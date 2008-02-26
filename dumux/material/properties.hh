@@ -105,9 +105,51 @@ public:
 	}
 };
 
-/** \ingroup properties
- * @brief Fluid properties of Oil
- */
+
+class CO2 : public Medium
+{
+public:
+	double viscosity ( double T=283.15, double p=1e5) const
+	{
+	
+		return 3.950e-5;//800e-3;//[kg/(ms)]
+	}
+	double density ( double T=283.15, double p=1e5) const
+	{
+		return 479.0;//820.0; // [kg/m^3]
+	}
+	double Sr() const
+	{
+		return 0.0;
+	}
+	double molarMass() const
+	{
+		return 0; // [kg/mole]
+	}
+};
+
+class Brine : public Medium
+{
+public:
+	double viscosity ( double T=283.15, double p=1e5) const
+	{
+	
+		return 2.535e-4;//800e-3;//[kg/(ms)]
+	}
+	double density ( double T=283.15, double p=1e5) const
+	{
+		return 1045.0;//820.0; // [kg/m^3]
+	}
+	double Sr() const
+	{
+		return 0.0;
+	}
+	double molarMass() const
+	{
+		return 0; // [kg/mole]
+	}
+};
+
 class Oil : public Medium
 {
 public:
@@ -128,6 +170,7 @@ public:
 		return 0; // [kg/mole]
 	}
 };
+
 
 /** \ingroup properties
  * @brief Uniform Fluid properties for testing and debugging.
