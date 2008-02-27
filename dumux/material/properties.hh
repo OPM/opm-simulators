@@ -40,7 +40,7 @@ public:
    * @brief vapor Pressure \f$ \left[ Pa \right] \f$
    * @param T Temperature \f$ \left[ K \right] \f$
    */
-  virtual double vaporPressure (double T) const
+  double vaporPressure (double T) const
   {
 	  return 0;
   }
@@ -89,7 +89,7 @@ class Air : public Medium
 public:
 	double viscosity ( double T=283.15, double p=1e5) const
 	{
-		return 1.76e-5;//[kg/(ms)]
+		return 1.;//[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5) const
 	{
@@ -105,28 +105,6 @@ public:
 	}
 };
 
-
-class CO2 : public Medium
-{
-public:
-	double viscosity ( double T=283.15, double p=1e5) const
-	{
-	
-		return 3.950e-5;//800e-3;//[kg/(ms)]
-	}
-	double density ( double T=283.15, double p=1e5) const
-	{
-		return 479.0;//820.0; // [kg/m^3]
-	}
-	double Sr() const
-	{
-		return 0.0;
-	}
-	double molarMass() const
-	{
-		return 0; // [kg/mole]
-	}
-};
 
 class Brine : public Medium
 {
@@ -218,6 +196,30 @@ public:
 	{
 		return 1.0; // [kg/mole]
 	}
+};
+
+/** \ingroup properties
+ * @brief Fluid properties of CO2 
+ */
+class CO2 : public Medium
+{
+public:
+        double viscosity ( double T=432.0, double p=3.086e7) const // according to "webbook.nist.gov/chemistry/fluid/"
+        {
+                return 3.95e-5;//[kg/(ms)] // given in "CO2 leakage through an abandoned well.." A.Ebigbo,H.Class,R.Helmig 
+        }
+        double density ( double T=432.0, double p=3.086e7) const
+        {
+                return 479.0; // [kg/m^3] // given in "CO2 leakage through an abandoned well.." A.Ebigbo,H.Class,R.Helmig 
+        }
+        double Sr() const
+        {
+                return 0.0;
+        }
+        double molarMass() const
+        {
+                return 44.01; // [kg/mole]
+        }
 };
 
 /**\ingroup properties
