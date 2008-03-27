@@ -14,14 +14,14 @@ class Solubility {
 public:
 //	virtual double operator() (double T=283.15) = 0; 
 	
-	virtual double Henry (double T=283.15)
+	double Henry (double T=283.15)
 	{
 		double celsius = T - 273.15;
 
 		return (0.8942 + 1.47 * exp(-0.04394*celsius) )*1e-10; // [1/Pa]
 	};
 	
-	virtual double Antoine(double T=283.15)
+	double Antoine(double T=283.15)
 	{
 		const double constA = 8.19621; 
 		const double constB = 1730.63;
@@ -38,6 +38,18 @@ public:
 		return(pwsat);
 	};
 	
+	
+	virtual double Xwg (double pg=1e5, double T=283.15)
+	{
+		double pwsat;
+		double Xwg;
+	
+		pwsat = Antoine(T);
+		Xwg = 0.0;//pwsat / pg;
+		
+		return(Xwg);
+	};
+
 	virtual double Xaw (double pg=1e5, double T=283.15)
 	{
 		double pag;
@@ -46,64 +58,20 @@ public:
 		
 		pag = pg * (1-Xwg(pg,T));
 		hagw = Henry(T);
-		Xaw = pag * hagw;
+		Xaw = 0.0;//pag * hagw;
 		
 		return(Xaw);
 	};
-	
-	
-	virtual double Xwg (double pg=1e5, double T=283.15)
-	{
-		double pwsat;
-		double Xwg;
-	
-		pwsat = Antoine(T);
-		Xwg = pwsat / pg;
-		
-		return(Xwg);
-	};
 
-  Solubility()
-  {}
+	
+	Solubility()
+	{}
 //
-  virtual ~Solubility()
-  {  }
+	virtual ~Solubility()
+	{  }
   
 };
 
-//class Xaw : public Solubility  // massfraction of component air in water phase
-//{
-//public:
-//	virtual double operator() (double pg, double T)	
-//	{
-//	double pag;
-//	double Xaw;
-//	double hagw;
-//
-//	pag = pg - Antoine(T);
-//	hagw = Henry(T);
-//	Xaw = pag / hagw;
-//	
-//	return(Xaw);
-//	}
-//	
-//};
-//
-//class Xwg : public Solubility  // massfraction of component air in water phase
-//{
-//public:
-//	virtual double operator() (double pg, double T)	
-//	{
-//	double pwsat;
-//	double Xaw;
-//
-//	pwsat = Antoine(T);
-//	Xaw = pwsat / pg;
-//	
-//	return(Xaw);
-//	}
-//	
-//};
 //class Henry : public Solubility
 //{
 //public:	
