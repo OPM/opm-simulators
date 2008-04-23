@@ -18,7 +18,7 @@ public:
 	{
 		double celsius = T - 273.15;
 
-		return (0.8942 + 1.47 * exp(-0.04394*celsius) )*1e-10; // [1/Pa]
+		return ((0.8942 + 1.47 * exp(-0.04394*celsius) )*1e-10); // [1/Pa]
 	};
 	
 	double Antoine(double T=283.15)
@@ -39,26 +39,26 @@ public:
 	};
 	
 	
-	virtual double Xwg (double pg=1e5, double T=283.15)
+	virtual double Xwn (double pn, double T=283.15)
 	{
-		double pwsat;
-		double Xwg;
+		double pwsat(0.0);
+		double Xwn(0.0);
 	
 		pwsat = Antoine(T);
-		Xwg = 0.0;//pwsat / pg;
+		Xwn = pwsat / pn;
 		
-		return(Xwg);
+		return(Xwn);
 	};
 
-	virtual double Xaw (double pg=1e5, double T=283.15)
+	virtual double Xaw (double pn, double T=283.15)
 	{
-		double pag;
-		double Xaw;
+		double pan;
+		double Xaw(0.0);
 		double hagw;
 		
-		pag = pg * (1-Xwg(pg,T));
+		pan = pn * (1-Xwn(pn,T));
 		hagw = Henry(T);
-		Xaw = 0.0;//pag * hagw;
+		Xaw = pan * hagw;
 		
 		return(Xaw);
 	};
