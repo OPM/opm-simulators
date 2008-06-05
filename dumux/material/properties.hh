@@ -89,7 +89,7 @@ class Air : public Medium
 public:
 	double viscosity ( double T=283.15, double p=1e5) const
 	{
-		return 1.;//[kg/(ms)]
+		return 1.8e-5;//[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5) const
 	{
