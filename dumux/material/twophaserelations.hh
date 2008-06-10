@@ -70,7 +70,12 @@ namespace Dune
 	  {
 		  return mobW(saturationW, T, p) + mobN(1.-saturationW, T, p);    
 	  }
-		
+	
+     double mobTotal (double saturationW, const FieldVector<double, 4>& parameters, double T=283.15, double p=1e5) 
+	  {
+		  return mobW(saturationW, parameters, T, p) + mobN(1.-saturationW, parameters, T, p);    
+	  }
+
 	  /*! \brief Implements the wetting phase fractional flow function
 	   *
 	   *  \param saturationW the saturation of the wetting phase   
@@ -84,7 +89,14 @@ namespace Dune
 	    double l_n = mobN(1.-saturationW, T, p);
 	    return l_w/(l_w + l_n);
 	  }
-	  
+	 
+     double fractionalW (double saturationW, const FieldVector<double, 4>& parameters, double T=283.15, double p=1e5)
+	  { 
+	    double l_w = mobW(saturationW, parameters, T, p); 
+	    double l_n = mobN(1.-saturationW, parameters, T, p);
+	    return l_w/(l_w + l_n);
+	  }
+
 	  /*! \brief Implements the nonwetting phase fractional flow function
 	   *
 	   *  \param saturationN the saturation of the nonwetting phase   
@@ -99,6 +111,13 @@ namespace Dune
 	    return l_n/(l_w + l_n);
 	  }
 	
+     double fractionalN (double saturationN, const FieldVector<double, 4>& parameters, double T=283.15, double p=1e5)
+	  { 
+	    double l_w = mobW(1.-saturationN, parameters, T, p); 
+	    double l_n = mobN(saturationN, parameters, T, p);
+	    return l_n/(l_w + l_n);
+	  }
+
 	  /*! \brief the capillary pressure - saturation relation 
 	   *
 	   *  \param saturationW the saturation of the wetting phase   
@@ -163,7 +182,7 @@ namespace Dune
 		 */
 		virtual double krw (double saturationW) const=0; 
 	  
-		virtual double krw (double saturationW, const FieldVector<double, 4>& parameters) const 
+		virtual double krw (double saturationW, const FieldVector<double, 4>& parameters)
 		  {
 			  DUNE_THROW(NotImplemented,"TwoPhaseRelations :: krw (double, const FieldVector<double, 4>&");
 		  }
@@ -175,7 +194,7 @@ namespace Dune
 		 */
 		virtual double krn (double saturationN) const=0;
 
-		virtual double krn (double saturationN, const FieldVector<double, 4>& parameters) const
+		virtual double krn (double saturationN, const FieldVector<double, 4>& parameters)
 		  {
 			  DUNE_THROW(NotImplemented,"TwoPhaseRelations :: krn (double, const FieldVector<double, 4>&");
 		  }

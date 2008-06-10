@@ -55,6 +55,7 @@ public:
 class Water : public Medium
 {
 public:
+	Water(double Sr = 0.0):Sr_(Sr) {}	
 	double viscosity (double T=283.15, double p=1e5) const
 	{
 		return 1e-3; //[kg/(ms)]
@@ -65,7 +66,7 @@ public:
 	}
 	double Sr() const
 	{
-		return 0.0;
+		return Sr_;
 	}
 	double henry (double T=283.15) const
 	{
@@ -79,6 +80,8 @@ public:
 	{
 		return 0.018016; // [kg/mole]
 	}
+private:
+   double Sr_;	
 };
 
 /** \ingroup properties
@@ -131,6 +134,7 @@ public:
 class Oil : public Medium
 {
 public:
+	Oil(double Sr = 0.0):Sr_(Sr) {}
 	double viscosity ( double T=283.15, double p=1e5) const
 	{
 		return 1e-3;//800e-3;//[kg/(ms)]
@@ -141,12 +145,14 @@ public:
 	}
 	double Sr() const
 	{
-		return 0.0;
+		return Sr_;
 	}
 	double molarMass() const
 	{
 		return 0; // [kg/mole]
 	}
+private:
+   double Sr_;	
 };
 
 
