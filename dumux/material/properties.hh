@@ -282,7 +282,7 @@ class CO2 : public Medium
 	
  public:
 	    
-		double density ( double T, double p) const
+		double density ( double T, double p, double X=1.) const
         {
 //			return 479.;
 			return constRelCO2.density(T,p);
