@@ -22,7 +22,7 @@ class MultiComp
 		 *  \param T temperature
 		 *  \return the mass fraction (dimensionless)
 		 */
-		virtual double xWN (double pn, double T=283.15) = 0;
+		virtual double xWN (const double pn, double T=283.15) = 0;
 		
 		/*! \brief solubility of a component (air) in the wetting phase
 		 *
@@ -30,7 +30,21 @@ class MultiComp
 		 *  \param T temperature [K]
 		 *  \return the mass fraction [-]
 		 */
-		virtual double xAW (double pn, double T=283.15) = 0;
+		virtual double xAW (const double pn, double T=283.15) = 0;
+		
+		/** @brief Henry coefficient
+		 * @param T Temperature \f$ \left[ K \right] \f$
+		 * @return Henry coefficient \f$ \left[ 1/Pa \right] \f$
+		 */
+		virtual double xWNmolar (const double pn, double T=283.15) = 0;
+		
+		/*! \brief solubility of a component (air) in the wetting phase
+		 *
+		 *  \param pN the pressure of the non-wetting phase [Pa]   
+		 *  \param T temperature [K]
+		 *  \return the mass fraction [-]
+		 */
+		virtual double xAWmolar (const double pn, double T=283.15) = 0;
 		
 		/** @brief Henry coefficient
 		 * @param T Temperature \f$ \left[ K \right] \f$
@@ -60,7 +74,11 @@ class MultiComp
 class CWaterAir : public MultiComp
 {
 	public:
-		double xWN (double pn, double T=283.15)
+		/*! \brief equation for calculating the mass fraction in the nonwetting phase
+		 *  \param T temperature \f$ \left[ K \right] \f$
+		 *  \return Henry Coefficient \f$ \left[ 1/Pa \right] \f$
+		 */
+		double xWN (const double pn, const double T=283.15)
 		{
 			double pwsat;
 			double result;
@@ -68,40 +86,79 @@ class CWaterAir : public MultiComp
 			pwsat = vaporPressure(T);
 			result = pwsat / pn;
 				
-			result = conversionMoleToMassFraction(result);
+			result = conversionMoleToMassFraction(result, 1);
 				
 			return(result);
 		}
 	  
-		double xAW (double pn, double T=283.15)
+
+		/*! \brief equation for calculating the mass fraction in the wetting phase
+		 *  \param T temperature \f$ \left[ K \right] \f$
+		 *  \return Henry Coefficient \f$ \left[ 1/Pa \right] \f$
+		 */
+		double xAW (const double pn, const double T=283.15)
 		{
 			double pan;
 			double result;
 			double hagw;
 				
-			pan = pn * (1-xWN(pn,T));
+			pan = pn * (1-xWNmolar(pn,T)); //ACHTUNG!! Molenbruch!!!
 			hagw = henry(T);
 			result = pan * hagw;
 				
-			result = conversionMoleToMassFraction(result);
+			result = conversionMoleToMassFraction(result, 0);
 				
 			return(result);
-	
+		}
+		
+		/*! \brief equation for calculating the mole fraction in the nonwetting phase
+		 *  \param T temperature \f$ \left[ K \right] \f$
+		 *  \return Henry Coefficient \f$ \left[ 1/Pa \right] \f$
+		 */
+		double xWNmolar (const double pn, const double T=283.15)
+		{
+			double pwsat;
+			double result;
+			
+			pwsat = vaporPressure(T);
+			result = pwsat / pn;
+				
+			return(result);
+		}
+		
+		/*! \brief equation for calculating the mole fraction in the wetting phase
+		 *  \param T temperature \f$ \left[ K \right] \f$
+		 *  \return Henry Coefficient \f$ \left[ 1/Pa \right] \f$
+		 */
+		double xAWmolar (const double pn, const double T=283.15)
+		{
+			double pan;
+			double result;
+			double hagw;
+				
+			pan = pn * (1-xWNmolar(pn,T));
+			hagw = henry(T);
+			result = pan * hagw;
+				
+			return(result);
 		}
 
-			  /*! \brief Henry equation for calculating the Henry coefficient
-			   *  \param T temperature \f$ \left[ K \right] \f$
-			   *  \return Henry Coefficient \f$ \left[ 1/Pa \right] \f$
-			   */
+		/*! \brief equation for calculating the inverse Henry coefficient
+		 *  \param T temperature \f$ \left[ K \right] \f$
+		 *  \return Henry Coefficient \f$ \left[ 1/Pa \right] \f$
+		 */
 		double henry(double T=283.15) const
 		{
 			double celsius = T - 273.15;
 			double result = ((0.8942 + 1.47 * exp(-0.04394*celsius) )*1e-10);
 	
 			return (result); // [1/Pa]
-
 		}
 
+		/** @brief calculates vapor pressure
+		 *  @param T temperature \f$ \left[ K \right] \f$
+		 *  @return vapor pressure \f$ \left[ Pa \right] \f$
+		 */
 		double vaporPressure(double T=283.15) const
 		{
 			const double constA = 8.19621; 
@@ -118,7 +175,6 @@ class CWaterAir : public MultiComp
 			psat = pow (10.0, exponent) *100; //1mbar = 100Pa
 	
 			return(psat);
-
 		}
 
 		CWaterAir(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
@@ -126,12 +182,25 @@ class CWaterAir : public MultiComp
 		{	 }
 
 	protected:
-		double conversionMoleToMassFraction(double molefrac) const
+
+		/** @brief converts mole fractions into mass fractions
+		 */
+		double conversionMoleToMassFraction(double molefrac, int phase) const
 		{
+			enum {wPhase = 0, nPhase = 1};
+			
 			double result;
-			double molarMass1 = 0.02896; //air
-			double molarMass2 = 0.018016; // water
-				
+			double molarMass1, molarMass2;
+
+			if (phase == wPhase){			
+				molarMass1 = this->wettingPhase.molarMass();
+				molarMass2 = this->nonwettingPhase.molarMass();
+			}
+			if (phase == nPhase){			
+				molarMass1 = this->nonwettingPhase.molarMass();
+				molarMass2 = this->wettingPhase.molarMass();
+			}
+
 			result = molefrac * molarMass1 / (molarMass1*molefrac + molarMass2*(1-molefrac));
 			
 			return (result);

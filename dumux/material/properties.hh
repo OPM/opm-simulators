@@ -3,6 +3,7 @@
 #include <dumux/material/constrel/constrelco2.hh>
 #include <dumux/material/constrel/constrelwater.hh>
 #include <dumux/material/constrel/constrelbrine.hh>
+#include <dumux/material/constrel/constrelair.hh>
 /**
  * \ingroup material
  * \defgroup properties Fluid and Soil properties
@@ -26,7 +27,7 @@ public:
    * @param p Pressure \f$ \left[ Pa \right] \f$
    * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
    */
-  virtual double density (double T=283.15, double p=1e5) const = 0;
+  virtual double density (double T=283.15, double p=1e5, double X=1.) const = 0;
 
   /** @brief residual saturation
    * @return residual saturation \f$ \left[ \, \right] \f$
@@ -99,7 +100,7 @@ public:
 	{
 		return 1e-3; //[kg/(ms)]
 	}
-	double density (double T=283.15, double p=1e5) const
+	double density (double T=283.15, double p=1e5, double X=1.) const
 	{
 		return 1000.; // [kg/m^3]
 	}
@@ -128,14 +129,18 @@ private:
  */
 class Air : public Medium
 {
+	ConstrelAir constRelAir;
+	
 public:
 	double viscosity ( double T=283.15, double p=1e5, double rho=0.) const
 	{
-		return 1.8e-5;//[kg/(ms)]
+		return constRelAir.viscosity_air (T); //[kg/(ms)]
 	}
-	double density ( double T=283.15, double p=1e5) const
+	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
-		return 1.29; // [kg/m^3]
+		const double molarMassAir = molarMass();
+
+		return constRelAir.rho_idGG_mass(T,p,molarMassAir); // [kg/m^3]
 	}
 	double Sr() const
 	{
@@ -164,7 +169,7 @@ public:
 			return constRelBrine.viscosity_brine(T,S);
 //  		 return 2.535e-4; // [kg/(ms)]
 	}
-	double density ( double T=283.15, double p=1e5) const
+	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		double S, x_CO2_w;
 		x_CO2_w = 0.0;
@@ -203,7 +208,7 @@ public:
 	{
 		return 1e-3;//800e-3;//[kg/(ms)]
 	}
-	double density ( double T=283.15, double p=1e5) const
+	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		return 1000.0;//820.0; // [kg/m^3]
 	}
@@ -230,7 +235,7 @@ public:
 	{
 		return 1.0;//[kg/(ms)]
 	}
-	double density ( double T=283.15, double p=1e5) const
+	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		return 1.0; // [kg/m^3]
 	}
@@ -254,7 +259,7 @@ public:
 	{
 		return 5.7e-4;//[kg/(ms)]
 	}
-	double density ( double T=283.15, double p=1e5) const
+	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		return 1460.0; // [kg/m^3]
 	}
@@ -287,7 +292,7 @@ class CO2 : public Medium
 //			return 3.95e-5;	
 			return constRelCO2.viscosity(T,p,rho);
 		}
-		double enthalpy ( double T=432.,double p=3.086e7) const
+		double enthalpy ( double T=432.,double p=3.086e7, double X=1.) const
 		{
 			return constRelCO2.enthalpy(T,p);
 		//	return 13141.5;
