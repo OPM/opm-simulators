@@ -58,6 +58,11 @@ class MultiComp
 		 */
 		virtual double vaporPressure (double T=283.15) const = 0;
 
+		virtual double conversionMoleToMassFraction(double massfrac, int phase) const = 0;
+
+		virtual double conversionMassToMoleFraction(double massfrac, int phase) const = 0;
+
+
 		MultiComp(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
 				: wettingPhase(wP), nonwettingPhase(nwP)
 		{	 }
@@ -177,12 +182,6 @@ class CWaterAir : public MultiComp
 			return(psat);
 		}
 
-		CWaterAir(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
-				: MultiComp(wP, nwP)
-		{	 }
-
-	protected:
-
 		/** @brief converts mole fractions into mass fractions
 		 */
 		double conversionMoleToMassFraction(double molefrac, int phase) const
@@ -205,6 +204,33 @@ class CWaterAir : public MultiComp
 			
 			return (result);
 		}		
+
+		double conversionMassToMoleFraction(double massfrac, int phase) const
+		{
+			enum {wPhase = 0, nPhase = 1};
+			
+			double result;
+			double molarMass1, molarMass2;
+
+			if (phase == wPhase){			
+				molarMass1 = this->wettingPhase.molarMass();
+				molarMass2 = this->nonwettingPhase.molarMass();
+			}
+			if (phase == nPhase){			
+				molarMass1 = this->nonwettingPhase.molarMass();
+				molarMass2 = this->wettingPhase.molarMass();
+			}
+
+			result = massfrac * molarMass2 / (molarMass1*(1-massfrac) + molarMass2*massfrac);
+			
+			return (result);
+		}		
+
+		CWaterAir(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
+				: MultiComp(wP, nwP)
+		{	 }
+
+		
 };
 }
 #endif /*MULTICOMPONENTRELATIONS_HH_*/
