@@ -95,14 +95,24 @@ public:
 class Water : public Medium
 {
 public:
-	Water(double Sr = 0.0):Sr_(Sr) {}	
+	Water(double Sr = 0.0, double constDensity = 0, 
+			double constViscosity = 0, double constEnthalpy = 0)
+	: Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy)
+	{}
+	
 	double viscosity (double T=283.15, double p=1e5, double rho=0.) const
 	{
-		return 1e-3; //[kg/(ms)]
+		if (constViscosity_) 
+			return constViscosity_;
+		else 
+			return 1e-3; //[kg/(ms)]
 	}
 	double density (double T=283.15, double p=1e5, double X=1.) const
 	{
-		return 1000.; // [kg/m^3]
+		if (constDensity_) 
+			return constDensity_;
+		else 
+			return 1000.0; // [kg/m^3]
 	}
 	double Sr() const
 	{
@@ -122,6 +132,9 @@ public:
 	}
 private:
    double Sr_;	
+   double constDensity_;
+   double constViscosity_;
+   double constEnthalpy_;
 };
 
 /** \ingroup properties
@@ -132,16 +145,26 @@ class Air : public Medium
 	ConstrelAir constRelAir;
 	
 public:
-	Air(double Sr = 0.0):Sr_(Sr) {}	
+	Air(double Sr = 0.0, double constDensity = 0, 
+			double constViscosity = 0, double constEnthalpy = 0)
+	:Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy) 
+	{}	
 	double viscosity ( double T=283.15, double p=1e5, double rho=0.) const
 	{
-		return constRelAir.viscosity_air (T); //[kg/(ms)]
+		if (constViscosity_) 
+			return constViscosity_;
+		else 
+			return constRelAir.viscosity_air (T); //[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
-		const double molarMassAir = molarMass();
+		if (constDensity_) 
+			return constDensity_;
+		else {
+			const double molarMassAir = molarMass();
 
-		return constRelAir.rho_idGG_mass(T,p,molarMassAir); // [kg/m^3]
+			return constRelAir.rho_idGG_mass(T,p,molarMassAir); // [kg/m^3]
+		}
 	}
 	double Sr() const
 	{
@@ -153,6 +176,9 @@ public:
 	}
 private:
    double Sr_;	
+   double constDensity_;
+   double constViscosity_;
+   double constEnthalpy_;
 };
 
 
@@ -161,32 +187,47 @@ class Brine : public Medium
 	ConstrelBrine constRelBrine;
 	
 public:
-	Brine(double Sr = 0.0):Sr_(Sr) {}	
+	Brine(double Sr = 0.0, double constDensity = 0, 
+			double constViscosity = 0, double constEnthalpy = 0)
+	: Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy) 
+	{}
+	
 	double Salinity() const
 	{
 		return 0.1;
 	}
 	double viscosity ( double T=283.15, double p=1e5, double rho=0.) const
 	{	
+		if (constViscosity_) 
+			return constViscosity_;
+		else {
 			double S;
 			S = Salinity();
 			return constRelBrine.viscosity_brine(T,S);
+		}
+		
 //  		 return 2.535e-4; // [kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
-		double S, x_CO2_w;
-		x_CO2_w = 0.0;
-		S = Salinity();
-		return constRelBrine.mass_density_brine_CO2(T,p,S,x_CO2_w);
-//		return 1045.0; // [kg/m^3]
+		if (constDensity_) 
+			return constDensity_;
+		else {
+			double S, x_CO2_w;
+			x_CO2_w = 0.0;
+			S = Salinity();
+			return constRelBrine.mass_density_brine_CO2(T,p,S,x_CO2_w);
+		}
 	}
 	double enthalpy (double T=283.15, double p=1e5, double X=1.) const
 	{
-		double S;
-		S = Salinity();
-		return constRelBrine.enthalpy_brine(T,p,S);
-		//return 180627.65;
+		if (constEnthalpy_) 
+			return constEnthalpy_;
+		else {
+			double S;
+			S = Salinity();
+			return constRelBrine.enthalpy_brine(T,p,S);
+		}
 	}
 	double Sr() const
 	{
@@ -204,19 +245,32 @@ public:
 	}
 private:
    double Sr_;	
+   double constDensity_;
+   double constViscosity_;
+   double constEnthalpy_;
 };
 
 class Oil : public Medium
 {
 public:
-	Oil(double Sr = 0.0):Sr_(Sr) {}
+	Oil(double Sr = 0.0, double constDensity = 0, 
+			double constViscosity = 0, double constEnthalpy = 0)
+	: Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy) 
+	{}
+	
 	double viscosity ( double T=283.15, double p=1e5, double rho=0.) const
 	{
-		return 1e-3;//800e-3;//[kg/(ms)]
+		if (constViscosity_) 
+			return constViscosity_;
+		else 
+			return 1e-3;//800e-3;//[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
-		return 1000.0;//820.0; // [kg/m^3]
+		if (constDensity_) 
+			return constDensity_;
+		else 
+			return 1000.0;//820.0; // [kg/m^3]
 	}
 	double Sr() const
 	{
@@ -228,6 +282,9 @@ public:
 	}
 private:
    double Sr_;	
+   double constDensity_;
+   double constViscosity_;
+   double constEnthalpy_;
 };
 
 
@@ -237,14 +294,24 @@ private:
 class Uniform : public Medium
 {
 public:
-	Uniform(double Sr = 0.0):Sr_(Sr) {}	
+	Uniform(double Sr = 0.0, double constDensity = 0, 
+			double constViscosity = 0, double constEnthalpy = 0)
+	: Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy) 
+	{}
+	
 	double viscosity ( double T=283.15, double p=1e5, double rho=0.) const
 	{
-		return 1.0;//[kg/(ms)]
+		if (constViscosity_) 
+			return constViscosity_;
+		else 
+			return 1.0;//[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
-		return 1.0; // [kg/m^3]
+		if (constDensity_) 
+			return constDensity_;
+		else 
+			return 1.0; // [kg/m^3]
 	}
 	double Sr() const
 	{
@@ -256,6 +323,9 @@ public:
 	}
 private:
    double Sr_;	
+   double constDensity_;
+   double constViscosity_;
+   double constEnthalpy_;
 };
 
 /** \ingroup properties
@@ -264,14 +334,24 @@ private:
 class DNAPL : public Medium
 {
 public:
-	DNAPL(double Sr = 0.0):Sr_(Sr) {}	
+	DNAPL(double Sr = 0.0, double constDensity = 0, 
+			double constViscosity = 0, double constEnthalpy = 0)
+	: Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy) 
+	{}
+	
 	double viscosity ( double T=283.15, double p=1e5, double rho=0.) const
 	{
-		return 5.7e-4;//[kg/(ms)]
+		if (constViscosity_) 
+			return constViscosity_;
+		else 
+			return 5.7e-4;//[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
-		return 1460.0; // [kg/m^3]
+		if (constDensity_) 
+			return constDensity_;
+		else 
+			return 1460.0; // [kg/m^3]
 	}
 	double Sr() const
 	{
@@ -283,6 +363,9 @@ public:
 	}
 private:
    double Sr_;	
+   double constDensity_;
+   double constViscosity_;
+   double constEnthalpy_;
 };
 
 /** \ingroup properties
@@ -293,22 +376,32 @@ class CO2 : public Medium
  ConstrelCO2 constRelCO2;
 	
  public:
-		CO2(double Sr = 0.0):Sr_(Sr) {}	
+		CO2(double Sr = 0.0, double constDensity = 0, 
+				double constViscosity = 0, double constEnthalpy = 0)
+		: Sr_(Sr), constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy) 
+		{}
+		
 		double density ( double T, double p, double X=1.) const
         {
-//			return 479.;
-			return constRelCO2.density(T,p);
+			if (constDensity_) 
+				return constDensity_;
+			else 
+				return constRelCO2.density(T,p);
 		}
 		double viscosity ( double T=432., double p=3.086e7, double rho=0.) const 
 		{
-//			return 3.95e-5;	
-			return constRelCO2.viscosity(T,p,rho);
+			if (constViscosity_) 
+				return constViscosity_;
+			else 
+				return constRelCO2.viscosity(T,p,rho);
 		}
 		double enthalpy ( double T=432., double p=3.086e7, double X=1.) const
 		{
-			return constRelCO2.enthalpy(T,p);
-		//	return 13141.5;
-       //	return 0;
+			if (constEnthalpy_) 
+				return constEnthalpy_;
+			else {
+				return constRelCO2.enthalpy(T,p);
+			}
 		}
         double Sr() const
         {
@@ -330,6 +423,9 @@ class CO2 : public Medium
 
  private:
     double Sr_;	
+    double constDensity_;
+    double constViscosity_;
+    double constEnthalpy_;
 };
 
 /**\ingroup properties
