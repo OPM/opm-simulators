@@ -1,0 +1,88 @@
+\documentclass[11pt,a4paper,headinclude,footinclude,DIV16,normalheadings]{scrreprt}
+\usepackage[automark]{scrpage2}
+\usepackage[ansinew]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{theorem}
+\usepackage{color}
+\usepackage{listings}
+\lstset{language=C++, basicstyle=\ttfamily, 
+  keywordstyle=\color{black}\bfseries, tabsize=4, stringstyle=\ttfamily,
+  commentstyle=\it, extendedchars=true, escapeinside={/*@}{@*/}}
+\usepackage{hyperref}
+\usepackage{psfrag}
+\usepackage{makeidx}
+\usepackage{graphicx}
+
+\DeclareGraphicsExtensions{.eps, .jpg}
+
+\newcommand{\Dune}{{\sf\bfseries DUNE}}
+\newcommand{\Dumux}{DuMu$^\text{x}$ }
+
+%The theorems
+\theorembodyfont{\upshape}
+\theoremheaderfont{\sffamily\bfseries}
+\newtheorem{exc}{Exercise}[chapter]
+\newtheorem{rem}[exc]{Remark}
+\newtheorem{lst}{Listing}
+\newtheorem{warn}[exc]{Warning}
+
+\pagestyle{scrheadings}
+
+\title{\Dumux Handbook}
+
+\author{}
+
+\date{\today}
+
+\publishers{%
+\vspace{10mm}
+{\normalsize Lehrstuhl f\"ur Hydromechanik und Hydrosystemmodellierung, \\
+Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
+%
+\bigskip
+{\normalsize \texttt{\url{http://www.dumux.uni-stuttgart.de}}}\\
+}
+
+\makeindex
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\tableofcontents
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Getting started}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{lst}[File dune-mux/test/twophase/test\_twophase.cc] \mbox{}
+\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
+numberstyle=\tiny, numbersep=5pt]{../../test/twophase/test_twophase.cc}
+\end{lst}
+
+In line \ref{tp:material}, the material law to be used is specified. 
+
+
+\bibliographystyle{plain}
+\bibliography{dumux-handbook}
+
+\printindex
+
+\end{document}
