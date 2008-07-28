@@ -94,6 +94,8 @@ public:
  */
 class Water : public Medium
 {
+	ConstrelWater constRelWater;
+
 public:
 	Water(double Sr = 0.0, double constDensity = 0, 
 			double constViscosity = 0, double constEnthalpy = 0)
@@ -105,19 +107,40 @@ public:
 		if (constViscosity_) 
 			return constViscosity_;
 		else 
-			return 1e-3; //[kg/(ms)]
+			return constRelWater.viscosity_water(T,p); //[kg/(ms)]
 	}
 	double density (double T=283.15, double p=1e5, double X=1.) const
 	{
 		if (constDensity_) 
 			return constDensity_;
 		else 
-			return 1000.0; // [kg/m^3]
+			return 1000.0; // assumed to be incompressible[kg/m^3]
 	}
 	double Sr() const
 	{
 		return Sr_;
 	}
+	double enthalpy (double T=283.15, double p=1e5, double X=1.) const
+	{
+		if (constEnthalpy_) 
+			return constEnthalpy_;
+		else {
+			return constRelWater.enthalpy_water(T,p);
+		}
+	}
+	double molarMass() const
+	{
+		return 0.018016; // [kg/mole]
+	}
+    double intEnergy( double T=283.15, double p=1e5) const
+    {
+    	double u;
+    	double rho_mass = density(T,p);
+    	double h = enthalpy(T,p);
+     
+    	u = h - (p / rho_mass);
+    	return u;
+    }
 	double henry (double T=283.15) const
 	{
 		return (0.8942 + 1.47 * exp(-0.04394*T) )*1e-10; // [1/Pa]
@@ -126,10 +149,7 @@ public:
 	{
 		return 1228.; // [Pa]
 	}
-	double molarMass() const
-	{
-		return 0.018016; // [kg/mole]
-	}
+
 private:
    double Sr_;	
    double constDensity_;
@@ -154,7 +174,7 @@ public:
 		if (constViscosity_) 
 			return constViscosity_;
 		else 
-			return constRelAir.viscosity_air (T); //[kg/(ms)]
+			return constRelAir.viscosity_air(T); //[kg/(ms)]
 	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
@@ -166,6 +186,14 @@ public:
 			return constRelAir.rho_idGG_mass(T,p,molarMassAir); // [kg/m^3]
 		}
 	}
+	double enthalpy (double T=283.15, double p=1e5, double Xwg=1.) const
+	{
+		if (constEnthalpy_) 
+			return constEnthalpy_;
+		else {
+			return constRelAir.sp_enth2p2cni_g(T,p,Xwg);
+		}
+	}
 	double Sr() const
 	{
 		return Sr_;
@@ -174,6 +202,16 @@ public:
 	{
 		return 0.02896; // [kg/mole]
 	}
+    double intEnergy( double T=283.15, double p=1e5) const
+    {
+    	double u;
+    	double rho_mass = density(T,p);
+    	double h = enthalpy(T,p);
+     
+    	u = h - (p / rho_mass);
+    	return u;
+    }
+
 private:
    double Sr_;	
    double constDensity_;
@@ -243,6 +281,7 @@ public:
 		intenergy = enthalpy(T,p);
 		return intenergy; 
 	}
+
 private:
    double Sr_;	
    double constDensity_;
@@ -272,6 +311,14 @@ public:
 		else 
 			return 1000.0;//820.0; // [kg/m^3]
 	}
+	double enthalpy (double T=283.15, double p=1e5, double X=1.) const
+	{
+		if (constEnthalpy_) 
+			return constEnthalpy_;
+		else {
+//			return constRelOil.enthalpy_brine(T,p,S);
+		}
+	}
 	double Sr() const
 	{
 		return Sr_;
@@ -280,6 +327,16 @@ public:
 	{
 		return 0; // [kg/mole]
 	}
+    double intEnergy( double T=283.15, double p=1e5) const
+    {
+    	double u;
+    	double rho_mass = density(T,p);
+    	double h = enthalpy(T,p);
+     
+    	u = h - (p / rho_mass);
+    	return u;
+    }
+
 private:
    double Sr_;	
    double constDensity_;
@@ -317,10 +374,28 @@ public:
 	{
 		return Sr_;
 	}
+	double enthalpy (double T=283.15, double p=1e5, double X=1.) const
+	{
+		if (constEnthalpy_) 
+			return constEnthalpy_;
+		else {
+			return 1.0;
+		}
+	}
 	double molarMass() const
 	{
 		return 1.0; // [kg/mole]
 	}
+    double intEnergy( double T=283.15, double p=1e5) const
+    {
+    	double u;
+    	double rho_mass = density(T,p);
+    	double h = enthalpy(T,p);
+     
+    	u = h - (p / rho_mass);
+    	return u;
+    }
+
 private:
    double Sr_;	
    double constDensity_;
@@ -357,10 +432,28 @@ public:
 	{
 		return Sr_;
 	}
+	double enthalpy (double T=283.15, double p=1e5, double X=1.) const
+	{
+		if (constEnthalpy_) 
+			return constEnthalpy_;
+		else {
+//			return 1.0;
+		}
+	}
 	double molarMass() const
 	{
 		return 1.0; // [kg/mole]
 	}
+    double intEnergy( double T=283.15, double p=1e5) const
+    {
+    	double u;
+    	double rho_mass = density(T,p);
+    	double h = enthalpy(T,p);
+     
+    	u = h - (p / rho_mass);
+    	return u;
+    }
+
 private:
    double Sr_;	
    double constDensity_;
@@ -409,16 +502,16 @@ class CO2 : public Medium
         }
         double molarMass() const
         {
-                return 0.04401; // [kg/mole]
+            return 0.04401; // [kg/mole]
         }
         double intEnergy( double T=432, double p=3.086e7) const
         {
-         double u;
-         double rho_mass = density(T,p);
-         double h = enthalpy(T,p);
+        	double u;
+        	double rho_mass = density(T,p);
+        	double h = enthalpy(T,p);
          
-         u = h - (p / rho_mass);
-         return u;
+        	u = h - (p / rho_mass);
+        	return u;
         }
 
  private:
