@@ -17,7 +17,7 @@
 \DeclareGraphicsExtensions{.eps, .jpg}
 
 \newcommand{\Dune}{{\sf\bfseries DUNE}}
-\newcommand{\Dumux}{DuMu$^\text{x}$ }
+\newcommand{\Dumux}{DuMu$^\text{x}$}
 
 %The theorems
 \theorembodyfont{\upshape}
@@ -56,32 +56,14 @@ Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
 
 \tableofcontents
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Introduction}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Getting started}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-\begin{lst}[File dune-mux/test/twophase/test\_twophase.cc] \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
-numberstyle=\tiny, numbersep=5pt]{../../test/twophase/test_twophase.cc}
-\end{lst}
-
-In line \ref{tp:material}, the material law to be used is specified. 
-
+\input{intro}
+\input{getting-started}
+\input{quickstart-guide}
+\input{tutorial-coupled}
+\input{tutorial-decoupled}
 
 \bibliographystyle{plain}
-\bibliography{dumux-handbook}
+%\bibliography{dumux-handbook}
 
 \printindex
 
