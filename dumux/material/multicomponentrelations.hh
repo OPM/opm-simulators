@@ -2,6 +2,7 @@
 #define DUNE_MULTICOMPONENTRELATIONS_HH 
 
 #include <dumux/material/solubilityco2.hh>
+#include <dumux/material/properties.hh>
 
 /**
  * \ingroup material
