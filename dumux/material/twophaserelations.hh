@@ -53,12 +53,23 @@ namespace Dune
 	    return krn(saturationN)/viscosityN;
 	  }
 	  
+	  double mobCO2 (double saturationN, double T=283.15, double p=1e5, double rho=500.)
+	  {
+	    double viscosityN = nonwettingPhase.viscosity ( T, p, rho);
+	    return krn(saturationN)/viscosityN;
+	  }
+	  
 	  double mobN (double saturationN, const FieldVector<double, 4>& parameters, double T=283.15, double p=1e5)
 	  {
 	    double viscosityN = nonwettingPhase.viscosity ( T, p );
 	    return krn(saturationN, parameters)/viscosityN;
 	  } 
-
+	  
+	  double mobCO2 (double saturationN, const FieldVector<double, 4>& parameters, double T=283.15, double p=1e5, double rho=500.)
+	  {
+	    double viscosityN = nonwettingPhase.viscosity ( T, p, rho );
+	    return krn(saturationN, parameters)/viscosityN;
+	  } 
 	  /*! \brief Implements the total mobility/saturation relation. 
 	   *
 	   *  \param saturationW the saturation of the wetting phase   
