@@ -20,13 +20,13 @@ namespace Dune
 class G_air_water : public gas_gl
 {
 public:
-	virtual double density(double p, double T, double Xw) const // [kg / m^3]
+	virtual double density(double T, double p, double Xw) const // [kg / m^3]
 	{
 		double Rsm = R * (Xw / M_w + (1-Xw) / M_a); // medium specific gas constant
 		return p / Rsm / T;
 	}
 	
-	virtual double viscosity(double p, double T, double Xw) const // [kg / (m*s)]
+	virtual double viscosity(double T, double p, double Xw) const // [kg / (m*s)]
 	{
 		double v_a = constRelAir.viscosity_air (T); // see constrelair.hh
 		double v_w = constRelAir.visco_w_vap(T);    // see constrelair.hh
@@ -36,17 +36,17 @@ public:
 		return (v_w * X[0] + v_a * X[1]) / (X[0] + X[1]); // after Herning & Zipperer, 1936
 	}
 	
-	virtual double viscosity(double p, double T, double Xw, double rho) const
+	virtual double viscosity(double T, double p, double Xw, double rho) const
 	{
 		return viscosity(p, T, Xw);
 	}
 	
-	virtual double intEnergy(double p, double T, double Xw) const
+	virtual double intEnergy(double T, double p, double Xw) const
 	{
 		return enthalpy(p,T,Xw) - p/density(p,T,Xw);
 	}
 	
-	virtual double enthalpy(double p, double T, double Xw) const
+	virtual double enthalpy(double T, double p, double Xw) const
 	{
 		double H_a = 1005 * (T - 273.15);
 		double H_w;
@@ -55,14 +55,14 @@ public:
 		return Xw * H_w + (1-Xw) * H_a;
 	}
 	
-	virtual double diffCoeff(double p, double T) const
+	virtual double diffCoeff(double T, double p) const
 	{
 		// D ~ T^(3/2) / see Atkins:Physical Chemistry p.778!
 		// for H2O and O2: D(273.15 K, 1e5 Pa) = 2.25 e-5
 		return 2.25e-5 * pow(T/273.15, 2/3) * 1e5 / p;
 	}
 	
-	virtual double Xw_Max(double p, double T) const
+	virtual double Xw_Max(double T, double p) const
 	{
 		double pwsat = constRelAir.pwsat(T);
 		FieldVector<double,2> x(std::min(pwsat / p, 1.)); x[1] = 1-x[0];
@@ -83,28 +83,28 @@ private:
 class L_air_water : public liquid_gl
 {
 public:
-	virtual double density(double p, double T, double Xa) const // [kg / m^3]
+	virtual double density(double T, double p, double Xa) const // [kg / m^3]
 	{
 		return constRelWater.mass_density_water_IAPWS(T, p);
 	}
 	
-	virtual double viscosity(double p, double T, double Xa) const
+	virtual double viscosity(double T, double p, double Xa) const
 	{
 		return constRelWater.viscosity_water(T,p);
 	}
 	
-	virtual double viscosity(double p, double T, double Xa, double rho) const
+	virtual double viscosity(double T, double p, double Xa, double rho) const
 	{
 		return constRelWater.viscosity_water(T,p);
 	}
 	
-	virtual double intEnergy(double p, double T, double Xa) const
+	virtual double intEnergy(double T, double p, double Xa) const
 	{
 		if (T < 273.15) return 4000 * (T-273.15);
 		return constRelWater.enthalpy_water(T,p);
 	}
 	
-	virtual double diffCoeff(double p, double T) const
+	virtual double diffCoeff(double T, double p) const
 	{
 		return 2e-9 * T / 273.15; 
 	}
@@ -115,7 +115,7 @@ public:
 		return (0.8942 + 1.47 * exp(-0.04394*T) )*1e-10; // [1/Pa]
 	}
 	
-	virtual double Xa_Max(double p, double T) const
+	virtual double Xa_Max(double T, double p) const
 	{
 		FieldVector<double,2> x(henry(T) * p); x[1] = 1- x[0];
 		x = this->x2X(x);
@@ -149,6 +149,24 @@ private:
 	ConstrelWater constRelWater;
 	ConstrelAir constRelAir;
 
+};
+
+class UniformPhase : Medium
+{
+	virtual double viscosity (double T = 0., double p = 0., double X = 0.)
+	{
+		return 1.;
+	}
+	
+	virtual double viscosity(double T = 0., double p = 0., double rho, double X = 0)
+	{
+		return 1.;
+	}
+	
+	virtual double density (double T = 0., double p = 0., double X = 0.)
+	{
+		return 1.;
+	}
 };
 
 } // namespace
