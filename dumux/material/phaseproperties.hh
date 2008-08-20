@@ -158,7 +158,7 @@ class UniformPhase : Medium
 		return 1.;
 	}
 	
-	virtual double viscosity(double T = 0., double p = 0., double rho, double X = 0)
+	virtual double viscosity(double T = 0., double p = 0., double rho = 0., double X = 0)
 	{
 		return 1.;
 	}

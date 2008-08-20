@@ -1,7 +1,7 @@
 #ifndef DUNE_VANGENUCHTENLAW_HH
 #define DUNE_VANGENUCHTENLAW_HH
 
-#include "dumux/material/twophaserelations.hh"
+#include "dumux/material/relperm_pc_law.hh"
 
 namespace Dune
 {
@@ -17,9 +17,14 @@ namespace Dune
    * 		- \f$ \alpha \f$
    *   
    */
-  class VanGenuchtenLaw : public TwoPhaseRelations
+	template<class G>
+  class VanGenuchtenLaw : public RelPerm_pc<G>
   {
   public:
+  	
+  	typedef typename G::Traits::template Codim<0>::Entity Entity;
+  	typedef double DT;
+  	enum {n=G::dimension, m=1};
   	
     double krw (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
@@ -70,7 +75,7 @@ namespace Dune
     
     std::vector<double> kr (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
-    	std::vector kr(2);
+    	std::vector<double> kr(2);
     	// residual saturations
    		double Srw = this->soil.Sr_w(x, e, xi, T);
    		double Srn = this->soil.Sr_n(x, e, xi, T);
@@ -92,7 +97,7 @@ namespace Dune
       double gamma = param[3];
       
       // compute values
-      r   = 1 - pow(Se, 1/m);
+      double r   = 1 - pow(Se, 1/m);
       kr[0] = pow(Se, eps) * pow(1 - pow(r,m), 2);
       kr[1] = pow(1-Se, gamma) * pow(r, 2*m);
       return kr;
@@ -100,7 +105,7 @@ namespace Dune
     
   	double pC (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const 
     {
-      double r, x, vgM;
+      double r, x_, vgM;
       double pc, pc_prime, Se_regu;
       int asymptotic;
 
@@ -142,10 +147,10 @@ namespace Dune
       	if (Se > epsPC && Se < 1 - epsPC)
       	{
 		      r = pow(Se, -1/m);
-		      x = r - 1;
+		      x_ = r - 1;
 		      vgM = 1 - m;
-		      x = pow(x, vgM);
-		      r = x / alpha;
+		      x_ = pow(x_, vgM);
+		      r = x_ / alpha;
 		      return(r);
       	}
       	else
@@ -165,8 +170,8 @@ namespace Dune
     
   	double dPdS (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
-      double r, x;
-s
+      double r, x_;
+
       double Swr = this->soil.Sr_w(x, e, xi, T);
       double Snr = this->soil.Sr_n(x, e, xi, T);
       
@@ -183,12 +188,12 @@ s
 
       /* compute value */
         r = pow(Se, -1/m);
-        x = pow((r-1), (1-m));
-        r = -(1-0.0) / alpha * x * (1-m) / m * r / (r-1) / Se / (1-Snr-Swr);
+        x_ = pow((r-1), (1-m));
+        r = -(1-0.0) / alpha * x_ * (1-m) / m * r / (r-1) / Se / (1-Snr-Swr);
         return(r);
     }
 	  
-    double saturationW (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) 
+    double saturationW (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
       DUNE_THROW(NotImplemented, "VanGenuchtenLaw::saturationW()");
 		  
@@ -202,14 +207,14 @@ s
       return 0;
     }
 
-    VanGenuchtenLaw(const Matrix2P& s, bool lin = false) 
-      : TwoPhaseRelations(s, false)
+    VanGenuchtenLaw(const Matrix2p<G,double>& s, bool lin = false) 
+      : RelPerm_pc<G>(s, false)
     {
     }
 	  
   protected:
-    double epsPC = 5e-4; //!< threshold for linearization of capillary pressure
-    double machineEps_ = 1e-15;
+    static const double epsPC = 5e-4; //!< threshold for linearization of capillary pressure
+    static const double machineEps_ = 1e-15;
   };
 }
 

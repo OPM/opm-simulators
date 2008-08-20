@@ -2,6 +2,8 @@
 #define DUNE_TWOPHASERELATIONS_HH
 
 #include <dumux/material/property_baseclasses.hh>
+#include <dumux/material/phaseproperties.hh>
+#include <dumux/material/relperm_pc_law.hh>
 #include <dumux/material/brookscoreylaw.hh>
 #include <dumux/material/vangenuchtenlaw.hh>
 #include <dumux/material/linearlaw.hh>
@@ -28,7 +30,47 @@ namespace Dune
 	 *  of the class. Auxiliary relative permeability / capillary pressure saturation relationships can be 
 	 *  added as constructor arguments.
 	 */
-	class TwoPhaseRelations {
+	template<class G, class RT>
+	class TwoPhaseRelations 
+	{
+	public:
+		
+		typedef typename G::Traits::template Codim<0>::Entity Entity;
+		typedef typename G::ctype DT;
+		enum { n=G::dimension};
+		
+		/** \brief constructor
+		 *  \param s soil properties
+		 *  \param wP wetting phase properties
+		 *  \param nP nonwetting phase properties
+		 *  \param a1 auxiliary relative permeability capillary pressure saturation relationship
+		 *  \param a2 auxiliary relative permeability capillary pressure saturation relationship
+		 *  \param a3 auxiliary relative permeability capillary pressure saturation relationship
+		 */
+	  TwoPhaseRelations(const Matrix2p<G, RT>& s = *(new Homogeneoussoil<G, RT>), const Medium& wP = *(new UniformPhase), const Medium& nwP = *(new UniformPhase),
+	  RelPerm_pc<G>& a1 = (*new LinearLaw<G>),
+	  RelPerm_pc<G>& a2 = (*new LinearLaw<G>),
+	  RelPerm_pc<G>& a3 = (*new LinearLaw<G>))
+	  : wettingPhase(wP), nonwettingPhase(nwP), soil(s), linear_(lin), auxiliary1(a1), auxiliary2(a2), auxiliary3(a3),
+	    brookscorey(s, false), vangenuchten(s, false), linearlaw(s, false)
+	  {	 }
+	  
+	  virtual ~TwoPhaseRelations()
+	  {	  }
+		
+	  const Medium& wettingPhase; //!< contains the properties of the wetting phase 
+	  const Medium& nonwettingPhase; //!< contains the properties of the nonwetting phase 
+	  const Matrix2p<G, RT>& soil;
+	
+	protected:
+		bool linear_;
+		const BrooksCoreyLaw<G> brookscorey;
+		const VanGenuchtenLaw<G> vangenuchten;
+		const LinearLaw<G> linearlaw;
+		const RelPerm_pc<G>& auxiliary1;
+		const RelPerm_pc<G>& auxiliary2;
+		const RelPerm_pc<G>& auxiliary3;
+	
 	public:
 	  /*! \brief Implements the wetting phase mobility/saturation relation. 
 	   *	Assumption: Phases do not mix and mixing effects do not influence viscosity respectively.
@@ -84,14 +126,14 @@ namespace Dune
 	  	double viscosityN = nonwettingPhase.viscosity ( T, p, 0.);
 	  	
 	  	// get relative permeabilities and divide by respective viscosities
-	  	std::vector lambda = kr(saturationW,x, e, xi, T);
+	  	std::vector<double> lambda = kr(saturationW,x, e, xi, T);
 	  	lambda[0] /= viscosityW;
 	  	lambda[1] /= viscosityN;
 	  	
 	  	// add total mobility to the end of the vector
 	  	lambda.resize(3);
 	  	lambda[2] = lambda[0] + lambda[1];
-	  	return l;
+	  	return lambda;
 	  }
 
 	  /*! \brief Implements the wetting phase fractional flow function
@@ -110,7 +152,7 @@ namespace Dune
 	  	double viscosityN = nonwettingPhase.viscosity ( T, p, 0.);
 	  	
 	  	// get relative permeabilities and divide by respective viscosities
-	  	std::vector f = kr(saturationW,x, e, xi, T);
+	  	std::vector<double> f = kr(saturationW,x, e, xi, T);
 	  	f[0] /= viscosityW;
 	  	f[1] /= viscosityN;
 	  	
@@ -149,7 +191,7 @@ namespace Dune
 	   *  \param saturationW the saturation of the wetting phase   
 	   *  \return the capillary pressur \f$ p_\text{c} (S_\text{w})\f$.
 	   */
-	  virtual double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+	  virtual double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T = 283.15) const
 	  {
 	    switch (soil.relPermFlag(x, e, xi))
 	    {
@@ -275,6 +317,7 @@ namespace Dune
 		  	return auxiliary3.krw(saturationW, x, e, xi, T);
 		  default:
 		  	DUNE_THROW(NotImplemented, "Matrix2p::modelFlag " << soil.relPermFlag(x, e, xi) << " for TwoPhaseRelations::krw");
+		  }
     }
 	  
 		/*! \brief nonwetting phase relative permeability saturation relationship 
@@ -323,35 +366,6 @@ namespace Dune
 	    	DUNE_THROW(NotImplemented, "Matrix2p::modelFlag " << soil.relPermFlag(x, e, xi) << " for TwoPhaseRelations::kr");
 	    }
 		}
-	  
-		/** \brief constructor
-		 *  \param s soil properties
-		 *  \param wP wetting phase properties
-		 *  \param nP nonwetting phase properties
-		 *  \param a1 auxiliary relative permeability capillary pressure saturation relationship
-		 *  \param a2 auxiliary relative permeability capillary pressure saturation relationship
-		 *  \param a3 auxiliary relative permeability capillary pressure saturation relationship
-		 */
-	  TwoPhaseRelations(const Matrix2p& s = *(new Homogeneoussoil), const Medium& wP = *(new UniformPhase), const Medium& nwP = *(new UniformPhase)),
-	  RelPerm_pc& a1 = (*new LinearLaw), RelPerm_pc& a2 = (*new LinearLaw), RelPerm_pc& a3 s= (*new LinearLaw))
-	  : wettingPhase(wP), nonwettingPhase(nwP), soil(s), linear_(lin), auxiliary1(a1), auxiliary2(a2), auxiliary3(a3),
-	    brookscorey(s, false), vangenuchten(s, false), linearlaw(s, false)
-	  {	 }
-	  
-	  virtual ~TwoPhaseRelations()
-	  {	  }
-		
-	  const Medium& wettingPhase; //!< contains the properties of the wetting phase 
-	  const Medium& nonwettingPhase; //!< contains the properties of the nonwetting phase 
-	  const Matrix2p& soil;
-	
-	protected:
-		const BrooksCoreyLaw brookscorey;
-		const VanGenuchtenLaw vangenuchten;
-		const LinearLaw linearlaw;
-		const RelPerm_pc& auxiliary1;
-		const RelPerm_pc& auxiliary2;
-		const RelPerm_pc& auxiliary3;
 		
 	};
 }

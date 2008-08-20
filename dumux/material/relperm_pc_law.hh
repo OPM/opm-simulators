@@ -17,8 +17,12 @@ namespace Dune
 	 * Specifications of model parameters for the relative permeability and capillary pressure
 	 * functions have to be made in right order. Read further details in the derived classes!
 	 */
+	template<class G>
 	class RelPerm_pc {
 	public:
+		typedef typename G::Traits::template Codim<0>::Entity Entity;
+		typedef typename G::ctype DT;
+		enum {n=G::dimension, m=1};
 	  /*! \brief the capillary pressure - saturation relation 
 	   *
 	   *  \param saturationW the saturation of the wetting phase  
@@ -106,7 +110,7 @@ namespace Dune
 		 *  \param nP phase property object for the nonwetting Phase.
 		 *  \param lin true specifies a linear model. Usually false. Only set true if you know what you are doing!
 		 */
-	  RelPerm_pc(const Matrix2p& s, const bool lin = false)
+	  RelPerm_pc(const Matrix2p<G,double>& s, const bool lin = false)
 	  : soil(s), linear_(lin)
 	  {	 
 	  }
@@ -117,7 +121,7 @@ namespace Dune
 	
 	protected:
 		const bool linear_;
-	  const Matrix2p& soil;
+	  const Matrix2p<G,double>& soil;
 	};
 }
 

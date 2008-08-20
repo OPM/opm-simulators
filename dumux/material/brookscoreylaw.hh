@@ -2,6 +2,7 @@
 #define DUNE_BROOKSCOREYLAW_HH
 
 #include "dumux/material/relperm_pc_law.hh"
+#include <dumux/material/property_baseclasses.hh>
 
 namespace Dune
 {
@@ -21,9 +22,13 @@ namespace Dune
    * 		- \f$ lambda \f$
    * 		- entry pressure \f$ p_c \f$
    */
-  class BrooksCoreyLaw : public RelPerm_pc
+	template<class G>
+  class BrooksCoreyLaw : public RelPerm_pc<G>
   {
   public:
+  	typedef typename G::Traits::template Codim<0>::Entity Entity;
+  	typedef typename G::ctype DT;
+  	enum {n=G::dimension, m=1};
     
   	double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
@@ -80,7 +85,7 @@ namespace Dune
     }
 
 	  	  
-    double krw (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+    double krw (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
       double Se = (saturationW - this->soil.Sr_w(x, e, xi, T))
       	/(1. - this->soil.Sr_w(x, e, xi, T) - this->soil.Sr_n(x, e, xi, T));
@@ -96,7 +101,7 @@ namespace Dune
     }
       
 	  
-    double krn (double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const 
+    double krn (double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const 
     {
       double Se = ((1.-saturationN) - this->soil.Sr_w(x, e, xi, T))
       	/(1. - this->soil.Sr_w(x, e, xi, T) - this->soil.Sr_n(x, e, xi, T));
@@ -112,7 +117,7 @@ namespace Dune
     
     std::vector<double> kr (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
     {
-    	std::vector kr(2);
+    	std::vector<double> kr(2);
     	double Srw = this->soil.Sr_w(x, e, xi, T);
     	double Srn = this->soil.Sr_n(x, e, xi, T);
     	double Se = (saturationW - Srw) / (1 - Srw - Srn);
@@ -138,8 +143,8 @@ namespace Dune
     	return kr;
     }
 		
-    BrooksCoreyLaw(const Matrix2P& s, bool lin = false) 
-      : RelPerm_pc(s, false)
+    BrooksCoreyLaw(const Matrix2p<G,double>& s, bool lin = false) 
+      : RelPerm_pc<G>(s, false)
     {
     }
 
