@@ -34,7 +34,8 @@ namespace Dune
 		typedef LeafP0Function<G,DT,1> PermType;
 		typedef BlockVector<FieldVector<DT,1> > RepresentationType;
 		typedef typename G::Traits::template Codim<0>::Entity Entity;
-		typedef typename G::Traits::LeafIndexSet IS;
+		typedef typename G::LeafGridView GV;
+	    typedef typename GV::IndexSet IS;
 	    typedef Dune::MultipleCodimMultipleGeomTypeMapper<G,IS,ElementLayout> EM;
 	
 	public:
@@ -52,13 +53,13 @@ namespace Dune
 	 *  permeability at the cell center. 
 	 */
 		RandomPermeability(const G& g, const char* name = "permeab.dat", const bool create = true)
-		: perm(g), permloc(0), 
+		: grid(g), perm(g), permloc(0), 
 		  createNew(create), fileName(name), elementmapper(g, g.leafIndexSet())
 		{
-			typedef typename IS::template Codim<0>::template Partition<All_Partition>::Iterator Iterator;
+			typedef typename GV::template Codim<0>::Iterator Iterator;
 			    	
-			const IS& indexset(g.leafIndexSet());
-		    Iterator eendit = indexset.template end<0,All_Partition>();
+			const GV& gridview(grid.leafView());
+		    Iterator eendit = gridview.template end<0>();
 			
 		    char* pwd(getenv("PWD"));
 		    char startCommand[220];
@@ -103,7 +104,7 @@ namespace Dune
 			    strcpy(outfileName, simsetdir);
 			    strcat(outfileName, "/SIMKOR");
 			    std::ofstream outfile(outfileName);
-			    for (Iterator it = indexset.template begin<0,All_Partition>(); it != eendit; ++it)
+			    for (Iterator it = gridview.template begin<0>(); it != eendit; ++it)
 			    {
 			    	Dune::GeometryType gt = it->geometry().type(); 
 		
@@ -128,7 +129,7 @@ namespace Dune
 			strcat(concd, "/");
 			std::ifstream infile(strcat(concd, fileName));
 			std::cout << "Read permeability data from " << concd << std::endl;
-			for (Iterator it = indexset.template begin<0,All_Partition>(); it != eendit; ++it)
+			for (Iterator it = gridview.template begin<0>(); it != eendit; ++it)
 			{
 				int indexi = elementmapper.map(*it);
 				double dummy1, dummy2, permi;
@@ -153,7 +154,7 @@ namespace Dune
 		  return (*perm);
 		}
 	
-		const Dune::FieldMatrix<DT,n,n>& K (const Entity& e) 
+		Dune::FieldMatrix<DT,n,n>& K (const Entity& e) 
 		{
 			int elemId = elementmapper.map(e);
 			DT permE = (*perm)[elemId];
@@ -166,8 +167,8 @@ namespace Dune
 		
 	  void vtkout (const char* name, const G& grid) const 
 	  {
-	    Dune::VTKWriter<G, typename G::template Codim<0>::LeafIndexSet> 
-	      vtkwriter(grid, grid.leafIndexSet());
+	    Dune::VTKWriter<G, typename G::LeafGridView> 
+	      vtkwriter(grid.leafView());
 	    vtkwriter.addCellData(*perm, "absolute permeability");
 	    int size = (*perm).size();
 	    RepresentationType logPerm(size);
@@ -178,6 +179,7 @@ namespace Dune
 	  }
 	
 	private:
+		const G& grid; 
 		PermType perm;
 		Dune::FieldMatrix<DT,n,n> permloc;
 		const bool createNew;
@@ -213,7 +215,8 @@ namespace Dune
 		typedef BlockVector<FieldVector<DT,1> > RepresentationType;
 		typedef typename G::Traits::template Codim<0>::Entity Entity;
 		typedef typename G::Traits::template Codim<0>::EntityPointer EntityPointer;
-		typedef typename G::Traits::LevelIndexSet IS;
+		typedef typename G::LevelGridView GV;
+	    typedef typename GV::IndexSet IS;
 	    typedef Dune::MultipleCodimMultipleGeomTypeMapper<G,IS,ElementLayout> EM;
 	
 	public:
@@ -232,14 +235,14 @@ namespace Dune
 	 *  permeability at the cell center. 
 	 */
 		LevelRandomPermeability(const G& g, const int lev, const char* name = "permeab.dat", const bool create = true)
-		: perm(g,lev), permloc(0), level_(lev),
+		: grid(g), perm(g,lev), permloc(0), level_(lev),
 		  createNew(create), fileName(name), elementmapper(g, g.levelIndexSet(lev))
 		{
 			if (lev > g.maxLevel() ) DUNE_THROW(Dune::Exception,"Level specified for permeability data is higher than maximum grid level!");
-			typedef typename IS::template Codim<0>::template Partition<All_Partition>::Iterator Iterator;
+			typedef typename GV::template Codim<0>::Iterator Iterator;
 			    	
-			const IS& indexset(g.levelIndexSet(level() ));
-		    Iterator eendit = indexset.template end<0,All_Partition>();
+			const GV& gridview(grid.levelView(level()));
+		    Iterator eendit = gridview.template end<0>();
 			
 		    char* pwd(getenv("PWD"));
 		    char startCommand[220];
@@ -284,7 +287,7 @@ namespace Dune
 			    strcpy(outfileName, simsetdir);
 			    strcat(outfileName, "/SIMKOR");
 			    std::ofstream outfile(outfileName);
-			    for (Iterator it = indexset.template begin<0,All_Partition>(); it != eendit; ++it)
+			    for (Iterator it = gridview.template begin<0>(); it != eendit; ++it)
 			    {
 			    	Dune::GeometryType gt = it->geometry().type(); 
 		
@@ -309,7 +312,7 @@ namespace Dune
 			strcat(concd, "/");
 			std::ifstream infile(strcat(concd, fileName));
 			std::cout << "Read permeability data from " << concd << std::endl;
-			for (Iterator it = indexset.template begin<0,All_Partition>(); it != eendit; ++it)
+			for (Iterator it = gridview.template begin<0>(); it != eendit; ++it)
 			{
 				int indexi = elementmapper.map(*it);
 				double dummy1, dummy2, permi;
@@ -338,7 +341,7 @@ namespace Dune
 		/** \param e cell of level\f$ l \f$ or higher
 		 * 
 		 */
-		const Dune::FieldMatrix<DT,n,n>& K (const Entity& e) 
+		Dune::FieldMatrix<DT,n,n>& K (const Entity& e) 
 		{
 			int le = e.level();
 			int elemId;
@@ -365,8 +368,8 @@ namespace Dune
 		
 	  void vtkout (const char* name, const G& grid) const 
 	  {
-	    Dune::VTKWriter<G, typename G::template Codim<0>::LevelIndexSet> 
-	      vtkwriter(grid, grid.levelIndexSet(level_));
+	    Dune::VTKWriter<G, typename G::LevelGridView> 
+	      vtkwriter(grid.levelView(level_));
 	    int size = (*perm).size();
 	    vtkwriter.addCellData(*perm, "absolute permeability");
 	    RepresentationType logPerm(size);
@@ -382,6 +385,7 @@ namespace Dune
 	  }
 	  
 	private:
+		const G& grid;
 		const int level_;
 		PermType perm;
 		Dune::FieldMatrix<DT,n,n> permloc;

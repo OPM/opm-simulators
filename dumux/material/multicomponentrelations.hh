@@ -215,7 +215,7 @@ class CWaterAir : public MultiComp
 				molarMass1 = this->wettingPhase.molarMass();
 				molarMass2 = this->nonwettingPhase.molarMass();
 			}
-			if (phase == nPhase){			
+			else if (phase == nPhase){			
 				molarMass1 = this->nonwettingPhase.molarMass();
 				molarMass2 = this->wettingPhase.molarMass();
 			}
@@ -238,7 +238,7 @@ class CWaterAir : public MultiComp
 				molarMass1 = this->wettingPhase.molarMass();
 				molarMass2 = this->nonwettingPhase.molarMass();
 			}
-			if (phase == nPhase){			
+			else if (phase == nPhase){			
 				molarMass1 = this->nonwettingPhase.molarMass();
 				molarMass2 = this->wettingPhase.molarMass();
 			}
