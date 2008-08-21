@@ -12,14 +12,14 @@ namespace Dune
 {
 
 template<class G, class RT>
-class Homogeneoussoil:Matrix2p<G,RT>
+class Homogeneoussoil: public Matrix2p<G,RT>
 {
 public:
 	typedef typename G::Traits::template Codim<0>::Entity Entity;
 	typedef typename G::ctype DT;
 	enum {n=G::dimension, m=1};
 	
-	virtual const FieldMatrix<DT,n,n>& K (const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+	virtual FieldMatrix<DT,n,n> K (const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
 		return K_;
 	}

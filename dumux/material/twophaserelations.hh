@@ -47,23 +47,22 @@ namespace Dune
 		 *  \param a2 auxiliary relative permeability capillary pressure saturation relationship
 		 *  \param a3 auxiliary relative permeability capillary pressure saturation relationship
 		 */
-	  TwoPhaseRelations(const Matrix2p<G, RT>& s = *(new Homogeneoussoil<G, RT>), const Medium& wP = *(new UniformPhase), const Medium& nwP = *(new UniformPhase),
-	  RelPerm_pc<G>& a1 = (*new LinearLaw<G>),
-	  RelPerm_pc<G>& a2 = (*new LinearLaw<G>),
-	  RelPerm_pc<G>& a3 = (*new LinearLaw<G>))
-	  : wettingPhase(wP), nonwettingPhase(nwP), soil(s), linear_(lin), auxiliary1(a1), auxiliary2(a2), auxiliary3(a3),
+	  TwoPhaseRelations(Matrix2p<G, RT>& s = *(new Homogeneoussoil<G, RT>), Medium& wP = *(new UniformPhase), Medium& nwP = *(new UniformPhase)
+	  /*,RelPerm_pc<G>& a1 = (*new LinearLaw<G>(s, false)),
+	  RelPerm_pc<G>& a2 = (*new LinearLaw<G>(s, false)),
+	  RelPerm_pc<G>& a3 = (*new LinearLaw<G>(s, false))*/)
+	  : wettingPhase(wP), nonwettingPhase(nwP), soil(s), auxiliary1(*new LinearLaw<G>(s, false)), auxiliary2(*new LinearLaw<G>(s, false)), auxiliary3(*new LinearLaw<G>(s, false)),
 	    brookscorey(s, false), vangenuchten(s, false), linearlaw(s, false)
 	  {	 }
 	  
 	  virtual ~TwoPhaseRelations()
 	  {	  }
 		
-	  const Medium& wettingPhase; //!< contains the properties of the wetting phase 
-	  const Medium& nonwettingPhase; //!< contains the properties of the nonwetting phase 
-	  const Matrix2p<G, RT>& soil;
+	  Medium& wettingPhase; //!< contains the properties of the wetting phase 
+	  Medium& nonwettingPhase; //!< contains the properties of the nonwetting phase 
+	  Matrix2p<G, RT>& soil;
 	
 	protected:
-		bool linear_;
 		const BrooksCoreyLaw<G> brookscorey;
 		const VanGenuchtenLaw<G> vangenuchten;
 		const LinearLaw<G> linearlaw;
@@ -330,7 +329,7 @@ namespace Dune
 	    switch (soil.relPermFlag(x, e, xi))
 	    {
 	    case 0: 
-	    	return linerlaw.krn(saturationN, x, e, xi, T);
+	    	return linearlaw.krn(saturationN, x, e, xi, T);
 	    case 1:
 	    	return brookscorey.krn(saturationN, x, e, xi, T);
 	    case 2: 
@@ -351,7 +350,7 @@ namespace Dune
 	    switch (soil.relPermFlag(x, e, xi))
 	    {
 	    case 0: 
-	    	return linerlaw.kr(saturationW, x, e, xi, T);
+	    	return linearlaw.kr(saturationW, x, e, xi, T);
 	    case 1:
 	    	return brookscorey.kr(saturationW, x, e, xi, T);
 	    case 2: 

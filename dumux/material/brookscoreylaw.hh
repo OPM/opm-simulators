@@ -30,7 +30,7 @@ namespace Dune
   	typedef typename G::ctype DT;
   	enum {n=G::dimension, m=1};
     
-  	double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+  	double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
     {
       double Se = (saturationW - this->soil.Sr_w(x, e, xi, T))
       	/(1. - this->soil.Sr_w(x, e, xi, T) - this->soil.Sr_n(x, e, xi, T));
@@ -42,12 +42,12 @@ namespace Dune
       	return (p0*pow(Se, -1.0/lambda));
       else 
       {
-      	double dpCEps = dPdS(epsPC,283.15, 1e5);
+      	double dpCEps = dPdS(epsPC, x, e, xi, T);
       	return (dpCEps*(Se - epsPC) + p0*pow(epsPC, -1.0/lambda));
       }
     }
 	  
-    double dPdS (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+    double dPdS (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
     {
       double Swr = this->soil.Sr_w(x, e, xi, T);
       double Snr = this->soil.Sr_n(x, e, xi, T);
@@ -70,14 +70,14 @@ namespace Dune
       }
     }
 	  
-    double saturationW (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+    double saturationW (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
     {
     	double lambda = this->soil.paramRelPerm(x, e, xi, T)[0];
       double p0 = this->soil.paramRelPerm(x, e, xi, T)[1];
       return ((1 - this->soil.Sr_w(x, e, xi, T)) * pow(p0/pC, lambda) + this->soil.Sr_n(x, e, xi, T));
     }
 
-    double dSdP (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const 
+    double dSdP (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const 
     {
     	double lambda = this->soil.paramRelPerm(x, e, xi, T)[0];
       double p0 = this->soil.paramRelPerm(x, e, xi, T)[1];
@@ -85,7 +85,7 @@ namespace Dune
     }
 
 	  	  
-    double krw (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+    double krw (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
     {
       double Se = (saturationW - this->soil.Sr_w(x, e, xi, T))
       	/(1. - this->soil.Sr_w(x, e, xi, T) - this->soil.Sr_n(x, e, xi, T));
@@ -101,7 +101,7 @@ namespace Dune
     }
       
 	  
-    double krn (double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const 
+    double krn (double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const 
     {
       double Se = ((1.-saturationN) - this->soil.Sr_w(x, e, xi, T))
       	/(1. - this->soil.Sr_w(x, e, xi, T) - this->soil.Sr_n(x, e, xi, T));
@@ -115,7 +115,7 @@ namespace Dune
       return pow(1.-Se, 2) * ( 1. - pow(Se, exponent) );
     }
     
-    std::vector<double> kr (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+    std::vector<double> kr (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
     {
     	std::vector<double> kr(2);
     	double Srw = this->soil.Sr_w(x, e, xi, T);

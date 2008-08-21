@@ -31,7 +31,7 @@ namespace Dune
 	   *  \param xi position in local coordinates in e 
 	   *  \return the capillary pressur \f$ p_\text{c} (S_\text{w})\f$.
 	   */
-	  virtual double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const = 0;
+	  virtual double pC (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
 
 	  /*! \brief the derivative of capillary pressure w.r.t. the saturation 
 	   *
@@ -43,7 +43,7 @@ namespace Dune
 	   *  \param xi position in local coordinates in e 
 	   *  \return the derivative \f$\text{d}p_\text{c}/\text{d}S_\text{e}\f$
 	   */
-	  virtual double dPdS (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const = 0;
+	  virtual double dPdS (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
 	  
 	  /*! \brief the wetting phase saturation w.r.t. the capillary pressure 
 	   *
@@ -54,7 +54,7 @@ namespace Dune
 	   *  \param xi position in local coordinates in e 
 	   *  \return the wetting phase saturation 
 	   */
-	  virtual double saturationW (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const = 0;
+	  virtual double saturationW (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
 	  
 	  /*! \brief the derivative of the saturation w.r.t. the capillary pressure 
 	   *
@@ -65,7 +65,7 @@ namespace Dune
 	   *  \param xi position in local coordinates in e 
 	   *  \return the derivative \f$\text{d}S_w/\text{d}p_\text{c}\f$
 	   */
-	  virtual double dSdP (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const = 0;
+	  virtual double dSdP (double pC, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
 	  
 	  const bool isLinear() const 
 	  {

@@ -151,21 +151,25 @@ private:
 
 };
 
-class UniformPhase : Medium
+class UniformPhase : public Medium
 {
-	virtual double viscosity (double T = 0., double p = 0., double X = 0.)
+	virtual double viscosity (double T = 0., double p = 0., double X = 0.) const
 	{
 		return 1.;
 	}
 	
-	virtual double viscosity(double T = 0., double p = 0., double rho = 0., double X = 0)
+	virtual double viscosity(double T = 0., double p = 0., double rho = 0., double X = 0) const
 	{
 		return 1.;
 	}
 	
-	virtual double density (double T = 0., double p = 0., double X = 0.)
+	virtual double density (double T = 0., double p = 0., double X = 0.) const
 	{
 		return 1.;
+	}
+	
+	UniformPhase():Medium()
+	{
 	}
 };
 

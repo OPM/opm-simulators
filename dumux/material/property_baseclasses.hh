@@ -53,7 +53,7 @@ public:
  * w for the main (liquid) component and
  * a for the dissolved (gaseous) component.
  */
-class liquid_gl : Medium
+class liquid_gl : public Medium
 {
 public:
 	
@@ -294,7 +294,7 @@ private:
  * w for the dissolved (liquid) component and
  * a for the main (gaseous) component.
  */
-class gas_gl
+class gas_gl : public Medium
 {
 public:
   /** @brief dynamic viscosity in [kg / (m*s)]
@@ -528,7 +528,7 @@ public:
 	 * @param e codim 0 entity for which the value is sought
 	 * @param xi position in local coordinates in e
 	 */
-	virtual const FieldMatrix<DT,n,n>& K (const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const = 0;
+	virtual FieldMatrix<DT,n,n> K (const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const = 0;
 
 	/**@brief matrix porosity
 	 * @param x position in global coordinates
@@ -570,7 +570,7 @@ public:
 	 * @param xi position in local coordinates in e
 	 * @param sat wetting Phase saturation
 	 */	
-	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) = 0;
+	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) const = 0;
 	
 	/**@brief parameters for relative permeabilty models
 	 * @param x position in global coordinates
