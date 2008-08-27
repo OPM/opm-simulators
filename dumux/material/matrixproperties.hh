@@ -18,7 +18,7 @@ public:
 	typedef typename G::Traits::template Codim<0>::Entity Entity;
 	typedef typename G::ctype DT;
 	enum {n=G::dimension, m=1};
-	
+
 	virtual FieldMatrix<DT,n,n> K (const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
 		return K_;
@@ -32,7 +32,7 @@ public:
 	{
 		return 0;
 	}
-	
+
 	virtual double Sr_n(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
 	{
 		return 0;
@@ -46,7 +46,7 @@ public:
 						* 2700 /* density of granite */
 						* porosity(x, e, xi);
 	}
-	
+
 	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) const
 	{
 		static const double lWater = 0.6;
@@ -56,7 +56,7 @@ public:
 		double ldry = pow(lGranite, (1-poro));
 		return ldry + sqrt(sat) * (ldry - lsat);
 	}
-		
+
 	virtual std::vector<double> paramRelPerm(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
 	{
 		// example for Brooks-Corey parameters
@@ -65,24 +65,24 @@ public:
 		param[1] = 0.; // entry-pressure
 		return param;
 	}
-	
+
 	virtual int relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
-		return 0;
+		return 1;
 	}
-	
+
 	Homogeneoussoil():Matrix2p<G,RT>()
 	{
 		for(int i = 0; i < n; i++)
 			K_[i][i] = 1e-10;
 	}
-	
+
 	~Homogeneoussoil()
 	{}
-	
+
 private:
 	FieldMatrix<DT,n,n> K_;
-		
+
 };
 
 } // end namespace
