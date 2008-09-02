@@ -2,7 +2,6 @@
 #define DUNE_TWOPHASERELATIONS_HH
 
 #include <dumux/material/property_baseclasses.hh>
-#include <dumux/material/phaseproperties.hh>
 #include <dumux/material/relperm_pc_law.hh>
 #include <dumux/material/brookscoreylaw.hh>
 #include <dumux/material/vangenuchtenlaw.hh>
