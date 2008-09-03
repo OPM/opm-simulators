@@ -97,7 +97,7 @@ namespace Dune
 	  double mobN (double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T=283.15, double p=1e5) const
 	  {
 	    double viscosityN = nonwettingPhase.viscosity ( T, p, 0.);
-	    return krn(saturationW, x, e, xi, T) / viscosityN;
+	    return krn(saturationN, x, e, xi, T) / viscosityN;
 	  }
 
 	  /*! \brief Implements the total mobility/saturation relation.
