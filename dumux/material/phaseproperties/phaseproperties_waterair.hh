@@ -1,5 +1,5 @@
-#ifndef PHASEPROPERTIES_HH_
-#define PHASEPROPERTIES_HH_
+#ifndef PHASEPROPERTIES_WATERAIR_HH_
+#define PHASEPROPERTIES_WATERAIR_HH_
 
 #include <dumux/material/property_baseclasses.hh>
 #include <dumux/material/constrel/constrelair.hh>
@@ -94,9 +94,10 @@ public:
 		return constRelWater.enthalpy_water(T,p);
 	}
 
-	virtual double enthalpy(double T, double p, double Xw) const
+	virtual double enthalpy(double T, double p, double Xa) const
 	{
-		return 0;
+		if (T < 273.15) return 4000 * (T-273.15);
+		return constRelWater.enthalpy_water(T,p);
 	}
 
 	virtual double diffCoeff(double T, double p) const
