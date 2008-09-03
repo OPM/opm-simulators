@@ -147,7 +147,7 @@ namespace Dune
 	   *  \param p pressure
 	   *  \return the fractional flow functions in the order: wetting phase, nonwetting phase
 	   */
-	  double fractional (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T=283.15, double p=1e5) const
+	  std::vector<double> fractional (double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T=283.15, double p=1e5) const
 	  {
 	  	// phase viscosities
 	  	double viscosityW = wettingPhase.viscosity ( T, p, 0.);
