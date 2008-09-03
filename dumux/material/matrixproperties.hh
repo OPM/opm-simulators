@@ -67,9 +67,9 @@ public:
 		return param;
 	}
 
-	virtual int relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+	virtual typename Matrix2p<G,RT>::modelFlag relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
-		return 1;
+		return Matrix2p<G,RT>::brooks_corey;
 	}
 
 	Homogeneoussoil():Matrix2p<G,RT>()
@@ -141,9 +141,9 @@ public:
 		return param;
 	}
 
-	virtual int relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+	virtual typename Matrix2p<G,RT>::modelFlag relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
-		return 1;
+		return Matrix2p<G,RT>::brooks_corey;
 	}
 
 	HeterogeneousSoil(const G& g,const char* name = "permeab.dat", const bool create = true)
