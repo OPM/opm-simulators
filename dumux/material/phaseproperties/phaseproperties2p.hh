@@ -22,7 +22,7 @@ public:
 	: constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy)
 	{}
 
-	double viscosity (double T=283.15, double p=1e5, double X=1.) const
+	double viscosity (double T=283.15, double p=1e5, double X=1.0) const
 	{
 		if (constViscosity_)
 			return constViscosity_;
@@ -30,14 +30,7 @@ public:
 			return constRelWater.viscosity_water(T,p); //[kg/(ms)]
 	}
 
-	double viscosity (double T=283.15, double p=1e5, double rho=0., double X=1.) const
-	{
-		if (constViscosity_)
-			return constViscosity_;
-		else
-			return constRelWater.viscosity_water(T,p); //[kg/(ms)]
-	}
-	double density (double T=283.15, double p=1e5, double X=1.) const
+	double density (double T=283.15, double p=1e5, double X=1.0) const
 	{
 		if (constDensity_)
 			return constDensity_;
@@ -45,7 +38,7 @@ public:
 			return 1000.0; // assumed to be incompressible[kg/m^3]
 	}
 
-	double enthalpy (double T=283.15, double p=1e5) const
+	double enthalpy (double T=283.15, double p=1e5, double X = 1) const
 	{
 		if (constEnthalpy_)
 			return constEnthalpy_;
@@ -53,7 +46,7 @@ public:
 			return constRelWater.enthalpy_water(T,p);
 		}
 	}
-    double intEnergy( double T=283.15, double p=1e5) const
+    double intEnergy( double T=283.15, double p=1e5, double X = 1) const
     {
     	double u;
     	double rho_mass = density(T,p);
@@ -90,13 +83,6 @@ public:
 			return constRelAir.viscosity_air(T); //[kg/(ms)]
 	}
 
-	double viscosity ( double T=283.15, double p=1e5, double rho=0., double X=1.) const
-	{
-		if (constViscosity_)
-			return constViscosity_;
-		else
-			return constRelAir.viscosity_air(T); //[kg/(ms)]
-	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		if (constDensity_)
@@ -107,7 +93,7 @@ public:
 			return constRelAir.rho_idGG_mass(T,p,molarMassAir); // [kg/m^3]
 		}
 	}
-	double enthalpy (double T=283.15, double p=1e5) const
+	double enthalpy (double T=283.15, double p=1e5, double X = 1) const
 	{
 		if (constEnthalpy_)
 			return constEnthalpy_;
@@ -116,7 +102,7 @@ public:
 		}
 	}
 
-    double intEnergy( double T=283.15, double p=1e5) const
+    double intEnergy( double T=283.15, double p=1e5, double X = 1) const
     {
     	double u;
     	double rho_mass = density(T,p);
@@ -160,18 +146,7 @@ public:
 	{
 		return 0.1;
 	}
-	double viscosity ( double T=283.15, double p=1e5, double rho=0., double X=1.) const
-	{
-		if (constViscosity_)
-			return constViscosity_;
-		else {
-			double S;
-			S = Salinity();
-			return constRelBrine.viscosity_brine(T,S);
-		}
 
-//  		 return 2.535e-4; // [kg/(ms)]
-	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		if (constDensity_)
@@ -183,7 +158,7 @@ public:
 			return constRelBrine.mass_density_brine_CO2(T,p,S,x_CO2_w);
 		}
 	}
-	double enthalpy (double T=283.15, double p=1e5) const
+	double enthalpy (double T=283.15, double p=1e5, double X = 1) const
 	{
 		if (constEnthalpy_)
 			return constEnthalpy_;
@@ -194,7 +169,7 @@ public:
 		}
 	}
 
-	double intEnergy(double T=283.15, double p=1e5) const
+	double intEnergy(double T=283.15, double p=1e5, double X = 1) const
 	{
 		double intenergy;
 		intenergy = enthalpy(T,p);
@@ -216,7 +191,7 @@ public:
 	: constDensity_(constDensity), constViscosity_(constViscosity), constEnthalpy_(constEnthalpy)
 	{}
 
-	double viscosity ( double T=283.15, double p=1e5, double X=1.) const
+	double viscosity ( double T=283.15, double p=1e5, double X=1.0) const
 	{
 		if (constViscosity_)
 			return constViscosity_;
@@ -224,21 +199,14 @@ public:
 			return 1e-3;//800e-3;//[kg/(ms)]
 	}
 
-	double viscosity ( double T=283.15, double p=1e5, double rho=0., double X=1.) const
-	{
-		if (constViscosity_)
-			return constViscosity_;
-		else
-			return 1e-3;//800e-3;//[kg/(ms)]
-	}
-	double density ( double T=283.15, double p=1e5, double X=1.) const
+	double density ( double T=283.15, double p=1e5, double X=1.0) const
 	{
 		if (constDensity_)
 			return constDensity_;
 		else
 			return 1000.0;//820.0; // [kg/m^3]
 	}
-	double enthalpy (double T=283.15, double p=1e5) const
+	double enthalpy (double T=283.15, double p=1e5, double X = 1) const
 	{
 		if (constEnthalpy_)
 			return constEnthalpy_;
@@ -247,7 +215,7 @@ public:
 		}
 	}
 
-    double intEnergy( double T=283.15, double p=1e5) const
+    double intEnergy( double T=283.15, double p=1e5, double X = 1) const
     {
     	double u;
     	double rho_mass = density(T,p);
@@ -283,13 +251,6 @@ public:
 			return 1.0;//[kg/(ms)]
 	}
 
-	double viscosity ( double T=283.15, double p=1e5, double rho=0., double X=1.) const
-	{
-		if (constViscosity_)
-			return constViscosity_;
-		else
-			return 1.0;//[kg/(ms)]
-	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		if (constDensity_)
@@ -298,7 +259,7 @@ public:
 			return 1.0; // [kg/m^3]
 	}
 
-	double enthalpy (double T=283.15, double p=1e5) const
+	double enthalpy (double T=283.15, double p=1e5, double X = 1) const
 	{
 		if (constEnthalpy_)
 			return constEnthalpy_;
@@ -306,7 +267,7 @@ public:
 			return 1.0;
 		}
 	}
-    double intEnergy( double T=283.15, double p=1e5) const
+    double intEnergy( double T=283.15, double p=1e5, double X = 1) const
     {
     	double u;
     	double rho_mass = density(T,p);
@@ -341,13 +302,6 @@ public:
 			return 5.7e-4;//[kg/(ms)]
 	}
 
-	double viscosity ( double T=283.15, double p=1e5, double rho=0., double X=1.) const
-	{
-		if (constViscosity_)
-			return constViscosity_;
-		else
-			return 5.7e-4;//[kg/(ms)]
-	}
 	double density ( double T=283.15, double p=1e5, double X=1.) const
 	{
 		if (constDensity_)
@@ -355,7 +309,7 @@ public:
 		else
 			return 1460.0; // [kg/m^3]
 	}
-	double enthalpy (double T=283.15, double p=1e5) const
+	double enthalpy (double T=283.15, double p=1e5, double X = 1) const
 	{
 		if (constEnthalpy_)
 			return constEnthalpy_;
@@ -363,7 +317,7 @@ public:
 //			return 1.0;
 		}
 	}
-    double intEnergy( double T=283.15, double p=1e5) const
+    double intEnergy( double T=283.15, double p=1e5, double X = 1) const
     {
     	double u;
     	double rho_mass = density(T,p);
@@ -407,14 +361,14 @@ class CO2 : public MediumNonIsothermal
 			else
 				return constRelCO2.density(T,p);
 		}
-		double viscosity ( double T=432., double p=3.086e7, double rho=0., double X=1.) const
+		double viscosityCO2 ( double T=432., double p=3.086e7, double rho=0., double X=1.) const
 		{
 			if (constViscosity_)
 				return constViscosity_;
 			else
 				return constRelCO2.viscosity(T,p,rho);
 		}
-		double enthalpy ( double T=432., double p=3.086e7) const
+		double enthalpy ( double T=432., double p=3.086e7, double X = 1) const
 		{
 			if (constEnthalpy_)
 				return constEnthalpy_;
@@ -423,7 +377,7 @@ class CO2 : public MediumNonIsothermal
 			}
 		}
 
-        double intEnergy( double T=432, double p=3.086e7) const
+        double intEnergy( double T=432, double p=3.086e7, double X = 1) const
         {
         	double u;
         	double rho_mass = density(T,p);

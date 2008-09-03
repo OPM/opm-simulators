@@ -21,8 +21,9 @@ template<class G, class RT>
 class Matrix2p
 {
 public:
-	typedef typename G::ctype DT;
-	enum {n=G::dimension, m=2};
+typedef	typename G::ctype DT;
+	enum
+	{	n=G::dimension, m=2};
 	typedef typename G::Traits::template Codim<0>::Entity Entity;
 
 	//! provides flags for the relative permeability and capillary pressure model
@@ -56,7 +57,7 @@ public:
 	 * @param xi position in local coordinates in e
 	 * @param T temperature in [K]
 	 */
-	virtual double Sr_w(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
+	virtual double Sr_w(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T = 283.15) const = 0;
 
 	/**@brief Nonwetting phase residual saturation
 	 * @param x position in global coordinates
@@ -64,7 +65,7 @@ public:
 	 * @param xi position in local coordinates in e
 	 * @param T temperature in [K]
 	 */
-	virtual double Sr_n(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
+	virtual double Sr_n(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T = 283.15) const = 0;
 
 	/**@brief Matrix heat capacity in [kJ / (m^3 K)]
 	 * ATTENTION: define heat capacity per cubic meter! Be sure, that it corresponds to porosity!
@@ -73,8 +74,8 @@ public:
 	 * @param e codim 0 entity for which the value is sought
 	 * @param xi position in local coordinates in e
 	 */
-	 /* ATTENTION: define heat capacity per cubic meter! Be sure, that it corresponds to porosity!
-		 * Best thing will be to define heatCap = (specific heatCapacity of material) * density * porosity*/
+	/* ATTENTION: define heat capacity per cubic meter! Be sure, that it corresponds to porosity!
+	 * Best thing will be to define heatCap = (specific heatCapacity of material) * density * porosity*/
 	virtual double heatCap(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const = 0;
 
 	/**@brief Heat conductivity of matrix AND fluid phases [ W / (m * K)]
@@ -91,7 +92,7 @@ public:
 	 * @param xi position in local coordinates in e
 	 * @param T Temperature
 	 */
-	virtual std::vector<double> paramRelPerm(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const = 0;
+	virtual std::vector<double> paramRelPerm(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T = 283.15) const = 0;
 
 	/**@brief Flag for determining the relative permeability model
 	 * @param x position in global coordinates
@@ -103,7 +104,8 @@ public:
 		return 0;
 	}
 
-	virtual ~Matrix2p() {}
+	virtual ~Matrix2p()
+	{}
 };
 
 /**ingroup properties
@@ -112,13 +114,13 @@ public:
 class Medium
 {
 public:
-  /** @brief dynamic viscosity in [kg / (m*s)]
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   *  @param Xa mass fraction of dissolved component
-   * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
-   */
-  virtual double viscosity (double T, double p, double X) const = 0;
+	/** @brief dynamic viscosity in [kg / (m*s)]
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 *  @param Xa mass fraction of dissolved component
+	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
+	 */
+	virtual double viscosity (double T = 283.15, double p = 1e5, double X = 1) const = 0;
 
 	//! Dynamic viscosity in [kg / (m*s)]
 	/** by specification of the phase density, the internal density calculation can be avoided
@@ -127,34 +129,37 @@ public:
 	 *  @param rho Phase density [kg / m^3]
 	 *  @param X mass fraction of dissolved component
 	 */
-	virtual double viscosity(double T, double p, double rho, double X) const = 0; // [kg / (m*s)]
+	virtual double viscosityCO2(double T, double p, double rho, double X) const // [kg / (m*s)]
+	{
+		return 0;
+	}
 
-  /** @brief density
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   * @param X mass fraction of dissolved component
-   * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
-   */
-  virtual double density (double T, double p, double X) const = 0;
+	/** @brief density
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @param X mass fraction of dissolved component
+	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
+	 */
+	virtual double density (double T = 283.15, double p = 1e5, double X = 1) const = 0;
 };
 
 /** \ingroup properties
  * @brief base class for fluid properties including properties needed for the calculation of  non-isothermal processes
  */
-class MediumNonIsothermal: public Medium
+class MediumNonIsothermal : public Medium
 {
 public:
-  /** @brief enthalpy
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
-   */
-  virtual double enthalpy (double T=283.15, double p=1e3) const = 0;
+	/** @brief enthalpy
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
+	 */
+	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1) const = 0;
 
-  virtual double intEnergy(double T=283.15, double p=1e3) const =0;
+	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1) const =0;
 
-  virtual ~MediumNonIsothermal()
-  { }
+	virtual ~MediumNonIsothermal()
+	{}
 };
 
 /**\ingroup properties
@@ -165,34 +170,32 @@ public:
  * w for the main (liquid) component and
  * a for the dissolved (gaseous) component.
  */
-class Liquid_GL : public Medium
+class Liquid_GL : public MediumNonIsothermal
 {
 public:
 
-  /** @brief dynamic viscosity in [kg / (m*s)]
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   *  @param Xa mass fraction of dissolved component
-   * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
-   */
-  virtual double viscosity (double T, double p, double X) const = 0;
-
-	//! Dynamic viscosity in [kg / (m*s)]
-	/** by specification of the phase density, the internal density calculation can be avoided
-	 *  @param p pressure [Pa]
-	 *  @param T temperature [K]
-	 *  @param rho Phase density [kg / m^3]
-	 *  @param X mass fraction of dissolved component
+	/** @brief dynamic viscosity in [kg / (m*s)]
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 *  @param Xa mass fraction of dissolved component
+	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
 	 */
-	virtual double viscosity(double T, double p, double rho, double X) const = 0; // [kg / (m*s)]
+	virtual double viscosity (double T, double p, double X) const = 0;
 
-  /** @brief density
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   * @param X mass fraction of dissolved component
-   * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
-   */
-  virtual double density (double T, double p, double X) const = 0;
+	/** @brief density
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @param X mass fraction of dissolved component
+	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
+	 */
+	virtual double density (double T, double p, double X) const = 0;
+
+	/** @brief enthalpy
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
+	 */
+	virtual double enthalpy (double T, double p, double Xa) const = 0;
 
 	//! Specific internal energy in [N * m / kg]
 	/** @param p pressure [Pa]
@@ -215,7 +218,7 @@ public:
 
 	//! vapour pressure of liquid component in [Pa]
 	/** @param T temperature in [K]
-	*/
+	 */
 	virtual double p_vap(double T) const = 0; // [Pa]
 
 	//! Henry coefficient of component a [1 / Pa]
@@ -282,7 +285,6 @@ protected:
 	double M_a;
 };
 
-
 /**\ingroup properties
  * @brief Base class for the liquid phase of a gas liquid mixture
  * Base class for a liquid phase made up of two sorts of components:
@@ -309,14 +311,12 @@ class NLiquid_GL
 	 */
 	virtual double viscosity(double T, double p, FieldVector<double,(n_w + n_a)> X) = 0;
 
-	//! Dynamic viscosity in [kg / (m*s)]
-	/** by specification of the phase density, the internal density calculation can be avoided
-	 *  @param p pressure [Pa]
-	 *  @param T temperature [K]
-	 *  @param rho Phase density [kg / m^3]
-	 *  @param X phase composition: mass fractions of components
+	/** @brief enthalpy
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
 	 */
-	virtual double viscosity(double T, double p, FieldVector<double,(n_w + n_a)> X, double rho) = 0;
+	virtual double enthalpy (double T, double p, double Xa) const = 0;
 
 	//! Specific internal energy in [N * m / kg]
 	/** @param p pressure [Pa]
@@ -339,7 +339,7 @@ class NLiquid_GL
 
 	//! vapour pressure of liquid components in [Pa]
 	/** @param T temperature in [K]
-	*/
+	 */
 	virtual FieldVector<double, n_w> p_vap(double T) = 0; // [Pa]
 
 	//! Boiling point temperature of liquid components in [K]
@@ -396,8 +396,6 @@ private:
 	Dune::FieldVector<double,(n_w + n_a)> M_;
 };
 
-
-
 /**\ingroup properties
  * @brief Base class for the gas phase of a binary gas liquid mixture
  * Base class for a gaseous phase made up of two components, where one
@@ -406,33 +404,24 @@ private:
  * w for the dissolved (liquid) component and
  * a for the main (gaseous) component.
  */
-class Gas_GL : public Medium
+class Gas_GL : public MediumNonIsothermal
 {
 public:
-  /** @brief dynamic viscosity in [kg / (m*s)]
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   *  @param Xa mass fraction of dissolved component
-   * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
-   */
-  virtual double viscosity (double T, double p, double X) const = 0;
-
-	//! Dynamic viscosity in [kg / (m*s)]
-	/** by specification of the phase density, the internal density calculation can be avoided
-	 *  @param p pressure [Pa]
-	 *  @param T temperature [K]
-	 *  @param rho Phase density [kg / m^3]
-	 *  @param X mass fraction of dissolved component
+	/** @brief dynamic viscosity in [kg / (m*s)]
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 *  @param Xa mass fraction of dissolved component
+	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
 	 */
-	virtual double viscosity(double T, double p, double rho, double X) const = 0; // [kg / (m*s)]
+	virtual double viscosity (double T, double p, double X) const = 0;
 
-  /** @brief density
-   * @param T Temperature \f$ \left[ K \right] \f$
-   * @param p Pressure \f$ \left[ Pa \right] \f$
-   * @param X mass fraction of dissolved component
-   * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
-   */
-  virtual double density (double T, double p, double X) const = 0;
+	/** @brief density
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @param X mass fraction of dissolved component
+	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
+	 */
+	virtual double density (double T, double p, double X) const = 0;
 
 	//! Specific internal energy in [N * m / kg]
 	/** @param p pressure [Pa]
@@ -510,8 +499,6 @@ private:
 	static const double M_a = 1;
 };
 
-
-
 /**\ingroup properties
  * @brief Base class for the gaseous phase of a gas liquid mixture
  * Base class for a gaseous phase made up of two sorts of components:
@@ -537,15 +524,6 @@ class NGas_GL
 	 *  @param X phase composition: mass fractions of components
 	 */
 	virtual double viscosity(double T, double p, FieldVector<double,(n_w + n_a)> X) = 0;
-
-	//! Dynamic viscosity in [kg / (m*s)]
-	/** by specification of the phase density, the internal density calculation can be avoided
-	 *  @param p pressure [Pa]
-	 *  @param T temperature [K]
-	 *  @param rho Phase density [kg / m^3]
-	 *  @param X phase composition: mass fractions of components
-	 */
-	virtual double viscosity(double T, double p, FieldVector<double,(n_w + n_a)> X, double rho) = 0;
 
 	//! Specific internal energy in [N * m / kg]
 	/** @param p pressure [Pa]

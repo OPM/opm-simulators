@@ -103,12 +103,12 @@ public:
 		return 0.3;
 	}
 
-	virtual double Sr_w(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
+	virtual double Sr_w(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T = 283.15) const
 	{
 		return 0;
 	}
 
-	virtual double Sr_n(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
+	virtual double Sr_n(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T = 283.15) const
 	{
 		return 0;
 	}
@@ -132,7 +132,7 @@ public:
 		return ldry + sqrt(sat) * (ldry - lsat);
 	}
 
-	virtual std::vector<double> paramRelPerm(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
+	virtual std::vector<double> paramRelPerm(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T = 283.15) const
 	{
 		// example for Brooks-Corey parameters
 		std::vector<double> param(2);

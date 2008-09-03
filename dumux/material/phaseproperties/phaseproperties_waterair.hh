@@ -36,11 +36,6 @@ public:
 		return (v_w * X[0] + v_a * X[1]) / (X[0] + X[1]); // after Herning & Zipperer, 1936
 	}
 
-	virtual double viscosity(double T, double p, double Xw, double rho) const
-	{
-		return viscosity(p, T, Xw);
-	}
-
 	virtual double intEnergy(double T, double p, double Xw) const
 	{
 		return enthalpy(p,T,Xw) - p/density(p,T,Xw);
@@ -93,15 +88,15 @@ public:
 		return constRelWater.viscosity_water(T,p);
 	}
 
-	virtual double viscosity(double T, double p, double Xa, double rho) const
-	{
-		return constRelWater.viscosity_water(T,p);
-	}
-
 	virtual double intEnergy(double T, double p, double Xa) const
 	{
 		if (T < 273.15) return 4000 * (T-273.15);
 		return constRelWater.enthalpy_water(T,p);
+	}
+
+	virtual double enthalpy(double T, double p, double Xw) const
+	{
+		return 0;
 	}
 
 	virtual double diffCoeff(double T, double p) const
