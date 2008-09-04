@@ -63,7 +63,11 @@ public:
 		// example for Brooks-Corey parameters
 		std::vector<double> param(2);
 		param[0] = 2.; // lambda
-		param[1] = 0.; // entry-pressure
+		param[1] = 0.; // entry-pressures
+
+		if (x[0] > 150)
+			param[0] = 0.5;
+
 		return param;
 	}
 
@@ -138,6 +142,7 @@ public:
 		std::vector<double> param(2);
 		param[0] = 2.; // lambda
 		param[1] = 0.; // entry-pressure
+
 		return param;
 	}
 

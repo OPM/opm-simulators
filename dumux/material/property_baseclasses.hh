@@ -99,9 +99,9 @@ typedef	typename G::ctype DT;
 	 * @param e codim 0 entity for which the value is sought
 	 * @param xi position in local coordinates in e
 	 */
-	virtual int relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+	virtual modelFlag relPermFlag(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
-		return 0;
+		return linear;
 	}
 
 	virtual ~Matrix2p()

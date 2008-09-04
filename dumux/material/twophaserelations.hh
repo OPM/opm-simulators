@@ -3,9 +3,6 @@
 
 #include <dumux/material/property_baseclasses.hh>
 #include <dumux/material/relperm_pc_law.hh>
-#include <dumux/material/brookscoreylaw.hh>
-#include <dumux/material/vangenuchtenlaw.hh>
-#include <dumux/material/linearlaw.hh>
 
 /**
  * \author Jochen Fritz
