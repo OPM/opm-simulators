@@ -437,7 +437,7 @@ public:
 		if (constEnthalpy_) 
 			return constEnthalpy_;
 		else {
-//			return 1.0;
+			return 1.0;
 		}
 	}
 	double molarMass() const
