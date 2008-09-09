@@ -1,8 +1,8 @@
 #ifndef DUNE_MULTICOMPONENTRELATIONS_HH
-#define DUNE_MULTICOMPONENTRELATIONS_HH 
+#define DUNE_MULTICOMPONENTRELATIONS_HH
 
 #include <dumux/material/solubilityco2.hh>
-#include <dumux/material/properties.hh>
+#include <dumux/material/phaseproperties/phaseproperties_waterair.hh>
 
 /**
  * \ingroup material
@@ -19,45 +19,44 @@ namespace Dune
 class MultiComp
 {
 
-
 	public:
 		/*! \brief solubility of a component (water) in the non-wetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature
 		 *  \return the mass fraction of water in the non-wetting phase \f$ \left[ kg/kg \right] \f$
 		 */
 		virtual double xWN (const double pn, double T=283.15) = 0;
-		
+
 		/*! \brief solubility of a component (air) in the wetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature [K]
 		 *  \return mass fraction of gas in the wetting phase \f$ \left[ kg/kg \right] \f$
 		 */
 		virtual double xAW (const double pn, double T=283.15) = 0;
 
 		/*! \brief solubility of a component (air) in the wetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature [K]
 		 *  \param X_NaCl mass fraction of salt dissolved in the wetting phase
 		 *  \return mass fraction of gas in the wetting phase \f$ \left[ kg/kg \right] \f$
 		 */
 
 		virtual double xWNmolar (const double pn, double T=283.15) = 0;
-		
+
 		/*! \brief solubility of a component (air) in the wetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature [K]
 		 *  \return the mass fraction of water in the non-wetting phase \f$ \left[ mol/mol \right] \f$
 		 */
 		virtual double xAWmolar (const double pn, double T=283.15) = 0;
-		
+
 		/** @brief Henry coefficient
-		 * \param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 * \param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 * @param T Temperature \f$ \left[ K \right] \f$
 		 * @return Henry coefficient \f$ \left[ 1/Pa \right] \f$
 		 */
 		virtual double henry (double T=283.15) const = 0;
-	
+
 		/*! \brief Antoine equation for calculating the vapor pressure
 		 *  \param T temperature [K]
 		 *  \return vapor pressure [Pa]
@@ -79,25 +78,26 @@ class MultiComp
 		virtual double conversionMassToMoleFraction(double massfrac, int phase) const = 0;
 
 
-		MultiComp(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
-				: wettingPhase(wP), nonwettingPhase(nwP)
+		MultiComp(const Liquid_GL& wP = *(new Liq_WaterAir),
+				const Gas_GL& nwP = *(new Gas_WaterAir))
+				//: wettingPhase(wP), nonwettingPhase(nwP)
 		{	 }
 
 		virtual ~MultiComp()
 		{}
 
-		const Medium& wettingPhase; //!< contains the properties of the wetting phase 
-		const Medium& nonwettingPhase; //!< contains the properties of the nonwetting phase 
+//		const Liquid_GL& wettingPhase; //!< contains properties of the wetting phase
+//		const Gas_GL& nonwettingPhase; //!< contains properties of the nonwetting phase
 
 };
-		
-		
+
+
 class CWaterAir : public MultiComp
 {
 
 	public:
 		/*! \brief equation for calculating the mass fraction in the nonwetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature \f$ \left[ K \right] \f$
 		 *  \return mass fraction \f$ \left[ kg/kg \right] \f$
 		 */
@@ -105,18 +105,18 @@ class CWaterAir : public MultiComp
 		{
 			double pwsat;
 			double result;
-			
+
 			pwsat = vaporPressure(T);
 			result = pwsat / pn;
-				
+
 			result = conversionMoleToMassFraction(result, 1);
-				
+
 			return(result);
 		}
-	  
+
 
 		/*! \brief equation for calculating the mass fraction in the wetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature \f$ \left[ K \right] \f$
 		 *  \return mass fraction \f$ \left[ kg/kg \right] \f$
 		 */
@@ -125,7 +125,7 @@ class CWaterAir : public MultiComp
 			double pan;
 			double result;
 			double hagw;
-				
+
 			pan = pn * (1-xWNmolar(pn,T));
 			hagw = henry(T);
 			result = pan * hagw;
@@ -133,9 +133,9 @@ class CWaterAir : public MultiComp
 			result = conversionMoleToMassFraction(result, 0);
 			return(result);
 		}
-		
+
 		/*! \brief equation for calculating the mole fraction in the nonwetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature \f$ \left[ K \right] \f$
 		 *  \return mole fraction \f$ \left[ mol/mol \right] \f$
 		 */
@@ -143,15 +143,15 @@ class CWaterAir : public MultiComp
 		{
 			double pwsat;
 			double result;
-			
+
 			pwsat = vaporPressure(T);
 			result = pwsat / pn;
-				
+
 			return(result);
 		}
-		
+
 		/*! \brief equation for calculating the mole fraction in the wetting phase
-		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+		 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 		 *  \param T temperature \f$ \left[ K \right] \f$
 		 *  \return mole fraction \f$ \left[ mol/mol \right] \f$
 		 */
@@ -160,11 +160,11 @@ class CWaterAir : public MultiComp
 			double pan;
 			double result;
 			double hagw;
-				
+
 			pan = pn * (1-xWNmolar(pn,T));
 			hagw = henry(T);
 			result = pan * hagw;
-				
+
 			return(result);
 		}
 
@@ -176,7 +176,7 @@ class CWaterAir : public MultiComp
 		{
 			double celsius = T - 273.15;
 			double result = ((0.8942 + 1.47 * exp(-0.04394*celsius) )*1e-10);
-	
+
 			return (result); // [1/Pa]
 		}
 
@@ -186,19 +186,20 @@ class CWaterAir : public MultiComp
 		 */
 		double vaporPressure(double T=283.15) const
 		{
-			const double constA = 8.19621; 
+			const double constA = 8.19621;
 			const double constB = 1730.63;
 			const double constC = 233.426;
 
 			double celsius;
 			double exponent, psat;
-	
+
 			celsius = T - 273.15;
-	
+
 			exponent = constA - (constB / (celsius + constC));
-	
+
+
 			psat = pow (10.0, exponent) *100; //1mbar = 100Pa
-	
+
 			return(psat);
 		}
 
@@ -207,52 +208,56 @@ class CWaterAir : public MultiComp
 		double conversionMoleToMassFraction(double molefrac, int phase) const
 		{
 			enum {wPhase = 0, nPhase = 1};
-			
+
 			double result;
 			double molarMass1, molarMass2;
 
-			if (phase == wPhase){			
-				molarMass1 = this->wettingPhase.molarMass();
-				molarMass2 = this->nonwettingPhase.molarMass();
+			if (phase == wPhase){
+				molarMass1 = wettingPhase.molarMass_w();
+				molarMass2 = nonwettingPhase.molarMass_a();
 			}
-			else if (phase == nPhase){			
-				molarMass1 = this->nonwettingPhase.molarMass();
-				molarMass2 = this->wettingPhase.molarMass();
+			else if (phase == nPhase){
+				molarMass1 = this->nonwettingPhase.molarMass_a();
+				molarMass2 = this->nonwettingPhase.molarMass_w();
 			}
 
 			result = molefrac * molarMass1 / (molarMass1*molefrac + molarMass2*(1-molefrac));
-			
+
 			return (result);
-		}		
+		}
 
 		/** @brief converts mass fractions into mole fractions
 		 */
 		double conversionMassToMoleFraction(double massfrac, int phase) const
 		{
 			enum {wPhase = 0, nPhase = 1};
-			
+
 			double result;
 			double molarMass1, molarMass2;
 
-			if (phase == wPhase){			
-				molarMass1 = this->wettingPhase.molarMass();
-				molarMass2 = this->nonwettingPhase.molarMass();
+			if (phase == wPhase){
+				molarMass1 = wettingPhase.molarMass_w();
+				molarMass2 = nonwettingPhase.molarMass_a();
 			}
-			else if (phase == nPhase){			
-				molarMass1 = this->nonwettingPhase.molarMass();
-				molarMass2 = this->wettingPhase.molarMass();
+			else if (phase == nPhase){
+				molarMass1 = nonwettingPhase.molarMass_a();
+				molarMass2 = wettingPhase.molarMass_w();
 			}
 
 			result = massfrac * molarMass2 / (molarMass1*(1-massfrac) + molarMass2*massfrac);
-			
-			return (result);
-		}		
 
-		CWaterAir(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
-				: MultiComp(wP, nwP)
+			return (result);
+		}
+
+		CWaterAir(Liq_WaterAir& wP = *(new Liq_WaterAir),
+				  Gas_WaterAir& nwP = *(new Gas_WaterAir))
+				: MultiComp(wP, nwP), wettingPhase(wP), nonwettingPhase(nwP)
 		{	 }
 
-		
+		Liq_WaterAir& wettingPhase; //!< contains properties of the wetting phase
+		Gas_WaterAir& nonwettingPhase; //!< contains properties of the nonwetting phase
+
+
 };
 class CBrineCO2 : public MultiComp
 {
@@ -260,7 +265,7 @@ class CBrineCO2 : public MultiComp
 
 		public:
 			/*! \brief equation for calculating the mass fraction in the nonwetting phase
-			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 			 *  \param T temperature \f$ \left[ K \right] \f$
 			 *  \return mass fraction \f$ \left[ kg/kg \right] \f$
 			 */
@@ -270,10 +275,10 @@ class CBrineCO2 : public MultiComp
 
 				return(result);
 			}
-		  
+
 
 			/*! \brief equation for calculating the mass fraction in the wetting phase
-			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 			 *  \param T temperature \f$ \left[ K \right] \f$
 			 *  \return mass fraction \f$ \left[ kg/kg \right] \f$
 			 */
@@ -281,12 +286,12 @@ class CBrineCO2 : public MultiComp
 			{
 				double result;
 				double X_NaCl = 0.1;
-					
+
 				result = solco2.SolCO2inWater(T, pn, X_NaCl);
 				return result;
 			}
 			/*! \brief solubility of a component (air) in the wetting phase
-			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 			 *  \param T temperature [K]
 			 *  \param X_NaCl mass fraction of salt dissolved in the wetting phase
 			 *  \return mass fraction of gas in the wetting phase \f$ \left[ kg/kg \right] \f$
@@ -297,7 +302,7 @@ class CBrineCO2 : public MultiComp
 				return 0;
 			}
 			/*! \brief solubility of a component (air) in the wetting phase
-			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+			 *	\param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 			 *  \param T temperature [K]
 			 *  \return the mass fraction of water in the non-wetting phase \f$ \left[ mol/mol \right] \f$
 			 */
@@ -306,7 +311,7 @@ class CBrineCO2 : public MultiComp
 				return 0;
 			}
 			/** @brief Henry coefficient
-			 * \param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$ 
+			 * \param pn non-wetting phase pressure \f$ \left[ Pa \right] \f$
 			 * @param T Temperature \f$ \left[ K \right] \f$
 			 * @return Henry coefficient \f$ \left[ 1/Pa \right] \f$
 			 */
@@ -342,13 +347,14 @@ class CBrineCO2 : public MultiComp
 				return 0;
 			}
 
-			
-			
-		CBrineCO2(const Medium& wP = *(new Uniform), const Medium& nwP = *(new Uniform))
+
+
+		CBrineCO2(Liq_WaterAir& wP = *(new Liq_WaterAir),
+				  Gas_WaterAir& nwP = *(new Gas_WaterAir))
 				: MultiComp(wP, nwP)
 		{	 }
 
-		
+
 };
 
 }

@@ -276,7 +276,7 @@ public:
 		return x;
 	}
 
-	Liquid_GL() : M_w(1), M_a(1)
+	Liquid_GL() : M_w(1.0), M_a(1.0)
 	{
 	}
 
