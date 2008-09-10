@@ -13,7 +13,7 @@ namespace Dune
 {
 
 template<class G, class RT>
-class Homogeneoussoil: public Matrix2p<G,RT>
+class HomogeneousSoil: public Matrix2p<G,RT>
 {
 public:
 	typedef typename G::Traits::template Codim<0>::Entity Entity;
@@ -26,17 +26,17 @@ public:
 	}
 	virtual double porosity(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
 	{
-		return 1.;
+		return 0.3;
 	}
 
 	virtual double Sr_w(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
 	{
-		return 0;
+		return 0.;
 	}
 
 	virtual double Sr_n(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double T) const
 	{
-		return 0;
+		return 0.;
 	}
 
 	/* ATTENTION: define heat capacity per cubic meter! Be sure, that it corresponds to porosity!
@@ -76,13 +76,13 @@ public:
 		return Matrix2p<G,RT>::brooks_corey;
 	}
 
-	Homogeneoussoil():Matrix2p<G,RT>()
+	HomogeneousSoil():Matrix2p<G,RT>()
 	{
 		for(int i = 0; i < n; i++)
-			K_[i][i] = 1e-10;
+			K_[i][i] = 1e-12;
 	}
 
-	~Homogeneoussoil()
+	~HomogeneousSoil()
 	{}
 
 private:

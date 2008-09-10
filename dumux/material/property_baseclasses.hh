@@ -120,16 +120,16 @@ public:
 	 *  @param Xa mass fraction of dissolved component
 	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
 	 */
-	virtual double viscosity (double T = 283.15, double p = 1e5, double X = 1) const = 0;
+	virtual double viscosity (double T = 283.15, double p = 1e5, double X = 1.) const = 0;
 
-	//! Dynamic viscosity in [kg / (m*s)]
+	//! dynamic viscosity in [kg / (m*s)]
 	/** by specification of the phase density, the internal density calculation can be avoided
 	 *  @param p pressure [Pa]
 	 *  @param T temperature [K]
 	 *  @param rho Phase density [kg / m^3]
 	 *  @param X mass fraction of dissolved component
 	 */
-	virtual double viscosityCO2(double T, double p, double rho, double X) const // [kg / (m*s)]
+	virtual double viscosityCO2(double T, double p, double rho, double X = 1.) const // [kg / (m*s)]
 	{
 		return 0;
 	}
@@ -140,7 +140,26 @@ public:
 	 * @param X mass fraction of dissolved component
 	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
 	 */
-	virtual double density (double T = 283.15, double p = 1e5, double X = 1) const = 0;
+	virtual double density (double T = 283.15, double p = 1e5, double X = 1.) const = 0;
+
+	/** @brief enthalpy
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
+	 */
+	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1.) const
+	{ return 0; }
+
+	//! Specific internal energy in [N * m / kg]
+	/** @param p pressure [Pa]
+	 *  @param T temperature [K]
+	 *  @param X phase composition: mass fractions of components
+	 */
+	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1.) const
+	{ return 0; }
+
+	virtual ~Medium()
+	{}
 };
 
 /** \ingroup properties
@@ -154,9 +173,9 @@ public:
 	 * @param p Pressure \f$ \left[ Pa \right] \f$
 	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
 	 */
-	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1) const = 0;
+	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1.) const = 0;
 
-	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1) const =0;
+	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1.) const =0;
 
 	virtual ~MediumNonIsothermal()
 	{}
