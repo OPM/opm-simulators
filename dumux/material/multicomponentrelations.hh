@@ -6,7 +6,7 @@
 
 /**
  * \ingroup material
- * \defgroup properties multicomponent
+ * \defgroup properties
  * \author Klaus Mosthaf
  */
 
@@ -68,26 +68,22 @@ class MultiComp
 		 *  \param phase phase for which a conversion is to be done [-]
 		 *  \return mass fraction [kg/kg]
 		 */
-		virtual double conversionMoleToMassFraction(double massfrac, int phase) const = 0;
+		virtual double convertMoleToMassFraction(double massfrac, int phase) const = 0;
 
 		/*! \brief converts mass fractions into mole fractions
 		 *  \param massfrac mass fraction [kg/kg]
 		 *  \param phase phase for which a conversion is to be done [-]
 		 *  \return mole fraction [mol/mol]
 		 */
-		virtual double conversionMassToMoleFraction(double massfrac, int phase) const = 0;
+		virtual double convertMassToMoleFraction(double massfrac, int phase) const = 0;
 
 
 		MultiComp(const Liquid_GL& wP = *(new Liq_WaterAir),
 				const Gas_GL& nwP = *(new Gas_WaterAir))
-				//: wettingPhase(wP), nonwettingPhase(nwP)
 		{	 }
 
 		virtual ~MultiComp()
 		{}
-
-//		const Liquid_GL& wettingPhase; //!< contains properties of the wetting phase
-//		const Gas_GL& nonwettingPhase; //!< contains properties of the nonwetting phase
 
 };
 
@@ -109,7 +105,7 @@ class CWaterAir : public MultiComp
 			pwsat = vaporPressure(T);
 			result = pwsat / pn;
 
-			result = conversionMoleToMassFraction(result, 1);
+			result = convertMoleToMassFraction(result, 1);
 
 			return(result);
 		}
@@ -130,7 +126,7 @@ class CWaterAir : public MultiComp
 			hagw = henry(T);
 			result = pan * hagw;
 
-			result = conversionMoleToMassFraction(result, 0);
+			result = convertMoleToMassFraction(result, 0);
 			return(result);
 		}
 
@@ -205,7 +201,7 @@ class CWaterAir : public MultiComp
 
 		/** @brief converts mole fractions into mass fractions
 		 */
-		double conversionMoleToMassFraction(double molefrac, int phase) const
+		double convertMoleToMassFraction(double molefrac, int phase) const
 		{
 			enum {wPhase = 0, nPhase = 1};
 
@@ -228,7 +224,7 @@ class CWaterAir : public MultiComp
 
 		/** @brief converts mass fractions into mole fractions
 		 */
-		double conversionMassToMoleFraction(double massfrac, int phase) const
+		double convertMassToMoleFraction(double massfrac, int phase) const
 		{
 			enum {wPhase = 0, nPhase = 1};
 
@@ -249,13 +245,13 @@ class CWaterAir : public MultiComp
 			return (result);
 		}
 
-		CWaterAir(Liq_WaterAir& wP = *(new Liq_WaterAir),
-				  Gas_WaterAir& nwP = *(new Gas_WaterAir))
+		CWaterAir(Liquid_GL& wP = *(new Liq_WaterAir),
+				  Gas_GL& nwP = *(new Gas_WaterAir))
 				: MultiComp(wP, nwP), wettingPhase(wP), nonwettingPhase(nwP)
 		{	 }
 
-		Liq_WaterAir& wettingPhase; //!< contains properties of the wetting phase
-		Gas_WaterAir& nonwettingPhase; //!< contains properties of the nonwetting phase
+		Liquid_GL& wettingPhase; //!< contains properties of the wetting phase
+		Gas_GL& nonwettingPhase; //!< contains properties of the nonwetting phase
 
 
 };
@@ -332,7 +328,7 @@ class CBrineCO2 : public MultiComp
 			 *  \param phase phase for which a conversion is to be done [-]
 			 *  \return mass fraction [kg/kg]
 			 */
-			 double conversionMoleToMassFraction(double massfrac, int phase) const
+			 double convertMoleToMassFraction(double massfrac, int phase) const
 			{
 				return 0;
 			}
@@ -342,15 +338,15 @@ class CBrineCO2 : public MultiComp
 			 *  \param phase phase for which a conversion is to be done [-]
 			 *  \return mole fraction [mol/mol]
 			 */
-			 double conversionMassToMoleFraction(double massfrac, int phase) const
+			 double convertMassToMoleFraction(double massfrac, int phase) const
 			{
 				return 0;
 			}
 
 
 
-		CBrineCO2(Liq_WaterAir& wP = *(new Liq_WaterAir),
-				  Gas_WaterAir& nwP = *(new Gas_WaterAir))
+		CBrineCO2(Liquid_GL& wP = *(new Liq_WaterAir),
+				  Gas_GL& nwP = *(new Gas_WaterAir))
 				: MultiComp(wP, nwP)
 		{	 }
 
