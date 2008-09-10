@@ -28,25 +28,29 @@ public:
 
 	virtual double viscosity(double T, double p, double Xw=0.) const // [kg / (m*s)]
 	{
-		double v_a = constRelAir.viscosity_air (T); // see constrelair.hh
+		double v_a = constRelAir.viscosity_air(T); // see constrelair.hh
 		double v_w = constRelAir.visco_w_vap(T);    // see constrelair.hh
 		FieldVector<double,2> X(Xw); X[1] = (1-Xw);
 		X = X2x(X);
-		X[0] *= sqrt(M_w); X[1] *= sqrt(M_a);
+		X[0] *= sqrt(M_w);
+		X[1] *= sqrt(M_a);
 		return (v_w * X[0] + v_a * X[1]) / (X[0] + X[1]); // after Herning & Zipperer, 1936
 	}
 
 	virtual double intEnergy(double T, double p, double Xw=0.) const
 	{
-		return enthalpy(p,T,Xw) - p/density(p,T,Xw);
+		return enthalpy(T,p,Xw) - p/density(T,p,Xw);
 	}
 
 	virtual double enthalpy(double T, double p, double Xw=0.) const
 	{
 		double H_a = 1005 * (T - 273.15);
 		double H_w;
-		if (T < 273.15) H_w = constRelWater.sp_enthalpy_IAPWS2(273.15, p) + 4000 * (T - 273.15);
-		else H_w = constRelWater.sp_enthalpy_IAPWS2(T, p);
+		H_w = constRelWater.enthalpy_water(T,p);
+//		if (T < 273.15)
+//			H_w = constRelWater.sp_enthalpy_IAPWS2(273.15, p) + 4000 * (T - 273.15);
+//		else
+//			H_w = constRelWater.sp_enthalpy_IAPWS2(T, p);
 		return Xw * H_w + (1-Xw) * H_a;
 	}
 
