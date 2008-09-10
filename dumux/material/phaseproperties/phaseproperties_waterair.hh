@@ -20,13 +20,13 @@ namespace Dune
 class Gas_WaterAir : public Gas_GL
 {
 public:
-	virtual double density(double T, double p, double Xw) const // [kg / m^3]
+	virtual double density(double T, double p, double Xw=0.) const // [kg / m^3]
 	{
 		double Rsm = R * (Xw / M_w + (1-Xw) / M_a); // medium specific gas constant
 		return p / Rsm / T;
 	}
 
-	virtual double viscosity(double T, double p, double Xw) const // [kg / (m*s)]
+	virtual double viscosity(double T, double p, double Xw=0.) const // [kg / (m*s)]
 	{
 		double v_a = constRelAir.viscosity_air (T); // see constrelair.hh
 		double v_w = constRelAir.visco_w_vap(T);    // see constrelair.hh
@@ -36,12 +36,12 @@ public:
 		return (v_w * X[0] + v_a * X[1]) / (X[0] + X[1]); // after Herning & Zipperer, 1936
 	}
 
-	virtual double intEnergy(double T, double p, double Xw) const
+	virtual double intEnergy(double T, double p, double Xw=0.) const
 	{
 		return enthalpy(p,T,Xw) - p/density(p,T,Xw);
 	}
 
-	virtual double enthalpy(double T, double p, double Xw) const
+	virtual double enthalpy(double T, double p, double Xw=0.) const
 	{
 		double H_a = 1005 * (T - 273.15);
 		double H_w;
@@ -78,23 +78,23 @@ private:
 class Liq_WaterAir : public Liquid_GL
 {
 public:
-	virtual double density(double T, double p, double Xa) const // [kg / m^3]
+	virtual double density(double T, double p, double Xa=0.) const // [kg / m^3]
 	{
 		return constRelWater.mass_density_water_IAPWS(T, p);
 	}
 
-	virtual double viscosity(double T, double p, double Xa) const
+	virtual double viscosity(double T, double p, double Xa=0.) const
 	{
 		return constRelWater.viscosity_water(T,p);
 	}
 
-	virtual double intEnergy(double T, double p, double Xa) const
+	virtual double intEnergy(double T, double p, double Xa=0.) const
 	{
 		if (T < 273.15) return 4000 * (T-273.15);
 		return constRelWater.enthalpy_water(T,p);
 	}
 
-	virtual double enthalpy(double T, double p, double Xa) const
+	virtual double enthalpy(double T, double p, double Xa=0.) const
 	{
 		if (T < 273.15) return 4000 * (T-273.15);
 		return constRelWater.enthalpy_water(T,p);
