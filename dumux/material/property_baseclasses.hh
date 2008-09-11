@@ -1,4 +1,4 @@
-// $Id$ 
+// $Id$
 
 #ifndef PROPERTY_BASECLASSES
 #define PROPERTY_BASECLASSES
@@ -78,7 +78,10 @@ typedef	typename G::ctype DT;
 	 */
 	/* ATTENTION: define heat capacity per cubic meter! Be sure, that it corresponds to porosity!
 	 * Best thing will be to define heatCap = (specific heatCapacity of material) * density * porosity*/
-	virtual double heatCap(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const = 0;
+	virtual double heatCap(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi) const
+	{
+		DUNE_THROW(NotImplemented, "heat capacity function not implemented!");
+	}
 
 	/**@brief Heat conductivity of matrix AND fluid phases [ W / (m * K)]
 	 * @param x position in global coordinates
@@ -86,7 +89,10 @@ typedef	typename G::ctype DT;
 	 * @param xi position in local coordinates in e
 	 * @param sat wetting Phase saturation
 	 */
-	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) const = 0;
+	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) const
+	{
+		DUNE_THROW(NotImplemented, "heat conductivity function not implemented!");
+	}
 
 	/**@brief parameters for relative permeabilty models
 	 * @param x position in global coordinates
