@@ -1,4 +1,4 @@
-// $Id$ 
+// $Id$
 
 #ifndef DUNE_TWOPHASERELATIONS_HH
 #define DUNE_TWOPHASERELATIONS_HH
@@ -45,7 +45,7 @@ namespace Dune
 		 *  \param a2 auxiliary relative permeability capillary pressure saturation relationship
 		 *  \param a3 auxiliary relative permeability capillary pressure saturation relationship
 		 */
-	  TwoPhaseRelations(Matrix2p<G, RT>& s, Medium& wP , Medium& nwP
+	  TwoPhaseRelations(Matrix2p<G, RT>& s, Fluid& wP , Fluid& nwP
 	  /*,RelPerm_pc<G>& a1 = (*new LinearLaw<G>(s, false)),
 	  RelPerm_pc<G>& a2 = (*new LinearLaw<G>(s, false)),
 	  RelPerm_pc<G>& a3 = (*new LinearLaw<G>(s, false))*/)
@@ -60,8 +60,8 @@ namespace Dune
 	  	delete &(auxiliary3);
 	  }
 
-	  Medium& wettingPhase; //!< contains the properties of the wetting phase
-	  Medium& nonwettingPhase; //!< contains the properties of the nonwetting phase
+	  Fluid& wettingPhase; //!< contains the properties of the wetting phase
+	  Fluid& nonwettingPhase; //!< contains the properties of the nonwetting phase
 	  Matrix2p<G, RT>& soil;
 
 	protected:

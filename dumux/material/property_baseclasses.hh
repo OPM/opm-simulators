@@ -119,7 +119,7 @@ typedef	typename G::ctype DT;
 /**ingroup properties
  * @brief baseclass for fluid phases.
  */
-class Medium
+class Fluid
 {
 public:
 	/** @brief dynamic viscosity in [kg / (m*s)]
@@ -150,27 +150,28 @@ public:
 	 */
 	virtual double density (double T = 283.15, double p = 1e5, double X = 0.) const = 0;
 
-
-	virtual ~Medium()
-	{}
-};
-
-/** \ingroup properties
- * @brief base class for fluid properties including properties needed for the calculation of  non-isothermal processes
- */
-class MediumNonIsothermal : public Medium
-{
-public:
 	/** @brief enthalpy
 	 * @param T Temperature \f$ \left[ K \right] \f$
 	 * @param p Pressure \f$ \left[ Pa \right] \f$
 	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
 	 */
-	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1.) const = 0;
+	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1.) const
+	{
+		DUNE_THROW(NotImplemented, "enthalpy function not implemented!");
+	}
 
-	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1.) const =0;
+	/** @brief enthalpy
+	 * @param T Temperature \f$ \left[ K \right] \f$
+	 * @param p Pressure \f$ \left[ Pa \right] \f$
+	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
+	 */
+	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1.) const
+	{
+		DUNE_THROW(NotImplemented, "internal energy function not implemented!");
+	}
 
-	virtual ~MediumNonIsothermal()
+
+	virtual ~Fluid()
 	{}
 };
 
@@ -182,7 +183,7 @@ public:
  * w for the main (liquid) component and
  * a for the dissolved (gaseous) component.
  */
-class Liquid_GL : public MediumNonIsothermal
+class Liquid_GL : public Fluid
 {
 public:
 
@@ -416,7 +417,7 @@ private:
  * w for the dissolved (liquid) component and
  * a for the main (gaseous) component.
  */
-class Gas_GL : public MediumNonIsothermal
+class Gas_GL : public Fluid
 {
 public:
 	/** @brief dynamic viscosity in [kg / (m*s)]

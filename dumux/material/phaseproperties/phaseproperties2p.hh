@@ -1,4 +1,4 @@
-// $Id$ 
+// $Id$
 
 #ifndef DUNE_PHASEPROPERTIES2P_HH
 #define DUNE_PHASEPROPERTIES2P_HH
@@ -14,7 +14,7 @@ namespace Dune
 /** \ingroup properties
  * @brief Fluid properties of water
  */
-class Water : public MediumNonIsothermal
+class Water : public Fluid
 {
 	ConstrelWater constRelWater;
 
@@ -67,7 +67,7 @@ private:
 /** \ingroup properties
  * @brief Fluid properties of Air
  */
-class Air : public MediumNonIsothermal
+class Air : public Fluid
 {
 	ConstrelAir constRelAir;
 
@@ -121,7 +121,7 @@ private:
 };
 
 
-class Brine : public MediumNonIsothermal
+class Brine : public Fluid
 {
 	ConstrelBrine constRelBrine;
 
@@ -185,7 +185,7 @@ private:
    double constEnthalpy_;
 };
 
-class Oil : public MediumNonIsothermal
+class Oil : public Fluid
 {
 public:
 	Oil(double constDensity = 0,
@@ -237,7 +237,7 @@ private:
 /** \ingroup properties
  * @brief Uniform Fluid properties for testing and debugging.
  */
-class Uniform : public MediumNonIsothermal
+class Uniform : public Fluid
 {
 public:
 	Uniform(double constDensity = 0,
@@ -288,7 +288,7 @@ private:
 /** \ingroup properties
  * @brief Fluid properties of DNAPL
  */
-class DNAPL : public MediumNonIsothermal
+class DNAPL : public Fluid
 {
 public:
 	DNAPL(double constDensity = 0,
@@ -338,7 +338,7 @@ private:
 /** \ingroup properties
  * @brief Fluid properties of CO2
  */
-class CO2 : public MediumNonIsothermal
+class CO2 : public Fluid
 {
  ConstrelCO2 constRelCO2;
 
