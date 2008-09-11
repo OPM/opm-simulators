@@ -1,3 +1,5 @@
+// $Id$ 
+
 #ifndef MATRIXPROPERTIES
 #define MATRIXPROPERTIES
 
