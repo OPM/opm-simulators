@@ -120,7 +120,7 @@ public:
 	 *  @param Xa mass fraction of dissolved component
 	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
 	 */
-	virtual double viscosity (double T = 283.15, double p = 1e5, double X = 1.) const = 0;
+	virtual double viscosity (double T = 283.15, double p = 1e5, double X = 0.) const = 0;
 
 	//! dynamic viscosity in [kg / (m*s)]
 	/** by specification of the phase density, the internal density calculation can be avoided
@@ -129,7 +129,7 @@ public:
 	 *  @param rho Phase density [kg / m^3]
 	 *  @param X mass fraction of dissolved component
 	 */
-	virtual double viscosityCO2(double T, double p, double rho, double X = 1.) const // [kg / (m*s)]
+	virtual double viscosityCO2(double T, double p, double rho, double X = 0.) const // [kg / (m*s)]
 	{
 		return 0;
 	}
@@ -140,23 +140,8 @@ public:
 	 * @param X mass fraction of dissolved component
 	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
 	 */
-	virtual double density (double T = 283.15, double p = 1e5, double X = 1.) const = 0;
+	virtual double density (double T = 283.15, double p = 1e5, double X = 0.) const = 0;
 
-	/** @brief enthalpy
-	 * @param T Temperature \f$ \left[ K \right] \f$
-	 * @param p Pressure \f$ \left[ Pa \right] \f$
-	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
-	 */
-	virtual double enthalpy (double T=283.15, double p=1e5, double X = 1.) const
-	{ return 0; }
-
-	//! Specific internal energy in [N * m / kg]
-	/** @param p pressure [Pa]
-	 *  @param T temperature [K]
-	 *  @param X phase composition: mass fractions of components
-	 */
-	virtual double intEnergy(double T=283.15, double p=1e5, double X = 1.) const
-	{ return 0; }
 
 	virtual ~Medium()
 	{}
@@ -199,7 +184,7 @@ public:
 	 *  @param Xa mass fraction of dissolved component
 	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
 	 */
-	virtual double viscosity (double T, double p, double X) const = 0;
+	virtual double viscosity (double T, double p, double X = 0.) const = 0;
 
 	/** @brief density
 	 * @param T Temperature \f$ \left[ K \right] \f$
@@ -207,21 +192,21 @@ public:
 	 * @param X mass fraction of dissolved component
 	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
 	 */
-	virtual double density (double T, double p, double X) const = 0;
+	virtual double density (double T, double p, double X = 0.) const = 0;
 
 	/** @brief enthalpy
 	 * @param T Temperature \f$ \left[ K \right] \f$
 	 * @param p Pressure \f$ \left[ Pa \right] \f$
 	 * @return enthalpy \f$ \left[ \frac{J}{kg} \right] \f$
 	 */
-	virtual double enthalpy (double T, double p, double Xa) const = 0;
+	virtual double enthalpy (double T, double p, double Xa = 0.) const = 0;
 
 	//! Specific internal energy in [N * m / kg]
 	/** @param p pressure [Pa]
 	 *  @param T temperature [K]
 	 *  @param Xa mass fraction of dissolved component
 	 */
-	virtual double intEnergy(double T, double p, double Xa) const = 0; // [N * m / kg]
+	virtual double intEnergy(double T, double p, double Xa = 0.) const = 0; // [N * m / kg]
 
 	//! Diffusion coefficient for component a [m^2 / s]
 	/** @param p pressure [Pa]
@@ -432,7 +417,7 @@ public:
 	 *  @param Xa mass fraction of dissolved component
 	 * @return kinematic viscosity \f$ \left[ \frac{kg}{ms} \right] \f$
 	 */
-	virtual double viscosity (double T, double p, double X) const = 0;
+	virtual double viscosity (double T, double p, double X = 0.) const = 0;
 
 	/** @brief density
 	 * @param T Temperature \f$ \left[ K \right] \f$
@@ -440,21 +425,21 @@ public:
 	 * @param X mass fraction of dissolved component
 	 * @return density \f$ \left[ \frac{kg}{m^3} \right] \f$
 	 */
-	virtual double density (double T, double p, double X) const = 0;
+	virtual double density (double T, double p, double X = 0.) const = 0;
 
 	//! Specific internal energy in [N * m / kg]
 	/** @param p pressure [Pa]
 	 *  @param T temperature [K]
 	 *  @param Xw mass fraction of dissolved component
 	 */
-	virtual double intEnergy(double T, double p, double Xw) const = 0; // [N * m / kg]
+	virtual double intEnergy(double T, double p, double Xw = 0.) const = 0; // [N * m / kg]
 
 	//! Specific enthalpy in [N * m / kg]
 	/** @param p pressure [Pa]
 	 *  @param T temperature [K]
 	 *  @param Xw mass fraction of dissolved component
 	 */
-	virtual double enthalpy(double T, double p, double Xw) const = 0; // [N * m / kg]
+	virtual double enthalpy(double T, double p, double Xw = 0.) const = 0; // [N * m / kg]
 
 	//! Diffusion coefficient for component a [m^2 / s]
 	/** @param p pressure [Pa]
