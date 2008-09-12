@@ -1,4 +1,4 @@
-// $Id$ 
+// $Id$
 
 #ifndef DUNE_RELATIVEPERMEABILITY_HH
 #define DUNE_RELATIVEPERMEABILITY_HH
@@ -122,8 +122,8 @@ namespace Dune
 	  }
 
 	protected:
+		const Matrix2p<G,double>& soil;
 		const bool linear_;
-	  const Matrix2p<G,double>& soil;
 	};
 
 
