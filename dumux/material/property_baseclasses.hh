@@ -268,7 +268,7 @@ public:
 	//! Conversion from mole fractions to mass fractions
 	/** @param x mole fractions of the components. The first entry represents the liquid component
 	 */
-	virtual FieldVector<double,2> x2X(FieldVector<double,2> x) const
+	inline FieldVector<double,2> x2X(FieldVector<double,2> x) const
 	{
 		if (x[0]+x[1] != 1.) DUNE_THROW(Dune::MathError, "mole fractions do not sum up to unity!");
 		FieldVector<double,2> X;
@@ -280,7 +280,7 @@ public:
 	//! Conversion from mass fractions to mole fractions
 	/** @param X mass fractions of the components. The first entry represents the liquid component
 	 */
-	virtual FieldVector<double,2> X2x(FieldVector<double,2> X) const
+	inline FieldVector<double,2> X2x(FieldVector<double,2> X) const
 	{
 		if (X[0]+X[1] != 1.) DUNE_THROW(Dune::MathError, "mole fractions do not sum up to unity!");
 		FieldVector<double,2> x;
@@ -486,7 +486,7 @@ public:
 	//! Conversion from mole fractions to mass fractions
 	/** @param x mole fractions of the components. The first entry represents the liquid component
 	 */
-	FieldVector<double,2> x2X(FieldVector<double,2> x) const
+	inline FieldVector<double,2> x2X(FieldVector<double,2> x) const
 	{
 		if (x[0]+x[1] != 1.) DUNE_THROW(MathError, "mole fractions do not sum up to unity!");
 		FieldVector<double,2> X;
@@ -498,7 +498,7 @@ public:
 	//! Conversion from mass fractions to mole fractions
 	/** @param X mass fractions of the components. The first entry represents the liquid component
 	 */
-	FieldVector<double,2> X2x(FieldVector<double,2> X) const
+	inline FieldVector<double,2> X2x(FieldVector<double,2> X) const
 	{
 		if (X[0]+X[1] != 1.) DUNE_THROW(MathError, "mass fractions do not sum up to unity!");
 		FieldVector<double,2> x;
