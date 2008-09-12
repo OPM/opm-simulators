@@ -49,8 +49,10 @@ namespace Dune
 	  /*,RelPerm_pc<G>& a1 = (*new LinearLaw<G>(s, false)),
 	  RelPerm_pc<G>& a2 = (*new LinearLaw<G>(s, false)),
 	  RelPerm_pc<G>& a3 = (*new LinearLaw<G>(s, false))*/)
-	  : wettingPhase(wP), nonwettingPhase(nwP), soil(s), auxiliary1(*new LinearLaw<G>(s, false)), auxiliary2(*new LinearLaw<G>(s, false)), auxiliary3(*new LinearLaw<G>(s, false)),
-	    brookscorey(s, false), vangenuchten(s, false), linearlaw(s, false)
+	  : wettingPhase(wP), nonwettingPhase(nwP), soil(s),
+	    brookscorey(s, false), vangenuchten(s, false), linearlaw(s, false),
+	    auxiliary1(*new LinearLaw<G>(s, false)), auxiliary2(*new LinearLaw<G>(s, false)),
+	    auxiliary3(*new LinearLaw<G>(s, false))
 	  {	 }
 
 	  virtual ~TwoPhaseRelations()
