@@ -302,7 +302,7 @@ namespace Dune
 		 *  \param saturationW the saturation of the wetting phase
 		 *  \return the wetting phase relative permeability
 		 */
-		virtual double krw (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+		virtual double krw (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T=283.15) const
 		{
 		  switch (soil.relPermFlag(x, e, xi))
 		  {
@@ -328,7 +328,7 @@ namespace Dune
 		 *  \param saturationN the saturation of the nonwetting phase
 		 *  \return the nonwetting phase relative permeability
 		 */
-		virtual double krn (const double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+		virtual double krn (const double saturationN, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T=283.15) const
 		{
 	    switch (soil.relPermFlag(x, e, xi))
 	    {
@@ -349,7 +349,7 @@ namespace Dune
 	    }
 		}
 
-		virtual std::vector<double> kr (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T) const
+		virtual std::vector<double> kr (const double saturationW, const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, double T=283.15) const
 		{
 	    switch (soil.relPermFlag(x, e, xi))
 	    {
