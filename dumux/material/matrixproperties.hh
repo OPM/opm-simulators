@@ -1,4 +1,4 @@
-// $Id$ 
+// $Id$
 
 #ifndef MATRIXPROPERTIES
 #define MATRIXPROPERTIES
@@ -47,7 +47,7 @@ public:
 	{
 		return 	790 /* spec. heat cap. of granite */
 						* 2700 /* density of granite */
-						* porosity(x, e, xi);
+						* (1 - porosity(x, e, xi));
 	}
 
 	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) const
@@ -67,8 +67,8 @@ public:
 		param[0] = 2.; // lambda
 		param[1] = 0.; // entry-pressures
 
-		if (x[0] > 150)
-			param[0] = 0.5;
+//		if (x[0] > 150)
+//			param[0] = 0.5;
 
 		return param;
 	}
@@ -125,7 +125,7 @@ public:
 	{
 		return 	790 /* spec. heat cap. of granite */
 						* 2700 /* density of granite */
-						* porosity(x, e, xi);
+						* (1-porosity(x, e, xi));
 	}
 
 	virtual double heatCond(const FieldVector<DT,n>& x, const Entity& e, const FieldVector<DT,n>& xi, const double sat) const
