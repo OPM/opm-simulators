@@ -1,6 +1,6 @@
 # $id: $
 
-EPS_FILES = 
+EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 
 DOCSOURCE = dumux-handbook.tex navigation.html css.html
 
