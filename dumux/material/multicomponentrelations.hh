@@ -1,4 +1,4 @@
-// $Id$ 
+// $Id$
 
 #ifndef DUNE_MULTICOMPONENTRELATIONS_HH
 #define DUNE_MULTICOMPONENTRELATIONS_HH
@@ -105,7 +105,7 @@ class CWaterAir : public MultiComp
 			double result;
 
 			pwsat = vaporPressure(T);
-			result = pwsat / pn;
+			result = pwsat / pn; //xWNmolar
 
 			result = convertMoleToMassFraction(result, 1);
 
@@ -126,7 +126,7 @@ class CWaterAir : public MultiComp
 
 			pan = pn * (1-xWNmolar(pn,T));
 			hagw = henry(T);
-			result = pan * hagw;
+			result = pan * hagw; //xAWmolar
 
 			result = convertMoleToMassFraction(result, 0);
 			return(result);
@@ -211,15 +211,15 @@ class CWaterAir : public MultiComp
 			double molarMass1, molarMass2;
 
 			if (phase == wPhase){
-				molarMass1 = wettingPhase.molarMass_w();
-				molarMass2 = nonwettingPhase.molarMass_a();
+				molarMass1 = wettingPhase.molarMass_a();
+				molarMass2 = wettingPhase.molarMass_w();
 			}
 			else if (phase == nPhase){
-				molarMass1 = this->nonwettingPhase.molarMass_a();
-				molarMass2 = this->nonwettingPhase.molarMass_w();
+				molarMass1 = nonwettingPhase.molarMass_w();
+				molarMass2 = nonwettingPhase.molarMass_a();
 			}
 
-			result = molefrac * molarMass1 / (molarMass1*molefrac + molarMass2*(1-molefrac));
+			result = molefrac * molarMass2 / (molarMass2*molefrac + molarMass1*(1-molefrac));
 
 			return (result);
 		}
@@ -234,15 +234,15 @@ class CWaterAir : public MultiComp
 			double molarMass1, molarMass2;
 
 			if (phase == wPhase){
-				molarMass1 = wettingPhase.molarMass_w();
-				molarMass2 = nonwettingPhase.molarMass_a();
-			}
-			else if (phase == nPhase){
-				molarMass1 = nonwettingPhase.molarMass_a();
+				molarMass1 = wettingPhase.molarMass_a();
 				molarMass2 = wettingPhase.molarMass_w();
 			}
+			else if (phase == nPhase){
+				molarMass1 = nonwettingPhase.molarMass_w();
+				molarMass2 = nonwettingPhase.molarMass_a();
+			}
 
-			result = massfrac * molarMass2 / (molarMass1*(1-massfrac) + molarMass2*massfrac);
+			result = massfrac * molarMass1 / (molarMass2*(1-massfrac) + molarMass1*massfrac);
 
 			return (result);
 		}
