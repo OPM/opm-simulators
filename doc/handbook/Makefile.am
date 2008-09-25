@@ -1,8 +1,8 @@
 # $id: $
 
-EPS_FILES = EPS/tutorial-problemconfiguration.eps 
+#EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 
-DOCSOURCE = dumux-handbook.tex navigation.html css.html
+DOCSOURCE = dumux-handbook.tex intro.tex navigation.html css.html
 
 MAINDOCS = dumux-handbook.dvi dumux-handbook.pdf dumux-handbook.ps
 
@@ -14,7 +14,8 @@ if TEX4HT
  HTDOCS =  navigation.html css.html dumux-handbook.html
 endif
 
-EXTRA_DIST = dumux-handbook.pdf Makefile.dist.in Makefile.dist.am
+EXTRA_DIST = dumux-handbook.pdf 
+#Makefile.dist.in Makefile.dist.am
 
 if BUILD_DOCS
 if CONVERT
@@ -51,9 +52,9 @@ dumux-handbook.html:  $(DOCSOURCE) dune.cfg tex4ht.env
 	$(T4HT) dumux-handbook.tex
 	$(TEX) dumux-handbook.tex
 
-dist-hook:
-	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
-	sed $(srcdir)/Makefile.dist.in -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.in
+#dist-hook:
+#	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
+#	sed $(srcdir)/Makefile.dist.in -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.in
 
 EXTRA_TEXINPUTS:=$(top_srcdir)
 

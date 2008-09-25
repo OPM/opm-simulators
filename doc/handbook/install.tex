@@ -1,0 +1,57 @@
+\section{Installation} 
+
+For the installation of DuMu$^\text{x}$, the following steps have to be performed.  
+
+\paragraph{Checkout of the core modules}
+Since we always want to be up to date with the latest changes in DUNE, 
+we decided to use the developers version of the core modules 
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-disc}, 
+and \texttt{dune-grid-howto}. The checkout has to be performed as described on 
+the DUNE webpage, \cite{DUNE-HP}: 
+\begin{itemize}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/trunk dune-common}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid/trunk dune-grid}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-istl/trunk dune-istl}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-disc/trunk dune-disc}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid-howto/trunk dune-grid-howto}
+\end{itemize} 
+
+\paragraph{Checkout of DuMu$^\text{x}$ and external modules} 
+
+First of all, you need to ask one of the IWS system administrators to 
+add your account to the group \texttt{svndune}. 
+If you are working on a LH2 computer, you then can checkout DuMu$^\text{x}$ 
+and the external modules via 
+\begin{itemize}
+\item \texttt{svn checkout svn+ssht://luftig/home/svn/DUMUX/dune-mux/trunk dune-mux}
+\item \texttt{svn checkout svn+ssht://luftig/home/svn/DUMUX/dune-subgrid/trunk dune-subgrid}
+\item \texttt{svn checkout svn+ssht://luftig/home/svn/DUMUX/external/trunk external}
+\end{itemize} 
+If you want to checkout from outside LH2, you first need to establish a tunnel. 
+To this end, you need to add once 
+\begin{center}
+\texttt{ssht = ssh -p 2022 -l login -o HostKeyAlias=luftig.iws.uni-stuttgart.de} 
+\end{center}
+to the file \texttt{\$HOME/.subversion/config}, with \texttt{login} replaced 
+by your actual IWS login name. 
+The tunnel then needs to be initialized every time you want 
+to connect to the repository by 
+\begin{center}
+\texttt{ssh -Nf -L 2022:luftig.iws.uni-stuttgart.de:22 login@login1.iws.uni-stuttgart.de}.
+\end{center}
+Then, you can checkout everything as described above, if you replace \texttt{luftig} 
+by \texttt{localhost}. 
+
+\paragraph{Build the external modules} 
+The external modules consist of Alberta, ALUGrid, UG, GotoBLAS, and Paraview. 
+To install them all, execute the script \texttt{installXXbit.sh} in the folder \texttt{external}. 
+If you like to only install some of the external software, you can copy the corresponding 
+parts of the script and paste them to the command line. 
+Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
+
+\paragraph{Build DUNE and DuMu$^\text{x}$}
+Type in the folder \texttt{DUMUX}: 
+\begin{center}
+\texttt{./dune-common/bin/dunecontrol --opts=dune-mux/debug.opts all}
+\end{center}
+
