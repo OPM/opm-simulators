@@ -102,13 +102,8 @@ Listing \ref{tutorial-coupled:tutorialproblem}) includes five types of functions
  \item an initial condition is called \textbf{initial}.
 \end{itemize}
 
-All different function types have to be called with three different argum
-ents. The first one (\texttt{x}) is a vector including the global coordin
-ates of the current entity (can be an element, vertex, etc.), the second
-one (\texttt{e}) is the entity itself and the third one is a vector inclu
-ding the local coordinates of the current entity. Thus, the return of the
- functions, which can be a boundary value, an initial value, a source/sin
-k, etc., can be defined depending on the position in the domain.
+All different function types have to be called with three different arguments. The first one (\texttt{x}) is a vector including the global coordinates of the current entity (can be an element, vertex, etc.), the second
+one (\texttt{e}) is the entity itself and the third one is a vector including the local coordinates of the current entity. Thus, the return of the functions, which can be a boundary value, an initial value, a source/sink, etc., can be defined depending on the position in the domain.
 
 The first function defined in the problem class \texttt{TutorialProblemCoupled} is the function \texttt{q} (line \ref{tutorial-coupled:q}). It returns a source or a sink term for the pressure equation.
 
