@@ -6,7 +6,7 @@ For the installation of DuMu$^\text{x}$, the following steps have to be performe
 Since we always want to be up to date with the latest changes in DUNE, 
 we decided to use the developers version of the core modules 
 \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-disc}, 
-and \texttt{dune-grid-howto}. The checkout has to be performed as described on 
+and \texttt{dune-grid-howto}. First, create a directory where all the DUNE modules will be stored in. Then, enter the previously created folder. The checkout has to be performed as described on 
 the DUNE webpage, \cite{DUNE-HP}: 
 \begin{itemize}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/trunk dune-common}
@@ -23,9 +23,9 @@ add your account to the group \texttt{svndune}.
 If you are working on a LH2 computer, you then can checkout DuMu$^\text{x}$ 
 and the external modules via 
 \begin{itemize}
-\item \texttt{svn checkout svn+ssht://luftig/home/svn/DUMUX/dune-mux/trunk dune-mux}
-\item \texttt{svn checkout svn+ssht://luftig/home/svn/DUMUX/dune-subgrid/trunk dune-subgrid}
-\item \texttt{svn checkout svn+ssht://luftig/home/svn/DUMUX/external/trunk external}
+\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-mux/trunk dune-mux}
+\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-subgrid/trunk dune-subgrid}
+\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
 \end{itemize} 
 If you want to checkout from outside LH2, you first need to establish a tunnel. 
 To this end, you need to add once 
