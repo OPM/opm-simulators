@@ -32,8 +32,9 @@ To this end, you need to add once
 \begin{center}
 \texttt{ssht = ssh -p 2022 -l login -o HostKeyAlias=luftig.iws.uni-stuttgart.de} 
 \end{center}
-to the file \texttt{\$HOME/.subversion/config}, with \texttt{login} replaced 
-by your actual IWS login name. 
+with \texttt{login} replaced 
+by your actual IWS login name, to the section \texttt{[tunnels]} of the 
+file \texttt{\$HOME/.subversion/config}, 
 The tunnel then needs to be initialized every time you want 
 to connect to the repository by 
 \begin{center}
