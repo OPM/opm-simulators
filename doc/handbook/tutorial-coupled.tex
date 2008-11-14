@@ -28,6 +28,14 @@ The problem that is solved in this tutorial is illustrated in figure \ref{tutori
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-coupled:problemfigure}
 \end{figure}
 
+The equations that are solved here are the mass balances of oil and water: \begin{equation}\label{massbalancewater}
+\frac {\partial (\phi \, S_{w}\, \rho_{w})}{\partial t} + \nabla \cdot ( \rho_{w} \, \frac{\mathbf{K} \, kr_w}{\mu_{w}} (\nabla p - \rho_{w}\textbf{g})) - q = 0
+\end{equation}
+
+\begin{equation}\label{massbalanceoil}
+\frac {\partial (\phi \, S_{o}\, \rho_{o})}{\partial t} + \nabla \cdot ( \rho_{o} \, \frac{\mathbf{K} \, kr_o}{\mu_{o}} (\nabla p - \rho_{o}\textbf{g})) - q = 0                                                                      \end{equation}
+
+
 Listing \ref{tutorial-coupled:mainfile} shows the main file \texttt{tutorial\_coupled.cc} for the coupled twophase model. This file needs to be executed to solve the problem described above. The main file can be found in the directory \texttt{/dune-mux/test/tutorial}.
 
 \begin{lst}[File dune-mux/test/tutorial/tutorial\_coupled.cc]\label{tutorial-coupled:mainfile} \mbox{}
@@ -119,6 +127,90 @@ in line \ref{tutorial-coupled:J} a function returning the \textit{Neumann} bound
 Finally, the function \texttt{initial} is defined in line \ref{tutorial-coupled:initial}. This function returns the initial values for the pressure and the
 saturation.
 
-\subsection{Exercise}
-TODO: give some exercises
+\subsection{Exercises}
+\label{exercises_coupled}
+The following exercises will give you the opportunity to learn how you can change soil parameters, boundary conditions and fluid properties in \Dumux.
 
+\subsubsection{Exercise 1}
+\renewcommand{\labelenumi}{\alph{enumi})}
+For Exercise 1 you only have to make some small changes in the tutorial files.
+To get an impression what the results should look like you can first run the original version of the fully-coupled tutorial model by typing  \texttt{./tutorial-coupled}. For the visualisation with paraview please refer to \ref{quick-start-guide}.
+For each exercise you can find the output file of the last timestep i.e. $ t = 10^8 s$ in the directory \texttt{/dune-mux/dumux}-\texttt{/tutorial/Results\_Coupled/Exercise1}.
+\begin{enumerate}
+\item \textbf{Changing the Model Domain and the Boundary Conditions} \\
+Change the size of the model domain so that you get a rectangular domain
+with x = 400 m and y = 400 and $\Delta \text{x} = \Delta \text{y} = 20$. \\
+Change the boundary conditions in the file \texttt{tutorialproblem\_coupled.hh} so that water enters from the bottom and oil is extracted from the top boundary. The right and the left boundary should be closed for water and oil fluxes.  \\
+Compile the main file by typing \texttt{make tutorial\_coupled} and run the model.
+
+
+\item \textbf{Changing Fluids} \\
+Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to change the file \texttt{tutorial\_coupled.cc}. If you want to take a closer look how the fluid classes are defined and which fluids are already available please open the file \texttt{phaseproperties2p.hh} in the directory
+\texttt{/dune-mux/dumux}-\texttt{/material/phaseproperties}.
+% to make people take a close look into the file phaseproperties2p.hh:
+% give the viscosity values of dnapl and oil
+% try to use a dnapl with a constant density of .. and a constant viscosity of ..
+
+\item \textbf{Changing Constitutive Relationships} \\
+Use a Brooks-Corey law with $\lambda$ = 2 and enty pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorial\_soilproperties\_coupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material}.  
+The available relative permeability and capillary pressure functions are defined in the file \texttt{/dune-mux/dumux}-\texttt{/material/relperm\_pc\_law}.
+ 
+\item \textbf{Heterogeneities}  \\
+Set up a model domain with the soil properties given in Figure \ref{exercise1_d}
+
+\begin{figure}[h]
+\psfrag{K1 =}{K $= 10^{-8}\text{ m}^2$}
+\psfrag{phi1 =}{$\phi = 0.15$}
+\psfrag{K2 =}{\textcolor{white}{K $= 10^{-9}\text{ m}^2$}}
+\psfrag{phi2 =}{\textcolor{white}{$\phi = 0.3$}}
+\psfrag{600 m}{600 m}
+\psfrag{300 m}{300 m}
+\centering
+\includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
+\caption{Exercise 1d: Set-up of a model domain a heterogeneity}\label{exercise1_d}
+\end{figure}
+
+\end{enumerate}
+
+\subsubsection{Exercise 2}
+For this exercise you should create a new proplem file according to the file \texttt{tutorialproblem\_coupled.hh} and a new soil property file according to the file \texttt{tutorial\_soilproperties\_coupled.hh}. These files need to be included in the file \texttt{tutorial\_coupled.cc}.\\
+The new soil file should contain the definition of a new soil class e.g. SoilEx2. Make sure that you also adjust the preprocessor commands (e.g. change TUTORIAL\_SOILPROPERTIES to TUTORIAL\_SOILEX2). 
+The new problem file should contain the definition of a new problem class e.g. ProblemEx2. Here you also need to adjust the preprocessor commands. 
+Replace the classes \texttt{TutorialSoil} and \texttt{TutorialProblemCoupled} by the the new classes you just created. \\
+Now, set up a model that describes the processes given in the Figures \ref{ex2_Domain} and \ref{ex2_BC}. Initially the domain is fully
+saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa.
+
+\begin{figure}[h]
+\psfrag{K1}{K $= 10^{-7}\text{ m}^2$}
+\psfrag{phi1}{$\phi = 0.2$}
+\psfrag{Lin}{Linear Law}
+\psfrag{K2}{K $= 10^{-9}\text{ m}^2$}
+\psfrag{phi2}{$\phi = 0.15$}
+\psfrag{BC1}{Brooks Corey Law} 
+\psfrag{BC2}{$\lambda = 1.8$, $p_b = 0.0$}
+\psfrag{H1y}{50 m}
+\psfrag{H2y}{15 m}
+\psfrag{H3y}{20 m}
+\psfrag{L1x}{100 m}
+\psfrag{L2x}{50 m}
+\psfrag{L3x}{25 m}
+\centering
+\includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Domain.eps}
+\caption{Set-up of the model domain and the soil parameters}\label{ex2_Domain}
+\end{figure}
+
+\begin{figure}[h]
+\psfrag{pw}{$p_w = 5 \times 10^5$ \text{Pa}}
+\psfrag{S}{$S_n = 1.0$}
+\psfrag{qw}{$q_w = 2 \time 10^{-4}$ [kg/$\text{m}^2$s]}
+\psfrag{qo}{$q_n = 0.0$ [kg/$\text{m}^2$s]}
+\psfrag{no flow}{no flow}
+\centering
+\includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Boundary.eps}
+\caption{Boundary Conditions}\label{ex2_BC}
+\end{figure}
+
+%\subsubsection{Exercise 3}
+%Create a file called new\_fluid.hh and implement a new fluid class. This new fluid class should be derived from the base class Fluid ...
+%You can implement your fluid class according to the fluids implemented in the file ...phaseproperties2p.hh.
+%Use the following properties for your new fluid and run the model of Exercise 2 with water and new fluid. 
