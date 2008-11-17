@@ -95,18 +95,18 @@ namespace Api
                            const CapPressureParams &micParams,
                            const CapPressureParams &mdcParams)
             : TwophaseSatState(Swr, Snr),
-              _micParams(micParams),
-              _mdcParams(mdcParams)
+              micParams_(micParams),
+              mdcParams_(mdcParams)
             {
                 Api::require<Api::ParkerLenhardState>(*this);
 
-                _Snrei = 0;
-                _mdc = new ScanningCurve();
-                _pisc = _csc = NULL;
+                Snrei_ = 0;
+                mdc_ = new ScanningCurve();
+                pisc_ = csc_ = NULL;
             }
 
         ~ParkerLenhardState()
-            { delete _mdc; }
+            { delete mdc_; }
 
         /*!
          * \brief The parameters of the MIC for the capillary pressure

@@ -26,16 +26,16 @@
 #define __PROPERTY_SETTER(Type, Name, SetterName)       \
     public:                                             \
     void SetterName(Type val)                           \
-    { _##Name = val; }
+    { Name##_ = val; }
 
 #define __PROPERTY_GETTER(Type, Name, GetterName)       \
     public:                                             \
     Type GetterName() const                             \
-    { return _##Name; }
+    { return Name##_; }
 
 #define __PROPERTY_MEMBER(Type, Name)           \
     protected:                                  \
-    Type _##Name;                               \
+    Type Name##_;                               \
 public:
 
 #define __PROPERTY_PROXY_SETTER(FwdObj, Type, Name, SetterName) \

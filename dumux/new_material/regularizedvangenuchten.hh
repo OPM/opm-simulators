@@ -71,16 +71,16 @@ namespace Dune
             // derivative calculated numerically) in order to get the
             // saturation moving to the right direction if it
             // temporarily is in an 'illegal' range.
-            if (Swe <= _SweLow) {
-                Scalar pC_SweLow = VanGenuchten::pC(state, _SweLow);
+            if (Swe <= SweLow_) {
+                Scalar pC_SweLow = VanGenuchten::pC(state, SweLow_);
                 Scalar m = (state.vgMaxPC() - pC_SweLow)
-                         / (state.vgMinSw() - _SweLow);
-                return pC_SweLow + m*(Swe - _SweLow);
+                         / (state.vgMinSw() - SweLow_);
+                return pC_SweLow + m*(Swe - SweLow_);
             }
-            else if (Swe >= _SweHigh) {
-                Scalar pC_SweHigh = VanGenuchten::pC(state, _SweHigh);
-                Scalar m = (pC_SweHigh - 0)/(_SweHigh - 1.0);
-                return pC_SweHigh + m*(Swe - _SweHigh);
+            else if (Swe >= SweHigh_) {
+                Scalar pC_SweHigh = VanGenuchten::pC(state, SweHigh_);
+                Scalar m = (pC_SweHigh - 0)/(SweHigh_ - 1.0);
+                return pC_SweHigh + m*(Swe - SweHigh_);
             }
 
             // if the effective saturation is in an 'reasonable'
@@ -118,18 +118,18 @@ namespace Dune
             // derivative calculated numerically) in order to get the
             // saturation moving to the right direction if it
             // temporarily is in an 'illegal' range.
-            if (Swe <= _SweLow) {
+            if (Swe <= SweLow_) {
                 // invert the low saturation regularization of pC()
-                Scalar pC_SweLow = VanGenuchten::pC(state, _SweLow);
+                Scalar pC_SweLow = VanGenuchten::pC(state, SweLow_);
                 Scalar m = (state.vgMaxPC() - pC_SweLow)
-                         / (state.vgMinSw() - _SweLow);
-                return _SweLow + (pC - pC_SweLow)/m;
+                         / (state.vgMinSw() - SweLow_);
+                return SweLow_ + (pC - pC_SweLow)/m;
             }
-            else if (Swe >= _SweHigh) {
+            else if (Swe >= SweHigh_) {
                 // invert the high saturation regularization of pC()
-                Scalar pC_SweHigh = VanGenuchten::pC(state, _SweHigh);
-                Scalar m = (pC_SweHigh - 0)/(_SweHigh - 1.0);
-                return _SweHigh + (pC - pC_SweHigh)/m;
+                Scalar pC_SweHigh = VanGenuchten::pC(state, SweHigh_);
+                Scalar m = (pC_SweHigh - 0)/(SweHigh_ - 1.0);
+                return SweHigh_ + (pC - pC_SweHigh)/m;
             }
 
             return VanGenuchten::Sw(state, pC);
@@ -151,17 +151,17 @@ namespace Dune
             Api::require<Api::RegularizedVanGenuchtenParams>(state);
 
             // derivative of the regualarization
-            if (Swe <= _SweLow) {
+            if (Swe <= SweLow_) {
                 // calculate the slope of the straight line used in pC()
-                Scalar pC_SweLow = VanGenuchten::pC(state, _SweLow);
+                Scalar pC_SweLow = VanGenuchten::pC(state, SweLow_);
                 Scalar m = (state.vgMaxPC() - pC_SweLow)
-                         / (state.vgMinSw() - _SweLow);
+                         / (state.vgMinSw() - SweLow_);
                 return m;
             }
-            else if (Swe >= _SweHigh) {
+            else if (Swe >= SweHigh_) {
                 // calculate the slope of the straight line used in pC()
-                Scalar pC_SweHigh = VanGenuchten::pC(state, _SweHigh);
-                Scalar m = (pC_SweHigh - 0)/(_SweHigh - 1.0);
+                Scalar pC_SweHigh = VanGenuchten::pC(state, SweHigh_);
+                Scalar m = (pC_SweHigh - 0)/(SweHigh_ - 1.0);
                 return m;
             }
 
@@ -186,17 +186,17 @@ namespace Dune
                 Swe = VanGenuchten::Sw(state, pC);
 
             // derivative of the regularization
-            if (Swe <= _SweLow) {
+            if (Swe <= SweLow_) {
                 // same as in dpC_dSw() but inverted
-                Scalar pC_SweLow = VanGenuchten::pC(state, _SweLow);
+                Scalar pC_SweLow = VanGenuchten::pC(state, SweLow_);
                 Scalar m = (state.vgMaxPC() - pC_SweLow)
-                         / (state.vgMinSw() - _SweLow);
+                         / (state.vgMinSw() - SweLow_);
                 return 1/m;
             }
-            else if (Swe >= _SweHigh) {
+            else if (Swe >= SweHigh_) {
                 // same as in dpC_dSw() but inverted
-                Scalar pC_SweHigh = VanGenuchten::pC(state, _SweHigh);
-                Scalar m = (pC_SweHigh - 0)/(_SweHigh - 1.0);
+                Scalar pC_SweHigh = VanGenuchten::pC(state, SweHigh_);
+                Scalar m = (pC_SweHigh - 0)/(SweHigh_ - 1.0);
                 return 1/m;
             }
 
@@ -241,15 +241,15 @@ namespace Dune
         }
 
         //! Effective saturation below which we regularize
-        static const Scalar _SweLow;
+        static const Scalar SweLow_;
         //! Effective saturation above which we regularize
-        static const Scalar _SweHigh;
+        static const Scalar SweHigh_;
     };
 
     template <class StateT>
-    const typename StateT::Scalar RegularizedVanGenuchten<StateT>::_SweLow(0.03);
+    const typename StateT::Scalar RegularizedVanGenuchten<StateT>::SweLow_(0.03);
     template <class StateT>
-    const typename StateT::Scalar RegularizedVanGenuchten<StateT>::_SweHigh(0.97);
+    const typename StateT::Scalar RegularizedVanGenuchten<StateT>::SweHigh_(0.97);
 }
 
 #endif

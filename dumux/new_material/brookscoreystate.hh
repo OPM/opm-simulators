@@ -59,7 +59,7 @@ namespace Api
         typedef ScalarT Scalar;
 
         BrooksCoreyState(Scalar pe, Scalar alpha)
-            : _pe(pe), _alpha(alpha)
+            : pe_(pe), alpha_(alpha)
             {
             }
 

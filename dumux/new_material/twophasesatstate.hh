@@ -61,18 +61,18 @@ namespace Api
         typedef ScalarT Scalar;
 
         TwophaseSatState(Scalar Swr, Scalar Snr)
-            : _Swr(Swr), _Snr(Snr), _Snre(Snr/(1 - _Swr))
+            : Swr_(Swr), Snr_(Snr), Snre_(Snr/(1 - Swr_))
             {
-                _setSnr(Snr);
+                setSnr_(Snr);
             }
 
         //! Residual saturation of the wetting phase.
         PARAMETER(Scalar, Swr);
-        void setSwr(Scalar val) { _Swr = val; _Snre = _Snr/(1 - _Swr); };
+        void setSwr(Scalar val) { Swr_ = val; Snre_ = Snr_/(1 - Swr_); };
 
         //! Residual saturation of the non-wetting phase.
         PARAMETER(Scalar, Snr);
-        void setSnr(Scalar val) { _Snr = val; _Snre = _Snr/(1 - _Swr); }
+        void setSnr(Scalar val) { Snr_ = val; Snre_ = Snr_/(1 - Swr_); }
 
         //! Effective residual saturation of the non-wetting phase.
         PARAMETER(Scalar, Snre);

@@ -83,22 +83,22 @@ namespace Api
         // we also need to update vgM if vgN is changed (and vince versa),
         // so that we have to define the setter for Swr ourselfs
         PARAMETER(Scalar, vgM);
-        void setVgM(Scalar vgM) { _vgM = vgM; _vgN = 1/(1 - _vgM); }
+        void setVgM(Scalar vgM) { vgM_ = vgM; vgN_ = 1/(1 - vgM_); }
         PARAMETER(Scalar, vgN);
-        void setVgN(Scalar vgN) { _vgN = vgN; _vgM = 1 - 1/_vgN; }
+        void setVgN(Scalar vgN) { vgN_ = vgN; vgM_ = 1 - 1/vgN_; }
 
         PARAMETER(Scalar, vgMinSw);
         void setVgMinSw(Scalar vgMinSw)
         {
-            _vgMinSw = vgMinSw;
-            _vgMaxPC = VanGenuchten::pC(*this, _vgMinSw);
+            vgMinSw_ = vgMinSw;
+            vgMaxPC_ = VanGenuchten::pC(*this, vgMinSw_);
         }
 
         PARAMETER(Scalar, vgMaxPC);
         void setVgMaxPC(Scalar vgMaxPC)
         {
-            _vgMaxPC = vgMaxPC;
-            _vgMinSw = VanGenuchten::Sw(*this, _vgMaxPC);
+            vgMaxPC_ = vgMaxPC;
+            vgMinSw_ = VanGenuchten::Sw(*this, vgMaxPC_);
         }
     };
 }; // namespace Dune
