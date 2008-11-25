@@ -138,25 +138,25 @@ To get an impression what the results should look like you can first run the ori
 For each exercise you can find the output file of the last timestep i.e. $ t = 10^8 s$ in the directory \texttt{/dune-mux/dumux}-\texttt{/tutorial/Results\_Coupled/Exercise1}.
 \begin{enumerate}
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
-Change the size of the model domain so that you get a rectangular domain
-with x = 400 m and y = 400 and $\Delta \text{x} = \Delta \text{y} = 20$. \\
+Change the size of the model domain so that you get a rectangle
+with edge lengths of x = 400 m \\  and y = 500 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 20$ m. \\
 Change the boundary conditions in the file \texttt{tutorialproblem\_coupled.hh} so that water enters from the bottom and oil is extracted from the top boundary. The right and the left boundary should be closed for water and oil fluxes.  \\
 Compile the main file by typing \texttt{make tutorial\_coupled} and run the model.
 
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to change the file \texttt{tutorial\_coupled.cc}. If you want to take a closer look how the fluid classes are defined and which fluids are already available please open the file \texttt{phaseproperties2p.hh} in the directory
-\texttt{/dune-mux/dumux}-\texttt{/material/phaseproperties}.
+\texttt{/dune-mux/dumux/material/phaseproperties}.
 % to make people take a close look into the file phaseproperties2p.hh:
 % give the viscosity values of dnapl and oil
 % try to use a dnapl with a constant density of .. and a constant viscosity of ..
 
 \item \textbf{Changing Constitutive Relationships} \\
-Use a Brooks-Corey law with $\lambda$ = 2 and enty pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorial\_soilproperties\_coupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material}.  
-The available relative permeability and capillary pressure functions are defined in the file \texttt{/dune-mux/dumux}-\texttt{/material/relperm\_pc\_law}.
+Use a Brooks-Corey law with $\lambda$ = 2 and entry pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorial\_soilproperties\_coupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material}.  
+The available relative permeability and capillary pressure functions are defined in the file \texttt{/dune-mux/dumux/material/relperm\_pc\_law}.
  
 \item \textbf{Heterogeneities}  \\
-Set up a model domain with the soil properties given in Figure \ref{exercise1_d}
+Set up a model domain with the soil properties given in Figure \ref{exercise1_d}. Adjust the boundary conditions so that water is still flowing from the bottom to the top of the domain. You can use the fluids of exercise 1b) and the constitutive relationship of exercise 1c). 
 
 \begin{figure}[h]
 \psfrag{K1 =}{K $= 10^{-8}\text{ m}^2$}
@@ -167,7 +167,7 @@ Set up a model domain with the soil properties given in Figure \ref{exercise1_d}
 \psfrag{300 m}{300 m}
 \centering
 \includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
-\caption{Exercise 1d: Set-up of a model domain a heterogeneity}\label{exercise1_d}
+\caption{Exercise 1d: Set-up of a model domain a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{exercise1_d}
 \end{figure}
 
 \end{enumerate}
