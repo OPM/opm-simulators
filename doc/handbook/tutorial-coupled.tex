@@ -128,14 +128,13 @@ Finally, the function \texttt{initial} is defined in line \ref{tutorial-coupled:
 saturation.
 
 \subsection{Exercises}
-\label{exercises_coupled}
+\label{tutorial-coupled:exercises}
 The following exercises will give you the opportunity to learn how you can change soil parameters, boundary conditions and fluid properties in \Dumux. For each exercise you can find the output file of the last timestep in the directory \texttt{/dune-mux/dumux/tutorial/results/coupled}.
-
 
 \subsubsection{Exercise 1}
 \renewcommand{\labelenumi}{\alph{enumi})}
 For Exercise 1 you only have to make some small changes in the tutorial files.
-To get an impression what the results should look like you can first run the original version of the fully-coupled tutorial model by typing  \texttt{./tutorial-coupled}. For the visualisation with paraview please refer to \ref{quick-start-guide}.
+To get an impression what the results should look like you can first run the original version of the fully-coupled tutorial model by typing  \texttt{./tutorial\_coupled}. For the visualisation with paraview please refer to \ref{quick-start-guide}.
 \begin{enumerate}
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
@@ -147,16 +146,13 @@ Compile the main file by typing \texttt{make tutorial\_coupled} and run the mode
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to change the file \texttt{tutorial\_coupled.cc}. If you want to take a closer look how the fluid classes are defined and which fluids are already available please open the file \texttt{phaseproperties2p.hh} in the directory
 \texttt{/dune-mux/dumux/material/phaseproperties}.
-% to make people take a close look into the file phaseproperties2p.hh:
-% give the viscosity values of dnapl and oil
-% try to use a dnapl with a constant density of .. and a constant viscosity of ..
 
 \item \textbf{Changing Constitutive Relationships} \\
 Use a Brooks-Corey law with $\lambda$ = 2 and entry pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorial\_soilproperties\_coupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material}.  
 The available relative permeability and capillary pressure functions are defined in the file \texttt{/dune-mux/dumux/material/relperm\_pc\_law}.
  
 \item \textbf{Heterogeneities}  \\
-Set up a model domain with the soil properties given in Figure \ref{exercise1_d}. Adjust the boundary conditions so that water is still flowing from the bottom to the top of the domain. You can use the fluids of exercise 1b) and the constitutive relationship of exercise 1c). 
+Set up a model domain with the soil properties given in Figure \ref{tutorial-coupled:exercise1_d}. Adjust the boundary conditions so that water is still flowing from the bottom to the top of the domain. You can use the fluids of exercise 1b) and the constitutive relationship of exercise 1c). 
 
 \begin{figure}[h]
 \psfrag{K1 =}{K $= 10^{-8}\text{ m}^2$}
@@ -167,7 +163,7 @@ Set up a model domain with the soil properties given in Figure \ref{exercise1_d}
 \psfrag{300 m}{300 m}
 \centering
 \includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
-\caption{Exercise 1d: Set-up of a model domain a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{exercise1_d}
+\caption{Exercise 1d: Set-up of a model domain a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{tutorial-coupled:exercise1_d}
 \end{figure}
 
 \end{enumerate}
@@ -177,7 +173,7 @@ For this exercise you should create a new proplem file according to the file \te
 The new soil file should contain the definition of a new soil class e.g. SoilEx2. Make sure that you also adjust the preprocessor commands (e.g. change TUTORIAL\_SOILPROPERTIES to TUTORIAL\_SOILEX2). 
 The new problem file should contain the definition of a new problem class e.g. ProblemEx2. Here you also need to adjust the preprocessor commands. 
 Replace the classes \texttt{TutorialSoil} and \texttt{TutorialProblemCoupled} by the the new classes you just created. \\
-Now, set up a model that describes the processes given in the Figures \ref{ex2_Domain} and \ref{ex2_BC}. Initially the domain is fully
+Now, set up a model that describes the processes given in the Figures \ref{tutorial-coupled:ex2_Domain} and \ref{tutorial-coupled:ex2_BC}. Initially the domain is fully
 saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa. Oil infiltrates from the left side. Create a grid with 20 cells in x direction and 10 cells in y direction. The simulation time should be set to $4\times 10^7$ s.\\
  (Hint: set the maximum time step size to $10^5$ s. This can be done by adding an additional argument when the constructor of the timeloop object is called in the file \texttt{tutorial\_coupled.cc}: \\
 \texttt{Dune::TimeLoop<GridType, TwoPhase> timeloop(tStart, tEnd, 100, fileName, modulo,1.e5);})
@@ -198,22 +194,22 @@ saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa. Oil infiltrat
 \psfrag{L3x}{25 m}
 \centering
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Domain.eps}
-\caption{Set-up of the model domain and the soil parameters}\label{ex2_Domain}
+\caption{Set-up of the model domain and the soil parameters}\label{tutorial-coupled:ex2_Domain}
 \end{figure}
 
 \begin{figure}[h]
 \psfrag{pw}{$p_w = 5 \times 10^5$ \text{Pa}}
 \psfrag{S}{$S_n = 1.0$}
-\psfrag{qw}{$q_w = 2 \time 10^{-4}$ [kg/$\text{m}^2$s]}
+\psfrag{qw}{$q_w = 2 \times 10^{-4}$ [kg/$\text{m}^2$s]}
 \psfrag{qo}{$q_n = 0.0$ [kg/$\text{m}^2$s]}
 \psfrag{no flow}{no flow}
 \centering
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Boundary.eps}
-\caption{Boundary Conditions}\label{ex2_BC}
+\caption{Boundary Conditions}\label{tutorial-coupled:ex2_BC}
 \end{figure}
 
 \subsubsection{Exercise 3}
 Create a file called \texttt{new\_fluid.hh} and implement a new fluid class. This new fluid class should be derived from the base class Fluid which can be found in  \texttt{/dune-mux/dumux/material/property\_baseclasses.hh}. \\
-(You can look at existing fluid classes in the file \texttt{/dune-mux/dumux/material/phaseproperties2p.hh}.)
+(You can look at existing fluid classes in the file \texttt{/dune-mux/dumux/material/phaseproperties/phaseproperties2p.hh}.)
 Use methane as a new fluid and run the model of Exercise 2 with water and methane. The properties of methane are given in the following: \\
 density: 3.443 kg/$\text{m}^3$, viscosity: 1.0751$\times 10^{-5}$ Pa s. 
