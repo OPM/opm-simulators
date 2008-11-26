@@ -178,7 +178,9 @@ The new soil file should contain the definition of a new soil class e.g. SoilEx2
 The new problem file should contain the definition of a new problem class e.g. ProblemEx2. Here you also need to adjust the preprocessor commands. 
 Replace the classes \texttt{TutorialSoil} and \texttt{TutorialProblemCoupled} by the the new classes you just created. \\
 Now, set up a model that describes the processes given in the Figures \ref{ex2_Domain} and \ref{ex2_BC}. Initially the domain is fully
-saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa.
+saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa. Oil infiltrates from the left side. Create a grid with 20 cells in x direction and 10 cells in y direction. The simulation time should be set to $4\times 10^7$ s.\\
+ (Hint: set the maximum time step size to $10^5$ s. This can be done by adding an additional argument when the constructor of the timeloop object is called in the file \texttt{tutorial\_coupled.cc}: \\
+\texttt{Dune::TimeLoop<GridType, TwoPhase> timeloop(tStart, tEnd, 100, fileName, modulo,1.e5);})
 
 \begin{figure}[h]
 \psfrag{K1}{K $= 10^{-7}\text{ m}^2$}
@@ -210,7 +212,8 @@ saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa.
 \caption{Boundary Conditions}\label{ex2_BC}
 \end{figure}
 
-%\subsubsection{Exercise 3}
-%Create a file called new\_fluid.hh and implement a new fluid class. This new fluid class should be derived from the base class Fluid ...
-%You can implement your fluid class according to the fluids implemented in the file ...phaseproperties2p.hh.
-%Use the following properties for your new fluid and run the model of Exercise 2 with water and new fluid. 
+\subsubsection{Exercise 3}
+Create a file called \texttt{new\_fluid.hh} and implement a new fluid class. This new fluid class should be derived from the base class Fluid which can be found in  \texttt{/dune-mux/dumux/material/property\_baseclasses.hh}. \\
+(You can look at existing fluid classes in the file \texttt{/dune-mux/dumux/material/phaseproperties2p.hh}.)
+Use methane as a new fluid and run the model of Exercise 2 with water and methane. The properties of methane are given in the following: \\
+density: 3.443 kg/$\text{m}^3$, viscosity: 1.0751$\times 10^{-5}$ Pa s. 
