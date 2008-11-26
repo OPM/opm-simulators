@@ -43,6 +43,12 @@ to connect to the repository by
 Then, you can checkout everything as described above, if you replace \texttt{luftig} 
 by \texttt{localhost}. 
 
+Moreover, the possibility to checkout a read-only version from outside exists. Therefor, no IWS-account is needed. The following commands can be used for an anonymous checkout:
+\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dune-mux}
+\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}
+\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-subgrid/trunk dune-subgrid}
+
+
 \paragraph{Build the external modules} 
 The external modules consist of Alberta, ALUGrid, UG, GotoBLAS, and Paraview. 
 To install them all, execute the script \texttt{installXXbit.sh} in the folder \texttt{external}. 
