@@ -90,7 +90,7 @@ namespace Dune
             Sw_app_ = 1.0;
             SwMic_ = 1.0;
             SwMdc_ = 1.0;
-            
+
             spline_ = NULL;
         }
 
@@ -112,7 +112,7 @@ namespace Dune
             Sw_app_ = Sw_app;
             SwMic_ = SwMic;
             SwMdc_ = SwMdc;
-           
+
             spline_ = NULL;
         }
 
@@ -181,19 +181,19 @@ namespace Dune
                 delete spline_;
                 spline_ = spline;
             };
-        
+
         /*!
          * \brief Returns true if the spline shall be used for an
          *        absolute saturation.
          */
         bool useSpline(Scalar Sw)
             { return spline_ && spline_->applies(Sw); }
-        
+
         /*!
          * \brief Returns the spline to be used for regularization
          *        of the current reversal point.
          */
-        Spline *spline() 
+        Spline *spline()
             { return spline_; }
 
         /*!
@@ -320,7 +320,7 @@ namespace Dune
         typedef typename State::Scalar Scalar;
         typedef Dune::PLScanningCurve<Scalar> ScanningCurve;
         typedef typename ScanningCurve::Spline Spline;
-        
+
         typedef Dune::TwophaseSat<State> TwophaseSat;
 
         /*!
@@ -377,19 +377,19 @@ namespace Dune
 
             Scalar Swe = TwophaseSat::Swe(state, Sw);
             ASSERT_RANGE(Swe, 0, 1);
-            
+
             // find the loop number which corrosponds to the
             // given effective saturation
             ScanningCurve *curve = findScanningCurve_Swe_(state, Swe);
-            
+
             // check whether the new reversal point is still in the
-            // range where we use a spline instead of the actual 
+            // range where we use a spline instead of the actual
             // material law.
             if (curve->useSpline(Sw))
                 return;
 
             Scalar Sw_app = Swapp_(state, Swe);
-                        
+
             // calculate the apparent saturation on the MIC and MDC
             // which yield the same capillary pressure as the
             // Sw at the current scanning curve
@@ -409,7 +409,7 @@ namespace Dune
                 state.setPisc(state.mdc()->next());
                 state.setSnrei(Snrei_(state, Swe));
             }
-            
+
             // add a spline to the newly created reversal point
             if (useSplines)
                 addSpline_(state, curve->next());
@@ -442,7 +442,7 @@ namespace Dune
                 return sc->prev()->spline()->eval(Sw);
             if (sc->useSpline(Sw))
                 return sc->spline()->eval(Sw);
-            
+
             // calculate the apparant saturation
             Scalar Sw_app = Swapp_(state, Swe);
 
@@ -531,7 +531,7 @@ namespace Dune
             ScanningCurve *sc = findScanningCurve_Swe_(state, Swe);
             if (sc->useSpline(Sw))
                 return sc->spline()->evalDerivative(Sw);
-            
+
             Scalar Sw_app = Swapp_(state, Swe);
             ASSERT_RANGE(Sw_app, 0, 1);
 
@@ -643,7 +643,7 @@ namespace Dune
             Scalar Sw_app = Swapp_(state, Swe);
             ASSERT_RANGE(Sw_app, 0, 1);
             return CapPressure::krw(state.mdcParams(), Sw_app);
-            
+
 #if 0 // TODO: saturation-permebility hysteresis
             if (state.pisc() && Swe > state.csc()->Swe()) {
                 return CapPressure::krw(state.micParams(), Sw_app);
@@ -662,7 +662,7 @@ namespace Dune
         {
             Api::require<Api::ParkerLenhardParams>(state);
             Api::require<Api::TwophaseSatParams>(state);
-            
+
             ASSERT_RANGE(Sw, 0, 1);
 
             // for the effective permeability we use play-type
@@ -744,7 +744,7 @@ namespace Dune
         {
             if (Swei > 1 || Swei < 0)
                 return state.Snrei();
-            
+
             Scalar Snrei;
             if (state.Snre() == 0.0) {
                 return 0.0;
@@ -759,7 +759,7 @@ namespace Dune
             // the current trapped saturation must be smaller than the
             // residual saturation
             assert(state.Snrei() <= state.Snre());
-            
+
             // we need to make sure that there is sufficent "distance"
             // between Swei and 1-Snrei in order not to get very steep
             // slopes which cause terrible nummeric headaches
@@ -833,7 +833,7 @@ namespace Dune
                      / (1 - state.pisc()->Swe());
             }
 
-        // calculate a spline for the reversal point of the curve 
+        // calculate a spline for the reversal point of the curve
         // in order to get a C1 steady function
         static void addSpline_(State &state, ScanningCurve *curve)
             {
@@ -869,7 +869,7 @@ namespace Dune
                         x2 = Sw;
                     }
                 }
-                
+
                 if (fabs(x2 - x1) < 2e-2 ||
                     curve->prev()->useSpline(x1) ||
                     curve->prev()->useSpline(x2))
@@ -894,7 +894,7 @@ namespace Dune
                     }
 //                    exit(1);
                 };
-                */                
+                */
             };
     };
 
