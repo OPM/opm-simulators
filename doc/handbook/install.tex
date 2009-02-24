@@ -51,10 +51,12 @@ Moreover, the possibility to checkout a read-only version from outside exists. T
 \end{itemize} 
 
 \paragraph{Build the external modules} 
-The external modules consist of Alberta, ALUGrid, UG, GotoBLAS, and Paraview. 
-To install them all, execute the script \texttt{installXXbit.sh} in the folder \texttt{external}. 
-If you like to only install some of the external software, you can copy the corresponding 
-parts of the script and paste them to the command line. 
+The external modules have to be built first. They consist of Alberta, ALUGrid, UG, GotoBLAS and METIS.
+To install them all, execute the install script in the folder \texttt{external}:
+\begin{center}
+\texttt{./installExternal.sh all}
+\end{center}
+If you like to only install some of the external software, you can choose one of the corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
 Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
 
 \paragraph{Build DUNE and DuMu$^\text{x}$}
