@@ -26,54 +26,54 @@ namespace Dune
 {
 namespace Api
 {
-    BEGIN_API_DEF(VanGenuchtenParams)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        Scalar tmp;
-        tmp = const_impl.vgAlpha();
-        tmp = const_impl.vgN();
-        tmp = const_impl.vgM();
-    }
-    END_API_DEF;
+BEGIN_API_DEF(VanGenuchtenParams)
+{
+    typedef typename Implementation::Scalar Scalar;
+    Scalar tmp;
+    tmp = const_impl.vgAlpha();
+    tmp = const_impl.vgN();
+    tmp = const_impl.vgM();
+}
+END_API_DEF;
 
-    BEGIN_API_DEF(VanGenuchtenState)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        Scalar tmp = 0.5f;
-        impl.setVgAlpha(tmp);
-        impl.setVgN(tmp);
-        impl.setVgM(tmp);
-    }
-    END_API_DEF;
+BEGIN_API_DEF(VanGenuchtenState)
+{
+    typedef typename Implementation::Scalar Scalar;
+    Scalar tmp = 0.5f;
+    impl.setVgAlpha(tmp);
+    impl.setVgN(tmp);
+    impl.setVgM(tmp);
+}
+END_API_DEF;
 }; // namespace Api
 
-    /*!
-     * \brief Reference implementation of a van Genuchten state
-     */
-    template<class ScalarT>
-    class VanGenuchtenState
+/*!
+ * \brief Reference implementation of a van Genuchten state
+ */
+template<class ScalarT>
+class VanGenuchtenState
+{
+public:
+    typedef ScalarT Scalar;
+
+    VanGenuchtenState()
+    {}
+
+    VanGenuchtenState(Scalar vgAlpha, Scalar vgN)
     {
-    public:
-        typedef ScalarT Scalar;
-
-        VanGenuchtenState()
-            {}
-
-        VanGenuchtenState(Scalar vgAlpha, Scalar vgN)
-            {
-                setVgAlpha(vgAlpha);
-                setVgN(vgN);
-            };
-
-        PROPERTY(Scalar, vgAlpha, setVgAlpha);
-
-        // we also need to update vgM if vgN is changed (and vince versa),
-        // so that we have to define the setter for Swr ourselfs
-        PARAMETER(Scalar, vgM);
-        void setVgM(Scalar vgM) { vgM_ = vgM; vgN_ = 1/(1 - vgM_); }
-        PARAMETER(Scalar, vgN);
-        void setVgN(Scalar vgN) { vgN_ = vgN; vgM_ = 1 - 1/vgN_; }
+        setVgAlpha(vgAlpha);
+        setVgN(vgN);
     };
+
+    PROPERTY(Scalar, vgAlpha, setVgAlpha);
+
+    // we also need to update vgM if vgN is changed (and vince versa),
+    // so that we have to define the setter for Swr ourselfs
+    PARAMETER(Scalar, vgM);
+    void setVgM(Scalar vgM) { vgM_ = vgM; vgN_ = 1/(1 - vgM_); }
+    PARAMETER(Scalar, vgN);
+    void setVgN(Scalar vgN) { vgN_ = vgN; vgM_ = 1 - 1/vgN_; }
+};
 }; // namespace Dune
 
 #endif

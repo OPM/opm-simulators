@@ -29,46 +29,46 @@ namespace Dune
 {
 namespace Api
 {
-    BEGIN_API_DEF(BrooksCoreyParams)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        Scalar tmp;
-        tmp = const_impl.alpha();
-        tmp = const_impl.pe();
-    }
-    END_API_DEF;
+BEGIN_API_DEF(BrooksCoreyParams)
+{
+    typedef typename Implementation::Scalar Scalar;
+    Scalar tmp;
+    tmp = const_impl.alpha();
+    tmp = const_impl.pe();
+}
+END_API_DEF;
 
-    BEGIN_API_DEF(BrooksCoreyState)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        Scalar tmp = 0.5;
-        impl.setAlpha(tmp);
-        impl.setPe(tmp);
-    }
-    END_API_DEF;
+BEGIN_API_DEF(BrooksCoreyState)
+{
+    typedef typename Implementation::Scalar Scalar;
+    Scalar tmp = 0.5;
+    impl.setAlpha(tmp);
+    impl.setPe(tmp);
+}
+END_API_DEF;
 }; // namespace Api
 
-    /*!
-     * \brief A reference implementation of the state API class for the
-     *        Brooks-Corey Sw-pC relation.
-     */
-    template <class ScalarT>
-    class BrooksCoreyState
+/*!
+ * \brief A reference implementation of the state API class for the
+ *        Brooks-Corey Sw-pC relation.
+ */
+template <class ScalarT>
+class BrooksCoreyState
+{
+public:
+    typedef ScalarT Scalar;
+
+    BrooksCoreyState(Scalar pe, Scalar alpha)
+        : pe_(pe), alpha_(alpha)
     {
-    public:
-        typedef ScalarT Scalar;
+    }
 
-        BrooksCoreyState(Scalar pe, Scalar alpha)
-            : pe_(pe), alpha_(alpha)
-            {
-            }
+    //! The entry pressure
+    PROPERTY(Scalar, pe, setPe);
 
-        //! The entry pressure
-        PROPERTY(Scalar, pe, setPe);
-
-        //! The alpha shape parameter
-        PROPERTY(Scalar, alpha, setAlpha);
-    };
+    //! The alpha shape parameter
+    PROPERTY(Scalar, alpha, setAlpha);
+};
 }; // namespace Dune
 
 #endif

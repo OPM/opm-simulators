@@ -27,56 +27,56 @@ namespace Dune
 {
 namespace Api
 {
-    BEGIN_API_DEF(TwophaseSatParams)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        Scalar tmp = 0.5;
-        tmp = const_impl.Swr();
-        tmp = const_impl.Snr();
-        tmp = const_impl.Snre();
-    }
-    END_API_DEF;
+BEGIN_API_DEF(TwophaseSatParams)
+{
+    typedef typename Implementation::Scalar Scalar;
+    Scalar tmp = 0.5;
+    tmp = const_impl.Swr();
+    tmp = const_impl.Snr();
+    tmp = const_impl.Snre();
+}
+END_API_DEF;
 
-    BEGIN_API_DEF(TwophaseSatState)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        require<TwophaseSatParams>(impl);
+BEGIN_API_DEF(TwophaseSatState)
+{
+    typedef typename Implementation::Scalar Scalar;
+    require<TwophaseSatParams>(impl);
 
-        Scalar tmp = 0.5;
-        impl.setSwr(tmp);
-        impl.setSnr(tmp);
-    }
-    END_API_DEF;
+    Scalar tmp = 0.5;
+    impl.setSwr(tmp);
+    impl.setSnr(tmp);
+}
+END_API_DEF;
 
 }; // namespace Api
 
-    /*!
-     * \brief A reference implementation of the state API class for the
-     *        twophase saturation relations.
-     */
-    template <class ScalarT>
-    class TwophaseSatState
+/*!
+ * \brief A reference implementation of the state API class for the
+ *        twophase saturation relations.
+ */
+template <class ScalarT>
+class TwophaseSatState
+{
+public:
+    typedef ScalarT Scalar;
+
+    TwophaseSatState(Scalar Swr, Scalar Snr)
+        : Swr_(Swr), Snr_(Snr), Snre_(Snr/(1 - Swr_))
     {
-    public:
-        typedef ScalarT Scalar;
+        setSnr_(Snr);
+    }
 
-        TwophaseSatState(Scalar Swr, Scalar Snr)
-            : Swr_(Swr), Snr_(Snr), Snre_(Snr/(1 - Swr_))
-            {
-                setSnr_(Snr);
-            }
+    //! Residual saturation of the wetting phase.
+    PARAMETER(Scalar, Swr);
+    void setSwr(Scalar val) { Swr_ = val; Snre_ = Snr_/(1 - Swr_); };
 
-        //! Residual saturation of the wetting phase.
-        PARAMETER(Scalar, Swr);
-        void setSwr(Scalar val) { Swr_ = val; Snre_ = Snr_/(1 - Swr_); };
+    //! Residual saturation of the non-wetting phase.
+    PARAMETER(Scalar, Snr);
+    void setSnr(Scalar val) { Snr_ = val; Snre_ = Snr_/(1 - Swr_); }
 
-        //! Residual saturation of the non-wetting phase.
-        PARAMETER(Scalar, Snr);
-        void setSnr(Scalar val) { Snr_ = val; Snre_ = Snr_/(1 - Swr_); }
-
-        //! Effective residual saturation of the non-wetting phase.
-        PARAMETER(Scalar, Snre);
-    };
+    //! Effective residual saturation of the non-wetting phase.
+    PARAMETER(Scalar, Snre);
+};
 }; // namespace Dune
 
 #endif

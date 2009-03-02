@@ -26,35 +26,35 @@ namespace Dune
 {
 namespace Api
 {
-    BEGIN_API_DEF(PlayTypeParams)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        typedef typename Implementation::CapPressureParams PCParams;
-        require<TwophaseSatParams>(impl);
+BEGIN_API_DEF(PlayTypeParams)
+{
+    typedef typename Implementation::Scalar Scalar;
+    typedef typename Implementation::CapPressureParams PCParams;
+    require<TwophaseSatParams>(impl);
 
-        const PCParams *tmp;
-        tmp = &const_impl.micParams();
-        tmp = &const_impl.mdcParams();
+    const PCParams *tmp;
+    tmp = &const_impl.micParams();
+    tmp = &const_impl.mdcParams();
 
-        Scalar tmp2 = 0.5;
-        tmp2   = const_impl.SweRef();
-        tmp2   = const_impl.deltaSwe();
-        bool b;
-        b = const_impl.isImbib();
-    }
-    END_API_DEF;
+    Scalar tmp2 = 0.5;
+    tmp2   = const_impl.SweRef();
+    tmp2   = const_impl.deltaSwe();
+    bool b;
+    b = const_impl.isImbib();
+}
+END_API_DEF;
 
-    BEGIN_API_DEF(PlayTypeState)
-    {
-        typedef typename Implementation::Scalar Scalar;
-        typedef typename Implementation::CapPressureParams PCParams;
-        require<PlayTypeParams>(impl);
+BEGIN_API_DEF(PlayTypeState)
+{
+    typedef typename Implementation::Scalar Scalar;
+    typedef typename Implementation::CapPressureParams PCParams;
+    require<PlayTypeParams>(impl);
 
-        Scalar tmp = 0.5;
-        impl.setSweRef(tmp);
-        impl.setImbib(true);
-    }
-    END_API_DEF;
+    Scalar tmp = 0.5;
+    impl.setSweRef(tmp);
+    impl.setImbib(true);
+}
+END_API_DEF;
 }; // namespace Api
 }; // namespace Dune
 
