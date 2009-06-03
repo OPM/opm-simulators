@@ -60,6 +60,8 @@ all:
 	cat ../doxygen/latex/classDune_1_1TwoPNIBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2pniboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1TwoPTwoCBoxModelBase.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1TwoPTwoCNIBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cniboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1FractionalFlow.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/fractionalflow.tex
+	cat ../doxygen/latex/classDune_1_1Decoupled2p2c.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/decoupled2p2c.tex
 	latex dumux-handbook.tex
 	bibtex dumux-handbook
 	latex dumux-handbook.tex
