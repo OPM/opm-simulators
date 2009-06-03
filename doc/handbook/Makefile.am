@@ -52,6 +52,20 @@ dumux-handbook.html:  $(DOCSOURCE) dune.cfg tex4ht.env
 	$(T4HT) dumux-handbook.tex
 	$(TEX) dumux-handbook.tex
 
+all: 
+	cat ../doxygen/latex/classDune_1_1OnePBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/1pboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1OnePTwoCBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/1p2cboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1RichardsBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/richardsboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1TwoPBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2pboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1TwoPNIBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2pniboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1TwoPTwoCBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1TwoPTwoCNIBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cniboxmodel.tex
+	latex dumux-handbook.tex
+	bibtex dumux-handbook
+	latex dumux-handbook.tex
+	latex dumux-handbook.tex
+	dvipdf dumux-handbook
+
 #dist-hook:
 #	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
 #	sed $(srcdir)/Makefile.dist.in -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.in
@@ -61,3 +75,4 @@ EXTRA_TEXINPUTS:=$(top_srcdir)
 include $(top_srcdir)/am/global-rules
 include $(top_srcdir)/am/webstuff
 include $(top_srcdir)/am/latex
+

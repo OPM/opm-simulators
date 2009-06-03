@@ -20,6 +20,24 @@
 
 \newcommand{\Dune}{{\sf\bfseries DUNE}}
 \newcommand{\Dumux}{DuMu$^\text{x}$ }
+\newcommand{\doxyref}[3]{\textnormal{#1}}
+\newenvironment{CompactList}
+{\begin{list}{}{
+  \setlength{\leftmargin}{0.5cm}
+  \setlength{\itemsep}{0pt}
+  \setlength{\parsep}{0pt}
+  \setlength{\topsep}{0pt}
+  \renewcommand{\makelabel}{\hfill}}}
+{\end{list}}
+\newenvironment{CompactItemize}
+{
+  \begin{itemize}
+  \setlength{\itemsep}{-3pt}
+  \setlength{\parsep}{0pt}
+  \setlength{\topsep}{0pt}
+  \setlength{\partopsep}{0pt}
+}
+{\end{itemize}}
 
 %The theorems
 \theorembodyfont{\upshape}
@@ -28,6 +46,10 @@
 \newtheorem{rem}[exc]{Remark}
 \newtheorem{lst}{Listing}
 \newtheorem{warn}[exc]{Warning}
+
+\DeclareMathOperator{\grad}{grad}
+\DeclareMathOperator{\curl}{curl}
+\DeclareMathOperator{\Div}{div}
 
 \pagestyle{scrheadings}
 
@@ -61,6 +83,7 @@ Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
 \input{intro}
 \input{getting-started}
 \input{tutorial}
+\input{models} 
 
 \bibliographystyle{plain}
 \bibliography{dumux-handbook}

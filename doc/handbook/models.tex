@@ -1,0 +1,150 @@
+\chapter[Models]{Physical and numerical models}
+
+\section{Physical and mathematical description} 
+
+Characteristic of compositional multiphase models is that the phases
+are not only matter of a single chemical substance. Instead, their
+composition in general includes several species, and for the mass transfer, 
+the component behavior is quite different from the phase behavior. In the following, we
+give some basic definitions and assumptions that are required for the
+formulation of the model concept below. As an example, we take a
+three-phase three-component system water-NAPL-gas
+\cite{A3:class:2002a}. The modification for other multicomponent
+systems is straightforward and can be found, e.\ g., in
+\cite{A3:bielinski:2006,A3:acosta:2006}.
+
+\subsection{Basic Definitions and Assumptions for the Compositional
+  Model Concept}
+\textbf{Components:}
+The term {\it component} stands for constituents of the phases which
+can be associated with a unique chemical species, or, more generally, with 
+a group of species exploiting similar physical behavior. In this work, we
+assume a water-gas-NAPL system composed of the phases water (subscript
+$\text{w}$), gas ($\text{g}$), and NAPL ($\text{n}$). These phases are
+composed of the components water (superscript $\text{w}$), air
+($\text{a}$), and the organic contaminant ($\text{c}$) (see Fig.\
+\ref{A3:fig:mundwtrans}).
+%
+\begin{figure}[hbt]
+  \centering
+  \includegraphics[width=0.7\linewidth]{EPS/masstransfer}
+  \caption{Mass and energy transfer between the phases}
+  \label{A3:fig:mundwtrans}
+\end{figure}
+
+\textbf{Equilibrium:}
+For the nonisothermal multiphase processes in porous media under
+consideration, we state that the assumption of local thermal
+equilibrium is valid since flow velocities are small. We neglect
+chemical reactions and biological decomposition and assume chemical
+equilibrium.  Mechanical equilibrium is not valid in a porous medium, 
+since discontinuities in pressure can occur across a fluid-fluid
+interface due to capillary effects.
+
+\textbf{Notation:} The index $\alpha \in \{\text{w}, \text{n}, \text{g}\}$ refers 
+to the phase, while the index $\kappa \in \{\text{w}, \text{a}, \text{c}\}$ refers 
+to the component. \\
+\begin{tabular}{llll}
+$p_\alpha$ & phase pressure & $\phi$ & porosity \\
+$T$ & temperature & $K$ & absolute permeability tensor \\
+$S_\alpha$ & phase saturation & $\tau$ & tortuosity \\
+$x_\alpha^\kappa$ & mole fraction of component $\kappa$ in phase $\alpha$ & $\boldsymbol{g}$ & gravitational acceleration \\
+$X_\alpha^\kappa$ & mass fraction of component $\kappa$ in phase $\alpha$ & $q^\kappa$ & volume source term \\
+$\varrho_{\text{mol},\alpha}$ & molar density of phase $\alpha$ & $u_\alpha$ & specific internal energy \\
+$\varrho_{\text{mass},\alpha}$ & mass density of phase $\alpha$ & $h_\alpha$ & specific enthalpy \\
+$k_{\text{r}\alpha}$ & relative permeability & $c_\text{s}$ & specific heat enthalpy \\
+$\mu_\alpha$ & phase viscosity & $\lambda_\text{pm}$ & heat conductivity \\
+$D_\alpha^\kappa$ & diffusivity of component $\kappa$ in phase $\alpha$ & $q^h$ & heat source term 
+\end{tabular}
+
+
+\subsection{Balance Equations}
+For the balance equations for multicomponent systems, it is in many
+cases convenient to use a molar formulation of the continuity
+equation. Considering the mass conservation for each component allows
+us to drop source/sink terms for describing the mass transfer between
+phases. Then, the
+molar mass balance can be written as:
+%
+\begin{eqnarray}
+  \label{A3:eqmass1}
+  && \phi \frac{\partial (\sum_\alpha \varrho_{\text{mol}, \alpha}
+    x_\alpha^\kappa S_\alpha )}{\partial t} \nonumber 
+ - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
+        \alpha}}{\mu_\alpha} \varrho_{\text{mol}, \alpha}
+    x_\alpha^\kappa K (\grad p_\alpha -
+    \varrho_{\text{mass}, \alpha} \boldsymbol{g}) \right) \nonumber \\
+  %
+  \nonumber \\
+  %
+  && - \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mol},
+      \alpha} \grad x_\alpha^\kappa \right) \nonumber 
+ - q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
+\end{eqnarray}
+
+In the case of non-isothermal systems, we further have to balance the
+thermal energy. We assume fully reversible processes, such that entropy
+is not needed as a model parameter. Furthermore, we neglect 
+dissipative effects and the heat transport due to molecular
+diffusion. The heat balance can then be
+formulated as:
+%
+\begin{eqnarray}
+  \label{A3:eqenergmak1}
+  && \phi \frac{\partial \left( \sum_\alpha \varrho_{\text{mass},
+        \alpha} u_\alpha S_\alpha \right)}{\partial t} + \left( 1 -
+    \phi \right) \frac{\partial \varrho_{\text{s}} c_{\text{s}}
+    T}{\partial t} \nonumber 
+ - \Div \left( \lambda_{\text{pm}} \grad T \right)
+  \nonumber \\
+  %
+  \nonumber \\
+  %
+  && - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
+        \alpha}}{\mu_\alpha} \varrho_{\text{mass}, \alpha} h_\alpha
+    K \left( \grad p_\alpha - \varrho_{\text{mass}, \alpha}
+      \boldsymbol{g} \right) \right) \nonumber 
+ - q^h \; = \; 0.
+\end{eqnarray}
+
+In order to close the system, supplementary constraints for capillary pressure, saturations and mole
+fractions are needed, \cite{A3:helmig:1997}. 
+According to the Gibbsian phase rule, the number of degrees of freedom
+in a non-isothermal multiphase multicomponent system is equal to the
+number of components plus one. This means we need as many independent
+unknowns in the system description. The
+available primary variables are, e.\ g., saturations, mole/mass
+fractions, temperature, pressures, etc.
+
+
+
+
+\section{Available models} 
+
+\subsection{Fully coupled models} 
+
+\subsubsection{OnePBoxModel} 
+\input{ModelDescriptions/1pboxmodel}
+
+\subsubsection{OnePTwoCBoxModel} 
+\input{ModelDescriptions/1p2cboxmodel}
+
+\subsubsection{RichardsBoxModel} 
+\input{ModelDescriptions/richardsboxmodel}
+
+\subsubsection{TwoPBoxModel} 
+\input{ModelDescriptions/2pboxmodel}
+
+\subsubsection{TwoPNIBoxModel} 
+\input{ModelDescriptions/2pniboxmodel}
+
+\subsubsection{TwoPTwoCBoxModel} 
+\input{ModelDescriptions/2p2cboxmodel}
+
+\subsubsection{TwoPTwoCNIBoxModel} 
+\input{ModelDescriptions/2p2cniboxmodel}
+
+
+\subsection{Decoupled models} 
+
+
