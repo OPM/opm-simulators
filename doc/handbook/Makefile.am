@@ -58,7 +58,7 @@ all:
 	cat ../doxygen/latex/classDune_1_1RichardsBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/richardsboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1TwoPBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2pboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1TwoPNIBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2pniboxmodel.tex
-	cat ../doxygen/latex/classDune_1_1TwoPTwoCBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cboxmodel.tex
+	cat ../doxygen/latex/classDune_1_1TwoPTwoCBoxModelBase.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1TwoPTwoCNIBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/2p2cniboxmodel.tex
 	latex dumux-handbook.tex
 	bibtex dumux-handbook
