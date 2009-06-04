@@ -82,6 +82,31 @@ molar mass balance can be written as:
  - q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
 \end{eqnarray}
 
+The component mass balance can also be written in terms of mass fractions 
+by replacing molar densities by mass densities and mole by mass fractions.
+To obtain a single conserved quantity in the temporal derivative, the total 
+concentration, representing the mass of one component per unit volume, is defined as
+\begin{displaymath}
+C_\alpha^\kappa = \phi S_\alpha \varrho_{\text{mass},\alpha} X_\alpha^\kappa \; .
+\end{displaymath}
+Using this definition, the component mass balance is written as:
+
+\begin{eqnarray}
+  \label{A3:eqmass2}
+  &&  \frac{\partial C^\kappa}{\partial t} = 
+  \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
+        \alpha}}{\mu_\alpha} \varrho_{\text{mass}, \alpha}
+    X_\alpha^\kappa K (\grad p_\alpha +
+    \varrho_{\text{mass}, \alpha} \boldsymbol{g}) \right) \nonumber \\
+  %
+  \nonumber \\
+  %
+  && + \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mass},
+      \alpha} \grad X_\alpha^\kappa \right) \nonumber 
+ + q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
+\end{eqnarray}
+
+
 In the case of non-isothermal systems, we further have to balance the
 thermal energy. We assume fully reversible processes, such that entropy
 is not needed as a model parameter. Furthermore, we neglect 
