@@ -49,12 +49,13 @@ $p_\alpha$ & phase pressure & $\phi$ & porosity \\
 $T$ & temperature & $K$ & absolute permeability tensor \\
 $S_\alpha$ & phase saturation & $\tau$ & tortuosity \\
 $x_\alpha^\kappa$ & mole fraction of component $\kappa$ in phase $\alpha$ & $\boldsymbol{g}$ & gravitational acceleration \\
-$X_\alpha^\kappa$ & mass fraction of component $\kappa$ in phase $\alpha$ & $q^\kappa$ & volume source term \\
+$X_\alpha^\kappa$ & mass fraction of component $\kappa$ in phase $\alpha$ & $q^\kappa_\alpha$ & volume source term of component $\kappa$ in phase $\alpha$ \\
 $\varrho_{\text{mol},\alpha}$ & molar density of phase $\alpha$ & $u_\alpha$ & specific internal energy \\
-$\varrho_{\text{mass},\alpha}$ & mass density of phase $\alpha$ & $h_\alpha$ & specific enthalpy \\
+$\varrho_{\alpha}$ & mass density of phase $\alpha$ & $h_\alpha$ & specific enthalpy \\
 $k_{\text{r}\alpha}$ & relative permeability & $c_\text{s}$ & specific heat enthalpy \\
 $\mu_\alpha$ & phase viscosity & $\lambda_\text{pm}$ & heat conductivity \\
-$D_\alpha^\kappa$ & diffusivity of component $\kappa$ in phase $\alpha$ & $q^h$ & heat source term 
+$D_\alpha^\kappa$ & diffusivity of component $\kappa$ in phase $\alpha$ & $q^h$ & heat source term \\
+$v_\alpha$ & Darcy velocity & $v_{a,\alpha}$  & advective velocity
 \end{tabular}
 
 
@@ -73,7 +74,7 @@ molar mass balance can be written as:
  - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\text{mol}, \alpha}
     x_\alpha^\kappa K (\grad p_\alpha -
-    \varrho_{\text{mass}, \alpha} \boldsymbol{g}) \right) \nonumber \\
+    \varrho_{\alpha} \boldsymbol{g}) \right) \nonumber \\
   %
   \nonumber \\
   %
@@ -116,8 +117,8 @@ formulated as:
 %
 \begin{eqnarray}
   \label{A3:eqenergmak1}
-  && \phi \frac{\partial \left( \sum_\alpha \varrho_{\text{mass},
-        \alpha} u_\alpha S_\alpha \right)}{\partial t} + \left( 1 -
+  && \phi \frac{\partial \left( \sum_\alpha \varrho_{\alpha}
+      u_\alpha S_\alpha \right)}{\partial t} + \left( 1 -
     \phi \right) \frac{\partial \varrho_{\text{s}} c_{\text{s}}
     T}{\partial t} \nonumber 
  - \Div \left( \lambda_{\text{pm}} \grad T \right)
@@ -126,8 +127,8 @@ formulated as:
   \nonumber \\
   %
   && - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
-        \alpha}}{\mu_\alpha} \varrho_{\text{mass}, \alpha} h_\alpha
-    K \left( \grad p_\alpha - \varrho_{\text{mass}, \alpha}
+        \alpha}}{\mu_\alpha} \varrho_{\alpha} h_\alpha
+    K \left( \grad p_\alpha - \varrho_{\alpha}
       \boldsymbol{g} \right) \right) \nonumber 
  - q^h \; = \; 0.
 \end{eqnarray}
@@ -148,25 +149,25 @@ fractions, temperature, pressures, etc.
 
 \subsection{Fully coupled models} 
 
-\subsubsection{OnePBoxModel} 
+\subsubsection{The single-phase model: OnePBoxModel} 
 \input{ModelDescriptions/1pboxmodel}
 
-\subsubsection{OnePTwoCBoxModel} 
+\subsubsection{The single-phase, two-component model:  OnePTwoCBoxModel} 
 \input{ModelDescriptions/1p2cboxmodel}
 
-\subsubsection{RichardsBoxModel} 
+\subsubsection{The two-phase model using Richards' assumption: RichardsBoxModel} 
 \input{ModelDescriptions/richardsboxmodel}
 
-\subsubsection{TwoPBoxModel} 
+\subsubsection{The two-phase model: TwoPBoxModel} 
 \input{ModelDescriptions/2pboxmodel}
 
-\subsubsection{TwoPNIBoxModel} 
+\subsubsection{The non-isothermal two-phase model: TwoPNIBoxModel} 
 \input{ModelDescriptions/2pniboxmodel}
 
-\subsubsection{TwoPTwoCBoxModel} 
+\subsubsection{The two-phase, two-component model: TwoPTwoCBoxModel} 
 \input{ModelDescriptions/2p2cboxmodel}
 
-\subsubsection{TwoPTwoCNIBoxModel} 
+\subsubsection{The non-isothermal two-phase, two-component model: TwoPTwoCNIBoxModel} 
 \input{ModelDescriptions/2p2cniboxmodel}
 
 
@@ -177,3 +178,8 @@ fractions, temperature, pressures, etc.
 \input{models_decoupled2p2c}
 
 
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "dumux-handbook"
+%%% End: 
