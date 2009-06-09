@@ -1,4 +1,4 @@
-This model implements two-phase flow of two completely immiscible fluids $\alpha \in \{ w, n \}$ using a standard multiphase Darcy approach as the equation for the conservation of momentum: \[ \vec{v_\alpha} = - \frac{k_{r\alpha}}{\mu_\alpha} K \left(\grad p_\alpha - \varrho_{\alpha} \boldsymbol{g} \right) \]
+This model implements two-phase flow of two completely immiscible fluids $\alpha \in \{ w, n \}$ using a standard multiphase Darcy approach as the equation for the conservation of momentum: \[ v_\alpha = - \frac{k_{r\alpha}}{\mu_\alpha} K \left(\grad p_\alpha - \varrho_{\alpha} \boldsymbol{g} \right) \]
 
 By inserting this into the equation for the conservation of the phase mass, one gets \[ \phi \frac{\partial \varrho_\alpha S_\alpha}{\partial t} - \Div \left\{ \varrho_\alpha \frac{k_{r\alpha}}{\mu_\alpha} K \left(\grad p_\alpha - \varrho_{\alpha} \boldsymbol{g} \right) \right\} = q_\alpha \;, \] which is discretized by this model using the fully-coupled vertex centered finite volume (box) scheme as spatial and the implicit Euler method as time discretization.
 
