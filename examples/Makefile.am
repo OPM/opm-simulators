@@ -17,7 +17,7 @@ tutorial_decoupled_SOURCES = tutorial_decoupled.cc
 
 tutorial_coupleddir = $(EXTRA_DIST=CMakeLists.txt
 includedir)/dumux/tutorial
-tutorial_coupled_HEADERS = tutorial_soilproperties_coupled.hh \
+tutorial_coupled_HEADERS = tutorialsoil_coupled.hh \
 	tutorialproblem_coupled.hh
 tutorial_coupled_SOURCES = tutorial_coupled.cc
 

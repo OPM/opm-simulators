@@ -190,7 +190,8 @@ public:
                  int                         boundaryFaceIdx) const
     {
         const GlobalPosition &pos = element.geometry().corner(scvIdx);
-        if (pos[0]> right_ - eps_) {
+        Scalar right = this->bboxMax()[0];
+        if (pos[0] > right - eps_) {
             // outflow of 0.3 g/(m * s) oil on the right boundary of the
             // domain
             values[Indices::phase2Mass(Indices::wPhase)] = 0;
@@ -243,8 +244,6 @@ public:
 
 private:
     static const Scalar eps_ = 3e-6;
-
-    static const Scalar right_ = 5.0;
 };
 } //end namespace
 
