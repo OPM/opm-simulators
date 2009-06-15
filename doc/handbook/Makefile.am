@@ -52,7 +52,8 @@ dumux-handbook.html:  $(DOCSOURCE) dune.cfg tex4ht.env
 	$(T4HT) dumux-handbook.tex
 	$(TEX) dumux-handbook.tex
 
-all: 
+dumux-handbook.pdf: 
+#	mkdir ModelDescriptions
 	cat ../doxygen/latex/classDune_1_1OnePBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/1pboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1OnePTwoCBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/1p2cboxmodel.tex
 	cat ../doxygen/latex/classDune_1_1RichardsBoxModel.tex | ../../util/scripts/extractDetailedDescription.py >ModelDescriptions/richardsboxmodel.tex
