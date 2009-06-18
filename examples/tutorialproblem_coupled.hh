@@ -26,7 +26,7 @@
 
 // the grid used
 #include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+#include <dune/grid/io/file/dgfparser/dgfs.hh>
 
 // the soil to be used
 #include "tutorialsoil_coupled.hh"
@@ -38,31 +38,43 @@ namespace Dune
 template <class TypeTag>
 class TutorialProblemCoupled;
 
-//////////
-// Specify the properties of the problem
-//////////
 namespace Properties
 {
 // create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP));
+NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP)); /*@\label{tutorial-coupled:create-type-tag}@*/
 
 // Set the "Problem" property
-SET_PROP(TutorialProblemCoupled, Problem)
+SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
 {
     typedef Dune::TutorialProblemCoupled<TTAG(TutorialProblemCoupled)> type;
 };
 
-// Set the grid type
-SET_TYPE_PROP(TutorialProblemCoupled, Grid, Dune::YaspGrid<2>);
+// Set the grid
+SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
+{ 
+    typedef Dune::SGrid<2,2> type;
+    static type *create() /*@\label{tutorial-coupled:create-grid-method}@*/
+    {
+        typedef typename SGrid<2,2>::ctype ctype;
+        Dune::FieldVector<int, 2> cellRes;
+        Dune::FieldVector<ctype, 2> lowerLeft(0.0);
+        Dune::FieldVector<ctype, 2> upperRight;
+        cellRes[0] = 45;
+        cellRes[1] = 15;
+        upperRight[0] = 300;
+        upperRight[1] = 100;
+        return new Dune::SGrid<2,2>(cellRes,
+                                    lowerLeft,
+                                    upperRight);
+    }
+};
 
-// Set the wetting phase
-SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dune::Water);
-
-// Set the non-wetting phase
-SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dune::Oil);
+// Set the wetting and non-wetting phases
+SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dune::Water); /*@\label{tutorial-coupled:set-wetting}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dune::Oil);/*@\label{tutorial-coupled:set-nonwetting}@*/
 
 // Set the soil properties
-SET_PROP(TutorialProblemCoupled, Soil)
+SET_PROP(TutorialProblemCoupled, Soil) /*@\label{tutorial-coupled:set-soil}@*/
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
@@ -72,16 +84,13 @@ public:
     typedef Dune::TutorialSoil<Grid, Scalar> type;
 };
 
-// Enable gravity
-SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, true);
+// Disable gravity
+SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
 }
 
-/*!
- * \ingroup TwoPBoxProblems
- * \brief The problem used for the tutorial of the coupled models
- */
+// Definition of the actual problem
 template <class TypeTag = TTAG(TutorialProblemCoupled) >
-class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag, 
+class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag, /*@\label{tutorial-coupled:def-problem}@*/
                                                      TutorialProblemCoupled<TypeTag> >
 {
     typedef TutorialProblemCoupled<TypeTag>   ThisType;
@@ -113,34 +122,14 @@ class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag,
 public:
     TutorialProblemCoupled(const GridView &gridView)
         : ParentType(gridView)
-    {
-    }
+    {}
 
-
-    /*!
-     * \name Problem parameters
-     */
-    // \{
-
-    /*!
-     * \brief Returns the temperature within the domain.
-     * 
-     * We use 10°C...
-     */
+    // Return the temperature within the domain. We use 10 degrees Celsius.
     Scalar temperature() const
     { return 283.15; };
 
-    // \}
-
-    /*!
-     * \name Boundary conditions
-     */
-    // \{
-
-    /*! 
-     * \brief Specifies which kind of boundary condition should be
-     *        used for which equation on a given boundary segment.
-     */
+    // Specifies which kind of boundary condition should be used for
+    // which equation on a given boundary segment.
     void boundaryTypes(BoundaryTypeVector         &values,
                        const Element              &element,
                        const FVElementGeometry    &fvElemGeom,
@@ -149,21 +138,16 @@ public:
                        int                         boundaryFaceIdx) const
     {    
         const GlobalPosition &pos = element.geometry().corner(scvIdx);
-        if (pos[0] < eps_)
-            // dirichlet conditions on left boundary
+        if (pos[0] < eps_) // dirichlet conditions on left boundary
            values = BoundaryConditions::dirichlet;
-        else 
-            // neuman for the remaining boundaries
+        else // neuman for the remaining boundaries
             values = BoundaryConditions::neumann;
 
     }
 
-    /*! 
-     * \brief Evaluate the boundary conditions for a dirichlet
-     *        boundary segment.
-     *
-     * For this method, the \a values parameter stores primary variables.
-     */
+    // Evaluate the boundary conditions for a dirichlet boundary
+    // segment.  For this method, the 'values' parameter stores
+    // primary variables.
     void dirichlet(PrimaryVarVector           &values,
                    const Element              &element,
                    const FVElementGeometry    &fvElemGeom,
@@ -175,13 +159,10 @@ public:
         values[Indices::sN] = 1.0; // 100 % oil saturation
     }
 
-    /*! 
-     * \brief Evaluate the boundary conditions for a neumann
-     *        boundary segment.
-     *
-     * For this method, the \a values parameter stores the mass flux
-     * in normal direction of each phase. Negative values mean influx.
-     */
+    // Evaluate the boundary conditions for a neumann boundary
+    // segment. For this method, the 'values' parameter stores the
+    // mass flux in normal direction of each phase. Negative values
+    // mean influx.
     void neumann(PrimaryVarVector           &values,
                  const Element              &element,
                  const FVElementGeometry    &fvElemGeom,
@@ -202,19 +183,9 @@ public:
             values[Indices::phase2Mass(Indices::nPhase)] = 0;
         }
     }
-    // \}
 
-    /*!
-     * \name Volume terms
-     */
-    // \{
-
-    /*! 
-     * \brief Evaluate the initial value for a control volume.
-     *
-     * For this method, the \a values parameter stores primary
-     * variables.
-     */
+    // Evaluate the initial value for a control volume. For this
+    // method, the 'values' parameter stores primary variables.
     void initial(PrimaryVarVector        &values,
                  const Element           &element,
                  const FVElementGeometry &fvElemGeom,
@@ -224,27 +195,23 @@ public:
         values[Indices::sN] = 1.0;
     }
 
-    /*! 
-     * \brief Evaluate the source term for all phases within a given
-     *        sub-control-volume.
-     *
-     * For this method, the \a values parameter stores the rate mass
-     * generated or annihilate per volume unit. Positive values mean
-     * that mass is created, negative ones mean that it vanishes.
-     */
+    // Evaluate the source term for all phases within a given
+    // sub-control-volume. For this method, the \a values parameter
+    // stores the rate mass generated or annihilate per volume
+    // unit. Positive values mean that mass is created, negative ones
+    // mean that it vanishes.
     void source(PrimaryVarVector        &values,
                 const Element           &element,
-                const FVElementGeometry &,
-                int subControlVolumeIdx) const
+                const FVElementGeometry &fvElemGeom,
+                int                      scvIdx) const
     {
         values[Indices::phase2Mass(Indices::wPhase)] = 0.0;
         values[Indices::phase2Mass(Indices::nPhase)] = 0.0;
     }
-    // \}
 
 private:
     static const Scalar eps_ = 3e-6;
 };
-} //end namespace
+}
 
 #endif

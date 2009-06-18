@@ -14,82 +14,56 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
-
-#include "config.h" /*@\label{tutorial-coupled:include-config-h}@*/
-
+#include "config.h" /*@\label{tutorial-coupled:include-begin}@*/
 #include "tutorialproblem_coupled.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/
 
 #include <dune/common/mpihelper.hh>
-#include <dune/common/exceptions.hh>
-
-#include <iostream>
+#include <iostream> /*@\label{tutorial-coupled:include-end}@*/
 
 void usage(const char *progname)
 {
-    std::cout << "usage: " << progname << "[--restart restartTime] gridFile.dgf tEnd dt\n";
+    std::cout << "usage: " << progname << " [--restart restartTime] tEnd dt\n";
     exit(1);
 };
 
 int main(int argc, char** argv)
 {
     try {
-        // Specify the type tag of the problem to be solved. All the
-        // other information can then be retrieved by the property
-        // system.
-        typedef TTAG(TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar))  Scalar; /*@\label{tutorial-coupled:retrieve-scalar-type}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid))    Grid; /*@\label{tutorial-coupled:retrieve-grid-type}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem; /*@\label{tutorial-coupled:retrieve-problem-type}@*/
-        typedef Dune::GridPtr<Grid>                                  GridPointer; /*@\label{tutorial-coupled:set-grid-pointer}@*/
-        typedef Dune::FieldVector<Grid::ctype, Grid::dimensionworld> GlobalPosition;
+        typedef TTAG(TutorialProblemCoupled)          TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar))  Scalar; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid))    Grid;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem; /*@\label{tutorial-coupled:retrieve-types-end}@*/
 
-        // Initialize the message passing interface using DUNE's
-        // MPIHelper. This line is essential if you would like to run
-        // your problem on more than one processor at the same
-        // time. If MPI should not be used, MPIHelper does nothing.
+        // Initialize MPI
         Dune::MPIHelper::instance(argc, argv); /*@\label{tutorial-coupled:init-mpi}@*/
 
-        ////////////////////////////////////////////////////////////
         // parse the command line arguments
-        ////////////////////////////////////////////////////////////
-        if (argc < 4)
+        if (argc < 3) /*@\label{tutorial-coupled:parse-args-begin}@*/
             usage(argv[0]);
 
         // parse restart time if restart is requested
         int argPos = 1;
         bool restart = false;
         double restartTime = 0;
-        if (std::string("--restart") == argv[argPos]) { /*@\label{tutorial-coupled:parse-restart-time}@*/
+        if (std::string("--restart") == argv[argPos]) {
             restart = true;
             ++argPos;
 
             std::istringstream(argv[argPos++]) >> restartTime;
         }
         
-        // read the file name of the DGF file, the initial time step
-        // and the end time
-        if (argc - argPos != 3) {
+        // read the the initial time step and the end time
+        if (argc - argPos != 2)
             usage(argv[0]);
-        }
-
-        const char *dgfFileName = argv[argPos++]; /*@\label{tutorial-coupled:parse-dgf-filename}@*/
 
         double tEnd, dt; /*@\label{tutorial-coupled:parse-tEn-and-dt}@*/
         std::istringstream(argv[argPos++]) >> tEnd;
-        std::istringstream(argv[argPos++]) >> dt;
+        std::istringstream(argv[argPos++]) >> dt; /*@\label{tutorial-coupled:parse-args-end}@*/
 
-        ////////////////////////////////////////////////////////////
         // create the grid
-        ////////////////////////////////////////////////////////////
+        Grid *gridPtr = GET_PROP(TypeTag, PTAG(Grid))::create(); /*@\label{tutorial-coupled:create-grid}@*/
 
-        // Load the grid from a DGF file
-        GridPointer gridPtr = GridPointer(dgfFileName); /*@\label{tutorial-coupled:create-grid}@*/
-
-        ////////////////////////////////////////////////////////////
-        // instantiate and run the simulation
-        ////////////////////////////////////////////////////////////
-
-        // instantiate the problem
+        // instantiate the problem on the leaf grid
         Problem problem(gridPtr->leafView()); /*@\label{tutorial-coupled:instantiate-problem}@*/
 
         // restore the simulation's state from the hard-disk if a
