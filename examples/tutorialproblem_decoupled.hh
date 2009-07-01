@@ -46,7 +46,7 @@ public:
     virtual Scalar sourcePress (const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:qpress}@*/
                                 const LocalPosition& localPos)
     {
-        return 0;
+        return 0.0;
     }
 
     // function returning the boundary condition type for solution
@@ -90,10 +90,10 @@ public:
     {
         if (globalPos[0] < eps_)
         {
-            return 1;
+            return 1.0;
         }
         // all other boundaries
-        return 0;
+        return 0.0;
     }
 
     // function returning the Neumann boundary condition for the solution
@@ -106,7 +106,7 @@ public:
             return 3e-7;
         }
         // all other boundaries
-        return 0;
+        return 0.0;
     }
 
     // function returning the initial saturation
@@ -114,7 +114,7 @@ public:
     Scalar initSat (const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:initsat}@*/
                     const FieldVector<Scalar,dim>& xi) const
     {
-        return 0;
+        return 0.0;
     }
 
 private:
