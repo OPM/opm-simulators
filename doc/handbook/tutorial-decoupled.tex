@@ -16,8 +16,8 @@ The problem which is solved in this tutorial is illustrated in figure \ref{tutor
 \psfrag{no flow}{no flow}
 \psfrag{water}{\textbf{water}}
 \psfrag{oil}{\textcolor{white}{\textbf{oil}}}
-\psfrag{p_w = 2 x 10^5 [Pa]}{$p_w = 2 \times 10^5$ [Pa]}
-\psfrag{p_w_initial = 2 x 10^5 [Pa]}{\textcolor{white}{\textbf{$\mathbf{p_{w_{initial}} = 2 \times 10^5}$ [Pa]}}}
+\psfrag{p_w = 2 x 10^5 [Pa]}{$p_w = 10^6$ [Pa]}
+\psfrag{p_w_initial = 2 x 10^5 [Pa]}{\textcolor{white}{\textbf{$\mathbf{p_{w_{initial}} = 10^6}$ [Pa]}}}
 \psfrag{S_n = 0}{$S_w = 1$}
 \psfrag{S_n_initial = 0}{\textcolor{white}{$\mathbf{S_{w_{initial}} = 0}$}}
 \psfrag{q_w = 0 [kg/m^2s]}{$q_w = 0$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
@@ -38,7 +38,7 @@ First, in line \ref{tutorial-decoupled:include-begin} to \ref{tutorial-decoupled
 
 In line \ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end} the geometry is defined and the grid is generated. The three variables of Type \texttt{Dune::FieldVector} define the lower left corner of the domain (\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number of cells in $x$ and $y$ direction (\texttt{N}), where the dimensions are previously defined in line \ref{tutorial-decoupled:dim}. The grid of type \texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. For more information about the dune grid interface, the different grid types that are supported and the generation of different grids it is referred to the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}.
 
-The second point mentioned at the beginning of this section was the definition of material properties and constitutive relationships. The fluid properties of the two fluid phases considered here are defined in lines \ref{tutorial-decoupled:water} and \ref{tutorial-decoupled:oil}. The fluid classes including different kinds of fluids (here: \texttt{Dune::Water} and \texttt{Dune::Oil}) can be found in the file \texttt{phaseproperties2p.hh} in the directory \texttt{/dune-mux/dumux}-\texttt{/material/phaseproperties}. The properties of the solid matrix are defined in a special soil class. The \texttt{soil} object is generated in line \ref{tutorial-decoupled:soil}. As can be seen, the class type is \texttt{Dune::TutorialSoil}, which is defined in the file \texttt{tutorial\_soilproperties\_decoupled.hh} in the folder \texttt{/tutorial}. A description of this file and the definition of a soil class including the soil parameters can be found in section \ref{tutorial-decoupled:description-soil-class}. Finally, in line \ref{tutorial-decoupled:twophaserelations} the information included in the fluid and soil objects is used to generate an object of type \texttt{Dune::TwoPhaseRelations}, which includes the constitutive relationships (capillary pressure-saturation relation, relative permeability-saturation relation, etc.). The file \texttt{twophaserelations.hh} can be found in the directory \texttt{/dune-mux/dumux/material}.
+The second point mentioned at the beginning of this section was the definition of material properties and constitutive relationships. The fluid properties of the two fluid phases considered here are defined in lines \ref{tutorial-decoupled:water} and \ref{tutorial-decoupled:oil}. The fluid classes including different kinds of fluids (here: \texttt{Dune::Water} and \texttt{Dune::Oil}) can be found in the folder \texttt{material/fluids} in the directory \texttt{/dune-mux/dumux}-\texttt{/material/fluids}. The properties of the solid matrix are defined in a special soil class. The \texttt{soil} object is generated in line \ref{tutorial-decoupled:soil}. As can be seen, the class type is \texttt{Dune::TutorialSoil}, which is defined in the file \texttt{tutorial\_soilproperties\_decoupled.hh} in the folder \texttt{/tutorial}. A description of this file and the definition of a soil class including the soil parameters can be found in section \ref{tutorial-decoupled:description-soil-class}. Finally, in line \ref{tutorial-decoupled:twophaserelations} the information included in the fluid and soil objects is used to generate an object of type \texttt{Dune::TwoPhaseRelations}, which includes the constitutive relationships (capillary pressure-saturation relation, relative permeability-saturation relation, etc.). The file \texttt{twophaserelations.hh} can be found in the directory \texttt{/dune-mux/dumux/material}.
 
 The definition of boundary and initial conditions as well as source of sink terms is done by definition of a so-called \textit{problem} class. In case of this tutorial the problem class is defined in the file \texttt{tutorialproblem\_decoupled.hh} in the \texttt{/tutorial} folder. In the main file the problem object of type \texttt{Dune::TutorialProblemDecoupled} is then generated in line \ref{tutorial-decoupled:problem}. A further explanation of the definition of boundary and initial conditions, source and sink terms and the structure of the problem class can be found in section \ref{tutorial-decoupled:description-bc-ic}. Besides the definition of the boundary and initial conditions the problem class is also a kind of interface containing all the objects generated before (geometry, fluids, soil, constitutive relationships, etc.). Thus, as can be seen in line \ref{tutorial-decoupled:problem} all this objects are given as arguments when calling the constructor of the problem class.
 
@@ -54,11 +54,11 @@ Finally, an object called \texttt{timeloop} of type \texttt{Dune::TimeLoop} is g
 
 \subsection{The definition of the fluid properties}\label{tutorial-decoupled:description-fluid-class}
 
-In \Dumux different fluids are already implemented. The definitions can be found in the file \texttt{phaseproperties2p.hh} in the directory \texttt{/dune-mux/dumux/material/phaseproperties}. As can be observed in this file, for each fluid a class named like the fluid is defined. These classes are derived from the fluid base class \texttt{Fluid} which is defined in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material} and include several functions returning different fluid properties.
+In \Dumux different fluids are already implemented. The definitions can be found in the directory \texttt{material/fluids}. As can be observed in these files, for each fluid a class named like the fluid is defined. These classes are derived from the fluid base class \texttt{Fluid} which is defined in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material} and include several functions returning different fluid properties.
 
-If a new fluid type is to be used or an existing type is to be used with different fluid parameters new fluid types can be defined derived from the base class \texttt{Fluid} comparable to the fluids already defined in the file \texttt{phaseproperties2p.hh}.
+If a new fluid type is to be used or an existing type is to be used with different fluid parameters new fluid types can be defined derived from the base class \texttt{Fluid} comparable to the fluids already defined in the file \texttt{material/fluids/}.
 
-It is important to mention, that existing fluid classes should not be changed. New fluid classes should only be added to the file \texttt{phaseproperties2p.hh} if they are also to be added to the repository! If you are not sure if your fluid class can be useful for the other \Dumux users just create a new file in your problem directory similar to the file \texttt{phaseproperties2p.hh} and define your fluid classes there. 
+It is important to mention, that existing fluid classes should not be changed.
 
 \subsection{The definition of the soil parameters}\label{tutorial-decoupled:description-soil-class}
 
@@ -94,17 +94,17 @@ numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorialproblem_decoupled.hh}
 
 Listing \ref{tutorial-decoupled:tutorialproblem}) includes five types of functions. The type of each function can be identified by the first letter and the first part respectively of its name. Function names of functions returning
 \begin{itemize}
- \item a source or sink term start with a \textbf{q},
+ \item a source or sink term start with a \textbf{source},
  \item a boundary condition type start with \textbf{bctype},
- \item a \textit{Dirichlet} boundary condition start with a \textbf{g},
- \item a \textit{Neumann} boundary condition start with a \textbf{J} and
+ \item a \textit{Dirichlet} boundary condition start with a \textbf{dirichlet},
+ \item a \textit{Neumann} boundary condition start with a \textbf{neumann} and
  \item a initial condition start with \textbf{init}. 
 \end{itemize}
 The second part of the function name indicates if the return value is used for the pressure equation (\textbf{Press}) or for the saturation equation (\textbf{Sat}).
 
 All different function types have to be called with three different arguments. The first one (\texttt{x}) is a vector including the global coordinates of the current entity (can be an element, vertex, etc.), the second one (\texttt{e}) is the entity itself and the third one is a vector including the local coordinates of the current entity. Thus, the return of the functions, which can be a boundary value, an initial value, a source/sink, etc., can be defined depending on the position in the domain.
 
-The first function defined in the problem class \texttt{TutorialProblemDecoupled} is the function \texttt{qPress} (line \ref{tutorial-decoupled:qpress}). It returns a source or a sink term for the pressure equation. 
+The first function defined in the problem class \texttt{TutorialProblemDecoupled} is the function \texttt{sourcePress} (line \ref{tutorial-decoupled:qpress}). It returns a source or a sink term for the pressure equation. 
 
 In lines \ref{tutorial-decoupled:bctypepress} and \ref{tutorial-decoupled:bctypesat} the functions returning the boundary condition type are defined. Flags of type \texttt{Dune::BoundaryConditions::Flags} have to be used as return value of these functions. The flags that can be chosen are defined in the file \texttt{boundaryconditions.hh} in the directory \texttt{/dune-disc/disc/operators}.
 
@@ -114,7 +114,7 @@ Finally, the function \texttt{initSat} is defined in line \ref{tutorial-decouple
 
 \subsection{Exercise}
 \label{tutorial-deoucpled:exercises}
-The following exercises will give you the opportunity to learn how you can change soil parameters, boundary conditions and fluid properties in \Dumux. For each exercise you can find the output file of the last timestep in the directory \texttt{/dune-mux/dumux/tutorial/results/decoupled}.
+The following exercises will give you the opportunity to learn how you can change soil parameters, boundary conditions and fluid properties in \Dumux. (In the future you will find the output file of the last timestep of each exercise simulation in the directory \texttt{/dune-mux/dumux/tutorial/results/decoupled}.)
 
 \subsubsection{Exercise 1}
 \renewcommand{\labelenumi}{\alph{enumi})}
@@ -128,8 +128,8 @@ Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh
 Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model.
 
 \item \textbf{Changing Fluids} \\
-Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to change the file \texttt{tutorial\_decoupled.cc}. If you want to take a closer look how the fluid classes are defined and which fluids are already available please open the file \texttt{phaseproperties2p.hh} in the directory
-\texttt{/dune-mux/dumux/material/phaseproperties}.
+Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to change the file \texttt{tutorial\_decoupled.cc}. If you want to take a closer look how the fluid classes are defined and which fluids are already available please open the files \texttt{oil.hh} and \texttt{water.hh} in the directory
+\texttt{/dune-mux/dumux/material/fluids}.
 
 \item \textbf{Changing Constitutive Relationships} \\
 Use a Brooks-Corey law with $\lambda$ = 2 and entry pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorial\_soilproperties\_decoupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dune-mux/dumux/material}.  
@@ -181,7 +181,7 @@ Now, set up a model that describes the processes given in the Figures \ref{tutor
 \end{figure}
 
 \begin{figure}[h]
-\psfrag{pw}{$p_w = 5 \times 10^5$ \text{Pa}}
+\psfrag{pw}{$p_w = 1.5 \times 10^6$ \text{Pa}}
 \psfrag{S}{$S_n = 1.0$}
 \psfrag{qw}{$q_w = 2 \times 10^{-7}$ [kg/$\text{m}^2$s]}
 \psfrag{qo}{$q_n = 0.0$ [kg/$\text{m}^2$s]}
@@ -193,6 +193,6 @@ Now, set up a model that describes the processes given in the Figures \ref{tutor
 
 \subsubsection{Exercise 3}
 Create a file called \texttt{new\_fluid.hh} and implement a new fluid class. This new fluid class should be derived from the base class Fluid which can be found in  \texttt{/dune-mux/dumux/material/property\_baseclasses.hh}. \\
-(You can look at existing fluid classes in the file \texttt{/dune-mux/dumux/material/phaseproperties/phaseproperties2p.hh}.)
+(You can look at existing fluid classes in the file \texttt{/dune-mux/dumux/material/fluids/}.)
 Use benzene as a new fluid and run the model of Exercise 2 with water and benzene. The properties of benzene are given in the following: \\
 density: 889.51 kg/$\text{m}^3$, viscosity: 0.00112 Pa s. 
