@@ -26,7 +26,7 @@ co-dimensional entities. Roughly speaking, an entity of co-dimension
 $0$ constitutes a cell, co-dimension $1$ entities are faces between
 cells, co-dimension $1$ are edges, and so on until co-dimension $n$
 which are the cell's vertices.  The DUNE grid interface generally
-assumes, that all entities are convex polytopes, which means that it
+assumes that all entities are convex polytopes, which means that it
 must be possible to express each entity as the convex hull of a set of
 vertices. For efficiency, all entities are further expressed in terms
 of so-called reference elements which are transformed to the actual
@@ -50,12 +50,15 @@ into global linear systems of equations and much more. \texttt{dune-istl} is the
 and provides generic, highly optimized linear algebra routines for solving
 the generated systems. 
 
-DuMu$^\text{x}$ comes in form of an additional module \texttt{dune-mux}. 
-It inherits functionality from all available DUNE modules. 
-Its main intention is to provide a framework for easy and efficient 
+\Dumux comes in form of an additional module \texttt{dune-mux}. 
+It inherits functionality from the DUNE core modules 
+\texttt{dune-common}, \texttt{dune-grid}, and \texttt{dune-istl}, as well as from 
+the discretization module \texttt{dune-disc}. Some numerical models 
+also depend on the \texttt{dune-subgrid} module, \cite{subgrid}. 
+The main intention of \Dumux is to provide a framework for easy and efficient 
 implementation of models from porous media flow problems, 
 ranging from problem formulation, the selection of 
 spatial and temporal discretization schemes, as well as nonlinear solvers,  
 up to general concepts for model coupling.  
-Moreover, DuMu$^\text{x}$ includes ready to use numerical models and example applications. 
+Moreover, \Dumux includes ready to use numerical models and example applications. 
 

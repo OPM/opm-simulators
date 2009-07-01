@@ -99,5 +99,16 @@ directory. Moreover, the compositional decoupled models are included here.
 \section{The directory \texttt{test}}\label{sec:test}
 
 
-
+The directory \texttt{test} contains a test for each numerical model and for 
+the property system. The subfolders \texttt{1p},  \texttt{1p2c},  \texttt{2p},  \texttt{2p2c},  
+\texttt{2p2cni},  \texttt{2pni},  and \texttt{richards} contain tests for the fully 
+coupled models, while \texttt{diffusion}, \texttt{fractionalflow}, and \texttt{transport} 
+correspond to the decoupled models. Each subdirectory 
+contains one or more program files \texttt{test\_*.cc}, where \texttt{*} usually is the 
+name of the folder. Moreover, the problem definitions can be found 
+in the \texttt{*problem.hh} files. Simply executing the tests should either run the 
+full test or give a list of required command line arguments. After test execution, 
+VTK output files should have been generated. 
+For more detailed descriptions of the tests, the problem definitions and their corresponding 
+Doxygen documentation should be considered. 
 

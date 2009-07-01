@@ -3,10 +3,10 @@
 The previous chapter showed, how to install and compile \Dumux. This chapter shall give a very brief introduction, how to run a first test application and how to visualize the first output files. Only the rough steps will be described here. More detailed explanations can be found in the tutorials in the following chapter.
 
 \begin{enumerate}
- \item Go to the directory \texttt{dune-mux/test}. There, various test application folders can be found. Let us consider as example \texttt{test{\_}twophase}:
- \item Enter the folder \texttt{twophase}. If everyting was compiled correctly, there should be an executable \texttt{test{\_}twophase}. In order to run the simulation, type\\ 
-\texttt{./test{\_}twophase 1e4 100}\\
-into the console. The parameters that are used here are the end time of the simulation and the initial timestep. The parameters that are required when calling the application are specified in the application file (here: test{\_}twophase.cc).
+ \item Go to the directory \texttt{dune-mux/test}. There, various test application folders can be found. Let us consider as example \texttt{test{\_}2p}:
+ \item Enter the folder \texttt{2p}. If everyting was compiled correctly, there should be an executable \texttt{test{\_}2p}. In order to run the simulation, type\\ 
+\texttt{./test{\_}2p 1e4 1e2}\\
+into the console. The parameters that are used here are the end time of the simulation and the initial timestep size. The parameters that are required when calling the application are specified in the application file (here: test{\_}2p.cc).
  \item The simulation starts and produces some .vtu output files and also a .pvd file. The .pvd file can be used to examine time series and summarizes the .vtu-files. It is possible to stop a running application by pressing $<ctrl><c>$.
  \item You can display the results using the previously installed visualization tool ParaView (or alternatively VisIt). Just type \texttt{paraview} in the console and open the .pvd file. On the left hand side, you can choose the desired parameter to be displayed.
 \end{enumerate}

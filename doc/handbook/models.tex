@@ -49,7 +49,7 @@ $p_\alpha$ & phase pressure & $\phi$ & porosity \\
 $T$ & temperature & $K$ & absolute permeability tensor \\
 $S_\alpha$ & phase saturation & $\tau$ & tortuosity \\
 $x_\alpha^\kappa$ & mole fraction of component $\kappa$ in phase $\alpha$ & $\boldsymbol{g}$ & gravitational acceleration \\
-$X_\alpha^\kappa$ & mass fraction of component $\kappa$ in phase $\alpha$ & $q^\kappa_\alpha$ & volume source term of component $\kappa$ in phase $\alpha$ \\
+$X_\alpha^\kappa$ & mass fraction of component $\kappa$ in phase $\alpha$ & $q^\kappa_\alpha$ & volume source term of $\kappa$ in $\alpha$ \\
 $\varrho_{\text{mol},\alpha}$ & molar density of phase $\alpha$ & $u_\alpha$ & specific internal energy \\
 $\varrho_{\alpha}$ & mass density of phase $\alpha$ & $h_\alpha$ & specific enthalpy \\
 $k_{\text{r}\alpha}$ & relative permeability & $c_\text{s}$ & specific heat enthalpy \\
@@ -88,7 +88,7 @@ by replacing molar densities by mass densities and mole by mass fractions.
 To obtain a single conserved quantity in the temporal derivative, the total 
 concentration, representing the mass of one component per unit volume, is defined as
 \begin{displaymath}
-C_\alpha^\kappa = \phi S_\alpha \varrho_{\text{mass},\alpha} X_\alpha^\kappa \; .
+C^\kappa = \sum_\alpha \phi S_\alpha \varrho_{\text{mass},\alpha} X_\alpha^\kappa \; .
 \end{displaymath}
 Using this definition, the component mass balance is written as:
 
@@ -136,7 +136,7 @@ formulated as:
 In order to close the system, supplementary constraints for capillary pressure, saturations and mole
 fractions are needed, \cite{A3:helmig:1997}. 
 According to the Gibbsian phase rule, the number of degrees of freedom
-in a non-isothermal multiphase multicomponent system is equal to the
+in a non-isothermal compositional multiphase system is equal to the
 number of components plus one. This means we need as many independent
 unknowns in the system description. The
 available primary variables are, e.\ g., saturations, mole/mass
@@ -146,6 +146,8 @@ fractions, temperature, pressures, etc.
 
 
 \section{Available models} 
+The following description of the available models is automatically extracted 
+from the Doxygen documentation. \textbf{TODO}: Unify notation. 
 
 \subsection{Fully coupled models} 
 

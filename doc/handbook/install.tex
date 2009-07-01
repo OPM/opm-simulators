@@ -5,19 +5,30 @@ For the installation of DuMu$^\text{x}$, the following steps have to be performe
 \paragraph{Checkout of the core modules}
 Since we always want to be up to date with the latest changes in DUNE, 
 we decided to use the developers version of the core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-disc}, 
-and \texttt{dune-grid-howto}. First, create a directory where all the DUNE modules will be stored in. Then, enter the previously created folder. The checkout has to be performed as described on 
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, and \texttt{dune-disc}.  
+First, create a directory where all the DUNE modules will be stored in. Then, enter the previously created folder. 
+The checkout has to be performed as described on 
 the DUNE webpage, \cite{DUNE-HP}: 
 \begin{itemize}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/trunk dune-common}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid/trunk dune-grid}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-istl/trunk dune-istl}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-disc/trunk dune-disc}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid-howto/trunk dune-grid-howto}
 \end{itemize} 
+The \Dumux webpage \cite{dumux-hp} contains the revision numbers of the core modules 
+for which compatibility to \Dumux can be guaranteed. 
+
+Additionally, it is highly recommended that you also checkout the \texttt{dune-grid} HOWTO 
+by 
+\begin{center}
+\texttt{svn checkout https://svn.dune-project.org/svn/dune-grid-howto/trunk dune-grid-howto}
+\end{center}
+and work yourself through that tutorial in order to get an understanding of 
+the Dune grid interface. 
 
 \paragraph{Checkout of DuMu$^\text{x}$ and external modules} 
-
+If you obtained a \Dumux tarball, you should just extract the tarball as usual 
+and can skip this part. 
 First of all, you need to ask one of the IWS system administrators to 
 add your account to the group \texttt{svndune}. 
 If you are working on a LH2 computer, you then can checkout DuMu$^\text{x}$ 
@@ -34,7 +45,7 @@ To this end, you need to add once
 \end{center}
 with \texttt{login} replaced 
 by your actual IWS login name, to the section \texttt{[tunnels]} of the 
-file \texttt{\$HOME/.subversion/config}, 
+file \texttt{\$HOME/} \texttt{.subversion/config}, 
 The tunnel then needs to be initialized every time you want 
 to connect to the repository by 
 \begin{center}
@@ -51,12 +62,14 @@ by \texttt{localhost}.
 %\end{itemize} 
 
 \paragraph{Build the external modules} 
-The external modules have to be built first. They consist of Alberta, ALUGrid, UG, GotoBLAS and METIS.
+If you obtained a \Dumux tarball, you should skip this part. 
+The external modules have to be built first. They consist of Alberta, ALUGrid, UG, and METIS.
 To install them all, execute the install script in the folder \texttt{external}:
 \begin{center}
 \texttt{./installExternal.sh all}
 \end{center}
-If you like to only install some of the external software, you can choose one of the corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
+If you like to only install some of the external software, you can choose one of the 
+corresponding options instead of \texttt{all}: \texttt{alberta, alu, metis, ug}.
 Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
 
 \paragraph{Build DUNE and DuMu$^\text{x}$}
@@ -64,4 +77,9 @@ Type in the folder \texttt{DUMUX}:
 \begin{center}
 \texttt{./dune-common/bin/dunecontrol --opts=dune-mux/debug.opts all}
 \end{center}
-
+This uses the DUNE buildsystem. If it does not work, please 
+consider the file \texttt{INSTALL} in the directory \texttt{dune-mux}. You can also find more information 
+in the DUNE Buildsystem HOWTO located at the DUNE webpage, \cite{DUNE-HP}. 
+Alternatively, the tool Cmake can 
+be used to build \Dumux. Please check the file 
+\texttt{INSTALL.cmake} for details. 

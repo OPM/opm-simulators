@@ -1,4 +1,3 @@
-\clearpage
 \section[Fully-coupled model]{Solving a problem using a Fully-Coupled Model}\label{tutorial-coupled}
 
 The process of solving a problem using \Dumux can be roughly divided into four parts:
@@ -9,7 +8,7 @@ The process of solving a problem using \Dumux can be roughly divided into four p
  \item A suitable model has to be chosen.
 \end{enumerate}
 
-The problem that is solved in this tutorial is illustrated in figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects as well as capillarity effects are neglected.
+The problem that is solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects as well as capillarity effects are neglected.
 
 \begin{figure}[h]
 \psfrag{x}{x}
@@ -110,7 +109,7 @@ tag inherits all properties defined for the \texttt{BoxTwoP} type tag,
 which means that for this problem the two-phase box model is chosen as
 discretization scheme. On line \ref{tutorial-coupled:set-problem}, a
 problem class is attached to the new type tag, while the grid which
-going to be used is defined on line \ref{tutorial-coupled:set-grid} --
+is going to be used is defined on line \ref{tutorial-coupled:set-grid} --
 in this case it's \texttt{SGrid}.  Since in Dune, there's no uniform
 mechanism to allocate grids, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that. Next,
@@ -148,9 +147,9 @@ six parameters:
 \item[values:] A vector which stores the result of the method. What
   the values in this vector means is dependent on the method: For
   \texttt{dirichlet()} it contains the values of the primary
-  variables, for \texttt{neumann()} it the mass fluxes per area unit
-  over the boundary segment, and for \texttt{boundaryTypes()} it
-  contains the type of boundary condition which should be used for
+  variables, for \texttt{neumann()} the mass fluxes per area unit
+  over the boundary segment, and for \texttt{boundaryTypes()} 
+  the type of boundary condition which should be used for
   each equation (either \texttt{Dune::BoundaryConditions::dirichlet} or
   \texttt{Dune::BoundaryConditions::neumann}).
 \item[element:] The element of the grid where the boundary segment
@@ -171,8 +170,8 @@ specify properties of sub-control volumes and thus only get
 \texttt{scvIdx} as parameters.
 
 In addition to these five methods, there might be some model-specific
-methods. If the isothermal two-phase model is used, a
-\texttt{temperature()} method which returns the temperature in Kelvin
+methods. If the isothermal two-phase model is used, this includes 
+for example a \texttt{temperature()} method which returns the temperature in Kelvin
 of the fluids and the rock matrix in the domain. This temperature is
 then used by the model to calculate fluid properties which possibly
 depend on it, e.g. density.
@@ -239,12 +238,12 @@ numberstyle=\tiny, numbersep=5pt, firstline=16]{../../tutorial/tutorialsoil_coup
 In line \ref{tutorial-coupled:permeability} the function returning the
 intrinsic permeability can be found. As can be seen, the function has
 to be called with three different arguments. The first one
-(\texttt{x}) is a vector including the global coordinates of the
+(\texttt{globalPos}) is a vector including the global coordinates of the
 current entity (can be an element, vertex, etc.), the second one
-(\texttt{e}) is the entity itself and the third one is a vector
-including the local coordinates of the current entity. The intrinsic
-permeability is a tensor and thus returned in form of a $n \times
-n$-matrix where $n$ is the dimension of the problem.
+(\texttt{element}) is the current element itself and the third one is a vector
+including the local coordinates of the current entity within the element. The intrinsic
+permeability is a tensor and thus returned in form of a $\texttt{dim} \times
+\texttt{dim}$-matrix where \texttt{dim} is the dimension of the problem.
 
 The function \texttt{porosity()} defined in line
 \ref{tutorial-coupled:porosity} is called with the same arguments as
@@ -366,12 +365,12 @@ problem file.
 After this, change the \texttt{create()} method of the \texttt{Grid}
 property and your soil class, so that it matches the domain described
 by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the problem class
-so the boundary conditions are consistent with figure
+so that the boundary conditions are consistent with figure
 \ref{tutorial-coupled:ex2_BC}. Initially the domain is fully saturated
 with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
-should be set to $4\times 10^7 \text{s}$ with an inital time step of
+should be set to $4\times 10^7 \text{s}$ with an inital time step size of
 $100 \text{s}$.
 
 Now include your new problem file in the main file and replace the
@@ -419,9 +418,6 @@ hint by looking at existing fluid classes in the directory
 \texttt{/dumux/material/fluids}.)
 
 Use benzene as a new fluid and run the model of Exercise 2 with water
-and benzene. Benzene has the following properties:
-\begin{description}
-  \item[density:] $889.51 \, \text{kg} / \text{m}^3$
-  \item[viscosity:] $0.00112 \, \text{Pa} \; \text{s}$
-\end{description}
+and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
+and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
 
