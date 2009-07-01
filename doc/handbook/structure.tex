@@ -1,2 +1,103 @@
 \chapter{Structure}
 
+We briefly describe the structure of \Dumux in terms 
+of subdirectories, source files, and tests. For more details, 
+the Doxygen documentation should be considered. 
+\Dumux comes in form of a DUNE module \texttt{dune-mux}. 
+It has a similar structure as other DUNE modules like \texttt{dune-grid}. 
+The following subdirectories are within the module's root directory, 
+from now on assumed to be \texttt{dune-mux}: 
+\begin{itemize} 
+\item \texttt{CMake}: the configuration options 
+for building \Dumux using CMake. See the file \texttt{INSTALL.cmake} in 
+the root directory \texttt{dune-mux} for details. Of course, 
+it is also possible to use the DUNE buildsystem just like for the other 
+DUNE modules.
+\item \texttt{doc}: contains the Doxygen documentation in \texttt{doxygen}, 
+this handbook in \texttt{handbook}, and the \Dumux logo in various formats in 
+\texttt{logo}. The html documentation produced by Doxygen can be accessed as usual, 
+namely, by opening \texttt{doc/doxygen/html/index.html} with a web browser. 
+\item \texttt{dumux}: the \Dumux source files. See Section \ref{sec:dumux} for details. 
+\item \texttt{test}: tests for each numerical model and the property system. 
+See Section \ref{sec:test} for details. 
+\item \texttt{tutorial}: contains the tutorials described in Chapter \ref{chp:tutorial}. 
+\item \texttt{util}:   contains various auxiliary programs which are not
+directly related to the core \Dumux libraries like programs to generate
+tables for material laws, to fix the indentation of the source code,
+etc.
+\end{itemize}
+
+
+
+\section{The directory \texttt{dumux}}\label{sec:dumux}
+
+The directory \texttt{dumux} contains the \Dumux source files. It consists 
+of the following subdirectories: 
+\begin{itemize} 
+\item \texttt{auxiliary}: 
+general stuff like the property system and the time management for the 
+fully coupled models. 
+
+\item \texttt{boxmodels}:
+the general fully implicit box method is contained in the subdirectory 
+\texttt{boxscheme}, while each of the other subdirectories contains 
+a derived specific numerical model. 
+
+\item \texttt{diffusion}: numerical models to solve the pressure equation 
+as part of the fractional flow formulation. The particular models are contained 
+in corresponding subdirectories, which are distinguished by the respectively employed 
+discretization scheme. 
+
+\item \texttt{fractionalflow}:
+the (non-compositional) fractional flow model, which utilizes the IMPES method 
+contained in the subdirectory \texttt{impes}.
+
+\item \texttt{functions}:
+the Crouzeix--Raviart function implemented in the style of \texttt{dune-disc}'s P1 function. 
+
+\item \texttt{fvgeometry}:
+employed by the box method to extract the dual mesh geometry information out of the 
+primal one. 
+
+\item \texttt{io}: Additional in-/output possibilities like restart files 
+and a VTKWriter extension. 
+
+\item \texttt{material}: everything related to material parameters and 
+constitutive equations. The base classes for matrix and fluid properties 
+can be found in \texttt{property\_baseclasses.hh}, while the base classes 
+for constitutive relations are in \texttt{twophaserelations.hh} and \texttt{multicomponentrelations.hh}.
+Derived particular properties and relations are contained in 
+\texttt{matrixproperties.hh} and in the subdirectories 
+\texttt{fluids} and \texttt{constrel}. 
+
+
+\item \texttt{nonlinear}: Newton's method.
+
+
+\item \texttt{operators}: based on \texttt{dune-disc}, assembly operators for Crouzeix--Raviart 
+elements and mimetic finite differences. 
+
+
+\item \texttt{pardiso}: interface to the Pardiso direct solver library, \cite{Pardiso}. 
+
+
+\item \texttt{shapefunctions}:  Crouzeix--Raviart element shape functions. 
+
+
+\item \texttt{timedisc}: time discretization for the decoupled models. 
+
+
+\item \texttt{transport}: numerical models to solve the pressure equation 
+as part of the fractional flow formulation analogous to the \texttt{diffusion} 
+directory. Moreover, the compositional decoupled models are included here. 
+
+
+\end{itemize}
+
+
+
+\section{The directory \texttt{test}}\label{sec:test}
+
+
+
+
