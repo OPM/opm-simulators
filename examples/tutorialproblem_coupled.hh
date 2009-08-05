@@ -19,7 +19,7 @@
 
 // fluid properties
 #include <dumux/material/fluids/water.hh>
-#include <dumux/material/fluids/oil.hh>
+#include <dumux/material/fluids/lowviscosityoil.hh>
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pboxmodel.hh>
@@ -59,10 +59,10 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
         Dune::FieldVector<int, 2> cellRes;
         Dune::FieldVector<ctype, 2> lowerLeft(0.0);
         Dune::FieldVector<ctype, 2> upperRight;
-        cellRes[0] = 45;
-        cellRes[1] = 15;
+        cellRes[0] = 30;
+        cellRes[1] = 10;
         upperRight[0] = 300;
-        upperRight[1] = 100;
+        upperRight[1] = 60;
         return new Dune::SGrid<2,2>(cellRes,
                                     lowerLeft,
                                     upperRight);
@@ -71,7 +71,7 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
 
 // Set the wetting and non-wetting phases
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dune::Water); /*@\label{tutorial-coupled:set-wetting}@*/
-SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dune::Oil);/*@\label{tutorial-coupled:set-nonwetting}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dune::LowViscosityOil);/*@\label{tutorial-coupled:set-nonwetting}@*/
 
 // Set the soil properties
 SET_PROP(TutorialProblemCoupled, Soil) /*@\label{tutorial-coupled:set-soil}@*/
@@ -155,8 +155,8 @@ public:
                    int                         scvIdx,
                    int                         boundaryFaceIdx) const
     {
-        values[Indices::pW] = 200.0e3; // 200 000 Pa = 2 bar
-        values[Indices::sN] = 1.0; // 100 % oil saturation
+        values[Indices::pW] = 200.0e3; // 200 kPa = 2 bar
+        values[Indices::sN] = 0.0; // 0 % oil saturation on left boundary
     }
 
     // Evaluate the boundary conditions for a neumann boundary
@@ -170,11 +170,12 @@ public:
                  int                         scvIdx,
                  int                         boundaryFaceIdx) const
     {
-        const GlobalPosition &pos = element.geometry().corner(scvIdx);
+        const GlobalPosition &pos = 
+            fvElemGeom.boundaryFace[boundaryFaceIdx].ipGlobal;
         Scalar right = this->bboxMax()[0];
         if (pos[0] > right - eps_) {
-            // outflow of 0.3 g/(m * s) oil on the right boundary of the
-            // domain
+            // oil outflux of 0.3 g/(m * s) on the right boundary of
+            // the domain.
             values[Indices::phase2Mass(Indices::wPhase)] = 0;
             values[Indices::phase2Mass(Indices::nPhase)] = 0.3e-3;
         } else {
@@ -191,7 +192,7 @@ public:
                  const FVElementGeometry &fvElemGeom,
                  int                      scvIdx) const
     {
-        values[Indices::pW] = 200.0e3; // 200 000 Pa = 2 bar
+        values[Indices::pW] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::sN] = 1.0;
     }
 

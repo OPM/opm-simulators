@@ -1,5 +1,7 @@
 # $id: $
 
+if BUILD_HANDBOOK
+
 #EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 
 DOCSOURCE = dumux-handbook.tex intro.tex navigation.html css.html
@@ -27,14 +29,10 @@ endif
 BASEDIR=../..
 CURDIR=doc/handbook
 
-docdir=$(datadir)/doc/handbook
+handbookdir=$(docdir)/handbook
+handbook_DATA = dumux-handbook.pdf
 
-if BUILD_DOCS
-doc_DATA = dumux-handbook.pdf
-EXTRAINSTALL = dumux-handbook.pdf grid-howto*.html *.png *.css
-endif
-
-CLEANFILES = *.aux *.bbl *.blg *.log *.out *.toc *.dvi *.pdf *.ps
+CLEANFILES = *.aux *.bbl *.blg *.log *.out *.toc *.dvi *.ps
 CLEANFILES += *.4ct *.4tc *.css *.idv *.idx *.lg *.tid *.tmp *.tms *.xref
 CLEANFILES += dumux-handbook*.html dumux-handbook*.png 
 CLEANFILES += $(DOCS)
@@ -74,8 +72,9 @@ dumux-handbook.pdf:
 #	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
 #	sed $(srcdir)/Makefile.dist.in -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.in
 
-EXTRA_TEXINPUTS:=$(top_srcdir)
+EXTRA_TEXINPUTS=$(top_srcdir)
 
 include $(top_srcdir)/am/global-rules
 include $(top_srcdir)/am/latex
 
+endif

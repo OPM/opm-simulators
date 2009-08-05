@@ -34,7 +34,7 @@ add your account to the group \texttt{svndune}.
 If you are working on a LH2 computer, you then can checkout DuMu$^\text{x}$ 
 and the external modules via 
 \begin{itemize}
-\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-mux/trunk dune-mux}
+\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-mux/trunk dumux}
 \item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-subgrid/trunk dune-subgrid}
 \item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
 \end{itemize} 
@@ -56,7 +56,7 @@ by \texttt{localhost}.
 
 %Moreover, the possibility to checkout a read-only version from outside exists. Therefor, no IWS-account is needed. The following commands can be used for an anonymous checkout:
 %\begin{itemize}
-%\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dune-mux}
+%\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux}
 %\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}
 %\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-subgrid/trunk dune-subgrid}
 %\end{itemize} 
@@ -75,11 +75,13 @@ Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}.
 \paragraph{Build DUNE and DuMu$^\text{x}$}
 Type in the folder \texttt{DUMUX}: 
 \begin{center}
-\texttt{./dune-common/bin/dunecontrol --opts=dune-mux/debug.opts all}
+\texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/debug.opts all}
 \end{center}
-This uses the DUNE buildsystem. If it does not work, please 
-consider the file \texttt{INSTALL} in the directory \texttt{dune-mux}. You can also find more information 
-in the DUNE Buildsystem HOWTO located at the DUNE webpage, \cite{DUNE-HP}. 
-Alternatively, the tool Cmake can 
-be used to build \Dumux. Please check the file 
-\texttt{INSTALL.cmake} for details. 
+This uses the DUNE buildsystem. If it does not work, please consider
+the file \texttt{INSTALL} in the \Dumux root directory (if you use
+SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use
+a released version it is usually \texttt{dumux-VERSION}). You can also
+find more information in the DUNE Buildsystem HOWTO located at the
+DUNE webpage, \cite{DUNE-HP}.  Alternatively, the tool CMake can be
+used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for
+details.
