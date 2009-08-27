@@ -104,7 +104,7 @@ public:
     {
         if (globalPos[0]> Right_ - eps_)
         {
-            return 3e-7;
+            return -3e-4;
         }
         // all other boundaries
         return 0.0;
