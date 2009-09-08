@@ -28,6 +28,7 @@ template<class GridView, class Scalar, class VariableClass> class TutorialProble
 {
     enum
         {dim=GridView::dimension, dimWorld = GridView::dimensionworld};
+    enum{wetting = 0, nonwetting = 1};
     typedef typename GridView::Grid Grid;
     typedef typename GridView::Traits::template Codim<0>::Entity Element;
     typedef Dune::FieldVector<Scalar,dim> LocalPosition;
@@ -43,11 +44,11 @@ public:
 
     // function returning source/sink terms for the pressure equation
     // depending on the position within the domain
-    virtual Scalar source(const GlobalPosition& globalPos, 
+    virtual std::vector<Scalar> source(const GlobalPosition& globalPos,
                           const Element& e, /*@\label{tutorial-decoupled:qpress}@*/
                           const LocalPosition& localPos)
     {
-        return 0.0;
+        return std::vector<Scalar>(2,0.0);
     }
 
     // function returning the boundary condition type for solution
@@ -99,15 +100,16 @@ public:
 
     // function returning the Neumann boundary condition for the solution
     // of the pressure equation depending on the position within the domain
-    Scalar neumannPress(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:jpress}@*/
+    std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:jpress}@*/
                         const LocalPosition& localPos) const
     {
+        std::vector<Scalar> neumannFlux(2, 0.0);
         if (globalPos[0]> Right_ - eps_)
         {
-            return -3e-4;
+            neumannFlux[nonwetting] = 3e-4;
         }
         // all other boundaries
-        return 0.0;
+        return neumannFlux;
     }
 
     // function returning the initial saturation
