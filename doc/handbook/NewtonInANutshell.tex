@@ -1,0 +1,50 @@
+
+
+\chapter{Newton in an Nutshell}
+
+When using a fully coupled numerical model, one timestep essentially consists of the applicaiotn of the \textsc{Newton} algorith to0 sole the nonlinear system.
+
+One step of the \textsc{Newton} method can be formalized as follows:
+
+
+
+\textsc{Newton} method: 
+\begin{subequations}
+\begin{align}
+\label{NewtonGen}
+\textbf{u}^{r+1} &= \textbf{u}^r -  \left(\textbf{f}^\prime (\textbf{u}^r) \right)^{-1} \textbf{f}(\textbf{u}^r) \\
+\Leftrightarrow ( \textbf{u}^{r+1}-\textbf{u}^r) {\textbf{f}^{\prime}(\textbf{u}^r)} &= -\textbf{f}(\textbf{u}^r) \\
+\Leftrightarrow ( \textbf{u}^r - \textbf{u}^{r+1}) \underbrace{\textbf{f}^{\prime}(\textbf{u}^r)}_{\textnormal{Jacobian}} &= \textbf{f}(\textbf{u}^r) \label{NewtonAsUsed}
+\end{align}
+\end{subequations}
+
+\noindent with
+\begin{itemize}
+\item $\phantom{a}^r$: last iteration, $\phantom{a}^{r+1}$: current iteration,
+\item $\phantom{a}^\prime$: derivative
+\item $\textbf{u}$: vector of unknowns
+\item $\textbf{f}(\textbf{u}^r)$: function of vector of unknowns
+\end{itemize}
+
+1-D example with slope $m$:
+\begin{equation}
+ m= \frac{y(u^{r+1})-y(u^{r})}{u^{r+1}-u^{r}} \textnormal{ for a root of a function: } m= - \frac{y(u^{r})}{u^{r+1}-u^{r}}
+\end{equation}
+The value of u (generally a vector of unknowns) for which f becomes zero is searched for. Therefore the quantity of interest is $\textbf{u}^{r+1}$.
+
+But the (BiCGSTAB / Pardiso ...-)linear solver solves systems of the form:
+\begin{equation}
+\label{GenSysEq}
+ A\textbf{x} = \textbf{b} .
+\end{equation}
+
+Comparing (\ref{GenSysEq}) with (\ref{NewtonAsUsed}) leads to:
+\begin{itemize}
+\item $\textbf{b} = \textbf{f}(\textbf{u}^r)$ r.h.s. as it is known from the last iteration. Here, $\textbf{f}(\textbf{u}^r)$ is called residual. It is obtained by evaluating the balance equations with the primary variables, as obtained from the last iteration step.
+\item $A=\textbf{f}^{\prime}(\textbf{u}^r)$ coefficient matrix or \textsc{Jacobian}. It is obtained by numerical differentiation. Evaluating the balance equations at the last solution + eps, then evaluating the balance equations at the last solution - eps, division by 2eps: numerical differentiation complete.
+\item $\textbf{x} = (\textbf{u}^{r+1} - \textbf{u}^{r})$ this is what the linear solver finds as an solution. 
+\end{itemize}
+
+This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more iteration.
+
+In the rest of Dumux (everywhere besides in the solver), not the change of the solution is looked for, but the actual solution is used. Therefore the outcome of the linear solver needs to be reformulated as done in \verb+updateMethod.update(*this, u, *uOld, model);+. In this function the ``change in solution'' is changed to ``solution''. Afterwards the quantity \verb+*u+ stands for the solution.

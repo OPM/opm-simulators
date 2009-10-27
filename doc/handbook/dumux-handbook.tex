@@ -15,6 +15,9 @@
 \usepackage{graphicx}
 \usepackage[htt]{hyphenat}
 \usepackage{color}
+\usepackage{lscape}
+\usepackage{enumerate}
+
 
 \DeclareGraphicsExtensions{.eps, .jpg}
 
@@ -39,6 +42,17 @@
 }
 {\end{itemize}}
 
+% a new counter
+% you can give a label to it and thus reference it
+% syntax: \numberThis{printedTextToBeLabeled}{label} 
+% if you wanted a \newline after a numbered thing, you could just add a empty line after ``\label{#2}''
+\newcounter{thingCounter}
+\renewcommand{\thethingCounter}{\arabic{thingCounter}}
+\newcommand{\numberThis}[2]{%
+        \refstepcounter{thingCounter}%
+        \thethingCounter.\ #1 \label{#2}
+}
+
 %The theorems
 \theorembodyfont{\upshape}
 \theoremheaderfont{\sffamily\bfseries}
@@ -46,6 +60,7 @@
 \newtheorem{rem}[exc]{Remark}
 \newtheorem{lst}{Listing}
 \newtheorem{warn}[exc]{Warning}
+\newtheorem{justCounting}{}
 
 \DeclareMathOperator{\grad}{grad}
 \DeclareMathOperator{\curl}{curl}
@@ -90,11 +105,14 @@ Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
 \input{getting-started}
 \input{tutorial}
 \input{structure}
-\input{models} 
+\input{models}
+\input{DumuxFlow}
+
+\input{NewtonInANutshell}
+
+
 
 \bibliographystyle{plain}
 \bibliography{dumux-handbook}
-
 \printindex
-
 \end{document}
