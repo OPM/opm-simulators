@@ -55,7 +55,7 @@ finalize\\
 \end{tabbing}
 
 
-%% this is tructured by a table propably the new structure is intuetivly easier to get
+%% this is tructured by a table propably the new structure (\numberThis{}{} defined in the main document)is intuetivly easier to get
 % \begin{enumerate}[1]
 %  \item\label{init} initialize \\
 %  \textbf{foreach} timestep
@@ -104,10 +104,11 @@ This section is supposed to help you in getting an idea how things are handled i
 %%SAMPLE:
 %    \begin{tabular}{|l|} % each box is a single table, left jusified and bars to the right and left
 %       \hline % this makes the top bar of the box
+%       \textbf{\textcircled{\ref{calc}}}\verb+ctl.newtonEnd()+ \\ % this is the line for showing code. also in this line the circled numbers are printed, that show the connection to the content wise structure. The numbers are realized as references to the enumerated list. bold!
+%       \begin{scriptsize}\end{scriptsize}\\
 %       \textbf{called by}:\\ %one line in the box/ table: ``called by'' is set in bold face
 %       \textbf{implemented in}: \\ %another line in the box / table  
-%       \textbf{\textcircled{\ref{calc}}}\verb+ctl.newtonEnd()+ \\ % this is the line for showing code. also in this line the circled numbers are printed, that show the connection to the content wise structure. The numbers are realized as references to the enumerated list. bold!
-%     \begin{scriptsize}\end{scriptsize}\\\hline % this line is smaller textsize for writing comments \hline makesthe bottom bar of the box
+% 	\hline % this line is smaller textsize for writing comments \hline makesthe bottom bar of the box
 %   \end{tabular}
 %     $\overrightarrow{\scriptsize % this is the arrow connecting two boxes. In can carry text. 
 %     \begin{array}{l} % if the arrow is supposed to carry multiple lines, an array is inserted.
@@ -115,18 +116,20 @@ This section is supposed to help you in getting an idea how things are handled i
 %     \textbf{\textcircled{\ref{prep}}} \rightarrow \textbf{\textcircled{\ref{init}}}
 %     \end{array}
 %     }$
-  \begin{tabular}{|l|}
-    \hline
+  \begin{tabular}{|l|} \hline
+    \textbf{\textcircled{\ref{init}}}\verb+problem.simulate()+ \\
+    \begin{scriptsize}dealing with t$_{init}$\end{scriptsize}\\
     \textbf{called by}: main() \\
     \textbf{implemented in}: boxproblem.hh \\  
-    \textbf{\textcircled{\ref{init}}}\verb+problem.simulate()+ \\
-    \begin{scriptsize}dealing with t$_{init}$\end{scriptsize}\\\hline
+    \hline
   \end{tabular}
     $\overrightarrow{}$
   \begin{tabular}{|l|}\hline
+    \textbf{\textcircled{\ref{init}}}\verb+timeManager_runSimulation(*asImp())+\\ 
+    \begin{scriptsize}\end{scriptsize}\\
     \textbf{called by}: {boxproblem.hh}\\
     \textbf{implemented in}: {timemanager.hh}\\  
-    \textbf{\textcircled{\ref{init}}}\verb+timeManager_runSimulation(*asImp())+\\ \hline
+    \hline
   \end{tabular} 
 {\scriptsize
     $\overrightarrow{ %an arrow under which things may be written
@@ -138,10 +141,11 @@ This section is supposed to help you in getting an idea how things are handled i
     }$}
   \begin{tabular}{|l|}
     \hline
+    \textbf{\textcircled{\ref{prep}}}\verb+problem.timeIntegration()+ \\
+    \begin{scriptsize}\end{scriptsize}\\
     \textbf{called by}: timemanager.hh\\
     \textbf{implemented in}: boxproblem.hh\\  
-    \textbf{\textcircled{\ref{prep}}}\verb+problem.timeIntegration()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline
+\hline
   \end{tabular}    
 \nextline
     {\scriptsize$\overrightarrow{
@@ -152,18 +156,20 @@ This section is supposed to help you in getting an idea how things are handled i
     }$}
       \begin{tabular}{|l|}
     \hline
+    \textbf{\textcircled{\ref{prep}}}\verb+model_.update()+ \\
+    \begin{scriptsize}sth like numerical model\end{scriptsize}\\
     \textbf{called by}: boxproblem.hh\\
     \textbf{implemented in}: boxscheme.hh\\  
-    \textbf{\textcircled{\ref{prep}}}\verb+model_.update+ \\
-    \begin{scriptsize}sth like numerical model\end{scriptsize}\\\hline
+	\hline
   \end{tabular}
     $\overrightarrow{}$
     \begin{tabular}{|l|}
       \hline
+     \textbf{\textcircled{\ref{prep}}}\verb+asImp_().updatebegin()+ \\
+    \begin{scriptsize}applies Dirichlets\end{scriptsize}\\
       \textbf{called by}: boxscheme.hh\\
       \textbf{implemented in}: boxscheme.hh\\  
-      \textbf{\textcircled{\ref{prep}}}\verb+asImp_().updatebegin()+ \\
-    \begin{scriptsize}applies Dirichlets\end{scriptsize}\\\hline
+	\hline
   \end{tabular}
     {\scriptsize$\overrightarrow{
       \begin{array}{l}
@@ -172,14 +178,15 @@ This section is supposed to help you in getting an idea how things are handled i
       \end{array} } $}
     \begin{tabular}{|l|}
       \hline
+            \textbf{\textcircled{\ref{prep}}}\verb+solver.execute()+ \\
+            \begin{scriptsize}$\begin{array}{l}
+      \textnormal{solver calls, but more than} \\ 
+      \textnormal{just solving happens in here} \\
+      \rightsquigarrow\textnormal{solver keeps track of things}
+      \end{array}$\end{scriptsize}\\
       \textbf{called by}: boxscheme.hh\\
       \textbf{implemented in}: boxscheme.hh\\  
-      \textbf{\textcircled{\ref{prep}}}\verb+solver.execute+ \\
-    \begin{scriptsize}$\begin{array}{l}
-	\textnormal{solver calls, but more than} \\ 
-	\textnormal{just solving happens in here} \\
-	\textnormal{solver keeps track of things}
-      \end{array}$\end{scriptsize}\\\hline
+    \hline
   \end{tabular}
 \nextline
     {\scriptsize$\overrightarrow{ \begin{array}{l}
@@ -195,20 +202,22 @@ This section is supposed to help you in getting an idea how things are handled i
                                  \end{array}
     }$}
     \begin{tabular}{|l|}
-      \hline
+      \hline      
+	\textbf{\textcircled{\ref{elem}}}\verb+jacobianAsm.assemble()+ \\
+    \begin{scriptsize}\end{scriptsize}\\
       \textbf{called by}: newtonmethod.hh\\
       \textbf{implemented in}: assemblerpdelab.hh\\  
-      \textbf{\textcircled{\ref{elem}}}\verb+jacobianAsm.assemble()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline
+	\hline
   \end{tabular}
     $\overrightarrow{
     }$
        \begin{tabular}{|l|}
       \hline
-      \textbf{called by}: assemblerpdelab.hh\\
-      \textbf{implemented in}: gridoperatorspace.hh\\  
-      \textbf{\textcircled{\ref{elem}}}\verb+gridOperatorSpace_->jacobian()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline
+    	\textbf{\textcircled{\ref{elem}}}\verb+gridOperatorSpace_->jacobian()+ \\
+    	\begin{scriptsize}\end{scriptsize}\\
+      	\textbf{called by}: assemblerpdelab.hh\\
+      	\textbf{implemented in}: gridoperatorspace.hh\\  
+	\hline
   \end{tabular}
     \nextline
     {\scriptsize$\overrightarrow{\begin{array}{l}
@@ -218,38 +227,42 @@ This section is supposed to help you in getting an idea how things are handled i
     }$}
      \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+LocalAssemblerCallSwitch<La,La::doAlphaVolume>::jacobian_volume()+ \\
+      \begin{scriptsize}\end{scriptsize}\\
       \textbf{called by}: gridoperatorspace.hh\\
       \textbf{implemented in}: gridoperatorspaceutilities.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+LocalAssemblerCallSwitch<La,La::doAlphaVolume>::jacobian_volume()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline
-  \end{tabular}
+      \hline
+     \end{tabular}
 \nextline
     $\overrightarrow{
     }$
      \begin{tabular}{|l|}
       \hline
+     \textbf{\textcircled{\ref{calc}}}\verb+la.jacobian_volume()+ \\
+     \begin{scriptsize}\end{scriptsize}\\
       \textbf{called by}: gridoperatorspaceutilities.hh\\
       \textbf{implemented in}:  boxjacobianpdelab.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+la.jacobian_volume()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline
+	\hline
   \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+model_.localJacobian.assemble()+ \\
+    \begin{scriptsize}\end{scriptsize}\\
       \textbf{called by}: boxjacobianpdelab.hh\\
       \textbf{implemented in}: boxjacobian.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+model_.localJacobian.assemble()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline
+	\hline
   \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
       \hline
+    \textbf{\textcircled{\ref{calc}}}\verb+assemble_()+ \\
+    \begin{scriptsize}the Jacobian\end{scriptsize}\\
       \textbf{called by}: boxjacobian.hh\\
       \textbf{implemented in}: boxjacobian.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+assemble_()+ \\
-    \begin{scriptsize}the Jacobian\end{scriptsize}\\\hline
+     \hline
   \end{tabular}
 \nextline
     $\overrightarrow{
@@ -300,22 +313,23 @@ $\left \lbrace
    \textnormal{calculating the fluxes takes two more steps} 
 }$}
      \begin{tabular}{||l||}
-      \hline\hline
+        \hline\hline
+        \textbf{\textcircled{\ref{calc}}}\verb+FluxData vars()+ \\
+        \begin{scriptsize}this a call to a constructor \end{scriptsize}\\
 	\textbf{called by}: 2pboxjacobian.hh\\
-      \textbf{implemented in}: 2pboxjacobian.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+FluxData vars()+ \\
-    \begin{scriptsize}this a call to a constructor \end{scriptsize}\\\hline\hline
-  \end{tabular}
+        \textbf{implemented in}: 2pboxjacobian.hh\\  
+	\hline\hline
+     \end{tabular}
     $\overrightarrow{
     }$
      \begin{tabular}{||l||}
       \hline\hline
+      	\textbf{\textcircled{\ref{calc}}}\verb+TwoPFluxdata+ \\
+    	\scriptsize{-all relevant gradients are calculated}\\
+    	\scriptsize{-all velocities are calculated}\\
 	\textbf{called by}: \\
-      \textbf{implemented in}: 2pfluxdata.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+TwoPFluxdata+ \\
-    \scriptsize{-all relevant gradients are calculated}\\
-    \scriptsize{-all velocities are calculated}
-    \\\hline\hline
+      	\textbf{implemented in}: 2pfluxdata.hh\\  
+     \hline\hline
   \end{tabular}
   \nextline
   $\left|
@@ -330,11 +344,11 @@ $\left \lbrace
     }$
      \begin{tabular}{|l|}
       \hline
-	\textbf{called by}: boxjacobian.hh\\
-      \textbf{implemented in}: boxjacobian.hh \fbox{\fbox{$\rightarrow$flux}}\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+evalLocalResiudal(residU, true)+\\
-    \begin{scriptsize}this is calculating the r.h.s.\end{scriptsize}\\\hline 
-  \end{tabular}
+      	\textbf{\textcircled{\ref{calc}}}\verb+evalLocalResiudal(residU, true)+\\
+	\begin{scriptsize}this is calculating the r.h.s.\end{scriptsize}\\	\textbf{called by}: boxjacobian.hh\\
+      	\textbf{implemented in}: boxjacobian.hh \fbox{\fbox{$\rightarrow$flux}}\\  
+      \hline 
+     \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
@@ -348,30 +362,32 @@ $\left \lbrace
     }$
       \begin{tabular}{|l|}
       \hline
+      	\textbf{\textcircled{\ref{calc}}}\verb+mat(i,j)=+ \\
+	\begin{scriptsize}a matrix is being filled\end{scriptsize}\\
 %       \textbf{called by}: boxjacobianpdelab.hh\\
-      \textbf{implemented in}: boxjacobianpdelab.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+mat(i,j)=+ \\
-    \begin{scriptsize}a matrix is being filled\end{scriptsize}\\\hline 
-  \end{tabular}
+      	\textbf{implemented in}: boxjacobianpdelab.hh\\  
+      \hline 
+      \end{tabular}
     \nextline
     $\overrightarrow{
     }$
       \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+jacobian_volume_post_skeleton()+ \\
+      \begin{scriptsize}nothing happesn in here\end{scriptsize}\\
 % 	\textbf{called by}: .hh\\
 %       \textbf{implemented in}: \\  
-      \textbf{\textcircled{\ref{calc}}}\verb+jacobian_volume_post_skeleton()+ \\
-    \begin{scriptsize}nothing happesn in here\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
       \begin{tabular}{|l|}
       \hline
-	\textbf{called by}: gridoperatorspace.hh\\
-      \textbf{implemented in}: gridoperatorspace.hh\\  
       \textbf{\textcircled{\ref{calc}}}\verb+etadd()+ \\
-    \begin{scriptsize}add local Jacobian to global Jacobian\end{scriptsize}\\
-    \begin{scriptsize}apply constraints e.g. Bound.Cond.\end{scriptsize}\\\hline 
+     \begin{scriptsize}add local Jacobian to global Jacobian\end{scriptsize}\\
+     \begin{scriptsize}apply constraints e.g. Bound.Cond.\end{scriptsize}\\	\textbf{called by}: gridoperatorspace.hh\\
+     \textbf{implemented in}: gridoperatorspace.hh\\  
+     \hline 
   \end{tabular}
     {\scriptsize$\overrightarrow{
     \begin{array}{l}
@@ -382,10 +398,11 @@ $\left \lbrace
    \nextline
        \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{elem}}}\verb+gridOperatorspace_->residual()+ \\
+      \begin{scriptsize}\end{scriptsize}\\
       \textbf{called by}: assemblerpdelab.hh\\
       \textbf{implemented in}: gridoperatorspace.hh\\  
-      \textbf{\textcircled{\ref{elem}}}\verb+gridOperatorspace_->residual()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     {\scriptsize$\overrightarrow{
     \texttt{for(ElementIterator)}
@@ -393,49 +410,54 @@ $\left \lbrace
 \nextline
       \begin{tabular}{|l|}
       \hline
+      \textnormal{\textbf{\textcircled{\ref{elem}}}}$\rightarrow$\textnormal{\textbf{\textcircled{\ref{calc}}}}\verb+LocalAssemblerCallSwitch<La,La::doAlphaVolume>::alpha_volume()+ \\
+      \begin{scriptsize}\end{scriptsize}\\
       \textbf{called by}:gridoperatorspace.hh\\
       \textbf{implemented in}: gridoperatorspace.hh\\  
-      \textnormal{\textbf{\textcircled{\ref{elem}}}}$\rightarrow$\textnormal{\textbf{\textcircled{\ref{calc}}}}\verb+LocalAssemblerCallSwitch<La,La::doAlphaVolume>::alpha_volume()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
    \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+la.alpha_volume()+ \\
+      \begin{scriptsize}\end{scriptsize}\\      
       \textbf{called by}:grid..util\\
       \textbf{implemented in}: boxjacobianpdelab.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+la.alpha_volume()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
 \nextline
      \begin{tabular}{|l|}
       \hline
-      \textbf{called by}:boxjabianpdelab.hh\\
-      \textbf{implemented in}: boxjacobian.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+model_.localJacobian().evalLocalResidual(localResidual,true)+ \\
-    \begin{scriptsize}this computes r.h.s.\end{scriptsize}\\
-    \begin{scriptsize}same implementation as for the calculation of the Jacobian\end{scriptsize}\\\hline 
-  \end{tabular}
+    	\textbf{\textcircled{\ref{calc}}}\verb+model_.localJacobian().evalLocalResidual(localResidual,true)+ \\
+    	\begin{scriptsize}this computes r.h.s.\end{scriptsize}\\
+    	\begin{scriptsize}same implementation as for the calculation of the Jacobian\end{scriptsize}\\
+      	\textbf{called by}:boxjabianpdelab.hh\\
+      	\textbf{implemented in}: boxjacobian.hh\\  
+	\hline 
+    \end{tabular}
     $\overrightarrow{
     }$
      \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+r[]=localResidual[][]+ \\
+      \begin{scriptsize}store r.h.s.\end{scriptsize}\\
 %       \textbf{called by}:\\
 %       \textbf{implemented in}: \\  
-      \textbf{\textcircled{\ref{calc}}}\verb+r[]=localResidual[][]+ \\
-    \begin{scriptsize}store r.h.s.\end{scriptsize}\\\hline 
+       \hline 
   \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
-      \hline
+    \hline
+    \textbf{\textcircled{\ref{calc}}}\verb+lambda_volume()+ \\
+    \begin{scriptsize}essentially empty\end{scriptsize}\\
 %       \textbf{called by}:\\
 %       \textbf{implemented in}: \\  
-      \textbf{\textcircled{\ref{calc}}}\verb+lambda_volume()+ \\
-    \begin{scriptsize}essentially empty\end{scriptsize}\\\hline 
-  \end{tabular}
+    \hline 
+    \end{tabular}
       \nextline
   {\scriptsize$\overrightarrow{
     \begin{array}{l}
@@ -446,19 +468,20 @@ $\left \lbrace
     }$}
     \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\texttt{...ctl.newtonSolveLinear(*jacobianAsm,u*,*(*f))} \\
+      \begin{scriptsize}tricky: each \textsc{Newton} step has a lienar solver step (e.g. BiCG)\end{scriptsize}\\      
       \textbf{called by}:newtonmethod.hh\\
       \textbf{implemented in}: newtoncontroller.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\texttt{...ctl.newtonSolveLinear(*jacobianAsm,u*,*(*f))} \\
-    \begin{scriptsize}tricky: each \textsc{Newton} step has a lienar solver step (e.g. BiCG)\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
      \begin{tabular}{|l|}
       \hline
-      \textbf{called by}:newtoncontroller.hh\\
-      \textbf{implemented in}:newtoncontroller.hh \\  
       \textbf{\textcircled{\ref{calc}}}\verb+solveSequential_(A,*u,b)+ \\
-    \begin{scriptsize}sequ. meaning not parallel\end{scriptsize}\\\hline 
+      \begin{scriptsize}sequ. meaning not parallel\end{scriptsize}\\      \textbf{called by}:newtoncontroller.hh\\
+      \textbf{implemented in}:newtoncontroller.hh \\  
+	\hline 
   \end{tabular}
 \nextline
     {\scriptsize$\overrightarrow{
@@ -468,38 +491,42 @@ $\left \lbrace
     }$}
      \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+Dune::BiCGStabSolver<Vector>solver(opA,precond...)+ \\
+      \begin{scriptsize}call to constructor with parameters\end{scriptsize}\\
       \textbf{called by}:newtoncontroller.hh\\
       \textbf{implemented in}: solvers.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+Dune::BiCGStabSolver<Vector>solver(opA,precond...)+ \\
-    \begin{scriptsize}call to constructor with parameters\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+solver.apply(x,b,result)+ \\
+      \begin{scriptsize}solving linear system of equations\end{scriptsize}\\
       \textbf{called by}:newtoncontroller.hh\\
       \textbf{implemented in}:solvers.hh \\  
-      \textbf{\textcircled{\ref{calc}}}\verb+solver.apply(x,b,result)+ \\
-    \begin{scriptsize}solving linear system of equations\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
     \nextline
     \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+updateMethod.update()+ \\
+      \begin{scriptsize}no clue why this is an update???\end{scriptsize}\\      
       \textbf{called by}:newtonmethod.hh\\
       \textbf{implemented in}:newtonmethod.hh \\  
-      \textbf{\textcircled{\ref{calc}}}\verb+updateMethod.update()+ \\
-    \begin{scriptsize}no clue why this is an update???\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+ctl.NewtonEndStep()+ \\
+      \begin{scriptsize}increase steps and write to console\end{scriptsize}\\
       \textbf{called by}:newtonmethod.hh\\
       \textbf{implemented in}:newtoncontroller.hh\\  
-      \textbf{\textcircled{\ref{calc}}}\verb+ctl.NewtonEndStep()+ \\
-    \begin{scriptsize}increase steps and write to console\end{scriptsize}\\\hline 
+      \hline 
   \end{tabular}
     {\scriptsize$\overrightarrow{
     \begin{array}{l}
@@ -509,11 +536,12 @@ $\left \lbrace
     }$}
     \begin{tabular}{|l|}
       \hline
+      \textbf{\textcircled{\ref{calc}}}\verb+ctl.newtonEnd()+ \\
+      \begin{scriptsize}\end{scriptsize}\\      
 %       \textbf{called by}:\\
 %       \textbf{implemented in}: \\  
-      \textbf{\textcircled{\ref{calc}}}\verb+ctl.newtonEnd()+ \\
-    \begin{scriptsize}\end{scriptsize}\\\hline 
-  \end{tabular}
+	\hline 
+    \end{tabular}
     {\scriptsize$\overrightarrow{
     \begin{array}{l}
     \textnormal{timemanager.hh}\\
@@ -522,11 +550,12 @@ $\left \lbrace
     }$}
 %      \begin{tabular}{|l|}
 %       \hline
+%       \textbf{\textcircled{\ref{calc}}}\verb++ \\
+%       \begin{scriptsize}\end{scriptsize}\\
 %       \textbf{called by}:\\
 %       \textbf{implemented in}: \\  
-%       \textbf{\textcircled{\ref{calc}}}\verb++ \\
-%     \begin{scriptsize}\end{scriptsize}\\\hline 
-%   \end{tabular}
+% 	\hline 
+%      \end{tabular}
 %     $\overrightarrow{\scriptsize
 %     }$
 }
