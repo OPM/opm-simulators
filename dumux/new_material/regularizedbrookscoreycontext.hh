@@ -15,50 +15,27 @@
 /*!
  * \file
  *
- * \brief Specification of the state API for the Brooks-Corey
+ * \brief Specification of the context API for the Brooks-Corey
  *        capillary pressure model.
  */
-#ifndef DUMUX_BROOKS_COREY_STATE_HH
-#define DUMUX_BROOKS_COREY_STATE_HH
+#ifndef DUMUX_REGULARIZED_BROOKS_COREY_CONTEXT_HH
+#define DUMUX_REGULARIZED_BROOKS_COREY_CONTEXT_HH
 
-#include <dumux/auxiliary/apis.hh>
-
-#include <dumux/auxiliary/statehelpermacros.hh>
+#include <dumux/new_material/statehelpermacros.hh>
 
 namespace Dune
 {
-namespace Api
-{
-BEGIN_API_DEF(BrooksCoreyParams)
-{
-    typedef typename Implementation::Scalar Scalar;
-    Scalar tmp;
-    tmp = const_impl.alpha();
-    tmp = const_impl.pe();
-}
-END_API_DEF;
-
-BEGIN_API_DEF(BrooksCoreyState)
-{
-    typedef typename Implementation::Scalar Scalar;
-    Scalar tmp = 0.5;
-    impl.setAlpha(tmp);
-    impl.setPe(tmp);
-}
-END_API_DEF;
-}; // namespace Api
-
 /*!
- * \brief A reference implementation of the state API class for the
+ * \brief A reference implementation of the context API class for the
  *        Brooks-Corey Sw-pC relation.
  */
 template <class ScalarT>
-class BrooksCoreyState
+class RegularizedBrooksCoreyContext
 {
 public:
     typedef ScalarT Scalar;
-
-    BrooksCoreyState(Scalar pe, Scalar alpha)
+    
+    RegularizedBrooksCoreyContext(Scalar pe = 0, Scalar alpha = 0)
         : pe_(pe), alpha_(alpha)
     {
     }

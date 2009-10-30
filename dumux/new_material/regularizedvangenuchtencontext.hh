@@ -13,65 +13,39 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file RegularizedVanGenuchtenState.hh
+ * \file RegularizedVanGenuchtenContext.hh
 
- * \brief Specification of the state API for the regualized van
+ * \brief Specification of the context API for the regualized van
  *        Genuchten capillary pressure model.
  */
-#ifndef REGULARIZED_VAN_GENUCHTEN_STATE_HH
-#define REGULARIZED_VAN_GENUCHTEN_STATE_HH
+#ifndef REGULARIZED_VAN_GENUCHTEN_CONTEXT_HH
+#define REGULARIZED_VAN_GENUCHTEN_CONTEXT_HH
 
 #include <dumux/auxiliary/apis.hh>
 #include <dumux/new_material/statehelpermacros.hh>
 
 #include <dumux/new_material/vangenuchten.hh>
-#include <dumux/new_material/vangenuchtenstate.hh>
+#include <dumux/new_material/vangenuchtencontext.hh>
 
 namespace Dune
 {
-namespace Api
-{
-BEGIN_API_DEF(RegularizedVanGenuchtenParams)
-{
-    require<VanGenuchtenParams>(impl);
-
-    typedef typename Implementation::Scalar Scalar;
-    Scalar tmp = 0.5;
-    tmp = const_impl.vgMaxPC();
-    tmp = const_impl.vgMinSw();
-}
-END_API_DEF;
-
-BEGIN_API_DEF(RegularizedVanGenuchtenState)
-{
-    require<RegularizedVanGenuchtenParams>(impl);
-    require<VanGenuchtenState>(impl);
-
-    typedef typename Implementation::Scalar Scalar;
-    Scalar tmp = 0.5f;
-    impl.setVgMaxPC(tmp);
-    impl.setVgMinSw(tmp);
-}
-END_API_DEF;
-}; // namespace Api
-
 /*!
- * \brief Reference implementation of a van Genuchten state
+ * \brief Reference implementation of a van Genuchten context
  */
 template<class ScalarT>
-class RegularizedVanGenuchtenState
+class RegularizedVanGenuchtenContext
 {
 public:
     typedef ScalarT Scalar;
-    typedef RegularizedVanGenuchtenState<Scalar> Self;
+    typedef RegularizedVanGenuchtenContext<Scalar> Self;
     typedef Dune::VanGenuchten<Self> VanGenuchten;
 
-    RegularizedVanGenuchtenState()
+    RegularizedVanGenuchtenContext()
     {}
 
-    RegularizedVanGenuchtenState(Scalar vgAlpha,
-                                 Scalar vgN,
-                                 Scalar minSw = 0.01)
+    RegularizedVanGenuchtenContext(Scalar vgAlpha,
+                                   Scalar vgN,
+                                   Scalar minSw = 0.01)
     {
         setVgAlpha(vgAlpha);
         setVgN(vgN);
