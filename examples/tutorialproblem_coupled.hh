@@ -109,7 +109,7 @@ class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag, /*@\label{tutorial
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
     typedef typename GridView::template Codim<0>::Entity    Element;
     typedef typename GridView::template Codim<dim>::Entity  Vertex;
-    typedef typename GridView::IntersectionIterator         IntersectionIterator;
+    typedef typename GridView::Intersection                 Intersection;
     typedef Dune::FieldVector<CoordScalar, dim>             LocalPosition;
     typedef Dune::FieldVector<CoordScalar, dimWorld>        GlobalPosition;
   
@@ -125,7 +125,9 @@ public:
     {}
 
     // Return the temperature within the domain. We use 10 degrees Celsius.
-    Scalar temperature() const
+    Scalar temperature(const Element           &element,
+                       const FVElementGeometry &fvElemGeom,
+                       int                      scvIdx) const
     { return 283.15; };
 
     // Specifies which kind of boundary condition should be used for
@@ -133,7 +135,7 @@ public:
     void boundaryTypes(BoundaryTypeVector         &values,
                        const Element              &element,
                        const FVElementGeometry    &fvElemGeom,
-                       const IntersectionIterator &isIt,
+                       const Intersection         &isIt,
                        int                         scvIdx,
                        int                         boundaryFaceIdx) const
     {    
@@ -151,7 +153,7 @@ public:
     void dirichlet(PrimaryVarVector           &values,
                    const Element              &element,
                    const FVElementGeometry    &fvElemGeom,
-                   const IntersectionIterator &isIt,
+                   const Intersection         &isIt,
                    int                         scvIdx,
                    int                         boundaryFaceIdx) const
     {
@@ -166,7 +168,7 @@ public:
     void neumann(PrimaryVarVector           &values,
                  const Element              &element,
                  const FVElementGeometry    &fvElemGeom,
-                 const IntersectionIterator &isIt,
+                 const Intersection         &isIt,
                  int                         scvIdx,
                  int                         boundaryFaceIdx) const
     {
