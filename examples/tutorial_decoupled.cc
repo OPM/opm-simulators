@@ -96,7 +96,7 @@ int main(int argc, char** argv)
         double cFLFactor = 0.9; // security factor for the Courant-Friedrichs-Lewy-Criterion
 
         // create TimeLoop-object
-        Dune::TimeLoop<Grid, IMPES> timeloop(tStart, tEnd, fileName, modulo, cFLFactor); /*@\label{tutorial-decoupled:timeloop}@*/
+        Dune::TimeLoop<GridView, IMPES> timeloop(gridView, tStart, tEnd, fileName, modulo, cFLFactor); /*@\label{tutorial-decoupled:timeloop}@*/
 
         Dune::Timer timer;
         timer.reset();
