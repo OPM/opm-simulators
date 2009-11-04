@@ -51,6 +51,8 @@ public:
         return std::vector<Scalar>(2,0.0);
     }
 
+    using FractionalFlowProblem<GridView, Scalar, VariableClass>::bctypePress;
+
     // function returning the boundary condition type for solution
     // of the pressure equation depending on the position within the domain
     typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:bctypepress}@*/
@@ -97,6 +99,8 @@ public:
         // all other boundaries
         return 0.0;
     }
+
+    using FractionalFlowProblem<GridView, Scalar, VariableClass>::neumannPress;
 
     // function returning the Neumann boundary condition for the solution
     // of the pressure equation depending on the position within the domain
