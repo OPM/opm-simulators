@@ -19,8 +19,7 @@
 #ifndef VAN_GENUCHTEN_HH
 #define VAN_GENUCHTEN_HH
 
-#include <dumux/auxiliary/apis.hh>
-#include <dumux/new_material/vangenuchtenstate.hh>
+#include <dumux/new_material/vangenuchtencontext.hh>
 
 #include <algorithm>
 
@@ -29,7 +28,8 @@
 
 namespace Dune
 {
-/*!\ingroup material
+/*!
+ * \ingroup material
  *
  * \brief Implementation of van Genuchten's capillary pressure <->
  *        saturation relation. This class bundles the "raw" curves
@@ -38,12 +38,12 @@ namespace Dune
  *
  * \sa VanGenuchten, VanGenuchtenTwophase
  */
-template <class StateT>
+template <class ContextT>
 class VanGenuchten
 {
 public:
-    typedef StateT State;
-    typedef typename State::Scalar Scalar;
+    typedef ContextT Context;
+    typedef typename Context::Scalar Scalar;
 
     /*!
      * \brief The capillary pressure-saturation curve.
@@ -55,11 +55,10 @@ public:
      \f]
      * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar pC(const State &state, Scalar Swe)
+    static Scalar pC(const Context &context, Scalar Swe)
     {
-        Api::require<Api::VanGenuchtenParams>(state);
         assert(0 <= Swe && Swe <= 1);
-        return pow(pow(Swe, -1.0/state.vgM()) - 1, 1.0/state.vgN())/state.vgAlpha();
+        return pow(pow(Swe, -1.0/context.vgM()) - 1, 1.0/context.vgN())/context.vgAlpha();
     }
 
     /*!
@@ -73,12 +72,11 @@ public:
      * \param pC Capillary pressure \f$\p_C\f$
      * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar Sw(const State &state, Scalar pC)
+    static Scalar Sw(const Context &context, Scalar pC)
     {
-        Api::require<Api::VanGenuchtenParams>(state);
         assert(pC >= 0);
 
-        return pow(pow(state.vgAlpha()*pC, state.vgN()) + 1, -state.vgM());
+        return pow(pow(context.vgAlpha()*pC, context.vgN()) + 1, -context.vgM());
     }
 
     /*!
@@ -92,28 +90,26 @@ public:
      \overline{S}_w^{-1/m} / \overline{S}_w / m
      \f]
     */
-    static Scalar dpC_dSw(const State &state, Scalar Swe)
+    static Scalar dpC_dSw(const Context &context, Scalar Swe)
     {
-        Api::require<Api::VanGenuchtenParams>(state);
         assert(0 <= Swe && Swe <= 1);
 
-        Scalar powSwe = pow(Swe, -1/state.vgM());
-        return - 1/state.vgAlpha() * pow(powSwe - 1, 1/state.vgN() - 1)/state.vgN()
-            * powSwe/Swe/state.vgM();
+        Scalar powSwe = pow(Swe, -1/context.vgM());
+        return - 1/context.vgAlpha() * pow(powSwe - 1, 1/context.vgN() - 1)/context.vgN()
+            * powSwe/Swe/context.vgM();
     }
 
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
      */
-    static Scalar dSw_dpC(const State &state, Scalar pC)
+    static Scalar dSw_dpC(const Context &context, Scalar pC)
     {
-        Api::require<Api::VanGenuchtenParams>(state);
         assert(pC >= 0);
 
-        Scalar powAlphaPc = pow(state.vgAlpha()*pC, state.vgN());
-        return -pow(powAlphaPc + 1, -state.vgM()-1)*
-            state.vgM()*powAlphaPc/pC*state.vgN();
+        Scalar powAlphaPc = pow(context.vgAlpha()*pC, context.vgN());
+        return -pow(powAlphaPc + 1, -context.vgM()-1)*
+            context.vgM()*powAlphaPc/pC*context.vgN();
     }
 
     /*!
@@ -124,12 +120,11 @@ public:
      * \param Sw_mob The mobile saturation of the wetting phase.
      * \param m      The "m" shape parameter according to van Genuchten
      */
-    static Scalar krw(const State &state, Scalar Sw_mob)
+    static Scalar krw(const Context &context, Scalar Sw_mob)
     {
-        Api::require<Api::VanGenuchtenParams>(state);
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        Scalar r = 1. - pow(1 - pow(Sw_mob, 1/state.vgM()), state.vgM());
+        Scalar r = 1. - pow(1 - pow(Sw_mob, 1/context.vgM()), context.vgM());
         return sqrt(Sw_mob)*r*r;
     };
 
@@ -140,12 +135,11 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const State &state, Scalar Sw_mob)
+    static Scalar krn(const Context &context, Scalar Sw_mob)
     {
-        Api::require<Api::VanGenuchtenParams>(state);
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        Scalar r = pow(1 - pow(Sw_mob, 1/state.vgM()), state.vgM());
+        Scalar r = pow(1 - pow(Sw_mob, 1/context.vgM()), context.vgM());
         return sqrt(1 - Sw_mob)*r*r;
     }
 };

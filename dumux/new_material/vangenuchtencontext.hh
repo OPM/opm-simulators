@@ -13,67 +13,83 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file VanGenuchtenState.hh Specification of the state API for the
- *                            van Genuchten capillary pressure model.
+ * \file vangenuchtencontext.hh Specification of the material context
+ *       for the van Genuchten capillary pressure model.
  */
-#ifndef VAN_GENUCHTEN_STATE_HH
-#define VAN_GENUCHTEN_STATE_HH
-
-#include <dumux/auxiliary/apis.hh>
-#include <dumux/new_material/statehelpermacros.hh>
+#ifndef VAN_GENUCHTEN_CONTEXT_HH
+#define VAN_GENUCHTEN_CONTEXT_HH
 
 namespace Dune
 {
-namespace Api
-{
-BEGIN_API_DEF(VanGenuchtenParams)
-{
-    typedef typename Implementation::Scalar Scalar;
-    Scalar tmp;
-    tmp = const_impl.vgAlpha();
-    tmp = const_impl.vgN();
-    tmp = const_impl.vgM();
-}
-END_API_DEF;
-
-BEGIN_API_DEF(VanGenuchtenState)
-{
-    typedef typename Implementation::Scalar Scalar;
-    Scalar tmp = 0.5f;
-    impl.setVgAlpha(tmp);
-    impl.setVgN(tmp);
-    impl.setVgM(tmp);
-}
-END_API_DEF;
-}; // namespace Api
-
 /*!
- * \brief Reference implementation of a van Genuchten state
+ * \brief Reference implementation of a van Genuchten context
  */
 template<class ScalarT>
-class VanGenuchtenState
+class VanGenuchtenContext
 {
 public:
     typedef ScalarT Scalar;
 
-    VanGenuchtenState()
+    VanGenuchtenContext()
     {}
 
-    VanGenuchtenState(Scalar vgAlpha, Scalar vgN)
+    VanGenuchtenContext(Scalar vgAlpha, Scalar vgN)
     {
         setVgAlpha(vgAlpha);
         setVgN(vgN);
     };
 
-    PROPERTY(Scalar, vgAlpha, setVgAlpha);
+    /*!
+     * \brief Return the \f$\alpha\f$ shape parameter of van Genuchten's
+     *        curve. 
+     */
+    Scalar vgAlpha() const
+    { return vgAlpha_; }
 
-    // we also need to update vgM if vgN is changed (and vince versa),
-    // so that we have to define the setter for Swr ourselfs
-    PARAMETER(Scalar, vgM);
-    void setVgM(Scalar vgM) { vgM_ = vgM; vgN_ = 1/(1 - vgM_); }
-    PARAMETER(Scalar, vgN);
-    void setVgN(Scalar vgN) { vgN_ = vgN; vgM_ = 1 - 1/vgN_; }
+    /*!
+     * \brief Set the \f$\alpha\f$ shape parameter of van Genuchten's
+     *        curve. 
+     */
+    void setVgAlpha(Scalar v)
+    { vgAlpha_ = v; }
+
+    /*!
+     * \brief Return the \f$m\f$ shape parameter of van Genuchten's
+     *        curve. 
+     */
+    Scalar vgM() const
+    { return vgM_; }
+
+    /*!
+     * \brief Set the \f$m\f$ shape parameter of van Genuchten's
+     *        curve. 
+     *
+     * The \f$n\f$ shape parameter is set to \f$n = \frac{1}{1 - m}\f$ 
+     */
+    void setVgM(Scalar m) 
+    { vgM_ = m; vgN_ = 1/(1 - vgM_); }
+
+    /*!
+     * \brief Return the \f$n\f$ shape parameter of van Genuchten's
+     *        curve. 
+     */
+    Scalar vgN() const 
+    { return vgN_; }
+
+    /*!
+     * \brief Set the \f$n\f$ shape parameter of van Genuchten's
+     *        curve. 
+     *
+     * The \f$n\f$ shape parameter is set to \f$m = 1 - \frac{1}{n}\f$ 
+     */
+    void setVgN(Scalar n)
+    { vgN_ = n; vgM_ = 1 - 1/vgN_; }
+
+private:
+    Scalar vgAlpha_;
+    Scalar vgM_;
+    Scalar vgN_;
 };
-}; // namespace Dune
+} // namespace Dune
 
 #endif
