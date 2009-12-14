@@ -15,36 +15,58 @@
 /*!
  * \file
  *
- * \brief Specification of the context API for the Brooks-Corey
+ * \brief Specification of the params API for the Brooks-Corey
  *        capillary pressure model.
  */
-#ifndef DUMUX_REGULARIZED_BROOKS_COREY_CONTEXT_HH
-#define DUMUX_REGULARIZED_BROOKS_COREY_CONTEXT_HH
-
-#include <dumux/new_material/statehelpermacros.hh>
+#ifndef DUMUX_BROOKS_COREY_PARAMS_HH
+#define DUMUX_BROOKS_COREY_PARAMS_HH
 
 namespace Dune
 {
+
 /*!
- * \brief A reference implementation of the context API class for the
+ * \brief A reference implementation of the params API class for the
  *        Brooks-Corey Sw-pC relation.
  */
 template <class ScalarT>
-class RegularizedBrooksCoreyContext
+class BrooksCoreyParams
 {
 public:
     typedef ScalarT Scalar;
-    
-    RegularizedBrooksCoreyContext(Scalar pe = 0, Scalar alpha = 0)
+
+    BrooksCoreyParams(Scalar pe, Scalar alpha)
         : pe_(pe), alpha_(alpha)
     {
     }
 
-    //! The entry pressure
-    PROPERTY(Scalar, pe, setPe);
+    /*!
+     * \brief Returns the entry pressure [Pa]
+     */
+    Scalar pe() const
+    { return pe_; }
 
-    //! The alpha shape parameter
-    PROPERTY(Scalar, alpha, setAlpha);
+    /*!
+     * \brief Set the entry pressure [Pa]
+     */
+    void setPe(Scalar v)
+    { return pe_ = v; }
+
+
+    /*!
+     * \brief Returns the alpha shape parameter
+     */
+    Scalar alpha() const
+    { return alpha_; }
+
+    /*!
+     * \brief Set the alpha shape parameter
+     */
+    void setAlpha(Scalar v)
+    { return alpha_ = v; }
+
+private:
+    Scalar pe_;
+    Scalar alpha_;
 };
 }; // namespace Dune
 

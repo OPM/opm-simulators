@@ -13,28 +13,28 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file linearmaterialcontext.hh Reference implementation of context for
+ * \file linearmaterialparams.hh Reference implementation of params for
  *                           the linear material material.
  */
-#ifndef LINEAR_MATERIAL_CONTEXT_HH
-#define LINEAR_MATERIAL_CONTEXT_HH
+#ifndef LINEAR_MATERIAL_PARAMS_HH
+#define LINEAR_MATERIAL_PARAMS_HH
 
 namespace Dune
 {
 /*!
- * \brief Reference implementation of context for the linear material
+ * \brief Reference implementation of params for the linear material
  *        material.
  */
 template<class ScalarT>
-class LinearMaterialContext
+class LinearMaterialParams
 {
 public:
     typedef ScalarT Scalar;
 
-    LinearMaterialContext()
+    LinearMaterialParams()
     {}
 
-    LinearMaterialContext(Scalar entryPC, Scalar maxPC)
+    LinearMaterialParams(Scalar entryPC, Scalar maxPC)
     {
         setEntryPC(entryPC);
         setMaxPC(maxPC);

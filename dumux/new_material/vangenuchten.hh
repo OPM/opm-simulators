@@ -19,7 +19,7 @@
 #ifndef VAN_GENUCHTEN_HH
 #define VAN_GENUCHTEN_HH
 
-#include <dumux/new_material/vangenuchtencontext.hh>
+#include <dumux/new_material/vangenuchtenparams.hh>
 
 #include <algorithm>
 
@@ -38,12 +38,12 @@ namespace Dune
  *
  * \sa VanGenuchten, VanGenuchtenTwophase
  */
-template <class ContextT>
+template <class ParamsT>
 class VanGenuchten
 {
 public:
-    typedef ContextT Context;
-    typedef typename Context::Scalar Scalar;
+    typedef ParamsT Params;
+    typedef typename Params::Scalar Scalar;
 
     /*!
      * \brief The capillary pressure-saturation curve.
@@ -55,10 +55,10 @@ public:
      \f]
      * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar pC(const Context &context, Scalar Swe)
+    static Scalar pC(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
-        return pow(pow(Swe, -1.0/context.vgM()) - 1, 1.0/context.vgN())/context.vgAlpha();
+        return pow(pow(Swe, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
     }
 
     /*!
@@ -72,11 +72,11 @@ public:
      * \param pC Capillary pressure \f$\p_C\f$
      * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar Sw(const Context &context, Scalar pC)
+    static Scalar Sw(const Params &params, Scalar pC)
     {
         assert(pC >= 0);
 
-        return pow(pow(context.vgAlpha()*pC, context.vgN()) + 1, -context.vgM());
+        return pow(pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
 
     /*!
@@ -90,26 +90,26 @@ public:
      \overline{S}_w^{-1/m} / \overline{S}_w / m
      \f]
     */
-    static Scalar dpC_dSw(const Context &context, Scalar Swe)
+    static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
 
-        Scalar powSwe = pow(Swe, -1/context.vgM());
-        return - 1/context.vgAlpha() * pow(powSwe - 1, 1/context.vgN() - 1)/context.vgN()
-            * powSwe/Swe/context.vgM();
+        Scalar powSwe = pow(Swe, -1/params.vgM());
+        return - 1/params.vgAlpha() * pow(powSwe - 1, 1/params.vgN() - 1)/params.vgN()
+            * powSwe/Swe/params.vgM();
     }
 
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
      */
-    static Scalar dSw_dpC(const Context &context, Scalar pC)
+    static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
         assert(pC >= 0);
 
-        Scalar powAlphaPc = pow(context.vgAlpha()*pC, context.vgN());
-        return -pow(powAlphaPc + 1, -context.vgM()-1)*
-            context.vgM()*powAlphaPc/pC*context.vgN();
+        Scalar powAlphaPc = pow(params.vgAlpha()*pC, params.vgN());
+        return -pow(powAlphaPc + 1, -params.vgM()-1)*
+            params.vgM()*powAlphaPc/pC*params.vgN();
     }
 
     /*!
@@ -120,11 +120,11 @@ public:
      * \param Sw_mob The mobile saturation of the wetting phase.
      * \param m      The "m" shape parameter according to van Genuchten
      */
-    static Scalar krw(const Context &context, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw_mob)
     {
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        Scalar r = 1. - pow(1 - pow(Sw_mob, 1/context.vgM()), context.vgM());
+        Scalar r = 1. - pow(1 - pow(Sw_mob, 1/params.vgM()), params.vgM());
         return sqrt(Sw_mob)*r*r;
     };
 
@@ -135,11 +135,11 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Context &context, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw_mob)
     {
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        Scalar r = pow(1 - pow(Sw_mob, 1/context.vgM()), context.vgM());
+        Scalar r = pow(1 - pow(Sw_mob, 1/params.vgM()), params.vgM());
         return sqrt(1 - Sw_mob)*r*r;
     }
 };

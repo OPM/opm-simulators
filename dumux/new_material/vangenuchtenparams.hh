@@ -13,27 +13,27 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file vangenuchtencontext.hh Specification of the material context
+ * \file vangenuchtenparams.hh Specification of the material params
  *       for the van Genuchten capillary pressure model.
  */
-#ifndef VAN_GENUCHTEN_CONTEXT_HH
-#define VAN_GENUCHTEN_CONTEXT_HH
+#ifndef VAN_GENUCHTEN_PARAMS_HH
+#define VAN_GENUCHTEN_PARAMS_HH
 
 namespace Dune
 {
 /*!
- * \brief Reference implementation of a van Genuchten context
+ * \brief Reference implementation of a van Genuchten params
  */
 template<class ScalarT>
-class VanGenuchtenContext
+class VanGenuchtenParams
 {
 public:
     typedef ScalarT Scalar;
 
-    VanGenuchtenContext()
+    VanGenuchtenParams()
     {}
 
-    VanGenuchtenContext(Scalar vgAlpha, Scalar vgN)
+    VanGenuchtenParams(Scalar vgAlpha, Scalar vgN)
     {
         setVgAlpha(vgAlpha);
         setVgN(vgN);

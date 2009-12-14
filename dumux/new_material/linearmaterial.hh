@@ -19,7 +19,7 @@
 #ifndef LINEAR_MATERIAL_HH
 #define LINEAR_MATERIAL_HH
 
-#include <dumux/new_material/linearmaterialcontext.hh>
+#include <dumux/new_material/linearmaterialparams.hh>
 
 #include <algorithm>
 
@@ -37,14 +37,14 @@ namespace Dune
  * The entry pressure is reached at \f$S_w = 1\f$, the maximum
  * capillary pressure is observed at \f$S_w = 0\f$.
  *
- * \sa LinearMaterialContext
+ * \sa LinearMaterialParams
  */
-template <class ContextT>
+template <class ParamsT>
 class LinearMaterial
 {
 public:
-    typedef ContextT Context;
-    typedef typename Context::Scalar Scalar;
+    typedef ParamsT Params;
+    typedef typename Params::Scalar Scalar;
 
     /*!
      * \brief The linear capillary pressure-saturation curve.
@@ -56,9 +56,9 @@ public:
      *
      * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar pC(const Context &context, Scalar Swe)
+    static Scalar pC(const Params &params, Scalar Swe)
     {
-        return (1 - Swe)*(context.maxPC() - context.entryPC()) + context.entryPC();
+        return (1 - Swe)*(params.maxPC() - params.entryPC()) + params.entryPC();
     }
 
     /*!
@@ -72,9 +72,9 @@ public:
      * \param pC Capillary pressure \f$\p_C\f$
      * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar Sw(const Context &context, Scalar pC)
+    static Scalar Sw(const Params &params, Scalar pC)
     {
-        return 1 - (pC - context.entryPC())/(context.maxPC() - context.entryPC());
+        return 1 - (pC - params.entryPC())/(params.maxPC() - params.entryPC());
     }
 
     /*!
@@ -87,18 +87,18 @@ public:
      - (p_{C,max} - p_{C,min})
      \f]
     */
-    static Scalar dpC_dSw(const Context &context, Scalar Swe)
+    static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
-        return - (context.maxPC() - context.entryPC());
+        return - (params.maxPC() - params.entryPC());
     }
 
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
      */
-    static Scalar dSw_dpC(const Context &context, Scalar pC)
+    static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        return - 1/(context.maxPC() - context.entryPC());
+        return - 1/(params.maxPC() - params.entryPC());
     }
 
     /*!
@@ -106,7 +106,7 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Context &context, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw_mob)
     {
         return std::min(Scalar(1),
                         std::max(Scalar(0),
@@ -118,7 +118,7 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Context &context, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw_mob)
     {
         return std::min(Scalar(1),
                         std::max(Scalar(0),

@@ -22,7 +22,7 @@
 #ifndef ABSOLUTE_SATURATIONS_LAW_HH
 #define ABSOLUTE_SATURATIONS_LAW_HH
 
-#include <dumux/new_material/absolutesaturationslawcontext.hh>
+#include <dumux/new_material/absolutesaturationslawparams.hh>
 
 namespace Dune
 {
@@ -39,16 +39,16 @@ class AbsoluteSaturationsLaw
     typedef RawLawT   RawLaw;
 
 public:
-    typedef typename RawLaw::Context  Context;
+    typedef typename RawLaw::Params   Params;
     typedef typename RawLaw::Scalar   Scalar;
 
 
     /*!
      * \brief The capillary pressure-saturation curve.
      */
-    static Scalar pC(const Context &context, Scalar Sw)
+    static Scalar pC(const Params &params, Scalar Sw)
     {
-        return RawLaw::pC(context, SwToSwe_(context, Sw));
+        return RawLaw::pC(params, SwToSwe_(params, Sw));
     }
 
     /*!
@@ -57,27 +57,27 @@ public:
      * \param pC Capillary pressure \f$\p_C\f$
      * \return The absolute saturation of the wetting phase \f$S_w\f$
      */
-    static Scalar Sw(const Context &context, Scalar pC)
+    static Scalar Sw(const Params &params, Scalar pC)
     {
-        return SweToSw_(context, RawLaw::Sw(context, pC));
+        return SweToSw_(params, RawLaw::Sw(params, pC));
     }
 
     /*!
      * \brief Returns the partial derivative of the capillary
      *        pressure to the absolute saturation.
     */
-    static Scalar dpC_dSw(const Context &context, Scalar Sw)
+    static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        return RawLaw::dpC_dSw(context, pC)/(1 - context.Swr() - context.Snr());
+        return RawLaw::dpC_dSw(params, pC)/(1 - params.Swr() - params.Snr());
     }
 
     /*!
      * \brief Returns the partial derivative of the absolute
      *        saturation to the capillary pressure.
      */
-    static Scalar dSw_dpC(const Context &context, Scalar pC)
+    static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        return RawLaw::dSw_dpC(context, pC)*(1 - context.Swr() - context.Snr());
+        return RawLaw::dSw_dpC(params, pC)*(1 - params.Swr() - params.Snr());
     }
 
     /*!
@@ -85,9 +85,9 @@ public:
      *
      * \param Sw The absolute saturation of the wetting phase.
      */
-    static Scalar krw(const Context &context, Scalar Sw)
+    static Scalar krw(const Params &params, Scalar Sw)
     {
-        return RawLaw::krw(context, SwToSwe_(context, Sw));
+        return RawLaw::krw(params, SwToSwe_(params, Sw));
     };
 
     /*!
@@ -95,22 +95,22 @@ public:
      *
      * \param Sw The absolute saturation of the wetting phase.
      */
-    static Scalar krn(const Context &context, Scalar Sw)
+    static Scalar krn(const Params &params, Scalar Sw)
     {
-        return RawLaw::krn(context, SwToSwe_(context, Sw));
+        return RawLaw::krn(params, SwToSwe_(params, Sw));
     }
 
 private:
     // convert an absolute wetting saturation to an effective one
-    static Scalar SwToSwe_(const Context &context, Scalar Sw)
+    static Scalar SwToSwe_(const Params &params, Scalar Sw)
     {
-        return (Sw - context.Swr())/(1 - context.Swr() - context.Snr());
+        return (Sw - params.Swr())/(1 - params.Swr() - params.Snr());
     }
 
     // convert an effective wetting saturation to an absolute one
-    static Scalar SweToSw_(const Context &context, Scalar Swe)
+    static Scalar SweToSw_(const Params &params, Scalar Swe)
     {
-        return Swe*(1 - context.Swr() - context.Snr()) + context.Swr();
+        return Swe*(1 - params.Swr() - params.Snr()) + params.Swr();
     }
 };
 }

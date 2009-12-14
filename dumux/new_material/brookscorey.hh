@@ -21,7 +21,7 @@
 #ifndef DUMUX_BROOKS_COREY_HH
 #define DUMUX_BROOKS_COREY_HH
 
-#include <dumux/new_material/brookscoreycontext.hh>
+#include <dumux/new_material/brookscoreyparams.hh>
 
 #include <algorithm>
 
@@ -40,12 +40,12 @@ namespace Dune
  *
  * \sa BrooksCorey, BrooksCoreyTwophase
  */
-template <class ContextT>
+template <class ParamsT>
 class BrooksCorey
 {
 public:
-    typedef ContextT Context;
-    typedef typename Context::Scalar Scalar;
+    typedef ParamsT Params;
+    typedef typename Params::Scalar Scalar;
 
     /*!
      * \brief The capillary pressure-saturation curve.
@@ -57,11 +57,11 @@ public:
      \f]
      * \param Swe   Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar pC(const Context &context, Scalar Swe)
+    static Scalar pC(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return context.pe()*pow(Swe, -1.0/context.alpha());
+        return params.pe()*pow(Swe, -1.0/params.alpha());
     }
 
     /*!
@@ -75,11 +75,11 @@ public:
      * \param pC Capillary pressure \f$\p_C\f$
      * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar Sw(const Context &context, Scalar pC)
+    static Scalar Sw(const Params &params, Scalar pC)
     {
         assert(pC >= 0);
 
-        Scalar tmp = pow(pC/context.pe(), -context.alpha());
+        Scalar tmp = pow(pC/params.pe(), -params.alpha());
         return std::min(std::max(tmp, Scalar(0.0)), Scalar(1.0));
     }
 
@@ -93,22 +93,22 @@ public:
      -\frac{p_e}{\alpha} \overline{S}_w^{-1/\alpha - 1}
      \f]
     */
-    static Scalar dpC_dSw(const Context &context, Scalar Swe)
+    static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return - context.pe()/context.alpha() * pow(Swe, -1/context.alpha() - 1);
+        return - params.pe()/params.alpha() * pow(Swe, -1/params.alpha() - 1);
     }
 
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
      */
-    static Scalar dSw_dpC(const Context &context, Scalar pC)
+    static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
         assert(pC >= 0);
 
-        return -context.alpha()/context.pe() * pow(pC/context.pe(), - context.alpha() - 1);
+        return -params.alpha()/params.pe() * pow(pC/params.pe(), - params.alpha() - 1);
     }
 
     /*!
@@ -118,11 +118,11 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Context &context, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw_mob)
     {
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        return pow(Sw_mob, (2. + 3*context.alpha()) / context.alpha());
+        return pow(Sw_mob, (2. + 3*params.alpha()) / params.alpha());
     };
 
     /*!
@@ -132,11 +132,11 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Context &context, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw_mob)
     {
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        Scalar exponent = (2. + context.alpha())/context.alpha();
+        Scalar exponent = (2. + params.alpha())/params.alpha();
         Scalar tmp = 1. - Sw_mob;
         return tmp*tmp*(1. - pow(Sw_mob, exponent));
     }

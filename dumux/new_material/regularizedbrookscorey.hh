@@ -22,7 +22,7 @@
 #define REGULARIZED_BROOKS_COREY_HH
 
 #include <dumux/new_material/brookscorey.hh>
-#include <dumux/new_material/regularizedbrookscoreycontext.hh>
+#include <dumux/new_material/regularizedbrookscoreyparams.hh>
 
 #include <algorithm>
 
@@ -40,20 +40,20 @@ namespace Dune
  *
  * \sa BrooksCorey, BrooksCoreyTwophase
  */
-template <class ContextT>
+template <class ParamsT>
 class RegularizedBrooksCorey
 {
 public:
-    typedef ContextT Context;
-    typedef typename Context::Scalar Scalar;
+    typedef ParamsT Params;
+    typedef typename Params::Scalar Scalar;
 
-    typedef Dune::BrooksCorey<ContextT> BrooksCorey;
+    typedef Dune::BrooksCorey<ParamsT> BrooksCorey;
 
     /*!
      * \brief A regularized Brooks-Corey capillary pressure-saturation
      *        curve.
      */
-    static Scalar pC(const Context &context, Scalar Swe)
+    static Scalar pC(const Params &params, Scalar Swe)
     {
         // make sure that the capilarry pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
@@ -62,26 +62,26 @@ public:
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
         if (Swe <= SweLow_) {
-            Scalar pC_SweLow  = BrooksCorey::pC(context, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(context, SweLow_/2);
+            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
             Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
             return pC_SweLow + m*(Swe - SweLow_);
         }
 
         // if the effective saturation is in an 'reasonable'
         // range, we use the real Brooks-Corey law...
-        return BrooksCorey::pC(context, Swe);
+        return BrooksCorey::pC(params, Swe);
     }
 
     /*!
      * \brief The saturation-capillary pressure curve.
      */
-    static Scalar Sw(const Context &context, Scalar pC)
+    static Scalar Sw(const Params &params, Scalar pC)
     {
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized version of 
         // the Brooks-Corey law
-        Scalar Swe = BrooksCorey::Sw(context, pC);
+        Scalar Swe = BrooksCorey::Sw(params, pC);
 
         // make sure that the capilarry pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
@@ -91,38 +91,38 @@ public:
         // temporarily is in an 'illegal' range.
         if (Swe <= SweLow_) {
             // invert the low saturation regularization of pC()
-            Scalar pC_SweLow  = BrooksCorey::pC(context, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(context, SweLow_/2);
+            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
             Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
             return SweLow_ + (pC - pC_SweLow)/m;
         }
 
-        return BrooksCorey::Sw(context, pC);
+        return BrooksCorey::Sw(params, pC);
     }
 
     /*!
      * \brief Returns the partial derivative of the capillary
      *        pressure to the effective saturation.
     */
-    static Scalar dpC_dSw(const Context &context, Scalar Swe)
+    static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         // derivative of the regualarization
         if (Swe <= SweLow_) {
             // calculate the slope of the straight line used in pC()
-            Scalar pC_SweLow  = BrooksCorey::pC(context, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(context, SweLow_/2);
+            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
             Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
             return m;
         }
 
-        return BrooksCorey::dpC_dSw(context, Swe);
+        return BrooksCorey::dpC_dSw(params, Swe);
     }
 
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
      */
-    static Scalar dSw_dpC(const Context &context, Scalar pC)
+    static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of the
@@ -131,18 +131,18 @@ public:
         if (pC < 0)
             Swe = 1.5; // make sure we regularize below
         else
-            Swe = BrooksCorey::Sw(context, pC);
+            Swe = BrooksCorey::Sw(params, pC);
 
         // derivative of the regularization
         if (Swe <= SweLow_) {
             // same as in dpC_dSw() but inverted
-            Scalar pC_SweLow  = BrooksCorey::pC(context, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(context, SweLow_/2);
+            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
             Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
             return 1/m;
         }
 
-        return BrooksCorey::dpC_dSw(context, pC);
+        return BrooksCorey::dpC_dSw(params, pC);
     }
 
     /*!
@@ -152,14 +152,14 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Context &context, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw_mob)
     {
         if (Sw_mob < 0)
             return 0;
         else if (Sw_mob > 1)
             return 1;
 
-        return BrooksCorey::krw(context, Sw_mob);
+        return BrooksCorey::krw(params, Sw_mob);
     };
 
     /*!
@@ -169,22 +169,22 @@ public:
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Context &context, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw_mob)
     {
         if (Sw_mob <= 0)
             return 1;
         else if (Sw_mob >= 1)
             return 0;
 
-        return BrooksCorey::krn(context, Sw_mob);
+        return BrooksCorey::krn(params, Sw_mob);
     }
 
     //! Effective saturation below which we regularize
     static const Scalar SweLow_;
 };
 
-template <class ContextT>
-const typename ContextT::Scalar RegularizedBrooksCorey<ContextT>::SweLow_(0.05);
+template <class ParamsT>
+const typename ParamsT::Scalar RegularizedBrooksCorey<ParamsT>::SweLow_(0.05);
 }
 
 #endif

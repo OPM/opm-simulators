@@ -15,29 +15,29 @@
 /*!
  * \file
  *
- * \brief A default implementation of the context for the material law
+ * \brief A default implementation of the params for the material law
  *        for absolute saturations.
  */
-#ifndef ABSOLUTE_SATURATIONS_LAW_CONTEXT_HH
-#define ABSOLUTE_SATURATIONS_LAW_CONTEXT_HH
+#ifndef ABSOLUTE_SATURATIONS_LAW_PARAMS_HH
+#define ABSOLUTE_SATURATIONS_LAW_PARAMS_HH
 
 namespace Dune
 {
 /*!
  * \ingroup material
  *
- * \brief A default implementation of the context for the material law
+ * \brief A default implementation of the params for the material law
  *        for absolute saturations.
  */
-template <class RawLawContextT>
-class AbsoluteSaturationsLawContext : public RawLawContextT
+template <class RawLawParamsT>
+class AbsoluteSaturationsLawParams : public RawLawParamsT
 {
-    typedef RawLawContextT  RawLawContext;
+    typedef RawLawParamsT  RawLawParams;
 public:
-    typedef typename RawLawContext::Scalar   Scalar;
+    typedef typename RawLawParams::Scalar   Scalar;
 
-    AbsoluteSaturationsLawContext()
-        : RawLawContext()
+    AbsoluteSaturationsLawParams()
+        : RawLawParams()
     {
         Swr_ = Snr_ = 0;
     }

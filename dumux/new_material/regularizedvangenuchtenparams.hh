@@ -13,39 +13,36 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file
- *
- * \brief Specification of the context API for the Brooks-Corey
- *        capillary pressure model.
- */
-#ifndef DUMUX_BROOKS_COREY_CONTEXT_HH
-#define DUMUX_BROOKS_COREY_CONTEXT_HH
+ * \file RegularizedVanGenuchtenParams.hh
 
-#include <dumux/new_material/statehelpermacros.hh>
+ * \brief Reference implementation of a regularized van Genuchten params
+ */
+#ifndef REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
+#define REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
+
+#include <dumux/new_material/vangenuchten.hh>
+#include <dumux/new_material/vangenuchtenparams.hh>
 
 namespace Dune
 {
-
 /*!
- * \brief A reference implementation of the context API class for the
- *        Brooks-Corey Sw-pC relation.
+ * \brief Reference implementation of a regularized van Genuchten params
  */
-template <class ScalarT>
-class BrooksCoreyContext
+template<class ScalarT>
+class RegularizedVanGenuchtenParams : public VanGenuchtenParams<ScalarT>
 {
 public:
     typedef ScalarT Scalar;
+    typedef VanGenuchtenParams<Scalar> Parent;
+    typedef RegularizedVanGenuchtenParams<Scalar> Self;
 
-    BrooksCoreyContext(Scalar pe, Scalar alpha)
-        : pe_(pe), alpha_(alpha)
-    {
-    }
+    RegularizedVanGenuchtenParams()
+    {}
 
-    //! The entry pressure
-    PROPERTY(Scalar, pe, setPe);
-
-    //! The alpha shape parameter
-    PROPERTY(Scalar, alpha, setAlpha);
+    RegularizedVanGenuchtenParams(Scalar vgAlpha,
+                                   Scalar vgN)
+        : Parent(vgAlpha, vgN)
+    {};
 };
 }; // namespace Dune
 
