@@ -23,8 +23,7 @@
 
 #include <algorithm>
 
-#include <dumux/auxiliary/apis.hh>
-#include <dumux/new_material/playtypestate.hh>
+#include "playtypestate.hh"
 
 namespace Dune
 {

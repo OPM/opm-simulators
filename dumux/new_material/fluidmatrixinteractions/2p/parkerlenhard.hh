@@ -21,9 +21,8 @@
 
 #include <dumux/auxiliary/apis.hh>
 
-#include <dumux/new_material/twophasesat.hh>
-#include <dumux/new_material/vangenuchten.hh>
-#include <dumux/new_material/parkerlenhardstate.hh>
+#include "vangenuchten.hh"
+#include "parkerlenhardstate.hh"
 
 #include <dumux/auxiliary/spline.hh>
 #include <dumux/auxiliary/expspline.hh>

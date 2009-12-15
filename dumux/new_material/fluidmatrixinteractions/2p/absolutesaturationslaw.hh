@@ -22,7 +22,7 @@
 #ifndef ABSOLUTE_SATURATIONS_LAW_HH
 #define ABSOLUTE_SATURATIONS_LAW_HH
 
-#include <dumux/new_material/absolutesaturationslawparams.hh>
+#include "absolutesaturationslawparams.hh"
 
 namespace Dune
 {

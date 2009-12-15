@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Copyright (C) 2008 by Andreas Lauser                                    *
+ *   Copyright (C) 2008 by Andreas Lauser, Bernd Flemisch                    *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -13,35 +13,33 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file
- *
- * \brief Implementation of the capillary pressure <-> saturation
- *         relation due to Brooks and Corey.
+ * \file VanGenuchten.hh Implementation of van Genuchten's capillary
+ *                       pressure <-> saturation relation
  */
-#ifndef DUMUX_BROOKS_COREY_HH
-#define DUMUX_BROOKS_COREY_HH
+#ifndef VAN_GENUCHTEN_HH
+#define VAN_GENUCHTEN_HH
 
-#include <dumux/new_material/brookscoreyparams.hh>
+#include "vangenuchtenparams.hh"
 
 #include <algorithm>
 
 #include <math.h>
 #include <assert.h>
 
-
 namespace Dune
 {
-/*!\ingroup material
+/*!
+ * \ingroup material
  *
- * \brief Implementation of the Brooks-Corey capillary pressure <->
+ * \brief Implementation of van Genuchten's capillary pressure <->
  *        saturation relation. This class bundles the "raw" curves
  *        as static members and doesn't concern itself converting
  *        absolute to effective saturations and vince versa.
  *
- * \sa BrooksCorey, BrooksCoreyTwophase
+ * \sa VanGenuchten, VanGenuchtenTwophase
  */
 template <class ParamsT>
-class BrooksCorey
+class VanGenuchten
 {
 public:
     typedef ParamsT Params;
@@ -50,18 +48,17 @@ public:
     /*!
      * \brief The capillary pressure-saturation curve.
      *
-     * The Brooks-Corey empirical capillary pressure <-> saturation
+     * Van Genuchten's empirical capillary pressure <-> saturation
      * function is given by
      * \f[
-     p_C = p_e\overline{S}_w^{-1/\alpha}
+     p_C = (\overline{S}_w^{-1/m} - 1)^{1/n}/\alpha
      \f]
-     * \param Swe   Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
-
-        return params.pe()*pow(Swe, -1.0/params.alpha());
+        return pow(pow(Swe, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
     }
 
     /*!
@@ -69,7 +66,7 @@ public:
      *
      * This is the inverse of the capillary pressure-saturation curve:
      * \f[
-     \overline{S}_w = (\frac{p_C}{p_e})^{-\alpha}
+     \overline{S}_w = {p_C}^{-1} = ((\alpha p_C)^n + 1)^{-m}
      \f]
      *
      * \param pC Capillary pressure \f$\p_C\f$
@@ -79,8 +76,7 @@ public:
     {
         assert(pC >= 0);
 
-        Scalar tmp = pow(pC/params.pe(), -params.alpha());
-        return std::min(std::max(tmp, Scalar(0.0)), Scalar(1.0));
+        return pow(pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
 
     /*!
@@ -90,14 +86,17 @@ public:
      * This is equivalent to
      * \f[
      \frac{\partial p_C}{\partial \overline{S}_w} =
-     -\frac{p_e}{\alpha} \overline{S}_w^{-1/\alpha - 1}
+     -\frac{1}{\alpha} (\overline{S}_w^{-1/m} - 1)^{1/n - }
+     \overline{S}_w^{-1/m} / \overline{S}_w / m
      \f]
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return - params.pe()/params.alpha() * pow(Swe, -1/params.alpha() - 1);
+        Scalar powSwe = pow(Swe, -1/params.vgM());
+        return - 1/params.vgAlpha() * pow(powSwe - 1, 1/params.vgN() - 1)/params.vgN()
+            * powSwe/Swe/params.vgM();
     }
 
     /*!
@@ -108,7 +107,9 @@ public:
     {
         assert(pC >= 0);
 
-        return -params.alpha()/params.pe() * pow(pC/params.pe(), - params.alpha() - 1);
+        Scalar powAlphaPc = pow(params.vgAlpha()*pC, params.vgN());
+        return -pow(powAlphaPc + 1, -params.vgM()-1)*
+            params.vgM()*powAlphaPc/pC*params.vgN();
     }
 
     /*!
@@ -117,12 +118,14 @@ public:
      *        parameterization.
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param m      The "m" shape parameter according to van Genuchten
      */
     static Scalar krw(const Params &params, Scalar Sw_mob)
     {
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        return pow(Sw_mob, (2. + 3*params.alpha()) / params.alpha());
+        Scalar r = 1. - pow(1 - pow(Sw_mob, 1/params.vgM()), params.vgM());
+        return sqrt(Sw_mob)*r*r;
     };
 
     /*!
@@ -136,11 +139,10 @@ public:
     {
         assert(0 <= Sw_mob && Sw_mob <= 1);
 
-        Scalar exponent = (2. + params.alpha())/params.alpha();
-        Scalar tmp = 1. - Sw_mob;
-        return tmp*tmp*(1. - pow(Sw_mob, exponent));
+        Scalar r = pow(1 - pow(Sw_mob, 1/params.vgM()), params.vgM());
+        return sqrt(1 - Sw_mob)*r*r;
     }
 };
 }
 
-#endif // BROOKS_COREY_HH
+#endif

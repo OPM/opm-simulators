@@ -21,8 +21,8 @@
 
 #include <dumux/auxiliary/apis.hh>
 
-#include <dumux/new_material/statehelpermacros.hh>
-#include <dumux/new_material/twophasesatstate.hh>
+#include "statehelpermacros.hh"
+#include "twophasesatstate.hh"
 
 #include <stdlib.h>
 

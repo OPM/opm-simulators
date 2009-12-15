@@ -21,8 +21,8 @@
 #ifndef REGULARIZED_VAN_GENUCHTEN_HH
 #define REGULARIZED_VAN_GENUCHTEN_HH
 
-#include <dumux/new_material/vangenuchten.hh>
-#include <dumux/new_material/regularizedvangenuchtenparams.hh>
+#include "vangenuchten.hh"
+#include "regularizedvangenuchtenparams.hh"
 
 #include <algorithm>
 

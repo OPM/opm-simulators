@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Copyright (C) 2008 by Andreas Lauser, Bernd Flemisch                    *
+ *   Copyright (C) 2009 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -13,13 +13,13 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file VanGenuchten.hh Implementation of van Genuchten's capillary
- *                       pressure <-> saturation relation
+ * \file linearmaterial.hh Implements a linear saturation-capillary
+ *                    pressure relation
  */
-#ifndef VAN_GENUCHTEN_HH
-#define VAN_GENUCHTEN_HH
+#ifndef LINEAR_MATERIAL_HH
+#define LINEAR_MATERIAL_HH
 
-#include <dumux/new_material/vangenuchtenparams.hh>
+#include "linearmaterialparams.hh"
 
 #include <algorithm>
 
@@ -31,34 +31,34 @@ namespace Dune
 /*!
  * \ingroup material
  *
- * \brief Implementation of van Genuchten's capillary pressure <->
- *        saturation relation. This class bundles the "raw" curves
- *        as static members and doesn't concern itself converting
- *        absolute to effective saturations and vince versa.
+ * \brief Implements a linear saturation-capillary pressure relation
  *
- * \sa VanGenuchten, VanGenuchtenTwophase
+ *
+ * The entry pressure is reached at \f$S_w = 1\f$, the maximum
+ * capillary pressure is observed at \f$S_w = 0\f$.
+ *
+ * \sa LinearMaterialParams
  */
 template <class ParamsT>
-class VanGenuchten
+class LinearMaterial
 {
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief The capillary pressure-saturation curve.
+     * \brief The linear capillary pressure-saturation curve.
      *
-     * Van Genuchten's empirical capillary pressure <-> saturation
-     * function is given by
+     * This material law is linear:
      * \f[
-     p_C = (\overline{S}_w^{-1/m} - 1)^{1/n}/\alpha
+     p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
      \f]
+     *
      * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
-        assert(0 <= Swe && Swe <= 1);
-        return pow(pow(Swe, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+        return (1 - Swe)*(params.maxPC() - params.entryPC()) + params.entryPC();
     }
 
     /*!
@@ -66,7 +66,7 @@ public:
      *
      * This is the inverse of the capillary pressure-saturation curve:
      * \f[
-     \overline{S}_w = {p_C}^{-1} = ((\alpha p_C)^n + 1)^{-m}
+     S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
      \f]
      *
      * \param pC Capillary pressure \f$\p_C\f$
@@ -74,9 +74,7 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        assert(pC >= 0);
-
-        return pow(pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
+        return 1 - (pC - params.entryPC())/(params.maxPC() - params.entryPC());
     }
 
     /*!
@@ -86,17 +84,12 @@ public:
      * This is equivalent to
      * \f[
      \frac{\partial p_C}{\partial \overline{S}_w} =
-     -\frac{1}{\alpha} (\overline{S}_w^{-1/m} - 1)^{1/n - }
-     \overline{S}_w^{-1/m} / \overline{S}_w / m
+     - (p_{C,max} - p_{C,min})
      \f]
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Swe && Swe <= 1);
-
-        Scalar powSwe = pow(Swe, -1/params.vgM());
-        return - 1/params.vgAlpha() * pow(powSwe - 1, 1/params.vgN() - 1)/params.vgN()
-            * powSwe/Swe/params.vgM();
+        return - (params.maxPC() - params.entryPC());
     }
 
     /*!
@@ -105,42 +98,31 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        assert(pC >= 0);
-
-        Scalar powAlphaPc = pow(params.vgAlpha()*pC, params.vgN());
-        return -pow(powAlphaPc + 1, -params.vgM()-1)*
-            params.vgM()*powAlphaPc/pC*params.vgN();
+        return - 1/(params.maxPC() - params.entryPC());
     }
 
     /*!
-     * \brief The relative permeability for the wetting phase of
-     *        the medium implied by van Genuchten's
-     *        parameterization.
+     * \brief The relative permeability for the wetting phase.
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
-     * \param m      The "m" shape parameter according to van Genuchten
      */
     static Scalar krw(const Params &params, Scalar Sw_mob)
     {
-        assert(0 <= Sw_mob && Sw_mob <= 1);
-
-        Scalar r = 1. - pow(1 - pow(Sw_mob, 1/params.vgM()), params.vgM());
-        return sqrt(Sw_mob)*r*r;
+        return std::min(Scalar(1),
+                        std::max(Scalar(0),
+                                 Sw_mob));
     };
 
     /*!
-     * \brief The relative permeability for the non-wetting phase
-     *        of the medium implied by van Genuchten's
-     *        parameterization.
+     * \brief The relative permeability for the non-wetting phase.
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
     static Scalar krn(const Params &params, Scalar Sw_mob)
     {
-        assert(0 <= Sw_mob && Sw_mob <= 1);
-
-        Scalar r = pow(1 - pow(Sw_mob, 1/params.vgM()), params.vgM());
-        return sqrt(1 - Sw_mob)*r*r;
+        return std::min(Scalar(1),
+                        std::max(Scalar(0),
+                                 1 - Sw_mob));
     }
 };
 }

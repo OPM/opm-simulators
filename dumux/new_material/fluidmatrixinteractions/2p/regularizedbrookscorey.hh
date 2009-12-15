@@ -21,8 +21,8 @@
 #ifndef REGULARIZED_BROOKS_COREY_HH
 #define REGULARIZED_BROOKS_COREY_HH
 
-#include <dumux/new_material/brookscorey.hh>
-#include <dumux/new_material/regularizedbrookscoreyparams.hh>
+#include "brookscorey.hh"
+#include "regularizedbrookscoreyparams.hh"
 
 #include <algorithm>
 

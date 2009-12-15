@@ -20,8 +20,8 @@
 #ifndef REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
 #define REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
 
-#include <dumux/new_material/vangenuchten.hh>
-#include <dumux/new_material/vangenuchtenparams.hh>
+#include "vangenuchten.hh"
+#include "vangenuchtenparams.hh"
 
 namespace Dune
 {

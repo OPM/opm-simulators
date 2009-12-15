@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Copyright (C) 2009 by Andreas Lauser                                    *
+ *   Copyright (C) 2008 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -13,52 +13,55 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file linearmaterial.hh Implements a linear saturation-capillary
- *                    pressure relation
+ * \file
+ *
+ * \brief Implementation of the capillary pressure <-> saturation
+ *         relation due to Brooks and Corey.
  */
-#ifndef LINEAR_MATERIAL_HH
-#define LINEAR_MATERIAL_HH
+#ifndef DUMUX_BROOKS_COREY_HH
+#define DUMUX_BROOKS_COREY_HH
 
-#include <dumux/new_material/linearmaterialparams.hh>
+#include "brookscoreyparams.hh"
 
 #include <algorithm>
 
 #include <math.h>
 #include <assert.h>
 
+
 namespace Dune
 {
-/*!
- * \ingroup material
+/*!\ingroup material
  *
- * \brief Implements a linear saturation-capillary pressure relation
+ * \brief Implementation of the Brooks-Corey capillary pressure <->
+ *        saturation relation. This class bundles the "raw" curves
+ *        as static members and doesn't concern itself converting
+ *        absolute to effective saturations and vince versa.
  *
- *
- * The entry pressure is reached at \f$S_w = 1\f$, the maximum
- * capillary pressure is observed at \f$S_w = 0\f$.
- *
- * \sa LinearMaterialParams
+ * \sa BrooksCorey, BrooksCoreyTwophase
  */
 template <class ParamsT>
-class LinearMaterial
+class BrooksCorey
 {
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief The linear capillary pressure-saturation curve.
+     * \brief The capillary pressure-saturation curve.
      *
-     * This material law is linear:
+     * The Brooks-Corey empirical capillary pressure <-> saturation
+     * function is given by
      * \f[
-     p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
+     p_C = p_e\overline{S}_w^{-1/\alpha}
      \f]
-     *
-     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \param Swe   Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
-        return (1 - Swe)*(params.maxPC() - params.entryPC()) + params.entryPC();
+        assert(0 <= Swe && Swe <= 1);
+
+        return params.pe()*pow(Swe, -1.0/params.alpha());
     }
 
     /*!
@@ -66,7 +69,7 @@ public:
      *
      * This is the inverse of the capillary pressure-saturation curve:
      * \f[
-     S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
+     \overline{S}_w = (\frac{p_C}{p_e})^{-\alpha}
      \f]
      *
      * \param pC Capillary pressure \f$\p_C\f$
@@ -74,7 +77,10 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        return 1 - (pC - params.entryPC())/(params.maxPC() - params.entryPC());
+        assert(pC >= 0);
+
+        Scalar tmp = pow(pC/params.pe(), -params.alpha());
+        return std::min(std::max(tmp, Scalar(0.0)), Scalar(1.0));
     }
 
     /*!
@@ -84,12 +90,14 @@ public:
      * This is equivalent to
      * \f[
      \frac{\partial p_C}{\partial \overline{S}_w} =
-     - (p_{C,max} - p_{C,min})
+     -\frac{p_e}{\alpha} \overline{S}_w^{-1/\alpha - 1}
      \f]
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
-        return - (params.maxPC() - params.entryPC());
+        assert(0 <= Swe && Swe <= 1);
+
+        return - params.pe()/params.alpha() * pow(Swe, -1/params.alpha() - 1);
     }
 
     /*!
@@ -98,33 +106,41 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        return - 1/(params.maxPC() - params.entryPC());
+        assert(pC >= 0);
+
+        return -params.alpha()/params.pe() * pow(pC/params.pe(), - params.alpha() - 1);
     }
 
     /*!
-     * \brief The relative permeability for the wetting phase.
+     * \brief The relative permeability for the wetting phase of
+     *        the medium implied by van Genuchten's
+     *        parameterization.
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
     static Scalar krw(const Params &params, Scalar Sw_mob)
     {
-        return std::min(Scalar(1),
-                        std::max(Scalar(0),
-                                 Sw_mob));
+        assert(0 <= Sw_mob && Sw_mob <= 1);
+
+        return pow(Sw_mob, (2. + 3*params.alpha()) / params.alpha());
     };
 
     /*!
-     * \brief The relative permeability for the non-wetting phase.
+     * \brief The relative permeability for the non-wetting phase
+     *        of the medium implied by van Genuchten's
+     *        parameterization.
      *
      * \param Sw_mob The mobile saturation of the wetting phase.
      */
     static Scalar krn(const Params &params, Scalar Sw_mob)
     {
-        return std::min(Scalar(1),
-                        std::max(Scalar(0),
-                                 1 - Sw_mob));
+        assert(0 <= Sw_mob && Sw_mob <= 1);
+
+        Scalar exponent = (2. + params.alpha())/params.alpha();
+        Scalar tmp = 1. - Sw_mob;
+        return tmp*tmp*(1. - pow(Sw_mob, exponent));
     }
 };
 }
 
-#endif
+#endif // BROOKS_COREY_HH
