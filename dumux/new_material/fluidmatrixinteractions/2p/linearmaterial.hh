@@ -104,25 +104,53 @@ public:
     /*!
      * \brief The relative permeability for the wetting phase.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Swe The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Params &params, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Swe)
     {
-        return std::min(Scalar(1),
-                        std::max(Scalar(0),
-                                 Sw_mob));
+        return relperm_(params, Swe);
     };
 
     /*!
      * \brief The relative permeability for the non-wetting phase.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Swe The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Params &params, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Swe)
     {
-        return std::min(Scalar(1),
-                        std::max(Scalar(0),
-                                 1 - Sw_mob));
+        Scalar Sne = 1 - Swe;
+        return relperm_(params, Sne);
+    }
+    
+private:
+    static Scalar relperm_(const Params &params, Scalar S)
+    {
+        const Scalar epsS = params.Sreg();
+        const Scalar m = (1 - epsS)/(1 - 2*epsS);
+        
+        // check whether the saturation is unpyhsical
+        if (S >= 1.0)
+            return 1.0;
+        else if (S <= 0.0)
+            return 0;
+        // check wether the permeability needs to be regularized
+        else if (S < epsS) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(0,    epsS,
+                      0,    epsS/2,
+                      0,    m);
+            return sp.eval(S);
+        }
+        else if (S > 1 - epsS) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(1 - epsS,   1,
+                      1 - epsS/2, 1,
+                      m,          0);
+            return sp.eval(S);
+        }
+        
+        // straight line for S \in [epsS, 1 - epsS]
+        return epsS/2 + m*(S - epsS);
     }
 };
 }

@@ -150,16 +150,21 @@ public:
      *        the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Sw The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Params &params, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw)
     {
-        if (Sw_mob < 0)
+        if (Sw < 0)
             return 0;
-        else if (Sw_mob > 1)
+        else if (Sw >= 1)
             return 1;
+        
+        // check if we need to regularize the relative permeability
+        else if (Sw > 1 - SweLow_) {
+        }
+        
 
-        return BrooksCorey::krw(params, Sw_mob);
+        return BrooksCorey::krw(params, Sw);
     };
 
     /*!
@@ -167,16 +172,16 @@ public:
      *        of the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Sw The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Params &params, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw)
     {
-        if (Sw_mob <= 0)
+        if (Sw <= 0)
             return 1;
-        else if (Sw_mob >= 1)
+        else if (Sw >= 1)
             return 0;
 
-        return BrooksCorey::krn(params, Sw_mob);
+        return BrooksCorey::krn(params, Sw);
     }
 
     //! Effective saturation below which we regularize

@@ -41,6 +41,15 @@ public:
     };
 
     /*!
+     * \brief Return the threshold saturation at which the relative
+     *        permeability starts to get regularized.
+     *
+     * This is simply 10%
+     */
+    Scalar Sreg() const
+    { return 0.10; }
+
+    /*!
      * \brief Return the entry pressure for the linear material law.
      *
      * The entry pressure is reached at \f$S_w = 1\f$
