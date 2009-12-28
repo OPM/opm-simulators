@@ -57,26 +57,31 @@ public:
      * \f[
      p_C = (\overline{S}_w^{-1/m} - 1)^{1/n}/\alpha
      \f]
-     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \param Sw Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar pC(const Params &params, Scalar Swe)
+    static Scalar pC(const Params &params, Scalar Sw)
     {
+        // retrieve the low and the high threshold saturations for the
+        // unregularized capillary pressure curve from the parameters
+        const Scalar SwThLow = params.pCLowSw();
+        const Scalar SwThHigh = params.pCHighSw();
+
         // make sure that the capilarry pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
         // required for example by newton solvers (if the
         // derivative calculated numerically) in order to get the
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
-        if (Swe <= SweLow_) {
-            return VanGenuchten::pC(params, SweLow_/2) + mLow_(params)*(Swe - SweLow_/2);
+        if (Sw < SwThLow) {
+            return VanGenuchten::pC(params, SwThLow/2) + mLow_(params)*(Sw - SwThLow/2);
         }
-        else if (Swe >= SweHigh_) {
-            return VanGenuchten::pC(params, SweHigh_) + mHigh_(params)*(Swe - SweHigh_);
+        else if (Sw > SwThHigh) {
+            return VanGenuchten::pC(params, SwThHigh) + mHigh_(params)*(Sw - SwThHigh);
         }
 
         // if the effective saturation is in an 'reasonable'
         // range, we use the real van genuchten law...
-        return VanGenuchten::pC(params, Swe);
+        return VanGenuchten::pC(params, Sw);
     }
 
     /*!
@@ -95,26 +100,31 @@ public:
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of van
         // Genuchten's law
-        Scalar Swe;
+        Scalar Sw;
         if (pC <= 0)
             // make sure we invert the regularization
-            Swe = 1.5; 
+            Sw = 1.5; 
         else
-            Swe = VanGenuchten::Sw(params, pC);
+            Sw = VanGenuchten::Sw(params, pC);
+
+        // retrieve the low and the high threshold saturations for the
+        // unregularized capillary pressure curve from the parameters
+        const Scalar SwThLow = params.pCLowSw();
+        const Scalar SwThHigh = params.pCHighSw();
 
         // invert the regularization if necessary
-        if (Swe <= SweLow_) {
+        if (Sw <= SwThLow) {
             // invert the low saturation regularization of pC()
-            Scalar pC_SweLow2 = VanGenuchten::pC(params, SweLow_/2);
-            return (pC - pC_SweLow2)/mLow_(params) + SweLow_/2;
+            Scalar pC_SwLow2 = VanGenuchten::pC(params, SwThLow/2);
+            return (pC - pC_SwLow2)/mLow_(params) + SwThLow/2;
         }
-        else if (Swe >= SweHigh_) {
+        else if (Sw >= SwThHigh) {
             // invert the high saturation regularization of pC()
-            Scalar pC_SweHigh = VanGenuchten::pC(params, SweHigh_);
-            return (pC - pC_SweHigh)/mHigh_(params) + SweHigh_;
+            Scalar pC_SwHigh = VanGenuchten::pC(params, SwThHigh);
+            return (pC - pC_SwHigh)/mHigh_(params) + SwThHigh;
         }
 
-        return Swe;
+        return Sw;
     }
 
     /*!
@@ -128,19 +138,19 @@ public:
      \overline{S}_w^{-1/m} / \overline{S}_w / m
      \f]
     */
-    static Scalar dpC_dSw(const Params &params, Scalar Swe)
+    static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
         // derivative of the regualarization
-        if (Swe <= SweLow_) {
+        if (Sw < params.pCLowSw()) {
             // the slope of the straight line used in pC()
             return mLow_(params);
         }
-        else if (Swe >= SweHigh_) {
+        else if (Sw > params.pCHighSw()) {
             // the slope of the straight line used in pC()
             return mHigh_(params);
         }
 
-        return VanGenuchten::dpC_dSw(params, Swe);
+        return VanGenuchten::dpC_dSw(params, Sw);
     }
 
     /*!
@@ -152,18 +162,18 @@ public:
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of van
         // Genuchten's law
-        Scalar Swe;
+        Scalar Sw;
         if (pC < 0)
-            Swe = 1.5; // make sure we regularize below
+            Sw = 1.5; // make sure we regularize below
         else
-            Swe = VanGenuchten::Sw(params, pC);
+            Sw = VanGenuchten::Sw(params, pC);
 
         // derivative of the regularization
-        if (Swe <= SweLow_) {
+        if (Sw < params.pCLowSw()) {
             // same as in dpC_dSw() but inverted
             return 1/mLow_(params);
         }
-        else if (Swe >= SweHigh_) {
+        if (Sw > params.pCHighSw()) {
             // same as in dpC_dSw() but inverted
             return 1/mHigh_(params);
         }
@@ -176,16 +186,28 @@ public:
      *        the medium implied by van Genuchten's
      *        parameterization.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Sw The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Params &params, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw)
     {
-        if (Sw_mob < 0)
-            return 0;
-        else if (Sw_mob > 1)
-            return 1;
+        // retrieve the high threshold saturation for the
+        // unregularized relative permeability curve of the wetting
+        // phase from the parameters
+        const Scalar SwThHigh = params.krwHighSw();
 
-        return VanGenuchten::krw(params, Sw_mob);
+        if (Sw < 0)
+            return 0;
+        else if (Sw > 1)
+            return 1;
+        else if (Sw > SwThHigh) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(SwThHigh, 1.0, // x1, x2
+                      VanGenuchten::krw(params, SwThHigh), 1.0, // y1, y2
+                      VanGenuchten::dkrw_dSw(params, SwThHigh), 0); // m1, m2
+            return sp.eval(Sw);
+        }
+
+        return VanGenuchten::krw(params, Sw);
     };
 
     /*!
@@ -193,16 +215,28 @@ public:
      *        of the medium implied by van Genuchten's
      *        parameterization.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Sw The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Params &params, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw)
     {
-        if (Sw_mob <= 0)
-            return 1;
-        else if (Sw_mob >= 1)
-            return 0;
+        // retrieve the low threshold saturation for the unregularized
+        // relative permeability curve of the non-wetting phase from
+        // the parameters
+        const Scalar SwThLow = params.krnLowSw();
 
-        return VanGenuchten::krn(params, Sw_mob);
+        if (Sw <= 0)
+            return 1;
+        else if (Sw >= 1)
+            return 0;
+        else if (Sw < SwThLow) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(0.0, SwThLow, // x1, x2
+                      1.0, VanGenuchten::krn(params, SwThLow), // y1, y2
+                      0.0, VanGenuchten::dkrn_dSw(params, SwThLow)); // m1, m2
+            return sp.eval(Sw);
+        }
+
+        return VanGenuchten::krn(params, Sw);
     }
 
 private:
@@ -210,27 +244,24 @@ private:
     // below the minimum saturation
     static Scalar mLow_(const Params &params)
     {
-        Scalar pC_SweLow  = VanGenuchten::pC(params, SweLow_);
-        Scalar pC_SweLow2 = VanGenuchten::pC(params, SweLow_/2);
-        return (pC_SweLow - pC_SweLow2) / (SweLow_ - SweLow_/2);
+        const Scalar SwThLow = params.pCLowSw();
+        
+        Scalar pC_SwLow  = VanGenuchten::pC(params, SwThLow);
+        Scalar pC_SwLow2 = VanGenuchten::pC(params, SwThLow/2);
+        return (pC_SwLow - pC_SwLow2) / (SwThLow - SwThLow/2);
     }
 
     // the slope of the straight line used to regularize saturations
     // above the maximum saturation
     static Scalar mHigh_(const Params &params)
     {
-        Scalar pC_SweHigh = VanGenuchten::pC(params, SweHigh_);
-        return (0 - pC_SweHigh)/(1.0 - SweHigh_);
-    }
+        const Scalar SwThHigh = params.pCHighSw();
 
-    static const Scalar SweLow_;
-    static const Scalar SweHigh_;
+        Scalar pC_SwHigh = VanGenuchten::pC(params, SwThHigh);
+        return (0 - pC_SwHigh)/(1.0 - SwThHigh);
+    }
 };
 
-template <class ParamsT>
-const typename ParamsT::Scalar RegularizedVanGenuchten<ParamsT>::SweLow_(0.03);
-template <class ParamsT>
-const typename ParamsT::Scalar RegularizedVanGenuchten<ParamsT>::SweHigh_(0.97);
 }
 
 #endif

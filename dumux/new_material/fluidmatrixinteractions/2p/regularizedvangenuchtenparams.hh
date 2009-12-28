@@ -43,6 +43,47 @@ public:
                                    Scalar vgN)
         : Parent(vgAlpha, vgN)
     {};
+
+    /*!
+     * \brief Threshold saturation below which the capillary pressure
+     *        is regularized.
+     *
+     * This is just 5%. If you need a different value, overload this
+     * class.
+     */
+    Scalar pCLowSw() const
+    { return 0.05; }
+
+    /*!
+     * \brief Threshold saturation above which the capillary pressure
+     *        is regularized.
+     *
+     * This is just 95%. If you need a different value, overload this
+     * class.
+     */
+    Scalar pCHighSw() const
+    { return 0.95; }
+
+    /*!
+     * \brief Threshold saturation below which the relative
+     *        permeability of the non-wetting phase gets regulatized.
+     *
+     * This is just 10%. If you need a different value, overload this
+     * class.
+     */
+    Scalar krnLowSw() const
+    { return 0.10; }
+
+    /*!
+     * \brief Threshold saturation above which the relative
+     *        permeability of the wetting phase gets regulatized.
+     *
+     * This is just 90%. If you need a different value, overload this
+     * class.
+     */
+    Scalar krwHighSw() const
+    { return 0.90; }
+
 };
 }; // namespace Dune
 
