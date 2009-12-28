@@ -55,17 +55,19 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
+        const Scalar Sthres = params.pCLowSw();
+
         // make sure that the capilarry pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
         // required for example by newton solvers (if the
         // derivative calculated numerically) in order to get the
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
-        if (Swe <= SweLow_) {
-            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
-            Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
-            return pC_SweLow + m*(Swe - SweLow_);
+        if (Swe <= Sthres) {
+            Scalar pC_SweLow  = BrooksCorey::pC(params, Sthres);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, Sthres/2);
+            Scalar m = (pC_SweLow2 - pC_SweLow)/(Sthres/2 - Sthres);
+            return pC_SweLow + m*(Swe - Sthres);
         }
 
         // if the effective saturation is in an 'reasonable'
@@ -78,6 +80,8 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
+        const Scalar Sthres = params.pCLowSw();
+
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized version of 
         // the Brooks-Corey law
@@ -89,12 +93,12 @@ public:
         // derivative calculated numerically) in order to get the
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
-        if (Swe <= SweLow_) {
+        if (Swe <= Sthres) {
             // invert the low saturation regularization of pC()
-            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
-            Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
-            return SweLow_ + (pC - pC_SweLow)/m;
+            Scalar pC_SweLow  = BrooksCorey::pC(params, Sthres);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, Sthres/2);
+            Scalar m = (pC_SweLow2 - pC_SweLow)/(Sthres/2 - Sthres);
+            return Sthres + (pC - pC_SweLow)/m;
         }
 
         return BrooksCorey::Sw(params, pC);
@@ -106,12 +110,14 @@ public:
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
+        const Scalar Sthres = params.pCLowSw();
+
         // derivative of the regualarization
-        if (Swe <= SweLow_) {
+        if (Swe <= Sthres) {
             // calculate the slope of the straight line used in pC()
-            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
-            Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
+            Scalar pC_SweLow  = BrooksCorey::pC(params, Sthres);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, Sthres/2);
+            Scalar m = (pC_SweLow2 - pC_SweLow)/(Sthres/2 - Sthres);
             return m;
         }
 
@@ -124,6 +130,8 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
+        const Scalar Sthres = params.pCLowSw();
+
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of the
         // Brooks-Corey law
@@ -134,11 +142,11 @@ public:
             Swe = BrooksCorey::Sw(params, pC);
 
         // derivative of the regularization
-        if (Swe <= SweLow_) {
+        if (Swe <= Sthres) {
             // same as in dpC_dSw() but inverted
-            Scalar pC_SweLow  = BrooksCorey::pC(params, SweLow_);
-            Scalar pC_SweLow2 = BrooksCorey::pC(params, SweLow_/2);
-            Scalar m = (pC_SweLow2 - pC_SweLow)/(SweLow_/2 - SweLow_);
+            Scalar pC_SweLow  = BrooksCorey::pC(params, Sthres);
+            Scalar pC_SweLow2 = BrooksCorey::pC(params, Sthres/2);
+            Scalar m = (pC_SweLow2 - pC_SweLow)/(Sthres/2 - Sthres);
             return 1/m;
         }
 
@@ -154,16 +162,21 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Sw)
     {
+        const Scalar Sthres = params.krwHighSw();
         if (Sw < 0)
             return 0;
         else if (Sw >= 1)
-            return 1;
-        
+            return 1;       
         // check if we need to regularize the relative permeability
-        else if (Sw > 1 - SweLow_) {
+        else if (Sw > Sthres) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(Sthres, 1.0, // x1, x2
+                      BrooksCorey::krw(params, Sthres), 1.0, // y1, y2
+                      BrooksCorey::dkrw_dSw(params, Sthres), 0); // m1, m2
+
+            return sp.eval(Sw);
         }
         
-
         return BrooksCorey::krw(params, Sw);
     };
 
@@ -176,20 +189,24 @@ public:
      */
     static Scalar krn(const Params &params, Scalar Sw)
     {
+        const Scalar Sthres = params.krnLowSw();
         if (Sw <= 0)
             return 1;
         else if (Sw >= 1)
             return 0;
-
+        // check if we need to regularize the relative permeability
+        else if (Sw < Sthres) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(0.0, Sthres, // x1, x2
+                      1.0, BrooksCorey::krn(params, Sthres), // y1, y2
+                      0.0, BrooksCorey::dkrn_dSw(params, Sthres)); // m1, m2
+            
+            return sp.eval(Sw);
+        }
+        
         return BrooksCorey::krn(params, Sw);
     }
-
-    //! Effective saturation below which we regularize
-    static const Scalar SweLow_;
 };
-
-template <class ParamsT>
-const typename ParamsT::Scalar RegularizedBrooksCorey<ParamsT>::SweLow_(0.05);
 }
 
 #endif

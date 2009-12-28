@@ -21,6 +21,8 @@
 #ifndef DUMUX_BROOKS_COREY_PARAMS_HH
 #define DUMUX_BROOKS_COREY_PARAMS_HH
 
+#include <dumux/auxiliary/valgrind.hh>
+
 namespace Dune
 {
 
@@ -33,6 +35,11 @@ class BrooksCoreyParams
 {
 public:
     typedef ScalarT Scalar;
+
+    BrooksCoreyParams()
+    {
+        Valgrind::SetUndefined(*this);
+    }
 
     BrooksCoreyParams(Scalar pe, Scalar alpha)
         : pe_(pe), alpha_(alpha)
@@ -49,7 +56,7 @@ public:
      * \brief Set the entry pressure [Pa]
      */
     void setPe(Scalar v)
-    { return pe_ = v; }
+    { pe_ = v; }
 
 
     /*!
@@ -62,7 +69,7 @@ public:
      * \brief Set the alpha shape parameter
      */
     void setAlpha(Scalar v)
-    { return alpha_ = v; }
+    { alpha_ = v; }
 
 private:
     Scalar pe_;

@@ -21,6 +21,8 @@
 #ifndef DUMUX_REGULARIZED_BROOKS_COREY_PARAMS_HH
 #define DUMUX_REGULARIZED_BROOKS_COREY_PARAMS_HH
 
+#include "brookscoreyparams.hh"
+
 namespace Dune
 {
 /*!
@@ -28,15 +30,52 @@ namespace Dune
  *        regularized Brooks-Corey Sw-pC relation.
  */
 template <class ScalarT>
-class RegularizedBrooksCoreyParams : BrooksCoreyParams<ScalarT>
+class RegularizedBrooksCoreyParams : public Dune::BrooksCoreyParams<ScalarT>
 {
+    typedef Dune::BrooksCoreyParams<ScalarT> BrooksCoreyParams;
+
 public:
     typedef ScalarT Scalar;
-    
-    RegularizedBrooksCoreyParams(Scalar pe = 0, Scalar alpha = 0)
-        : RegularizedBrooksCoreyParams(pe, alpha)
+
+    RegularizedBrooksCoreyParams()
+        : BrooksCoreyParams()
     {
     }
+    
+    RegularizedBrooksCoreyParams(Scalar pe, Scalar alpha)
+        : BrooksCoreyParams(pe, alpha)
+    {
+    }
+
+    /*!
+     * \brief Threshold saturation below which the capillary pressure
+     *        is regularized.
+     *
+     * This is just 5%. If you need a different value, overload this
+     * class.
+     */
+    Scalar pCLowSw() const
+    { return 0.05; }
+
+    /*!
+     * \brief Threshold saturation below which the relative
+     *        permeability of the non-wetting phase gets regulatized.
+     *
+     * This is just 15%. If you need a different value, overload this
+     * class.
+     */
+    Scalar krnLowSw() const
+    { return 0.15; }
+
+    /*!
+     * \brief Threshold saturation above which the relative
+     *        permeability of the wetting phase gets regulatized.
+     *
+     * This is just 85%. If you need a different value, overload this
+     * class.
+     */
+    Scalar krwHighSw() const
+    { return 0.85; }
 };
 }; // namespace Dune
 

@@ -113,33 +113,70 @@ public:
 
     /*!
      * \brief The relative permeability for the wetting phase of
-     *        the medium implied by van Genuchten's
+     *        the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Sw The mobile saturation of the wetting phase.
      */
-    static Scalar krw(const Params &params, Scalar Sw_mob)
+    static Scalar krw(const Params &params, Scalar Sw)
     {
-        assert(0 <= Sw_mob && Sw_mob <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
-        return pow(Sw_mob, (2. + 3*params.alpha()) / params.alpha());
+        return pow(Sw, 2.0/params.alpha() + 3);
     };
 
     /*!
-     * \brief The relative permeability for the non-wetting phase
-     *        of the medium implied by van Genuchten's
+     * \brief The derivative of the relative permeability for the
+     *        wetting phase in regard to the wetting saturation of the
+     *        medium implied by the Brooks-Corey parameterization.
+     *
+     * \param Sw The mobile saturation of the wetting phase.
+     */
+    static Scalar dkrw_dSw(const Params &params, Scalar Sw)
+    {
+        assert(0 <= Sw && Sw <= 1);
+
+        return (2.0/params.alpha() + 3)*pow(Sw, 2.0/params.alpha() + 2);
+    };
+
+    /*!
+     * \brief The relative permeability for the non-wetting phase of
+     *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw_mob The mobile saturation of the wetting phase.
+     * \param Sw The mobile saturation of the wetting phase.
      */
-    static Scalar krn(const Params &params, Scalar Sw_mob)
+    static Scalar krn(const Params &params, Scalar Sw)
     {
-        assert(0 <= Sw_mob && Sw_mob <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
-        Scalar exponent = (2. + params.alpha())/params.alpha();
-        Scalar tmp = 1. - Sw_mob;
-        return tmp*tmp*(1. - pow(Sw_mob, exponent));
+        Scalar exponent = 2.0/params.alpha() + 1;
+        Scalar tmp = 1. - Sw;
+        return tmp*tmp*(1. - pow(Sw, exponent));
     }
+
+    /*!
+     * \brief The derivative of the relative permeability for the
+     *        non-wetting phase in regard to the wetting saturation of
+     *        the medium as implied by the Brooks-Corey
+     *        parameterization.
+     *
+     * \param Sw The mobile saturation of the wetting phase.
+     */
+    static Scalar dkrn_dSw(const Params &params, Scalar Sw)
+    {
+        assert(0 <= Sw && Sw <= 1);
+        
+        return 
+            2.0*(Sw - 1)*(
+                1 +
+                pow(Sw, 2.0/params.alpha())*(
+                    1.0/params.alpha() + 1.0/2 -
+                    Sw*(1.0/params.alpha() + 1.0/2)
+                    )
+                );
+    };
+
 };
 }
 
