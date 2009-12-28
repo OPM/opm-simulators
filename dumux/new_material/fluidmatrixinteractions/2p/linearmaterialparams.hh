@@ -81,6 +81,26 @@ public:
     void setMaxPC(Scalar v)
     { maxPC_ = v; }
 
+    /*!
+     * \brief Return the threshold saturation respective phase below
+     *        which the relative permeability gets regularized.
+     *
+     * This is just 5%. If you need a different value, write your own
+     * parameter class.
+     */
+    Scalar krLowS() const
+    { return 0.05; }
+
+    /*!
+     * \brief Return the threshold saturation of the respective phase
+     *        above which the relative permeability gets regularized.
+     *
+     * This is just 95%. If you need a different value, write your own
+     * parameter class.
+     */
+    Scalar krHighS() const
+    { return 0.95; }
+
 private:
     Scalar entryPC_;
     Scalar maxPC_;

@@ -125,8 +125,11 @@ public:
 private:
     static Scalar relperm_(const Params &params, Scalar S)
     {
-        const Scalar epsS = params.Sreg();
-        const Scalar m = (1 - epsS)/(1 - 2*epsS);
+        const Scalar lowS = params.krLowS();
+        const Scalar highS = params.krHighS();
+        
+        
+        const Scalar m = (1 - ((1 - highS) + lowS)/2 ) / (1 - (1 - highS) - lowS);
         
         // check whether the saturation is unpyhsical
         if (S >= 1.0)
@@ -134,23 +137,23 @@ private:
         else if (S <= 0.0)
             return 0;
         // check wether the permeability needs to be regularized
-        else if (S < epsS) {
+        else if (S < lowS) {
             typedef Dune::Spline<Scalar> Spline;
-            Spline sp(0,    epsS,
-                      0,    epsS/2,
+            Spline sp(0,    lowS,
+                      0,    lowS/2,
                       0,    m);
             return sp.eval(S);
         }
-        else if (S > 1 - epsS) {
+        else if (S > highS) {
             typedef Dune::Spline<Scalar> Spline;
-            Spline sp(1 - epsS,   1,
-                      1 - epsS/2, 1,
+            Spline sp(highS,   1,
+                      1 - (1 - highS)/2, 1,
                       m,          0);
             return sp.eval(S);
         }
         
-        // straight line for S \in [epsS, 1 - epsS]
-        return epsS/2 + m*(S - epsS);
+        // straight line for S \in [lowS, highS]
+        return lowS/2 + m*(S - lowS);
     }
 };
 }
