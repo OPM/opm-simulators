@@ -306,7 +306,7 @@ public:
         else {
             return
                 enthalpy(phaseIdx, temperature, phasePressure, flash)
-                - phasePressure/density(phaseIdx, temperature, phasePressure, flash);
+                - phasePressure/phaseDensity(phaseIdx, temperature, phasePressure, flash);
         }
         return 0; 
     }
