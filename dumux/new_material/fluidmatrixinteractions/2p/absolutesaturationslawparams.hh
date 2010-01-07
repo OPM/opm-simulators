@@ -58,7 +58,7 @@ public:
      * \brief Return the residual non-wetting saturation.
      */
     Scalar Snr() const
-    { return Swr_; }
+    { return Snr_; }
 
     /*!
      * \brief Set the residual non-wetting saturation.
