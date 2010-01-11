@@ -112,32 +112,32 @@ public:
      * \brief Given all mole fractions in a phase, return the phase
      *        density [kg/m^3].
      */
-    template <class Flash>
+    template <class PhaseState>
     static Scalar phaseDensity(int phaseIdx,
-                               Scalar temperature, 
-                               Scalar phasePressure,
-                               const Flash &flash)
+                               const PhaseState &phaseState)
     { 
         switch (phaseIdx) {
         case lPhaseIdx: 
         {
             // See: Ochs 2008
             // \todo: proper citation
-            Scalar rhoWater = H2O::liquidDensity(temperature, 
-                                                 phasePressure);
+            Scalar rhoWater = H2O::liquidDensity(phaseState.temperature(), 
+                                                 phaseState.phasePressure(lPhaseIdx));
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
-                (1 - flash.moleFrac(lPhaseIdx, N2Idx)) * rhoWater
+                (1 - phaseState.moleFrac(lPhaseIdx, N2Idx)) * rhoWater
                 + 
-                flash.moleFrac(lPhaseIdx, N2Idx)*cWater*N2::molarMass();
+                phaseState.moleFrac(lPhaseIdx, N2Idx)*cWater*N2::molarMass();
         }
         case gPhaseIdx:
         {
             // assume ideal gas
             Scalar avgMolarMass = 
-                flash.moleFrac(gPhaseIdx, H2OIdx)*H2O::molarMass() + 
-                flash.moleFrac(gPhaseIdx, N2Idx)*N2::molarMass();
-            return IdealGas::density(avgMolarMass, temperature, phasePressure);
+                phaseState.moleFrac(gPhaseIdx, H2OIdx)*H2O::molarMass() + 
+                phaseState.moleFrac(gPhaseIdx, N2Idx)*N2::molarMass();
+            return IdealGas::density(avgMolarMass, 
+                                     phaseState.temperature(), 
+                                     phaseState.phasePressure(gPhaseIdx));
         };
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
@@ -146,16 +146,15 @@ public:
     /*!
      * \brief Return the viscosity of a phase.
      */
-    template <class Flash>
+    template <class PhaseState>
     static Scalar phaseViscosity(int phaseIdx,
-                                 Scalar temperature, 
-                                 Scalar phasePressure,
-                                 const Flash &flash)
+                                 const PhaseState &phaseState)
     { 
         if (phaseIdx == lPhaseIdx)
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
-            return H2O::liquidViscosity(temperature, phasePressure);
+            return H2O::liquidViscosity(phaseState.temperature(), 
+                                        phaseState.phasePressure(lPhaseIdx));
         else {
             /* Wilke method. See:
              *
@@ -170,8 +169,10 @@ public:
              */
             Scalar muResult = 0; 
             const Scalar mu[numComponents] = {
-                H2O::gasViscosity(temperature, H2O::vaporPressure(temperature)),
-                N2::gasViscosity(temperature, phasePressure)
+                H2O::gasViscosity(phaseState.temperature(), 
+                                  H2O::vaporPressure(phaseState.temperature())),
+                N2::gasViscosity(phaseState.temperature(), 
+                                 phaseState.phasePressure(gPhaseIdx))
             };
             // molar masses
             const Scalar M[numComponents] = {
@@ -186,9 +187,9 @@ public:
                                             pow(M[i]/M[j], 1/4.0));
                     phiIJ *= phiIJ;
                     phiIJ /= sqrt(8*(1 + M[i]/M[j]));
-                    divisor += flash.moleFrac(phaseIdx, j)*phiIJ;
+                    divisor += phaseState.moleFrac(phaseIdx, j)*phiIJ;
                 }
-                muResult += flash.moleFrac(phaseIdx, i)*mu[i] / divisor;
+                muResult += phaseState.moleFrac(phaseIdx, i)*mu[i] / divisor;
             }
             return muResult;
         }
@@ -203,14 +204,13 @@ public:
      * the inverse Henry constant for the solutes and the partial
      * pressure for the solvent.
      */
-    template <class Flash>
+    template <class PhaseState>
     static Scalar dPg_dxl(int compIdx, 
-                          Scalar temperature,
-                          const Flash &flash)
+                          const PhaseState &phaseState)
     {        
         switch (compIdx) {
-        case H2OIdx: return H2O::vaporPressure(temperature);
-        case N2Idx: return BinaryCoeff::H2O_N2::henry(temperature);
+        case H2OIdx: return H2O::vaporPressure(phaseState.temperature());
+        case N2Idx: return BinaryCoeff::H2O_N2::henry(phaseState.temperature());
         };
         DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
     }
@@ -219,11 +219,11 @@ public:
      * \brief Given all mole fractions, return the diffusion
      *        coefficent of a component in a phase.
      */
+    template <class PhaseState>
     static Scalar diffCoeff(int phaseIdx,
                             int compIIdx,
                             int compJIdx,
-                            Scalar temperature, 
-                            Scalar phasePressure)
+                            const PhaseState &phaseState)
     { 
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
@@ -246,7 +246,8 @@ public:
             switch (compIIdx) {
             case H2OIdx:
                 switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(temperature, phasePressure);
+                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(phaseState.temperature(), 
+                                                                        phaseState.phasePressure(phaseIdx));
                 }
             default:
                 DUNE_THROW(InvalidStateException, 
@@ -257,7 +258,8 @@ public:
             switch (compIIdx) {
             case H2OIdx:
                 switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::gasDiffCoeff(temperature, phasePressure);
+                case N2Idx: return BinaryCoeff::H2O_N2::gasDiffCoeff(phaseState.temperature(),
+                                                                     phaseState.phasePressure(phaseIdx));
                 }
             }
         }
@@ -272,22 +274,27 @@ public:
      * \brief Given all mole fractions in a phase, return the specific
      *        phase enthalpy [J/kg].
      */
-    template <class Flash>
+    template <class PhaseState>
     static Scalar enthalpy(int phaseIdx,
-                           Scalar temperature, 
-                           Scalar phasePressure,
-                           const Flash &flash)
+                           const PhaseState &phaseState)
     { 
         if (phaseIdx == gPhaseIdx) {
             Scalar result = 0;
-            result += H2O::gasEnthalpy(temperature, flash.partialPressure(H2OIdx))*flash.massFrac(gPhaseIdx, H2OIdx);
-            result +=  N2::gasEnthalpy(temperature, flash.partialPressure(N2Idx))*flash.massFrac(gPhaseIdx, N2Idx);
+            result += 
+                H2O::gasEnthalpy(phaseState.temperature(), 
+                                 phaseState.partialPressure(H2OIdx)) *
+                phaseState.massFrac(gPhaseIdx, H2OIdx);
+            result +=  
+                N2::gasEnthalpy(phaseState.temperature(), 
+                                phaseState.partialPressure(N2Idx)) *
+                phaseState.massFrac(gPhaseIdx, N2Idx);
             
             return result;
         }
         else {
             // TODO (?): solutes are not yet considered!
-            return H2O::liquidEnthalpy(temperature, phasePressure);            
+            return H2O::liquidEnthalpy(phaseState.temperature(), 
+                                       phaseState.phasePressure(lPhaseIdx));
         }
     }
 
@@ -295,18 +302,17 @@ public:
      * \brief Given all mole fractions in a phase, return the phase's
      *        internal energy [J/kg].
      */
-    template <class Flash>
+    template <class PhaseState>
     static Scalar internalEnergy(int phaseIdx,
-                                 Scalar temperature, 
-                                 Scalar phasePressure,
-                                 const Flash &flash)
+                                 const PhaseState &phaseState)
     { 
         if (phaseIdx == lPhaseIdx) 
-            return enthalpy(phaseIdx, temperature, phasePressure, flash);
+            return enthalpy(phaseIdx, phaseState);
         else {
             return
-                enthalpy(phaseIdx, temperature, phasePressure, flash)
-                - phasePressure/phaseDensity(phaseIdx, temperature, phasePressure, flash);
+                enthalpy(phaseIdx, phaseState)
+                - ( phaseState.phasePressure(gPhaseIdx) /
+                    phaseDensity(phaseIdx, phaseState));
         }
         return 0; 
     }
