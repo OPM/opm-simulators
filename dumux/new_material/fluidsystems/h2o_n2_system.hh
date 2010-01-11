@@ -24,6 +24,7 @@
 #include <dumux/new_material/idealgas.hh>
 #include <dumux/new_material/components/n2.hh>
 #include <dumux/new_material/components/h2o.hh>
+#include <dumux/new_material/components/simpleh2o.hh>
 #include <dumux/new_material/components/tabulatedcomponent.hh>
 
 #include <dumux/new_material/binarycoefficients/h2o_n2.hh>
@@ -47,8 +48,9 @@ class H2O_N2_System
     typedef Dune::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
 
 public:
-    typedef H2O_Tabulated                             H2O;
+    //typedef H2O_Tabulated                             H2O;
     //typedef H2O_IAPWS                                 H2O;
+    typedef Dune::SimpleH2O<Scalar>                   H2O;
     typedef Dune::N2<Scalar>                          N2;
 
     static const int numComponents = 2;
