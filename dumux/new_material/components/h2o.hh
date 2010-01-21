@@ -22,6 +22,7 @@
 
 #include <dumux/new_material/idealgas.hh>
 #include <dune/common/exceptions.hh>
+#include <dumux/exceptions.hh>
 
 #include "component.hh"
 
@@ -162,7 +163,7 @@ public:
         if (temperature > 623.15 || 
             pressure > 100e6)
         {
-            DUNE_THROW(NumericalProblem, 
+            DUNE_THROW(NumericalProblem,
                        "Enthalpy of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
