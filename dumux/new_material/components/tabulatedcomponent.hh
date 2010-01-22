@@ -29,7 +29,7 @@ namespace Dune
 /*!
  * \brief Abstract base class of a pure chemical species.
  */
-template <class Scalar, class InComponent>
+template <class Scalar, class RawComponent>
 class TabulatedComponent
 {
 public:
@@ -63,7 +63,7 @@ public:
         for (unsigned iT = 0; iT < nTemp_; ++ iT) {
             Scalar temperature = iT * (tempMax_ - tempMin_)/(nTemp_ - 1) + tempMin_;
 
-            try { vaporPressure_[iT] = InComponent::vaporPressure(temperature); }
+            try { vaporPressure_[iT] = RawComponent::vaporPressure(temperature); }
             catch (NumericalProblem e) { vaporPressure_[iT] = NaN; };
             
             Scalar pgMax = maxGasPressure_(iT);
@@ -72,13 +72,13 @@ public:
 
                 unsigned i = iT + iP*nTemp_;
 
-                try { gasEnthalpy_[i] = InComponent::gasEnthalpy(temperature, pressure); }
+                try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { gasEnthalpy_[i] = NaN; };
 
-                try { gasDensity_[i] = InComponent::gasDensity(temperature, pressure); }
+                try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
                 catch (NumericalProblem) { gasDensity_[i] = NaN; };
 
-                try { gasViscosity_[i] = InComponent::gasViscosity(temperature, pressure); }
+                try { gasViscosity_[i] = RawComponent::gasViscosity(temperature, pressure); }
                 catch (NumericalProblem) { gasViscosity_[i] = NaN; };
             };
             
@@ -88,13 +88,13 @@ public:
 
                 unsigned i = iT + iP*nTemp_;
                 
-                try { liquidEnthalpy_[i] = InComponent::liquidEnthalpy(temperature, pressure); }
+                try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { liquidEnthalpy_[i] = NaN; };
                 
-                try { liquidDensity_[i] = InComponent::liquidDensity(temperature, pressure); }
+                try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
                 catch (NumericalProblem) { liquidDensity_[i] = NaN; };
 
-                try { liquidViscosity_[i] = InComponent::liquidViscosity(temperature, pressure); }
+                try { liquidViscosity_[i] = RawComponent::liquidViscosity(temperature, pressure); }
                 catch (NumericalProblem) { liquidViscosity_[i] = NaN; };
             }
         }
@@ -104,37 +104,37 @@ public:
      * \brief A human readable name for the compoent.
      */
     static const char *name()
-    { return InComponent::name(); } 
+    { return RawComponent::name(); } 
     
     /*!
      * \brief The mass in [kg] of one mole of the component.
      */
     static Scalar molarMass()
-    { return InComponent::molarMass(); } 
+    { return RawComponent::molarMass(); } 
 
     /*!
      * \brief Returns the critical temperature of the component
      */
     static Scalar criticalTemperature()
-    { return InComponent::criticalTemperature(); }
+    { return RawComponent::criticalTemperature(); }
 
     /*!
      * \brief Returns the critical pressure of the component
      */
     static Scalar criticalPressure()
-    { return InComponent::criticalPressure(); }
+    { return RawComponent::criticalPressure(); }
 
     /*!
      * \brief Returns the temperature at the component's triple point.
      */
     static Scalar tripleTemperature()
-    { return InComponent::tripleTemperature(); }
+    { return RawComponent::tripleTemperature(); }
 
     /*!
      * \brief Returns the pressure at the component's triple point.
      */
     static Scalar triplePressure()
-    { return InComponent::triplePressure(); }
+    { return RawComponent::triplePressure(); }
 
     /*!
      * \brief The vapor pressure in [N/m^2] of the component at a given
@@ -144,7 +144,7 @@ public:
     { 
         Scalar result = interpolateT_(vaporPressure_, T);
         if (std::isnan(result)) {
-            return InComponent::vaporPressure(T);
+            return RawComponent::vaporPressure(T);
         }
         return result;
     };
@@ -158,7 +158,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            return InComponent::gasEnthalpy(temperature, pressure);
+            return RawComponent::gasEnthalpy(temperature, pressure);
         }
         return result;
     }
@@ -172,7 +172,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            return InComponent::liquidEnthalpy(temperature, pressure);
+            return RawComponent::liquidEnthalpy(temperature, pressure);
         }
         return result;
     }
@@ -187,7 +187,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            return InComponent::gasDensity(temperature, pressure);
+            return RawComponent::gasDensity(temperature, pressure);
         }
         return result;
     }
@@ -202,7 +202,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            return InComponent::liquidDensity(temperature, pressure);
+            return RawComponent::liquidDensity(temperature, pressure);
         }
         return result;       
     }
@@ -216,7 +216,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            return InComponent::gasViscosity(temperature, pressure);
+            return RawComponent::gasViscosity(temperature, pressure);
         }
         return result;       
     };
@@ -230,7 +230,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            return InComponent::liquidViscosity(temperature, pressure);
+            return RawComponent::liquidViscosity(temperature, pressure);
         }
         return result;       
     };
@@ -369,32 +369,32 @@ private:
     static unsigned nPress_;
 };
 
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::vaporPressure_;
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::gasEnthalpy_;
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::liquidEnthalpy_;
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::gasDensity_;
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::liquidDensity_;
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::gasViscosity_;
-template <class Scalar, class InComponent>
-Scalar* TabulatedComponent<Scalar, InComponent>::liquidViscosity_;
-template <class Scalar, class InComponent>
-Scalar  TabulatedComponent<Scalar, InComponent>::tempMin_;
-template <class Scalar, class InComponent>
-Scalar  TabulatedComponent<Scalar, InComponent>::tempMax_;
-template <class Scalar, class InComponent>
-unsigned TabulatedComponent<Scalar, InComponent>::nTemp_;
-template <class Scalar, class InComponent>
-Scalar   TabulatedComponent<Scalar, InComponent>::pressMin_;
-template <class Scalar, class InComponent>
-Scalar   TabulatedComponent<Scalar, InComponent>::pressMax_;
-template <class Scalar, class InComponent>
-unsigned TabulatedComponent<Scalar, InComponent>::nPress_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::vaporPressure_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::gasEnthalpy_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::liquidEnthalpy_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::gasDensity_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::liquidDensity_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::gasViscosity_;
+template <class Scalar, class RawComponent>
+Scalar* TabulatedComponent<Scalar, RawComponent>::liquidViscosity_;
+template <class Scalar, class RawComponent>
+Scalar  TabulatedComponent<Scalar, RawComponent>::tempMin_;
+template <class Scalar, class RawComponent>
+Scalar  TabulatedComponent<Scalar, RawComponent>::tempMax_;
+template <class Scalar, class RawComponent>
+unsigned TabulatedComponent<Scalar, RawComponent>::nTemp_;
+template <class Scalar, class RawComponent>
+Scalar   TabulatedComponent<Scalar, RawComponent>::pressMin_;
+template <class Scalar, class RawComponent>
+Scalar   TabulatedComponent<Scalar, RawComponent>::pressMax_;
+template <class Scalar, class RawComponent>
+unsigned TabulatedComponent<Scalar, RawComponent>::nPress_;
 
 
 } // end namepace
