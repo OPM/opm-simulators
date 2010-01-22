@@ -91,10 +91,9 @@ public:
      *
      * See:
      *
-     * IAPWS: "Guideline on the Henry's Constant and Vapor-Liquid
-     * Distribution Constant for Gases in H2O and D2O at High
-     * Temperatures"
-     * http://www.iapws.org/relguide/HenGuide.pdf
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
     static Scalar vaporPressure(Scalar T)
     { 
@@ -103,24 +102,24 @@ public:
         if (T < tripleTemperature())
             return 0; // water is solid: We don't take sublimation into account
         
-        // vapor pressure between triple and critical points.
-        // See: IAPWS henry guide
-        const Scalar a[6] = {
-            -7.85951783, 1.84408259,-11.7866497,
-            22.6807411, -15.9618719, 1.80122502
+        static const Scalar n[10] = {
+            0.11670521452767e4,  -0.72421316703206e6, -0.17073846940092e2,
+            0.12020824702470e5,  -0.32325550322333e7,  0.14915108613530e2,
+            -0.48232657361591e4,  0.40511340542057e6, -0.23855557567849,
+            0.65017534844798e3
         };
-        const Scalar b[6] = {
-            1, 1.5, 3, 3.5, 4, 7.5
-        };
+         
+        Scalar sigma = T + n[8]/(T - n[9]);
+        
+        Scalar A = (sigma + n[0])*sigma + n[1];
+        Scalar B = (n[2]*sigma + n[3])*sigma + n[4];
+        Scalar C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Scalar Tr = T/criticalTemperature();
-        Scalar tau = 1 - Tr;
-        Scalar exponent = 0;
-        for (int i = 0; i < 6; ++i)
-            exponent += a[i]*std::pow(tau, b[i]);
-        exponent /= Tr;
+        Scalar tmp = 2*C/(std::sqrt(B*B - 4*A*C) - B);
+        tmp *= tmp;
+        tmp *= tmp;
 
-        return criticalPressure()*exp(exponent);
+        return 1e6*tmp;
     }
 
     /*!
@@ -135,10 +134,12 @@ public:
     static const Scalar gasEnthalpy(Scalar temperature, 
                                     Scalar pressure)
     {
+        /*
         // regularization
         Scalar pVap = vaporPressure(temperature);
         if (pressure > pVap)
             pressure = pVap;
+        */
 
         return 540.0 * gamma_tau_region2(temperature, pressure) * R;    /* J/kg */
     }
@@ -155,10 +156,12 @@ public:
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
     {
+        /*
         // regularization
         Scalar pVap = vaporPressure(temperature);
         if (pressure < pVap)
             pressure = pVap;
+        */
 
         if (temperature > 623.15 || 
             pressure > 100e6)
@@ -181,6 +184,7 @@ public:
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
+        /*
         // regularization
         Scalar pVap = vaporPressure(temperature);
         if (pressure > pVap) {
@@ -190,6 +194,7 @@ public:
             Scalar specificVolume = gamma_pi_region2(temperature, pVap) * R*temperature / 1e6;
             return 1./specificVolume * pressure/pVap;
         }
+        */
 
         Scalar specificVolume = gamma_pi_region2(temperature, pressure) * R*temperature / 1e6;
         return 1/specificVolume;
@@ -206,10 +211,12 @@ public:
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
+        /*
         // regularization
         Scalar pVap = vaporPressure(temperature);
         if (pressure < pVap)
             pressure = pVap;
+        */
 
         Scalar specificVolume = gamma_pi_region1(temperature, pressure) * R*temperature / 16.53e6;
         return 1/specificVolume;
@@ -226,7 +233,7 @@ public:
      * IAPWS: "Release on the IAPWS Formulation 2008 for the Viscosity
      * of Ordinary Water Substance", http://www.iapws.org/relguide/visc.pdf
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
+    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
         // regularization
         Scalar pVap = vaporPressure(temperature);
@@ -549,7 +556,7 @@ private:
                 J_i *
                 std::pow(tau,  J_i - 1);
         }
-        
+
         // residual part
         for (int i = 0; i < 43; i++) {
             Scalar n_i = n_r_region2(i);
@@ -561,7 +568,7 @@ private:
                 J_i *
                 std::pow(tau - 0.5,  J_i - 1);
         }
-        
+
         return result;
     }
 
