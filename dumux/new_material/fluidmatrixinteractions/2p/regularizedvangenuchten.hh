@@ -66,12 +66,11 @@ public:
         const Scalar SwThLow = params.pCLowSw();
         const Scalar SwThHigh = params.pCHighSw();
 
-        // make sure that the capilarry pressure observes a
-        // derivative != 0 for 'illegal' saturations. This is
-        // required for example by newton solvers (if the
-        // derivative calculated numerically) in order to get the
-        // saturation moving to the right direction if it
-        // temporarily is in an 'illegal' range.
+        // make sure that the capilarry pressure observes a derivative
+        // != 0 for 'illegal' saturations. This is favourable for the
+        // newton solver (if the derivative is calculated numerically)
+        // in order to get the saturation moving to the right
+        // direction if it temporarily is in an 'illegal' range.
         if (Sw < SwThLow) {
             return VanGenuchten::pC(params, SwThLow/2) + mLow_(params)*(Sw - SwThLow/2);
         }
@@ -246,9 +245,7 @@ private:
     {
         const Scalar SwThLow = params.pCLowSw();
         
-        Scalar pC_SwLow  = VanGenuchten::pC(params, SwThLow);
-        Scalar pC_SwLow2 = VanGenuchten::pC(params, SwThLow/2);
-        return (pC_SwLow - pC_SwLow2) / (SwThLow - SwThLow/2);
+        return VanGenuchten::dpC_dSw(params, SwThLow);
     }
 
     // the slope of the straight line used to regularize saturations
