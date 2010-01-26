@@ -30,6 +30,7 @@ template<class GridView, class Scalar, class VariableClass> class TutorialProble
         {dim=GridView::dimension, dimWorld = GridView::dimensionworld};
     enum{wetting = 0, nonwetting = 1};
     typedef typename GridView::Grid Grid;
+    typedef typename GridView::Intersection Intersection;
     typedef typename GridView::Traits::template Codim<0>::Entity Element;
     typedef Dune::FieldVector<Scalar,dim> LocalPosition;
     typedef Dune::FieldVector<Scalar,dimWorld> GlobalPosition;
@@ -55,8 +56,7 @@ public:
 
     // function returning the boundary condition type for solution
     // of the pressure equation depending on the position within the domain
-    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:bctypepress}@*/
-                                                   const LocalPosition& localPos) const
+    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypepress}@*/
     {
         if (globalPos[0] < eps_)
         {
@@ -68,8 +68,7 @@ public:
 
     // function returning the boundary condition type for solution
     // of the saturation equation depending on the position within the domain
-    BoundaryConditions::Flags bctypeSat (const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:bctypesat}@*/
-                                         const LocalPosition& localPos) const
+    BoundaryConditions::Flags bctypeSat (const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypesat}@*/
     {
         if (globalPos[0]> (Right_ - eps_) || globalPos[0] < eps_)
         {
@@ -81,16 +80,14 @@ public:
 
     // function returning the Dirichlet boundary condition for the solution
     // of the pressure equation depending on the position within the domain
-    Scalar dirichletPress(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:gpress}@*/
-                          const LocalPosition& localPos) const
+    Scalar dirichletPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:gpress}@*/
     {
         return 1e6;
     }
 
     // function returning the Dirichlet boundary condition for the solution
     // of the saturation equation depending on the position within the domain
-    Scalar dirichletSat(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:gsat}@*/
-                        const LocalPosition& localPos) const
+    Scalar dirichletSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:gsat}@*/
     {
         if (globalPos[0] < eps_)
         {
@@ -104,8 +101,7 @@ public:
 
     // function returning the Neumann boundary condition for the solution
     // of the pressure equation depending on the position within the domain
-    std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:jpress}@*/
-                        const LocalPosition& localPos) const
+    std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:jpress}@*/
     {
         std::vector<Scalar> neumannFlux(2, 0.0);
         if (globalPos[0]> Right_ - eps_)
