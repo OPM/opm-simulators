@@ -16,7 +16,7 @@
  * \file
  *
  * \brief This material law takes a material law defined for effective
- *        saturations and converts it to a material law defined on absolute 
+ *        saturations and converts it to a material law defined on absolute
  *        saturations.
  */
 #ifndef ABSOLUTE_SATURATIONS_LAW_HH
@@ -30,7 +30,7 @@ namespace Dune
  * \ingroup material
  *
  * \brief This material law takes a material law defined for effective
- *        saturations and converts it to a material law defined on absolute 
+ *        saturations and converts it to a material law defined on absolute
  *        saturations.
  */
 template <class RawLawT>
@@ -68,7 +68,7 @@ public:
     */
     static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        return RawLaw::dpC_dSw(params, pC)/(1 - params.Swr() - params.Snr());
+        return RawLaw::dpC_dSw(params, Sw)/(1 - params.Swr() - params.Snr());
     }
 
     /*!
