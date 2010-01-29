@@ -48,9 +48,9 @@ class H2O_N2_System
     typedef Dune::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
 
 public:
-    //typedef H2O_Tabulated                             H2O;
+    typedef H2O_Tabulated                             H2O;
     //typedef H2O_IAPWS                                 H2O;
-    typedef Dune::SimpleH2O<Scalar>                   H2O;
+    //typedef Dune::SimpleH2O<Scalar>                   H2O;
     typedef Dune::N2<Scalar>                          N2;
 
     static const int numComponents = 2;
@@ -121,10 +121,15 @@ public:
         switch (phaseIdx) {
         case lPhaseIdx: 
         {
+            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pressure = phaseState.phasePressure(lPhaseIdx);
+            if (pressure < pVap)
+                pressure = pVap;
+
             // See: Ochs 2008
             // \todo: proper citation
             Scalar rhoWater = H2O::liquidDensity(phaseState.temperature(), 
-                                                 phaseState.phasePressure(lPhaseIdx));
+                                                 pressure);
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
                 (1 - phaseState.moleFrac(lPhaseIdx, N2Idx)) * rhoWater
@@ -135,11 +140,19 @@ public:
         {
             // assume ideal gas
             Scalar avgMolarMass = 
-                phaseState.moleFrac(gPhaseIdx, H2OIdx)*H2O::molarMass() + 
                 phaseState.moleFrac(gPhaseIdx, N2Idx)*N2::molarMass();
-            return IdealGas::density(avgMolarMass, 
-                                     phaseState.temperature(), 
-                                     phaseState.phasePressure(gPhaseIdx));
+            Scalar pWater = phaseState.partialPressure(H2OIdx);
+
+            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            if (pWater > pVap)
+                pWater = pVap;
+            
+            Scalar rhoWater = H2O::gasDensity(phaseState.temperature(), pWater);
+            return 
+                rhoWater +
+                IdealGas::density(avgMolarMass, 
+                                  phaseState.temperature(), 
+                                  phaseState.phasePressure(gPhaseIdx) - pWater);
         };
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
@@ -152,11 +165,16 @@ public:
     static Scalar phaseViscosity(int phaseIdx,
                                  const PhaseState &phaseState)
     { 
-        if (phaseIdx == lPhaseIdx)
+        if (phaseIdx == lPhaseIdx) {
+            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pressure = phaseState.phasePressure(lPhaseIdx);
+            if (pressure < pVap)
+                pressure = pVap;
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
             return H2O::liquidViscosity(phaseState.temperature(), 
-                                        phaseState.phasePressure(lPhaseIdx));
+                                        pressure);
+        }
         else {
             /* Wilke method. See:
              *
@@ -193,6 +211,7 @@ public:
                 }
                 muResult += phaseState.moleFrac(phaseIdx, i)*mu[i] / divisor;
             }
+
             return muResult;
         }
     } 
@@ -281,10 +300,14 @@ public:
                            const PhaseState &phaseState)
     { 
         if (phaseIdx == gPhaseIdx) {
+            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pWater = phaseState.phasePressure(lPhaseIdx);
+            if (pWater > pVap)
+                pWater = pVap;
+
             Scalar result = 0;
             result += 
-                H2O::gasEnthalpy(phaseState.temperature(), 
-                                 phaseState.partialPressure(H2OIdx)) *
+                H2O::gasEnthalpy(phaseState.temperature(), pWater) *
                 phaseState.massFrac(gPhaseIdx, H2OIdx);
             result +=  
                 N2::gasEnthalpy(phaseState.temperature(), 
@@ -294,9 +317,23 @@ public:
             return result;
         }
         else {
-            // TODO (?): solutes are not yet considered!
-            return H2O::liquidEnthalpy(phaseState.temperature(), 
-                                       phaseState.phasePressure(lPhaseIdx));
+            Scalar temperature = phaseState.temperature();
+            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pressure = phaseState.phasePressure(lPhaseIdx);
+            if (pressure < pVap)
+                pressure = pVap;
+            
+            Scalar cN2 = phaseState.concentration(lPhaseIdx, N2Idx);
+            Scalar pN2 = IdealGas::pressure(temperature, cN2);
+            Scalar hN2 = N2::gasEnthalpy(temperature, pN2);
+            
+            // TODO: correct way to deal with the solutes??? 
+            return 
+                phaseState.massFrac(lPhaseIdx, H2OIdx)*
+                H2O::liquidEnthalpy(temperature, pressure)
+                +
+                phaseState.massFrac(lPhaseIdx, N2Idx)*
+                hN2;
         }
     }
 
@@ -308,13 +345,42 @@ public:
     static Scalar internalEnergy(int phaseIdx,
                                  const PhaseState &phaseState)
     { 
-        if (phaseIdx == lPhaseIdx) 
-            return enthalpy(phaseIdx, phaseState);
+        if (phaseIdx == lPhaseIdx)  {
+            Scalar temperature = phaseState.temperature();
+            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pWater = phaseState.phasePressure(lPhaseIdx);
+
+            if (pWater < pVap)
+                pWater = pVap;
+
+            Scalar cN2 = phaseState.concentration(lPhaseIdx, N2Idx);
+            Scalar uN2 = N2::gasInternalEnergy(temperature,
+                                               IdealGas::pressure(temperature, cN2));
+
+            // TODO: correct way to deal with the solutes??? 
+            return 
+                phaseState.massFrac(lPhaseIdx, H2OIdx)*
+                H2O::liquidInternalEnergy(temperature, pWater)
+                +
+                phaseState.massFrac(lPhaseIdx, N2Idx)*
+                uN2;
+        }
         else {
-            return
-                enthalpy(phaseIdx, phaseState)
-                - ( phaseState.phasePressure(gPhaseIdx) /
-                    phaseDensity(phaseIdx, phaseState));
+            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pWater = std::max(0.0, phaseState.phasePressure(lPhaseIdx));
+            if (pWater > pVap)
+                pWater = pVap;
+
+            Scalar result = 0;
+            result += 
+                H2O::gasInternalEnergy(phaseState.temperature(), pWater) *
+                phaseState.massFrac(gPhaseIdx, H2OIdx);
+            result += 
+                N2::gasInternalEnergy(phaseState.temperature(), 
+                                      phaseState.partialPressure(N2Idx)) *
+                phaseState.massFrac(gPhaseIdx, N2Idx);
+            
+            return result;
         }
         return 0; 
     }
