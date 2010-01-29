@@ -245,7 +245,6 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            unsigned iT = tempIdx_(temperature);
             std::cout << "forward liquidDensity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidDensity(temperature, pressure);
         }
