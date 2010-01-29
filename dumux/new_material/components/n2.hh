@@ -120,13 +120,19 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of N2 at a given pressure and temperature.
+     * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
      */
-    static Scalar density(Scalar temperature, Scalar pressure)
+    static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
         // Assume an ideal gas
         return IdealGas::density(molarMass(), pressure, temperature);
     }
+
+    /*!
+     * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     */
+    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(NotImplemented, "liquidDensity for N2"); }
     
     /*!
      * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
@@ -144,6 +150,24 @@ public:
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(NotImplemented, "liquidEnthalpy for N2"); }
+
+    /*!
+     * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     */
+    static const Scalar gasInternalEnergy(Scalar temperature, 
+                                          Scalar pressure)
+    {
+        
+        return
+            gasEnthalpy(temperature, pressure) - 
+            IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas
+    }
+
+    /*!
+     * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     */
+    static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(NotImplemented, "liquidInternalEnergy of N2"); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.

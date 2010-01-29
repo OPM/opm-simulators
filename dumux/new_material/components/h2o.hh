@@ -47,7 +47,6 @@ class H2O : public Component<Scalar, H2O<Scalar> >
     typedef Dune::IdealGas<Scalar> IdealGas;
 
     static const Scalar R = 461.526;  // specific gas constant of water
-
 public:
     /*!
      * \brief A human readable name for the water.
@@ -134,12 +133,15 @@ public:
     static const Scalar gasEnthalpy(Scalar temperature, 
                                     Scalar pressure)
     {
-        /*
-        // regularization
-        Scalar pVap = vaporPressure(temperature);
-        if (pressure > pVap)
-            pressure = pVap;
-        */
+        // gas is only present if the vapor pressure is larger than the
+        // partial pressure
+        assert(vaporPressure(temperature) >= pressure);
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Enthalpy of steam is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
 
         return 540.0 * gamma_tau_region2(temperature, pressure) * R;    /* J/kg */
     }
@@ -156,21 +158,76 @@ public:
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
     {
-        /*
-        // regularization
-        Scalar pVap = vaporPressure(temperature);
-        if (pressure < pVap)
-            pressure = pVap;
-        */
-
-        if (temperature > 623.15 || 
-            pressure > 100e6)
+        // liquid is only present if the vapor pressure is smaller than the
+        // partial pressure
+        assert(vaporPressure(temperature) <= pressure);      
+        if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
                        "Enthalpy of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
+
         return 1386.0 * gamma_tau_region1(temperature, pressure) * R;    /* J/kg */
+    }
+
+    /*!
+     * \brief Specific internal energy of liquid water [J/kg].
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static const Scalar liquidInternalEnergy(Scalar temperature,
+                                             Scalar pressure)
+    {
+        // liquid is only present if the vapor pressure is smaller than the
+        // partial pressure
+        assert(vaporPressure(temperature) <= pressure);
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Internal Energy of water is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
+
+        Scalar tau = 1386.0 / temperature;   /* reduced temperature */
+        Scalar pi = pressure / 16.53e6;    /* reduced pressure */
+        return
+            R * temperature *
+            ( tau*gamma_tau_region1(temperature, pressure) - 
+              pi*gamma_pi_region1(temperature, pressure));
+    }
+
+    /*!
+     * \brief Specific internal energy of steam and water vapor [J/kg].
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+    */
+    static Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
+    {
+        // gas is only present if the vapor pressure is larger than the
+        // partial pressure
+        assert(vaporPressure(temperature) >= pressure);      
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Internal Energy of steam is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
+
+        Scalar tau = 540.0/temperature;
+        Scalar pi = pressure/1.0e6;
+        return
+            R * temperature *
+            ( tau*gamma_tau_region2(temperature, pressure) - 
+              pi*gamma_pi_region2(temperature, pressure));
     }
 
     /*!
@@ -184,17 +241,15 @@ public:
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
-        /*
-        // regularization
-        Scalar pVap = vaporPressure(temperature);
-        if (pressure > pVap) {
-            // calculate the density at the vapor pressure and
-            // scale it by the ratio of the pressure and the vapor
-            // pressure
-            Scalar specificVolume = gamma_pi_region2(temperature, pVap) * R*temperature / 1e6;
-            return 1./specificVolume * pressure/pVap;
+        // gas is only present if the vapor pressure is larger than the
+        // partial pressure
+        assert(vaporPressure(temperature) >= pressure);      
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Density of steam is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
-        */
 
         Scalar specificVolume = gamma_pi_region2(temperature, pressure) * R*temperature / 1e6;
         return 1/specificVolume;
@@ -211,12 +266,15 @@ public:
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
-        /*
-        // regularization
-        Scalar pVap = vaporPressure(temperature);
-        if (pressure < pVap)
-            pressure = pVap;
-        */
+        // liquid is only present if the vapor pressure is smaller than the
+        // partial pressure
+        assert(vaporPressure(temperature) <= pressure);      
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Density of water is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
 
         Scalar specificVolume = gamma_pi_region1(temperature, pressure) * R*temperature / 16.53e6;
         return 1/specificVolume;
@@ -235,10 +293,15 @@ public:
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
-        // regularization
-        Scalar pVap = vaporPressure(temperature);
-        if (pressure > pVap)
-            pressure = pVap;
+        // gas is only present if the vapor pressure is larger than the
+        // partial pressure
+        assert(vaporPressure(temperature) >= pressure);      
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Viscosity of steam is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
 
         return viscosityIAPWS_(temperature, H2O::gasDensity(temperature, pressure));
     };
@@ -253,10 +316,15 @@ public:
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
-        // regularization
-        Scalar pVap = vaporPressure(temperature);
-        if (pressure < pVap)
-            pressure = pVap;
+        // liquid is only present if the vapor pressure is smaller than the
+        // partial pressure
+        assert(vaporPressure(temperature) <= pressure);      
+        if (temperature > 623.15 || pressure > 100e6)
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Viscosity of water is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
 
         return viscosityIAPWS_(temperature, H2O::liquidDensity(temperature, pressure));
     };
@@ -435,8 +503,8 @@ private:
         
         Scalar result = 0.0;
         for (int i = 0; i < 34; i++) {
-            result -= 
-                n_region1(i) *
+            result += 
+                -n_region1(i) *
                 I_region1(i) *
                 std::pow(7.1 - pi, I_region1(i) - 1) *
                 std::pow(tau - 1.222,  J_region1(i));
@@ -459,26 +527,26 @@ private:
     static Scalar n_r_region2(int i)
     {
         static const Scalar n[43] =  {
-            -0.17731742473213e-2, -0.17834862292358e-1, -0.45996013696365e-1,
-            -0.57581259083432e-1, -0.50325278727930e-1, -0.33032641670203e-4,
-            -0.18948987516315e-3, -0.39392777243355e-2, -0.43797295650573e-1,
-            -0.26674547914087e-4, 0.20481737692309e-7, 0.43870667284435e-6,
-            -0.32277677238570e-4, -0.15033924542148e-2, -0.40668253562649e-1,
-            -0.78847309559367e-9, 0.12790717852285e-7, 0.48225372718507e-6,
-            0.22922076337661e-5, -0.16714766451061e-10, -0.21171472321355e-2,
-            -0.23895741934104e2, -0.59059564324270e-17, -0.12621808899101e-5,
-            -0.38946842435739e-1, 0.11256211360459e-10, -0.82311340897998e-1,
-            0.19809712802088e-7, 0.10406965210174e-18, -0.10234747095929e-12,
-            -0.10018179379511e-8, -0.80882908646985e-10, 0.10693031879409,
-            -0.33662250574171, 0.89185845355421e-24, 0.30629316876232e-12,
-            -0.42002467698208e-5, -0.59056029685639e-25, 0.37826947613457e-5,
-            -0.12768608934681e-14, 0.73087610595061e-28, 0.55414715350778e-16,
+            -0.17731742473213e-2, -0.17834862292358e-1,  -0.45996013696365e-1,
+            -0.57581259083432e-1, -0.50325278727930e-1,  -0.33032641670203e-4,
+            -0.18948987516315e-3, -0.39392777243355e-2,  -0.43797295650573e-1,
+            -0.26674547914087e-4,  0.20481737692309e-7,   0.43870667284435e-6,
+            -0.32277677238570e-4, -0.15033924542148e-2,  -0.40668253562649e-1,
+            -0.78847309559367e-9,  0.12790717852285e-7,   0.48225372718507e-6,
+             0.22922076337661e-5, -0.16714766451061e-10, -0.21171472321355e-2,
+            -0.23895741934104e2,  -0.59059564324270e-17, -0.12621808899101e-5,
+            -0.38946842435739e-1,  0.11256211360459e-10, -0.82311340897998e1,
+             0.19809712802088e-7,  0.10406965210174e-18, -0.10234747095929e-12,
+            -0.10018179379511e-8, -0.80882908646985e-10,  0.10693031879409,
+            -0.33662250574171,     0.89185845355421e-24,  0.30629316876232e-12,
+            -0.42002467698208e-5, -0.59056029685639e-25,  0.37826947613457e-5,
+            -0.12768608934681e-14, 0.73087610595061e-28,  0.55414715350778e-16,
             -0.94369707241210e-6
         };
         return n[i];
     }
 
-    static short int I_r_region2(int i)
+    static Scalar I_r_region2(int i)
     {
         static const short int I[43] = {
             1, 1, 1,
@@ -500,17 +568,17 @@ private:
         return I[i];
     }
 
-    static short int J_g_region2(int i)
+    static Scalar J_g_region2(int i)
     {
         static const short int J[9] = {
-             0,  1, -5,
-             -4, -3, -2,
+            0,  1, -5,
+            -4, -3, -2,
             -1,  2,  3
         };
         return J[i];
     }
 
-    static short int J_r_region2(int i)
+    static Scalar J_r_region2(int i)
     {
         static const short int J[43] = {
             0, 1, 2,
@@ -543,7 +611,7 @@ private:
      */
     static Scalar gamma_tau_region2(Scalar temperature, Scalar pressure)
     {
-        Scalar tau = 540 / temperature;   /* reduced temperature */
+        Scalar tau = 540.0 / temperature;   /* reduced temperature */
         Scalar pi = pressure / 1e6;    /* reduced pressure */
         
         // ideal gas part

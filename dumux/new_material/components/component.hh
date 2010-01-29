@@ -76,7 +76,13 @@ public:
     /*!
      * \brief The density [kg/m^3] of the component at a given pressure and temperature.
      */
-    static Scalar density(Scalar temperature, Scalar pressure)
+    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(NotImplemented, "Component::density()"); } 
+
+    /*!
+     * \brief The density [kg/m^3] of the liquid component at a given pressure and temperature.
+     */
+    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(NotImplemented, "Component::density()"); } 
 
     /*!
@@ -89,6 +95,18 @@ public:
      * \brief Specific enthalpy [J/kg] of pure the pure component in liquid.
      */
     static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(NotImplemented, "Component::liquidEnthalpy()"); } 
+
+    /*!
+     * \brief Specific internal energy [J/kg] of pure the pure component in gas.
+     */
+    static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(NotImplemented, "Component::gasEnthalpy()"); } 
+
+    /*!
+     * \brief Specific internal energy [J/kg] of pure the pure component in liquid.
+     */
+    static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(NotImplemented, "Component::liquidEnthalpy()"); } 
         
     /*!
