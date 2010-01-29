@@ -69,13 +69,17 @@ public:
             catch (NumericalProblem e) { vaporPressure_[iT] = NaN; };
             
             Scalar pgMax = maxGasPressure_(iT);
+            Scalar pgMin = minGasPressure_(iT);
             for (unsigned iP = 0; iP < nPress_; ++ iP) {
-                Scalar pressure = iP * (pgMax - pressMin_)/(nPress_ - 1) + pressMin_;
+                Scalar pressure = iP * (pgMax - pgMin)/(nPress_ - 1) + pgMin;
 
                 unsigned i = iT + iP*nTemp_;
 
                 try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { gasEnthalpy_[i] = NaN; };
+
+                try { gasInternalEnergy_[i] = RawComponent::gasInternalEnergy(temperature, pressure); }
+                catch (NumericalProblem) { gasInternalEnergy_[i] = NaN; };
 
                 try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
                 catch (NumericalProblem) { gasDensity_[i] = NaN; };
@@ -85,13 +89,17 @@ public:
             };
             
             Scalar plMin = minLiquidPressure_(iT);
+            Scalar plMax = maxLiquidPressure_(iT);
             for (unsigned iP = 0; iP < nPress_; ++ iP) {
-                Scalar pressure = iP * (pressMax_ - plMin)/(nPress_ - 1) + plMin;
+                Scalar pressure = iP * (plMax - plMin)/(nPress_ - 1) + plMin;
 
                 unsigned i = iT + iP*nTemp_;
                 
                 try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { liquidEnthalpy_[i] = NaN; };
+
+                try { liquidInternalEnergy_[i] = RawComponent::liquidInternalEnergy(temperature, pressure); }
+                catch (NumericalProblem) { liquidInternalEnergy_[i] = NaN; };
                 
                 try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
                 catch (NumericalProblem) { liquidDensity_[i] = NaN; };
