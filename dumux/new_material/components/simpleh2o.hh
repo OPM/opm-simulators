@@ -138,6 +138,26 @@ public:
     }
 
     /*!
+     * \brief Specific internal energy of steam [J/kg].
+     */
+    static const Scalar gasInternalEnergy(Scalar temperature,
+                                          Scalar pressure)
+    {
+        return
+            gasEnthalpy(temperature, pressure) - 
+            IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas
+    }
+
+    /*!
+     * \brief Specific internal energy of liquid water [J/kg].
+     */
+    static const Scalar liquidInternalEnergy(Scalar temperature,
+                                             Scalar pressure)
+    {
+        return liquidEnthalpy(temperature, pressure); 
+    }
+
+    /*!
      * \brief The density of steam at a given pressure and temperature [kg/m^3].
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
