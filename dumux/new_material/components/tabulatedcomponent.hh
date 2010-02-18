@@ -377,22 +377,22 @@ private:
     // returns the minimum tabulized liquid pressure at a given
     // temperature index
     static Scalar minLiquidPressure_(int tempIdx)
-    { return std::max<Scalar>(pressMin_, vaporPressure_[tempIdx]) + 1e-1; }
+    { return std::max<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.1); }
 
     // returns the maximum tabulized liquid pressure at a given
     // temperature index
     static Scalar maxLiquidPressure_(int tempIdx)
-    { return std::max<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.01); }
+    { return std::max<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.1); }
 
     // returns the minumum tabulized gas pressure at a given
     // temperature index
     static Scalar minGasPressure_(int tempIdx)
-    { return std::min<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.01 ); }
+    { return std::min<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.1 ); }
 
     // returns the maximum tabulized gas pressure at a given
     // temperature index
     static Scalar maxGasPressure_(int tempIdx)
-    { return std::min<Scalar>(pressMax_, vaporPressure_[tempIdx]) - 1e-3; }
+    { return std::min<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.1); }
 
     static Scalar *vaporPressure_;
 
