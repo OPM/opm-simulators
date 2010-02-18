@@ -132,7 +132,7 @@ public:
                                                  pressure);
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
-                (1 - phaseState.moleFrac(lPhaseIdx, N2Idx)) * rhoWater
+                phaseState.moleFrac(lPhaseIdx, H2OIdx)*rhoWater
                 + 
                 phaseState.moleFrac(lPhaseIdx, N2Idx)*cWater*N2::molarMass();
         }
@@ -299,41 +299,41 @@ public:
     static Scalar enthalpy(int phaseIdx,
                            const PhaseState &phaseState)
     { 
-        if (phaseIdx == gPhaseIdx) {
-            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+        Scalar temperature = phaseState.temperature();
+        if (phaseIdx == lPhaseIdx)  {
+            Scalar pVap = H2O::vaporPressure(temperature);
             Scalar pWater = phaseState.phasePressure(lPhaseIdx);
-            if (pWater > pVap)
+            if (pWater < pVap)
                 pWater = pVap;
 
-            Scalar result = 0;
-            result += 
-                H2O::gasEnthalpy(phaseState.temperature(), pWater) *
-                phaseState.massFrac(gPhaseIdx, H2OIdx);
-            result +=  
-                N2::gasEnthalpy(phaseState.temperature(), 
-                                phaseState.partialPressure(N2Idx)) *
-                phaseState.massFrac(gPhaseIdx, N2Idx);
-            
-            return result;
-        }
-        else {
-            Scalar temperature = phaseState.temperature();
-            Scalar pVap = H2O::vaporPressure(temperature);
-            Scalar pressure = phaseState.phasePressure(lPhaseIdx);
-            if (pressure < pVap)
-                pressure = pVap;
-            
             Scalar cN2 = phaseState.concentration(lPhaseIdx, N2Idx);
             Scalar pN2 = IdealGas::pressure(temperature, cN2);
-            Scalar hN2 = N2::gasEnthalpy(temperature, pN2);
-            
+
             // TODO: correct way to deal with the solutes??? 
             return 
                 phaseState.massFrac(lPhaseIdx, H2OIdx)*
-                H2O::liquidEnthalpy(temperature, pressure)
+                H2O::liquidEnthalpy(temperature, pWater)
                 +
                 phaseState.massFrac(lPhaseIdx, N2Idx)*
-                hN2;
+                N2::gasEnthalpy(temperature, pN2);
+        }
+        else {
+            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pWater = phaseState.partialPressure(H2OIdx);
+            if (pWater > pVap)
+                pWater = pVap;
+
+            Scalar pN2 = phaseState.partialPressure(N2Idx);
+
+            Scalar result = 0;
+            result += 
+                H2O::gasEnthalpy(temperature, pWater) *
+                phaseState.massFrac(gPhaseIdx, H2OIdx);
+            result += 
+                N2::gasEnthalpy(temperature, pN2) *
+                phaseState.massFrac(gPhaseIdx, N2Idx);
+            
+            return result;
         }
     }
 
@@ -345,17 +345,15 @@ public:
     static Scalar internalEnergy(int phaseIdx,
                                  const PhaseState &phaseState)
     { 
+        Scalar temperature = phaseState.temperature();
         if (phaseIdx == lPhaseIdx)  {
-            Scalar temperature = phaseState.temperature();
             Scalar pVap = H2O::vaporPressure(temperature);
             Scalar pWater = phaseState.phasePressure(lPhaseIdx);
-
             if (pWater < pVap)
                 pWater = pVap;
 
             Scalar cN2 = phaseState.concentration(lPhaseIdx, N2Idx);
-            Scalar uN2 = N2::gasInternalEnergy(temperature,
-                                               IdealGas::pressure(temperature, cN2));
+            Scalar pN2 = IdealGas::pressure(temperature, cN2);
 
             // TODO: correct way to deal with the solutes??? 
             return 
@@ -363,26 +361,26 @@ public:
                 H2O::liquidInternalEnergy(temperature, pWater)
                 +
                 phaseState.massFrac(lPhaseIdx, N2Idx)*
-                uN2;
+                N2::gasInternalEnergy(temperature, pN2);
         }
         else {
-            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
-            Scalar pWater = std::max(0.0, phaseState.phasePressure(lPhaseIdx));
+            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pWater = phaseState.partialPressure(H2OIdx);
             if (pWater > pVap)
                 pWater = pVap;
 
+            Scalar pN2 = phaseState.partialPressure(N2Idx);
+            
             Scalar result = 0;
             result += 
-                H2O::gasInternalEnergy(phaseState.temperature(), pWater) *
+                H2O::gasInternalEnergy(temperature, pWater)*
                 phaseState.massFrac(gPhaseIdx, H2OIdx);
             result += 
-                N2::gasInternalEnergy(phaseState.temperature(), 
-                                      phaseState.partialPressure(N2Idx)) *
+                N2::gasInternalEnergy(temperature, pN2)*
                 phaseState.massFrac(gPhaseIdx, N2Idx);
             
             return result;
         }
-        return 0; 
     }
 };
 
