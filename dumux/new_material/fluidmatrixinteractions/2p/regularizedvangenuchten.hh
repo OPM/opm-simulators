@@ -66,13 +66,13 @@ public:
         const Scalar SwThLow = params.pCLowSw();
         const Scalar SwThHigh = params.pCHighSw();
 
-        // make sure that the capilarry pressure observes a derivative
+        // make sure that the capillary pressure observes a derivative
         // != 0 for 'illegal' saturations. This is favourable for the
         // newton solver (if the derivative is calculated numerically)
         // in order to get the saturation moving to the right
         // direction if it temporarily is in an 'illegal' range.
         if (Sw < SwThLow) {
-            return VanGenuchten::pC(params, SwThLow/2) + mLow_(params)*(Sw - SwThLow/2);
+            return VanGenuchten::pC(params, SwThLow) + mLow_(params)*(Sw - SwThLow);
         }
         else if (Sw > SwThHigh) {
             return VanGenuchten::pC(params, SwThHigh) + mHigh_(params)*(Sw - SwThHigh);
@@ -102,7 +102,7 @@ public:
         Scalar Sw;
         if (pC <= 0)
             // make sure we invert the regularization
-            Sw = 1.5; 
+            Sw = 1.5;
         else
             Sw = VanGenuchten::Sw(params, pC);
 
@@ -114,8 +114,8 @@ public:
         // invert the regularization if necessary
         if (Sw <= SwThLow) {
             // invert the low saturation regularization of pC()
-            Scalar pC_SwLow2 = VanGenuchten::pC(params, SwThLow/2);
-            return (pC - pC_SwLow2)/mLow_(params) + SwThLow/2;
+            Scalar pC_SwLow = VanGenuchten::pC(params, SwThLow);
+            return (pC - pC_SwLow)/mLow_(params) + SwThLow;
         }
         else if (Sw >= SwThHigh) {
             // invert the high saturation regularization of pC()
@@ -244,7 +244,7 @@ private:
     static Scalar mLow_(const Params &params)
     {
         const Scalar SwThLow = params.pCLowSw();
-        
+
         return VanGenuchten::dpC_dSw(params, SwThLow);
     }
 
