@@ -38,7 +38,7 @@ namespace Dune
 template <class Scalar>
 class SimpleH2O : public Component<Scalar, SimpleH2O<Scalar> >
 {
-    typedef Component<Scalar, H2O<Scalar> > ParentType;
+    typedef Component<Scalar, SimpleH2O<Scalar> > ParentType;
     typedef Dune::IdealGas<Scalar> IdealGas;
 
     static const double R = 461.526;  // specific gas constant of water

@@ -29,6 +29,8 @@
 #include <math.h>
 #include <assert.h>
 
+#include <dumux/auxiliary/spline.hh>
+
 namespace Dune
 {
 /*!\ingroup material
