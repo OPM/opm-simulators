@@ -121,7 +121,7 @@ public:
         switch (phaseIdx) {
         case lPhaseIdx: 
         {
-            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pVap = 0.9*H2O::vaporPressure(phaseState.temperature());
             Scalar pressure = phaseState.phasePressure(lPhaseIdx);
             if (pressure < pVap)
                 pressure = pVap;
@@ -143,7 +143,7 @@ public:
                 phaseState.moleFrac(gPhaseIdx, N2Idx)*N2::molarMass();
             Scalar pWater = phaseState.partialPressure(H2OIdx);
 
-            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pVap = 1.1*H2O::vaporPressure(phaseState.temperature());
             if (pWater > pVap)
                 pWater = pVap;
             
@@ -166,7 +166,7 @@ public:
                                  const PhaseState &phaseState)
     { 
         if (phaseIdx == lPhaseIdx) {
-            Scalar pVap = H2O::vaporPressure(phaseState.temperature());
+            Scalar pVap = 0.9*H2O::vaporPressure(phaseState.temperature());
             Scalar pressure = phaseState.phasePressure(lPhaseIdx);
             if (pressure < pVap)
                 pressure = pVap;
@@ -301,7 +301,7 @@ public:
     { 
         Scalar temperature = phaseState.temperature();
         if (phaseIdx == lPhaseIdx)  {
-            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pVap = 1.1*H2O::vaporPressure(temperature);
             Scalar pWater = phaseState.phasePressure(lPhaseIdx);
             if (pWater < pVap)
                 pWater = pVap;
@@ -318,7 +318,7 @@ public:
                 N2::gasEnthalpy(temperature, pN2);
         }
         else {
-            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
             Scalar pWater = phaseState.partialPressure(H2OIdx);
             if (pWater > pVap)
                 pWater = pVap;
@@ -347,7 +347,7 @@ public:
     { 
         Scalar temperature = phaseState.temperature();
         if (phaseIdx == lPhaseIdx)  {
-            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pVap = 1.1*H2O::vaporPressure(temperature);
             Scalar pWater = phaseState.phasePressure(lPhaseIdx);
             if (pWater < pVap)
                 pWater = pVap;
@@ -364,7 +364,7 @@ public:
                 N2::gasInternalEnergy(temperature, pN2);
         }
         else {
-            Scalar pVap = H2O::vaporPressure(temperature);
+            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
             Scalar pWater = phaseState.partialPressure(H2OIdx);
             if (pWater > pVap)
                 pWater = pVap;
