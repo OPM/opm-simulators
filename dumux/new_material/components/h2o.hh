@@ -135,7 +135,7 @@ public:
     {
         // gas is only present if the vapor pressure is larger than the
         // partial pressure
-        assert(vaporPressure(temperature) >= pressure);
+        //assert(vaporPressure(temperature) >= pressure);
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -160,7 +160,7 @@ public:
     {
         // liquid is only present if the vapor pressure is smaller than the
         // partial pressure
-        assert(vaporPressure(temperature) <= pressure);      
+        //assert(vaporPressure(temperature) <= pressure);      
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -185,7 +185,7 @@ public:
     {
         // liquid is only present if the vapor pressure is smaller than the
         // partial pressure
-        assert(vaporPressure(temperature) <= pressure);
+        //assert(vaporPressure(temperature) <= pressure);
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -214,7 +214,7 @@ public:
     {
         // gas is only present if the vapor pressure is larger than the
         // partial pressure
-        assert(vaporPressure(temperature) >= pressure);      
+        //assert(vaporPressure(temperature) >= pressure);      
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -243,7 +243,7 @@ public:
     {
         // gas is only present if the vapor pressure is larger than the
         // partial pressure
-        assert(vaporPressure(temperature) >= pressure);      
+        //assert(vaporPressure(temperature) >= pressure);      
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -268,7 +268,7 @@ public:
     {
         // liquid is only present if the vapor pressure is smaller than the
         // partial pressure
-        assert(vaporPressure(temperature) <= pressure);      
+        //assert(vaporPressure(temperature) <= pressure);      
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -295,7 +295,7 @@ public:
     {
         // gas is only present if the vapor pressure is larger than the
         // partial pressure
-        assert(vaporPressure(temperature) >= pressure);      
+        //assert(vaporPressure(temperature) >= pressure);      
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
@@ -318,7 +318,7 @@ public:
     {
         // liquid is only present if the vapor pressure is smaller than the
         // partial pressure
-        assert(vaporPressure(temperature) <= pressure);      
+        //assert(vaporPressure(temperature) <= pressure);      
         if (temperature > 623.15 || pressure > 100e6)
         {
             DUNE_THROW(NumericalProblem,
