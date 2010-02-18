@@ -27,10 +27,17 @@
 #include <dumux/new_material/components/simpleh2o.hh>
 #include <dumux/new_material/components/tabulatedcomponent.hh>
 
+#include <dumux/auxiliary/properties.hh>
+
 #include <dumux/new_material/binarycoefficients/h2o_n2.hh>
 
 namespace Dune
 {
+
+namespace Properties
+{
+NEW_PROP_TAG(Scalar);
+};
 
 /*!
  * \brief A compositional fluid with water and molecular nitrogen as
