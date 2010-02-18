@@ -168,7 +168,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cout << "forward gasEnthalpy("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward gasEnthalpy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasEnthalpy(temperature, pressure);
         }
         return result;
@@ -183,7 +183,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cout << "forward liquidEnthalpy("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward liquidEnthalpy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidEnthalpy(temperature, pressure);
         }
         return result;
@@ -198,7 +198,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cout << "forward gasInternalEnergy("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward gasInternalEnergy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasInternalEnergy(temperature, pressure);
         }
         return result;
@@ -213,7 +213,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cout << "forward liquidInternalEnergy("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward liquidInternalEnergy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidInternalEnergy(temperature, pressure);
         }
         return result;
@@ -229,7 +229,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cout << "forward gasDensity("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward gasDensity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasDensity(temperature, pressure);
         }
         return result;
@@ -245,7 +245,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cout << "forward liquidDensity("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward liquidDensity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidDensity(temperature, pressure);
         }
         return result;       
@@ -260,7 +260,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cout << "forward gasViscosity("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward gasViscosity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasViscosity(temperature, pressure);
         }
         return result;       
@@ -275,7 +275,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cout << "forward liquidViscosity("<<temperature<<", "<<pressure<<")\n";
+            std::cerr << "forward liquidViscosity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidViscosity(temperature, pressure);
         }
         return result;       
@@ -303,7 +303,7 @@ private:
     {
         Scalar alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            // std::cout << __LINE__ << " T: " << T << "\n";
+            // std::cerr << __LINE__ << " T: " << T << "\n";
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
         
@@ -331,7 +331,7 @@ private:
     {
         Scalar alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            // std::cout << __LINE__ << " T: " << T << "\n";
+            // std::cerr << __LINE__ << " T: " << T << "\n";
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
         
@@ -377,22 +377,22 @@ private:
     // returns the minimum tabulized liquid pressure at a given
     // temperature index
     static Scalar minLiquidPressure_(int tempIdx)
-    { return std::max(pressMin_, vaporPressure_[tempIdx]) + 1e-1; }
+    { return std::max<Scalar>(pressMin_, vaporPressure_[tempIdx]) + 1e-1; }
 
     // returns the maximum tabulized liquid pressure at a given
     // temperature index
     static Scalar maxLiquidPressure_(int tempIdx)
-    { return std::max(pressMax_, vaporPressure_[tempIdx] * 1.01); }
+    { return std::max<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.01); }
 
     // returns the minumum tabulized gas pressure at a given
     // temperature index
     static Scalar minGasPressure_(int tempIdx)
-    { return std::min(pressMin_, vaporPressure_[tempIdx] / 1.01 ); }
+    { return std::min<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.01 ); }
 
     // returns the maximum tabulized gas pressure at a given
     // temperature index
     static Scalar maxGasPressure_(int tempIdx)
-    { return std::min(pressMax_, vaporPressure_[tempIdx]) - 1e-3; }
+    { return std::min<Scalar>(pressMax_, vaporPressure_[tempIdx]) - 1e-3; }
 
     static Scalar *vaporPressure_;
 

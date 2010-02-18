@@ -101,13 +101,13 @@ public:
      * \brief Specific internal energy [J/kg] of pure the pure component in gas.
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "Component::gasEnthalpy()"); } 
+    { DUNE_THROW(NotImplemented, "Component::gasInternalEnergy()"); } 
 
     /*!
      * \brief Specific internal energy [J/kg] of pure the pure component in liquid.
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "Component::liquidEnthalpy()"); } 
+    { DUNE_THROW(NotImplemented, "Component::liquidInternalEnergy()"); } 
         
     /*!
      * \brief The dynamic viscosity [Pa s] of the pure component at a given pressure and temperature.

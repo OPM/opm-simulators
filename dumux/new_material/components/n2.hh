@@ -104,19 +104,19 @@ public:
                       // account
 
         // note: this is the ancillary equation given on page 1368
-        Scalar sigma = 1.0 - T/criticalTemperature();
-        Scalar sqrtSigma = sqrt(sigma);
+        Scalar sigma = Scalar(1.0) - T/criticalTemperature();
+        Scalar sqrtSigma = std::sqrt(sigma);
         const Scalar N1 = -6.12445284;
         const Scalar N2 = 1.26327220;
         const Scalar N3 = -0.765910082;
         const Scalar N4 = -1.77570564;
         return
             criticalPressure() *
-            exp(criticalTemperature()/T*
-                (sigma*(N1 +
-                        sqrtSigma*N2 + 
-                        sigma*(sqrtSigma*N3 + 
-                               sigma*sigma*sigma*N4))));
+            std::exp(criticalTemperature()/T*
+                     (sigma*(N1 +
+                             sqrtSigma*N2 + 
+                             sigma*(sqrtSigma*N3 + 
+                                    sigma*sigma*sigma*N4))));
     }
 
     /*!

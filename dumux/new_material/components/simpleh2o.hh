@@ -41,7 +41,7 @@ class SimpleH2O : public Component<Scalar, SimpleH2O<Scalar> >
     typedef Component<Scalar, H2O<Scalar> > ParentType;
     typedef Dune::IdealGas<Scalar> IdealGas;
 
-    static const Scalar R = 461.526;  // specific gas constant of water
+    static const double R = 461.526;  // specific gas constant of water
 
 public:
     /*!
@@ -110,11 +110,11 @@ public:
         Scalar B = (n[2]*sigma + n[3])*sigma + n[4];
         Scalar C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Scalar tmp = 2*C/(std::sqrt(B*B - 4*A*C) - B);
+        Scalar tmp = Scalar(2.0)*C/(std::sqrt(B*B - Scalar(4.0)*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 
-        return 1e6*tmp;
+        return Scalar(1e6)*tmp;
     }
 
     /*!
