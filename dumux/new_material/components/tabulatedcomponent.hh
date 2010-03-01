@@ -17,6 +17,9 @@
  *
  * \brief Tabulates all thermodynamic properties of a given
  *        untabulated chemical species.
+ *
+ * At the moment, this class can only handle the sub-critical fluids
+ * since it tabulates along the vapor pressure curve.
  */
 #ifndef DUMUX_TABULATED_COMPONENT_HH
 #define DUMUX_TABULATED_COMPONENT_HH
@@ -27,9 +30,20 @@ namespace Dune
 {
 
 /*!
- * \brief Abstract base class of a pure chemical species.
+ * \brief  Tabulates all thermodynamic properties of a given
+ *        untabulated chemical species.
+ *
+ * At the moment, this class can only handle the sub-critical fluids
+ * since it tabulates along the vapor pressure curve.
+ *
+ * \tparam Scalar  The type used for scalar values
+ * \tparam Scalar  The component which ought to be tabulated
+ * \tparam verbose If set to true, a warning will be printed each time
+ *                 a request can not be fulfilled from the tabulated
+ *                 arrays. This is quite useful for debugging
+ *                 purposes.
  */
-template <class Scalar, class RawComponent>
+template <class Scalar, class RawComponent, bool verbose=true>
 class TabulatedComponent
 {
 public:
@@ -217,7 +231,8 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward gasEnthalpy("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward gasEnthalpy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasEnthalpy(temperature, pressure);
         }
         return result;
@@ -232,7 +247,8 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward liquidEnthalpy("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward liquidEnthalpy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidEnthalpy(temperature, pressure);
         }
         return result;
@@ -247,7 +263,8 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward gasInternalEnergy("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward gasInternalEnergy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasInternalEnergy(temperature, pressure);
         }
         return result;
@@ -262,7 +279,8 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward liquidInternalEnergy("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward liquidInternalEnergy("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidInternalEnergy(temperature, pressure);
         }
         return result;
@@ -278,7 +296,8 @@ public:
                                             temperature,
                                             density);
         if (std::isnan(result)) {
-            std::cerr << "forward gasPressure("<<temperature<<", "<<density<<")\n";
+            if (verbose)
+                std::cerr << "forward gasPressure("<<temperature<<", "<<density<<")\n";
             return RawComponent::gasPressure(temperature, 
                                              density);
         }
@@ -294,7 +313,8 @@ public:
                                                temperature,
                                                density);
         if (std::isnan(result)) {
-            std::cerr << "forward liquidPressure("<<temperature<<", "<<density<<")\n";
+            if (verbose)
+                std::cerr << "forward liquidPressure("<<temperature<<", "<<density<<")\n";
             return RawComponent::liquidPressure(temperature, 
                                                 density);
         }
@@ -311,7 +331,8 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward gasDensity("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward gasDensity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasDensity(temperature, pressure);
         }
         return result;
@@ -327,7 +348,8 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward liquidDensity("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward liquidDensity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidDensity(temperature, pressure);
         }
         return result;       
@@ -342,7 +364,8 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward gasViscosity("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward gasViscosity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::gasViscosity(temperature, pressure);
         }
         return result;       
@@ -357,7 +380,8 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            std::cerr << "forward liquidViscosity("<<temperature<<", "<<pressure<<")\n";
+            if (verbose)
+                std::cerr << "forward liquidViscosity("<<temperature<<", "<<pressure<<")\n";
             return RawComponent::liquidViscosity(temperature, pressure);
         }
         return result;       
@@ -613,54 +637,54 @@ private:
     static unsigned nDensity_;
 };
 
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::vaporPressure_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::minLiquidDensity__;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::maxLiquidDensity__;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::minGasDensity__;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::maxGasDensity__;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::gasEnthalpy_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::liquidEnthalpy_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::gasInternalEnergy_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::liquidInternalEnergy_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::gasDensity_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::liquidDensity_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::gasViscosity_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::liquidViscosity_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::gasPressure_;
-template <class Scalar, class RawComponent>
-Scalar* TabulatedComponent<Scalar, RawComponent>::liquidPressure_;
-template <class Scalar, class RawComponent>
-Scalar  TabulatedComponent<Scalar, RawComponent>::tempMin_;
-template <class Scalar, class RawComponent>
-Scalar  TabulatedComponent<Scalar, RawComponent>::tempMax_;
-template <class Scalar, class RawComponent>
-unsigned TabulatedComponent<Scalar, RawComponent>::nTemp_;
-template <class Scalar, class RawComponent>
-Scalar   TabulatedComponent<Scalar, RawComponent>::pressMin_;
-template <class Scalar, class RawComponent>
-Scalar   TabulatedComponent<Scalar, RawComponent>::pressMax_;
-template <class Scalar, class RawComponent>
-unsigned TabulatedComponent<Scalar, RawComponent>::nPress_;
-template <class Scalar, class RawComponent>
-Scalar   TabulatedComponent<Scalar, RawComponent>::densityMin_;
-template <class Scalar, class RawComponent>
-Scalar   TabulatedComponent<Scalar, RawComponent>::densityMax_;
-template <class Scalar, class RawComponent>
-unsigned TabulatedComponent<Scalar, RawComponent>::nDensity_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::vaporPressure_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::minLiquidDensity__;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::maxLiquidDensity__;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::minGasDensity__;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::maxGasDensity__;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasEnthalpy_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidEnthalpy_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasInternalEnergy_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidInternalEnergy_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasDensity_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidDensity_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasViscosity_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidViscosity_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasPressure_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidPressure_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar  TabulatedComponent<Scalar, RawComponent, verbose>::tempMin_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar  TabulatedComponent<Scalar, RawComponent, verbose>::tempMax_;
+template <class Scalar, class RawComponent, bool verbose>
+unsigned TabulatedComponent<Scalar, RawComponent, verbose>::nTemp_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::pressMin_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::pressMax_;
+template <class Scalar, class RawComponent, bool verbose>
+unsigned TabulatedComponent<Scalar, RawComponent, verbose>::nPress_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::densityMin_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::densityMax_;
+template <class Scalar, class RawComponent, bool verbose>
+unsigned TabulatedComponent<Scalar, RawComponent, verbose>::nDensity_;
 
 
 } // end namepace
