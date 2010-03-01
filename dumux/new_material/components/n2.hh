@@ -125,7 +125,16 @@ public:
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
         // Assume an ideal gas
-        return IdealGas::density(molarMass(), pressure, temperature);
+        return IdealGas::density(molarMass(), temperature, pressure);
+    }
+
+    /*
+     * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
+     */
+    static Scalar gasPressure(Scalar temperature, Scalar density)
+    {
+        // Assume an ideal gas
+        return IdealGas::pressure(temperature, density/molarMass());
     }
 
     /*!
@@ -134,6 +143,13 @@ public:
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(NotImplemented, "liquidDensity for N2"); }
     
+    /*
+     * \brief The pressure of liquid nitrogen at a given density and
+     *        temperature [Pa].
+     */
+    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    { DUNE_THROW(NotImplemented, "liquidPressure for N2"); }
+
     /*!
      * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
      */

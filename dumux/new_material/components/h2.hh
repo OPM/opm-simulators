@@ -109,9 +109,18 @@ public:
     static Scalar density(Scalar temperature, Scalar pressure)
     {
         // Assume an ideal gas
-        return IdealGas::density(molarMass(), pressure, temperature);
+        return IdealGas::density(molarMass(), temperature, pressure);
     }
     
+    /*
+     * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
+     */
+    static Scalar gasPressure(Scalar temperature, Scalar density)
+    {
+        // Assume an ideal gas
+        return IdealGas::pressure(temperature, density/molarMass());
+    }
+
     /*!
      * \brief Specific enthalpy [J/kg] of pure hydrogen gas.
      */
@@ -121,6 +130,19 @@ public:
         
         return temperature * (cvHat + 1) * IdealGas::R / molarMass();
     }
+
+    /*!
+     * \brief The density [kg/m^3] of liquid hydrogen at a given pressure and temperature.
+     */
+    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(NotImplemented, "liquidDensity for H2"); }
+
+    /*
+     * \brief The pressure of liquid hydrogen at a given density and
+     *        temperature [Pa].
+     */
+    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    { DUNE_THROW(NotImplemented, "liquidPressure for H2"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid H2 .

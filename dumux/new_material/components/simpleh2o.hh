@@ -158,11 +158,21 @@ public:
     }
 
     /*!
-     * \brief The density of steam at a given pressure and temperature [kg/m^3].
-    */
+     * \brief The density [kg/m^3] of steam at a given pressure and temperature.
+     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
-        return 1/IdealGas::density(molarMass(), temperature, pressure);
+        // Assume an ideal gas
+        return IdealGas::density(molarMass(), temperature, pressure);
+    }
+
+    /*
+     * \brief The pressure of steam at a given density and temperature [Pa].
+     */
+    static Scalar gasPressure(Scalar temperature, Scalar density)
+    {
+        // Assume an ideal gas
+        return IdealGas::pressure(temperature, density/molarMass());
     }
 
     /*!
@@ -171,6 +181,15 @@ public:
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
         return 1000;
+    }
+
+    /*
+     * \brief The pressure of water at a given density and temperature [Pa].
+     */
+    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    {
+        DUNE_THROW(InvalidStateException, 
+                   "The liquid pressure is undefined for incompressible fluids");
     }
 
     /*!

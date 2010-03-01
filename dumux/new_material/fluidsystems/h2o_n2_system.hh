@@ -69,10 +69,6 @@ public:
     static const int H2OIdx = 0;
     static const int N2Idx = 1;
     
-    H2O_N2_System()
-    {
-    }
-
     static void init()
     {
         std::cout << "Initializing tables for the H2O fluid properties.\n";
@@ -93,7 +89,7 @@ public:
     }
 
     /*!
-     * \brief Return the molar mass of a component in [kg/mol].
+     * \brief Return the molar mass of a component [kg/mol].
      */
     static Scalar molarMass(int compIdx)
     {
@@ -105,37 +101,78 @@ public:
     }
 
     /*!
-     * \brief Return the vapor pressure of a component in [Pa].
+     * \brief Given the gas phase's composition, temperature and
+     *        pressure, compute the partial presures of all components
+     *        in [Pa] and assign it to the PhaseState.
+     *
+     * This is required for models which cannot calculate the the
+     * partial pressures of the components in the gas phase from the
+     * degasPressure(). To use this method, the PhaseState must have a
+     * setPartialPressure(componentIndex, pressure) method.
      */
-    static Scalar vaporPressure(int compIdx, 
-                                Scalar temperature)
-    {
-        switch (compIdx) {
-        case H2OIdx: return H2O::vaporPressure(temperature);
-        case N2Idx: return N2::vaporPressure(temperature);
-        };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
-    }
-    
+    template <class PhaseState>
+    static void computePartialPressures(Scalar temperature,
+                                        Scalar pg,
+                                        PhaseState &phaseState)
+    {       
+        Scalar X1 = phaseState.massFrac(gPhaseIdx, H2OIdx);
+
+        // We use the newton method for this. For the initial value we
+        // assume all components to be an ideal gas
+        Scalar pH2O = 
+            phaseState.moleFrac(gPhaseIdx, H2OIdx) * pg;
+        Scalar eps = pg*1e-9;
+
+        Scalar deltaP = pH2O;
+        Valgrind::CheckDefined(pH2O);
+        Valgrind::CheckDefined(deltaP);
+        for (int i = 0; i < 5 && std::abs(deltaP/pg) > 1e-9; ++i) {
+            Scalar f = 
+                H2O::gasDensity(temperature, pH2O)*(1 - 1/X1) +
+                N2::gasDensity(temperature, pg - pH2O);
+            
+            Scalar df_dp;
+            df_dp  =
+                H2O::gasDensity(temperature, pH2O + eps)*(1 - 1/X1) +
+                N2::gasDensity(temperature, pg - (pH2O + eps));
+            df_dp -= 
+                H2O::gasDensity(temperature, pH2O - eps)*(1 - 1/X1) +
+                N2::gasDensity(temperature, pg - (pH2O - eps));
+            df_dp /= 
+                2*eps;
+            
+            deltaP = - f/df_dp;
+            
+            pH2O += deltaP;
+            Valgrind::CheckDefined(pH2O);
+            Valgrind::CheckDefined(deltaP);
+        }
+        
+        phaseState.setPartialPressure(H2OIdx, pH2O);
+        phaseState.setPartialPressure(N2Idx, pg - pH2O);
+    };
+   
     /*!
-     * \brief Given all mole fractions in a phase, return the phase
+     * \brief Given a phase's composition, temperature, pressure, and
+     *        the partial pressures of all components, return its
      *        density [kg/m^3].
      */
     template <class PhaseState>
     static Scalar phaseDensity(int phaseIdx,
+                               int temperature,
+                               int pressure,
                                const PhaseState &phaseState)
     { 
         switch (phaseIdx) {
         case lPhaseIdx: 
         {
-            Scalar pVap = 0.9*H2O::vaporPressure(phaseState.temperature());
-            Scalar pressure = phaseState.phasePressure(lPhaseIdx);
+            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
             if (pressure < pVap)
                 pressure = pVap;
 
             // See: Ochs 2008
             // \todo: proper citation
-            Scalar rhoWater = H2O::liquidDensity(phaseState.temperature(), 
+            Scalar rhoWater = H2O::liquidDensity(temperature, 
                                                  pressure);
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
@@ -145,41 +182,37 @@ public:
         }
         case gPhaseIdx:
         {
-            // assume ideal gas
-            Scalar avgMolarMass = 
-                phaseState.moleFrac(gPhaseIdx, N2Idx)*N2::molarMass();
-            Scalar pWater = phaseState.partialPressure(H2OIdx);
+            Scalar pH2O = phaseState.partialPressure(H2OIdx);
+            Scalar pN2 = phaseState.partialPressure(N2Idx);
 
-            Scalar pVap = 1.1*H2O::vaporPressure(phaseState.temperature());
-            if (pWater > pVap)
-                pWater = pVap;
-            
-            Scalar rhoWater = H2O::gasDensity(phaseState.temperature(), pWater);
+            // using the two partial pressures we can calculate the
+            // density of the phase. This assumes that Dalton's law is
+            // valid
             return 
-                rhoWater +
-                IdealGas::density(avgMolarMass, 
-                                  phaseState.temperature(), 
-                                  phaseState.phasePressure(gPhaseIdx) - pWater);
+                H2O::gasDensity(temperature, pH2O) +
+                N2::gasDensity(temperature, pN2);
         };
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
     /*!
-     * \brief Return the viscosity of a phase.
+     * \brief Given a phase's composition, temperature and pressure,
+     *        return its viscosity.
      */
-    template <class PhaseState>
+    template <class PhaseCompo>
     static Scalar phaseViscosity(int phaseIdx,
-                                 const PhaseState &phaseState)
+                                 Scalar temperature, 
+                                 Scalar pressure,
+                                 const PhaseCompo &phaseCompo)
     { 
         if (phaseIdx == lPhaseIdx) {
-            Scalar pVap = 0.9*H2O::vaporPressure(phaseState.temperature());
-            Scalar pressure = phaseState.phasePressure(lPhaseIdx);
+            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
             if (pressure < pVap)
                 pressure = pVap;
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
-            return H2O::liquidViscosity(phaseState.temperature(), 
+            return H2O::liquidViscosity(phaseCompo.temperature(), 
                                         pressure);
         }
         else {
@@ -196,10 +229,10 @@ public:
              */
             Scalar muResult = 0; 
             const Scalar mu[numComponents] = {
-                H2O::gasViscosity(phaseState.temperature(), 
-                                  H2O::vaporPressure(phaseState.temperature())),
-                N2::gasViscosity(phaseState.temperature(), 
-                                 phaseState.phasePressure(gPhaseIdx))
+                H2O::gasViscosity(temperature,
+                                  H2O::vaporPressure(temperature)),
+                N2::gasViscosity(temperature, 
+                                 pressure)
             };
             // molar masses
             const Scalar M[numComponents] = {
@@ -214,9 +247,9 @@ public:
                                             pow(M[i]/M[j], 1/4.0));
                     phiIJ *= phiIJ;
                     phiIJ /= sqrt(8*(1 + M[i]/M[j]));
-                    divisor += phaseState.moleFrac(phaseIdx, j)*phiIJ;
+                    divisor += phaseCompo.moleFrac(phaseIdx, j)*phiIJ;
                 }
-                muResult += phaseState.moleFrac(phaseIdx, i)*mu[i] / divisor;
+                muResult += phaseCompo.moleFrac(phaseIdx, i)*mu[i] / divisor;
             }
 
             return muResult;
@@ -224,34 +257,89 @@ public:
     } 
 
     /*!
-     * \brief Returns the derivative of the equilibrium partial
-     *        pressure \f$\partial p^\kappa_g / \partial x^\kappa_l\$
-     *        to the mole fraction of a component in the liquid phase.
+     * \brief Return the pressure which a component degases from the
+     *        liquid scaled to \f$100\%\f$ of the component.
      *
      * For solutions with only traces in a solvent this boils down to
      * the inverse Henry constant for the solutes and the partial
      * pressure for the solvent.
      */
-    template <class PhaseState>
-    static Scalar dPg_dxl(int compIdx, 
-                          const PhaseState &phaseState)
+    static Scalar degasPressure(int compIdx, 
+                                Scalar temperature,
+                                Scalar pg)
     {        
         switch (compIdx) {
-        case H2OIdx: return H2O::vaporPressure(phaseState.temperature());
-        case N2Idx: return BinaryCoeff::H2O_N2::henry(phaseState.temperature());
+        case H2OIdx: return H2O::vaporPressure(temperature);
+        case N2Idx: return BinaryCoeff::H2O_N2::henry(temperature);
         };
         DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
     }
+    
+    /*!
+     * \brief Given a component's pressure and temperature, return its
+     *        density in a phase [kg/m^3].
+     */
+    static Scalar componentDensity(int phaseIdx,
+                                   int compIdx,
+                                   Scalar temperature, 
+                                   Scalar pressure)
+    {
+        if (phaseIdx == lPhaseIdx) {
+            if (compIdx == H2OIdx)
+                return H2O::liquidDensity(temperature, pressure);
+            else if (compIdx == N2Idx)
+                return N2::liquidDensity(temperature, pressure);
+            DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        }
+        else if (phaseIdx == gPhaseIdx) {
+            if (compIdx == H2OIdx) {
+                return H2O::gasDensity(temperature, pressure);
+            }
+            else if (compIdx == N2Idx)
+                return N2::gasDensity(temperature, pressure);
+            DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        }
+        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+    };
 
     /*!
-     * \brief Given all mole fractions, return the diffusion
-     *        coefficent of a component in a phase.
+     * \brief Given a component's density and temperature, return the
+     *        corresponding pressure in a phase [Pa].
      */
-    template <class PhaseState>
+    static Scalar componentPressure(int phaseIdx,
+                                    int compIdx,
+                                    Scalar temperature, 
+                                    Scalar density)
+    {
+        if (phaseIdx == lPhaseIdx) {
+            if (compIdx == H2OIdx)
+                return H2O::liquidPressure(temperature, density);
+            else if (compIdx == N2Idx)
+                return N2::liquidPressure(temperature, density);
+            DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        }
+        else if (phaseIdx == gPhaseIdx) {
+            if (compIdx == H2OIdx)
+                return H2O::gasPressure(temperature, density);
+            else if (compIdx == N2Idx)
+                return N2::gasPressure(temperature, density);
+            DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        }
+        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+    };
+
+    /*!
+     * \brief Given a phase's composition, temperature and pressure,
+     *        return the binary diffusion coefficent for components
+     *        \f$i\f$ and \f$j\f$ in this phase.
+     */
+    template <class PhaseCompo>
     static Scalar diffCoeff(int phaseIdx,
                             int compIIdx,
                             int compJIdx,
-                            const PhaseState &phaseState)
+                            Scalar temperature,
+                            Scalar pressure,
+                            const PhaseCompo &phaseCompo)
     { 
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
@@ -274,8 +362,8 @@ public:
             switch (compIIdx) {
             case H2OIdx:
                 switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(phaseState.temperature(), 
-                                                                        phaseState.phasePressure(phaseIdx));
+                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(temperature, 
+                                                                        pressure);
                 }
             default:
                 DUNE_THROW(InvalidStateException, 
@@ -286,8 +374,8 @@ public:
             switch (compIIdx) {
             case H2OIdx:
                 switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::gasDiffCoeff(phaseState.temperature(),
-                                                                     phaseState.phasePressure(phaseIdx));
+                case N2Idx: return BinaryCoeff::H2O_N2::gasDiffCoeff(temperature,
+                                                                     pressure);
                 }
             }
         }
@@ -299,92 +387,94 @@ public:
     };
 
     /*!
-     * \brief Given all mole fractions in a phase, return the specific
-     *        phase enthalpy [J/kg].
+     * \brief Given a phase's composition, temperature and pressure,
+     *        return its specific enthalpy [J/kg].
      */
-    template <class PhaseState>
+    template <class PhaseCompo>
     static Scalar enthalpy(int phaseIdx,
-                           const PhaseState &phaseState)
+                           Scalar temperature,
+                           Scalar pressure,
+                           const PhaseCompo &phaseCompo)
     { 
-        Scalar temperature = phaseState.temperature();
         if (phaseIdx == lPhaseIdx)  {
             Scalar pVap = 1.1*H2O::vaporPressure(temperature);
-            Scalar pWater = phaseState.phasePressure(lPhaseIdx);
+            Scalar pWater = pressure;
             if (pWater < pVap)
                 pWater = pVap;
 
-            Scalar cN2 = phaseState.concentration(lPhaseIdx, N2Idx);
+            Scalar cN2 = phaseCompo.concentration(lPhaseIdx, N2Idx);
             Scalar pN2 = IdealGas::pressure(temperature, cN2);
 
             // TODO: correct way to deal with the solutes??? 
             return 
-                phaseState.massFrac(lPhaseIdx, H2OIdx)*
+                phaseCompo.massFrac(lPhaseIdx, H2OIdx)*
                 H2O::liquidEnthalpy(temperature, pWater)
                 +
-                phaseState.massFrac(lPhaseIdx, N2Idx)*
+                phaseCompo.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasEnthalpy(temperature, pN2);
         }
         else {
             Scalar pVap = 0.9*H2O::vaporPressure(temperature);
-            Scalar pWater = phaseState.partialPressure(H2OIdx);
+            Scalar pWater = phaseCompo.partialPressure(H2OIdx);
             if (pWater > pVap)
                 pWater = pVap;
 
-            Scalar pN2 = phaseState.partialPressure(N2Idx);
+            Scalar pN2 = phaseCompo.partialPressure(N2Idx);
 
             Scalar result = 0;
             result += 
                 H2O::gasEnthalpy(temperature, pWater) *
-                phaseState.massFrac(gPhaseIdx, H2OIdx);
+                phaseCompo.massFrac(gPhaseIdx, H2OIdx);
             result += 
                 N2::gasEnthalpy(temperature, pN2) *
-                phaseState.massFrac(gPhaseIdx, N2Idx);
+                phaseCompo.massFrac(gPhaseIdx, N2Idx);
             
             return result;
         }
     }
 
     /*!
-     * \brief Given all mole fractions in a phase, return the phase's
-     *        internal energy [J/kg].
+     * \brief Given a phase's composition, temperature and pressure,
+     *        return its specific internal energy [J/kg].
      */
-    template <class PhaseState>
+    template <class PhaseCompo>
     static Scalar internalEnergy(int phaseIdx,
-                                 const PhaseState &phaseState)
+                                 Scalar temperature,
+                                 Scalar pressure,
+                                 const PhaseCompo &phaseCompo)
     { 
-        Scalar temperature = phaseState.temperature();
         if (phaseIdx == lPhaseIdx)  {
             Scalar pVap = 1.1*H2O::vaporPressure(temperature);
-            Scalar pWater = phaseState.phasePressure(lPhaseIdx);
+            Scalar pWater = pressure;
             if (pWater < pVap)
                 pWater = pVap;
 
-            Scalar cN2 = phaseState.concentration(lPhaseIdx, N2Idx);
+            Scalar cN2 = phaseCompo.concentration(lPhaseIdx, N2Idx);
             Scalar pN2 = IdealGas::pressure(temperature, cN2);
 
             // TODO: correct way to deal with the solutes??? 
             return 
-                phaseState.massFrac(lPhaseIdx, H2OIdx)*
+                phaseCompo.massFrac(lPhaseIdx, H2OIdx)*
                 H2O::liquidInternalEnergy(temperature, pWater)
                 +
-                phaseState.massFrac(lPhaseIdx, N2Idx)*
+                phaseCompo.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasInternalEnergy(temperature, pN2);
         }
         else {
             Scalar pVap = 0.9*H2O::vaporPressure(temperature);
-            Scalar pWater = phaseState.partialPressure(H2OIdx);
+            Scalar pWater = phaseCompo.partialPressure(H2OIdx);
             if (pWater > pVap)
                 pWater = pVap;
 
-            Scalar pN2 = phaseState.partialPressure(N2Idx);
+            Scalar pN2 = phaseCompo.partialPressure(N2Idx);
             
             Scalar result = 0;
             result += 
                 H2O::gasInternalEnergy(temperature, pWater)*
-                phaseState.massFrac(gPhaseIdx, H2OIdx);
+                phaseCompo.massFrac(gPhaseIdx, H2OIdx);
             result += 
                 N2::gasInternalEnergy(temperature, pN2)*
-                phaseState.massFrac(gPhaseIdx, N2Idx);
+                phaseCompo.massFrac(gPhaseIdx, N2Idx);
             
             return result;
         }

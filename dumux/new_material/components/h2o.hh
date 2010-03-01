@@ -248,7 +248,33 @@ public:
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
-        DUNE_THROW(NotImplemented, "H2O::gasPressure");
+        Valgrind::CheckDefined(temperature);
+        Valgrind::CheckDefined(density);
+
+        // We use the newton method for this. For the initial value we
+        // assume steam to be an ideal gas
+        Scalar pressure = IdealGas<Scalar>::pressure(temperature, density/molarMass());
+        Scalar eps = pressure*1e-7;
+        
+        Scalar deltaP = pressure*2;
+        Valgrind::CheckDefined(pressure);
+        Valgrind::CheckDefined(deltaP);
+        for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
+            Scalar f = gasDensity(temperature, pressure) - density;
+            
+            Scalar df_dp;
+            df_dp  = gasDensity(temperature, pressure + eps);
+            df_dp -= gasDensity(temperature, pressure - eps);
+            df_dp /= 2*eps;
+            
+            deltaP = - f/df_dp;
+            
+            pressure += deltaP;
+            Valgrind::CheckDefined(pressure);
+            Valgrind::CheckDefined(deltaP);
+        }
+        
+        return pressure;
     }
 
     /*!
@@ -277,7 +303,8 @@ public:
     }
 
     /*!
-     * \brief The pressure of liquid at a given density and temperature [Pa].
+     * \brief The pressure of liquid water at a given density and
+     *        temperature [Pa].
      *
      * See:
      *
@@ -287,7 +314,27 @@ public:
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
-        DUNE_THROW(NotImplemented, "H2O::liquidPressure");
+        // We use the newton method for this. For the initial value we
+        // assume the pressure to be 10% higher than the vapor
+        // pressure
+        Scalar pressure = 1.1*vaporPressure(temperature);
+        Scalar eps = pressure*1e-7;
+        
+        Scalar deltaP = pressure*2;
+        for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
+            Scalar f = liquidDensity(temperature, pressure) - density;
+            
+            Scalar df_dp;
+            df_dp  = liquidDensity(temperature, pressure + eps);
+            df_dp -= liquidDensity(temperature, pressure - eps);
+            df_dp /= 2*eps;
+            
+            deltaP = - f/df_dp;
+            
+            pressure += deltaP;
+        }
+        
+        return pressure;
     }
 
     /*!
