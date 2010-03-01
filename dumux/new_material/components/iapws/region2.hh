@@ -71,10 +71,24 @@ public:
     { return 540.0 / temperature; }
 
     /*!
+     * \brief Returns the derivative of the reduced temperature to the
+     *        temperature for IAPWS region 2.
+     */
+    static Scalar dtau_dT(Scalar temperature)
+    { return - 540.0 / (temperature*temperature); }
+
+    /*!
      * \brief Returns the reduced pressure for IAPWS region 2.
      */
     static Scalar pi(Scalar pressure)
     { return pressure / 1e6; }
+
+    /*!
+     * \brief Returns the derivative of the reduced pressure to the
+     *        pressure for IAPWS region 2.
+     */
+    static Scalar dpi_dp(Scalar pressure)
+    { return 1.0 / 1e6; }
 
     /*!
      * \brief The gibbs free energy for IAPWS region 2 (i.e. sub-critical
@@ -163,6 +177,66 @@ public:
                 n_r(i) *
                 I_r(i) *
                 std::pow(pi_, I_r(i) - 1) *
+                std::pow(tau_ - 0.5, J_r(i));
+        }
+        
+        return result;
+    }
+
+    /*!
+     * \brief The partial derivative of the gibbs free energy to the
+     *        normalized pressure and to the normalized temperature
+     *        for IAPWS region 2 (i.e. sub-critical steam)
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static Scalar ddgamma_dtaudpi(Scalar temperature, Scalar pressure)
+    {
+        Scalar tau_ = tau(temperature);   /* reduced temperature */
+        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        
+        // ideal gas part
+        Scalar result = 0;
+        
+        // residual part
+        for (int i = 0; i < 43; i++) {
+            result += 
+                n_r(i) *
+                I_r(i) *
+                J_r(i) *
+                std::pow(pi_, I_r(i) - 1) *
+                std::pow(tau_ - 0.5, J_r(i) - 1);
+        }
+        
+        return result;
+    }
+
+    /*!
+     * \brief The second partial derivative of the gibbs free energy
+     *        to the normalized pressure for IAPWS region 2
+     *        (i.e. sub-critical steam)
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static Scalar ddgamma_ddpi(Scalar temperature, Scalar pressure)
+    {
+        Scalar tau_ = tau(temperature);   /* reduced temperature */
+        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        
+        // ideal gas part
+        Scalar result = 1/pi_;
+        
+        // residual part
+        for (int i = 0; i < 43; i++) {
+            result += 
+                n_r(i) *
+                I_r(i) *
+                (I_r(i) - 1) *
+                std::pow(pi_, I_r(i) - 2) *
                 std::pow(tau_ - 0.5, J_r(i));
         }
         

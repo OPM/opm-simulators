@@ -75,10 +75,25 @@ public:
     { return 1386.0 / temperature; }
 
     /*!
+     * \brief Returns the derivative of the reduced temperature to the
+     *        temperature for IAPWS region 1.
+     */
+    static Scalar dtau_dT(Scalar temperature)
+    { return - 1386.0 / (temperature*temperature); }
+
+    /*!
      * \brief Returns the reduced pressure for IAPWS region 1.
      */
     static Scalar pi(Scalar pressure)
     { return pressure / 16.53e6; }
+
+    /*!
+     * \brief Returns the derivative of the reduced pressure to the
+     *        pressure for IAPWS region 1.
+     */
+    static Scalar dpi_dp(Scalar pressure)
+    { return 1.0 / 16.53e6; }
+
 
     /*!
      * \brief The gibbs free energy for IAPWS region 1 (i.e. liquid)
@@ -145,6 +160,60 @@ public:
                 -n(i) *
                 I(i) *
                 std::pow(7.1 - pi_, I(i) - 1) *
+                std::pow(tau_ - 1.222,  J(i));
+        }
+
+        return result;
+    }
+
+    /*!
+     * \brief The partial derivative of the gibbs free energy to the
+     *        normalized pressure and to the normalized temperature
+     *        for IAPWS region 1 (i.e. liquid water)
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static Scalar ddgamma_dtaudpi(Scalar temperature, Scalar pressure)
+    {
+        Scalar tau_ = tau(temperature);   /* reduced temperature */
+        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        
+        Scalar result = 0.0;
+        for (int i = 0; i < 34; i++) {
+            result += 
+                -n(i) *
+                I(i) *
+                J(i) *
+                std::pow(7.1 - pi_, I(i) - 1) *
+                std::pow(tau_ - 1.222,  J(i) - 1);
+        }
+
+        return result;
+    }
+
+    /*!
+     * \brief The second partial derivative of the gibbs free energy
+     *        to the normalized pressure for IAPWS region 1
+     *        (i.e. liquid water)
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static Scalar ddgamma_ddpi(Scalar temperature, Scalar pressure)
+    {
+        Scalar tau_ = tau(temperature);   /* reduced temperature */
+        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        
+        Scalar result = 0.0;
+        for (int i = 0; i < 34; i++) {
+            result += 
+                n(i) *
+                I(i) *
+                (I(i) - 1) *
+                std::pow(7.1 - pi_, I(i) - 2) *
                 std::pow(tau_ - 1.222,  J(i));
         }
 

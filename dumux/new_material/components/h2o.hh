@@ -21,8 +21,8 @@
 #define DUMUX_H2O_HH
 
 #include <dumux/new_material/idealgas.hh>
-#include <dune/common/exceptions.hh>
 #include <dumux/exceptions.hh>
+#include <dumux/auxiliary/valgrind.hh>
 
 #include "component.hh"
 
@@ -33,6 +33,7 @@
 
 #include <cmath>
 #include <iostream>
+
 
 namespace Dune
 {
@@ -132,10 +133,32 @@ public:
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
         
-        return 
-            Region2::tau(temperature) *
-            Region2::dgamma_dtau(temperature, pressure) *
-            R*temperature; 
+        // regularization
+        if (pressure < triplePressure() - 100) {
+            // We assume an ideal gas for low pressures to avoid the
+            // 0/0 for the gas enthalpy at very low pressures. The
+            // enthalpy of an ideal gas does not exhibit any
+            // dependence on pressure, so we can just return the
+            // specific enthalpy at the point of regularization, i.e.
+            // the triple pressure - 100Pa
+            return enthalpyRegion2_(temperature, triplePressure() - 100);
+        }
+        Scalar pv = vaporPressure(temperature);
+        if (pressure > pv) {
+            // the pressure is too high, in this case we use the slope
+            // of the enthalpy at the vapor pressure to regularize
+            Scalar tau = Region2::tau(temperature);
+            Scalar dh_dp = 
+                R*temperature*tau*
+                Region2::ddgamma_dtaudpi(temperature, pv)*
+                Region2::dpi_dp(pressure);
+
+            return
+                enthalpyRegion2_(temperature, pv) + 
+                (pressure - pv)*dh_dp;
+        };
+
+        return enthalpyRegion2_(temperature, pressure);
     }
 
     /*!
@@ -157,10 +180,23 @@ public:
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
-        return
-            Region1::tau(temperature) *
-            Region1::dgamma_dtau(temperature, pressure) *
-            R*temperature; 
+        // regularization
+        Scalar pv = vaporPressure(temperature);
+        if (pressure < pv) {
+            // the pressure is too low, in this case we use the slope
+            // of the enthalpy at the vapor pressure to regularize
+            Scalar tau = Region1::tau(temperature);
+            Scalar dh_dp = 
+                R*temperature*tau*
+                Region1::ddgamma_dtaudpi(temperature, pv)*
+                Region1::dpi_dp(pressure);
+
+            return
+                enthalpyRegion1_(temperature, pv) + 
+                (pressure - pv)*dh_dp;
+        };
+
+        return enthalpyRegion1_(temperature, pressure);
     }
 
     /*!
@@ -182,10 +218,32 @@ public:
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
-        return
-            R * temperature *
-            ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) - 
-              Region1::pi(pressure)*Region1::dgamma_dpi(temperature, pressure));
+
+        // regularization
+        Scalar pv = vaporPressure(temperature);
+        if (pressure < pv) {
+            // the pressure is too low, in this case we use the slope
+            // of the internal energy at the vapor pressure to
+            // regularize
+            
+            // calculate the partial derivative of the internal energy
+            // to the pressure at the vapor pressure.
+            Scalar tau = Region1::tau(temperature);
+            Scalar dgamma_dpi = Region1::dgamma_dpi(temperature, pv);
+            Scalar ddgamma_dtaudpi = Region1::ddgamma_dtaudpi(temperature, pv);
+            Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
+            Scalar pi = Region1::pi(pv);
+            Scalar dpi_dp = Region1::dpi_dp(pv);
+            Scalar du_dp = 
+                R*temperature*
+                (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
+            
+            // use a straight line for extrapolation
+            Scalar uv = internalEnergyRegion1_(temperature, pv);
+            return uv + du_dp*(pressure - pv);
+        };
+
+        return internalEnergyRegion1_(temperature, pressure);
     }
 
     /*!
@@ -206,10 +264,45 @@ public:
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
-        return
-            R * temperature *
-            ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) - 
-              Region2::pi(pressure)*Region2::dgamma_dpi(temperature, pressure));
+        // regularization
+        if (pressure < triplePressure() - 100) {
+            // We assume an ideal gas for low pressures to avoid the
+            // 0/0 for the internal energy of gas at very low
+            // pressures. The enthalpy of an ideal gas does not
+            // exhibit any dependence on pressure, so we can just
+            // return the specific enthalpy at the point of
+            // regularization, i.e.  the triple pressure - 100Pa, and
+            // subtract the work required to change the volume for an
+            // ideal gas.
+            return 
+                enthalpyRegion2_(temperature, triplePressure() - 100) 
+                - 
+                R*temperature; // = p*v   for an ideal gas!
+        }
+        Scalar pv = vaporPressure(temperature);
+        if (pressure > pv) {
+            // the pressure is too high, in this case we use the slope
+            // of the internal energy at the vapor pressure to
+            // regularize
+            
+            // calculate the partial derivative of the internal energy
+            // to the pressure at the vapor pressure.
+            Scalar tau = Region2::tau(temperature);
+            Scalar dgamma_dpi = Region2::dgamma_dpi(temperature, pv);
+            Scalar ddgamma_dtaudpi = Region2::ddgamma_dtaudpi(temperature, pv);
+            Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
+            Scalar pi = Region2::pi(pv);
+            Scalar dpi_dp = Region2::dpi_dp(pv);
+            Scalar du_dp = 
+                R*temperature*
+                (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
+            
+            // use a straight line for extrapolation
+            Scalar uv = internalEnergyRegion2_(temperature, pv);
+            return uv + du_dp*(pressure - pv);
+        };
+
+        return internalEnergyRegion2_(temperature, pressure);
     }
 
     /*!
@@ -230,11 +323,41 @@ public:
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
-        Scalar specificVolume = 
-            Region2::pi(pressure)*
-            Region2::dgamma_dpi(temperature, pressure) *
-            R * temperature / pressure;
-        return 1/specificVolume;
+        // regularization
+        if (pressure < triplePressure() - 100) {
+            // We assume an ideal gas for low pressures to avoid the
+            // 0/0 for the internal energy and enthalpy.
+            Scalar rho0IAPWS = 1.0/volumeRegion2_(temperature, 
+                                                  triplePressure() - 100);
+            Scalar rho0Id = IdealGas<Scalar>::density(molarMass(),
+                                                      temperature,
+                                                      triplePressure() - 100);
+            return 
+                rho0IAPWS/rho0Id * 
+                IdealGas<Scalar>::density(molarMass(),
+                                          temperature,
+                                          pressure);
+        }
+        Scalar pv = vaporPressure(temperature);
+        if (pressure > pv) {
+            // the pressure is too high, in this case we use the slope
+            // of the density energy at the vapor pressure to
+            // regularize
+            
+            // calculate the partial derivative of the specific volume
+            // to the pressure at the vapor pressure.
+            Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
+            Scalar dpi_dp = Region2::dpi_dp(pv);
+            Scalar dv_dp = 
+                R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
+            
+            // use a straight line for extrapolation
+            Scalar v0 = volumeRegion2_(temperature, pressure);
+            
+            return 1.0/(v0 + (pressure - pv)*dv_dp);
+        };
+
+        return 1.0/volumeRegion2_(temperature, pressure);
     }
 
     /*!
@@ -295,11 +418,26 @@ public:
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
         
-        Scalar specificVolume = 
-            Region1::pi(pressure)*
-            Region1::dgamma_dpi(temperature, pressure) *
-            R * temperature / pressure;
-        return 1/specificVolume;
+        // regularization
+        Scalar pv = vaporPressure(temperature);
+        if (pressure < pv) {
+            // the pressure is too low, in this case we use the slope
+            // of the density at the vapor pressure to regularize
+            
+            // calculate the partial derivative of the specific volume
+            // to the pressure at the vapor pressure.
+            Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
+            Scalar dpi_dp = Region1::dpi_dp(pv);
+            Scalar dv_dp = 
+                R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
+            
+            // use a straight line for extrapolation
+            Scalar v0 = volumeRegion1_(temperature, pressure);
+            
+            return 1.0/(v0 + (pressure - pv)*dv_dp);
+        };
+
+        return 1/volumeRegion1_(temperature, pressure);
     }
 
     /*!
@@ -383,7 +521,60 @@ public:
     };
 
 private:
-};
+    // the unregularized specific enthalpy for liquid water
+    static Scalar enthalpyRegion1_(Scalar temperature, Scalar pressure)
+    {
+        return
+            Region1::tau(temperature) *
+            Region1::dgamma_dtau(temperature, pressure) *
+            R*temperature; 
+    };
+
+    // the unregularized specific internal energy for liquid water
+    static Scalar internalEnergyRegion1_(Scalar temperature, Scalar pressure)
+    {
+        return
+            R * temperature *
+            ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) - 
+              Region1::pi(pressure)*Region1::dgamma_dpi(temperature, pressure));
+    }
+
+    // the unregularized specific volume for liquid water
+    static Scalar volumeRegion1_(Scalar temperature, Scalar pressure)
+    {
+        return
+            Region1::pi(pressure)*
+            Region1::dgamma_dpi(temperature, pressure) *
+            R * temperature / pressure;
+    }
+
+    // the unregularized specific enthalpy for steam
+    static Scalar enthalpyRegion2_(Scalar temperature, Scalar pressure)
+    {
+        return
+            Region2::tau(temperature) *
+            Region2::dgamma_dtau(temperature, pressure) *
+            R*temperature; 
+    };
+
+    // the unregularized specific internal energy for steam
+    static Scalar internalEnergyRegion2_(Scalar temperature, Scalar pressure)
+    {
+        return
+            R * temperature *
+            ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) - 
+              Region2::pi(pressure)*Region2::dgamma_dpi(temperature, pressure));
+    }
+
+    // the unregularized specific volume for steam
+    static Scalar volumeRegion2_(Scalar temperature, Scalar pressure)
+    {
+        return
+            Region2::pi(pressure)*
+            Region2::dgamma_dpi(temperature, pressure) *
+            R * temperature / pressure;
+    }
+}; // end class
 
 } // end namepace
 
