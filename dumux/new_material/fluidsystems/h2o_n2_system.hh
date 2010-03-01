@@ -31,6 +31,8 @@
 
 #include <dumux/new_material/binarycoefficients/h2o_n2.hh>
 
+#define USE_SIMPLE_WATER 0
+
 namespace Dune
 {
 
@@ -51,13 +53,17 @@ class H2O_N2_System
 
     typedef Dune::IdealGas<Scalar> IdealGas;
 
+    typedef Dune::SimpleH2O<Scalar>                     SimpleH2O;
     typedef Dune::H2O<Scalar>                           H2O_IAPWS;
     typedef Dune::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
 
 public:
+#if ! USE_SIMPLE_WATER
     typedef H2O_Tabulated                             H2O;
     //typedef H2O_IAPWS                                 H2O;
-    //typedef Dune::SimpleH2O<Scalar>                   H2O;
+#else
+    typedef SimpleH2O                                 H2O;
+#endif
     typedef Dune::N2<Scalar>                          N2;
 
     static const int numComponents = 2;
@@ -71,9 +77,41 @@ public:
     
     static void init()
     {
+#if ! USE_SIMPLE_WATER
         std::cout << "Initializing tables for the H2O fluid properties.\n";
         H2O_Tabulated::init(273.15, 623.15, 100,
                             -10,      20e6, 200);
+#endif
+
+#if 0
+        // this used is to print the quanties of water into a CSV file
+        // which can be inspected by matlab to check the
+        // regularizations, etc.
+        int nT = 300;
+        Scalar minT = 273.15;
+        Scalar maxT = 620.0;
+        int nP = 600;
+        Scalar minP = 0.0;
+        Scalar maxP = 10e6;
+        std::cerr << "'T' 'p' 'u_l' 'u_g' 'h_l' 'h_g' 'u_l,tab' 'u_g,tab' 'h_l,tab' 'h_g,tab'\n";
+        for (int iT = 0; iT < nT; ++ iT) {
+            Scalar T = Scalar(iT)/(nT - 1)*(maxT - minT) + minT;
+            for (int iP = 0; iP < nP; ++ iP) {
+                Scalar p = Scalar(iP)/(nP - 1)*(maxP - minP) + minP;
+                std::cerr << T << " "
+                          << p << " "
+                          << H2O_IAPWS::liquidInternalEnergy(T, p) << " "
+                          << H2O_IAPWS::gasInternalEnergy(T, p) << " "
+                          << H2O_IAPWS::liquidEnthalpy(T, p) << " "
+                          << H2O_IAPWS::gasEnthalpy(T, p) << " "
+                          << H2O_Tabulated::liquidInternalEnergy(T, p) << " "
+                          << H2O_Tabulated::gasInternalEnergy(T, p) << " "
+                          << H2O_Tabulated::liquidEnthalpy(T, p) << " "
+                          << H2O_Tabulated::gasEnthalpy(T, p) << "\n";
+            }
+            std::cerr << "\n";
+        };
+#endif
     }
 
     /*!
@@ -114,7 +152,7 @@ public:
     static void computePartialPressures(Scalar temperature,
                                         Scalar pg,
                                         PhaseState &phaseState)
-    {       
+    {
         Scalar X1 = phaseState.massFrac(gPhaseIdx, H2OIdx);
 
         // We use the newton method for this. For the initial value we
@@ -166,14 +204,9 @@ public:
         switch (phaseIdx) {
         case lPhaseIdx: 
         {
-            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
-            if (pressure < pVap)
-                pressure = pVap;
-
             // See: Ochs 2008
             // \todo: proper citation
-            Scalar rhoWater = H2O::liquidDensity(temperature, 
-                                                 pressure);
+            Scalar rhoWater = H2O::liquidDensity(temperature, pressure);
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
                 phaseState.moleFrac(lPhaseIdx, H2OIdx)*rhoWater
@@ -207,9 +240,6 @@ public:
                                  const PhaseCompo &phaseCompo)
     { 
         if (phaseIdx == lPhaseIdx) {
-            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
-            if (pressure < pVap)
-                pressure = pVap;
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
             return H2O::liquidViscosity(phaseCompo.temperature(), 
@@ -397,28 +427,19 @@ public:
                            const PhaseCompo &phaseCompo)
     { 
         if (phaseIdx == lPhaseIdx)  {
-            Scalar pVap = 1.1*H2O::vaporPressure(temperature);
-            Scalar pWater = pressure;
-            if (pWater < pVap)
-                pWater = pVap;
-
             Scalar cN2 = phaseCompo.concentration(lPhaseIdx, N2Idx);
-            Scalar pN2 = IdealGas::pressure(temperature, cN2);
+            Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
 
             // TODO: correct way to deal with the solutes??? 
             return 
                 phaseCompo.massFrac(lPhaseIdx, H2OIdx)*
-                H2O::liquidEnthalpy(temperature, pWater)
+                H2O::liquidEnthalpy(temperature, pressure)
                 +
                 phaseCompo.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasEnthalpy(temperature, pN2);
         }
         else {
-            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
             Scalar pWater = phaseCompo.partialPressure(H2OIdx);
-            if (pWater > pVap)
-                pWater = pVap;
-
             Scalar pN2 = phaseCompo.partialPressure(N2Idx);
 
             Scalar result = 0;
@@ -444,28 +465,19 @@ public:
                                  const PhaseCompo &phaseCompo)
     { 
         if (phaseIdx == lPhaseIdx)  {
-            Scalar pVap = 1.1*H2O::vaporPressure(temperature);
-            Scalar pWater = pressure;
-            if (pWater < pVap)
-                pWater = pVap;
-
             Scalar cN2 = phaseCompo.concentration(lPhaseIdx, N2Idx);
-            Scalar pN2 = IdealGas::pressure(temperature, cN2);
+            Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
 
             // TODO: correct way to deal with the solutes??? 
             return 
                 phaseCompo.massFrac(lPhaseIdx, H2OIdx)*
-                H2O::liquidInternalEnergy(temperature, pWater)
+                H2O::liquidInternalEnergy(temperature, pressure)
                 +
                 phaseCompo.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasInternalEnergy(temperature, pN2);
         }
         else {
-            Scalar pVap = 0.9*H2O::vaporPressure(temperature);
             Scalar pWater = phaseCompo.partialPressure(H2OIdx);
-            if (pWater > pVap)
-                pWater = pVap;
-
             Scalar pN2 = phaseCompo.partialPressure(N2Idx);
             
             Scalar result = 0;
