@@ -141,24 +141,24 @@ public:
     /*!
      * \brief Given the gas phase's composition, temperature and
      *        pressure, compute the partial presures of all components
-     *        in [Pa] and assign it to the PhaseState.
+     *        in [Pa] and assign it to the FluidState.
      *
      * This is required for models which cannot calculate the the
      * partial pressures of the components in the gas phase from the
-     * degasPressure(). To use this method, the PhaseState must have a
+     * degasPressure(). To use this method, the FluidState must have a
      * setPartialPressure(componentIndex, pressure) method.
      */
-    template <class PhaseState>
+    template <class FluidState>
     static void computePartialPressures(Scalar temperature,
                                         Scalar pg,
-                                        PhaseState &phaseState)
+                                        FluidState &fluidState)
     {
-        Scalar X1 = phaseState.massFrac(gPhaseIdx, H2OIdx);
+        Scalar X1 = fluidState.massFrac(gPhaseIdx, H2OIdx);
 
         // We use the newton method for this. For the initial value we
         // assume all components to be an ideal gas
         Scalar pH2O = 
-            phaseState.moleFrac(gPhaseIdx, H2OIdx) * pg;
+            fluidState.moleFrac(gPhaseIdx, H2OIdx) * pg;
         Scalar eps = pg*1e-9;
 
         Scalar deltaP = pH2O;
@@ -186,8 +186,8 @@ public:
             Valgrind::CheckDefined(deltaP);
         }
         
-        phaseState.setPartialPressure(H2OIdx, pH2O);
-        phaseState.setPartialPressure(N2Idx, pg - pH2O);
+        fluidState.setPartialPressure(H2OIdx, pH2O);
+        fluidState.setPartialPressure(N2Idx, pg - pH2O);
     };
    
     /*!
@@ -195,11 +195,11 @@ public:
      *        the partial pressures of all components, return its
      *        density [kg/m^3].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
                                int temperature,
                                int pressure,
-                               const PhaseState &phaseState)
+                               const FluidState &fluidState)
     { 
         switch (phaseIdx) {
         case lPhaseIdx: 
@@ -209,14 +209,14 @@ public:
             Scalar rhoWater = H2O::liquidDensity(temperature, pressure);
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
-                phaseState.moleFrac(lPhaseIdx, H2OIdx)*rhoWater
+                fluidState.moleFrac(lPhaseIdx, H2OIdx)*rhoWater
                 + 
-                phaseState.moleFrac(lPhaseIdx, N2Idx)*cWater*N2::molarMass();
+                fluidState.moleFrac(lPhaseIdx, N2Idx)*cWater*N2::molarMass();
         }
         case gPhaseIdx:
         {
-            Scalar pH2O = phaseState.partialPressure(H2OIdx);
-            Scalar pN2 = phaseState.partialPressure(N2Idx);
+            Scalar pH2O = fluidState.partialPressure(H2OIdx);
+            Scalar pN2 = fluidState.partialPressure(N2Idx);
 
             // using the two partial pressures we can calculate the
             // density of the phase. This assumes that Dalton's law is

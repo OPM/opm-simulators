@@ -55,7 +55,12 @@ public:
      * This assumes that the salt is pure NaCl
      */
     static Scalar molarMass()
-    { return H2O::molarMass()*(1-salinity) + salinity*58; } 
+    { 
+        const Scalar M1 = H2O::molarMass();
+        const Scalar M2 = 58e-3; // molar mass of NaCl [kg/mol]
+        const Scalar X2 = salinity; // mass fraction of salt in brine
+        return M1*M2/(M2 + X2*(M1 - M2));
+    };
 
     /*!
      * \brief Returns the critical temperature [K] of brine
