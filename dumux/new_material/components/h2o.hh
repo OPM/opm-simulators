@@ -186,17 +186,79 @@ public:
             // the pressure is too low, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
             Scalar tau = Region1::tau(temperature);
-            Scalar dh_dp = 
+            Scalar dh_dp =
                 R*temperature*tau*
                 Region1::ddgamma_dtaudpi(temperature, pv)*
                 Region1::dpi_dp(pressure);
 
             return
-                enthalpyRegion1_(temperature, pv) + 
+                enthalpyRegion1_(temperature, pv) +
                 (pressure - pv)*dh_dp;
         };
 
         return enthalpyRegion1_(temperature, pressure);
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity of water steam [J/kg].
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static const Scalar gasHeatCap_p(Scalar temperature,
+                                    Scalar pressure)
+    {
+        if (!Region2::isValid(temperature, pressure))
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Heat capacity of steam is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
+
+        // regularization
+        if (pressure < triplePressure() - 100) {
+            return heatCap_p_Region2_(temperature, triplePressure() - 100);
+        }
+        Scalar pv = vaporPressure(temperature);
+        if (pressure > pv) {
+            // the pressure is too high, in this case we use the heat cap at the vapor pressure to regularize
+            return
+                heatCap_p_Region2_(temperature, pv);
+        };
+        return heatCap_p_Region2_(temperature, pressure);
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity of liquid water [J/kg].
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static const Scalar liquidHeatCap_p(Scalar temperature,
+                                       Scalar pressure)
+    {
+        if (!Region1::isValid(temperature, pressure))
+        {
+            DUNE_THROW(NumericalProblem,
+                       "heat Capacity of water is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
+
+        // regularization
+        Scalar pv = vaporPressure(temperature);
+        if (pressure < pv) {
+            // the pressure is too low, in this case we use the heat cap at the vapor pressure to regularize
+            return
+                heatCap_p_Region1_(temperature, pv);
+        };
+
+        return heatCap_p_Region1_(temperature, pressure);
     }
 
     /*!
@@ -303,6 +365,68 @@ public:
         };
 
         return internalEnergyRegion2_(temperature, pressure);
+    }
+
+    /*!
+     * \brief Specific isochoric heat capacity of liquid water [J/kg].
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static const Scalar liquidHeatCap_v(Scalar temperature,
+                                             Scalar pressure)
+    {
+        if (!Region1::isValid(temperature, pressure))
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Heat capacity of water is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
+
+
+        // regularization
+        Scalar pv = vaporPressure(temperature);
+        if (pressure < pv) {
+            // the pressure is too low, in this case we use the heat cap at the vapor pressure to regularize
+
+            return heatCap_v_Region1_(temperature, pv);
+        }
+
+        return heatCap_v_Region1_(temperature, pressure);
+    }
+
+    /*!
+     * \brief Specific isochoric heat capacity of steam and water vapor [J/kg].
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+    */
+    static Scalar gasHeatCap_v(Scalar temperature, Scalar pressure)
+    {
+        if (!Region2::isValid(temperature, pressure))
+        {
+            DUNE_THROW(NumericalProblem,
+                       "Heat capacity of steam is only implemented for temperatures below 623.15K and "
+                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+        }
+
+        // regularization
+        if (pressure < triplePressure() - 100) {
+            return
+                heatCap_v_Region2_(temperature, triplePressure() - 100);
+        }
+        Scalar pv = vaporPressure(temperature);
+        if (pressure > pv) {
+            return heatCap_v_Region2_(temperature, pv);
+        };
+
+        return heatCap_v_Region2_(temperature, pressure);
     }
 
     /*!
@@ -530,6 +654,28 @@ private:
             R*temperature; 
     };
 
+    // the unregularized specific isobaric heat capacity
+    static Scalar heatCap_p_Region1_(Scalar temperature, Scalar pressure)
+    {
+        return
+            - pow(Region1::tau(temperature), 2 ) *
+            Region1::ddgamma_ddtau(temperature, pressure) *
+            R;
+    };
+
+    // the unregularized specific isochoric heat capacity
+    static Scalar heatCap_v_Region1_(Scalar temperature, Scalar pressure)
+    {
+        double tau = Region1::tau(temperature);
+        double num = Region1::dgamma_dpi(temperature, pressure) - tau * Region1::ddgamma_dtaudpi(temperature, pressure);
+        double diff = pow(num, 2) / Region1::ddgamma_ddpi(temperature, pressure);
+
+        return
+            - pow(tau, 2 ) *
+            Region1::ddgamma_ddtau(temperature, pressure) * R +
+            diff;
+    };
+
     // the unregularized specific internal energy for liquid water
     static Scalar internalEnergyRegion1_(Scalar temperature, Scalar pressure)
     {
@@ -537,7 +683,7 @@ private:
             R * temperature *
             ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) - 
               Region1::pi(pressure)*Region1::dgamma_dpi(temperature, pressure));
-    }
+    };
 
     // the unregularized specific volume for liquid water
     static Scalar volumeRegion1_(Scalar temperature, Scalar pressure)
@@ -546,7 +692,7 @@ private:
             Region1::pi(pressure)*
             Region1::dgamma_dpi(temperature, pressure) *
             R * temperature / pressure;
-    }
+    };
 
     // the unregularized specific enthalpy for steam
     static Scalar enthalpyRegion2_(Scalar temperature, Scalar pressure)
@@ -564,7 +710,29 @@ private:
             R * temperature *
             ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) - 
               Region2::pi(pressure)*Region2::dgamma_dpi(temperature, pressure));
-    }
+    };
+
+    // the unregularized specific isobaric heat capacity
+    static Scalar heatCap_p_Region2_(Scalar temperature, Scalar pressure)
+    {
+        return
+            - pow(Region2::tau(temperature), 2 ) *
+            Region2::ddgamma_ddtau(temperature, pressure) *
+            R;
+    };
+
+    // the unregularized specific isochoric heat capacity
+    static Scalar heatCap_v_Region2_(Scalar temperature, Scalar pressure)
+    {
+        double tau = Region2::tau(temperature);
+        double pi = Region2::pi(pressure);
+        double num = 1 + pi * Region2::dgamma_dpi(temperature, pressure) + tau * pi * Region2::ddgamma_dtaudpi(temperature, pressure);
+        double diff = num * num / (1 - pi * pi * Region2::ddgamma_ddpi(temperature, pressure));
+        return
+            - pow(tau, 2 ) *
+            Region2::ddgamma_ddtau(temperature, pressure) * R
+            - diff;
+    };
 
     // the unregularized specific volume for steam
     static Scalar volumeRegion2_(Scalar temperature, Scalar pressure)
@@ -573,7 +741,7 @@ private:
             Region2::pi(pressure)*
             Region2::dgamma_dpi(temperature, pressure) *
             R * temperature / pressure;
-    }
+    };
 }; // end class
 
 } // end namepace
