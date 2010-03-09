@@ -31,7 +31,7 @@
 
 #include <dumux/new_material/binarycoefficients/h2o_n2.hh>
 
-#define USE_SIMPLE_WATER 0
+#define USE_SIMPLE_WATER 1
 
 namespace Dune
 {
@@ -71,6 +71,9 @@ public:
 
     static const int lPhaseIdx = 0; // index of the liquid phase 
     static const int gPhaseIdx = 1; // index of the gas phase 
+
+    static const int wPhaseIdx = lPhaseIdx; // index of the wetting phase 
+    static const int nPhaseIdx = gPhaseIdx; // index of the non-wetting phase 
 
     static const int H2OIdx = 0;
     static const int N2Idx = 1;
@@ -197,8 +200,8 @@ public:
      */
     template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
-                               int temperature,
-                               int pressure,
+                               Scalar temperature,
+                               Scalar pressure,
                                const FluidState &fluidState)
     { 
         switch (phaseIdx) {
@@ -209,7 +212,7 @@ public:
             Scalar rhoWater = H2O::liquidDensity(temperature, pressure);
             Scalar cWater = rhoWater/H2O::molarMass();
             return 
-                fluidState.moleFrac(lPhaseIdx, H2OIdx)*rhoWater
+                fluidState.massFrac(lPhaseIdx, H2OIdx)*rhoWater
                 + 
                 fluidState.moleFrac(lPhaseIdx, N2Idx)*cWater*N2::molarMass();
         }
@@ -222,8 +225,9 @@ public:
             // density of the phase. This assumes that Dalton's law is
             // valid
             return 
-                H2O::gasDensity(temperature, pH2O) +
-                N2::gasDensity(temperature, pN2);
+                //H2O::gasDensity(temperature, pH2O) +
+                //N2::gasDensity(temperature, pN2);
+                N2::gasDensity(temperature, pressure);
         };
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
@@ -242,10 +246,12 @@ public:
         if (phaseIdx == lPhaseIdx) {
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
-            return H2O::liquidViscosity(phaseCompo.temperature(), 
+            return H2O::liquidViscosity(temperature, 
                                         pressure);
         }
         else {
+            return N2::gasViscosity(temperature, 
+                                    pressure);
             /* Wilke method. See:
              *
              * S.O.Ochs: "Development of a multiphase multicomponent

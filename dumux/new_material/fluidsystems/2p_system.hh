@@ -79,6 +79,26 @@ public:
         };
         DUNE_THROW(InvalidStateException, "Invalid component index " << phaseIdx);
     }
+
+    /*!
+     * \brief Return the density of a component for a phase [kg/m^3].
+     */
+    static Scalar componentDensity(int phaseIdx,
+                                   int compIdx,
+                                   Scalar temperature, 
+                                   Scalar pressure)
+    { 
+        if (phaseIdx != compIdx)
+            return 0;
+        switch (phaseIdx) {
+        case wPhaseIdx:
+            return WettingPhase::density(temperature, pressure);
+        case nPhaseIdx:
+            return NonwettingPhase::density(temperature, pressure);
+        }
+        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+    }
+
     
     /*!
      * \brief Given all mole fractions in a phase, return the phase
@@ -86,17 +106,15 @@ public:
      */
     template <class PhaseState>
     static Scalar phaseDensity(int phaseIdx,
+                               Scalar temperature, 
+                               Scalar pressure, 
                                const PhaseState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:
-        {
-            return WettingPhase::density(phaseState.temperature(), phaseState.phasePressure(phaseIdx));
-        }
+            return WettingPhase::density(temperature, pressure);
         case nPhaseIdx:
-        {
-            return NonwettingPhase::density( phaseState.temperature(), phaseState.phasePressure(phaseIdx));
-        };
+            return NonwettingPhase::density(temperature, pressure);
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
     }
@@ -106,17 +124,15 @@ public:
      */
     template <class PhaseState>
     static Scalar phaseViscosity(int phaseIdx,
+                                 Scalar temperature, 
+                                 Scalar pressure, 
                                  const PhaseState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:
-        {
-            return WettingPhase::viscosity(phaseState.temperature(), phaseState.phasePressure(phaseIdx));
-        }
+            return WettingPhase::viscosity(temperature, pressure);
         case nPhaseIdx:
-        {
-            return NonwettingPhase::viscosity(phaseState.temperature(), phaseState.phasePressure(phaseIdx));
-        };
+            return NonwettingPhase::viscosity(temperature, pressure);
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
     } 
@@ -127,17 +143,34 @@ public:
      */
     template <class PhaseState>
     static Scalar enthalpy(int phaseIdx,
+                           Scalar temperature, 
+                           Scalar pressure, 
                            const PhaseState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:
-        {
-            return WettingPhase::enthalpy(phaseState.temperature(), phaseState.phasePressure(phaseIdx));
-        }
+            return WettingPhase::enthalpy(temperature, pressure);
         case nPhaseIdx:
-        {
-            return NonwettingPhase::enthalpy(phaseState.temperature(), phaseState.phasePressure(phaseIdx));
-        };
+            return NonwettingPhase::enthalpy(temperature, pressure);
+        }
+        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+    }
+
+    /*!
+     * \brief Given all mole fractions in a phase, return the specific
+     *        internal energy of the phase [J/kg].
+     */
+    template <class PhaseState>
+    static Scalar internalEnergy(int phaseIdx,
+                                 Scalar temperature, 
+                                 Scalar pressure, 
+                                 const PhaseState &phaseState)
+    { 
+        switch (phaseIdx) {
+        case wPhaseIdx:
+            return WettingPhase::internalEnergy(temperature, pressure);
+        case nPhaseIdx:
+            return NonwettingPhase::internalEnergy(temperature, pressure);
         }
         DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
     }
@@ -163,25 +196,25 @@ public:
      * \brief Returns the critical temperature of the component
      */
     static Scalar criticalTemperature()
-    {  DUNE_THROW(NotImplemented, "Component::criticalTemperature()"); }
+    {  return Component::criticalTemperature(); }
 
     /*!
      * \brief Returns the critical pressure of the component
      */
     static Scalar criticalPressure()
-    {  DUNE_THROW(NotImplemented, "Component::criticalPressure()"); }
+    {  return Component::criticalPressure(); }
 
     /*!
      * \brief Returns the temperature at the component's triple point.
      */
     static Scalar tripleTemperature()
-    {  DUNE_THROW(NotImplemented, "Component::tripleTemperature()"); }
+    {  return Component::tripleTemperature(); }
 
     /*!
      * \brief Returns the pressure at the component's triple point.
      */
     static Scalar triplePressure()
-    {  DUNE_THROW(NotImplemented, "Component::triplePressure()"); }
+    { return Component::triplePressure(); }
 
     /*!
      * \brief The vapor pressure in [N/m^2] of the component at a given
@@ -197,10 +230,22 @@ public:
     {  return Component::gasDensity(temperature, pressure); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure the pure component in gas.
+     * \brief The pressure [Pa] of the component at a given density and temperature.
+     */
+    static Scalar pressure(Scalar temperature, Scalar density)
+    {  return Component::gasPressure(temperature, density); }
+
+    /*!
+     * \brief Specific enthalpy [J/kg] the pure component in gas.
      */
     static const Scalar enthalpy(Scalar temperature, Scalar pressure)
     { return Component::gasEnthalpy(temperature, pressure); }
+
+    /*!
+     * \brief Specific internal energy [J/kg] the pure component in gas.
+     */
+    static const Scalar internalEnergy(Scalar temperature, Scalar pressure)
+    { return Component::gasInternalEnergy(temperature, pressure); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of the pure component at a given pressure and temperature.
@@ -228,25 +273,25 @@ public:
      * \brief Returns the critical temperature of the component
      */
     static Scalar criticalTemperature()
-    {  DUNE_THROW(NotImplemented, "Component::criticalTemperature()"); }
+    {  return Component::criticalTemperature(); }
 
     /*!
      * \brief Returns the critical pressure of the component
      */
     static Scalar criticalPressure()
-    {  DUNE_THROW(NotImplemented, "Component::criticalPressure()"); }
+    {  return Component::criticalPressure(); }
 
     /*!
      * \brief Returns the temperature at the component's triple point.
      */
     static Scalar tripleTemperature()
-    {  DUNE_THROW(NotImplemented, "Component::tripleTemperature()"); }
+    {  return Component::tripleTemperature(); }
 
     /*!
      * \brief Returns the pressure at the component's triple point.
      */
     static Scalar triplePressure()
-    {  DUNE_THROW(NotImplemented, "Component::triplePressure()"); }
+    { return Component::triplePressure(); }
 
     /*!
      * \brief The vapor pressure in [N/m^2] of the component at a given
@@ -262,10 +307,22 @@ public:
     {  return Component::liquidDensity(temperature, pressure); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure the pure component in liquid.
+     * \brief The pressure [Pa] of the component at a given density and temperature.
+     */
+    static Scalar pressure(Scalar temperature, Scalar density)
+    {  return Component::liquidPressure(temperature, density); }
+
+    /*!
+     * \brief Specific enthalpy [J/kg] the pure component in liquid.
      */
     static const Scalar enthalpy(Scalar temperature, Scalar pressure)
     {  return Component::liquidEnthalpy(temperature, pressure); }
+
+    /*!
+     * \brief Specific internal energy [J/kg] the pure component in gas.
+     */
+    static const Scalar internalEnergy(Scalar temperature, Scalar pressure)
+    { return Component::liquidInternalEnergy(temperature, pressure); }
 
     /*!
      * \brief The dynamic liquid viscosity [N/m^3*s] of the pure component.

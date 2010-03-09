@@ -409,7 +409,6 @@ private:
     {
         Scalar alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            // std::cerr << __LINE__ << " T: " << T << "\n";
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
         
