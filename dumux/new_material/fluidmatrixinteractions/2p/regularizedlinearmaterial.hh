@@ -16,10 +16,18 @@
  * \file linearmaterial.hh Implements a linear saturation-capillary
  *                    pressure relation
  */
-#ifndef LINEAR_MATERIAL_HH
-#define LINEAR_MATERIAL_HH
+#ifndef REGULARIZED_LINEAR_MATERIAL_HH
+#define REGULARIZED_LINEAR_MATERIAL_HH
 
+#include "linearmaterial.hh"
 #include "linearmaterialparams.hh"
+
+#include <algorithm>
+
+#include <math.h>
+#include <assert.h>
+
+#include <dumux/auxiliary/spline.hh>
 
 namespace Dune
 {
@@ -35,9 +43,10 @@ namespace Dune
  * \sa LinearMaterialParams
  */
 template <class ParamsT>
-class LinearMaterial
+class RegularizedLinearMaterial
 {
 public:
+    typedef Dune::LinearMaterial<ParamsT> LinearMaterial;
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
@@ -53,7 +62,7 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
-        return (1 - Swe)*(params.maxPC() - params.entryPC()) + params.entryPC();
+        return LinearMaterial::pC(params, Swe);
     }
 
     /*!
@@ -69,7 +78,7 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        return 1 - (pC - params.entryPC())/(params.maxPC() - params.entryPC());
+        return LinearMaterial::Sw(params, pC);
     }
 
     /*!
@@ -84,7 +93,7 @@ public:
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
-        return - (params.maxPC() - params.entryPC());
+        return LinearMaterial::dpC_dSw(params, Swe);
     }
 
     /*!
@@ -93,7 +102,7 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        return - 1/(params.maxPC() - params.entryPC());
+        return LinearMaterial::dSw_dpC(params, pC);
     }
 
     /*!
@@ -103,7 +112,7 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
-        return Swe;
+        return relperm_(params, Swe);
     };
 
     /*!
@@ -114,7 +123,41 @@ public:
     static Scalar krn(const Params &params, Scalar Swe)
     {
         Scalar Sne = 1 - Swe;
-        return Sne;
+        return relperm_(params, Sne);
+    }
+    
+private:
+    static Scalar relperm_(const Params &params, Scalar S)
+    {
+        const Scalar lowS = params.krLowS();
+        const Scalar highS = params.krHighS();
+        
+        
+        const Scalar m = (1 - ((1 - highS) + lowS)/2 ) / (1 - (1 - highS) - lowS);
+        
+        // check whether the saturation is unpyhsical
+        if (S >= 1.0)
+            return 1.0;
+        else if (S <= 0.0)
+            return 0;
+        // check wether the permeability needs to be regularized
+        else if (S < lowS) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(0,    lowS,
+                      0,    lowS/2,
+                      0,    m);
+            return sp.eval(S);
+        }
+        else if (S > highS) {
+            typedef Dune::Spline<Scalar> Spline;
+            Spline sp(highS,   1,
+                      1 - (1 - highS)/2, 1,
+                      m,          0);
+            return sp.eval(S);
+        }
+        
+        // straight line for S \in [lowS, highS]
+        return lowS/2 + m*(S - lowS);
     }
 };
 }
