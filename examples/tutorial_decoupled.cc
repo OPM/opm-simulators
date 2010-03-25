@@ -52,31 +52,31 @@ int main(int argc, char** argv)
 
 
         // define fluid and solid properties and constitutive relationships
-        Dune::Water wettingfluid; /*@\label{tutorial-decoupled:water}@*/
-        Dune::LowViscosityOil nonwettingfluid; /*@\label{tutorial-decoupled:oil}@*/
-        Dune::TutorialSoil<Grid, Scalar> soil; /*@\label{tutorial-decoupled:soil}@*/
-        Dune::TwoPhaseRelations<Grid, Scalar> materialLaw(soil, wettingfluid, nonwettingfluid);/*@\label{tutorial-decoupled:twophaserelations}@*/
+        Dumux::Water wettingfluid; /*@\label{tutorial-decoupled:water}@*/
+        Dumux::LowViscosityOil nonwettingfluid; /*@\label{tutorial-decoupled:oil}@*/
+        Dumux::TutorialSoil<Grid, Scalar> soil; /*@\label{tutorial-decoupled:soil}@*/
+        Dumux::TwoPhaseRelations<Grid, Scalar> materialLaw(soil, wettingfluid, nonwettingfluid);/*@\label{tutorial-decoupled:twophaserelations}@*/
 
         // create object containing the variables
-        typedef Dune::VariableClass<GridView, Scalar> VariableClass;
+        typedef Dumux::VariableClass<GridView, Scalar> VariableClass;
         VariableClass variables(gridView);
 
         //choose kind of two-phase model. Default: pw, Sw, vtotal
-        struct Dune::DefineModel modelDef;
+        struct Dumux::DefineModel modelDef;
 //        modelDef.pressureType = modelDef.pressureW;
 //        modelDef.saturationType = modelDef.saturationW;
 //        modelDef.velocityType = modelDef.velocityTotal;
 
         // create object including the problem definition
-        typedef Dune::TutorialProblemDecoupled<GridView, Scalar, VariableClass> Problem;
+        typedef Dumux::TutorialProblemDecoupled<GridView, Scalar, VariableClass> Problem;
         Problem problem(variables, wettingfluid, nonwettingfluid, soil, materialLaw,L, H); /*@\label{tutorial-decoupled:problem}@*/
 
         // create object including the discretisation of the pressure equation
-        typedef Dune::FVVelocity2P<GridView, Scalar, VariableClass, Problem> Diffusion;
+        typedef Dumux::FVVelocity2P<GridView, Scalar, VariableClass, Problem> Diffusion;
         Diffusion diffusion(gridView, problem, modelDef); /*@\label{tutorial-decoupled:diffusion}@*/
 
         // create object including the space discretisation of the saturation equation
-        typedef Dune::FVSaturation2P<GridView, Scalar, VariableClass, Problem> Transport;
+        typedef Dumux::FVSaturation2P<GridView, Scalar, VariableClass, Problem> Transport;
         Transport transport(gridView, problem, modelDef); /*@\label{tutorial-decoupled:transport}@*/
 
         // some parameters used in the IMPES-object
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
         double cFLFactor = 0.9; // security factor for the Courant-Friedrichs-Lewy-Criterion
 
         // create TimeLoop-object
-        Dune::TimeLoop<GridView, IMPES> timeloop(gridView, tStart, tEnd, fileName, modulo, cFLFactor); /*@\label{tutorial-decoupled:timeloop}@*/
+        Dumux::TimeLoop<GridView, IMPES> timeloop(gridView, tStart, tEnd, fileName, modulo, cFLFactor); /*@\label{tutorial-decoupled:timeloop}@*/
 
         Dune::Timer timer;
         timer.reset();

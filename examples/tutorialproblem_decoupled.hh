@@ -18,7 +18,7 @@
 
 #include "dumux/fractionalflow/fractionalflowproblem.hh"
 
-namespace Dune
+namespace Dumux
 {
 
 /** \todo Please doc me! */
@@ -38,7 +38,7 @@ template<class GridView, class Scalar, class VariableClass> class TutorialProble
 public:
     TutorialProblemDecoupled(VariableClass& variables, Fluid& wettingphase, Fluid& nonwettingphase, Matrix2p<Grid, Scalar>& soil,
                              TwoPhaseRelations<Grid, Scalar>& materialLaw = *(new TwoPhaseRelations<Grid,Scalar>),
-                             const FieldVector<Scalar,dim> Left = 0, const FieldVector<Scalar,dim> Right = 0)
+                             const Dune::FieldVector<Scalar,dim> Left = 0, const Dune::FieldVector<Scalar,dim> Right = 0)
         : FractionalFlowProblem<GridView, Scalar, VariableClass>(variables, wettingphase, nonwettingphase, soil, materialLaw),
           Left_(Left[0]), Right_(Right[0]), eps_(1e-8)
     {}
@@ -72,10 +72,10 @@ public:
     {
         if (globalPos[0]> (Right_ - eps_) || globalPos[0] < eps_)
         {
-            return Dune::BoundaryConditions::dirichlet;
+            return Dumux::BoundaryConditions::dirichlet;
         }
         // all other boundaries
-        return Dune::BoundaryConditions::neumann;
+        return Dumux::BoundaryConditions::neumann;
     }
 
     // function returning the Dirichlet boundary condition for the solution
@@ -115,7 +115,7 @@ public:
     // function returning the initial saturation
     // depending on the position within the domain
     Scalar initSat (const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:initsat}@*/
-                    const FieldVector<Scalar,dim>& xi) const
+                    const Dune::FieldVector<Scalar,dim>& xi) const
     {
         return 0.0;
     }

@@ -14,8 +14,8 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
-#ifndef DUNE_TUTORIALPROBLEM_COUPLED_HH
-#define DUNE_TUTORIALPROBLEM_COUPLED_HH
+#ifndef DUMUX_TUTORIALPROBLEM_COUPLED_HH
+#define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
 // fluid properties
 #include <dumux/material/fluids/water.hh>
@@ -31,7 +31,7 @@
 // the soil to be used
 #include "tutorialsoil_coupled.hh"
 
-namespace Dune
+namespace Dumux
 {
 
 // forward declaration of the problem class
@@ -46,7 +46,7 @@ NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP)); /*@\label{tutorial
 // Set the "Problem" property
 SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
 {
-    typedef Dune::TutorialProblemCoupled<TTAG(TutorialProblemCoupled)> type;
+    typedef Dumux::TutorialProblemCoupled<TTAG(TutorialProblemCoupled)> type;
 };
 
 // Set the grid
@@ -70,8 +70,8 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
 };
 
 // Set the wetting and non-wetting phases
-SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dune::Water); /*@\label{tutorial-coupled:set-wetting}@*/
-SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dune::LowViscosityOil);/*@\label{tutorial-coupled:set-nonwetting}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dumux::Water); /*@\label{tutorial-coupled:set-wetting}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dumux::LowViscosityOil);/*@\label{tutorial-coupled:set-nonwetting}@*/
 
 // Set the soil properties
 SET_PROP(TutorialProblemCoupled, Soil) /*@\label{tutorial-coupled:set-soil}@*/
@@ -81,7 +81,7 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     
 public:
-    typedef Dune::TutorialSoil<Grid, Scalar> type;
+    typedef Dumux::TutorialSoil<Grid, Scalar> type;
 };
 
 // Disable gravity
