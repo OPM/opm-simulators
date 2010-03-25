@@ -22,7 +22,7 @@
 
 #include <dumux/new_material/components/h2o.hh>
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief The Henry constants in liquid water using the IAPWS 2004
@@ -44,7 +44,7 @@ inline Scalar henryIAPWS(Scalar E,
                          Scalar H, 
                          Scalar temperature)
 { 
-    typedef Dune::H2O<Scalar> H2O;
+    typedef Dumux::H2O<Scalar> H2O;
 
     Scalar Tr = temperature/H2O::criticalTemperature();
     Scalar tau = 1 - Tr;

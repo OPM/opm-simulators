@@ -37,7 +37,7 @@ template <class Scalar>
 class H2 : public Component<Scalar, H2<Scalar> >
 {
     typedef Component<Scalar, H2<Scalar> >  ParentType;
-    typedef Dune::IdealGas<Scalar> IdealGas;
+    typedef Dumux::IdealGas<Scalar> IdealGas;
 
 public:
     /*!

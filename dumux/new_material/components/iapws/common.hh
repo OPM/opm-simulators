@@ -30,7 +30,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace Dune
+namespace Dumux
 {
 namespace IAPWS
 {

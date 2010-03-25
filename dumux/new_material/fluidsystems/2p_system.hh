@@ -102,11 +102,11 @@ public:
      * \brief Given all mole fractions in a phase, return the phase
      *        density [kg/m^3].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
                                Scalar temperature, 
                                Scalar pressure, 
-                               const PhaseState &phaseState)
+                               const FluidState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:
@@ -120,11 +120,11 @@ public:
     /*!
      * \brief Return the viscosity of a phase.
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
                                  Scalar temperature, 
                                  Scalar pressure, 
-                                 const PhaseState &phaseState)
+                                 const FluidState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:
@@ -139,11 +139,11 @@ public:
      * \brief Given all mole fractions in a phase, return the specific
      *        phase enthalpy [J/kg].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar enthalpy(int phaseIdx,
                            Scalar temperature, 
                            Scalar pressure, 
-                           const PhaseState &phaseState)
+                           const FluidState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:
@@ -158,11 +158,11 @@ public:
      * \brief Given all mole fractions in a phase, return the specific
      *        internal energy of the phase [J/kg].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar internalEnergy(int phaseIdx,
                                  Scalar temperature, 
                                  Scalar pressure, 
-                                 const PhaseState &phaseState)
+                                 const FluidState &phaseState)
     { 
         switch (phaseIdx) {
         case wPhaseIdx:

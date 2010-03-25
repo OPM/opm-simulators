@@ -21,7 +21,7 @@
 #ifndef DUMUX_BROOKS_COREY_PARAMS_HH
 #define DUMUX_BROOKS_COREY_PARAMS_HH
 
-#include <dumux/auxiliary/valgrind.hh>
+#include <dumux/common/valgrind.hh>
 
 namespace Dumux
 {

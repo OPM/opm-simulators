@@ -20,7 +20,7 @@
 #ifndef DUMUX_FULLERMETHOD_HH
 #define DUMUX_FULLERMETHOD_HH
 
-namespace Dune
+namespace Dumux
 {
 namespace BinaryCoeff
 {

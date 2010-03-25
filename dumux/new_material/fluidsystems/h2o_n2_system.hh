@@ -27,7 +27,7 @@
 #include <dumux/new_material/components/simpleh2o.hh>
 #include <dumux/new_material/components/tabulatedcomponent.hh>
 
-#include <dumux/auxiliary/properties.hh>
+#include <dumux/common/properties.hh>
 
 #include <dumux/new_material/binarycoefficients/h2o_n2.hh>
 
@@ -51,11 +51,11 @@ class H2O_N2_System
     typedef H2O_N2_System<TypeTag> ThisType;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 
-    typedef Dune::IdealGas<Scalar> IdealGas;
+    typedef Dumux::IdealGas<Scalar> IdealGas;
 
-    typedef Dune::SimpleH2O<Scalar>                     SimpleH2O;
-    typedef Dune::H2O<Scalar>                           H2O_IAPWS;
-    typedef Dune::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
+    typedef Dumux::SimpleH2O<Scalar>                     SimpleH2O;
+    typedef Dumux::H2O<Scalar>                           H2O_IAPWS;
+    typedef Dumux::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
 
 public:
 #if ! USE_SIMPLE_WATER
@@ -64,7 +64,7 @@ public:
 #else
     typedef SimpleH2O                                 H2O;
 #endif
-    typedef Dune::N2<Scalar>                          N2;
+    typedef Dumux::N2<Scalar>                          N2;
 
     static const int numComponents = 2;
     static const int numPhases = 2;
@@ -225,9 +225,8 @@ public:
             // density of the phase. This assumes that Dalton's law is
             // valid
             return 
-                //H2O::gasDensity(temperature, pH2O) +
-                //N2::gasDensity(temperature, pN2);
-                N2::gasDensity(temperature, pressure);
+                H2O::gasDensity(temperature, pH2O) +
+                N2::gasDensity(temperature, pN2);
         };
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);

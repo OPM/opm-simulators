@@ -26,7 +26,7 @@
 #include <dumux/new_material/components/n2.hh>
 #include <dumux/new_material/components/h2.hh>
 
-namespace Dune
+namespace Dumux
 {
 namespace BinaryCoeff
 {
@@ -43,7 +43,7 @@ public:
     template <class Scalar>
     static Scalar henry(Scalar temperature)
     {
-        DUNE_THROW(NotImplemented, "henry coefficient for nitrogen in liquid hydrogen");
+        DUNE_THROW(Dune::NotImplemented, "henry coefficient for nitrogen in liquid hydrogen");
     };
 
     /*!
@@ -54,8 +54,8 @@ public:
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
     {
-        typedef Dune::H2<Scalar> H2;
-        typedef Dune::N2<Scalar> N2;
+        typedef Dumux::H2<Scalar> H2;
+        typedef Dumux::N2<Scalar> N2;
         
         // atomic diffusion volumes
         const Scalar SigmaNu[2] = { 6.12 /* H2 */,  18.5 /* N2 */ };
@@ -71,7 +71,7 @@ public:
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
     {
-        DUNE_THROW(NotImplemented, "diffusion coefficient for liquid nitrogen and hydrogen");
+        DUNE_THROW(Dune::NotImplemented, "diffusion coefficient for liquid nitrogen and hydrogen");
     };
 };
 

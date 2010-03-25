@@ -38,7 +38,7 @@ namespace Dumux
 template <class Scalar>
 class Brine : public Component<Scalar, Brine<Scalar> >
 {
-    typedef Dune::H2O<Scalar> H2O;
+    typedef Dumux::H2O<Scalar> H2O;
 public:
     // HACKy
     static Scalar salinity;

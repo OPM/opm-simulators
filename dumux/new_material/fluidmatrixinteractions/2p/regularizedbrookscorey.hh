@@ -29,7 +29,7 @@
 #include <math.h>
 #include <assert.h>
 
-#include <dumux/auxiliary/spline.hh>
+#include <dumux/common/spline.hh>
 
 namespace Dumux
 {
@@ -49,7 +49,7 @@ public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
-    typedef Dune::BrooksCorey<ParamsT> BrooksCorey;
+    typedef Dumux::BrooksCorey<ParamsT> BrooksCorey;
 
     /*!
      * \brief A regularized Brooks-Corey capillary pressure-saturation

@@ -21,8 +21,8 @@
 #define DUMUX_H2O_HH
 
 #include <dumux/new_material/idealgas.hh>
-#include <dumux/exceptions.hh>
-#include <dumux/auxiliary/valgrind.hh>
+#include <dumux/common/exceptions.hh>
+#include <dumux/common/valgrind.hh>
 
 #include "component.hh"
 

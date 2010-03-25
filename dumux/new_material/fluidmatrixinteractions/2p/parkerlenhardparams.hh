@@ -19,7 +19,7 @@
 #ifndef PARKER_LENHARD_STATE_HH
 #define PARKER_LENHARD_STATE_HH
 
-#include <dumux/auxiliary/apis.hh>
+#include <dumux/common/apis.hh>
 
 #include "statehelpermacros.hh"
 #include "twophasesatstate.hh"
@@ -87,7 +87,7 @@ class ParkerLenhardState : public TwophaseSatState<typename CapPressureParamsT::
 public:
     typedef CapPressureParamsT CapPressureParams;
     typedef typename CapPressureParams::Scalar Scalar;
-    typedef Dune::TwophaseSatState<Scalar> TwophaseSatState;
+    typedef Dumux::TwophaseSatState<Scalar> TwophaseSatState;
     typedef Dune::PLScanningCurve<Scalar>  ScanningCurve;
 
     ParkerLenhardState(Scalar Swr,

@@ -30,9 +30,9 @@ namespace Dumux
  *        regularized Brooks-Corey Sw-pC relation.
  */
 template <class ScalarT>
-class RegularizedBrooksCoreyParams : public Dune::BrooksCoreyParams<ScalarT>
+class RegularizedBrooksCoreyParams : public Dumux::BrooksCoreyParams<ScalarT>
 {
-    typedef Dune::BrooksCoreyParams<ScalarT> BrooksCoreyParams;
+    typedef Dumux::BrooksCoreyParams<ScalarT> BrooksCoreyParams;
 
 public:
     typedef ScalarT Scalar;

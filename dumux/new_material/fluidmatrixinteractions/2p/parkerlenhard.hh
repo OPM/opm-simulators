@@ -19,13 +19,13 @@
 #ifndef PARKER_LENHARD_HH
 #define PARKER_LENHARD_HH
 
-#include <dumux/auxiliary/apis.hh>
+#include <dumux/common/apis.hh>
 
 #include "vangenuchten.hh"
 #include "parkerlenhardstate.hh"
 
-#include <dumux/auxiliary/spline.hh>
-#include <dumux/auxiliary/expspline.hh>
+#include <dumux/common/spline.hh>
+#include <dumux/common/expspline.hh>
 
 #include <math.h>
 #include <assert.h>
@@ -320,7 +320,7 @@ public:
     typedef Dune::PLScanningCurve<Scalar> ScanningCurve;
     typedef typename ScanningCurve::Spline Spline;
 
-    typedef Dune::TwophaseSat<State> TwophaseSat;
+    typedef Dumux::TwophaseSat<State> TwophaseSat;
 
     /*!
      * \brief Resets the hysteresis model to the

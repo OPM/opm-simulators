@@ -26,7 +26,7 @@
 #include <dumux/new_material/components/o2.hh>
 #include <dumux/new_material/components/h2o.hh>
 
-namespace Dune
+namespace Dumux
 {
 namespace BinaryCoeff
 {
@@ -66,8 +66,8 @@ public:
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
     {
-        typedef Dune::H2O<Scalar> H2O;
-        typedef Dune::O2<Scalar>  O2;
+        typedef Dumux::H2O<Scalar> H2O;
+        typedef Dumux::O2<Scalar>  O2;
         
         // atomic diffusion volumes
         const Scalar SigmaNu[2] = { 13.1 /* H2O */,  16.3 /* O2 */ };

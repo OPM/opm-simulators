@@ -43,16 +43,16 @@ class H2O_N2_O2_System
     typedef H2O_N2_O2_System<TypeTag> ThisType;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 
-    typedef Dune::IdealGas<Scalar> IdealGas;
+    typedef Dumux::IdealGas<Scalar> IdealGas;
 
-    typedef Dune::H2O<Scalar>                           H2O_IAPWS;
-    typedef Dune::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
+    typedef Dumux::H2O<Scalar>                           H2O_IAPWS;
+    typedef Dumux::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
 
 public:
     typedef H2O_Tabulated     H2O;
     //typedef H2O_IAPWS         H2O;
-    typedef Dune::N2<Scalar>  N2;
-    typedef Dune::O2<Scalar>  O2;
+    typedef Dumux::N2<Scalar>  N2;
+    typedef Dumux::O2<Scalar>  O2;
 
     static const int numComponents = 3;
     static const int numPhases = 2;
@@ -121,9 +121,9 @@ public:
      * \brief Given all mole fractions in a phase, return the phase
      *        density [kg/m^3].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
-                               const PhaseState &phaseState)
+                               const FluidState &phaseState)
     { 
         switch (phaseIdx) {
         case lPhaseIdx: 
@@ -158,9 +158,9 @@ public:
     /*!
      * \brief Return the viscosity of a phase.
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
-                                 const PhaseState &phaseState)
+                                 const FluidState &phaseState)
     { 
         if (phaseIdx == lPhaseIdx)
             // assume pure water for the liquid phase
@@ -215,9 +215,9 @@ public:
      * the inverse Henry constant for the solutes and the partial
      * pressure for the solvent.
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar dPg_dxl(int compIdx, 
-                          const PhaseState &phaseState)
+                          const FluidState &phaseState)
     {
         switch (compIdx) {
         case H2OIdx: return H2O::vaporPressure(phaseState.temperature());
@@ -231,11 +231,11 @@ public:
      * \brief Given all mole fractions, return the diffusion
      *        coefficent of a component in a phase.
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar diffCoeff(int phaseIdx,
                             int compIIdx,
                             int compJIdx,
-                            const PhaseState &phaseState)
+                            const FluidState &phaseState)
     { 
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
@@ -289,9 +289,9 @@ public:
      * \brief Given all mole fractions in a phase, return the specific
      *        phase enthalpy [J/kg].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar enthalpy(int phaseIdx,
-                           const PhaseState &phaseState)
+                           const FluidState &phaseState)
     { 
         if (phaseIdx == gPhaseIdx) {
             Scalar result = 0;
@@ -314,9 +314,9 @@ public:
      * \brief Given all mole fractions in a phase, return the phase's
      *        specific internal energy [J/kg].
      */
-    template <class PhaseState>
+    template <class FluidState>
     static Scalar internalEnergy(int phaseIdx,
-                                 const PhaseState &phaseState)
+                                 const FluidState &phaseState)
     { 
         if (phaseIdx == lPhaseIdx) 
             return enthalpy(phaseIdx, phaseState);
