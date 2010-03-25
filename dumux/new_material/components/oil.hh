@@ -24,7 +24,7 @@
 
 #include "component.hh"
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief Rough estimate for testing purposes of some oil.

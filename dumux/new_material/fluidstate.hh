@@ -22,7 +22,7 @@
 #ifndef DUMUX_FLUID_STATE_HH
 #define DUMUX_FLUID_STATE_HH
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief Abstract base class representing a fluid state
@@ -64,13 +64,13 @@ public:
      * \brief Return saturation of a phase
      */
     Scalar saturation(int phaseIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::saturation()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::saturation()"); }
 
     /*!
      * \brief Return the mole fraction of a component within a phase.
      */
     Scalar moleFrac(int phaseIdx, int compIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::moleFrac()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::moleFrac()"); }
 
     /*!
      * \brief Return the sum of the concentrations of all components
@@ -79,7 +79,7 @@ public:
      * Unit: [mol/m^3]
      */
     Scalar totalConcentration(int phaseIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::totalConcentration()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::totalConcentration()"); }
   
     /*!
      * \brief Return the concentrations of an individual component in
@@ -88,7 +88,7 @@ public:
      * Unit: [mol/m^3]
      */
     Scalar concentration(int phaseIdx, int compIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::concentration()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::concentration()"); }
 
     /*!
      * \brief Return the density of a phase.
@@ -96,7 +96,7 @@ public:
      * Unit: [kg/m^3]
      */
     Scalar density(int phaseIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::density()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::density()"); }
     
     /*!
      * \brief Return the average molar mass of a phase.
@@ -107,7 +107,7 @@ public:
      * Unit: [kg/m^3]
      */
     Scalar averageMolarMass(int phaseIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::averageMolarMass()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::averageMolarMass()"); }
 
     /*!
      * \brief Return the partial pressure of a component in the gas phase.
@@ -117,7 +117,7 @@ public:
      * Unit: [Pa] = [N/m^2]
      */
     Scalar partialPressure(int componentIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::partialPressure()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::partialPressure()"); }
 
     /*!
      * \brief Return the total pressure of the gas phase.
@@ -125,7 +125,7 @@ public:
      * Unit: [Pa] = [N/m^2]
      */
     Scalar phasePressure(int phaseIdx) const
-    { DUNE_THROW(NotImplemented, "FluidState::totalPressure()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::totalPressure()"); }
 
     /*!
      * \brief Return the temperature at which the equilibrium was
@@ -134,7 +134,7 @@ public:
      * Unit: [Pa] = [N/m^2]
      */
     Scalar temperature() const
-    { DUNE_THROW(NotImplemented, "FluidState::temperature()"); }
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::temperature()"); }
 
 protected:
     Implementation &asImp_()
@@ -143,6 +143,6 @@ protected:
     { return *((const Implementation*) this); }
 };
 
-} // end namepace
+} // namespace Dumux
 
 #endif

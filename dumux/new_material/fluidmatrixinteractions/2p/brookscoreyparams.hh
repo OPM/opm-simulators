@@ -23,7 +23,7 @@
 
 #include <dumux/auxiliary/valgrind.hh>
 
-namespace Dune
+namespace Dumux
 {
 
 /*!
@@ -75,6 +75,6 @@ private:
     Scalar pe_;
     Scalar alpha_;
 };
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif

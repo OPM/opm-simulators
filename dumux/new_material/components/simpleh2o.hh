@@ -29,7 +29,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief A much simpler (and thus potentially less buggy) version of
@@ -39,7 +39,7 @@ template <class Scalar>
 class SimpleH2O : public Component<Scalar, SimpleH2O<Scalar> >
 {
     typedef Component<Scalar, SimpleH2O<Scalar> > ParentType;
-    typedef Dune::IdealGas<Scalar> IdealGas;
+    typedef Dumux::IdealGas<Scalar> IdealGas;
 
     static const double R = 461.526;  // specific gas constant of water
 
@@ -183,7 +183,7 @@ public:
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
-        DUNE_THROW(InvalidStateException, 
+        DUNE_THROW(Dune::InvalidStateException, 
                    "The liquid pressure is undefined for incompressible fluids");
     }
 

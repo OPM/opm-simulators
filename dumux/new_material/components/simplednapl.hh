@@ -28,7 +28,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief A much simpler (and thus potentially less buggy) version of

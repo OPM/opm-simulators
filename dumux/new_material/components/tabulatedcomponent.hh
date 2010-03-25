@@ -26,7 +26,7 @@
 
 #include <boost/math/special_functions/fpclassify.hpp>
 
-namespace Dune
+namespace Dumux
 {
 
 /*!

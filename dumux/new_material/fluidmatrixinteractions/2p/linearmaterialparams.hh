@@ -19,7 +19,7 @@
 #ifndef LINEAR_MATERIAL_PARAMS_HH
 #define LINEAR_MATERIAL_PARAMS_HH
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief Reference implementation of params for the linear material
@@ -105,6 +105,6 @@ private:
     Scalar entryPC_;
     Scalar maxPC_;
 };
-} // namespace Dune
+} // namespace Dumux
 
 #endif

@@ -31,7 +31,7 @@
 
 #include <dumux/auxiliary/spline.hh>
 
-namespace Dune
+namespace Dumux
 {
 /*!\ingroup material
  *
@@ -185,7 +185,7 @@ public:
             return 1;       
         // check if we need to regularize the relative permeability
         else if (Sw > Sthres) {
-            typedef Dune::Spline<Scalar> Spline;
+            typedef Dumux::Spline<Scalar> Spline;
             Spline sp(Sthres, 1.0, // x1, x2
                       BrooksCorey::krw(params, Sthres), 1.0, // y1, y2
                       BrooksCorey::dkrw_dSw(params, Sthres), 0); // m1, m2
@@ -212,7 +212,7 @@ public:
             return 0;
         // check if we need to regularize the relative permeability
         else if (Sw < Sthres) {
-            typedef Dune::Spline<Scalar> Spline;
+            typedef Dumux::Spline<Scalar> Spline;
             Spline sp(0.0, Sthres, // x1, x2
                       1.0, BrooksCorey::krn(params, Sthres), // y1, y2
                       0.0, BrooksCorey::dkrn_dSw(params, Sthres)); // m1, m2

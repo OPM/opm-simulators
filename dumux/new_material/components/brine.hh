@@ -30,7 +30,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief A class for the brine fluid properties

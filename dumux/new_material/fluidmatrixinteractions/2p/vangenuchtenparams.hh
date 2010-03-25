@@ -19,7 +19,7 @@
 #ifndef VAN_GENUCHTEN_PARAMS_HH
 #define VAN_GENUCHTEN_PARAMS_HH
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief Reference implementation of a van Genuchten params
@@ -90,6 +90,6 @@ private:
     Scalar vgM_;
     Scalar vgN_;
 };
-} // namespace Dune
+} // namespace Dumux
 
 #endif

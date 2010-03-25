@@ -35,7 +35,7 @@
 #include <iostream>
 
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief Properties of pure water \f$H_2O\f$.

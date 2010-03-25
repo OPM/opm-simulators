@@ -21,9 +21,9 @@
 
 #include "statehelpermacros.hh"
 
-namespace Dune
+namespace Dumux
 {
 }; // namespace Api
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif

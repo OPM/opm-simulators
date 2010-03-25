@@ -27,7 +27,7 @@
 
 #include <cmath>
 
-namespace Dune
+namespace Dumux
 {
 
 /*!
@@ -74,7 +74,7 @@ public:
      * \brief Returns the pressure [Pa] at molecular hydrogen's triple point.
      */
     static Scalar triplePressure()
-    { DUNE_THROW(NotImplemented, "triplePressure for H2"); }
+    { DUNE_THROW(Dune::NotImplemented, "triplePressure for H2"); }
 
     /*!
      * \brief The vapor pressure in [Pa] of pure molecular hydrogen
@@ -135,20 +135,20 @@ public:
      * \brief The density [kg/m^3] of liquid hydrogen at a given pressure and temperature.
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "liquidDensity for H2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidDensity for H2"); }
 
     /*
      * \brief The pressure of liquid hydrogen at a given density and
      *        temperature [Pa].
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
-    { DUNE_THROW(NotImplemented, "liquidPressure for H2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for H2"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid H2 .
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "liquidEnthalpy for H2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for H2"); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of H2 at a given pressure and temperature.
@@ -186,7 +186,7 @@ public:
      * \brief The dynamic liquid viscosity [N/m^3*s] of pure H2.
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "liquidViscosity for H2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for H2"); }
 };
 
 } // end namepace

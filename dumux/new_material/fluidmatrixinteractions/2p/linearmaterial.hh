@@ -21,7 +21,7 @@
 
 #include "linearmaterialparams.hh"
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \ingroup material

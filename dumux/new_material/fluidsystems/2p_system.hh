@@ -21,9 +21,7 @@
 #ifndef DUMUX_2P_SYSTEM_HH
 #define DUMUX_2P_SYSTEM_HH
 
-#include <dumux/new_decoupled/2p/2pproperties.hh>
-
-namespace Dune
+namespace Dumux
 {
 
 /*!
@@ -65,7 +63,7 @@ public:
         case wPhaseIdx: return WettingPhase::name();
         case nPhaseIdx: return NonwettingPhase::name();
         };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << phaseIdx);
     }
 
     /*!
@@ -77,7 +75,7 @@ public:
         case wPhaseIdx: return WettingPhase::molarMass();
         case nPhaseIdx: return NonwettingPhase::molarMass();
         };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << phaseIdx);
     }
 
     /*!
@@ -96,7 +94,7 @@ public:
         case nPhaseIdx:
             return NonwettingPhase::density(temperature, pressure);
         }
-        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
     
@@ -116,7 +114,7 @@ public:
         case nPhaseIdx:
             return NonwettingPhase::density(temperature, pressure);
         }
-        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
     /*!
@@ -134,7 +132,7 @@ public:
         case nPhaseIdx:
             return NonwettingPhase::viscosity(temperature, pressure);
         }
-        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     } 
 
     /*!
@@ -153,7 +151,7 @@ public:
         case nPhaseIdx:
             return NonwettingPhase::enthalpy(temperature, pressure);
         }
-        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
     /*!
@@ -172,7 +170,7 @@ public:
         case nPhaseIdx:
             return NonwettingPhase::internalEnergy(temperature, pressure);
         }
-        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
 };

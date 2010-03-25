@@ -19,10 +19,16 @@
  * \brief The base class for spatial parameters of problems using the
  *        box method.
  */
-#ifndef DUNE_BOX_SPATIAL_PARAMETERS_HH
-#define DUNE_BOX_SPATIAL_PARAMETERS_HH
+#ifndef DUMUX_BOX_SPATIAL_PARAMETERS_HH
+#define DUMUX_BOX_SPATIAL_PARAMETERS_HH
 
-namespace Dune
+#include <dumux/common/properties.hh>
+#include <dumux/common/math.hh>
+#include <dumux/box/boxproperties.hh>
+
+#include <dune/common/fmatrix.hh>
+
+namespace Dumux
 {
 
 /**
@@ -32,8 +38,8 @@ namespace Dune
 template<class TypeTag>
 class BoxSpatialParameters 
 {
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar))   Scalar;
 
     enum {
         dimWorld = GridView::dimensionworld
@@ -52,11 +58,11 @@ public:
     /*!
      * \brief Averages the intrinsic permeability.
      */
-    const void meanIntrinsicPermeability(Tensor &result,
-                                         Scalar K1,
-                                         Scalar K2) const
+    const void meanK(Tensor &result,
+                     Scalar K1,
+                     Scalar K2) const
     {
-        const Scalar K = harmonicMean(K1, K2);
+        const Scalar K = Dumux::harmonicMean(K1, K2);
         for (int i = 0; i < dimWorld; ++i) {
             for (int j = 0; j < dimWorld; ++j)
                 result[i][j] = 0;
@@ -67,9 +73,9 @@ public:
     /*!
      * \brief Averages the intrinsic permeability.
      */
-    const void meanIntrinsicPermeability(Tensor &result,
-                                         const Tensor &K1,
-                                         const Tensor &K2) const
+    const void meanK(Tensor &result,
+                     const Tensor &K1,
+                     const Tensor &K2) const
     {
         // entry-wise harmonic mean. this is almost certainly wrong if
         // you have off-main diagonal entries in your permeabilities!
@@ -79,6 +85,6 @@ public:
     }
 };
 
-}
+} // namespace Dumux
 
 #endif

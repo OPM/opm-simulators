@@ -47,7 +47,7 @@ void ASSERT_RANGE(Scalar &var, Scalar1 left, Scalar2 right)
 { var = std::max(Scalar(left), std::min(Scalar(right), var)); }
 #endif
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \internal
@@ -63,7 +63,7 @@ class PLScanningCurve
 public:
     typedef ScalarT Scalar;
     typedef Dune::ExpSpline<Scalar> Spline;
-    //        typedef Dune::Spline<Scalar> Spline;
+    //        typedef Dumux::Spline<Scalar> Spline;
 
     /*!
      * \brief Constructs main imbibtion curve.
@@ -899,6 +899,6 @@ private:
 
 
 #undef ASSERT_RANGE
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif // PARKER_LENHARD_HH

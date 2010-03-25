@@ -21,7 +21,7 @@
 #ifndef ABSOLUTE_SATURATIONS_LAW_PARAMS_HH
 #define ABSOLUTE_SATURATIONS_LAW_PARAMS_HH
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \ingroup material

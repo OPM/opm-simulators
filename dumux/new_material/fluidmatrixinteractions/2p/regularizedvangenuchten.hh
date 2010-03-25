@@ -29,9 +29,9 @@
 #include <math.h>
 #include <assert.h>
 
-#include <dumux/auxiliary/spline.hh>
+#include <dumux/common/spline.hh>
 
-namespace Dune
+namespace Dumux
 {
 /*!\ingroup material
  *
@@ -49,7 +49,7 @@ public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
-    typedef Dune::VanGenuchten<ParamsT> VanGenuchten;
+    typedef Dumux::VanGenuchten<ParamsT> VanGenuchten;
 
     /*!
      * \brief The capillary pressure-saturation curve.
@@ -201,7 +201,7 @@ public:
         else if (Sw > 1)
             return 1;
         else if (Sw > SwThHigh) {
-            typedef Dune::Spline<Scalar> Spline;
+            typedef Dumux::Spline<Scalar> Spline;
             Spline sp(SwThHigh, 1.0, // x1, x2
                       VanGenuchten::krw(params, SwThHigh), 1.0, // y1, y2
                       VanGenuchten::dkrw_dSw(params, SwThHigh), 0); // m1, m2
@@ -230,7 +230,7 @@ public:
         else if (Sw >= 1)
             return 0;
         else if (Sw < SwThLow) {
-            typedef Dune::Spline<Scalar> Spline;
+            typedef Dumux::Spline<Scalar> Spline;
             Spline sp(0.0, SwThLow, // x1, x2
                       1.0, VanGenuchten::krn(params, SwThLow), // y1, y2
                       0.0, VanGenuchten::dkrn_dSw(params, SwThLow)); // m1, m2

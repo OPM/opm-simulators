@@ -26,7 +26,7 @@
 
 #include <stdlib.h>
 
-namespace Dune
+namespace Dumux
 {
 // forward declaration
 template <class ScalarT>
@@ -130,6 +130,6 @@ public:
     MUTABLE_PTR_PROPERTY(ScanningCurve, pisc, setPisc); // primary imbibition
     MUTABLE_PTR_PROPERTY(ScanningCurve, csc, setCsc); // current
 };
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif

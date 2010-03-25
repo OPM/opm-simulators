@@ -23,7 +23,7 @@
 #include "vangenuchten.hh"
 #include "vangenuchtenparams.hh"
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief Reference implementation of a regularized van Genuchten params
@@ -85,6 +85,6 @@ public:
     { return 0.90; }
 
 };
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif

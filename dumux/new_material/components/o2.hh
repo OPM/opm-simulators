@@ -27,7 +27,7 @@
 
 #include <cmath>
 
-namespace Dune
+namespace Dumux
 {
 
 /*!
@@ -145,20 +145,20 @@ public:
      * \brief The density [kg/m^3] of gaseous O2 at a given pressure and temperature.
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "liquidDensity for O2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidDensity for O2"); }
 
     /*
      * \brief The pressure of liquid oxygen at a given density and
      *        temperature [Pa].
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
-    { DUNE_THROW(NotImplemented, "liquidPressure for O2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for O2"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid O2.
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "liquidEnthalpy for O2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for O2"); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
@@ -196,7 +196,7 @@ public:
      * \brief The dynamic liquid viscosity [N/m^3*s] of pure H2.
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(NotImplemented, "liquidViscosity for O2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for O2"); }
 
 };
 

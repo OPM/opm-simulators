@@ -26,7 +26,7 @@
 #include <math.h>
 #include <assert.h>
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \ingroup material

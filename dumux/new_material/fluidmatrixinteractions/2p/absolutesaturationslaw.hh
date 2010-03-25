@@ -24,7 +24,7 @@
 
 #include "absolutesaturationslawparams.hh"
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \ingroup material

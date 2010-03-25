@@ -23,7 +23,7 @@
 
 #include "brookscoreyparams.hh"
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \brief A reference implementation of the params class for the
@@ -77,6 +77,6 @@ public:
     Scalar krwHighSw() const
     { return 0.85; }
 };
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif

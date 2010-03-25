@@ -25,7 +25,7 @@
 
 #include "playtypestate.hh"
 
-namespace Dune
+namespace Dumux
 {
 /*
  * \brief Implements the play-type hysteresis model.
@@ -251,6 +251,6 @@ public:
         }
     }
 };
-}; // namespace Dune
+}; // namespace Dumux
 
 #endif // PLAY_TYPE_HH

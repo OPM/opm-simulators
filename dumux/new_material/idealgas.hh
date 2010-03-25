@@ -20,7 +20,7 @@
 #ifndef DUMUX_IDEAL_GAS_HH
 #define DUMUX_IDEAL_GAS_HH
 
-namespace Dune
+namespace Dumux
 {
 
 /*!

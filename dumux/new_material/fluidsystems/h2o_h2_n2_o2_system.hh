@@ -35,7 +35,7 @@
 #include <dumux/new_material/binarycoefficients/h2_o2.hh>
 #include <dumux/new_material/binarycoefficients/n2_o2.hh>
 
-namespace Dune
+namespace Dumux
 {
 
 /*!
@@ -94,7 +94,7 @@ public:
         case N2Idx: return N2::name();
         case O2Idx: return O2::name();
         };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
 
@@ -109,7 +109,7 @@ public:
         case N2Idx: return N2::molarMass();
         case O2Idx: return O2::molarMass();
         };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
     /*!
@@ -124,7 +124,7 @@ public:
         case N2Idx: return N2::vaporPressure(temperature);
         case O2Idx: return O2::vaporPressure(temperature);
         };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
     
     /*!
@@ -167,7 +167,7 @@ public:
             return IdealGas::density(avgMolarMass, phaseState.temperature(), phaseState.phasePressure(phaseIdx));
         };
         }
-        DUNE_THROW(InvalidStateException, "Invalid phase index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
 
     }
 
@@ -243,7 +243,7 @@ public:
         case N2Idx: return BinaryCoeff::H2O_N2::henry(phaseState.temperature());
         case O2Idx: return BinaryCoeff::H2O_O2::henry(phaseState.temperature());
         };
-        DUNE_THROW(InvalidStateException, "Invalid component index " << compIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
     /*!
@@ -264,7 +264,7 @@ public:
             phaseIdx > numPhases - 1 ||
             compJIdx > numComponents - 1)
         {
-            DUNE_THROW(InvalidStateException, 
+            DUNE_THROW(Dune::InvalidStateException, 
                        "Binary diffusion coefficient of components " 
                        << compIIdx << " and " << compJIdx
                        << " in phase " << phaseIdx << " is undefined!\n");
@@ -281,7 +281,7 @@ public:
                 case O2Idx: return BinaryCoeff::H2O_O2::liquidDiffCoeff(phaseState.temperature(), phaseState.phasePressure(phaseIdx));
                 }
             default:
-                DUNE_THROW(InvalidStateException, 
+                DUNE_THROW(Dune::InvalidStateException, 
                            "Binary diffusion coefficients of trace "
                            "substances in liquid phase is undefined!\n");
             }
@@ -306,7 +306,7 @@ public:
             }
         }
 
-        DUNE_THROW(InvalidStateException, 
+        DUNE_THROW(Dune::InvalidStateException, 
                    "Binary diffusion coefficient of components " 
                    << compIIdx << " and " << compJIdx
                    << " in phase " << phaseIdx << " is undefined!\n");
@@ -350,7 +350,7 @@ public:
                 enthalpy(phaseIdx, phaseState)
                 - phaseState.phasePressure(phaseIdx)/phaseDensity(phaseIdx, phaseState);
         }
-        DUNE_THROW(InvalidStateException, 
+        DUNE_THROW(Dune::InvalidStateException, 
                    "Invalid phase index: " << phaseIdx);
     }
 
