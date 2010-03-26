@@ -16,13 +16,13 @@
  * \file
  *
  * \brief This material law takes a material law defined for effective
- *        saturations and converts it to a material law defined on absolute
- *        saturations.
+ *        saturations and converts it to a material law defined on
+ *        absolute saturations.
  */
-#ifndef ABSOLUTE_SATURATIONS_LAW_HH
-#define ABSOLUTE_SATURATIONS_LAW_HH
+#ifndef DUMUX_EFF_TO_ABS_LAW_HH
+#define DUMUX_EFF_TO_ABS_LAW_HH
 
-#include "absolutesaturationslawparams.hh"
+#include "efftoabslawparams.hh"
 
 namespace Dumux
 {
@@ -33,14 +33,14 @@ namespace Dumux
  *        saturations and converts it to a material law defined on absolute
  *        saturations.
  */
-template <class RawLawT>
-class AbsoluteSaturationsLaw
+template <class EffLawT, class AbsParamsT = EffToAbsLawParams<typename EffLawT::Params> >
+class EffToAbsLaw
 {
-    typedef RawLawT   RawLaw;
+    typedef EffLawT EffLaw;
 
 public:
-    typedef typename RawLaw::Params   Params;
-    typedef typename RawLaw::Scalar   Scalar;
+    typedef AbsParamsT Params;
+    typedef typename EffLaw::Scalar Scalar;
 
 
     /*!
@@ -48,7 +48,7 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
-        return RawLaw::pC(params, SwToSwe_(params, Sw));
+        return EffLaw::pC(params, SwToSwe_(params, Sw));
     }
 
     /*!
@@ -59,7 +59,7 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        return SweToSw_(params, RawLaw::Sw(params, pC));
+        return SweToSw_(params, EffLaw::Sw(params, pC));
     }
 
     /*!
@@ -68,7 +68,7 @@ public:
     */
     static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        return RawLaw::dpC_dSw(params, Sw)/(1 - params.Swr() - params.Snr());
+        return EffLaw::dpC_dSw(params, Sw)*dSwe_dSw_(params);
     }
 
     /*!
@@ -77,7 +77,7 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        return RawLaw::dSw_dpC(params, pC)*(1 - params.Swr() - params.Snr());
+        return EffLaw::dSw_dpC(params, pC)*dSw_dSwe_(params);
     }
 
     /*!
@@ -87,7 +87,7 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Sw)
     {
-        return RawLaw::krw(params, SwToSwe_(params, Sw));
+        return EffLaw::krw(params, SwToSwe_(params, Sw));
     };
 
     /*!
@@ -97,7 +97,7 @@ public:
      */
     static Scalar krn(const Params &params, Scalar Sw)
     {
-        return RawLaw::krn(params, SwToSwe_(params, Sw));
+        return EffLaw::krn(params, SwToSwe_(params, Sw));
     }
 
 private:
@@ -112,6 +112,16 @@ private:
     {
         return Swe*(1 - params.Swr() - params.Snr()) + params.Swr();
     }
+
+    // derivative of the effective saturation to the absolute
+    // saturation.
+    static Scalar dSwe_dSw_(const Params &params)
+    { return 1.0/(1 - params.Swr() - params.Snr()); }
+
+    // derivative of the absolute saturation to the effective
+    // saturation.
+    static Scalar dSw_dSwe_(const Params &params)
+    { return 1 - params.Swr() - params.Snr(); }
 };
 }
 

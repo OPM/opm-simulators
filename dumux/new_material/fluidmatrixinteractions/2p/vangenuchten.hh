@@ -38,7 +38,7 @@ namespace Dumux
  *
  * \sa VanGenuchten, VanGenuchtenTwophase
  */
-template <class ParamsT>
+template <class ScalarT, class ParamsT = VanGenuchtenParams<ScalarT> >
 class VanGenuchten
 {
 public:

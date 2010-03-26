@@ -40,7 +40,7 @@ namespace Dumux
  *
  * \sa BrooksCorey, BrooksCoreyTwophase
  */
-template <class ParamsT>
+template <class ScalarT, class ParamsT = BrooksCoreyParams<ScalarT> >
 class BrooksCorey
 {
 public:

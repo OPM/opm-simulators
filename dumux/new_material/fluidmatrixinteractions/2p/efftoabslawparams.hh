@@ -15,32 +15,32 @@
 /*!
  * \file
  *
- * \brief A default implementation of the params for the material law
- *        for absolute saturations.
+ * \brief A default implementation of the parameters for the adapter
+ *        class to convert material laws from effective to absolute
+ *        saturations.
  */
-#ifndef ABSOLUTE_SATURATIONS_LAW_PARAMS_HH
-#define ABSOLUTE_SATURATIONS_LAW_PARAMS_HH
+#ifndef DUMUX_EFF_TO_ABS_LAW_PARAMS_HH
+#define DUMUX_EFF_TO_ABS_LAW_PARAMS_HH
 
 namespace Dumux
 {
 /*!
  * \ingroup material
  *
- * \brief A default implementation of the params for the material law
- *        for absolute saturations.
+ * \brief A default implementation of the parameters for the adapter
+ *        class to convert material laws from effective to absolute
+ *        saturations.
  */
-template <class RawLawParamsT>
-class AbsoluteSaturationsLawParams : public RawLawParamsT
+template <class EffLawParamsT>
+class EffToAbsLawParams : public EffLawParamsT
 {
-    typedef RawLawParamsT  RawLawParams;
+    typedef EffLawParamsT  EffLawParams;
 public:
-    typedef typename RawLawParams::Scalar   Scalar;
+    typedef typename EffLawParams::Scalar   Scalar;
 
-    AbsoluteSaturationsLawParams()
-        : RawLawParams()
-    {
-        Swr_ = Snr_ = 0;
-    }
+    EffToAbsLawParams()
+        : EffLawParams()
+    { Swr_ = Snr_ = 0; }
 
     /*!
      * \brief Return the residual wetting saturation.

@@ -42,14 +42,14 @@ namespace Dumux
  * concern itself converting absolute to effective saturations and
  * vince versa.
  */
-template <class ParamsT>
+template <class ScalarT, class ParamsT = RegularizedVanGenuchtenParams<ScalarT> >
 class RegularizedVanGenuchten
 {
+    typedef Dumux::VanGenuchten<ScalarT, ParamsT> VanGenuchten;
+
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
-
-    typedef Dumux::VanGenuchten<ParamsT> VanGenuchten;
 
     /*!
      * \brief The capillary pressure-saturation curve.

@@ -16,8 +16,8 @@
  * \file linearmaterial.hh Implements a linear saturation-capillary
  *                    pressure relation
  */
-#ifndef REGULARIZED_LINEAR_MATERIAL_HH
-#define REGULARIZED_LINEAR_MATERIAL_HH
+#ifndef DUMUX_REGULARIZED_LINEAR_MATERIAL_HH
+#define DUMUX_REGULARIZED_LINEAR_MATERIAL_HH
 
 #include "linearmaterial.hh"
 #include "linearmaterialparams.hh"
@@ -27,9 +27,9 @@
 #include <math.h>
 #include <assert.h>
 
-#include <dumux/auxiliary/spline.hh>
+#include <dumux/common/spline.hh>
 
-namespace Dune
+namespace Dumux
 {
 /*!
  * \ingroup material
@@ -42,11 +42,12 @@ namespace Dune
  *
  * \sa LinearMaterialParams
  */
-template <class ParamsT>
+template <class ScalarT, class ParamsT = LinearMaterialParams<ScalarT> >
 class RegularizedLinearMaterial
 {
+    typedef Dumux::LinearMaterial<ScalarT, ParamsT> LinearMaterial;
+
 public:
-    typedef Dune::LinearMaterial<ParamsT> LinearMaterial;
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
@@ -142,14 +143,14 @@ private:
             return 0;
         // check wether the permeability needs to be regularized
         else if (S < lowS) {
-            typedef Dune::Spline<Scalar> Spline;
+            typedef Dumux::Spline<Scalar> Spline;
             Spline sp(0,    lowS,
                       0,    lowS/2,
                       0,    m);
             return sp.eval(S);
         }
         else if (S > highS) {
-            typedef Dune::Spline<Scalar> Spline;
+            typedef Dumux::Spline<Scalar> Spline;
             Spline sp(highS,   1,
                       1 - (1 - highS)/2, 1,
                       m,          0);

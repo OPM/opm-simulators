@@ -42,14 +42,14 @@ namespace Dumux
  *
  * \sa BrooksCorey, BrooksCoreyTwophase
  */
-template <class ParamsT>
+template <class ScalarT, class ParamsT = RegularizedBrooksCoreyParams<ScalarT> >
 class RegularizedBrooksCorey
 {
+    typedef Dumux::BrooksCorey<ScalarT, ParamsT> BrooksCorey;
+
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
-
-    typedef Dumux::BrooksCorey<ParamsT> BrooksCorey;
 
     /*!
      * \brief A regularized Brooks-Corey capillary pressure-saturation

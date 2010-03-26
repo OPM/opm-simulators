@@ -34,7 +34,7 @@ namespace Dumux
  *
  * \sa LinearMaterialParams
  */
-template <class ParamsT>
+template <class ScalarT, class ParamsT = LinearMaterialParams<ScalarT> >
 class LinearMaterial
 {
 public:
