@@ -18,9 +18,11 @@
 #define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
 // fluid properties
-#include <dumux/new_material/components/simpleh2o.hh>
-#include <dumux/new_material/components/simplednapl.hh>
 #include <dumux/new_material/fluidsystems/h2o_n2_system.hh>
+
+//#include <dumux/new_material/components/simpleh2o.hh>		// special case of 2p model!
+//#include <dumux/new_material/components/simplednapl.hh>	// special case of 2p model!
+
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pboxmodel.hh>
@@ -29,7 +31,7 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfs.hh>
 
-// the soil to be used
+// assign parameters dependent on space (e.g. soil properties)
 #include "tutorialspatialparameters_coupled.hh"
 
 namespace Dumux
@@ -70,37 +72,32 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     }
 };
 
-// Set the wetting and non-wetting phases
-SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:set-wetting}@*/
+// Select fluid system
+SET_PROP(TutorialProblemCoupled,   FluidSystem)
 {
-private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-public:
-    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleH2O<Scalar> > type;
-};
-SET_PROP(TutorialProblemCoupled, NonwettingPhase)/*@\label{tutorial-coupled:set-nonwetting}@*/
-{
-private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-public:
-    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleDNAPL<Scalar> > type;
+    //typedef Dune::Brine_CO2_System<TypeTag, Dune::IFP::CO2Tables> type;
+    typedef Dumux::H2O_N2_System<TypeTag> type;
 };
 
-
-//SET_PROP(TutorialProblemCoupled,   FluidSystem)
+//// Set the wetting and non-wetting phases - special case of 2p model!
+//SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:set-wetting}@*/
 //{
-//    //typedef Dune::Brine_CO2_System<TypeTag, Dune::IFP::CO2Tables> type;
-//    typedef Dumux::H2O_N2_System<TypeTag> type;
+//private:
+//    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+//public:
+//    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleH2O<Scalar> > type;
+//};
+//SET_PROP(TutorialProblemCoupled, NonwettingPhase)/*@\label{tutorial-coupled:set-nonwetting}@*/
+//{
+//private:
+//    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+//public:
+//    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleDNAPL<Scalar> > type;
 //};
 
 // Set the soil properties
 SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-soil}@*/
 {
-private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-    
-public:
     typedef Dumux::TutorialSpatialParameters<TypeTag> type;
 };
 
