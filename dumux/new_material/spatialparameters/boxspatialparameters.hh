@@ -24,7 +24,6 @@
 
 #include <dumux/common/properties.hh>
 #include <dumux/common/math.hh>
-#include <dumux/box/boxproperties.hh>
 
 #include <dune/common/fmatrix.hh>
 
