@@ -16,9 +16,13 @@
 #ifndef TUTORIALSPATIALPARAMETERS_COUPLED_HH
 #define TUTORIALSPATIALPARAMETERS_COUPLED_HH
 
+// include parent spatialparameters
 #include <dumux/new_material/spatialparameters/boxspatialparameters.hh>
+
+// include material laws
 #include <dumux/new_material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
 #include <dumux/new_material/fluidmatrixinteractions/2p/regularizedlinearmaterial.hh>
+#include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/new_material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 namespace Dumux
@@ -43,11 +47,15 @@ class TutorialSpatialParameters: public BoxSpatialParameters<TypeTag> /*@\label{
 	typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
 	// select materialLaw to be used
-	typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
-	//    typedef RegularizedLinearMaterial<Scalar>		RawMaterialLaw;		// example for linear Materiallaw
+	//	typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
+    typedef LinearMaterial<Scalar>		RawMaterialLaw;		// example for linear Materiallaw
 public:
-	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;				// adapter for absolute law
-	typedef typename MaterialLaw::Params MaterialLawParams;			// determine appropriate parameters depening on selected materialLaw
+    // adapter for absolute law
+	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;
+
+	// determine appropriate parameters depening on selected materialLaw
+	typedef typename MaterialLaw::Params MaterialLawParams;
+
 
 	// method returning the intrinsic permeability tensor K depending
 	// on the position within the domain
@@ -72,6 +80,8 @@ public:
 											const FVElementGeometry &fvElemGeom,
 											int scvIdx) const
 	{
+//		if (element.center()>= 783636)
+//			return UpperBoundaryMaterialParams_;
 		return materialParams_;
 	}
 
@@ -86,13 +96,13 @@ public:
 		materialParams_.setSwr(0.0);
 		materialParams_.setSnr(0.0);
 
-		//brooks-corey law
-		materialParams_.setPe(0.0);
-		materialParams_.setAlpha(2.0);
+//		//brooks-corey law
+//		materialParams_.setPe(0.0);
+//		materialParams_.setAlpha(2.0);
 
 		//linear material law
-//		materialParams_.setEntryPC(0.0);
-//		materialParams_.setMaxPC(0.0);
+		materialParams_.setEntryPC(0.0);
+		materialParams_.setMaxPC(0.0);
 	}
 
 private:
