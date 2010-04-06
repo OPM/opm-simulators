@@ -18,8 +18,9 @@
 #define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
 // fluid properties
-#include <dumux/material/fluids/water.hh>
-#include <dumux/material/fluids/lowviscosityoil.hh>
+#include <dumux/new_material/components/simpleh2o.hh>
+#include <dumux/new_material/components/simplednapl.hh>
+#include <dumux/new_material/fluidsystems/h2o_n2_system.hh>
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pboxmodel.hh>
@@ -29,7 +30,7 @@
 #include <dune/grid/io/file/dgfparser/dgfs.hh>
 
 // the soil to be used
-#include "tutorialsoil_coupled.hh"
+#include "tutorialspatialparameters_coupled.hh"
 
 namespace Dumux
 {
@@ -55,7 +56,7 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     typedef Dune::SGrid<2,2> type;
     static type *create() /*@\label{tutorial-coupled:create-grid-method}@*/
     {
-        typedef typename SGrid<2,2>::ctype ctype;
+        typedef typename type::ctype ctype;
         Dune::FieldVector<int, 2> cellRes;
         Dune::FieldVector<ctype, 2> lowerLeft(0.0);
         Dune::FieldVector<ctype, 2> upperRight;
@@ -70,18 +71,37 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
 };
 
 // Set the wetting and non-wetting phases
-SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dumux::Water); /*@\label{tutorial-coupled:set-wetting}@*/
-SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dumux::LowViscosityOil);/*@\label{tutorial-coupled:set-nonwetting}@*/
+SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:set-wetting}@*/
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public:
+    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleH2O<Scalar> > type;
+};
+SET_PROP(TutorialProblemCoupled, NonwettingPhase)/*@\label{tutorial-coupled:set-nonwetting}@*/
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public:
+    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleDNAPL<Scalar> > type;
+};
+
+
+//SET_PROP(TutorialProblemCoupled,   FluidSystem)
+//{
+//    //typedef Dune::Brine_CO2_System<TypeTag, Dune::IFP::CO2Tables> type;
+//    typedef Dumux::H2O_N2_System<TypeTag> type;
+//};
 
 // Set the soil properties
-SET_PROP(TutorialProblemCoupled, Soil) /*@\label{tutorial-coupled:set-soil}@*/
+SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-soil}@*/
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     
 public:
-    typedef Dumux::TutorialSoil<Grid, Scalar> type;
+    typedef Dumux::TutorialSpatialParameters<TypeTag> type;
 };
 
 // Disable gravity
@@ -141,9 +161,9 @@ public:
     {    
         const GlobalPosition &pos = element.geometry().corner(scvIdx);
         if (pos[0] < eps_) // dirichlet conditions on left boundary
-           values = BoundaryConditions::dirichlet;
+           values.setAllDirichlet();
         else // neuman for the remaining boundaries
-            values = BoundaryConditions::neumann;
+           values.setAllNeumann();
 
     }
 
@@ -157,8 +177,8 @@ public:
                    int                         scvIdx,
                    int                         boundaryFaceIdx) const
     {
-        values[Indices::pW] = 200.0e3; // 200 kPa = 2 bar
-        values[Indices::sN] = 0.0; // 0 % oil saturation on left boundary
+        values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
+        values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
     }
 
     // Evaluate the boundary conditions for a neumann boundary
@@ -178,12 +198,12 @@ public:
         if (pos[0] > right - eps_) {
             // oil outflux of 0.3 g/(m * s) on the right boundary of
             // the domain.
-            values[Indices::phase2Mass(Indices::wPhase)] = 0;
-            values[Indices::phase2Mass(Indices::nPhase)] = 0.3e-3;
+            values[Indices::contiWEqIdx] = 0;
+            values[Indices::contiNEqIdx] = 0.3e-3;
         } else {
             // no-flow on the remaining neumann-boundaries
-            values[Indices::phase2Mass(Indices::wPhase)] = 0;
-            values[Indices::phase2Mass(Indices::nPhase)] = 0;
+            values[Indices::contiWEqIdx] = 0;
+            values[Indices::contiNEqIdx] = 0;
         }
     }
 
@@ -194,8 +214,8 @@ public:
                  const FVElementGeometry &fvElemGeom,
                  int                      scvIdx) const
     {
-        values[Indices::pW] = 200.0e3; // 200 kPa = 2 bar
-        values[Indices::sN] = 1.0;
+        values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
+        values[Indices::SnIdx] = 1.0;
     }
 
     // Evaluate the source term for all phases within a given
@@ -208,8 +228,8 @@ public:
                 const FVElementGeometry &fvElemGeom,
                 int                      scvIdx) const
     {
-        values[Indices::phase2Mass(Indices::wPhase)] = 0.0;
-        values[Indices::phase2Mass(Indices::nPhase)] = 0.0;
+        values[Indices::contiWEqIdx] = 0.0;
+        values[Indices::contiNEqIdx]= 0.0;
     }
 
 private:
