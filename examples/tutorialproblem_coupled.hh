@@ -18,10 +18,8 @@
 #define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
 // fluid properties
-#include <dumux/new_material/fluidsystems/h2o_n2_system.hh>
-
-//#include <dumux/new_material/components/simpleh2o.hh>		// special case of 2p model!
-//#include <dumux/new_material/components/simplednapl.hh>	// special case of 2p model!
+#include <dumux/material/fluids/water.hh>				//TODO: edit here!
+#include <dumux/material/fluids/lowviscosityoil.hh>		//TODO: edit here!
 
 
 // the numerical model
@@ -31,8 +29,8 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfs.hh>
 
-// assign parameters dependent on space (e.g. soil properties)
-#include "tutorialspatialparameters_coupled.hh"
+// the soil to be used
+#include "tutorialsoil_coupled.hh"		//TODO: edit here!
 
 namespace Dumux
 {
@@ -72,34 +70,23 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     }
 };
 
-// Select fluid system
-SET_PROP(TutorialProblemCoupled,   FluidSystem)
-{
-    //typedef Dune::Brine_CO2_System<TypeTag, Dune::IFP::CO2Tables> type;
-    typedef Dumux::H2O_N2_System<TypeTag> type;
-};
+//TODO: edit from here......
+// Set the wetting and non-wetting phases
+SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase, Dumux::Water); /*@\label{tutorial-coupled:set-wetting}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase, Dumux::LowViscosityOil);/*@\label{tutorial-coupled:set-nonwetting}@*/
 
-//// Set the wetting and non-wetting phases - special case of 2p model!
-//SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:set-wetting}@*/
-//{
-//private:
-//    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-//public:
-//    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleH2O<Scalar> > type;
-//};
-//SET_PROP(TutorialProblemCoupled, NonwettingPhase)/*@\label{tutorial-coupled:set-nonwetting}@*/
-//{
-//private:
-//    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-//public:
-//    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleDNAPL<Scalar> > type;
-//};
 
 // Set the soil properties
-SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-soil}@*/
+SET_PROP(TutorialProblemCoupled, Soil) /*@\label{tutorial-coupled:set-soil}@*/
 {
-    typedef Dumux::TutorialSpatialParameters<TypeTag> type;
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+
+public:
+    typedef Dumux::TutorialSoil<Grid, Scalar> type;
 };
+//TODO: .....until here
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/

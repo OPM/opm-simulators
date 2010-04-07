@@ -20,7 +20,6 @@
 #include <dumux/new_material/spatialparameters/boxspatialparameters.hh>
 
 // include material laws
-#include <dumux/new_material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
 #include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/new_material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
@@ -46,15 +45,15 @@ class TutorialSpatialParameters: public BoxSpatialParameters<TypeTag> /*@\label{
 	typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
 	// select materialLaw to be used
-	typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
-    //typedef LinearMaterial<Scalar>		RawMaterialLaw;		// example for linear Materiallaw
-public:
-    // adapter for absolute law
-	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;
+	//TODO: enter materialLaw stuff here
 
-	// determine appropriate parameters depening on selected materialLaw
-	typedef typename MaterialLaw::Params MaterialLawParams;
-	typedef typename MaterialLaw::Params SecondMaterialLawParams;
+
+
+
+
+
+
+
 
 	// method returning the intrinsic permeability tensor K depending
 	// on the position within the domain
@@ -79,11 +78,60 @@ public:
 											const FVElementGeometry &fvElemGeom,
 											int scvIdx) const
 	{
-		if (element.geometry().center()[1]< 40.)
-			return secondMaterialParams_;
-		else
-			return materialParams_;
+		//TODO: return current material law Object and delete the relPermFlag stuff!
+
+
 	}
+
+
+
+
+    // method returning the residual saturation of the wetting fluid
+    // depending on the position within the domain and on the
+    // temperature
+    double Sr_w(const Dune::FieldVector<Scalar,dim>& globalPos, const Element& element, /*@\label{tutorial-coupled:srw}@*/
+                const Dune::FieldVector<Scalar,dim>& localPos, const double T = 283.15) const
+    {
+        return 0;
+    }
+
+    // method returning the residual saturation of the non-wetting
+    // fluid depending on the position within the domain and on the
+    // temperature
+    double Sr_n(const Dune::FieldVector<Scalar,dim>& globalPos, const Element& element, /*@\label{tutorial-coupled:srn}@*/
+                const Dune::FieldVector<Scalar,dim>& localPos, const double T = 283.15) const
+    {
+        return 0;
+    }
+
+    // method returning the parameters of the capillary pressure and
+    // the relative permeability functionms depending on the position
+    // within the domain and on the temperature
+    std::vector<double> paramRelPerm(const Dune::FieldVector<Scalar,dim>& globalPos, const Element& element, /*@\label{tutorial-coupled:parameters}@*/
+                                     const Dune::FieldVector<Scalar,dim>& localPos, const double T = 283.15) const
+    {
+        std::vector<double> param(2);
+
+        //linear law parameters
+        param[0] = 0; // minimal capillary pressure
+        param[1] = 0; // maximal capillary pressure
+
+        //Brooks-Corey parameters
+        //        param[0] = 2; // lambda
+        //        param[1] = 0.; // entry-pressure
+
+        return param;
+    }
+
+    // method returning the kind of relation used for the calculation
+    // of the capillary pressure and the relative permeabilities
+    // depending on the position within the domain
+    typename Matrix2p<Grid,Scalar>::modelFlag relPermFlag(const Dune::FieldVector<Scalar,dim>& globalPos, const Element& element, /*@\label{tutorial-coupled:flags}@*/
+                                                   const Dune::FieldVector<Scalar,dim>& localPos) const
+    {
+        return Matrix2p<Grid,Scalar>::linear; //flag types defined in
+    }                                   //dumux/material/property_baseclasses.hh
+
 
 	// constructor
 	TutorialSpatialParameters(const GridView& gridView) :
@@ -92,25 +140,24 @@ public:
 		for (int i = 0; i < dim; i++)
 			K_[i][i] = 1e-7;
 
-		//set residual saturations
-		materialParams_.setSwr(0.0);
-		materialParams_.setSnr(0.0);
+		//TODO: set the actual values for the respective parameters that are
+		// of interest in the applied materialLaw. e.g. in a linar law, these are
+		// residual saturations, a minimum value and a maximum value.
+		// Afterwards, please delete the paramRelPerm and Sr_n, Sr_w functions above.
 
-//		//brooks-corey law
-		materialParams_.setPe(0.0);
-		materialParams_.setAlpha(2.0);
 
-//		//linear material law
-		secondMaterialParams_.setPe(0.0);
-		secondMaterialParams_.setAlpha(3.0);
-		secondMaterialParams_.setSnr(0.3);
+
+
+
+
+
+
 	}
 
 private:
 	Dune::FieldMatrix<Scalar, dim, dim> K_;
 	// Object that helds the values/parameters of the selected material law.
-	MaterialLawParams materialParams_;
-	SecondMaterialLawParams secondMaterialParams_;
+	//TODO: add something here!
 };
 } // end namespace
 #endif
