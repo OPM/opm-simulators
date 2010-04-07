@@ -31,7 +31,7 @@
 
 #include <dumux/new_material/binarycoefficients/h2o_n2.hh>
 
-#define USE_SIMPLE_WATER 1
+#define USE_SIMPLE_WATER 0
 
 namespace Dumux
 {
@@ -236,11 +236,11 @@ public:
      * \brief Given a phase's composition, temperature and pressure,
      *        return its viscosity.
      */
-    template <class PhaseCompo>
+    template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
                                  Scalar temperature, 
                                  Scalar pressure,
-                                 const PhaseCompo &phaseCompo)
+                                 const FluidState &fluidState)
     { 
         if (phaseIdx == lPhaseIdx) {
             // assume pure water for the liquid phase
@@ -282,9 +282,9 @@ public:
                                             pow(M[i]/M[j], 1/4.0));
                     phiIJ *= phiIJ;
                     phiIJ /= sqrt(8*(1 + M[i]/M[j]));
-                    divisor += phaseCompo.moleFrac(phaseIdx, j)*phiIJ;
+                    divisor += fluidState.moleFrac(phaseIdx, j)*phiIJ;
                 }
-                muResult += phaseCompo.moleFrac(phaseIdx, i)*mu[i] / divisor;
+                muResult += fluidState.moleFrac(phaseIdx, i)*mu[i] / divisor;
             }
 
             return muResult;
@@ -368,13 +368,13 @@ public:
      *        return the binary diffusion coefficent for components
      *        \f$i\f$ and \f$j\f$ in this phase.
      */
-    template <class PhaseCompo>
+    template <class FluidState>
     static Scalar diffCoeff(int phaseIdx,
                             int compIIdx,
                             int compJIdx,
                             Scalar temperature,
                             Scalar pressure,
-                            const PhaseCompo &phaseCompo)
+                            const FluidState &fluidState)
     { 
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
@@ -425,35 +425,35 @@ public:
      * \brief Given a phase's composition, temperature and pressure,
      *        return its specific enthalpy [J/kg].
      */
-    template <class PhaseCompo>
-    static Scalar enthalpy(int phaseIdx,
-                           Scalar temperature,
-                           Scalar pressure,
-                           const PhaseCompo &phaseCompo)
+    template <class FluidState>
+    static Scalar phaseEnthalpy(int phaseIdx,
+                                Scalar temperature,
+                                Scalar pressure,
+                                const FluidState &fluidState)
     { 
         if (phaseIdx == lPhaseIdx)  {
-            Scalar cN2 = phaseCompo.concentration(lPhaseIdx, N2Idx);
+            Scalar cN2 = fluidState.concentration(lPhaseIdx, N2Idx);
             Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
 
             // TODO: correct way to deal with the solutes??? 
             return 
-                phaseCompo.massFrac(lPhaseIdx, H2OIdx)*
+                fluidState.massFrac(lPhaseIdx, H2OIdx)*
                 H2O::liquidEnthalpy(temperature, pressure)
                 +
-                phaseCompo.massFrac(lPhaseIdx, N2Idx)*
+                fluidState.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasEnthalpy(temperature, pN2);
         }
         else {
-            Scalar pWater = phaseCompo.partialPressure(H2OIdx);
-            Scalar pN2 = phaseCompo.partialPressure(N2Idx);
+            Scalar pWater = fluidState.partialPressure(H2OIdx);
+            Scalar pN2 = fluidState.partialPressure(N2Idx);
 
             Scalar result = 0;
             result += 
                 H2O::gasEnthalpy(temperature, pWater) *
-                phaseCompo.massFrac(gPhaseIdx, H2OIdx);
+                fluidState.massFrac(gPhaseIdx, H2OIdx);
             result += 
                 N2::gasEnthalpy(temperature, pN2) *
-                phaseCompo.massFrac(gPhaseIdx, N2Idx);
+                fluidState.massFrac(gPhaseIdx, N2Idx);
             
             return result;
         }
@@ -463,35 +463,35 @@ public:
      * \brief Given a phase's composition, temperature and pressure,
      *        return its specific internal energy [J/kg].
      */
-    template <class PhaseCompo>
-    static Scalar internalEnergy(int phaseIdx,
-                                 Scalar temperature,
-                                 Scalar pressure,
-                                 const PhaseCompo &phaseCompo)
+    template <class FluidState>
+    static Scalar phaseInternalEnergy(int phaseIdx,
+                                      Scalar temperature,
+                                      Scalar pressure,
+                                      const FluidState &fluidState)
     { 
         if (phaseIdx == lPhaseIdx)  {
-            Scalar cN2 = phaseCompo.concentration(lPhaseIdx, N2Idx);
+            Scalar cN2 = fluidState.concentration(lPhaseIdx, N2Idx);
             Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
 
             // TODO: correct way to deal with the solutes??? 
             return 
-                phaseCompo.massFrac(lPhaseIdx, H2OIdx)*
+                fluidState.massFrac(lPhaseIdx, H2OIdx)*
                 H2O::liquidInternalEnergy(temperature, pressure)
                 +
-                phaseCompo.massFrac(lPhaseIdx, N2Idx)*
+                fluidState.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasInternalEnergy(temperature, pN2);
         }
         else {
-            Scalar pWater = phaseCompo.partialPressure(H2OIdx);
-            Scalar pN2 = phaseCompo.partialPressure(N2Idx);
+            Scalar pWater = fluidState.partialPressure(H2OIdx);
+            Scalar pN2 = fluidState.partialPressure(N2Idx);
             
             Scalar result = 0;
             result += 
                 H2O::gasInternalEnergy(temperature, pWater)*
-                phaseCompo.massFrac(gPhaseIdx, H2OIdx);
+                fluidState.massFrac(gPhaseIdx, H2OIdx);
             result += 
                 N2::gasInternalEnergy(temperature, pN2)*
-                phaseCompo.massFrac(gPhaseIdx, N2Idx);
+                fluidState.massFrac(gPhaseIdx, N2Idx);
             
             return result;
         }
