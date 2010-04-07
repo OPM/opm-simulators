@@ -20,6 +20,8 @@
 #include <dumux/new_material/spatialparameters/boxspatialparameters.hh>
 
 // include material laws
+#include <dumux/new_material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
+#include <dumux/new_material/fluidmatrixinteractions/2p/regularizedlinearmaterial.hh>
 #include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/new_material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
@@ -45,8 +47,8 @@ class TutorialSpatialParameters: public BoxSpatialParameters<TypeTag> /*@\label{
 	typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
 	// select materialLaw to be used
-	//TODO: enter materialLaw stuff here
-    typedef LinearMaterial<Scalar>		RawMaterialLaw;		// example for linear Materiallaw
+	typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
+    //typedef LinearMaterial<Scalar>		RawMaterialLaw;		// example for linear Materiallaw
 public:
     // adapter for absolute law
 	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;
@@ -78,7 +80,7 @@ public:
 											const FVElementGeometry &fvElemGeom,
 											int scvIdx) const
 	{
-//		if (element.geometry().center()[1] >= 783636.)	//Hint for next exercise
+//		if (element.center()>= 783636)
 //			return UpperBoundaryMaterialParams_;
 		return materialParams_;
 	}
@@ -90,24 +92,22 @@ public:
 		for (int i = 0; i < dim; i++)
 			K_[i][i] = 1e-7;
 
-		//TODO: set the actual values for the respective parameters that are
-		// of interest in the applied materialLaw. e.g. in a linar law, these are
-		// residual saturations, a minimum value and a maximum value.
-		// Afterwards, please delete the paramRelPerm and Sr_n, Sr_w functions above.
-
 		//set residual saturations
 		materialParams_.setSwr(0.0);
 		materialParams_.setSnr(0.0);
 
-		//linear material law
-		materialParams_.setEntryPC(0.0);
-		materialParams_.setMaxPC(0.0);
+		//brooks-corey law
+		materialParams_.setPe(0.0);
+		materialParams_.setAlpha(2.0);
+
+//		//linear material law
+//		materialParams_.setEntryPC(0.0);
+//		materialParams_.setMaxPC(0.0);
 	}
 
 private:
 	Dune::FieldMatrix<Scalar, dim, dim> K_;
 	// Object that helds the values/parameters of the selected material law.
-	//TODO: add something here!
 	MaterialLawParams materialParams_;
 };
 } // end namespace
