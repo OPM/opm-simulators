@@ -197,7 +197,7 @@ letter, e.g. \texttt{Water}, and are derived from \texttt{Component}.
 
 Mostoften, when two or more components are considered, fluid interactions 
 such as solubility effects come into play and properties of mixtures such as 
-the densitiy are of interest. These interactions are defined in
+the density are of interest. These interactions are defined in
 a specific \verb+fluidsystem+ in the folder \verb+dumux/new_material/fluidsystems+.
 It features methods returning fluid properties like density, enthalpy, viscosity,
 etc. by accessing the pure components as well as binary coefficients such as
@@ -205,7 +205,7 @@ Henry's or Diffusion coefficients, which are stored in
 \verb+dumux/new_material/binarycoefficients+. New fluids which are not yet
  available in the \Dumux distribution can be defined analogous.
 
-\subsection{The definition of the parameters that are dependant on space}\label{tutorial-coupled:description-spatialParameters}
+\subsection{The definition of the parameters that are dependent on space}\label{tutorial-coupled:description-spatialParameters}
 
 In \Dumux, the properties of the porous medium such as \textit{intrinsic 
 permeability}, the \textit{porosity}, the \textit{heat capacity} as
@@ -216,7 +216,7 @@ their selection and definition of their attributes (e.g. \textit{residual
 saturations}) are also accomplished in the spatial parameters.
 
 The base class \texttt{Dumux::BoxSpatialParameters<TypeTag>} holds a general 
-averageing procedure for vertex-ceneterd box-methods.
+averaging procedure for vertex-centered box-methods.
 
 Listing \ref{tutorial-coupled:spatialparametersfile} shows the file
 \verb+tutorialspatialparameters_coupled.hh+:
@@ -246,7 +246,7 @@ intrinsic permeability can be found. As can be seen, the function has
 to be called with three different arguments. 
 (\texttt{Element}) is again the current element, which also holds information
 about its geometry and position, the second argument
-(\texttt{fvElemGeom}) holds information about the finite-volume gemoetry induced
+(\texttt{fvElemGeom}) holds information about the finite-volume geometry induced
 by the box-method, and the third defines the index of the current sub-control 
 volume. The intrinsic permeability is a tensor and is thus returned in form of
 a $\texttt{dim} \times \texttt{dim}$-matrix where \texttt{dim} is the dimension 
@@ -263,7 +263,7 @@ While the selection of the type of this object was already explained (see
 values of the applied material law are still needed. This is 
 done in the constructor body (line \ref{tutorial-coupled:setLawParams}.
 Depending on the type of the materialLaw object, the adequate \texttt{set}-methods
-are privided by the object to access all necessary parameters 
+are provided by the object to access all necessary parameters 
 for the applied material law.
 
 \subsection{Exercises}
@@ -361,7 +361,7 @@ so that the boundary conditions are consistent with figure
 with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
-should be set to $4\times 10^7 \text{s}$ with an inital time step size of
+should be set to $4\times 10^7 \text{s}$ with an initial time step size of
 $100 \text{s}$.
 
 Now include your new problem file in the main file and replace the
