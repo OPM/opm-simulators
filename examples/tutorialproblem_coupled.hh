@@ -68,36 +68,17 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     }
 };
 
-//TODO: edit from here......
 // Select fluid system
-SET_PROP(TutorialProblemCoupled,   FluidSystem)
+SET_PROP(TutorialProblemCoupled,   FluidSystem) /*@\label{tutorial-coupled:set-fluidsystem}@*/
 {
-    //typedef Dune::Brine_CO2_System<TypeTag, Dune::IFP::CO2Tables> type;
     typedef Dumux::H2O_N2_System<TypeTag> type;
 };
 
-//// Set the wetting and non-wetting phases - special case of 2p model!
-//SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:set-wetting}@*/
-//{
-//private:
-//    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-//public:
-//    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleH2O<Scalar> > type;
-//};
-//SET_PROP(TutorialProblemCoupled, NonwettingPhase)/*@\label{tutorial-coupled:set-nonwetting}@*/
-//{
-//private:
-//    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-//public:
-//    typedef Dumux::LiquidPhase<Scalar, Dumux::SimpleDNAPL<Scalar> > type;
-//};
-
-// Set the soil properties
-SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-soil}@*/
+// Set the spatial parameters
+SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-spatialparameters}@*/
 {
     typedef Dumux::TutorialSpatialParameters<TypeTag> type;
 };
-//TODO: .....until here
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
@@ -147,7 +128,7 @@ public:
 
     // Specifies which kind of boundary condition should be used for
     // which equation on a given boundary segment.
-    void boundaryTypes(BoundaryTypeVector         &values,
+    void boundaryTypes(BoundaryTypeVector         &BCtype,
                        const Element              &element,
                        const FVElementGeometry    &fvElemGeom,
                        const Intersection         &isIt,
@@ -156,9 +137,9 @@ public:
     {    
         const GlobalPosition &pos = element.geometry().corner(scvIdx);
         if (pos[0] < eps_) // dirichlet conditions on left boundary
-           values.setAllDirichlet();
+           BCtype.setAllDirichlet();
         else // neuman for the remaining boundaries
-           values.setAllNeumann();
+           BCtype.setAllNeumann();
 
     }
 

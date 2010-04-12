@@ -20,9 +20,7 @@
 #include <dumux/new_material/spatialparameters/boxspatialparameters.hh>
 
 // include material laws
-#include <dumux/new_material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
-#include <dumux/new_material/fluidmatrixinteractions/2p/regularizedlinearmaterial.hh>
-#include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh>
+#include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
 #include <dumux/new_material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 namespace Dumux
@@ -46,20 +44,19 @@ class TutorialSpatialParameters: public BoxSpatialParameters<TypeTag> /*@\label{
 	typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
 	typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
-	// select materialLaw to be used
-	typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
-    //typedef LinearMaterial<Scalar>		RawMaterialLaw;		// example for linear Materiallaw
+	// select material law to be used
+    typedef LinearMaterial<Scalar>		RawMaterialLaw; 	/*@\label{tutorial-coupled:rawlaw}@*/
+
 public:
     // adapter for absolute law
-	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;
-
+	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;		/*@\label{tutorial-coupled:eff2abs}@*/
 	// determine appropriate parameters depening on selected materialLaw
-	typedef typename MaterialLaw::Params MaterialLawParams;
+	typedef typename MaterialLaw::Params MaterialLawParams;	/*@\label{tutorial-coupled:matLawObjectType}@*/
 
 
 	// method returning the intrinsic permeability tensor K depending
 	// on the position within the domain
-	const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element,
+	const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
 													const FVElementGeometry &fvElemGeom,
 													int scvIdx) const
 	{
@@ -68,7 +65,7 @@ public:
 
 	// method returning the porosity of the porous matrix depending on
 	// the position within the domain
-	double porosity(const Element &element,
+	double porosity(const Element &element,					/*@\label{tutorial-coupled:porosity}@*/
 					const FVElementGeometry &fvElemGeom,
 					int scvIdx) const
 	{
@@ -76,12 +73,10 @@ public:
 	}
 
 	// return the materialLaw context (i.e. BC, regularizedVG, etc) depending on the position
-	const MaterialLawParams& materialLawParams(const Element &element,
+	const MaterialLawParams& materialLawParams(const Element &element,			/*@\label{tutorial-coupled:matLawParams}@*/
 											const FVElementGeometry &fvElemGeom,
 											int scvIdx) const
 	{
-//		if (element.center()>= 783636)
-//			return UpperBoundaryMaterialParams_;
 		return materialParams_;
 	}
 
@@ -93,22 +88,18 @@ public:
 			K_[i][i] = 1e-7;
 
 		//set residual saturations
-		materialParams_.setSwr(0.0);
+		materialParams_.setSwr(0.0);				/*@\label{tutorial-coupled:setLawParams}@*/
 		materialParams_.setSnr(0.0);
 
-		//brooks-corey law
-		materialParams_.setPe(0.0);
-		materialParams_.setAlpha(2.0);
-
-//		//linear material law
-//		materialParams_.setEntryPC(0.0);
-//		materialParams_.setMaxPC(0.0);
+		//linear material law
+		materialParams_.setEntryPC(0.0);
+		materialParams_.setMaxPC(0.0);
 	}
 
 private:
 	Dune::FieldMatrix<Scalar, dim, dim> K_;
 	// Object that helds the values/parameters of the selected material law.
-	MaterialLawParams materialParams_;
+	MaterialLawParams materialParams_; 				/*@\label{tutorial-coupled:matParamsObject}@*/
 };
 } // end namespace
 #endif
