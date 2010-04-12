@@ -113,10 +113,12 @@ is going to be used is defined on line \ref{tutorial-coupled:set-grid} --
 in this case it's \texttt{SGrid}.  Since in Dune, there's no uniform
 mechanism to allocate grids, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that. Next,
-fluids used as wetting phase and non-wetting phase as well as the soil
-properties are specified on lines \ref{tutorial-coupled:set-wetting},
-\ref{tutorial-coupled:set-nonwetting} and
-\ref{tutorial-coupled:set-soil}. The final property on line line
+the appropriate fluid system, that specifies both information about
+the fluid mixture as well as about the pure substances, has to be chosen 
+in line \ref{tutorial-coupled:set-fluidsystem}. For all parameters that 
+depend on space, such as the properties of the soil, the specific spatial 
+parameters for the problem of interest are specified in line
+\ref{tutorial-coupled:set-spatialparameters}. The final property on line line
 \ref{tutorial-coupled:gravity} is optional and tells the model not to
 use gravity.
 
@@ -142,16 +144,13 @@ The problem class always has at least five methods:
 
 Methods which make statements about boundary segments of the grid (i.e. 
 \texttt{boundaryTypes()}, \texttt{dirichlet()} and \texttt{neumann()}) get 
-six parameters:
+six parameters. The first parameter differs if the type of the boundary condition
+is defined \texttt{boundaryTypes()}:
 \begin{description}
-\item[values:] A vector which stores the result of the method. What
-  the values in this vector means is dependent on the method: For
-  \texttt{dirichlet()} it contains the values of the primary
-  variables, for \texttt{neumann()} the mass fluxes per area unit
-  over the boundary segment, and for \texttt{boundaryTypes()} 
-  the type of boundary condition which should be used for
-  each equation (either \texttt{Dune::BoundaryConditions::dirichlet} or
-  \texttt{Dune::BoundaryConditions::neumann}).
+\item[BCtypes:] A container which stores the type of the boundary condition
+for each equation. For the typical case where all eqations have the same boundary
+condition at a certain position, there are two methods that set the appropriate conditions
+for all primary variables / equations: Either \texttt{setAllDirichlet()} or \texttt{setAllNeumann()}.
 \item[element:] The element of the grid where the boundary segment
   is located.
 \item[fvElemGeometry:] The finite-volume geometry induced on the
@@ -162,6 +161,16 @@ six parameters:
   \texttt{fvElementGeometry} adjacent to the boundary segment.
 \item[boundaryFaceIdx:] The index of the boundary face in
   \texttt{fvElementGeometry} which represents the boundary segment.  
+\end{description}
+After the type of the boundary condition is defined, their values have to be
+assigned with the methods \texttt{dirichlet()} and \texttt{neumann()} which only differ 
+by the first function parameter:
+\begin{description}
+ \item[values:] A vector which stores the result of the method. What
+  the values in this vector means is dependent on the method: For
+  \texttt{dirichlet()} it contains the values of the primary
+  variables, for \texttt{neumann()} the mass fluxes per area unit
+  over the boundary segment.
 \end{description}
 
 Similarly, the \texttt{initial()} and \texttt{dirichlet()} methods
@@ -179,100 +188,83 @@ depend on it, e.g. density.
 
 \subsection{Defining fluid properties}\label{tutorial-coupled:description-fluid-class}
 
-The \Dumux distribution includes some common fluids which can be used
-out of the box. For each fluid there is a header file in
-\texttt{dumux/material/fluids}, for example the fluid class for air is
-located in \texttt{air.hh}. Each of these files, defines a class with
-the same name as the fluid but starting with a capital letter,
-e.g. \texttt{Air}. These classes are derived from \texttt{Fluid}, the
-base class of all fluids in \Dumux. \texttt{Fluid} is defined in the
-file \texttt{dumux/material/property\_baseclasses.hh} and features
-methods returning fluid properties like density, enthalpy, viscosity,
-etc. New fluids which are not yet available in the \Dumux distribution
-can be defined analogous.
+The \Dumux distribution includes some common substances which can be used
+out of the box. The properties of the pure substances (such as the component 
+Nitrogen, water, or pseudo-component air) are stored in header files in 
+the folder \verb+dumux/new_material/components+. Each of these files 
+defines a class with the same name as the component but starting with a capital
+letter, e.g. \texttt{Water}, and are derived from \texttt{Component}.
 
-It is important to mention that existing fluid classes should not be
-changed by the user, in order to avoid confusion. Also, new fluid
-classes should only be added to the directory
-\texttt{dumux/material/fluids} and if they might be useful for other
-people. If you are not sure if your fluid class can be useful for
-other \Dumux users, just create a new fluid in your problem directory
-analogous to the ones defined in \texttt{dumux/material/fluids}.
+Mostoften, when two or more components are considered, fluid interactions 
+such as solubility effects come into play and properties of mixtures such as 
+the densitiy are of interest. These interactions are defined in
+a specific \verb+fluidsystem+ in the folder \verb+dumux/new_material/fluidsystems+.
+It features methods returning fluid properties like density, enthalpy, viscosity,
+etc. by accessing the pure components as well as binary coefficients such as
+Henry's or Diffusion coefficients, which are stored in 
+\verb+dumux/new_material/binarycoefficients+. New fluids which are not yet
+ available in the \Dumux distribution can be defined analogous.
 
-\subsection{The definition of the soil parameters}\label{tutorial-coupled:description-soil-class}
+\subsection{The definition of the parameters that are dependant on space}\label{tutorial-coupled:description-spatialParameters}
 
-In \Dumux, properties of the porous medium like \textit{intrinsic
-  permeability}, the \textit{porosity}, the \textit{heat capacity} as
-well as the \textit{heat conductivity} can be defined using a
-so-called \texttt{Soil} class. Further the \textit{residual
-  saturations} of the fluids, and the \textit{capillary
-  pressures-saturation function} as well as the \textit{relative
-  permeability-saturation functions} are defined by the soil.
+In \Dumux, the properties of the porous medium such as \textit{intrinsic 
+permeability}, the \textit{porosity}, the \textit{heat capacity} as
+well as the \textit{heat conductivity} can be defined in space using a
+so-called \texttt{spatial parameters} class.  However, because the soil
+also has an effect on the material laws of the fluids (e.g. \textit{capillarity}),
+their selection and definition of their attributes (e.g. \textit{residual 
+saturations}) are also accomplished in the spatial parameters.
 
-The base class \texttt{Dune::Matrix2p} for the definition of the soil
-parameters can be found in the file
-\texttt{dumux/material/property\_baseclasses.hh}. Derived from this
-base class, two standard soil types called \texttt{HomogeneousSoil}
-and \texttt{HeterogeneousSoil} are included in the \Dumux
-distribution, both of which are located in
-\texttt{dumux/material/matrixproperties.hh}. If one wants to use a
-soil that differs from this standard soil types, new soil classes can
-be derived either from the base class (\texttt{Dune::Matrix2p}) or
-from either \texttt{Dune::HomogeneousSoil} or
-\texttt{Dune::HeterogeneousSoil}.
+The base class \texttt{Dumux::BoxSpatialParameters<TypeTag>} holds a general 
+averageing procedure for vertex-ceneterd box-methods.
 
-For this tutorial problem a new soil class named \texttt{TutorialSoil}
-is derived from \texttt{Dune::Matrix2p} (listing
-\ref{tutorial-coupled:soilpropertiesfile}, line
-\ref{tutorial-coupled:tutorialsoil}), is located in
-\texttt{tutorial/tutorialsoil\_coupled.hh}.
+Listing \ref{tutorial-coupled:spatialparametersfile} shows the file
+\verb+tutorialspatialparameters_coupled.hh+:
 
-Listing \ref{tutorial-coupled:soilpropertiesfile} shows the file
-\texttt{tutorialsoil\_coupled.hh}.
-
-\begin{lst}[File tutorial/tutorialsoil\_coupled.hh]\label{tutorial-coupled:soilpropertiesfile} \mbox{}
+\begin{lst}[File tutorial/tutorialspatialparameters\_coupled.hh]\label{tutorial-coupled:spatialparametersfile} \mbox{}
 \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-numberstyle=\tiny, numbersep=5pt, firstline=16]{../../tutorial/tutorialsoil_coupled.hh}
+numberstyle=\tiny, numbersep=5pt, firstline=16]{../../tutorial/tutorialspatialparameters_coupled.hh}
 \end{lst}
+
+First, a certain material law that best describes the problem at hand has to
+be selected in line \ref{tutorial-coupled:rawlaw}\label{tutorial-coupled:materialLaw}. 
+\Dumux provides several material laws in the folder 
+\verb+dumux/new_material/fluidmatrixinteractions+.
+The selected one, here it is a simple linear relation, is included
+in line \ref{tutorial-coupled:rawLawInclude}. After the selection,
+an adapter in line \ref{tutorial-coupled:eff2abs} translates the raw 
+law to effective values (residual saturations are considered). As the
+applied raw law knows best which kind of parameters are necessary,
+it provides a parameter class \texttt{LinearMaterialParams} that is
+accessible via the member \texttt{Params} and defined in line 
+\ref{tutorial-coupled:matLawObjectType}. The material law object 
+could now be instantiated correctly as a private object
+in line \ref{tutorial-coupled:matParamsObject}.
 
 In line \ref{tutorial-coupled:permeability} the function returning the
 intrinsic permeability can be found. As can be seen, the function has
-to be called with three different arguments. The first one
-(\texttt{globalPos}) is a vector including the global coordinates of the
-current entity (can be an element, vertex, etc.), the second one
-(\texttt{element}) is the current element itself and the third one is a vector
-including the local coordinates of the current entity within the element. The intrinsic
-permeability is a tensor and thus returned in form of a $\texttt{dim} \times
-\texttt{dim}$-matrix where \texttt{dim} is the dimension of the problem.
-
+to be called with three different arguments. 
+(\texttt{Element}) is again the current element, which also holds information
+about its geometry and position, the second argument
+(\texttt{fvElemGeom}) holds information about the finite-volume gemoetry induced
+by the box-method, and the third defines the index of the current sub-control 
+volume. The intrinsic permeability is a tensor and is thus returned in form of
+a $\texttt{dim} \times \texttt{dim}$-matrix where \texttt{dim} is the dimension 
+of the problem.\\
 The function \texttt{porosity()} defined in line
 \ref{tutorial-coupled:porosity} is called with the same arguments as
 the permeability function described before and returns the porosity
-dependent on the position in the domain.
-
-The residual saturation functions \texttt{Sr\_w()} (line
-\ref{tutorial-coupled:srw}) and \texttt{Sr\_n()} (line
-\ref{tutorial-coupled:srn}) additionally have the temperature as
-function argument, which is set to a default value if an isothermal
-model is used.
-
-Finally, the functions defining the type of the capillary pressure
-function and the relative permeability functions have to be
-considered. In line \ref{tutorial-coupled:flags} the function
-\texttt{relPermFlag()} is defined. This function returns a flag
-indicating the type of function which is used depending on the
-position. This could be a linear function, a \textit{Brooks-Corey}
-function, a \textit{van Genuchten} function, etc. The flags that can
-be chosen as return parameter are defined in the base soil class
-\texttt{Matrix2p} in the file \texttt{property\_baseclasses.hh}. The
-parameters used in the chosen function type can be defined in the
-function \texttt{paramRelPerm} (line
-\ref{tutorial-coupled:parameters}). As can be seen in listing
-\ref{tutorial-coupled:soilpropertiesfile}, e.g. linear capillary
-pressure and relative permeability functions require a vector of two
-arguments, one defining the minimum and one defining the maximum
-capillary pressure. The parameters can again be defined depending on
-the position in the domain an on temperature.
+dependent on the position in the domain.\\
+Next, the method \texttt{materialLawParams()} defines in line 
+\ref{tutorial-coupled:matLawParams} which object of a considered 
+material law should be applied at this specific position. 
+While the selection of the type of this object was already explained (see 
+\ref{tutorial-coupled:materialLaw}), some specific parameter 
+values of the applied material law are still needed. This is 
+done in the constructor body (line \ref{tutorial-coupled:setLawParams}.
+Depending on the type of the materialLaw object, the adequate \texttt{set}-methods
+are privided by the object to access all necessary parameters 
+for the applied material law.
 
 \subsection{Exercises}
 \label{tutorial-coupled:exercises}
@@ -306,24 +298,24 @@ please refer to \ref{quick-start-guide}.
 
 
 \item \textbf{Changing Fluids} \\
-  Now you can change the fluids. Use \texttt{DNAPL} instead of
-  \texttt{Oil} and \texttt{Brine} instead of \texttt{Water}. To do
+  Now you can change the fluids. Use \texttt{Carbon dioxide} instead of
+  \texttt{Nitrogen} and \texttt{Brine} instead of \texttt{Water}. To do
   that you have to change the problem file
-  \texttt{tutorialproblem\_coupled.hh}. If you want to take a closer
-  look how the fluid classes are defined and which fluids are already
-  available please open the file \texttt{dumux/material/fluids/air.hh}
+  \texttt{tutorialproblem\_coupled.hh} and choose another \texttt{fluid system}. 
+  If you want to take a closer look how the fluid systems are defined 
+  and which fluids are already available please look into the folder \verb+dumux/new_material/fluidsystems/+
   for an example.
 
 
 \item \textbf{Changing Constitutive Relations} \\
-  Use a Brooks-Corey law with $\lambda = 2$ and entry pressure $p_e =
-  0.0$ instead of using a linear law for the
-  relative-permeability/saturation relationship. To do that you have
-  to change the file \texttt{tutorialsoil\_coupled.hh}. You can find
-  the flag that you have to set for the Brooks-Corey law in the file
-  \texttt{dumux/material/property\_baseclasses.hh}.  The available
-  relative permeability and capillary pressure functions are defined
-  in the file \texttt{/dumux/material/relperm\_pc\_law}.
+  Use a regularized Brooks-Corey law with $\lambda = 2$ and entry pressure $p_e =
+  0.0$ instead of using an unregularized linear law for the
+  relative-permeability saturation relationship. To do that you have
+  to change the file \texttt{tutorialspatialparameters\_coupled.hh}. 
+ You can find the material laws in the folder 
+  \verb+dumux/new_material/fluidmatrixinteractions+. The necessary parameters
+of the Brooks-Corey law and the respective \texttt{set}-functions can be found
+ in the file \verb+dumux/new_material/fluidmatrixinteractions/2p/brookscoreyparams.hh+.
  
 \item \textbf{Heterogeneities}  \\
   Set up a model domain with the soil properties given in Figure
@@ -348,22 +340,21 @@ please refer to \ref{quick-start-guide}.
 
 \subsubsection{Exercise 2}
 For this exercise you should create a new proplem file analogous to
-the file \texttt{tutorialproblem\_coupled.hh} and a new soil property
-file just like \texttt{tutorialsoil\_coupled.hh}. These files need to
+the file \texttt{tutorialproblem\_coupled.hh} and new spatial parameters 
+just like \texttt{tutorialspatialparameters\_coupled.hh}. These files need to
 be included in the file \texttt{tutorial\_coupled.cc}. 
 
-The new soil file should contain the definition of a new soil class
-e.g. \texttt{SoilEx2}. Make sure that you also adjust the guardian
-macros in the header files (e.g. change \texttt{TUTORIAL\_SOIL} to
-\texttt{TUTORIAL\_SOILEX2}).  The new problem file should define and
-use a new type tag for the problem as well as a new problem class
-e.g. \texttt{ProblemEx2}. Make sure you assign your newly defined soil
-class to the \texttt{Soil} property for the new type tag. Just like
-for your new soil, you also need to adjust the guardian macros in the
-problem file.
+The new file defining spatial parameters should contain the definition 
+of a new class, such as \texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
+macros in the header files (e.g. change \texttt{TUTORIALSPATIALPARAMETERS\_COUPLED} to
+\texttt{SPATIALPARAMETERSEX2}). Besides also adjusting the guardian macros, 
+the new problem file should define and use a new type tag for the problem as well as a new problem class
+e.g. \texttt{ProblemEx2}. Make sure you assign your newly defined spatial 
+parameter class to the \texttt{SpatialParameters} property for the new 
+type tag. 
 
 After this, change the \texttt{create()} method of the \texttt{Grid}
-property and your soil class, so that it matches the domain described
+property so that it matches the domain described
 by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the problem class
 so that the boundary conditions are consistent with figure
 \ref{tutorial-coupled:ex2_BC}. Initially the domain is fully saturated
@@ -411,11 +402,8 @@ compile the program.
 \subsubsection{Exercise 3}
 
 Create a new file for benzene called \texttt{benzene.hh} and implement
-a new fluid class. This new fluid class should be derived from the
-base class \texttt{Fluid} located in
-\texttt{/dumux/material/property\_baseclasses.hh}.  (You may get a
-hint by looking at existing fluid classes in the directory
-\texttt{/dumux/material/fluids}.)
+a new fluid system. (You may get a hint by looking at existing fluid 
+systems in the directory \verb+/dumux/new_material/fluidsystems+.)
 
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
