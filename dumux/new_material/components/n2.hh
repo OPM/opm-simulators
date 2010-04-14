@@ -32,13 +32,6 @@ namespace Dumux
 
 /*!
  * \brief Properties of pure molecular nitrogen \f$N_2\f$.
- *
- * See: 
- *
- * R. Span, E.W. Lemmon, et al.: "A Reference Equation of State for
- * the Thermodynamic Properties of Nitrogen for Temperatures from
- * 63.151 to 1000 K and Pressures to 2200 MPa", Journal of Physical
- * and Chemical Refefence Data, Vol. 29, No. 6, pp. 1361-1433
  */
 template <class Scalar>
 class N2 : public Component<Scalar, N2<Scalar> >
@@ -152,13 +145,30 @@ public:
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     *
+     * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
+     * edition, McGraw-Hill, 1987, pp 154, 657, 665
      */
-    static const Scalar gasEnthalpy(Scalar temperature, 
+    static const Scalar gasEnthalpy(Scalar T, 
                                     Scalar pressure)
     {
-        const Scalar cvHat = 5./2; // constant for diatomic gases
+        // method of Joback
+        const Scalar cpVapA =  31.15;
+        const Scalar cpVapB = -0.01357;
+        const Scalar cpVapC =  2.680e-5;
+        const Scalar cpVapD = -1.168e-8;
         
-        return temperature * (cvHat + 1) * IdealGas::R / molarMass();
+        //Scalar cp = 
+        //    cpVapA + T*(cpVapB + T*(cpVapC + T*cpVapD));
+
+        // calculate: \int_0^T c_p dT
+        return 
+            1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
+
+            T*(cpVapA + T*
+               (cpVapB/2 + T*
+                (cpVapC/3 + T*
+                 (cpVapD/4))));
     }
 
     /*!
