@@ -169,16 +169,16 @@ public:
         Valgrind::CheckDefined(deltaP);
         for (int i = 0; i < 5 && std::abs(deltaP/pg) > 1e-9; ++i) {
             Scalar f = 
-                H2O::gasDensity(temperature, pH2O)*(1 - 1/X1) +
-                N2::gasDensity(temperature, pg - pH2O);
+                H2O::gasDensity(temperature, pH2O)*(X1 - 1) +
+                X1*N2::gasDensity(temperature, pg - pH2O);
             
             Scalar df_dp;
             df_dp  =
-                H2O::gasDensity(temperature, pH2O + eps)*(1 - 1/X1) +
-                N2::gasDensity(temperature, pg - (pH2O + eps));
+                H2O::gasDensity(temperature, pH2O + eps)*(X1 - 1) +
+                X1*N2::gasDensity(temperature, pg - (pH2O + eps));
             df_dp -= 
-                H2O::gasDensity(temperature, pH2O - eps)*(1 - 1/X1) +
-                N2::gasDensity(temperature, pg - (pH2O - eps));
+                H2O::gasDensity(temperature, pH2O - eps)*(X1 - 1) +
+                X1*N2::gasDensity(temperature, pg - (pH2O - eps));
             df_dp /= 
                 2*eps;
             
@@ -290,6 +290,57 @@ public:
             return muResult;
         }
     } 
+
+#if 0
+    /*!
+     * \brief Given a phase's composition, temperature and
+     *        pressure, compute the other composition of all other phases.
+     */
+    template <class FluidState>
+    static void computeEquilibrium(int knownPhaseIdx,
+                                   Scalar temperature,
+                                   Scalar pressure,
+                                   FluidState &fluidState)
+    {
+        Scalar betaH2O = H2O::vaporPressure(temperature);
+        Scalar betaN2 = BinaryCoeff::H2O_N2::henry(temperature);
+        if (knownPhaseIdx == gPhaseIdx) {
+            AssignablePhase<TypeTag> phase(lPhaseIdx);
+            
+            // rault and henry laws
+            phase.moleFrac_[H2OIdx] = fluidState.partialPressure(H2OIdx)/betaH2O;
+            phase.moleFrac_[N2Idx] = fluidState.partialPressure(N2Idx)/betaN2;
+
+            // calculate mass fractions from mole fractions
+            phase.XFromx_(); 
+            phase.density_ = phaseDensity(lPhaseIdx, temperature, pressure, phase);
+
+            fluidState.assignComposition(lPhaseIdx, phase);
+        }
+        else if (knownPhaseIdx == lPhaseIdx) {
+            AssignablePhase<TypeTag> phase(gPhaseIdx);
+
+            // Rault and Henry laws
+            phase.partialPressure_[H2OIdx] = fluidState.moleFrac(lPhaseIdx, H2OIdx)*betaH2O;
+            phase.partialPressure_[N2Idx] = fluidState.moleFrac(lPhaseIdx, N2Idx)*betaN2;
+
+            // Convert partial pressures to gas composition. For this,
+            // assume Dalton's law
+            Scalar rhoH2O =
+                H2O::gasDensity(temperature,
+                                phase.partialPressure_[H2OIdx]);
+            Scalar rhoN2 =
+                N2::gasDensity(temperature,
+                               phase.partialPressure_[N2Idx]);
+            phase.density_ = rhoH2O + rhoN2;
+            phase.moleFrac_[H2OIdx] = rhoH2O/phase.density_;
+            phase.moleFrac_[N2Idx] = rhoN2/phase.density_;
+            phase.xFromX(); // mole fractions from mass fractions
+            
+            fluidState.assignComposition(gPhaseIdx, phase);
+        }
+    };
+#endif
 
     /*!
      * \brief Return the pressure which a component degases from the
