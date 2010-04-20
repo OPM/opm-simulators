@@ -73,7 +73,7 @@ public:
         else if (Swe > 1) {
             Scalar m = BrooksCorey::dpC_dSw(params, 1.0);
             Scalar pC_SweHigh = BrooksCorey::pC(params, 1.0);
-            return pC_SweHigh + m*(Swe - Sthres);
+            return pC_SweHigh + m*(Swe - 1.0);
         }
 
         // if the effective saturation is in an 'reasonable'
@@ -179,18 +179,11 @@ public:
     static Scalar krw(const Params &params, Scalar Sw)
     {
         const Scalar Sthres = params.krwHighSw();
-        if (Sw < 0)
+        if (Sw <= 0)
             return 0;
-        else if (Sw >= 1)
-            return 1;       
-        // check if we need to regularize the relative permeability
-        else if (Sw > Sthres) {
-            typedef Dumux::Spline<Scalar> Spline;
-            Spline sp(Sthres, 1.0, // x1, x2
-                      BrooksCorey::krw(params, Sthres), 1.0, // y1, y2
-                      BrooksCorey::dkrw_dSw(params, Sthres), 0); // m1, m2
-
-            return sp.eval(Sw);
+        else if (Sw >= 1) {
+            Scalar m = BrooksCorey::dkrw_dSw(params, 1.0);
+            return 1 + m*(Sw - 1.0);
         }
         
         return BrooksCorey::krw(params, Sw);
@@ -206,20 +199,14 @@ public:
     static Scalar krn(const Params &params, Scalar Sw)
     {
         const Scalar Sthres = params.krnLowSw();
-        if (Sw <= 0)
-            return 1;
-        else if (Sw >= 1)
+        if (Sw >= 1)
             return 0;
         // check if we need to regularize the relative permeability
-        else if (Sw < Sthres) {
-            typedef Dumux::Spline<Scalar> Spline;
-            Spline sp(0.0, Sthres, // x1, x2
-                      1.0, BrooksCorey::krn(params, Sthres), // y1, y2
-                      0.0, BrooksCorey::dkrn_dSw(params, Sthres)); // m1, m2
-            
-            return sp.eval(Sw);
+        else if (Sw <= 0) {
+            Scalar m = BrooksCorey::dkrn_dSw(params, 0);
+            return 1 + m*(Sw - 0);
         }
-        
+     
         return BrooksCorey::krn(params, Sw);
     }
 };
