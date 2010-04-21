@@ -54,28 +54,9 @@ public:
      * This is just 5%. If you need a different value, overload this
      * class.
      */
-    Scalar pCLowSw() const
+    Scalar thresholdSw() const
     { return 0.05; }
 
-    /*!
-     * \brief Threshold saturation below which the relative
-     *        permeability of the non-wetting phase gets regulatized.
-     *
-     * This is just 15%. If you need a different value, overload this
-     * class.
-     */
-    Scalar krnLowSw() const
-    { return 0.15; }
-
-    /*!
-     * \brief Threshold saturation above which the relative
-     *        permeability of the wetting phase gets regulatized.
-     *
-     * This is just 85%. If you need a different value, overload this
-     * class.
-     */
-    Scalar krwHighSw() const
-    { return 0.85; }
 };
 }; // namespace Dumux
 

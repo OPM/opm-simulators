@@ -57,7 +57,7 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
-        const Scalar Sthres = params.pCLowSw();
+        const Scalar Sthres = params.thresholdSw();
 
         // make sure that the capilarry pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
@@ -86,7 +86,7 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        const Scalar Sthres = params.pCLowSw();
+        const Scalar Sthres = params.thresholdSw();
 
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized version of 
@@ -120,7 +120,7 @@ public:
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
-        const Scalar Sthres = params.pCLowSw();
+        const Scalar Sthres = params.thresholdSw();
 
         // derivative of the regualarization
         if (Swe <= Sthres) {
@@ -143,7 +143,7 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        const Scalar Sthres = params.pCLowSw();
+        const Scalar Sthres = params.thresholdSw();
 
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of the
@@ -178,7 +178,6 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Sw)
     {
-        const Scalar Sthres = params.krwHighSw();
         if (Sw <= 0)
             return 0;
         else if (Sw >= 1) {
@@ -198,7 +197,6 @@ public:
      */
     static Scalar krn(const Params &params, Scalar Sw)
     {
-        const Scalar Sthres = params.krnLowSw();
         if (Sw >= 1)
             return 0;
         // check if we need to regularize the relative permeability
