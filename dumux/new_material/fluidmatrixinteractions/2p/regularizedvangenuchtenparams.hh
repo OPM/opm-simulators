@@ -52,7 +52,7 @@ public:
      * class.
      */
     Scalar pCLowSw() const
-    { return 0.05; }
+    { return 5e-6; }
 
     /*!
      * \brief Threshold saturation above which the capillary pressure
@@ -62,7 +62,7 @@ public:
      * class.
      */
     Scalar pCHighSw() const
-    { return 0.95; }
+    { return 1-5e-6; }
 
     /*!
      * \brief Threshold saturation below which the relative
