@@ -580,15 +580,13 @@ private:
         // \todo: proper citation
         Scalar rholH2O = H2O::liquidDensity(T, pl);
         Scalar clH2O = rholH2O/H2O::molarMass();
-        Scalar meanM = xlH2O*H2O::molarMass() + xlN2*N2::molarMass();
-        Scalar XlH2O = xlH2O * H2O::molarMass()/meanM;
 
         // this assumes each nitrogen molecule displaces exactly one
         // water molecule in the liquid
         return 
-            XlH2O*rholH2O
-            + 
-            xlN2*clH2O*N2::molarMass();
+            clH2O*(xlH2O*H2O::molarMass()
+                   + 
+                   xlN2*N2::molarMass());
     }
 
     // defect of gas density
