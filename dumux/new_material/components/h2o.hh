@@ -151,7 +151,7 @@ public:
             Scalar dh_dp = 
                 R*temperature*tau*
                 Region2::ddgamma_dtaudpi(temperature, pv)*
-                Region2::dpi_dp(pressure);
+                Region2::dpi_dp(pv);
 
             return
                 enthalpyRegion2_(temperature, pv) + 
@@ -189,7 +189,7 @@ public:
             Scalar dh_dp =
                 R*temperature*tau*
                 Region1::ddgamma_dtaudpi(temperature, pv)*
-                Region1::dpi_dp(pressure);
+                Region1::dpi_dp(pv);
 
             return
                 enthalpyRegion1_(temperature, pv) +
@@ -476,8 +476,7 @@ public:
                 R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
             
             // use a straight line for extrapolation
-            Scalar v0 = volumeRegion2_(temperature, pressure);
-            
+            Scalar v0 = volumeRegion2_(temperature, pv);
             return 1.0/(v0 + (pressure - pv)*dv_dp);
         };
 
@@ -556,9 +555,9 @@ public:
                 R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
             
             // use a straight line for extrapolation
-            Scalar v0 = volumeRegion1_(temperature, pressure);
-            
-            return 1.0/(v0 + (pressure - pv)*dv_dp);
+            Scalar v0 = volumeRegion1_(temperature, pv);
+            Scalar v = v0 + (pressure - pv)*dv_dp;
+            return 1.0/v;
         };
 
         return 1/volumeRegion1_(temperature, pressure);
