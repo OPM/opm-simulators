@@ -391,17 +391,24 @@ public:
         }
 
     /*!
-     * \brief Return the pressure which a component degases from the
-     *        liquid scaled to \f$100\%\f$ of the component.
+     * \brief Returns the fugacity coefficient of a component in a
+     *        phase.
      *
      * For solutions with only traces in a solvent this boils down to
      * the inverse Henry constant for the solutes and the partial
      * pressure for the solvent.
      */
-    static Scalar degasPressure(int compIdx, 
+    template <class FluidState>
+    static Scalar fugacityCoeff(int phaseIdx, 
+                                int compIdx, 
                                 Scalar temperature,
-                                Scalar pg)
+                                Scalar pressure,
+                                const FluidState &state)
     {
+        if (phaseIdx != lPhaseIdx)
+            DUNE_THROW(Dune::NotImplemented,
+                       "Fugacities in the gas phase");
+
         switch (compIdx) {
         case H2OIdx: return H2O::vaporPressure(temperature);
         case N2Idx: return BinaryCoeff::H2O_N2::henry(temperature);
