@@ -102,6 +102,9 @@ public:
 
     /*!
      * \brief Specific enthalpy of liquid brine [J/kg].
+     * Equations given in:	- Palliser & McKibbin 1997
+     * 						- Michaelides 1981
+     * 						- Daubert & Danner 1989
      */
     static const Scalar liquidEnthalpy(Scalar T,
                                        Scalar p)
@@ -190,6 +193,8 @@ public:
 
     /*!
      * \brief The density of pure brine at a given pressure and temperature [kg/m^3].
+     * Equations given in:	- Batzle & Wang (1992)
+     *    					- cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -256,8 +261,9 @@ public:
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure brine.
-     *
-     * \todo reference
+     * Equation given in:	- Batzle & Wang (1992)
+     * 						- cited by: Bachu & Adams (2002)
+     * 						  "Equations of State for basin geofluids"
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
@@ -273,7 +279,7 @@ public:
 };
 
 template <class Scalar>
-Scalar Brine<Scalar>::salinity = 0.1;
+Scalar Brine<Scalar>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
 
 } // end namepace
 
