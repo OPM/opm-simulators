@@ -1,6 +1,8 @@
 // $Id$
 /*****************************************************************************
- *   Copyright (C) 2008-2009 by Markus Wolff                                 *
+ *   Copyright (C) 20010 by Markus Wolff                                     *
+ *   Copyright (C) 2007-2008 by Bernd Flemisch                               *
+ *   Copyright (C) 2008-2009 by Andreas Lauser                               *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -14,104 +16,98 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 #include "config.h"
-#include <iostream>
-#include <iomanip>
-#include <dune/grid/sgrid.hh> /*@\label{tutorial-decoupled:include-begin}@*/
-#include <dune/grid/io/file/vtk/vtkwriter.hh>
-#include <dune/istl/io.hh>
-#include <dune/common/timer.hh>
-#include "dumux/fractionalflow/variableclass2p.hh"
-#include "dumux/fractionalflow/define2pmodel.hh"
-#include "dumux/material/fluids/water.hh"
-#include "dumux/material/fluids/lowviscosityoil.hh"
-#include "tutorial_soilproperties_decoupled.hh"
-#include "dumux/material/twophaserelations.hh"
-#include "tutorialproblem_decoupled.hh"
-#include "dumux/diffusion/fv/fvvelocity2p.hh"
-#include "dumux/transport/fv/fvsaturation2p.hh"
-#include "dumux/fractionalflow/impes/impes.hh"
-#include "dumux/timedisc/timeloop.hh" /*@\label{tutorial-decoupled:include-end}@*/
 
+#include "tutorialproblem_decoupled.hh"
+
+#include <dune/grid/common/gridinfo.hh>
+
+#include <dune/common/exceptions.hh>
+#include <dune/common/mpihelper.hh>
+
+#include <iostream>
+#include <boost/format.hpp>
+
+
+////////////////////////
+// the main function
+////////////////////////
+void usage(const char *progname)
+{
+    std::cout << boost::format("usage: %s [--restart restartTime] tEnd\n")%progname;
+    exit(1);
+}
 
 int main(int argc, char** argv)
 {
-    try{
-        // define the problem dimensions
-        const int dim=2; /*@\label{tutorial-decoupled:dim}@*/
+    try {
+        typedef TTAG(TutorialProblemDecoupled) TypeTag;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar))  Scalar;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid))    Grid;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem;
+        typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition;
 
-        // create a grid object
-        typedef double Scalar; /*@\label{tutorial-decoupled:grid-begin}@*/
-        typedef Dune::SGrid<dim,dim> Grid;
-        typedef Grid::LevelGridView GridView;
-        typedef Dune::FieldVector<Grid::ctype,dim> FieldVector;
-        Dune::FieldVector<int,dim> N(10); N[0] = 30;
-        FieldVector L(0);
-        FieldVector H(60); H[0] = 300;
+        static const int dim = Grid::dimension;
+
+        // initialize MPI, finalize is done automatically on exit
+        Dune::MPIHelper::instance(argc, argv);
+
+        ////////////////////////////////////////////////////////////
+        // parse the command line arguments
+        ////////////////////////////////////////////////////////////
+        if (argc < 2)
+            usage(argv[0]);
+
+        // deal with the restart stuff
+        int argPos = 1;
+        bool restart = false;
+        double restartTime = 0;
+        if (std::string("--restart") == argv[argPos]) {
+            restart = true;
+            ++argPos;
+
+            std::istringstream(argv[argPos++]) >> restartTime;
+        }
+
+        if (argc - argPos != 1) {
+            usage(argv[0]);
+        }
+
+        // read the initial time step and the end time
+        double tEnd, dt;
+        std::istringstream(argv[argPos++]) >> tEnd;
+        dt = tEnd;
+
+        ////////////////////////////////////////////////////////////
+        // create the grid
+        ////////////////////////////////////////////////////////////
+        Dune::FieldVector<int,dim> N(1); N[0] = 100;
+        Dune::FieldVector<double ,dim> L(0);
+        Dune::FieldVector<double,dim> H(60); H[0] = 300;
         Grid grid(N,L,H);
-        GridView gridView(grid.levelView(0));/*@\label{tutorial-decoupled:grid-end}@*/
 
+        ////////////////////////////////////////////////////////////
+        // instantiate and run the concrete problem
+        ////////////////////////////////////////////////////////////
 
-        // define fluid and solid properties and constitutive relationships
-        Dumux::Water wettingfluid; /*@\label{tutorial-decoupled:water}@*/
-        Dumux::LowViscosityOil nonwettingfluid; /*@\label{tutorial-decoupled:oil}@*/
-        Dumux::TutorialSoil<Grid, Scalar> soil; /*@\label{tutorial-decoupled:soil}@*/
-        Dumux::TwoPhaseRelations<Grid, Scalar> materialLaw(soil, wettingfluid, nonwettingfluid);/*@\label{tutorial-decoupled:twophaserelations}@*/
+        Problem problem(grid.leafView(), L, H);
 
-        // create object containing the variables
-        typedef Dumux::VariableClass<GridView, Scalar> VariableClass;
-        VariableClass variables(gridView);
+        // load restart file if necessarry
+        if (restart)
+            problem.deserialize(restartTime);
 
-        //choose kind of two-phase model. Default: pw, Sw, vtotal
-        struct Dumux::DefineModel modelDef;
-//        modelDef.pressureType = modelDef.pressureW;
-//        modelDef.saturationType = modelDef.saturationW;
-//        modelDef.velocityType = modelDef.velocityTotal;
-
-        // create object including the problem definition
-        typedef Dumux::TutorialProblemDecoupled<GridView, Scalar, VariableClass> Problem;
-        Problem problem(variables, wettingfluid, nonwettingfluid, soil, materialLaw,L, H); /*@\label{tutorial-decoupled:problem}@*/
-
-        // create object including the discretisation of the pressure equation
-        typedef Dumux::FVVelocity2P<GridView, Scalar, VariableClass, Problem> Diffusion;
-        Diffusion diffusion(gridView, problem, modelDef); /*@\label{tutorial-decoupled:diffusion}@*/
-
-        // create object including the space discretisation of the saturation equation
-        typedef Dumux::FVSaturation2P<GridView, Scalar, VariableClass, Problem> Transport;
-        Transport transport(gridView, problem, modelDef); /*@\label{tutorial-decoupled:transport}@*/
-
-        // some parameters used in the IMPES-object
-        int iterFlag = 0;
-        int nIter = 2;
-        double maxDefect = 1e-5;
-
-        // create object including the IMPES (IMplicit Pressure Explicit Saturation) algorithm
-        typedef Dune::IMPES<GridView, Diffusion, Transport, VariableClass> IMPES;
-        IMPES impes(diffusion, transport, iterFlag, nIter, maxDefect); /*@\label{tutorial-decoupled:impes}@*/
-
-        // some parameters needed for the TimeLoop-object
-        double tStart = 0; // start simulation at t = tStart
-        double tEnd = 4e7; // stop simulation at t = tEnd
-        const char* fileName = "tutorial_decoupled"; // name of the output files
-        int modulo = 1; // define time step interval in which output files are generated
-        double cFLFactor = 0.9; // security factor for the Courant-Friedrichs-Lewy-Criterion
-
-        // create TimeLoop-object
-        Dumux::TimeLoop<GridView, IMPES> timeloop(gridView, tStart, tEnd, fileName, modulo, cFLFactor); /*@\label{tutorial-decoupled:timeloop}@*/
-
-        Dune::Timer timer;
-        timer.reset();
-
-        // start simulation
-        timeloop.execute(impes); /*@\label{tutorial-decoupled:execute}@*/
+        // run the simulation
+        if (!problem.simulate(dt, tEnd))
+            return 2;
 
         return 0;
     }
-    catch (Dune::Exception &e){
+    catch (Dune::Exception &e) {
         std::cerr << "Dune reported error: " << e << std::endl;
-        return 1;
     }
-    catch (...){
-        std::cerr << "Unknown exception thrown!" << std::endl;
-        return 1;
+    catch (...) {
+        std::cerr << "Unknown exception thrown!\n";
+        throw;
     }
+
+    return 3;
 }

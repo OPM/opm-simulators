@@ -27,7 +27,7 @@ namespace Dumux
 {
 
 template<class TypeTag>
-class TutorialSpatialParameters: public BoxSpatialParameters<TypeTag> /*@\label{tutorial-coupled:tutorialSpatialParameters}@*/
+class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@\label{tutorial-coupled:tutorialSpatialParameters}@*/
 {
 	// Get informations for current implementation via property system
 	typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
@@ -81,7 +81,7 @@ public:
 	}
 
 	// constructor
-	TutorialSpatialParameters(const GridView& gridView) :
+	TutorialSpatialParametersCoupled(const GridView& gridView) :
 		BoxSpatialParameters<TypeTag>(gridView), K_(0)
 	{
 		for (int i = 0; i < dim; i++)

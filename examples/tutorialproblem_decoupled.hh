@@ -1,130 +1,260 @@
 // $Id$
 /*****************************************************************************
- *   Copyright (C) 2008-2009 by Markus Wolff                                 *
- *   Institute of Hydraulic Engineering                                      *
- *   University of Stuttgart, Germany                                        *
- *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
- *                                                                           *
- *   This program is free software; you can redistribute it and/or modify    *
- *   it under the terms of the GNU General Public License as published by    *
- *   the Free Software Foundation; either version 2 of the License, or       *
- *   (at your option) any later version, as long as this copyright notice    *
- *   is included in its original form.                                       *
- *                                                                           *
- *   This program is distributed WITHOUT ANY WARRANTY.                       *
- *****************************************************************************/
-#ifndef TUTORIALPROBLEM_DECOUPLED_HH
-#define TUTORIALPROBLEM_DECOUPLED_HH
+*   Copyright (C) 2007-2008 by Klaus Mosthaf                                *
+*   Copyright (C) 2007-2008 by Bernd Flemisch                               *
+*   Copyright (C) 2008-2009 by Andreas Lauser                               *
+*   Institute of Hydraulic Engineering                                      *
+*   University of Stuttgart, Germany                                        *
+*   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
+*                                                                           *
+*   This program is free software; you can redistribute it and/or modify    *
+*   it under the terms of the GNU General Public License as published by    *
+*   the Free Software Foundation; either version 2 of the License, or       *
+*   (at your option) any later version, as long as this copyright notice    *
+*   is included in its original form.                                       *
+*                                                                           *
+*   This program is distributed WITHOUT ANY WARRANTY.                       *
+*****************************************************************************/
+#ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
+#define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
 
-#include "dumux/fractionalflow/fractionalflowproblem.hh"
+#if HAVE_UG
+#include <dune/grid/uggrid.hh>
+#endif
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/sgrid.hh>
+
+#include <dumux/new_material/components/h2o.hh>
+#include <dumux/new_material/components/oil.hh>
+
+#include <dumux/new_decoupled/2p/impes/impesproblem2p.hh>
+#include <dumux/new_decoupled/2p/diffusion/fv/fvvelocity2p.hh>
+#include <dumux/new_decoupled/2p/transport/fv/fvsaturation2p.hh>
+#include <dumux/new_decoupled/2p/transport/fv/capillarydiffusion.hh>
+#include <dumux/new_decoupled/2p/transport/fv/gravitypart.hh>
+
+#include "tutorialspatialparameters_decoupled.hh"
 
 namespace Dumux
 {
 
-/** \todo Please doc me! */
+template<class TypeTag>
+class TutorialProblemDecoupled;
 
-template<class GridView, class Scalar, class VariableClass> class TutorialProblemDecoupled /*@\label{tutorial-decoupled:tutorialproblem}@*/
-    : public FractionalFlowProblem<GridView, Scalar, VariableClass>
+//////////
+// Specify the properties for the lens problem
+//////////
+namespace Properties
 {
-    enum
-        {dim=GridView::dimension, dimWorld = GridView::dimensionworld};
-    enum{wetting = 0, nonwetting = 1};
-    typedef typename GridView::Grid Grid;
-    typedef typename GridView::Intersection Intersection;
-    typedef typename GridView::Traits::template Codim<0>::Entity Element;
-    typedef Dune::FieldVector<Scalar,dim> LocalPosition;
-    typedef Dune::FieldVector<Scalar,dimWorld> GlobalPosition;
+NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(DecoupledTwoP, Transport));
+
+// Set the grid type
+SET_PROP(TutorialProblemDecoupled, Grid)
+{
+    //    typedef Dune::YaspGrid<2> type;
+    typedef Dune::SGrid<2, 2> type;
+};
+
+// Set the problem property
+SET_PROP(TutorialProblemDecoupled, Problem)
+{
+public:
+    typedef Dumux::TutorialProblemDecoupled<TTAG(TutorialProblemDecoupled)> type;
+};
+
+// Set the model properties
+SET_PROP(TutorialProblemDecoupled, SaturationModel)
+{
+    typedef Dumux::FVSaturation2P<TTAG(TutorialProblemDecoupled)> type;
+};
+
+SET_PROP(TutorialProblemDecoupled, PressureModel)
+{
+    typedef Dumux::FVVelocity2P<TTAG(TutorialProblemDecoupled)> type;
+};
+
+SET_INT_PROP(TutorialProblemDecoupled, VelocityFormulation,
+        GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices))::velocityW);
+
+//SET_INT_PROP(TutorialProblemDecoupled, PressureFormulation,
+//        GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices))::pressureGlobal);
+
+// Set the wetting phase
+SET_PROP(TutorialProblemDecoupled, WettingPhase)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public:
+    typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type;
+};
+
+// Set the non-wetting phase
+SET_PROP(TutorialProblemDecoupled, NonwettingPhase)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public:
+    typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type;
+};
+
+// Set the soil properties
+SET_PROP(TutorialProblemDecoupled, SpatialParameters)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 
 public:
-    TutorialProblemDecoupled(VariableClass& variables, Fluid& wettingphase, Fluid& nonwettingphase, Matrix2p<Grid, Scalar>& soil,
-                             TwoPhaseRelations<Grid, Scalar>& materialLaw = *(new TwoPhaseRelations<Grid,Scalar>),
-                             const Dune::FieldVector<Scalar,dim> Left = 0, const Dune::FieldVector<Scalar,dim> Right = 0)
-        : FractionalFlowProblem<GridView, Scalar, VariableClass>(variables, wettingphase, nonwettingphase, soil, materialLaw),
-          Left_(Left[0]), Right_(Right[0]), eps_(1e-8)
-    {}
+    typedef Dumux::TutorialSpatialParametersDecoupled<TypeTag> type;
+};
 
-    // function returning source/sink terms for the pressure equation
-    // depending on the position within the domain
-    virtual std::vector<Scalar> source(const GlobalPosition& globalPos,
-                          const Element& e, /*@\label{tutorial-decoupled:qpress}@*/
-                          const LocalPosition& localPos)
+SET_TYPE_PROP(TutorialProblemDecoupled, DiffusivePart, Dumux::CapillaryDiffusion<TypeTag>);
+
+// Disable gravity
+SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false);
+
+SET_SCALAR_PROP(TutorialProblemDecoupled, CFLFactor, 0.3);
+}
+
+/*!
+* \ingroup DecoupledProblems
+*/
+template<class TypeTag = TTAG(TutorialProblemDecoupled)>
+class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDecoupled<TypeTag> >
+{
+    typedef TutorialProblemDecoupled<TypeTag> ThisType;
+    typedef IMPESProblem2P<TypeTag, ThisType> ParentType;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
+
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
+
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidSystem)) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidState)) FluidState;
+
+    enum
     {
-        return std::vector<Scalar>(2,0.0);
+        dim = GridView::dimension, dimWorld = GridView::dimensionworld
+    };
+
+    enum
+    {
+        wPhaseIdx = Indices::wPhaseIdx, nPhaseIdx = Indices::nPhaseIdx
+    };
+
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+
+    typedef typename GridView::Traits::template Codim<0>::Entity Element;
+    typedef typename GridView::Intersection Intersection;
+    typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
+    typedef Dune::FieldVector<Scalar, dim> LocalPosition;
+
+public:
+    TutorialProblemDecoupled(const GridView &gridView, const GlobalPosition lowerLeft = 0, const GlobalPosition upperRight = 0) :
+        ParentType(gridView), lowerLeft_(lowerLeft), upperRight_(upperRight)
+    {
     }
 
-    using FractionalFlowProblem<GridView, Scalar, VariableClass>::bctypePress;
+    /*!
+    * \name Problem parameters
+    */
+    // \{
 
-    // function returning the boundary condition type for solution
-    // of the pressure equation depending on the position within the domain
-    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypepress}@*/
+    /*!
+    * \brief The problem name.
+    *
+    * This is used as a prefix for files generated by the simulation.
+    */
+    const char *name() const
     {
-        if (globalPos[0] < eps_)
+        return "tutorial_decoupled";
+    }
+
+    bool shouldWriteRestartFile() const
+    {
+        return false;
+    }
+
+    /*!
+    * \brief Returns the temperature within the domain.
+    *
+    * This problem assumes a temperature of 10 degrees Celsius.
+    */
+    Scalar temperature(const GlobalPosition& globalPos, const Element& element) const
+    {
+        return 273.15 + 10; // -> 10°C
+    }
+
+    // \}
+
+    Scalar referencePressure(const GlobalPosition& globalPos, const Element& element) const
+    {
+        return 1e5; // -> 10°C
+    }
+
+    std::vector<Scalar> source(const GlobalPosition& globalPos, const Element& element)
         {
-            return BoundaryConditions::dirichlet;
+        return std::vector<Scalar>(2, 0.0);
         }
+
+    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Intersection& intersection) const
+    {
+        if ((globalPos[0] < lowerLeft_[0] + eps_))
+            return BoundaryConditions::dirichlet;
         // all other boundaries
         return BoundaryConditions::neumann;
     }
 
-    // function returning the boundary condition type for solution
-    // of the saturation equation depending on the position within the domain
-    BoundaryConditions::Flags bctypeSat (const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypesat}@*/
+    BoundaryConditions::Flags bctypeSat(const GlobalPosition& globalPos, const Intersection& intersection) const
     {
-        if (globalPos[0]> (Right_ - eps_) || globalPos[0] < eps_)
-        {
+        if (globalPos[0] < lowerLeft_[0] + eps_)
             return Dumux::BoundaryConditions::dirichlet;
-        }
+        else
+            return Dumux::BoundaryConditions::neumann;
+    }
+
+    Scalar dirichletPress(const GlobalPosition& globalPos, const Intersection& intersection) const
+    {
+        if (globalPos[0] < lowerLeft_[0] + eps_)
+            return 2e5;
         // all other boundaries
-        return Dumux::BoundaryConditions::neumann;
+        return 0;
     }
 
-    // function returning the Dirichlet boundary condition for the solution
-    // of the pressure equation depending on the position within the domain
-    Scalar dirichletPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:gpress}@*/
+    Scalar dirichletSat(const GlobalPosition& globalPos, const Intersection& intersection) const
     {
-        return 1e6;
+        if (globalPos[0] < lowerLeft_[0] + eps_)
+            return 1;
+        // all other boundaries
+        return 0;
     }
 
-    // function returning the Dirichlet boundary condition for the solution
-    // of the saturation equation depending on the position within the domain
-    Scalar dirichletSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:gsat}@*/
+    std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Intersection& intersection) const
     {
-        if (globalPos[0] < eps_)
+        std::vector<Scalar> neumannFlux(2,0.0);
+        if (globalPos[0] > upperRight_[0] - eps_)
         {
-            return 1.0;
+            neumannFlux[nPhaseIdx] = 3e-4;
         }
-        // all other boundaries
-        return 0.0;
-    }
-
-    using FractionalFlowProblem<GridView, Scalar, VariableClass>::neumannPress;
-
-    // function returning the Neumann boundary condition for the solution
-    // of the pressure equation depending on the position within the domain
-    std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:jpress}@*/
-    {
-        std::vector<Scalar> neumannFlux(2, 0.0);
-        if (globalPos[0]> Right_ - eps_)
-        {
-            neumannFlux[nonwetting] = 3e-4;
-        }
-        // all other boundaries
         return neumannFlux;
     }
 
-    // function returning the initial saturation
-    // depending on the position within the domain
-    Scalar initSat (const GlobalPosition& globalPos, const Element& e, /*@\label{tutorial-decoupled:initsat}@*/
-                    const Dune::FieldVector<Scalar,dim>& xi) const
+    Scalar neumannSat(const GlobalPosition& globalPos, const Intersection& intersection, Scalar factor) const
     {
-        return 0.0;
+        return 0;
+    }
+
+    Scalar initSat(const GlobalPosition& globalPos, const Element& element) const
+    {
+        return 0;
     }
 
 private:
-    Scalar Left_;
-    Scalar Right_;
+    GlobalPosition lowerLeft_;
+    GlobalPosition upperRight_;
 
-    Scalar eps_;
+    static const Scalar eps_ = 1e-6;
 };
-} // end namespace
+} //end namespace
+
 #endif

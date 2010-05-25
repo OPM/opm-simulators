@@ -77,7 +77,7 @@ SET_PROP(TutorialProblemCoupled,   FluidSystem) /*@\label{tutorial-coupled:set-f
 // Set the spatial parameters
 SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-spatialparameters}@*/
 {
-    typedef Dumux::TutorialSpatialParameters<TypeTag> type;
+    typedef Dumux::TutorialSpatialParametersCoupled<TypeTag> type;
 };
 
 // Disable gravity
