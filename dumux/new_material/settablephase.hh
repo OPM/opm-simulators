@@ -20,6 +20,8 @@
 #ifndef DUMUX_SETTABLE_PHASE_HH
 #define DUMUX_SETTABLE_PHASE_HH
 
+#include <dune/common/fmatrix.hh>
+
 namespace Dumux
 {
 /*!
