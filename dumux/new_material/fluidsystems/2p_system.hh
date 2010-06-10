@@ -140,7 +140,7 @@ public:
      *        phase enthalpy [J/kg].
      */
     template <class FluidState>
-    static Scalar enthalpy(int phaseIdx,
+    static Scalar phaseEnthalpy(int phaseIdx,
                            Scalar temperature, 
                            Scalar pressure, 
                            const FluidState &phaseState)
@@ -159,7 +159,7 @@ public:
      *        internal energy of the phase [J/kg].
      */
     template <class FluidState>
-    static Scalar internalEnergy(int phaseIdx,
+    static Scalar phaseInternalEnergy(int phaseIdx,
                                  Scalar temperature, 
                                  Scalar pressure, 
                                  const FluidState &phaseState)
