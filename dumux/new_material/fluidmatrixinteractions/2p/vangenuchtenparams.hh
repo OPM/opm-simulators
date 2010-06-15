@@ -42,46 +42,46 @@ public:
 
     /*!
      * \brief Return the \f$\alpha\f$ shape parameter of van Genuchten's
-     *        curve. 
+     *        curve.
      */
     Scalar vgAlpha() const
     { return vgAlpha_; }
 
     /*!
      * \brief Set the \f$\alpha\f$ shape parameter of van Genuchten's
-     *        curve. 
+     *        curve.
      */
     void setVgAlpha(Scalar v)
     { vgAlpha_ = v; }
 
     /*!
      * \brief Return the \f$m\f$ shape parameter of van Genuchten's
-     *        curve. 
+     *        curve.
      */
     Scalar vgM() const
     { return vgM_; }
 
     /*!
      * \brief Set the \f$m\f$ shape parameter of van Genuchten's
-     *        curve. 
+     *        curve.
      *
-     * The \f$n\f$ shape parameter is set to \f$n = \frac{1}{1 - m}\f$ 
+     * The \f$n\f$ shape parameter is set to \f$n = \frac{1}{1 - m}\f$
      */
-    void setVgM(Scalar m) 
+    void setVgM(Scalar m)
     { vgM_ = m; vgN_ = 1/(1 - vgM_); }
 
     /*!
      * \brief Return the \f$n\f$ shape parameter of van Genuchten's
-     *        curve. 
+     *        curve.
      */
-    Scalar vgN() const 
+    Scalar vgN() const
     { return vgN_; }
 
     /*!
      * \brief Set the \f$n\f$ shape parameter of van Genuchten's
-     *        curve. 
+     *        curve.
      *
-     * The \f$n\f$ shape parameter is set to \f$m = 1 - \frac{1}{n}\f$ 
+     * The \f$n\f$ shape parameter is set to \f$m = 1 - \frac{1}{n}\f$
      */
     void setVgN(Scalar n)
     { vgN_ = n; vgM_ = 1 - 1/vgN_; }

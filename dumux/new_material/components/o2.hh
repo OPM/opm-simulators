@@ -13,7 +13,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Properties of pure molecular oxygen \f$O_2\f$.
  */
@@ -44,13 +44,13 @@ public:
      * \brief A human readable name for the O2.
      */
     static const char *name()
-    { return "O2"; } 
+    { return "O2"; }
 
     /*!
      * \brief The mass in [kg] of one mole of molecular oxygen.
      */
     static Scalar molarMass()
-    { return 32e-3; } 
+    { return 32e-3; }
 
     /*!
      * \brief Returns the critical temperature of molecular oxygen
@@ -80,18 +80,18 @@ public:
      * \brief The vapor pressure in [N/m^2] of pure molecular oxygen
      *        at a given temperature.
      *
-     * Taken from: 
+     * Taken from:
      *
      * R. Prydz: "An Improved Oxygen Vapor Pressure Representation",
      * Metrologia, Vol. 8, No. 1, pp. 1-4, 1972
      */
     static Scalar vaporPressure(Scalar T)
-    { 
+    {
         if (T > criticalTemperature())
             return criticalPressure();
         if (T < tripleTemperature())
             return 0; // O2 is solid: We don't take sublimation into account
-        
+
         // vapor pressure between tripe and critical points.  See the
         // paper of Prydz for a discussion
         Scalar X =
@@ -130,14 +130,14 @@ public:
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
     }
-    
+
     /*!
      * \brief Specific enthalpy [J/kg] of pure oxygen gas.
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
      */
-    static const Scalar gasEnthalpy(Scalar T, 
+    static const Scalar gasEnthalpy(Scalar T,
                                     Scalar pressure)
     {
         // method of Joback
@@ -145,12 +145,12 @@ public:
         const Scalar cpVapB = -3.680e-6;
         const Scalar cpVapC =  1.746e-5;
         const Scalar cpVapD = -1.065e-8;
-        
-        //Scalar cp = 
+
+        //Scalar cp =
         //    cpVapA + T*(cpVapB + T*(cpVapC + T*cpVapD));
 
         // calculate: \int_0^T c_p dT
-        return 
+        return
             1/molarMass()* // conversion from [J/mol] to [J/kg]
 
             T*(cpVapA + T*
@@ -181,7 +181,7 @@ public:
     /*!
      * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
      *
-     * See: 
+     * See:
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 396-397, 664
@@ -193,11 +193,11 @@ public:
         const Scalar omega = 0.025; // accentric factor
         const Scalar M = molarMass() * 1e3; // molar mas [g/mol]
         const Scalar dipole = 0.0; // dipole moment [debye]
-        
+
         Scalar mu_r4 = 131.3 * dipole / std::sqrt(Vc * Tc);
         mu_r4 *= mu_r4;
         mu_r4 *= mu_r4;
-        
+
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         Scalar Tstar = 1.2593 * temperature/Tc;
         Scalar Omega_v =

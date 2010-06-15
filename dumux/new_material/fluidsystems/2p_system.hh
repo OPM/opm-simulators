@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief A fluid system with water and gas as phases and \f$H_2O\f$ and \f$N_2\f$
  *        as components.
@@ -44,7 +44,7 @@ public:
         wPhaseIdx = 0,
         nPhaseIdx = 1
     };
-    
+
     static const int numPhases = 2;
 
     FluidSystem2P()
@@ -84,9 +84,9 @@ public:
      */
     static Scalar componentDensity(int phaseIdx,
                                    int compIdx,
-                                   Scalar temperature, 
+                                   Scalar temperature,
                                    Scalar pressure)
-    { 
+    {
         if (phaseIdx != compIdx)
             return 0;
         switch (phaseIdx) {
@@ -98,17 +98,17 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
-    
+
     /*!
      * \brief Given all mole fractions in a phase, return the phase
      *        density [kg/m^3].
      */
     template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
-                               Scalar temperature, 
-                               Scalar pressure, 
+                               Scalar temperature,
+                               Scalar pressure,
                                const FluidState &phaseState)
-    { 
+    {
         switch (phaseIdx) {
         case wPhaseIdx:
             return WettingPhase::density(temperature, pressure);
@@ -123,10 +123,10 @@ public:
      */
     template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
-                                 Scalar temperature, 
-                                 Scalar pressure, 
+                                 Scalar temperature,
+                                 Scalar pressure,
                                  const FluidState &phaseState)
-    { 
+    {
         switch (phaseIdx) {
         case wPhaseIdx:
             return WettingPhase::viscosity(temperature, pressure);
@@ -134,7 +134,7 @@ public:
             return NonwettingPhase::viscosity(temperature, pressure);
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
-    } 
+    }
 
     /*!
      * \brief Given all mole fractions in a phase, return the specific
@@ -142,10 +142,10 @@ public:
      */
     template <class FluidState>
     static Scalar phaseEnthalpy(int phaseIdx,
-                           Scalar temperature, 
-                           Scalar pressure, 
+                           Scalar temperature,
+                           Scalar pressure,
                            const FluidState &phaseState)
-    { 
+    {
         switch (phaseIdx) {
         case wPhaseIdx:
             return WettingPhase::enthalpy(temperature, pressure);
@@ -161,10 +161,10 @@ public:
      */
     template <class FluidState>
     static Scalar phaseInternalEnergy(int phaseIdx,
-                                 Scalar temperature, 
-                                 Scalar pressure, 
+                                 Scalar temperature,
+                                 Scalar pressure,
                                  const FluidState &phaseState)
-    { 
+    {
         switch (phaseIdx) {
         case wPhaseIdx:
             return WettingPhase::internalEnergy(temperature, pressure);

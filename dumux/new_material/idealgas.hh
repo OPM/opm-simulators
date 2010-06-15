@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Relations valid for an ideal gas.
  */
@@ -33,15 +33,15 @@ class IdealGas
 public:
     //! The ideal gas constant [J/mol/K]
     static const Scalar R = 8.3144;
-    
+
     /*!
      * \brief The density of the gas in [kg/m^3], depending on
      *        pressure, temperature and average molar mass of the gas.
      */
-    static Scalar density(Scalar avgMolarMass, 
+    static Scalar density(Scalar avgMolarMass,
                           Scalar temperature,
                           Scalar pressure)
-    { return pressure*avgMolarMass/(R*temperature); } 
+    { return pressure*avgMolarMass/(R*temperature); }
 
     /*!
      * \brief The pressure of the gas in [N/m^2], depending on
@@ -49,7 +49,7 @@ public:
      */
     static Scalar pressure(Scalar temperature,
                            Scalar concentration)
-    { return R*temperature*concentration; } 
+    { return R*temperature*concentration; }
 
     /*!
      * \brief The molar concentration of the gas in [mol/m^3], depending on
@@ -57,7 +57,7 @@ public:
      */
     static Scalar concentration(Scalar temperature,
                                 Scalar pressure)
-    { return pressure/(R*temperature); } 
+    { return pressure/(R*temperature); }
 };
 
 } // end namepace

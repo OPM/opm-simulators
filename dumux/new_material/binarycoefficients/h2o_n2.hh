@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Binary coefficients for water and nitrogen.
  */
@@ -55,7 +55,7 @@ public:
         const Scalar F = -14.9593;
         const Scalar G = 42.0179;
         const Scalar H = -29.4396;
-        
+
         return henryIAPWS(E, F, G, H, temperature);
     };
 
@@ -69,12 +69,12 @@ public:
     {
         typedef Dumux::H2O<Scalar> H2O;
         typedef Dumux::N2<Scalar> N2;
-        
+
         // atomic diffusion volumes
         const Scalar SigmaNu[2] = { 13.1 /* H2O */,  18.5 /* N2 */ };
         // molar masses [g/mol]
         const Scalar M[2] = { H2O::molarMass()*1e3, N2::molarMass()*1e3 };
-        
+
         return fullerMethod(M, SigmaNu, temperature, pressure);
     };
 

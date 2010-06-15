@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Various relations for molecular diffusion coefficients.
  */

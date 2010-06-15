@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Properties of pure molecular nitrogen \f$N_2\f$.
  */
@@ -45,13 +45,13 @@ public:
      * \brief A human readable name for nitrogen.
      */
     static const char *name()
-    { return "N2"; } 
+    { return "N2"; }
 
     /*!
      * \brief The mass in [kg/mol] of one of molecular nitrogen.
      */
     static Scalar molarMass()
-    { return 28.0134e-3;} 
+    { return 28.0134e-3;}
 
     /*!
      * \brief Returns the critical temperature [K] of molecular nitrogen
@@ -81,7 +81,7 @@ public:
      * \brief The vapor pressure in [Pa] of pure molecular nitrogen
      *        at a given temperature.
      *
-     * Taken from: 
+     * Taken from:
      *
      * R. Span, E.W. Lemmon, et al.: "A Reference Equation of State
      * for the Thermodynamic Properties of Nitrogen for Temperatures
@@ -90,7 +90,7 @@ public:
      * pp. 1361-1433
      */
     static Scalar vaporPressure(Scalar T)
-    { 
+    {
         if (T > criticalTemperature())
             return criticalPressure();
         if (T < tripleTemperature())
@@ -108,8 +108,8 @@ public:
             criticalPressure() *
             std::exp(criticalTemperature()/T*
                      (sigma*(N1 +
-                             sqrtSigma*N2 + 
-                             sigma*(sqrtSigma*N3 + 
+                             sqrtSigma*N2 +
+                             sigma*(sqrtSigma*N3 +
                                     sigma*sigma*sigma*N4))));
     }
 
@@ -136,7 +136,7 @@ public:
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for N2"); }
-    
+
     /*
      * \brief The pressure of liquid nitrogen at a given density and
      *        temperature [Pa].
@@ -150,7 +150,7 @@ public:
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
      */
-    static const Scalar gasEnthalpy(Scalar T, 
+    static const Scalar gasEnthalpy(Scalar T,
                                     Scalar pressure)
     {
         // method of Joback
@@ -158,12 +158,12 @@ public:
         const Scalar cpVapB = -0.01357;
         const Scalar cpVapC =  2.680e-5;
         const Scalar cpVapD = -1.168e-8;
-        
-        //Scalar cp = 
+
+        //Scalar cp =
         //    cpVapA + T*(cpVapB + T*(cpVapC + T*cpVapD));
 
         // calculate: \int_0^T c_p dT
-        return 
+        return
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
 
             T*(cpVapA + T*
@@ -181,12 +181,12 @@ public:
     /*!
      * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
      */
-    static const Scalar gasInternalEnergy(Scalar temperature, 
+    static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
     {
-        
+
         return
-            gasEnthalpy(temperature, pressure) - 
+            gasEnthalpy(temperature, pressure) -
             IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas
     }
 
@@ -199,7 +199,7 @@ public:
     /*!
      * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
      *
-     * See: 
+     * See:
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 396-397, 664
@@ -211,11 +211,11 @@ public:
         const Scalar omega = 0.0039; // accentric factor
         const Scalar M = molarMass() * 1e3; // molar mas [g/mol]
         const Scalar dipole = 0.0; // dipole moment [debye]
-        
+
         Scalar mu_r4 = 131.3 * dipole / std::sqrt(Vc * Tc);
         mu_r4 *= mu_r4;
         mu_r4 *= mu_r4;
-        
+
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         Scalar Tstar = 1.2593 * temperature/Tc;
         Scalar Omega_v =

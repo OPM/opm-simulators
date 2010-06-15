@@ -42,7 +42,7 @@ public:
         : BrooksCoreyParams()
     {
     }
-    
+
     RegularizedBrooksCoreyParams(Scalar pe, Scalar alpha)
         : BrooksCoreyParams(pe, alpha)
     {

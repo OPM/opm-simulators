@@ -35,7 +35,7 @@ namespace Dumux
  *        box method.
  */
 template<class TypeTag>
-class BoxSpatialParameters 
+class BoxSpatialParameters
 {
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;

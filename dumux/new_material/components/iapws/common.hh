@@ -14,12 +14,12 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Implements relations common for all regions of the IAPWS '97
  *        formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -40,7 +40,7 @@ namespace IAPWS
  * \brief Implements relations common for all regions of the IAPWS '97
  *        formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -117,7 +117,7 @@ public:
         const Scalar H[4] = {
             1.67752, 2.20462, 0.6366564, -0.241605
         };
-        
+
         tmp = 0, tmp2 = 1;
         for (int i = 0; i < 4; ++i) {
             tmp += H[i]/tmp2;

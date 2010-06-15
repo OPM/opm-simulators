@@ -14,11 +14,11 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Implements the equations for region 2 of the IAPWS '97 formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -37,7 +37,7 @@ namespace IAPWS
 /*!
  * \brief Implements the equations for region 2 of the IAPWS '97 formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -50,7 +50,7 @@ public:
     /*!
      * \brief Returns true iff IAPWS region 2 applies for a
      *        (temperature, pressure) pair.
-     */ 
+     */
     static bool isValid(Scalar temperature, Scalar pressure)
     {
         return
@@ -58,7 +58,7 @@ public:
 
         // actually this is:
         /*
-        return 
+        return
            (273.15 <= temperature && temperature <= 623.15 && pressure <= vaporPressure(temperature)) ||
            (623.15 < temperature && temperature <= 863.15 && pressure <= auxPressure(temperature)) ||
            (863.15 < temperature && temperature <= 1073.15 && pressure < 100e6);
@@ -103,17 +103,17 @@ public:
     {
         Scalar tau = tau(temperature);   /* reduced temperature */
         Scalar pi = pi(pressure);    /* reduced pressure */
-     
+
         Scalar result;
-        
+
         // ideal gas part
         result = ln(pi);
         for (int i = 0; i < 9; ++i)
             result += n_g(i)*std::pow(tau, J_g(i));
-        
+
         // residual part
         for (int i = 0; i < 43; ++i)
-            result += 
+            result +=
                 n_r(i)*
                 std::pow(pi, I_r(i))*
                 std::pow(tau - 0.5, J_r(i));
@@ -133,11 +133,11 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         // ideal gas part
         Scalar result = 0;
         for (int i = 0; i < 9; i++) {
-            result += 
+            result +=
                 n_g(i) *
                 J_g(i) *
                 std::pow(tau_,  J_g(i) - 1);
@@ -145,7 +145,7 @@ public:
 
         // residual part
         for (int i = 0; i < 43; i++) {
-            result += 
+            result +=
                 n_r(i) *
                 std::pow(pi_,  I_r(i)) *
                 J_r(i) *
@@ -168,19 +168,19 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         // ideal gas part
         Scalar result = 1/pi_;
-        
+
         // residual part
         for (int i = 0; i < 43; i++) {
-            result += 
+            result +=
                 n_r(i) *
                 I_r(i) *
                 std::pow(pi_, I_r(i) - 1) *
                 std::pow(tau_ - 0.5, J_r(i));
         }
-        
+
         return result;
     }
 
@@ -197,20 +197,20 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         // ideal gas part
         Scalar result = 0;
-        
+
         // residual part
         for (int i = 0; i < 43; i++) {
-            result += 
+            result +=
                 n_r(i) *
                 I_r(i) *
                 J_r(i) *
                 std::pow(pi_, I_r(i) - 1) *
                 std::pow(tau_ - 0.5, J_r(i) - 1);
         }
-        
+
         return result;
     }
 
@@ -227,20 +227,20 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         // ideal gas part
         Scalar result = 1/pi_;
-        
+
         // residual part
         for (int i = 0; i < 43; i++) {
-            result += 
+            result +=
                 n_r(i) *
                 I_r(i) *
                 (I_r(i) - 1) *
                 std::pow(pi_, I_r(i) - 2) *
                 std::pow(tau_ - 0.5, J_r(i));
         }
-        
+
         return result;
     }
 

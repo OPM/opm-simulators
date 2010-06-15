@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief A class for the brine fluid properties
  */
@@ -42,12 +42,12 @@ class Brine : public Component<Scalar, Brine<Scalar> >
 public:
     // HACKy
     static Scalar salinity;
-  
+
     /*!
      * \brief A human readable name for the brine.
      */
     static const char *name()
-    { return "Brine"; } 
+    { return "Brine"; }
 
     /*!
      * \brief The mass in [kg] of one mole of brine.
@@ -55,7 +55,7 @@ public:
      * This assumes that the salt is pure NaCl
      */
     static Scalar molarMass()
-    { 
+    {
         const Scalar M1 = H2O::molarMass();
         const Scalar M2 = 58e-3; // molar mass of NaCl [kg/mol]
         const Scalar X2 = salinity; // mass fraction of salt in brine
@@ -96,15 +96,15 @@ public:
     /*!
      * \brief Specific enthalpy of gaseous brine [J/kg].
      */
-    static const Scalar gasEnthalpy(Scalar temperature, 
+    static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
     { return H2O::gasEnthalpy(temperature, pressure); /* [J/kg] */ }
 
     /*!
      * \brief Specific enthalpy of liquid brine [J/kg].
-     * Equations given in:	- Palliser & McKibbin 1997
-     * 						- Michaelides 1981
-     * 						- Daubert & Danner 1989
+     * Equations given in:    - Palliser & McKibbin 1997
+     *                         - Michaelides 1981
+     *                         - Daubert & Danner 1989
      */
     static const Scalar liquidEnthalpy(Scalar T,
                                        Scalar p)
@@ -179,9 +179,9 @@ public:
      */
     static const Scalar liquidInternalEnergy(Scalar temperature,
                                              Scalar pressure)
-    { 
+    {
         return
-            liquidEnthalpy(temperature, pressure) - 
+            liquidEnthalpy(temperature, pressure) -
             pressure/liquidDensity(temperature, pressure);
     }
 
@@ -193,8 +193,8 @@ public:
 
     /*!
      * \brief The density of pure brine at a given pressure and temperature [kg/m^3].
-     * Equations given in:	- Batzle & Wang (1992)
-     *    					- cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
+     * Equations given in:    - Batzle & Wang (1992)
+     *                        - cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -202,16 +202,16 @@ public:
         Scalar pMPa = pressure/1.0E6;
 
         Scalar rhow = H2O::liquidDensity(temperature, pressure);
-        return 
-            rhow + 
+        return
+            rhow +
             1000*salinity*(
-                0.668 + 
-                0.44*salinity + 
+                0.668 +
+                0.44*salinity +
                 1.0E-6*(
                     300*pMPa -
                     2400*pMPa*salinity +
                     TempC*(
-                        80.0 - 
+                        80.0 -
                         3*TempC -
                         3300*salinity -
                         13*pMPa +
@@ -235,21 +235,21 @@ public:
         // pressure
         Scalar pressure = 1.1*vaporPressure(temperature);
         Scalar eps = pressure*1e-7;
-        
+
         Scalar deltaP = pressure*2;
         for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
             Scalar f = liquidDensity(temperature, pressure) - density;
-            
+
             Scalar df_dp;
             df_dp  = liquidDensity(temperature, pressure + eps);
             df_dp -= liquidDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
-            
+
             deltaP = - f/df_dp;
-            
+
             pressure += deltaP;
         }
-        
+
         return pressure;
     }
 
@@ -261,9 +261,9 @@ public:
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure brine.
-     * Equation given in:	- Batzle & Wang (1992)
-     * 						- cited by: Bachu & Adams (2002)
-     * 						  "Equations of State for basin geofluids"
+     * Equation given in:    - Batzle & Wang (1992)
+     *                         - cited by: Bachu & Adams (2002)
+     *                           "Equations of State for basin geofluids"
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

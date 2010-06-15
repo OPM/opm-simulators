@@ -74,7 +74,7 @@ public:
     {
         int idx = findIdxSw_(params, Sw);
 
-        return 
+        return
             (params.pC(idx + 1) - params.pC(idx)) /
             (params.Sw(idx + 1) - params.Sw(idx));
     }
@@ -87,7 +87,7 @@ public:
     {
         int idx = findIdxPc_(params, pC);
 
-        return 
+        return
             (params.Sw(idx + 1) - params.Sw(idx)) /
             (params.pC(idx + 1) - params.pC(idx));
     }

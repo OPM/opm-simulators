@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief A much simpler (and thus potentially less buggy) version of
  *        pure water.
@@ -49,13 +49,13 @@ public:
      * \brief A human readable name for the water.
      */
     static const char *name()
-    { return "H2O"; } 
+    { return "H2O"; }
 
     /*!
      * \brief The mass in [kg] of one mole of water.
      */
     static Scalar molarMass()
-    { return 18e-3; } 
+    { return 18e-3; }
 
     /*!
      * \brief Returns the critical temperature [K] of water
@@ -92,21 +92,21 @@ public:
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
     static Scalar vaporPressure(Scalar T)
-    { 
+    {
         if (T > criticalTemperature())
             return criticalPressure();
         if (T < tripleTemperature())
             return 0; // water is solid: We don't take sublimation into account
-        
+
         static const Scalar n[10] = {
             0.11670521452767e4,  -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5,  -0.32325550322333e7,  0.14915108613530e2,
             -0.48232657361591e4,  0.40511340542057e6, -0.23855557567849,
             0.65017534844798e3
         };
-         
+
         Scalar sigma = T + n[8]/(T - n[9]);
-        
+
         Scalar A = (sigma + n[0])*sigma + n[1];
         Scalar B = (n[2]*sigma + n[3])*sigma + n[4];
         Scalar C = (n[5]*sigma + n[6])*sigma + n[7];
@@ -121,7 +121,7 @@ public:
     /*!
      * \brief Specific enthalpy of water steam [J/kg].
      */
-    static const Scalar gasEnthalpy(Scalar temperature, 
+    static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
     { return 1976*(temperature - 293.15) + 2.45e6; }
 
@@ -140,8 +140,8 @@ public:
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
     {
-        return 
-            gasEnthalpy(temperature, pressure) - 
+        return
+            gasEnthalpy(temperature, pressure) -
             IdealGas::R*temperature; // = pressure *spec. volume for an ideal gas
     }
 
@@ -185,7 +185,7 @@ public:
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
-        DUNE_THROW(Dune::InvalidStateException, 
+        DUNE_THROW(Dune::InvalidStateException,
                    "The liquid pressure is undefined for incompressible fluids");
     }
 

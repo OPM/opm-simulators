@@ -14,11 +14,11 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Implements the equations for region 4 of the IAPWS '97 formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -38,7 +38,7 @@ namespace IAPWS
 /*!
  * \brief Implements the equations for region 4 of the IAPWS '97 formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -53,7 +53,7 @@ public:
      *        temperature.
      *
      * The saturation pressure is often also called vapor pressure.
-     */ 
+     */
     static Scalar saturationPressure(Scalar temperature)
     {
         static const Scalar n[10] = {
@@ -62,9 +62,9 @@ public:
             -0.48232657361591e4,  0.40511340542057e6, -0.23855557567849,
             0.65017534844798e3
         };
-         
+
         Scalar sigma = temperature + n[8]/(temperature - n[9]);
-        
+
         Scalar A = (sigma + n[0])*sigma + n[1];
         Scalar B = (n[2]*sigma + n[3])*sigma + n[4];
         Scalar C = (n[5]*sigma + n[6])*sigma + n[7];

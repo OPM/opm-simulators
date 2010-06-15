@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Abstract base class representing a fluid state
  *        (thermodynamic equilibrium properties and composition) of
@@ -55,7 +55,7 @@ public:
     enum { numPhases };
     //! The number of the fluid system's chemical (pseudo-) species
     enum { numComponents };
-    
+
     //! The number of "highly" miscible components in which only
     //! traces of the remaining components are resolved in the liquid
     //! phases.
@@ -81,7 +81,7 @@ public:
      */
     Scalar totalConcentration(int phaseIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::totalConcentration()"); }
-  
+
     /*!
      * \brief Return the concentrations of an individual component in
      *        a phase.
@@ -98,7 +98,7 @@ public:
      */
     Scalar density(int phaseIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::density()"); }
-    
+
     /*!
      * \brief Return the average molar mass of a phase.
      *

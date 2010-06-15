@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Abstract base class of a pure chemical species.
  */
@@ -35,92 +35,92 @@ public:
      * \brief A human readable name for the compoent.
      */
     static const char *name()
-    { DUNE_THROW(Dune::NotImplemented, "Component::name()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::name()"); }
 
     /*!
      * \brief The mass in [kg] of one mole of the component.
      */
     static Scalar molarMass()
-    { DUNE_THROW(Dune::NotImplemented, "Component::molarMass()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::molarMass()"); }
 
     /*!
      * \brief Returns the critical temperature of the component
      */
     static Scalar criticalTemperature()
-    { DUNE_THROW(Dune::NotImplemented, "Component::criticalTemperature()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::criticalTemperature()"); }
 
     /*!
      * \brief Returns the critical pressure of the component
      */
     static Scalar criticalPressure()
-    { DUNE_THROW(Dune::NotImplemented, "Component::criticalPressure()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::criticalPressure()"); }
 
     /*!
      * \brief Returns the temperature at the component's triple point.
      */
     static Scalar tripleTemperature()
-    { DUNE_THROW(Dune::NotImplemented, "Component::tripleTemperature()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::tripleTemperature()"); }
 
     /*!
      * \brief Returns the pressure at the component's triple point.
      */
     static Scalar triplePressure()
-    { DUNE_THROW(Dune::NotImplemented, "Component::triplePressure()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::triplePressure()"); }
 
     /*!
      * \brief The vapor pressure in [N/m^2] of the component at a given
      *        temperature.
      */
     static Scalar vaporPressure(Scalar T)
-    { DUNE_THROW(Dune::NotImplemented, "Component::vaporPressure()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::vaporPressure()"); }
 
     /*!
      * \brief The density [kg/m^3] of the component at a given pressure and temperature.
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::density()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::density()"); }
 
     /*!
      * \brief The density [kg/m^3] of the liquid component at a given pressure and temperature.
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::density()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::density()"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure the pure component in gas.
      */
     static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasEnthalpy()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasEnthalpy()"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure the pure component in liquid.
      */
     static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidEnthalpy()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidEnthalpy()"); }
 
     /*!
      * \brief Specific internal energy [J/kg] of pure the pure component in gas.
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasInternalEnergy()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasInternalEnergy()"); }
 
     /*!
      * \brief Specific internal energy [J/kg] of pure the pure component in liquid.
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidInternalEnergy()"); } 
-        
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidInternalEnergy()"); }
+
     /*!
      * \brief The dynamic viscosity [Pa s] of the pure component at a given pressure and temperature.
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasViscosity()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasViscosity()"); }
 
     /*!
      * \brief The dynamic liquid viscosity [N/m^3*s] of the pure component.
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidViscosity()"); } 
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidViscosity()"); }
 
 };
 

@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief The IAPWS formulation of Henry coefficients in water.
  */
@@ -39,17 +39,17 @@ namespace Dumux
  * http://www.iapws.org/relguide/HenGuide.pdf
  */
 template <class Scalar>
-inline Scalar henryIAPWS(Scalar E, 
+inline Scalar henryIAPWS(Scalar E,
                          Scalar F,
-                         Scalar G, 
-                         Scalar H, 
+                         Scalar G,
+                         Scalar H,
                          Scalar temperature)
-{ 
+{
     typedef Dumux::H2O<Scalar> H2O;
 
     Scalar Tr = temperature/H2O::criticalTemperature();
     Scalar tau = 1 - Tr;
-    
+
     const Scalar c[6] = {
         1.99274064, 1.09965342, -0.510839303,
         -1.75493479,-45.5170352, -6.7469445e5
@@ -64,9 +64,9 @@ inline Scalar henryIAPWS(Scalar E,
     for (int i = 0; i < 6; ++i) {
         f += c[i]*pow(tau, d[i]);
     }
-    
-    Scalar exponent = 
-        q*F + 
+
+    Scalar exponent =
+        q*F +
         E/temperature*f +
         (F +
          G*pow(tau, 2.0/3) +

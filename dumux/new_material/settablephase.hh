@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief A fluid state for a single phase which an be arbitrarily modified.
  */
@@ -57,7 +57,7 @@ public:
      */
     Scalar totalConcentration() const
     { return density_/meanMolarMass_; }
-  
+
     /*!
      * \brief Return the concentrations of an individual component in
      *        a phase.
@@ -99,8 +99,8 @@ public:
      *
      * Also updates the mean molar mass.
      */
-    void XTox() 
-    { 
+    void XTox()
+    {
         typedef Dune::FieldMatrix<Scalar, numComponents, numComponents> Matrix;
         typedef Dune::FieldVector<Scalar, numComponents> Vector;
 
@@ -110,7 +110,7 @@ public:
         Scalar sumX = 0;
         for (int j = 0; j < numComponents; ++j)
             sumX += massFrac_[j];
-        
+
         // Calculate the linear system of equations which determines
         // the conversion from mass fractions to mole fractions
         for (int i = 0; i < numComponents - 1; ++i) {
@@ -146,12 +146,12 @@ public:
      *
      * Also updates the mean molar mass.
      */
-    void xToX() 
-    { 
+    void xToX()
+    {
         // calculate mean molar mass
         meanMolarMass_ = 0;
         Scalar sumx = 0;
-        for (int i = 0; i < numComponents; ++i) { 
+        for (int i = 0; i < numComponents; ++i) {
             sumx += moleFrac_[i];
             meanMolarMass_ += moleFrac_[i] * FluidSystem::molarMass(i);
         }
@@ -161,7 +161,7 @@ public:
         for (int i = 0; i < numComponents; ++i)
             massFrac_[i] = moleFrac_[i]*FluidSystem::molarMass(i)/meanMolarMass_;
     }
-    
+
     Scalar pressure_;
     Scalar density_;
     Scalar meanMolarMass_;

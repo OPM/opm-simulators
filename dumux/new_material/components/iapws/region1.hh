@@ -14,11 +14,11 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Implements the equations for region 1 of the IAPWS '97 formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -37,7 +37,7 @@ namespace IAPWS
 /*!
  * \brief Implements the equations for region 1 of the IAPWS '97 formulation.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -50,20 +50,20 @@ public:
     /*!
      * \brief Returns true iff IAPWS region 1 applies for a
      *        (temperature, pressure) pair.
-     */ 
+     */
     static bool isValid(Scalar temperature, Scalar pressure)
     {
         return
-            temperature <= 623.15 && 
+            temperature <= 623.15 &&
             pressure <= 100e6;
 
         // actually this is:
         /*
-        return 
+        return
            (
-           273.15 <= temperature && 
-           temperature <= 623.15 && 
-           pressure >= vaporPressure(temperature) && 
+           273.15 <= temperature &&
+           temperature <= 623.15 &&
+           pressure >= vaporPressure(temperature) &&
            pressure <= 100e6
            );
         */
@@ -107,7 +107,7 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         Scalar result = 0;
         for (int i = 0; i < 34; ++i) {
             result += n(i)*pow(7.1 - pi_, I(i))*pow(tau_ - 1.222, J(i));
@@ -129,10 +129,10 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         Scalar result = 0.0;
         for (int i = 0; i < 34; i++) {
-            result += 
+            result +=
                 n(i) *
                 std::pow(7.1 - pi_, I(i)) *
                 std::pow(tau_ - 1.222,  J(i)-1) *
@@ -154,10 +154,10 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         Scalar result = 0.0;
         for (int i = 0; i < 34; i++) {
-            result += 
+            result +=
                 -n(i) *
                 I(i) *
                 std::pow(7.1 - pi_, I(i) - 1) *
@@ -180,10 +180,10 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         Scalar result = 0.0;
         for (int i = 0; i < 34; i++) {
-            result += 
+            result +=
                 -n(i) *
                 I(i) *
                 J(i) *
@@ -207,10 +207,10 @@ public:
     {
         Scalar tau_ = tau(temperature);   /* reduced temperature */
         Scalar pi_ = pi(pressure);    /* reduced pressure */
-        
+
         Scalar result = 0.0;
         for (int i = 0; i < 34; i++) {
-            result += 
+            result +=
                 n(i) *
                 I(i) *
                 (I(i) - 1) *
@@ -225,14 +225,14 @@ private:
     static Scalar n(int i)
     {
         static const Scalar n[34] =  {
-            0.14632971213167,    -0.84548187169114,    -0.37563603672040e1, 
+            0.14632971213167,    -0.84548187169114,    -0.37563603672040e1,
             0.33855169168385e1,  -0.95791963387872,     0.15772038513228,
            -0.16616417199501e-1,  0.81214629983568e-3,  0.28319080123804e-3,
            -0.60706301565874e-3, -0.18990068218419e-1, -0.32529748770505e-1,
            -0.21841717175414e-1, -0.52838357969930e-4, -0.47184321073267e-3,
            -0.30001780793026e-3,  0.47661393906987e-4, -0.44141845330846e-5,
            -0.72694996297594e-15,-0.31679644845054e-4, -0.28270797985312e-5,
-           -0.85205128120103e-9, -0.22425281908000e-5, -0.65171222895601e-6, 
+           -0.85205128120103e-9, -0.22425281908000e-5, -0.65171222895601e-6,
            -0.14341729937924e-12,-0.40516996860117e-6, -0.12734301741641e-8,
            -0.17424871230634e-9, -0.68762131295531e-18, 0.14478307828521e-19,
             0.26335781662795e-22,-0.11947622640071e-22, 0.18228094581404e-23,

@@ -13,7 +13,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Binary coefficients for hydrogen and nitrogen.
  */
@@ -56,12 +56,12 @@ public:
     {
         typedef Dumux::H2<Scalar> H2;
         typedef Dumux::N2<Scalar> N2;
-        
+
         // atomic diffusion volumes
         const Scalar SigmaNu[2] = { 6.12 /* H2 */,  18.5 /* N2 */ };
         // molar masses [g/mol]
         const Scalar M[2] = { H2::molarMass()*1e3, N2::molarMass()*1e3 };
-        
+
         return fullerMethod(M, SigmaNu, temperature, pressure);
     };
 

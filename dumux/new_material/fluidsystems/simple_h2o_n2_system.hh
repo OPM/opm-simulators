@@ -13,7 +13,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief A fluid system with water and gas as phases and \f$H_2O\f$ and \f$N_2\f$
  *        as components.
@@ -51,15 +51,15 @@ public:
     static const int numComponents = 2;
     static const int numPhases = 2;
 
-    static const int lPhaseIdx = 0; // index of the liquid phase 
-    static const int gPhaseIdx = 1; // index of the gas phase 
+    static const int lPhaseIdx = 0; // index of the liquid phase
+    static const int gPhaseIdx = 1; // index of the gas phase
 
-    static const int wPhaseIdx = lPhaseIdx; // index of the wetting phase 
-    static const int nPhaseIdx = gPhaseIdx; // index of the non-wetting phase 
+    static const int wPhaseIdx = lPhaseIdx; // index of the wetting phase
+    static const int nPhaseIdx = gPhaseIdx; // index of the non-wetting phase
 
     static const int H2OIdx = 0;
     static const int N2Idx = 1;
-    
+
     static void init()
     { }
 
@@ -86,7 +86,7 @@ public:
         };
         DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
-    
+
     /*!
      * \brief Given the gas phase's composition, temperature and
      *        pressure, compute the partial presures of all components
@@ -116,20 +116,20 @@ public:
                                Scalar temperature,
                                Scalar pressure,
                                const FluidState &fluidState)
-    { 
+    {
         if (phaseIdx == lPhaseIdx)
             return H2O::liquidDensity(temperature,
                                       pressure);
         else if (phaseIdx == gPhaseIdx)
         {
             // assume ideal gas. we just need the mean molar mass
-            Scalar meanMolarMass = 
+            Scalar meanMolarMass =
                 fluidState.moleFrac(gPhaseIdx, H2OIdx)*H2O::molarMass() +
                 fluidState.moleFrac(gPhaseIdx, N2Idx)*N2::molarMass();
 
-            return 
-                IdealGas::density(meanMolarMass, 
-                                  temperature, 
+            return
+                IdealGas::density(meanMolarMass,
+                                  temperature,
                                   pressure);
         };
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
@@ -143,18 +143,18 @@ public:
                                  Scalar temperature,
                                  Scalar pressure,
                                  const FluidState &fluidState)
-    { 
+    {
         if (phaseIdx == lPhaseIdx) {
             // assume pure water for the liquid phase
-            return H2O::liquidViscosity(temperature, 
+            return H2O::liquidViscosity(temperature,
                                         pressure);
         }
         else {
             // assume pure nitrogen for the gas phase
-            return N2::gasViscosity(temperature, 
+            return N2::gasViscosity(temperature,
                                     pressure);
         }
-    } 
+    }
 
     /*!
      * \brief Returns the derivative of the equilibrium partial
@@ -165,10 +165,17 @@ public:
      * the inverse Henry constant for the solutes and the partial
      * pressure for the solvent.
      */
-    static Scalar degasPressure(int compIdx,
+    template <class FluidState>
+    static Scalar fugacityCoeff(int phaseIdx,
+                                int compIdx,
                                 Scalar temperature,
-                                Scalar pressure)
-    {        
+                                Scalar pressure,
+                                const FluidState &state)
+    {
+        if (phaseIdx != lPhaseIdx)
+            DUNE_THROW(Dune::NotImplemented,
+                       "Fugacities in the gas phase");
+
         switch (compIdx) {
         case H2OIdx: return H2O::vaporPressure(temperature);
         case N2Idx: return BinaryCoeff::H2O_N2::henry(temperature);
@@ -182,7 +189,7 @@ public:
      */
     static Scalar componentDensity(int phaseIdx,
                                    int compIdx,
-                                   Scalar temperature, 
+                                   Scalar temperature,
                                    Scalar pressure)
     {
         if (phaseIdx == lPhaseIdx) {
@@ -209,7 +216,7 @@ public:
      */
     static Scalar componentPressure(int phaseIdx,
                                     int compIdx,
-                                    Scalar temperature, 
+                                    Scalar temperature,
                                     Scalar density)
     {
         if (phaseIdx == lPhaseIdx) {
@@ -240,20 +247,20 @@ public:
                             Scalar temperature,
                             Scalar pressure,
                             const FluidState &fluidState)
-    { 
+    {
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
-        
+
         switch (phaseIdx) {
         case lPhaseIdx:
             switch (compIIdx) {
             case H2OIdx:
                 switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(temperature, 
+                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(temperature,
                                                                         pressure);
                 }
             default:
-                DUNE_THROW(Dune::InvalidStateException, 
+                DUNE_THROW(Dune::InvalidStateException,
                            "Binary diffusion coefficients of trace "
                            "substances in liquid phase is undefined!\n");
             }
@@ -267,8 +274,8 @@ public:
             }
         }
 
-        DUNE_THROW(Dune::InvalidStateException, 
-                   "Binary diffusion coefficient of components " 
+        DUNE_THROW(Dune::InvalidStateException,
+                   "Binary diffusion coefficient of components "
                    << compIIdx << " and " << compJIdx
                    << " in phase " << phaseIdx << " is undefined!\n");
     };
@@ -282,12 +289,12 @@ public:
                                 Scalar temperature,
                                 Scalar pressure,
                                 const FluidState &fluidState)
-    { 
+    {
         if (phaseIdx == lPhaseIdx) {
             Scalar temperature = temperature;
             Scalar pressure = pressure;
-            
-            return 
+
+            return
                 //fluidState.massFrac(lPhaseIdx, H2OIdx)*
                 H2O::liquidEnthalpy(temperature, pressure);
         }
@@ -295,14 +302,14 @@ public:
             Scalar pWater = fluidState.partialPressure(H2OIdx);
 
             Scalar result = 0;
-            result += 
+            result +=
                 H2O::gasEnthalpy(temperature, pWater) *
                 fluidState.massFrac(gPhaseIdx, H2OIdx);
-            result +=  
-                N2::gasEnthalpy(temperature, 
+            result +=
+                N2::gasEnthalpy(temperature,
                                 fluidState.partialPressure(N2Idx)) *
                 fluidState.massFrac(gPhaseIdx, N2Idx);
-            
+
             return result;
         }
     }
@@ -316,16 +323,16 @@ public:
                                       Scalar temperature,
                                       Scalar pressure,
                                       const FluidState &fluidState)
-    { 
+    {
         Scalar h =
-            enthalpy(phaseIdx, 
-                     temperature, 
+            enthalpy(phaseIdx,
+                     temperature,
                      pressure,
                      fluidState);
-            
-        if (phaseIdx == lPhaseIdx) 
-            return h - pressure*phaseDensity(phaseIdx, 
-                                             temperature, 
+
+        if (phaseIdx == lPhaseIdx)
+            return h - pressure*phaseDensity(phaseIdx,
+                                             temperature,
                                              pressure,
                                              fluidState);
         else {

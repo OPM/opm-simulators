@@ -13,7 +13,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Binary coefficients for nitrogen and oxygen.
  */
@@ -56,7 +56,7 @@ public:
     {
         typedef Dumux::N2<Scalar> N2;
         typedef Dumux::O2<Scalar> O2;
-        
+
         // atomic diffusion volumes
         const Scalar SigmaNu[2] = { 18.1 /* N2 */,  16.3 /* O2 */ };
         // molar masses [g/mol]

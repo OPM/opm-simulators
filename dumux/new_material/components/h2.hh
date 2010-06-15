@@ -13,7 +13,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Properties of pure molecular nitrogen \f$H_2\f$.
  */
@@ -44,13 +44,13 @@ public:
      * \brief A human readable name for the H2.
      */
     static const char *name()
-    { return "H2"; } 
+    { return "H2"; }
 
     /*!
      * \brief The mass in [kg/mol] of one of molecular hydrogen.
      */
     static Scalar molarMass()
-    { return 1.0e-3; } 
+    { return 1.0e-3; }
 
     /*!
      * \brief Returns the critical temperature [K] of molecular hydrogen
@@ -80,13 +80,13 @@ public:
      * \brief The vapor pressure in [Pa] of pure molecular hydrogen
      *        at a given temperature.
      *
-     * Taken from: 
+     * Taken from:
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 208-209, 669
      */
     static Scalar vaporPressure(Scalar temperature)
-    { 
+    {
         if (temperature > criticalTemperature())
             return criticalPressure();
         if (temperature < tripleTemperature())
@@ -94,12 +94,12 @@ public:
                       // account
 
         // TODO: the Gomez-Thodos approach would probably be better...
-        
+
         // antoine equatuion
         const Scalar A = -7.76451;
         const Scalar B = 1.45838;
         const Scalar C = -2.77580;
-        
+
         return 1e5 * std::exp(A - B/(temperature + C));
     }
 
@@ -111,7 +111,7 @@ public:
         // Assume an ideal gas
         return IdealGas::density(molarMass(), temperature, pressure);
     }
-    
+
     /*
      * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
      */
@@ -127,7 +127,7 @@ public:
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
      */
-    static const Scalar gasEnthalpy(Scalar T, 
+    static const Scalar gasEnthalpy(Scalar T,
                                     Scalar pressure)
     {
         // method of Joback
@@ -135,12 +135,12 @@ public:
         const Scalar cpVapB =  9.273e-3;
         const Scalar cpVapC = -1.381e-5;
         const Scalar cpVapD =  7.645e-9;
-        
-        //Scalar cp = 
+
+        //Scalar cp =
         //    cpVapA + T*(cpVapB + T*(cpVapC + T*cpVapD));
 
         // calculate: \int_0^T c_p dT
-        return 
+        return
             1/molarMass()* // conversion from [J/mol] to [J/kg]
 
             T*(cpVapA + T*
@@ -171,7 +171,7 @@ public:
     /*!
      * \brief The dynamic viscosity [Pa s] of H2 at a given pressure and temperature.
      *
-     * See: 
+     * See:
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 396-397, 667
@@ -183,11 +183,11 @@ public:
         const Scalar omega = -0.218; // accentric factor
         const Scalar M = molarMass() * 1e3; // molar mas [g/mol]
         const Scalar dipole = 0.0; // dipole moment [debye]
-        
+
         Scalar mu_r4 = 131.3 * dipole / std::sqrt(Vc * Tc);
         mu_r4 *= mu_r4;
         mu_r4 *= mu_r4;
-        
+
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         Scalar Tstar = 1.2593 * temperature/Tc;
         Scalar Omega_v =

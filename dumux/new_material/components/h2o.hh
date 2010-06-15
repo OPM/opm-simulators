@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief Properties of pure water \f$H_2O\f$.
  */
@@ -41,7 +41,7 @@ namespace Dumux
 /*!
  * \brief Properties of pure water \f$H_2O\f$.
  *
- * See: 
+ * See:
  *
  * IAPWS: "Revised Release on the IAPWS Industrial Formulation
  * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -51,7 +51,7 @@ template <class Scalar>
 class H2O : public Component<Scalar, H2O<Scalar> >
 {
     typedef Component<Scalar, H2O<Scalar> > ParentType;
-    
+
     typedef IAPWS::Common<Scalar> Common;
     typedef IAPWS::Region1<Scalar> Region1;
     typedef IAPWS::Region2<Scalar> Region2;
@@ -63,37 +63,37 @@ public:
      * \brief A human readable name for the water.
      */
     static const char *name()
-    { return "H2O"; } 
+    { return "H2O"; }
 
     /*!
      * \brief The mass in [kg] of one mole of water.
      */
     static Scalar molarMass()
-    { return Common::molarMass; } 
+    { return Common::molarMass; }
 
     /*!
      * \brief Returns the critical temperature [K] of water
      */
     static Scalar criticalTemperature()
-    { return Common::criticalTemperature; } 
+    { return Common::criticalTemperature; }
 
     /*!
      * \brief Returns the critical pressure [Pa] of water
      */
     static Scalar criticalPressure()
-    { return Common::criticalPressure; } 
+    { return Common::criticalPressure; }
 
     /*!
      * \brief Returns the temperature [K]at water's triple point.
      */
     static Scalar tripleTemperature()
-    { return Common::tripleTemperature; } 
+    { return Common::tripleTemperature; }
 
     /*!
      * \brief Returns the pressure [Pa] at water's triple point.
      */
     static Scalar triplePressure()
-    { return Common::triplePressure; } 
+    { return Common::triplePressure; }
 
     /*!
      * \brief The vapor pressure in [N/m^2] of pure water
@@ -106,7 +106,7 @@ public:
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
     static Scalar vaporPressure(Scalar T)
-    { 
+    {
         if (T > criticalTemperature())
             T = criticalTemperature();
         if (T < tripleTemperature())
@@ -124,7 +124,7 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar gasEnthalpy(Scalar temperature, 
+    static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
@@ -133,7 +133,7 @@ public:
                        "Enthalpy of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
-        
+
         // regularization
         if (pressure < triplePressure() - 100) {
             // We assume an ideal gas for low pressures to avoid the
@@ -149,13 +149,13 @@ public:
             // the pressure is too high, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
             Scalar tau = Region2::tau(temperature);
-            Scalar dh_dp = 
+            Scalar dh_dp =
                 R*temperature*tau*
                 Region2::ddgamma_dtaudpi(temperature, pv)*
                 Region2::dpi_dp(pv);
 
             return
-                enthalpyRegion2_(temperature, pv) + 
+                enthalpyRegion2_(temperature, pv) +
                 (pressure - pv)*dh_dp;
         };
 
@@ -288,7 +288,7 @@ public:
             // the pressure is too low, in this case we use the slope
             // of the internal energy at the vapor pressure to
             // regularize
-            
+
             // calculate the partial derivative of the internal energy
             // to the pressure at the vapor pressure.
             Scalar tau = Region1::tau(temperature);
@@ -297,10 +297,10 @@ public:
             Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
             Scalar pi = Region1::pi(pv);
             Scalar dpi_dp = Region1::dpi_dp(pv);
-            Scalar du_dp = 
+            Scalar du_dp =
                 R*temperature*
                 (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
-            
+
             // use a straight line for extrapolation
             Scalar uv = internalEnergyRegion1_(temperature, pv);
             return uv + du_dp*(pressure - pv);
@@ -337,9 +337,9 @@ public:
             // regularization, i.e.  the triple pressure - 100Pa, and
             // subtract the work required to change the volume for an
             // ideal gas.
-            return 
-                enthalpyRegion2_(temperature, triplePressure() - 100) 
-                - 
+            return
+                enthalpyRegion2_(temperature, triplePressure() - 100)
+                -
                 R*temperature; // = p*v   for an ideal gas!
         }
         Scalar pv = vaporPressure(temperature);
@@ -347,7 +347,7 @@ public:
             // the pressure is too high, in this case we use the slope
             // of the internal energy at the vapor pressure to
             // regularize
-            
+
             // calculate the partial derivative of the internal energy
             // to the pressure at the vapor pressure.
             Scalar tau = Region2::tau(temperature);
@@ -356,10 +356,10 @@ public:
             Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
             Scalar pi = Region2::pi(pv);
             Scalar dpi_dp = Region2::dpi_dp(pv);
-            Scalar du_dp = 
+            Scalar du_dp =
                 R*temperature*
                 (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
-            
+
             // use a straight line for extrapolation
             Scalar uv = internalEnergyRegion2_(temperature, pv);
             return uv + du_dp*(pressure - pv);
@@ -452,13 +452,13 @@ public:
         if (pressure < triplePressure() - 100) {
             // We assume an ideal gas for low pressures to avoid the
             // 0/0 for the internal energy and enthalpy.
-            Scalar rho0IAPWS = 1.0/volumeRegion2_(temperature, 
+            Scalar rho0IAPWS = 1.0/volumeRegion2_(temperature,
                                                   triplePressure() - 100);
             Scalar rho0Id = IdealGas<Scalar>::density(molarMass(),
                                                       temperature,
                                                       triplePressure() - 100);
-            return 
-                rho0IAPWS/rho0Id * 
+            return
+                rho0IAPWS/rho0Id *
                 IdealGas<Scalar>::density(molarMass(),
                                           temperature,
                                           pressure);
@@ -468,14 +468,14 @@ public:
             // the pressure is too high, in this case we use the slope
             // of the density energy at the vapor pressure to
             // regularize
-            
+
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
             Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
             Scalar dpi_dp = Region2::dpi_dp(pv);
-            Scalar dv_dp = 
+            Scalar dv_dp =
                 R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
-            
+
             // use a straight line for extrapolation
             Scalar v0 = volumeRegion2_(temperature, pv);
             return 1.0/(v0 + (pressure - pv)*dv_dp);
@@ -502,25 +502,25 @@ public:
         // assume steam to be an ideal gas
         Scalar pressure = IdealGas<Scalar>::pressure(temperature, density/molarMass());
         Scalar eps = pressure*1e-7;
-        
+
         Scalar deltaP = pressure*2;
         Valgrind::CheckDefined(pressure);
         Valgrind::CheckDefined(deltaP);
         for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
             Scalar f = gasDensity(temperature, pressure) - density;
-            
+
             Scalar df_dp;
             df_dp  = gasDensity(temperature, pressure + eps);
             df_dp -= gasDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
-            
+
             deltaP = - f/df_dp;
-            
+
             pressure += deltaP;
             Valgrind::CheckDefined(pressure);
             Valgrind::CheckDefined(deltaP);
         }
-        
+
         return pressure;
     }
 
@@ -541,20 +541,20 @@ public:
                        "Density of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
-        
+
         // regularization
         Scalar pv = vaporPressure(temperature);
         if (pressure < pv) {
             // the pressure is too low, in this case we use the slope
             // of the density at the vapor pressure to regularize
-            
+
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
             Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
             Scalar dpi_dp = Region1::dpi_dp(pv);
-            Scalar dv_dp = 
+            Scalar dv_dp =
                 R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
-            
+
             // use a straight line for extrapolation
             Scalar v0 = volumeRegion1_(temperature, pv);
             Scalar v = v0 + (pressure - pv)*dv_dp;
@@ -581,21 +581,21 @@ public:
         // pressure
         Scalar pressure = 1.1*vaporPressure(temperature);
         Scalar eps = pressure*1e-7;
-        
+
         Scalar deltaP = pressure*2;
         for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
             Scalar f = liquidDensity(temperature, pressure) - density;
-            
+
             Scalar df_dp;
             df_dp  = liquidDensity(temperature, pressure + eps);
             df_dp -= liquidDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
-            
+
             deltaP = - f/df_dp;
-            
+
             pressure += deltaP;
         }
-        
+
         return pressure;
     }
 
@@ -651,7 +651,7 @@ private:
         return
             Region1::tau(temperature) *
             Region1::dgamma_dtau(temperature, pressure) *
-            R*temperature; 
+            R*temperature;
     };
 
     // the unregularized specific isobaric heat capacity
@@ -681,7 +681,7 @@ private:
     {
         return
             R * temperature *
-            ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) - 
+            ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) -
               Region1::pi(pressure)*Region1::dgamma_dpi(temperature, pressure));
     };
 
@@ -700,7 +700,7 @@ private:
         return
             Region2::tau(temperature) *
             Region2::dgamma_dtau(temperature, pressure) *
-            R*temperature; 
+            R*temperature;
     };
 
     // the unregularized specific internal energy for steam
@@ -708,7 +708,7 @@ private:
     {
         return
             R * temperature *
-            ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) - 
+            ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) -
               Region2::pi(pressure)*Region2::dgamma_dpi(temperature, pressure));
     };
 

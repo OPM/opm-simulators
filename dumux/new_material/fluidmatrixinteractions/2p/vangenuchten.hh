@@ -138,7 +138,7 @@ public:
     static Scalar dkrw_dSw(const Params &params, Scalar Sw)
     {
         assert(0 <= Sw && Sw <= 1);
-        
+
         const Scalar x = 1 - std::pow(Sw, 1.0/params.vgM());
         const Scalar xToM = std::pow(x, params.vgM());
         return (1 - xToM)/std::sqrt(Sw) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );

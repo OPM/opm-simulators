@@ -14,7 +14,7 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief A much simpler (and thus potentially less buggy) version of
  *        pure water.
@@ -103,14 +103,14 @@ public:
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
     static Scalar vaporPressure(Scalar T)
-    { 
+    {
         DUNE_THROW(Dune::NotImplemented, "vaporPressure for DNAPL");
         return 0;
     };
     /*!
      * \brief Specific enthalpy of DNAPL steam [J/kg].
      */
-    static const Scalar gasEnthalpy(Scalar temperature, 
+    static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
     {
         DUNE_THROW(Dune::NotImplemented, "gasEnthalpy for DNAPL");

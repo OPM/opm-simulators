@@ -126,16 +126,16 @@ public:
         Scalar Sne = 1 - Swe;
         return relperm_(params, Sne);
     }
-    
+
 private:
     static Scalar relperm_(const Params &params, Scalar S)
     {
         const Scalar lowS = params.krLowS();
         const Scalar highS = params.krHighS();
-        
-        
+
+
         const Scalar m = (1 - ((1 - highS) + lowS)/2 ) / (1 - (1 - highS) - lowS);
-        
+
         // check whether the saturation is unpyhsical
         if (S >= 1.0)
             return 1.0;
@@ -156,7 +156,7 @@ private:
                       m,          0);
             return sp.eval(S);
         }
-        
+
         // straight line for S \in [lowS, highS]
         return lowS/2 + m*(S - lowS);
     }

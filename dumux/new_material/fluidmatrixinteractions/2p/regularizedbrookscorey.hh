@@ -90,7 +90,7 @@ public:
         const Scalar Sthres = params.thresholdSw();
 
         // calculate the saturation which corrosponds to the
-        // saturation in the non-regularized version of 
+        // saturation in the non-regularized version of
         // the Brooks-Corey law
         Scalar Swe = BrooksCorey::Sw(params, pC);
 
@@ -185,7 +185,7 @@ public:
             Scalar m = BrooksCorey::dkrw_dSw(params, 1.0);
             return 1 + m*(Sw - 1.0);
         }
-        
+
         return BrooksCorey::krw(params, Sw);
     };
 
@@ -205,7 +205,7 @@ public:
             Scalar m = BrooksCorey::dkrn_dSw(params, 0);
             return 1 + m*(Sw - 0);
         }
-     
+
         return BrooksCorey::krn(params, Sw);
     }
 };

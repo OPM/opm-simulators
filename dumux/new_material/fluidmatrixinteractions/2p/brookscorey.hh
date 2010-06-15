@@ -167,8 +167,8 @@ public:
     static Scalar dkrn_dSw(const Params &params, Scalar Sw)
     {
         assert(0 <= Sw && Sw <= 1);
-        
-        return 
+
+        return
             2.0*(Sw - 1)*(
                 1 +
                 pow(Sw, 2.0/params.alpha())*(
