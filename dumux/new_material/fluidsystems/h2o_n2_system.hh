@@ -306,7 +306,7 @@ public:
             Scalar xlH2O = (pg - betaN2)/(betaH2O - betaN2);
             Scalar xlN2 = 1 - xlH2O;
             Scalar rhol = liquidPhaseDensity_(T, pl, xlH2O, xlN2);
-
+            
             Scalar cgH2O = H2O::gasDensity(T, betaH2O*xlH2O)/H2O::molarMass();
             Scalar cgN2 = N2::gasDensity(T, betaN2*xlN2)/N2::molarMass();
 
@@ -372,11 +372,10 @@ public:
         else if (knownPhaseIdx == gPhaseIdx) {
             // the composition of the gas phase is given
 
-            Scalar XgH2O = fluidState.massFrac(gPhaseIdx, H2OIdx);
-            Scalar XgN2 = fluidState.massFrac(gPhaseIdx, N2Idx);
-            Scalar rhog = fluidState.density(gPhaseIdx);
-            Scalar pgH2O = H2O::gasPressure(T, XgH2O*rhog);
-            Scalar pgN2 = N2::gasPressure(T, XgN2*rhog);
+            Scalar xgH2O = fluidState.moleFrac(gPhaseIdx, H2OIdx);
+            Scalar xgN2 = fluidState.moleFrac(gPhaseIdx, N2Idx);
+            Scalar pgH2O = pg*xgH2O;
+            Scalar pgN2 = pg*xgN2;
 
             Scalar xlH2O = pgH2O/betaH2O;
             Scalar xlN2 = pgN2/betaN2;
@@ -389,7 +388,7 @@ public:
             liquid.xToX(); // update mass fractions from mole fractions
             fluidState.assignPhase(lPhaseIdx, liquid);            
         }
-        }
+    }
 
     /*!
      * \brief Returns the fugacity coefficient of a component in a
