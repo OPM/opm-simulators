@@ -29,77 +29,77 @@ namespace Dumux
 template<class TypeTag>
 class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@\label{tutorial-coupled:tutorialSpatialParameters}@*/
 {
-	// Get informations for current implementation via property system
-	typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
-	typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-	typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    // Get informations for current implementation via property system
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 
-	enum
-	{
-		dim = Grid::dimension,
-		dimWorld = Grid::dimensionworld,
-	};
+    enum
+    {
+        dim = Grid::dimension,
+        dimWorld = Grid::dimensionworld,
+    };
 
-	// Get object types for function arguments
-	typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
-	typedef typename Grid::Traits::template Codim<0>::Entity Element;
+    // Get object types for function arguments
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
+    typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
-	// select material law to be used
-    typedef LinearMaterial<Scalar>		RawMaterialLaw; 	/*@\label{tutorial-coupled:rawlaw}@*/
+    // select material law to be used
+    typedef LinearMaterial<Scalar>        RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
 
 public:
     // adapter for absolute law
-	typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;		/*@\label{tutorial-coupled:eff2abs}@*/
-	// determine appropriate parameters depening on selected materialLaw
-	typedef typename MaterialLaw::Params MaterialLawParams;	/*@\label{tutorial-coupled:matLawObjectType}@*/
+    typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;        /*@\label{tutorial-coupled:eff2abs}@*/
+    // determine appropriate parameters depening on selected materialLaw
+    typedef typename MaterialLaw::Params MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
 
-	// method returning the intrinsic permeability tensor K depending
-	// on the position within the domain
-	const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
-													const FVElementGeometry &fvElemGeom,
-													int scvIdx) const
-	{
-		return K_;
-	}
+    // method returning the intrinsic permeability tensor K depending
+    // on the position within the domain
+    const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
+                                                    const FVElementGeometry &fvElemGeom,
+                                                    int scvIdx) const
+    {
+        return K_;
+    }
 
-	// method returning the porosity of the porous matrix depending on
-	// the position within the domain
-	double porosity(const Element &element,					/*@\label{tutorial-coupled:porosity}@*/
-					const FVElementGeometry &fvElemGeom,
-					int scvIdx) const
-	{
-		return 0.2;
-	}
+    // method returning the porosity of the porous matrix depending on
+    // the position within the domain
+    double porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
+                    const FVElementGeometry &fvElemGeom,
+                    int scvIdx) const
+    {
+        return 0.2;
+    }
 
-	// return the materialLaw context (i.e. BC, regularizedVG, etc) depending on the position
-	const MaterialLawParams& materialLawParams(const Element &element,			/*@\label{tutorial-coupled:matLawParams}@*/
-											const FVElementGeometry &fvElemGeom,
-											int scvIdx) const
-	{
-		return materialParams_;
-	}
+    // return the materialLaw context (i.e. BC, regularizedVG, etc) depending on the position
+    const MaterialLawParams& materialLawParams(const Element &element,            /*@\label{tutorial-coupled:matLawParams}@*/
+                                            const FVElementGeometry &fvElemGeom,
+                                            int scvIdx) const
+    {
+        return materialParams_;
+    }
 
-	// constructor
-	TutorialSpatialParametersCoupled(const GridView& gridView) :
-		BoxSpatialParameters<TypeTag>(gridView), K_(0)
-	{
-		for (int i = 0; i < dim; i++)
-			K_[i][i] = 1e-7;
+    // constructor
+    TutorialSpatialParametersCoupled(const GridView& gridView) :
+        BoxSpatialParameters<TypeTag>(gridView), K_(0)
+    {
+        for (int i = 0; i < dim; i++)
+            K_[i][i] = 1e-7;
 
-		//set residual saturations
-		materialParams_.setSwr(0.0);				/*@\label{tutorial-coupled:setLawParams}@*/
-		materialParams_.setSnr(0.0);
+        //set residual saturations
+        materialParams_.setSwr(0.0);                /*@\label{tutorial-coupled:setLawParams}@*/
+        materialParams_.setSnr(0.0);
 
-		//linear material law
-		materialParams_.setEntryPC(0.0);
-		materialParams_.setMaxPC(0.0);
-	}
+        //linear material law
+        materialParams_.setEntryPC(0.0);
+        materialParams_.setMaxPC(0.0);
+    }
 
 private:
-	Dune::FieldMatrix<Scalar, dim, dim> K_;
-	// Object that helds the values/parameters of the selected material law.
-	MaterialLawParams materialParams_; 				/*@\label{tutorial-coupled:matParamsObject}@*/
+    Dune::FieldMatrix<Scalar, dim, dim> K_;
+    // Object that helds the values/parameters of the selected material law.
+    MaterialLawParams materialParams_;                 /*@\label{tutorial-coupled:matParamsObject}@*/
 };
 } // end namespace
 #endif

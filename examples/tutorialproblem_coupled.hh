@@ -50,7 +50,7 @@ SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem
 
 // Set the grid
 SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
-{ 
+{
     typedef Dune::SGrid<2,2> type;
     static type *create() /*@\label{tutorial-coupled:create-grid-method}@*/
     {
@@ -94,7 +94,7 @@ class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag, /*@\label{tutorial
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView))    GridView;
 
     // Grid and world dimension
-    enum {       
+    enum {
         dim         = GridView::dimension,
         dimWorld    = GridView::dimensionworld,
     };
@@ -108,7 +108,7 @@ class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag, /*@\label{tutorial
     typedef typename GridView::Intersection                 Intersection;
     typedef Dune::FieldVector<CoordScalar, dim>             LocalPosition;
     typedef Dune::FieldVector<CoordScalar, dimWorld>        GlobalPosition;
-  
+
     typedef typename GET_PROP(TypeTag, PTAG(SolutionTypes))          SolutionTypes;
     typedef typename SolutionTypes::PrimaryVarVector                 PrimaryVarVector;
     typedef typename SolutionTypes::BoundaryTypeVector               BoundaryTypeVector;
@@ -134,7 +134,7 @@ public:
                        const Intersection         &isIt,
                        int                         scvIdx,
                        int                         boundaryFaceIdx) const
-    {    
+    {
         const GlobalPosition &pos = element.geometry().corner(scvIdx);
         if (pos[0] < eps_) // dirichlet conditions on left boundary
            BCtype.setAllDirichlet();
@@ -168,7 +168,7 @@ public:
                  int                         scvIdx,
                  int                         boundaryFaceIdx) const
     {
-        const GlobalPosition &pos = 
+        const GlobalPosition &pos =
             fvElemGeom.boundaryFace[boundaryFaceIdx].ipGlobal;
         Scalar right = this->bboxMax()[0];
         if (pos[0] > right - eps_) {

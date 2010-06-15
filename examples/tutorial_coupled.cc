@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 
             std::istringstream(argv[argPos++]) >> restartTime;
         }
-        
+
         // read the the initial time step and the end time
         if (argc - argPos != 2)
             usage(argv[0]);
@@ -87,6 +87,6 @@ int main(int argc, char** argv)
         std::cerr << "Unknown exception thrown!\n";
         throw;
     }
-    
+
     return 3;
 }
