@@ -17,9 +17,9 @@
 #define TUTORIALSPATIALPARAMETERS_DECOUPLED_HH
 
 
-//#include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh>
-#include <dumux/new_material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
-#include <dumux/new_material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+//#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
+#include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
+#include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 namespace Dumux
 {

@@ -18,7 +18,7 @@
 #define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
 // fluid properties
-#include <dumux/new_material/fluidsystems/h2o_n2_system.hh>
+#include <dumux/material/fluidsystems/h2o_n2_system.hh>
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pboxmodel.hh>

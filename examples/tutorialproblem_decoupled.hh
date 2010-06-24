@@ -25,9 +25,9 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/sgrid.hh>
 
-#include <dumux/new_material/components/h2o.hh>
-#include <dumux/new_material/components/oil.hh>
-#include <dumux/new_material/fluidsystems/liquidphase.hh>
+#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/oil.hh>
+#include <dumux/material/fluidsystems/liquidphase.hh>
 
 #include <dumux/decoupled/2p/impes/impesproblem2p.hh>
 #include <dumux/decoupled/2p/diffusion/fv/fvvelocity2p.hh>

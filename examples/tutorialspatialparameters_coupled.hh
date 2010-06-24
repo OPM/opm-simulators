@@ -17,11 +17,11 @@
 #define TUTORIALSPATIALPARAMETERS_COUPLED_HH
 
 // include parent spatialparameters
-#include <dumux/new_material/spatialparameters/boxspatialparameters.hh>
+#include <dumux/material/spatialparameters/boxspatialparameters.hh>
 
 // include material laws
-#include <dumux/new_material/fluidmatrixinteractions/2p/linearmaterial.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
-#include <dumux/new_material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 namespace Dumux
 {

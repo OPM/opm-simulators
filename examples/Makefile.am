@@ -2,8 +2,7 @@
 NORMALTESTS = tutorial_decoupled tutorial_coupled
 
 EXTRA_DIST=CMakeLists.txt results/*/*/*.vtu
-noinst_HEADERS= tutorial_soilproperties_decoupled.hh \
-	tutorialproblem_decoupled.hh
+noinst_HEADERS= tutorialspatialparameters_decoupled.hh tutorialproblem_decoupled.hh tutorialspatialparameters_coupled.hh tutorialproblem_coupled.hh
 
 # list of tests to run
 #TESTS = $(NORMALTESTS)
@@ -12,12 +11,12 @@ noinst_HEADERS= tutorial_soilproperties_decoupled.hh \
 bin_PROGRAMS = $(NORMALTESTS)
 
 tutorial_decoupleddir = $(datadir)/dumux/tutorial
-tutorial_decoupled_HEADERS = tutorial_soilproperties_decoupled.hh \
+tutorial_decoupled_HEADERS = tutorialspatialparameters_decoupled.hh \
 	tutorialproblem_decoupled.hh
 tutorial_decoupled_SOURCES = tutorial_decoupled.cc
 tutorial_decoupled_DATA = $(tutorial_decoupled_SOURCES)
 tutorial_coupleddir = $(datadir)/dumux/tutorial
-tutorial_coupled_HEADERS = tutorialsoil_coupled.hh \
+tutorial_coupled_HEADERS = tutorialspatialparameters_coupled.hh \
 	tutorialproblem_coupled.hh
 tutorial_coupled_SOURCES = tutorial_coupled.cc
 tutorial_coupled_DATA = $(tutorial_coupled_SOURCES)
