@@ -22,7 +22,7 @@
 #ifndef DUMUX_BOX_SPATIAL_PARAMETERS_HH
 #define DUMUX_BOX_SPATIAL_PARAMETERS_HH
 
-#include <dumux/common/properties.hh>
+#include <dumux/common/propertysystem.hh>
 #include <dumux/common/math.hh>
 
 #include <dune/common/fmatrix.hh>

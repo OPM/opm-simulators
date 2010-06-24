@@ -15,16 +15,16 @@
 /*!
  * \file
  *
- * \brief Binary coefficients for nitrogen and oxygen.
+ * \brief Binary coefficients for hydrogen and nitrogen.
  */
-#ifndef DUMUX_BINARY_COEFF_N2_O2_HH
-#define DUMUX_BINARY_COEFF_N2_O2_HH
+#ifndef DUMUX_BINARY_COEFF_H2_N2_HH
+#define DUMUX_BINARY_COEFF_H2_N2_HH
 
 #include "henryiapws.hh"
 #include "fullermethod.hh"
 
-#include <dumux/new_material/components/o2.hh>
-#include <dumux/new_material/components/n2.hh>
+#include <dumux/material/components/n2.hh>
+#include <dumux/material/components/h2.hh>
 
 namespace Dumux
 {
@@ -32,45 +32,46 @@ namespace BinaryCoeff
 {
 
 /*!
- * \brief Binary coefficients for nitrogen and oxygen.
+ * \brief Binary coefficients for hydrogen and nitrogen.
  */
-class N2_O2
+class H2_N2
 {
 public:
     /*!
-     * \brief Henry coefficent \f$[N/m^2]\f$  for molecular oxygen in liquid nitrogen.
+     * \brief Henry coefficent \f$[N/m^2]\f$  for molecular nitrogen in liquid hydrogen.
      */
     template <class Scalar>
     static Scalar henry(Scalar temperature)
     {
-        DUNE_THROW(Dune::NotImplemented, "henry coefficient for oxygen in liquid nitrogen");
+        DUNE_THROW(Dune::NotImplemented, "henry coefficient for nitrogen in liquid hydrogen");
     };
 
     /*!
-     * \brief Binary diffusion coefficent [m^2/s] for molecular nitrogen and oxygen.
+     * \brief Binary diffusion coefficent [m^2/s] for molecular hydrogen and nitrogen.
      *
      * \copybody fullerMethod()
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
     {
+        typedef Dumux::H2<Scalar> H2;
         typedef Dumux::N2<Scalar> N2;
-        typedef Dumux::O2<Scalar> O2;
 
         // atomic diffusion volumes
-        const Scalar SigmaNu[2] = { 18.1 /* N2 */,  16.3 /* O2 */ };
+        const Scalar SigmaNu[2] = { 6.12 /* H2 */,  18.5 /* N2 */ };
         // molar masses [g/mol]
-        const Scalar M[2] = { N2::molarMass()*1e3, O2::molarMass()*1e3 };
+        const Scalar M[2] = { H2::molarMass()*1e3, N2::molarMass()*1e3 };
+
         return fullerMethod(M, SigmaNu, temperature, pressure);
     };
 
     /*!
-     * \brief Diffusion coefficent [m^2/s] for molecular oxygen in liquid nitrogen.
+     * \brief Diffusion coefficent [m^2/s] for molecular nitrogen in liquid hydrogen.
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
     {
-        DUNE_THROW(Dune::NotImplemented, "diffusion coefficient for liquid oxygen and nitrogen");
+        DUNE_THROW(Dune::NotImplemented, "diffusion coefficient for liquid nitrogen and hydrogen");
     };
 };
 

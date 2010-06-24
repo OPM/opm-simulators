@@ -22,6 +22,9 @@
 #ifndef DUMUX_2P_SYSTEM_HH
 #define DUMUX_2P_SYSTEM_HH
 
+#include "liquidphase.hh"
+#include "gasphase.hh"
+
 namespace Dumux
 {
 

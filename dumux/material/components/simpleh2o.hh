@@ -22,7 +22,7 @@
 #ifndef DUMUX_SIMPLE_H2O_HH
 #define DUMUX_SIMPLE_H2O_HH
 
-#include <dumux/new_material/idealgas.hh>
+#include <dumux/material/idealgas.hh>
 #include <dune/common/exceptions.hh>
 
 #include "component.hh"

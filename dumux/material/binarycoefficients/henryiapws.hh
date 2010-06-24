@@ -21,7 +21,7 @@
 #ifndef DUMUX_HENRY_IAPWS_HH
 #define DUMUX_HENRY_IAPWS_HH
 
-#include <dumux/new_material/components/h2o.hh>
+#include <dumux/material/components/h2o.hh>
 
 namespace Dumux
 {

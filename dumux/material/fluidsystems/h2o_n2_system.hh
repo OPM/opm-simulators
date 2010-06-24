@@ -22,17 +22,17 @@
 #ifndef DUMUX_H2O_N2_SYSTEM_HH
 #define DUMUX_H2O_N2_SYSTEM_HH
 
-#include <dumux/new_material/idealgas.hh>
-#include <dumux/new_material/settablephase.hh>
+#include <dumux/material/idealgas.hh>
+#include <dumux/material/settablephase.hh>
 
-#include <dumux/new_material/components/n2.hh>
-#include <dumux/new_material/components/h2o.hh>
-#include <dumux/new_material/components/simpleh2o.hh>
-#include <dumux/new_material/components/tabulatedcomponent.hh>
+#include <dumux/material/components/n2.hh>
+#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/simpleh2o.hh>
+#include <dumux/material/components/tabulatedcomponent.hh>
 
-#include <dumux/common/properties.hh>
+#include <dumux/common/propertysystem.hh>
 
-#include <dumux/new_material/binarycoefficients/h2o_n2.hh>
+#include <dumux/material/binarycoefficients/h2o_n2.hh>
 
 #define USE_SIMPLE_WATER 0
 

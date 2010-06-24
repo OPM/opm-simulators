@@ -1,3 +1,4 @@
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
@@ -15,16 +16,16 @@
 /*!
  * \file
  *
- * \brief Binary coefficients for water and oxygen.
+ * \brief Binary coefficients for water and nitrogen.
  */
-#ifndef DUMUX_BINARY_COEFF_H2O_O2_HH
-#define DUMUX_BINARY_COEFF_H2O_O2_HH
+#ifndef DUMUX_BINARY_COEFF_H2O_N2_HH
+#define DUMUX_BINARY_COEFF_H2O_N2_HH
 
 #include "henryiapws.hh"
 #include "fullermethod.hh"
 
-#include <dumux/new_material/components/o2.hh>
-#include <dumux/new_material/components/h2o.hh>
+#include <dumux/material/components/n2.hh>
+#include <dumux/material/components/h2o.hh>
 
 namespace Dumux
 {
@@ -32,13 +33,13 @@ namespace BinaryCoeff
 {
 
 /*!
- * \brief Binary coefficients for water and oxygen.
+ * \brief Binary coefficients for water and nitrogen.
  */
-class H2O_O2
+class H2O_N2
 {
 public:
     /*!
-     * \brief Henry coefficent \f$[N/m^2]\f$  for molecular oxygen in liquid water.
+     * \brief Henry coefficent \f$[N/m^2]\f$  for molecular nitrogen in liquid water.
      *
      * See:
      *
@@ -50,16 +51,16 @@ public:
     template <class Scalar>
     static Scalar henry(Scalar temperature)
     {
-        const Scalar E =  2305.0674;
-        const Scalar F = -11.3240;
-        const Scalar G =  25.3224;
-        const Scalar H = -15.6449;
+        const Scalar E = 2388.8777;
+        const Scalar F = -14.9593;
+        const Scalar G = 42.0179;
+        const Scalar H = -29.4396;
 
         return henryIAPWS(E, F, G, H, temperature);
     };
 
     /*!
-     * \brief Binary diffusion coefficent [m^2/s] for molecular water and oxygen.
+     * \brief Binary diffusion coefficent [m^2/s] for molecular water and nitrogen.
      *
      * \copybody fullerMethod()
      */
@@ -67,18 +68,18 @@ public:
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
     {
         typedef Dumux::H2O<Scalar> H2O;
-        typedef Dumux::O2<Scalar>  O2;
+        typedef Dumux::N2<Scalar> N2;
 
         // atomic diffusion volumes
-        const Scalar SigmaNu[2] = { 13.1 /* H2O */,  16.3 /* O2 */ };
+        const Scalar SigmaNu[2] = { 13.1 /* H2O */,  18.5 /* N2 */ };
         // molar masses [g/mol]
-        const Scalar M[2] = { H2O::molarMass()*1e3, O2::molarMass()*1e3 };
+        const Scalar M[2] = { H2O::molarMass()*1e3, N2::molarMass()*1e3 };
 
         return fullerMethod(M, SigmaNu, temperature, pressure);
     };
 
     /*!
-     * \brief Diffusion coefficent [m^2/s] for molecular oxygen in liquid water.
+     * \brief Diffusion coefficent [m^2/s] for molecular nitrogen in liquid water.
      *
      * The empirical equations for estimating the diffusion coefficient in
      * infinite solution which are presented in Reid, 1987 all show a
@@ -99,7 +100,7 @@ public:
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
     {
         const Scalar Texp = 273.15 + 25; // [K]
-        const Scalar Dexp = 2.2e-9; // [m^2/s]
+        const Scalar Dexp = 2.01e-9; // [m^2/s]
         return Dexp * temperature/Texp;
     };
 };
