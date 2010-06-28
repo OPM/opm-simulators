@@ -89,7 +89,7 @@ mim_ip_simple_fill_null(size_t nf, size_t d, double *C, double *A,
     /* Account for DSYRK only assigning upper triangular part. */
     for (j = 0; j < nf; j++) {
         for (i = j + 1; i < nf; i++) {
-            A[i + j*nf] = A[j + i*nf];
+            Binv[i + j*nf] = Binv[j + i*nf];
         }
     }
 }
