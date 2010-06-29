@@ -1,6 +1,8 @@
 #include <stddef.h>
 
+#ifndef MAT_SIZE_T
 #define MAT_SIZE_T size_t
+#endif
 
 #include "blas_lapack.h"
 #include "mimetic.h"
