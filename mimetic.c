@@ -78,16 +78,16 @@ mim_ip_linpress_exact(int nf, int d, double vol, double *N, double *K,
     double     a1, a2, t;
 
     t = 0.0;
-    for (i = 0; i < nf; i++) {
-        t += K[i + i*nf];
+    for (i = 0; i < d; i++) {
+        t += K[i + i*d];
     }
 
     /* Step 4) T <- N*K */
-    m   = nf ;  n   = nf ;  k = d;
+    m   = nf ;  n   = d  ;  k = d;
     ld1 = nf ;  ld2 = d  ;
     a1  = 1.0;  a2  = 0.0;
     dgemm_("No Transpose", "No Transpose", &m, &n, &k,
-           &a1, N, &ld1, K, &ld1, &a2, T, &ld1);
+           &a1, N, &ld1, K, &ld2, &a2, T, &ld1);
 
     /*  Step 5) Binv <- (N*K*N' + t*X) / vol */
     a1 = 1.0     /      vol ;
