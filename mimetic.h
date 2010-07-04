@@ -12,5 +12,9 @@ void mim_ip_simple(int nf, int d, double v, double *A, double *K,
                    double *C, double *N, double *Binv,
                    double *work, int lwork);
 
+void mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf, int *cf,
+                       int *fneighbour, double *fcentroid, double *fnormal,
+                       double *farea, double *ccentroid, double *cvol,
+                       double *perm, double *Binv);
 
 #endif /* MIMETIC_H_INCLUDED */

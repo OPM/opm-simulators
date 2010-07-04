@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdlib.h>
 
 #ifndef MAT_SIZE_T
 #define MAT_SIZE_T int
@@ -6,6 +7,61 @@
 
 #include "blas_lapack.h"
 #include "mimetic.h"
+
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+
+/* ------------------------------------------------------------------ */
+void
+mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf, int *cf,
+                  int *fneighbour,  double *fcentroid, double *fnormal,
+                  double *farea, double *ccentroid, double *cvol,
+                  double *perm, double *Binv)
+/* ------------------------------------------------------------------ */
+{
+    int i, j, c, f, nf, fpos, fpos2, lwork;
+
+    double *C, *N, *A, *work, s;
+
+    double cc[3] = { 0.0 };     /* No more than 3 space dimensions */
+
+    lwork = 64 * (max_ncf * d);                   /* 64 from ILAENV() */
+    C     = malloc((max_ncf * d) * sizeof *C);
+    N     = malloc((max_ncf * d) * sizeof *N);
+    A     = malloc(max_ncf       * sizeof *A);
+    work  = malloc(lwork         * sizeof *work);
+
+    if ((C != NULL) && (N != NULL) && (A != NULL) && (work != NULL)) {
+        fpos = fpos2 = 0;
+
+        for (c = 0; c < ncells; c++) {
+            for (j = 0; j < d; j++) {
+                cc[j] = ccentroid[j + c*d];
+            }
+
+            nf = ncf[c];
+
+            for (i = 0; i < nf; i++) {
+                f = cf[fpos + i];
+                s = 2.0*(fneighbour[2 * f] == c) - 1.0;
+
+                A[i] = farea[f];
+
+                for (j = 0; j < d; j++) {
+                    C[i + j*nf] = fcentroid  [j + f*d] - cc[j];
+                    N[i + j*nf] = s * fnormal[j + f*d];
+                }
+            }
+
+            mim_ip_simple(nf, d, cvol[c], A, &perm[c * d * d],
+                          C, N, &Binv[fpos2], work, lwork);
+
+            fpos  += nf;
+            fpos2 += nf * nf;
+        }
+    }
+
+    free(work);  free(A);  free(N);  free(C);
+}
 
 
 /* ------------------------------------------------------------------ */
