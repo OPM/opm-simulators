@@ -49,7 +49,7 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
-        return EffLaw::pC(params, SwToSwe_(params, Sw));
+        return EffLaw::pC(params, SwToSwe(params, Sw));
     }
 
     /*!
@@ -88,7 +88,7 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Sw)
     {
-        return EffLaw::krw(params, SwToSwe_(params, Sw));
+        return EffLaw::krw(params, SwToSwe(params, Sw));
     };
 
     /*!
@@ -98,16 +98,22 @@ public:
      */
     static Scalar krn(const Params &params, Scalar Sw)
     {
-        return EffLaw::krn(params, SwToSwe_(params, Sw));
+        return EffLaw::krn(params, SwToSwe(params, Sw));
     }
 
-private:
     // convert an absolute wetting saturation to an effective one
-    static Scalar SwToSwe_(const Params &params, Scalar Sw)
+    static Scalar SwToSwe(const Params &params, Scalar Sw)
     {
         return (Sw - params.Swr())/(1 - params.Swr() - params.Snr());
     }
 
+    // convert an absolute wetting saturation to an effective one
+    static Scalar SnToSne(const Params &params, Scalar Sn)
+    {
+        return (Sn - params.Snr())/(1 - params.Swr() - params.Snr());
+    }
+
+private:
     // convert an effective wetting saturation to an absolute one
     static Scalar SweToSw_(const Params &params, Scalar Swe)
     {
