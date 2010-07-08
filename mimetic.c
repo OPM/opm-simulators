@@ -1,6 +1,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#if COMPILING_FOR_MATLAB
+#include "mex.h"
+#include "matrix.h"
+#define MAT_SIZE_T mwSignedIndex
+#endif
+
 #ifndef MAT_SIZE_T
 #define MAT_SIZE_T int
 #endif
