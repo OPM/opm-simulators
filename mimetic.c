@@ -14,8 +14,6 @@
 #include "blas_lapack.h"
 #include "mimetic.h"
 
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-
 /* ------------------------------------------------------------------ */
 void
 mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf, int *cf,
