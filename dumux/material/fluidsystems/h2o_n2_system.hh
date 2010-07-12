@@ -34,14 +34,20 @@
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
 
-#define USE_SIMPLE_WATER 0
-
 namespace Dumux
 {
 
 namespace Properties
 {
 NEW_PROP_TAG(Scalar);
+
+// defines which formulation (IAPWS, Tabulated, Simple...) is used
+NEW_PROP_TAG(H2O_Formulation);
+SET_PROP_DEFAULT(H2O_Formulation)
+    {
+        typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+        typedef Dumux::TabulatedComponent<Scalar, typename Dumux::H2O<Scalar> > type;
+    };
 };
 
 /*!
@@ -57,17 +63,8 @@ class H2O_N2_System
     typedef Dumux::IdealGas<Scalar> IdealGas;
     typedef Dumux::SettablePhase<Scalar, ThisType> SettablePhase;
 
-    typedef Dumux::SimpleH2O<Scalar>                     SimpleH2O;
-    typedef Dumux::H2O<Scalar>                           H2O_IAPWS;
-    typedef Dumux::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
-
 public:
-#if ! USE_SIMPLE_WATER
-    typedef H2O_Tabulated                             H2O;
-    //typedef H2O_IAPWS                                 H2O;
-#else
-    typedef SimpleH2O                                 H2O;
-#endif
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(H2O_Formulation)) H2O;
     typedef Dumux::N2<Scalar>                          N2;
 
     static const int numComponents = 2;
@@ -84,11 +81,11 @@ public:
 
     static void init()
     {
-#if ! USE_SIMPLE_WATER
-        std::cout << "Initializing tables for the H2O fluid properties.\n";
-        H2O_Tabulated::init(273.15, 623.15, 100,
-                            -10,      20e6, 200);
-#endif
+            Dune::dinfo << "Initializing tables for the H2O fluid properties.\n";
+            // the following method initializes the thermodynamic tables. Arguments are
+            // (tempMin, tempMax, nTemp, pressMin, pressMax, nPress)
+            GET_PROP(TypeTag, PTAG(H2O_Formulation))::init(273.15, 623.15, 100, -10, 20e6, 200);
+
 
 #if 0
         // this used is to print the quanties of water into a CSV file
