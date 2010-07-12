@@ -23,8 +23,8 @@
 #include "henryiapws.hh"
 #include "fullermethod.hh"
 
-#include <dumux/material/components/n2.hh>
 #include <dumux/material/components/h2.hh>
+#include <dumux/material/components/n2.hh>
 
 namespace Dumux
 {

@@ -35,10 +35,9 @@ namespace Dumux
 /*!
  * \brief A class for the brine fluid properties
  */
-template <class Scalar>
-class Brine : public Component<Scalar, Brine<Scalar> >
+template <class Scalar, class H2O>
+class Brine : public Component<Scalar, Brine<Scalar, H2O> >
 {
-    typedef Dumux::H2O<Scalar> H2O;
 public:
     // HACKy
     static Scalar salinity;
@@ -278,8 +277,8 @@ public:
     }
 };
 
-template <class Scalar>
-Scalar Brine<Scalar>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
+template <class Scalar, class H2O>
+Scalar Brine<Scalar, H2O>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
 
 } // end namepace
 

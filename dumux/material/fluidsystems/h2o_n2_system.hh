@@ -25,31 +25,14 @@
 #include <dumux/material/idealgas.hh>
 #include <dumux/material/settablephase.hh>
 
-#include <dumux/material/components/n2.hh>
-#include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/simpleh2o.hh>
-#include <dumux/material/components/tabulatedcomponent.hh>
+#include <dumux/material/binarycoefficients/h2o_n2.hh>
+
+#include "defaultcomponents.hh"
 
 #include <dumux/common/propertysystem.hh>
 
-#include <dumux/material/binarycoefficients/h2o_n2.hh>
-
 namespace Dumux
 {
-
-namespace Properties
-{
-NEW_PROP_TAG(Scalar);
-
-// defines which formulation (IAPWS, Tabulated, Simple...) is used
-NEW_PROP_TAG(H2O_Formulation);
-SET_PROP_DEFAULT(H2O_Formulation)
-    {
-        typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-        typedef Dumux::TabulatedComponent<Scalar, typename Dumux::H2O<Scalar> > type;
-    };
-};
-
 /*!
  * \brief A compositional fluid with water and molecular nitrogen as
  *        components in both, the liquid and the gas phase.
@@ -63,9 +46,11 @@ class H2O_N2_System
     typedef Dumux::IdealGas<Scalar> IdealGas;
     typedef Dumux::SettablePhase<Scalar, ThisType> SettablePhase;
 
+    typedef typename GET_PROP(TypeTag, PTAG(Components)) Components;
+
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(H2O_Formulation)) H2O;
-    typedef Dumux::N2<Scalar>                          N2;
+    typedef typename Components::H2O H2O;
+    typedef typename Components::N2 N2;
 
     static const int numComponents = 2;
     static const int numPhases = 2;
@@ -80,43 +65,7 @@ public:
     static const int N2Idx = 1;
 
     static void init()
-    {
-            Dune::dinfo << "Initializing tables for the H2O fluid properties.\n";
-            // the following method initializes the thermodynamic tables. Arguments are
-            // (tempMin, tempMax, nTemp, pressMin, pressMax, nPress)
-            GET_PROP(TypeTag, PTAG(H2O_Formulation))::init(273.15, 623.15, 100, -10, 20e6, 200);
-
-
-#if 0
-        // this used is to print the quanties of water into a CSV file
-        // which can be inspected by matlab to check the
-        // regularizations, etc.
-        int nT = 300;
-        Scalar minT = 273.15;
-        Scalar maxT = 620.0;
-        int nP = 600;
-        Scalar minP = 0.0;
-        Scalar maxP = 10e6;
-        std::cerr << "'T' 'p' 'u_l' 'u_g' 'h_l' 'h_g' 'u_l,tab' 'u_g,tab' 'h_l,tab' 'h_g,tab'\n";
-        for (int iT = 0; iT < nT; ++ iT) {
-            Scalar T = Scalar(iT)/(nT - 1)*(maxT - minT) + minT;
-            for (int iP = 0; iP < nP; ++ iP) {
-                Scalar p = Scalar(iP)/(nP - 1)*(maxP - minP) + minP;
-                std::cerr << T << " "
-                          << p << " "
-                          << H2O_IAPWS::liquidInternalEnergy(T, p) << " "
-                          << H2O_IAPWS::gasInternalEnergy(T, p) << " "
-                          << H2O_IAPWS::liquidEnthalpy(T, p) << " "
-                          << H2O_IAPWS::gasEnthalpy(T, p) << " "
-                          << H2O_Tabulated::liquidInternalEnergy(T, p) << " "
-                          << H2O_Tabulated::gasInternalEnergy(T, p) << " "
-                          << H2O_Tabulated::liquidEnthalpy(T, p) << " "
-                          << H2O_Tabulated::gasEnthalpy(T, p) << "\n";
-            }
-            std::cerr << "\n";
-        };
-#endif
-    }
+    { Components::init(); }
 
     /*!
      * \brief Return the human readable name of a component
