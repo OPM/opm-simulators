@@ -33,6 +33,8 @@
 #include <dumux/material/components/brine.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 
+#include <dune/common/stdstreams.hh>
+
 namespace Dumux
 {
 namespace Properties
@@ -44,6 +46,8 @@ NEW_PROP_TAG(DefaultComponents);
 //! defines the components which are actually being used by the fluid
 //! system
 NEW_PROP_TAG(Components);
+
+NEW_PROP_TAG(Scalar);
 
 SET_PROP_DEFAULT(DefaultComponents)
 { private:

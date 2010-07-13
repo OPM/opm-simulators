@@ -605,7 +605,7 @@ private:
         }
 #endif
     }
-    };
+};
 
 } // end namepace
 

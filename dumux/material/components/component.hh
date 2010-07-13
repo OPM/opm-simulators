@@ -21,6 +21,8 @@
 #ifndef DUMUX_COMPONENT_HH
 #define DUMUX_COMPONENT_HH
 
+#include <dune/common/exceptions.hh>
+
 namespace Dumux
 {
 
@@ -31,10 +33,6 @@ template <class Scalar, class Implementation>
 class Component
 {
 public:
-    static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
-            Scalar pressMin, Scalar pressMax, unsigned nPress)
-    {   Dune::dwarn << "No init routine defined - make shure that this is not necessary!" << std::endl; }
-
     /*!
      * \brief A human readable name for the compoent.
      */
