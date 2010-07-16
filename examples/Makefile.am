@@ -8,7 +8,7 @@ noinst_HEADERS= tutorialspatialparameters_decoupled.hh tutorialproblem_decoupled
 #TESTS = $(NORMALTESTS)
 
 # programs just to build when "make check" is used
-bin_PROGRAMS = $(NORMALTESTS)
+check_PROGRAMS = $(NORMALTESTS)
 
 tutorial_decoupleddir = $(datadir)/dumux/tutorial
 tutorial_decoupled_HEADERS = tutorialspatialparameters_decoupled.hh \
