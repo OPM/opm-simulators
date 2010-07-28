@@ -4,20 +4,20 @@
 For the installation of DuMu$^\text{x}$, the following steps have to be performed.  
 
 \paragraph{Checkout of the core modules}
-Since we always want to be up to date with the latest changes in DUNE, 
-we decided to use the developers version of the core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, and \texttt{dune-disc}.  
-First, create a directory where all the DUNE modules will be stored in. Then, enter the previously created folder. 
+From version 2.0 of DUNE, it was decided to stick to stable DUNE releases, comprising the core modules 
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions}, and the external \texttt{dune-pdelab}.  
+First, create a directory where all the DUNE and \Dumux modules will be stored in. Then, enter the previously created folder. 
 The checkout has to be performed as described on 
 the DUNE webpage, \cite{DUNE-HP}: 
 \begin{itemize}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/trunk dune-common}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid/trunk dune-grid}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-istl/trunk dune-istl}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-disc/trunk dune-disc}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/releases/2.0 dune-common}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid/releases/2.0 dune-grid}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-istl/releases/2.0 dune-istl}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-localfunctions/releases/2.0 dune-localfunctions}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab}
 \end{itemize} 
-The \Dumux webpage \cite{dumux-hp} contains the revision numbers of the core modules 
-for which compatibility to \Dumux can be guaranteed. 
+%The \Dumux webpage \cite{dumux-hp} contains the revision numbers of the core modules 
+%for which compatibility to \Dumux can be guaranteed. 
 
 Additionally, it is highly recommended that you also checkout the \texttt{dune-grid} HOWTO 
 by 
@@ -29,14 +29,14 @@ the Dune grid interface.
 
 \paragraph{Checkout of DuMu$^\text{x}$ and external modules} 
 If you obtained a \Dumux tarball, you should just extract the tarball as usual 
-and can skip this part. 
-First of all, you need to ask one of the IWS system administrators to 
-add your account to the group \texttt{svndune}. 
-If you are working on a LH2 computer, you then can checkout DuMu$^\text{x}$ 
+and can skip this part. First of all, you need to ask one of the IWS system administrators to 
+add your account to the group \texttt{svndune}. \\
+On the repository, the \Dumux project is divided into a stable and developers part, which should stay seperate
+on the file system. If you are working on a LH2 computer, you then can checkout both parts of \Dumux
 and the external modules via 
 \begin{itemize}
-\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-mux/trunk dumux}
-\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-subgrid/trunk dune-subgrid}
+\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dumux/trunk dumux}
+\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-mux/trunk dumux-dev}
 \item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
 \end{itemize} 
 If you want to checkout from outside LH2, you first need to establish a tunnel. 
