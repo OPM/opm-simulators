@@ -1,4 +1,4 @@
-// $Id: idealgas.hh 3777 2010-06-24 06:46:46Z bernd $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *

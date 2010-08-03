@@ -1,4 +1,4 @@
-// $Id: component.hh 3824 2010-07-13 13:30:02Z lauser $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *
@@ -21,8 +21,6 @@
 #ifndef DUMUX_COMPONENT_HH
 #define DUMUX_COMPONENT_HH
 
-#include <dune/common/exceptions.hh>
-
 namespace Dumux
 {
 
@@ -33,6 +31,10 @@ template <class Scalar, class Implementation>
 class Component
 {
 public:
+    static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
+            Scalar pressMin, Scalar pressMax, unsigned nPress)
+    {   Dune::dwarn << "No init routine defined - make shure that this is not necessary!" << std::endl; }
+
     /*!
      * \brief A human readable name for the compoent.
      */

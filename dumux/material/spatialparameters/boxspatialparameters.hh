@@ -1,4 +1,4 @@
-// $Id: boxspatialparameters.hh 3783 2010-06-24 11:33:53Z bernd $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2010 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
@@ -39,10 +39,14 @@ class BoxSpatialParameters
 {
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(SpatialParameters)) Implementation;
 
     enum {
         dimWorld = GridView::dimensionworld
     };
+    
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldMatrix<CoordScalar, dimWorld, dimWorld> Tensor;
@@ -53,6 +57,41 @@ public:
 
     ~BoxSpatialParameters()
     {}
+
+    /*!
+     * \brief Returns the factor by which the volume of a sub control
+     *        volume needs to be multiplied in order to get cubic
+     *        meters.
+     *
+     * By default that's just 1.0
+     */
+    Scalar extrusionFactorScv(const Element &element,
+                              const FVElementGeometry &fvElemGeom,
+                              int scvIdx) const
+    { return 1.0; }
+
+    /*!
+     * \brief Returns the factor by which the area of a sub control
+     *        volume face needs to be multiplied in order to get
+     *        square meters.
+     *
+     * By default it is the arithmetic mean of the extrusion factor of
+     * the face's two sub-control volumes.
+     */
+    Scalar extrusionFactorScvf(const Element &element,
+                              const FVElementGeometry &fvElemGeom,
+                              int scvfIdx) const
+    { 
+        return
+            0.5 *
+            (asImp_().extrusionFactorScv(element, 
+                                         fvElemGeom, 
+                                         fvElemGeom.subContVolFace[scvfIdx].i)
+             +
+             asImp_().extrusionFactorScv(element, 
+                                         fvElemGeom, 
+                                         fvElemGeom.subContVolFace[scvfIdx].j));
+    }
 
     /*!
      * \brief Averages the intrinsic permeability.
@@ -82,6 +121,13 @@ public:
             for (int j = 0; j < dimWorld; ++j)
                 result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
     }
+
+protected:
+    Implementation &asImp_()
+    { return *static_cast<Implementation*>(this); }
+    
+    const Implementation &asImp_() const
+    { return *static_cast<const Implementation*>(this); }
 };
 
 } // namespace Dumux

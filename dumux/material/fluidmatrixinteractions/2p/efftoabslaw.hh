@@ -1,4 +1,4 @@
-// $Id: efftoabslaw.hh 3811 2010-07-05 12:59:17Z pnuske $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *

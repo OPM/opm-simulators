@@ -106,7 +106,7 @@ public:
     /*!
      * \brief The density [kg/m^3] of H2 at a given pressure and temperature.
      */
-    static Scalar density(Scalar temperature, Scalar pressure)
+    static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
         // Assume an ideal gas
         return IdealGas::density(molarMass(), temperature, pressure);

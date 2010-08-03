@@ -1,4 +1,4 @@
-// $Id: fluidstate.hh 3777 2010-06-24 06:46:46Z bernd $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *
@@ -117,8 +117,8 @@ public:
      *
      * Unit: [Pa] = [N/m^2]
      */
-    Scalar partialPressure(int componentIdx) const
-    { DUNE_THROW(Dune::NotImplemented, "FluidState::partialPressure()"); }
+    Scalar fugacity(int componentIdx) const
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::fugacity()"); }
 
     /*!
      * \brief Return the total pressure of the gas phase.

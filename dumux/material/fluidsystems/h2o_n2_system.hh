@@ -1,4 +1,4 @@
-// $Id: h2o_n2_system.hh 3824 2010-07-13 13:30:02Z lauser $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *
@@ -92,57 +92,6 @@ public:
     }
 
     /*!
-     * \brief Given the gas phase's composition, temperature and
-     *        pressure, compute the partial presures of all components
-     *        in [Pa] and assign it to the FluidState.
-     *
-     * This is required for models which cannot calculate the the
-     * partial pressures of the components in the gas phase from the
-     * degasPressure(). To use this method, the FluidState must have a
-     * setPartialPressure(componentIndex, pressure) method.
-     */
-    template <class FluidState>
-    static void computePartialPressures(Scalar temperature,
-                                        Scalar pg,
-                                        FluidState &fluidState)
-    {
-        Scalar X1 = fluidState.massFrac(gPhaseIdx, H2OIdx);
-
-        // We use the newton method for this. For the initial value we
-        // assume all components to be an ideal gas
-        Scalar pH2O = fluidState.moleFrac(gPhaseIdx, H2OIdx) * pg;
-        Scalar eps = pg*1e-9;
-
-        Scalar deltaP = pH2O;
-        Valgrind::CheckDefined(pH2O);
-        Valgrind::CheckDefined(deltaP);
-        for (int i = 0; i < 5 && std::abs(deltaP/pg) > 1e-9; ++i) {
-            Scalar f =
-                H2O::gasDensity(temperature, pH2O)*(X1 - 1) +
-                X1*N2::gasDensity(temperature, pg - pH2O);
-
-            Scalar df_dp;
-            df_dp  =
-                H2O::gasDensity(temperature, pH2O + eps)*(X1 - 1) +
-                X1*N2::gasDensity(temperature, pg - (pH2O + eps));
-            df_dp -=
-                H2O::gasDensity(temperature, pH2O - eps)*(X1 - 1) +
-                X1*N2::gasDensity(temperature, pg - (pH2O - eps));
-            df_dp /=
-                2*eps;
-
-            deltaP = - f/df_dp;
-
-            pH2O += deltaP;
-            Valgrind::CheckDefined(pH2O);
-            Valgrind::CheckDefined(deltaP);
-        }
-
-        fluidState.setPartialPressure(H2OIdx, pH2O);
-        fluidState.setPartialPressure(N2Idx, pg - pH2O);
-    };
-
-    /*!
      * \brief Given a phase's composition, temperature, pressure, and
      *        the partial pressures of all components, return its
      *        density [kg/m^3].
@@ -153,16 +102,26 @@ public:
                                Scalar pressure,
                                const FluidState &fluidState)
     {
-        if (phaseIdx == lPhaseIdx)
-            return liquidPhaseDensity_(temperature,
-                                       pressure,
-                                       fluidState.moleFrac(lPhaseIdx, H2OIdx),
-                                       fluidState.moleFrac(lPhaseIdx, N2Idx));
-        else if (phaseIdx == gPhaseIdx)
-            return gasPhaseDensity_(temperature,
-                                    pressure,
-                                    fluidState.moleFrac(gPhaseIdx, H2OIdx),
-                                    fluidState.moleFrac(gPhaseIdx, N2Idx));
+        if (phaseIdx == lPhaseIdx) {
+            // See: Ochs 2008
+            // \todo: proper citation
+            Scalar rholH2O = H2O::liquidDensity(temperature, pressure);
+            Scalar clH2O = rholH2O/H2O::molarMass();
+        
+            // this assumes each nitrogen molecule displaces exactly one
+            // water molecule in the liquid
+            return
+                clH2O*(H2O::molarMass()*fluidState.moleFrac(lPhaseIdx, H2OIdx)
+                       +
+                       N2::molarMass()*fluidState.moleFrac(lPhaseIdx, N2Idx));
+        }
+        else if (phaseIdx == gPhaseIdx) {
+            Scalar fugH2O = fluidState.fugacity(H2OIdx);
+            Scalar fugN2 = fluidState.fugacity(N2Idx);
+            return 
+                H2O::gasDensity(temperature, fugH2O) +
+                N2::gasDensity(temperature, fugN2);
+        }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
@@ -337,23 +296,46 @@ public:
     }
 
     /*!
-     * \brief Returns the fugacity coefficient of a component in a
+     * \brief Returns the activity coefficient of a component in a
      *        phase.
      *
-     * For solutions with only traces in a solvent this boils down to
-     * the inverse Henry constant for the solutes and the partial
-     * pressure for the solvent.
+     * We define the activity coefficent \f$\gamma_{\alpha,\kappa}\f$
+     * of component \f$\kappa\f$ by the following equation:
+     *  \f[ f_\kappa = p_\alpha \gamma_{\alpha,\kappa} \f]
+     * where \f$f_\kappa\f$  is the component's fugacity and \f$p_\alpha\f$
+     * is the phase' pressure
+     *
+     * For liquids with very low miscibility this boils down to the
+     * inverse Henry constant for the solutes and the partial pressure
+     * for the solvent.
+     *
+     * For ideal gases this is equivalent to the gas pressure, in real
+     * gases it is the gas pressure times the component's fugacity
+     * coefficient.
      */
     template <class FluidState>
-    static Scalar fugacityCoeff(int phaseIdx,
+    static Scalar activityCoeff(int phaseIdx,
                                 int compIdx,
                                 Scalar temperature,
                                 Scalar pressure,
                                 const FluidState &state)
     {
-        if (phaseIdx != lPhaseIdx)
-            DUNE_THROW(Dune::NotImplemented,
-                       "Fugacities in the gas phase");
+        if (phaseIdx == gPhaseIdx) {
+            return pressure;
+            Scalar fugH2O = std::max(1e-3, state.fugacity(H2OIdx));
+            Scalar fugN2 = std::max(1e-3, state.fugacity(N2Idx));
+            Scalar cH2O = H2O::gasDensity(temperature, fugH2O) / H2O::molarMass();
+            Scalar cN2 = N2::gasDensity(temperature, fugN2) / N2::molarMass();
+            
+            Scalar alpha = (fugH2O + fugN2)/pressure;
+
+            if (compIdx == H2OIdx)
+                return fugH2O/(alpha*cH2O/(cH2O + cN2));
+            else if (compIdx == N2Idx)
+                return fugN2/(alpha*cN2/(cH2O + cN2));
+            
+            DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+        }
 
         switch (compIdx) {
         case H2OIdx: return H2O::vaporPressure(temperature);
@@ -361,59 +343,6 @@ public:
         };
         DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
-
-    /*!
-     * \brief Given a component's pressure and temperature, return its
-     *        density in a phase [kg/m^3].
-     */
-    static Scalar componentDensity(int phaseIdx,
-                                   int compIdx,
-                                   Scalar temperature,
-                                   Scalar pressure)
-    {
-        if (phaseIdx == lPhaseIdx) {
-            if (compIdx == H2OIdx)
-                return H2O::liquidDensity(temperature, pressure);
-            else if (compIdx == N2Idx)
-                return N2::liquidDensity(temperature, pressure);
-            DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
-        }
-        else if (phaseIdx == gPhaseIdx) {
-            if (compIdx == H2OIdx) {
-                return H2O::gasDensity(temperature, pressure);
-            }
-            else if (compIdx == N2Idx)
-                return N2::gasDensity(temperature, pressure);
-            DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
-        }
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
-    };
-
-    /*!
-     * \brief Given a component's density and temperature, return the
-     *        corresponding pressure in a phase [Pa].
-     */
-    static Scalar componentPressure(int phaseIdx,
-                                    int compIdx,
-                                    Scalar temperature,
-                                    Scalar density)
-    {
-        if (phaseIdx == lPhaseIdx) {
-            if (compIdx == H2OIdx)
-                return H2O::liquidPressure(temperature, density);
-            else if (compIdx == N2Idx)
-                return N2::liquidPressure(temperature, density);
-            DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
-        }
-        else if (phaseIdx == gPhaseIdx) {
-            if (compIdx == H2OIdx)
-                return H2O::gasPressure(temperature, density);
-            else if (compIdx == N2Idx)
-                return N2::gasPressure(temperature, density);
-            DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
-        }
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
-    };
 
     /*!
      * \brief Given a phase's composition, temperature and pressure,
@@ -496,8 +425,8 @@ public:
                 N2::gasEnthalpy(temperature, pN2);
         }
         else {
-            Scalar pWater = fluidState.partialPressure(H2OIdx);
-            Scalar pN2 = fluidState.partialPressure(N2Idx);
+            Scalar pWater = fluidState.fugacity(H2OIdx);
+            Scalar pN2 = fluidState.fugacity(N2Idx);
 
             Scalar result = 0;
             result +=
@@ -533,7 +462,7 @@ private:
         // \todo: proper citation
         Scalar rholH2O = H2O::liquidDensity(T, pl);
         Scalar clH2O = rholH2O/H2O::molarMass();
-
+        
         // this assumes each nitrogen molecule displaces exactly one
         // water molecule in the liquid
         return
@@ -542,69 +471,10 @@ private:
                    xlN2*N2::molarMass());
     }
 
-    // defect of gas density
-    static inline Scalar gasDefect_(Scalar pH2O, Scalar T, Scalar pg, Scalar xgH2O, Scalar xgN2)
-    {
-        // this assumes that sum of the fugacities of the individual
-        // components add up to the gas pressure
-        return
-            H2O::gasDensity(T, pH2O)/H2O::molarMass()*(xgH2O - 1) +
-            xgH2O*N2::gasDensity(T, pg - pH2O)/N2::molarMass();
-    }
-
     static Scalar gasPhaseDensity_(Scalar T, Scalar pg, Scalar xgH2O, Scalar xgN2)
     {
-        // assume ideal gas for the initial condition
-        Scalar pH2O = pg*xgH2O;
-        Scalar delta = 1e100;
-
-        // newton method. makes sure that the total pressure of the
-        // gas phase is the sum of the individual gas phase fugacities
-        // of the individual components
-        for (int i = 0; i < 10; ++i) {
-            Scalar f;
-            Scalar df_dpH2O;
-
-            f = gasDefect_(pH2O, T, pg, xgH2O, xgN2);
-            Scalar eps = (std::abs(pg) + 1)*1e-9;
-            df_dpH2O = gasDefect_(pH2O + eps, T, pg, xgH2O, xgN2);
-            df_dpH2O -= gasDefect_(pH2O - eps, T, pg, xgH2O, xgN2);
-            df_dpH2O /= 2*eps;
-
-            delta = - f/df_dpH2O;
-            pH2O += delta;
-
-            if (std::abs(delta) < 1e-10*pg) {
-                return H2O::gasDensity(T, pH2O) + N2::gasDensity(T, pg - pH2O);
-            }
-        };
-        DUNE_THROW(NumericalProblem,
-                   "Can not calculate the gas density at "
-                   << " T=" << T
-                   << " pg=" << pg
-                   << " xgH2O=" << xgH2O
-                   << " xgN2=" << xgN2
-                   << "\n");
+        return H2O::gasDensity(T, pg*xgH2O) + N2::gasDensity(T, pg*xgN2);
     };
-
-    template <class FluidState>
-    static void checkConsistentGasDensity_(Scalar rhoToTest,
-                                           Scalar pg,
-                                           const FluidState &fluidState)
-    {
-#ifndef NDEBUG
-        Scalar rho = gasPhaseDensity_(fluidState.temperature(),
-                                      pg,
-                                      fluidState.moleFrac(gPhaseIdx, H2OIdx),
-                                      fluidState.moleFrac(gPhaseIdx, N2Idx));
-        static const Scalar eps = 1e-8;
-        if (std::abs(rhoToTest/rho - 1.0) > eps) {
-            DUNE_THROW(Dune::InvalidStateException,
-                       "Density of gas phase is inconsistent: rho1/rho2 = "
-                       << rhoToTest/rho);
-        }
-#endif
-    }
 };
 
 } // end namepace

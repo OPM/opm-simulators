@@ -116,7 +116,7 @@ public:
      *
      * \todo density liquid oxygen
      */
-    static Scalar density(Scalar temperature, Scalar pressure)
+    static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
         // Assume an ideal gas
         return IdealGas::density(molarMass(), temperature, pressure);
