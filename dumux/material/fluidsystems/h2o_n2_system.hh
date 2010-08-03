@@ -235,11 +235,6 @@ public:
             gas.density_ = cgH2O*H2O::molarMass() + cgN2*N2::molarMass();
             gas.xToX(); // compute mass fractions from mole fractions
             fluidState.assignPhase(gPhaseIdx, gas);
-
-            // check for consistency of the gasDensity_() method
-            checkConsistentGasDensity_(gas.density_,
-                                       fluidState.phasePressure(gPhaseIdx),
-                                       fluidState);
         }
         else if (knownPhaseIdx == lPhaseIdx) {
             // the composition of the liquid phase is given
@@ -266,13 +261,6 @@ public:
             gas.density_ = cgH2O*H2O::molarMass() + cgN2*N2::molarMass();
             gas.xToX(); // update mass fractions from mole fractions
             fluidState.assignPhase(gPhaseIdx, gas);
-
-            // check for consistency of the gasDensity_() method if
-            // the gas phase is present
-            if (std::abs((pN2 + pH2O - pg)/pg) < 1e-8)
-                checkConsistentGasDensity_(gas.density_,
-                                           betaH2O*xlH2O + betaN2*xlN2,
-                                           fluidState);
         }
         else if (knownPhaseIdx == gPhaseIdx) {
             // the composition of the gas phase is given
