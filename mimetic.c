@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#if COMPILING_FOR_MATLAB
+#if defined(COMPILING_FOR_MATLAB) && COMPILING_FOR_MATLAB
 #include "mex.h"
 #include "matrix.h"
 #define MAT_SIZE_T mwSignedIndex
