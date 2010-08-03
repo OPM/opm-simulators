@@ -21,6 +21,8 @@
 #ifndef DUMUX_COMPONENT_HH
 #define DUMUX_COMPONENT_HH
 
+#include <dune/common/stdstreams.hh>
+
 namespace Dumux
 {
 
