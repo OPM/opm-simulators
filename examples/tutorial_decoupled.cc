@@ -96,9 +96,8 @@ int main(int argc, char** argv)
             problem.deserialize(restartTime);
 
         // run the simulation
-        if (!problem.simulate(dt, tEnd))
-            return 2;
-
+        problem.timeManager().init(problem, 0, dt, tEnd, !restart);
+        problem.timeManager().run();
         return 0;
     }
     catch (Dune::Exception &e) {

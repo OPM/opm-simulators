@@ -21,7 +21,7 @@
 #include <dumux/material/fluidsystems/h2o_n2_system.hh>
 
 // the numerical model
-#include <dumux/boxmodels/2p/2pboxmodel.hh>
+#include <dumux/boxmodels/2p/2pmodel.hh>
 
 // the grid used
 #include <dune/grid/yaspgrid.hh>
@@ -86,54 +86,53 @@ SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-
 
 // Definition of the actual problem
 template <class TypeTag = TTAG(TutorialProblemCoupled) >
-class TutorialProblemCoupled : public TwoPBoxProblem<TypeTag, /*@\label{tutorial-coupled:def-problem}@*/
-                                                     TutorialProblemCoupled<TypeTag> >
+class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-coupled:def-problem}@*/
 {
-    typedef TutorialProblemCoupled<TypeTag>   ThisType;
-    typedef TwoPBoxProblem<TypeTag, ThisType> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView))    GridView;
+    typedef TutorialProblemCoupled<TypeTag> ThisType;
+    typedef TwoPProblem<TypeTag> ParentType;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
 
     // Grid and world dimension
     enum {
-        dim         = GridView::dimension,
-        dimWorld    = GridView::dimensionworld,
+        dim = GridView::dimension,
+        dimWorld = GridView::dimensionworld,
     };
 
-    typedef typename GridView::Grid::ctype                    CoordScalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar))     Scalar;
+    typedef typename GridView::Grid::ctype CoordScalar;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
-    typedef typename GridView::template Codim<0>::Entity    Element;
-    typedef typename GridView::template Codim<dim>::Entity  Vertex;
-    typedef typename GridView::Intersection                 Intersection;
-    typedef Dune::FieldVector<CoordScalar, dim>             LocalPosition;
-    typedef Dune::FieldVector<CoordScalar, dimWorld>        GlobalPosition;
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GridView::template Codim<dim>::Entity Vertex;
+    typedef typename GridView::Intersection Intersection;
+    typedef Dune::FieldVector<CoordScalar, dim> LocalPosition;
+    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
 
-    typedef typename GET_PROP(TypeTag, PTAG(SolutionTypes))          SolutionTypes;
-    typedef typename SolutionTypes::PrimaryVarVector                 PrimaryVarVector;
-    typedef typename SolutionTypes::BoundaryTypeVector               BoundaryTypeVector;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(PrimaryVarVector)) PrimaryVarVector;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(BoundaryTypes)) BoundaryTypes;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
-
-
+    
 public:
-    TutorialProblemCoupled(const GridView &gridView)
-        : ParentType(gridView)
+    TutorialProblemCoupled(TimeManager &timeManager,
+                           const GridView &gridView)
+        : ParentType(timeManager, gridView)
     {}
 
     // Return the temperature within the domain. We use 10 degrees Celsius.
-    Scalar temperature(const Element           &element,
+    Scalar temperature(const Element &element,
                        const FVElementGeometry &fvElemGeom,
-                       int                      scvIdx) const
+                       int scvIdx) const
     { return 283.15; };
 
     // Specifies which kind of boundary condition should be used for
     // which equation on a given boundary segment.
-    void boundaryTypes(BoundaryTypeVector         &BCtype,
-                       const Element              &element,
-                       const FVElementGeometry    &fvElemGeom,
-                       const Intersection         &isIt,
-                       int                         scvIdx,
-                       int                         boundaryFaceIdx) const
+    void boundaryTypes(BoundaryTypes &BCtype,
+                       const Element &element,
+                       const FVElementGeometry &fvElemGeom,
+                       const Intersection &isIt,
+                       int scvIdx,
+                       int boundaryFaceIdx) const
     {
         const GlobalPosition &pos = element.geometry().corner(scvIdx);
         if (pos[0] < eps_) // dirichlet conditions on left boundary
@@ -146,12 +145,12 @@ public:
     // Evaluate the boundary conditions for a dirichlet boundary
     // segment.  For this method, the 'values' parameter stores
     // primary variables.
-    void dirichlet(PrimaryVarVector           &values,
-                   const Element              &element,
-                   const FVElementGeometry    &fvElemGeom,
-                   const Intersection         &isIt,
-                   int                         scvIdx,
-                   int                         boundaryFaceIdx) const
+    void dirichlet(PrimaryVarVector &values,
+                   const Element &element,
+                   const FVElementGeometry &fvElemGeom,
+                   const Intersection &isIt,
+                   int scvIdx,
+                   int boundaryFaceIdx) const
     {
         values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
@@ -161,12 +160,12 @@ public:
     // segment. For this method, the 'values' parameter stores the
     // mass flux in normal direction of each phase. Negative values
     // mean influx.
-    void neumann(PrimaryVarVector           &values,
-                 const Element              &element,
-                 const FVElementGeometry    &fvElemGeom,
-                 const Intersection         &isIt,
-                 int                         scvIdx,
-                 int                         boundaryFaceIdx) const
+    void neumann(PrimaryVarVector &values,
+                 const Element &element,
+                 const FVElementGeometry &fvElemGeom,
+                 const Intersection &isIt,
+                 int scvIdx,
+                 int boundaryFaceIdx) const
     {
         const GlobalPosition &pos =
             fvElemGeom.boundaryFace[boundaryFaceIdx].ipGlobal;
@@ -185,10 +184,10 @@ public:
 
     // Evaluate the initial value for a control volume. For this
     // method, the 'values' parameter stores primary variables.
-    void initial(PrimaryVarVector        &values,
-                 const Element           &element,
+    void initial(PrimaryVarVector &values,
+                 const Element &element,
                  const FVElementGeometry &fvElemGeom,
-                 int                      scvIdx) const
+                 int scvIdx) const
     {
         values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::SnIdx] = 1.0;
@@ -199,10 +198,10 @@ public:
     // stores the rate mass generated or annihilate per volume
     // unit. Positive values mean that mass is created, negative ones
     // mean that it vanishes.
-    void source(PrimaryVarVector        &values,
-                const Element           &element,
+    void source(PrimaryVarVector &values,
+                const Element &element,
                 const FVElementGeometry &fvElemGeom,
-                int                      scvIdx) const
+                int scvIdx) const
     {
         values[Indices::contiWEqIdx] = 0.0;
         values[Indices::contiNEqIdx]= 0.0;

@@ -30,9 +30,10 @@ void usage(const char *progname)
 int main(int argc, char** argv)
 {
     try {
-        typedef TTAG(TutorialProblemCoupled)          TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar))  Scalar; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid))    Grid;
+        typedef TTAG(TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
         typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem; /*@\label{tutorial-coupled:retrieve-types-end}@*/
 
         // Initialize MPI
@@ -64,18 +65,17 @@ int main(int argc, char** argv)
         // create the grid
         Grid *gridPtr = GET_PROP(TypeTag, PTAG(Grid))::create(); /*@\label{tutorial-coupled:create-grid}@*/
 
+        // create time manager responsible for global simulation control
+        TimeManager timeManager;
+
         // instantiate the problem on the leaf grid
-        Problem problem(gridPtr->leafView()); /*@\label{tutorial-coupled:instantiate-problem}@*/
-
-        // restore the simulation's state from the hard-disk if a
-        // restart was requested
-        if (restart) /*@\label{tutorial-coupled:restart}@*/
-            problem.deserialize(restartTime);
-
+        Problem problem(timeManager, gridPtr->leafView());
+        timeManager.init(problem, 0, dt, tEnd, !restart);
+        // load the some previously saved state from disk
+        if (restart)
+            problem.restart(restartTime);
         // run the simulation
-        if (!problem.simulate(dt, tEnd)) /*@\label{tutorial-coupled:execute}@*/
-            return 2;
-
+        timeManager.run();
         return 0;
     }
     catch (Dune::Exception &e) { /*@\label{tutorial-coupled:catch-dune-exceptions}@*/
