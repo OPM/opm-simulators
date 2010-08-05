@@ -99,7 +99,7 @@ public:
     typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type;
 };
 
-// Set the soil properties
+// Set the spatial parameters
 SET_PROP(TutorialProblemDecoupled, SpatialParameters)
 {
 private:

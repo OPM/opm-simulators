@@ -27,7 +27,7 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfs.hh>
 
-// assign parameters dependent on space (e.g. soil properties)
+// assign parameters dependent on space (e.g. spatial parameters)
 #include "tutorialspatialparameters_coupled.hh"
 
 namespace Dumux
@@ -109,10 +109,10 @@ class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-co
     typedef Dune::FieldVector<CoordScalar, dim> LocalPosition;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
 
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(PrimaryVarVector)) PrimaryVarVector;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(PrimaryVariables)) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(BoundaryTypes)) BoundaryTypes;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
-    
+
 public:
     TutorialProblemCoupled(TimeManager &timeManager,
                            const GridView &gridView)
@@ -145,7 +145,7 @@ public:
     // Evaluate the boundary conditions for a dirichlet boundary
     // segment.  For this method, the 'values' parameter stores
     // primary variables.
-    void dirichlet(PrimaryVarVector &values,
+    void dirichlet(PrimaryVariables &values,
                    const Element &element,
                    const FVElementGeometry &fvElemGeom,
                    const Intersection &isIt,
@@ -160,7 +160,7 @@ public:
     // segment. For this method, the 'values' parameter stores the
     // mass flux in normal direction of each phase. Negative values
     // mean influx.
-    void neumann(PrimaryVarVector &values,
+    void neumann(PrimaryVariables &values,
                  const Element &element,
                  const FVElementGeometry &fvElemGeom,
                  const Intersection &isIt,
@@ -184,7 +184,7 @@ public:
 
     // Evaluate the initial value for a control volume. For this
     // method, the 'values' parameter stores primary variables.
-    void initial(PrimaryVarVector &values,
+    void initial(PrimaryVariables &values,
                  const Element &element,
                  const FVElementGeometry &fvElemGeom,
                  int scvIdx) const
@@ -198,7 +198,7 @@ public:
     // stores the rate mass generated or annihilate per volume
     // unit. Positive values mean that mass is created, negative ones
     // mean that it vanishes.
-    void source(PrimaryVarVector &values,
+    void source(PrimaryVariables &values,
                 const Element &element,
                 const FVElementGeometry &fvElemGeom,
                 int scvIdx) const

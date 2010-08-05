@@ -41,8 +41,8 @@ int main(int argc, char** argv)
 {
     try {
         typedef TTAG(TutorialProblemDecoupled) TypeTag;
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar))  Scalar;
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid))    Grid;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
         typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem;
         typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition;
 
