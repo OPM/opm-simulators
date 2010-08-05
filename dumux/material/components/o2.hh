@@ -97,10 +97,10 @@ public:
         Scalar X =
             (1 - tripleTemperature()/T) /
             (1 - tripleTemperature()/criticalTemperature());
-        const Scalar A =  7.568956;
-        const Scalar B =  5.004836;
+        const Scalar A = 7.568956;
+        const Scalar B = 5.004836;
         const Scalar C = -2.137460;
-        const Scalar D =  3.454481;
+        const Scalar D = 3.454481;
         const Scalar epsilon = 1.514;
 
         return
@@ -141,9 +141,9 @@ public:
                                     Scalar pressure)
     {
         // method of Joback
-        const Scalar cpVapA =  28.11;
+        const Scalar cpVapA = 28.11;
         const Scalar cpVapB = -3.680e-6;
-        const Scalar cpVapC =  1.746e-5;
+        const Scalar cpVapC = 1.746e-5;
         const Scalar cpVapD = -1.065e-8;
 
         //Scalar cp =

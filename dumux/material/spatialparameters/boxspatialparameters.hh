@@ -46,7 +46,7 @@ class BoxSpatialParameters
     enum {
         dimWorld = GridView::dimensionworld
     };
-    
+
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
 
@@ -83,15 +83,15 @@ public:
     Scalar extrusionFactorScvf(const Element &element,
                               const FVElementGeometry &fvElemGeom,
                               int scvfIdx) const
-    { 
+    {
         return
             0.5 *
-            (asImp_().extrusionFactorScv(element, 
-                                         fvElemGeom, 
+            (asImp_().extrusionFactorScv(element,
+                                         fvElemGeom,
                                          fvElemGeom.subContVolFace[scvfIdx].i)
              +
-             asImp_().extrusionFactorScv(element, 
-                                         fvElemGeom, 
+             asImp_().extrusionFactorScv(element,
+                                         fvElemGeom,
                                          fvElemGeom.subContVolFace[scvfIdx].j));
     }
 
@@ -127,7 +127,7 @@ public:
 protected:
     Implementation &asImp_()
     { return *static_cast<Implementation*>(this); }
-    
+
     const Implementation &asImp_() const
     { return *static_cast<const Implementation*>(this); }
 };

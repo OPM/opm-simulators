@@ -35,9 +35,9 @@ namespace Dumux
 template <class EffLawParamsT>
 class EffToAbsLawParams : public EffLawParamsT
 {
-    typedef EffLawParamsT  EffLawParams;
+    typedef EffLawParamsT EffLawParams;
 public:
-    typedef typename EffLawParams::Scalar   Scalar;
+    typedef typename EffLawParams::Scalar Scalar;
 
     EffToAbsLawParams()
         : EffLawParams()

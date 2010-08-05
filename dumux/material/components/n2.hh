@@ -154,9 +154,9 @@ public:
                                     Scalar pressure)
     {
         // method of Joback
-        const Scalar cpVapA =  31.15;
+        const Scalar cpVapA = 31.15;
         const Scalar cpVapB = -0.01357;
-        const Scalar cpVapC =  2.680e-5;
+        const Scalar cpVapC = 2.680e-5;
         const Scalar cpVapD = -1.168e-8;
 
         //Scalar cp =

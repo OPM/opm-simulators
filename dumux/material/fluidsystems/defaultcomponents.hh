@@ -53,7 +53,7 @@ SET_PROP_DEFAULT(DefaultComponents)
 { private:
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef Dumux::H2O<Scalar> H2O_IAPWS;
-    
+
 public:
     typedef Dumux::TabulatedComponent<Scalar, H2O_IAPWS> H2O;
     typedef Dumux::N2<Scalar> N2;
@@ -62,7 +62,7 @@ public:
     typedef Dumux::CH4<Scalar> CH4;
     typedef Dumux::SimpleCO2<Scalar> SimpleCO2;
     typedef Dumux::Brine<Scalar, H2O> Brine;
-    
+
     static void init()
     {
         int nT = 100;
@@ -74,7 +74,7 @@ public:
     }
 };
 
-SET_PROP_DEFAULT(Components) 
+SET_PROP_DEFAULT(Components)
     : public GET_PROP(TypeTag, PTAG(DefaultComponents))
 {};
 

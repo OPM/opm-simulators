@@ -107,7 +107,7 @@ public:
             // \todo: proper citation
             Scalar rholH2O = H2O::liquidDensity(temperature, pressure);
             Scalar clH2O = rholH2O/H2O::molarMass();
-        
+
             // this assumes each nitrogen molecule displaces exactly one
             // water molecule in the liquid
             return
@@ -118,7 +118,7 @@ public:
         else if (phaseIdx == gPhaseIdx) {
             Scalar fugH2O = fluidState.fugacity(H2OIdx);
             Scalar fugN2 = fluidState.fugacity(N2Idx);
-            return 
+            return
                 H2O::gasDensity(temperature, fugH2O) +
                 N2::gasDensity(temperature, fugN2);
         }
@@ -314,14 +314,14 @@ public:
             Scalar fugN2 = std::max(1e-3, state.fugacity(N2Idx));
             Scalar cH2O = H2O::gasDensity(temperature, fugH2O) / H2O::molarMass();
             Scalar cN2 = N2::gasDensity(temperature, fugN2) / N2::molarMass();
-            
+
             Scalar alpha = (fugH2O + fugN2)/pressure;
 
             if (compIdx == H2OIdx)
                 return fugH2O/(alpha*cH2O/(cH2O + cN2));
             else if (compIdx == N2Idx)
                 return fugN2/(alpha*cN2/(cH2O + cN2));
-            
+
             DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
         }
 
@@ -400,7 +400,7 @@ public:
                                 Scalar pressure,
                                 const FluidState &fluidState)
     {
-        if (phaseIdx == lPhaseIdx)  {
+        if (phaseIdx == lPhaseIdx) {
             Scalar cN2 = fluidState.concentration(lPhaseIdx, N2Idx);
             Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
 
@@ -450,7 +450,7 @@ private:
         // \todo: proper citation
         Scalar rholH2O = H2O::liquidDensity(T, pl);
         Scalar clH2O = rholH2O/H2O::molarMass();
-        
+
         // this assumes each nitrogen molecule displaces exactly one
         // water molecule in the liquid
         return

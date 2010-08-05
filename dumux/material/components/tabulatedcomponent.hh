@@ -624,16 +624,16 @@ private:
     static Scalar *liquidPressure_;
 
     // temperature, pressure and density ranges
-    static Scalar   tempMin_;
-    static Scalar   tempMax_;
+    static Scalar tempMin_;
+    static Scalar tempMax_;
     static unsigned nTemp_;
 
-    static Scalar   pressMin_;
-    static Scalar   pressMax_;
+    static Scalar pressMin_;
+    static Scalar pressMax_;
     static unsigned nPress_;
 
-    static Scalar   densityMin_;
-    static Scalar   densityMax_;
+    static Scalar densityMin_;
+    static Scalar densityMax_;
     static unsigned nDensity_;
 };
 
@@ -668,21 +668,21 @@ Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasPressure_;
 template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidPressure_;
 template <class Scalar, class RawComponent, bool verbose>
-Scalar  TabulatedComponent<Scalar, RawComponent, verbose>::tempMin_;
+Scalar TabulatedComponent<Scalar, RawComponent, verbose>::tempMin_;
 template <class Scalar, class RawComponent, bool verbose>
-Scalar  TabulatedComponent<Scalar, RawComponent, verbose>::tempMax_;
+Scalar TabulatedComponent<Scalar, RawComponent, verbose>::tempMax_;
 template <class Scalar, class RawComponent, bool verbose>
 unsigned TabulatedComponent<Scalar, RawComponent, verbose>::nTemp_;
 template <class Scalar, class RawComponent, bool verbose>
-Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::pressMin_;
+Scalar TabulatedComponent<Scalar, RawComponent, verbose>::pressMin_;
 template <class Scalar, class RawComponent, bool verbose>
-Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::pressMax_;
+Scalar TabulatedComponent<Scalar, RawComponent, verbose>::pressMax_;
 template <class Scalar, class RawComponent, bool verbose>
 unsigned TabulatedComponent<Scalar, RawComponent, verbose>::nPress_;
 template <class Scalar, class RawComponent, bool verbose>
-Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::densityMin_;
+Scalar TabulatedComponent<Scalar, RawComponent, verbose>::densityMin_;
 template <class Scalar, class RawComponent, bool verbose>
-Scalar   TabulatedComponent<Scalar, RawComponent, verbose>::densityMax_;
+Scalar TabulatedComponent<Scalar, RawComponent, verbose>::densityMax_;
 template <class Scalar, class RawComponent, bool verbose>
 unsigned TabulatedComponent<Scalar, RawComponent, verbose>::nDensity_;
 

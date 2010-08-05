@@ -510,7 +510,7 @@ public:
             Scalar f = gasDensity(temperature, pressure) - density;
 
             Scalar df_dp;
-            df_dp  = gasDensity(temperature, pressure + eps);
+            df_dp = gasDensity(temperature, pressure + eps);
             df_dp -= gasDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
 
@@ -587,7 +587,7 @@ public:
             Scalar f = liquidDensity(temperature, pressure) - density;
 
             Scalar df_dp;
-            df_dp  = liquidDensity(temperature, pressure + eps);
+            df_dp = liquidDensity(temperature, pressure + eps);
             df_dp -= liquidDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
 

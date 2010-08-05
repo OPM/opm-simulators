@@ -144,16 +144,16 @@ private:
         // check wether the permeability needs to be regularized
         else if (S < lowS) {
             typedef Dumux::Spline<Scalar> Spline;
-            Spline sp(0,    lowS,
-                      0,    lowS/2,
-                      0,    m);
+            Spline sp(0, lowS,
+                      0, lowS/2,
+                      0, m);
             return sp.eval(S);
         }
         else if (S > highS) {
             typedef Dumux::Spline<Scalar> Spline;
-            Spline sp(highS,   1,
+            Spline sp(highS, 1,
                       1 - (1 - highS)/2, 1,
-                      m,          0);
+                      m, 0);
             return sp.eval(S);
         }
 
