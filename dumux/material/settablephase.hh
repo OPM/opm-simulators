@@ -55,7 +55,7 @@ public:
      *
      * Unit: [mol/m^3]
      */
-    Scalar totalConcentration() const
+    Scalar phaseConcentration() const
     { return density_/meanMolarMass_; }
 
     /*!
@@ -65,7 +65,7 @@ public:
      * Unit: [mol/m^3]
      */
     Scalar concentration(int compIdx) const
-    { return moleFrac_[compIdx]*totalConcentration(); }
+    { return moleFrac_[compIdx]*phaseConcentration(); }
 
     /*!
      * \brief Return the density of a phase.

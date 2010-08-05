@@ -79,8 +79,8 @@ public:
      *
      * Unit: [mol/m^3]
      */
-    Scalar totalConcentration(int phaseIdx) const
-    { DUNE_THROW(Dune::NotImplemented, "FluidState::totalConcentration()"); }
+    Scalar phaseConcentration(int phaseIdx) const
+    { DUNE_THROW(Dune::NotImplemented, "FluidState::phaseConcentration()"); }
 
     /*!
      * \brief Return the concentrations of an individual component in
