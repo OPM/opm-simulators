@@ -1,9 +1,9 @@
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 
 #if defined(COMPILING_FOR_MATLAB) && COMPILING_FOR_MATLAB
-#include "mex.h"
-#include "matrix.h"
+#include <mex.h>
 #define MAT_SIZE_T mwSignedIndex
 #endif
 
@@ -16,8 +16,9 @@
 
 /* ------------------------------------------------------------------ */
 void
-mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf, int *cf,
-                  int *fneighbour,  double *fcentroid, double *fnormal,
+mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
+                  int *nconn, int *cf,
+                  int *fneighbour, double *fcentroid, double *fnormal,
                   double *farea, double *ccentroid, double *cvol,
                   double *perm, double *Binv)
 /* ------------------------------------------------------------------ */
@@ -56,11 +57,11 @@ mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf, int *cf,
                 }
             }
 
-            mim_ip_simple(nf, d, cvol[c], A, &perm[c * d * d],
-                          C, N, &Binv[fpos2], work, lwork);
+            mim_ip_simple(nf, nconn[c], d, cvol[c], &perm[c * d * d],
+                          C, A, N, &Binv[fpos2], work, lwork);
 
-            fpos  += nf;
-            fpos2 += nf * nf;
+            fpos  += nconn[c];
+            fpos2 += nconn[c] * nconn[c];
         }
     }
 
@@ -70,32 +71,41 @@ mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf, int *cf,
 
 /* ------------------------------------------------------------------ */
 void
-mim_ip_simple(int nf, int d, double vol,
-              double *A, double *K, double *C, double *N,
-              double *Binv, double *work, int lwork)
+mim_ip_simple(int nf, int nconn, int d,
+              double v, double *K, double *C,
+              double *A, double *N,
+              double *Binv,
+              double *work, int lwork)
 /* ------------------------------------------------------------------ */
 {
-    mim_ip_span_nullspace(nf, d, C, A, Binv, work, lwork);
-    mim_ip_linpress_exact(nf, d, vol, N, K, Binv, C);
+    mim_ip_span_nullspace(nf, nconn, d,    C, A, Binv, work, lwork);
+    mim_ip_linpress_exact(nf, nconn, d, v, K, N, Binv, work, lwork);
 }
 
 
 /* ------------------------------------------------------------------ */
 void
-mim_ip_span_nullspace(int nf, int d, double *C, double *A,
-                      double *X, double *work, int nwork)
+mim_ip_span_nullspace(int nf, int nconn, int d,
+                      double *C,
+                      double *A,
+                      double *X,
+                      double *work, int nwork)
 /* ------------------------------------------------------------------ */
 {
-    MAT_SIZE_T m, n, k, ld, info, lwork;
+    MAT_SIZE_T m, n, k, ldC, ldX, info, lwork;
 
     int    i, j;
     double a1, a2;
 
     double tau[3] = { 0.0 };  /* No more than 3 spatial dimensions */
 
-    /* Step 1) X <- I */
-    for (i = 0; i < nf*nf; i++) { X[i           ] = 0.0; }
-    for (i = 0; i < nf   ; i++) { X[i * (nf + 1)] = 1.0; }
+    /* Step 1) X(1:nf, 1:nf) <- I_{nf} */
+    for (j = 0; j < nf; j++) {
+        for (i = 0; i < nf; i++) {
+            X[i + j*nconn] = 0.0;
+        }
+        X[j * (nconn + 1)] = 1.0;
+    }
 
     /* Step 2) C <- orth(A * C) */
     for (j = 0; j < d; j++) {
@@ -104,24 +114,25 @@ mim_ip_span_nullspace(int nf, int d, double *C, double *A,
         }
     }
 
-    m = nf;  n = d;  ld = nf;  k = d;  lwork = nwork;
-    dgeqrf_(&m, &n,     C, &ld, tau, work, &lwork, &info);
-    dorgqr_(&m, &n, &k, C, &ld, tau, work, &lwork, &info);
+    m = nf;  n = d;  ldC = nf;  k = d;  lwork = nwork;
+    dgeqrf_(&m, &n,     C, &ldC, tau, work, &lwork, &info);
+    dorgqr_(&m, &n, &k, C, &ldC, tau, work, &lwork, &info);
 
     /* Step 3) X <- A * (X - C*C') * A */
+    ldX = nconn;
     a1 = -1.0;  a2 = 1.0;
     dsyrk_("Upper Triangular", "No Transpose",
-           &m, &n, &a1, C, &ld, &a2, X, &ld);
+           &m, &n, &a1, C, &ldC, &a2, X, &ldX);
     for (j = 0; j < nf; j++) {
         for (i = 0; i <= j; i++) {
-            X[i + j*nf] *= A[i] * A[j];
+            X[i + j*nconn] *= A[i] * A[j];
         }
     }
 
     /* Account for DSYRK only assigning upper triangular part. */
     for (j = 0; j < nf; j++) {
         for (i = j + 1; i < nf; i++) {
-            X[i + j*nf] = X[j + i*nf];
+            X[i + j*nconn] = X[j + i*nconn];
         }
     }
 }
@@ -129,13 +140,18 @@ mim_ip_span_nullspace(int nf, int d, double *C, double *A,
 
 /* ------------------------------------------------------------------ */
 void
-mim_ip_linpress_exact(int nf, int d, double vol, double *N, double *K,
-                      double *Binv, double *T)
+mim_ip_linpress_exact(int nf, int nconn, int d,
+                      double vol, double *K,
+                      double *N,
+                      double *Binv,
+                      double *work, int lwork)
 /* ------------------------------------------------------------------ */
 {
     MAT_SIZE_T m, n, k, ld1, ld2, ldBinv;
     int        i;
     double     a1, a2, t;
+
+    assert (lwork >= d * nf);
 
     t = 0.0;
     for (i = 0; i < d; i++) {
@@ -147,12 +163,12 @@ mim_ip_linpress_exact(int nf, int d, double vol, double *N, double *K,
     ld1 = nf ;  ld2 = d  ;
     a1  = 1.0;  a2  = 0.0;
     dgemm_("No Transpose", "No Transpose", &m, &n, &k,
-           &a1, N, &ld1, K, &ld2, &a2, T, &ld1);
+           &a1, N, &ld1, K, &ld2, &a2, work, &ld1);
 
     /*  Step 5) Binv <- (N*K*N' + t*X) / vol */
     a1 = 1.0     /      vol ;
     a2 = 6.0 * t / (d * vol);
-    ldBinv = nf;
+    ldBinv = nconn;
     dgemm_("No Transpose", "Transpose", &m, &m, &n,
-           &a1, T, &ld1, N, &ld1, &a2, Binv, &ldBinv);
+           &a1, work, &ld1, N, &ld1, &a2, Binv, &ldBinv);
 }
