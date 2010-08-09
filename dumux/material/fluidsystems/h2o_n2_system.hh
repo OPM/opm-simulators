@@ -116,8 +116,12 @@ public:
                        N2::molarMass()*fluidState.moleFrac(lPhaseIdx, N2Idx));
         }
         else if (phaseIdx == gPhaseIdx) {
-            Scalar fugH2O = fluidState.fugacity(H2OIdx);
-            Scalar fugN2 = fluidState.fugacity(N2Idx);
+            Scalar fugH2O = 
+                fluidState.moleFrac(gPhaseIdx, H2OIdx)  *
+                fluidState.phasePressure(gPhaseIdx);
+            Scalar fugN2 = 
+                fluidState.moleFrac(gPhaseIdx, N2Idx)  *
+                fluidState.phasePressure(gPhaseIdx);
             return
                 H2O::gasDensity(temperature, fugH2O) +
                 N2::gasDensity(temperature, fugN2);
