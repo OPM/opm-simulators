@@ -21,7 +21,7 @@ void mim_ip_simple(int nf, int nconn, int d,
                    double *work, int lwork);
 
 void mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
-                       int *nconn, int *conn,
+                       int *pconn, int *conn,
                        int *fneighbour, double *fcentroid, double *fnormal,
                        double *farea, double *ccentroid, double *cvol,
                        double *perm, double *Binv);

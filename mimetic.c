@@ -16,27 +16,27 @@
 
 /* ------------------------------------------------------------------ */
 void
-mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
-                  int *nconn, int *cf,
+mim_ip_simple_all(int ncells, int d, int max_nconn, int *ncf,
+                  int *pconn, int *conn,
                   int *fneighbour, double *fcentroid, double *fnormal,
                   double *farea, double *ccentroid, double *cvol,
                   double *perm, double *Binv)
 /* ------------------------------------------------------------------ */
 {
-    int i, j, c, f, nf, fpos, fpos2, lwork;
+    int i, j, c, f, nf, nconn, fpos2, lwork;
 
     double *C, *N, *A, *work, s;
 
     double cc[3] = { 0.0 };     /* No more than 3 space dimensions */
 
-    lwork = 64 * (max_ncf * d);                   /* 64 from ILAENV() */
-    C     = malloc((max_ncf * d) * sizeof *C);
-    N     = malloc((max_ncf * d) * sizeof *N);
-    A     = malloc(max_ncf       * sizeof *A);
-    work  = malloc(lwork         * sizeof *work);
+    lwork = 64 * (max_nconn * d);                 /* 64 from ILAENV() */
+    C     = malloc((max_nconn * d) * sizeof *C);
+    N     = malloc((max_nconn * d) * sizeof *N);
+    A     = malloc(max_nconn       * sizeof *A);
+    work  = malloc(lwork           * sizeof *work);
 
     if ((C != NULL) && (N != NULL) && (A != NULL) && (work != NULL)) {
-        fpos = fpos2 = 0;
+        fpos2 = 0;
 
         for (c = 0; c < ncells; c++) {
             for (j = 0; j < d; j++) {
@@ -46,7 +46,7 @@ mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
             nf = ncf[c];
 
             for (i = 0; i < nf; i++) {
-                f = cf[fpos + i];
+                f = conn[pconn[c] + i];
                 s = 2.0*(fneighbour[2 * f] == c) - 1.0;
 
                 A[i] = farea[f];
@@ -57,11 +57,12 @@ mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
                 }
             }
 
-            mim_ip_simple(nf, nconn[c], d, cvol[c], &perm[c * d * d],
+            nconn = pconn[c + 1] - pconn[c];
+
+            mim_ip_simple(nf, nconn, d, cvol[c], &perm[c * d * d],
                           C, A, N, &Binv[fpos2], work, lwork);
 
-            fpos  += nconn[c];
-            fpos2 += nconn[c] * nconn[c];
+            fpos2 += nconn * nconn;
         }
     }
 
