@@ -11,4 +11,20 @@ partition_unif_idx(int ndims, int nc,
 int
 partition_compress(int n, int *p);
 
+
+int
+partition_allocate_inverse(int nc, int max_blk,
+                           int **pi, int **inverse);
+
+void
+partition_deallocate_inverse(int *pi, int *inverse);
+
+void
+partition_invert(int nc, const int *p,
+                 int *pi, int *inverse);
+
+void
+partition_localidx(int nblk, const int *pi, const int *inverse,
+                   int *localidx);
+
 #endif  /* PARTITION_H_INLCUDED */

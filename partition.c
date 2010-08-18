@@ -129,3 +129,110 @@ partition_compress(int n, int *p)
 
     return ret;
 }
+
+
+/* ---------------------------------------------------------------------- */
+void
+partition_deallocate_inverse(int *pi, int *inverse)
+/* ---------------------------------------------------------------------- */
+{
+    free(inverse);
+    free(pi);
+}
+
+
+/* ---------------------------------------------------------------------- */
+int
+partition_allocate_inverse(int nc, int max_bin,
+                           int **pi, int **inverse)
+/* ---------------------------------------------------------------------- */
+{
+    int nbin, ret, *ptr, *i;
+
+    nbin = max_bin + 1;
+
+    ptr  = malloc((nbin + 1) * sizeof *ptr);
+    i    = malloc(nc         * sizeof *i  );
+
+    if ((ptr == NULL) || (i == NULL)) {
+        partition_deallocate_inverse(ptr, i);
+
+        *pi      = NULL;
+        *inverse = NULL;
+
+        ret = 0;
+    } else {
+        *pi      = ptr;
+        *inverse = i;
+
+        ret = nc;
+    }
+
+    return ret;
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+partition_invert(int nc, const *p, int *pi, int *inverse)
+/* ---------------------------------------------------------------------- */
+{
+    int nbin, b, i, j, tmp;
+
+    nbin = 0;
+    for (i = 0; i < nc; i++) {
+        nbin = MAX(nbin, p[i]);
+    }
+    nbin += 1;            /* Adjust for bin 0 */
+
+    /* Zero start pointers */
+    for (b = 0; b < nbin; b++) { pi[b] = 0; }
+
+    /* Count elements per bin */
+    for (i = 0; i < nc  ; i++) { pi[ p[i] ]++; }
+
+    /* Derive start pointers for b=1:nbin */
+    for (b = 1; b < nbin; b++) { pi[b] += pi[b - 1]; }
+
+    /* Set end pointer in last bin */
+    assert (pi[nbin - 1] == nc);
+    pi[nbin] = nc;
+
+    /* Reverse insert bin elements whilst deriving start pointers */
+    for (i = 0; i < nc; i++) {
+        inverse[-- pi[ p[i] ]] = i;
+    }
+    assert (pi[0] == 0);
+
+    /* Reverse the reverse order, creating final inverse mapping */
+    for (b = 0; b < nbin; b++) {
+        i = pi[b + 0] + 0;
+        j = pi[b + 1] - 1;
+
+        while (i < j) {
+            /* Swap reverse (lower <-> upper) */
+            tmp        = inverse[i];
+            inverse[i] = inverse[j];
+            inverse[j] = tmp;
+
+            i += 1;             /* Increase lower bound */
+            j -= 1;             /* Decrease upper bound */
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+partition_localidx(int nbin, const int *pi, const int *inverse,
+                   int *localidx)
+/* ---------------------------------------------------------------------- */
+{
+    int b, i;
+
+    for (b = 0; b < nbin; b++) {
+        for (i = pi[b]; i < pi[b + 1]; i++) {
+            localidx[ inverse[i] ] = i - pi[b];
+        }
+    }
+}
