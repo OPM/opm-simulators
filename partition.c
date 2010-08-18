@@ -174,7 +174,7 @@ partition_allocate_inverse(int nc, int max_bin,
 
 /* ---------------------------------------------------------------------- */
 void
-partition_invert(int nc, const *p, int *pi, int *inverse)
+partition_invert(int nc, const int *p, int *pi, int *inverse)
 /* ---------------------------------------------------------------------- */
 {
     int nbin, b, i, j, tmp;
