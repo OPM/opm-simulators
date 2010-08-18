@@ -191,7 +191,7 @@ partition_invert(int nc, const int *p, int *pi, int *inverse)
     /* Count elements per bin */
     for (i = 0; i < nc  ; i++) { pi[ p[i] ]++; }
 
-    /* Derive start pointers for b=1:nbin */
+    /* Derive start pointers for b=1:nbin (== ubound for b=0:nbin-1) */
     for (b = 1; b < nbin; b++) { pi[b] += pi[b - 1]; }
 
     /* Set end pointer in last bin */
