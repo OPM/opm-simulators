@@ -10,6 +10,9 @@
   ====================================================================*/
 #include <assert.h>
 
+/* 
+ * Assign color (nonnegative number) to each connected component of graph 
+ */
 void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 {
    int i, c;
@@ -20,7 +23,7 @@ void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
    *ncolors = 0; /* colors are nonnegative */
   
    for (i=0; i<size; ++i) {
-      color [i] = -(ia[i+1]-ia[i]+1);
+      color [i] = -(ia[i+1]-ia[i]+1); 
    }
 
    /* Push seeds on stack */
