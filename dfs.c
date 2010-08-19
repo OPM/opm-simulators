@@ -15,39 +15,39 @@
  */
 void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 {
-   int i, c;
+    int i, c;
 
-   int *stack  = work;
-   int *bottom = stack;
+    int *stack  = work;
+    int *bottom = stack;
 
-   *ncolors = 0; /* colors are nonnegative */
+    *ncolors = 0; /* colors are nonnegative */
   
-   for (i=0; i<size; ++i) {
-      color [i] = -(ia[i+1]-ia[i]+1); 
-   }
+    for (i=0; i<size; ++i) {
+        color [i] = -(ia[i+1]-ia[i]+1); 
+    }
 
-   /* Push seeds on stack */
-   for (i=0; i<size; ++i) {
-      if(color[i] >= 0) {
-         continue;
-      }
+    /* Push seeds on stack */
+    for (i=0; i<size; ++i) {
+        if(color[i] >= 0) {
+            continue;
+        }
 
-      *stack++ = i; /* push i */
+        *stack++ = i; /* push i */
      
-      while ( stack != bottom ) {
-         c = *(stack-1); /* peek */
+        while ( stack != bottom ) {
+            c = *(stack-1); /* peek */
 
-         if (color[c] < 0){
-            *stack++ = ja[ia[c]-color[c]-2];
-            ++color[c];
+            if (color[c] < 0){
+                *stack++ = ja[ia[c]-color[c]-2];
+                ++color[c];
    
-         } else {
-            color[c] = *ncolors;
-            --stack; /* pop c */
-         }
-      }
-      ++*ncolors;
-   }
+            } else {
+                color[c] = *ncolors;
+                --stack; /* pop c */
+            }
+        }
+        ++*ncolors;
+    }
 }
 
 
@@ -63,25 +63,29 @@ void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 /* Computes reorder sequence                                        */
 int main (int argc, char *argv [])
 {
-   int      *color, *work;
-   int       j, ncolors;
-   int size = 8;
-   int ia[] = {0, 1, 2, 4, 5, 5, 7, 7, 8};
-   int ja[] = {1, 2, 0, 3, 4, 5, 6, 6};
+    int      *color, *work;
+    int       j, ncolors;
+    int size = 8;
+    int ia[] = {0, 1, 2, 4, 5, 5, 7, 7, 8};
+    int ja[] = {1, 2, 0, 3, 4, 5, 6, 6};
 
-   color = malloc (size * sizeof *color);
-   work  = malloc (size * sizeof *work);
-   dfs(size, ia, ja, &ncolors, color, work);
+    color = malloc (size * sizeof *color);
+    work  = malloc (size * sizeof *work);
+    dfs(size, ia, ja, &ncolors, color, work);
 
 
-   fprintf(stderr, "ncolors = %d\n", ncolors);
-   for (j=0; j<size; ++j) {
-      fprintf(stderr, "%d\n", color[j]);   
-   }
+    fprintf(stderr, "ncolors = %d\n", ncolors);
+    for (j=0; j<size; ++j) {
+        fprintf(stderr, "%d\n", color[j]);   
+    }
  
 
-   free (color);
-   free (work);
-   return 0;
+    free (color);
+    free (work);
+    return 0;
 }
 #endif
+
+/* Local Variables:    */
+/* c-basic-offset:4    */
+/* End:                */
