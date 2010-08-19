@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "dfs.h"
 #include "partition.h"
@@ -285,6 +286,7 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
     if (*pc2c != NULL) {
         for (i = 0; i < nneigh; i++) {
             if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
+                /* Symmetric Laplace matrix (undirected graph) */
                 (*pc2c)[neigh[2*i + 0]]++;
                 (*pc2c)[neigh[2*i + 1]]++;
             }
@@ -300,6 +302,7 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
         if (*c2c != NULL) {
             for (i = 0; i < nneigh; i++) {
                 if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
+                    /* Symmetric Laplace matrix (undirected graph) */
                     (*c2c)[-- (*pc2c)[neigh[2*i + 0]]] = neigh[2*i + 1];
                     (*c2c)[-- (*pc2c)[neigh[2*i + 1]]] = neigh[2*i + 0];
                 }
@@ -399,6 +402,47 @@ create_block_conns(int        b   ,
                    int       *ia  , int       *ja )
 /* ---------------------------------------------------------------------- */
 {
+    int nc, c, i, j;
+
+    nc = pb2c[b + 1] - pb2c[b];
+
+    /* Clear start pointers */
+    memset(ia, 0, (nc + 1) * sizeof *ia);
+
+    for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
+        c = b2c[i];   assert (loc[c] == i - pb2c[b]);
+
+        /* Connect cell to self */
+        ia[loc[c]] ++ ;
+
+        /* Handle neighbours (if any) */
+        for (j = pc2c[c]; j < pc2c[c + 1]; j++) {
+            if (p[c2c[j]] == b) {
+                /* Connection internal to block 'b'.  Add */
+                ia[loc[c]] ++;
+            }
+        }
+    }
+
+    assert (ia[nc] == 0);
+    for (i = 1; i <= nc; i++) { ia[i] += ia[i - 1]; }
+
+    for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
+        c = b2c[i];
+
+        /* Connect cell to self */
+        ja[-- ia[loc[c]]] = loc[c];
+
+        /* Handle neighbours (if any) */
+        for (j = pc2c[c]; j < pc2c[c + 1]; j++) {
+            if (p[c2c[j]] == b) {
+                ja[-- ia[loc[c]]] = loc[c2c[j]];
+            }
+        }
+    }
+    assert (ia[0] == 0);
+
+    reverse_bins(nc, ia, ja);
 }
 
 
