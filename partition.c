@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "dfs.h"
 #include "partition.h"
 
 
@@ -173,17 +174,54 @@ partition_allocate_inverse(int nc, int max_bin,
 
 
 /* ---------------------------------------------------------------------- */
+static void
+reverse_bins(int nbin, const int *pbin, int *elements)
+/* ---------------------------------------------------------------------- */
+{
+    int b, i, j, tmp;
+
+    for (b = 0; b < nbin; b++) {
+        i = pbin[b + 0] + 0;
+        j = pbin[b + 1] - 1;
+
+        while (i < j) {
+            /* Swap reverse (lower <-> upper) */
+            tmp         = elements[i];
+            elements[i] = elements[j];
+            elements[j] = tmp;
+
+            i += 1;             /* Increase lower bound */
+            j -= 1;             /* Decrease upper bound */
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static int
+max_block(int nc, const int *p)
+/* ---------------------------------------------------------------------- */
+{
+    int m, i;
+
+    m = -1;
+
+    for (i = 0; i < nc; i++) {
+        m = MAX(m, p[i]);
+    }
+
+    return m;
+}
+
+
+/* ---------------------------------------------------------------------- */
 void
 partition_invert(int nc, const int *p, int *pi, int *inverse)
 /* ---------------------------------------------------------------------- */
 {
-    int nbin, b, i, j, tmp;
+    int nbin, b, i;
 
-    nbin = 0;
-    for (i = 0; i < nc; i++) {
-        nbin = MAX(nbin, p[i]);
-    }
-    nbin += 1;            /* Adjust for bin 0 */
+    nbin = max_block(nc, p) + 1; /* Adjust for bin 0 */
 
     /* Zero start pointers */
     for (b = 0; b < nbin; b++) { pi[b] = 0; }
@@ -205,20 +243,7 @@ partition_invert(int nc, const int *p, int *pi, int *inverse)
     assert (pi[0] == 0);
 
     /* Reverse the reverse order, creating final inverse mapping */
-    for (b = 0; b < nbin; b++) {
-        i = pi[b + 0] + 0;
-        j = pi[b + 1] - 1;
-
-        while (i < j) {
-            /* Swap reverse (lower <-> upper) */
-            tmp        = inverse[i];
-            inverse[i] = inverse[j];
-            inverse[j] = tmp;
-
-            i += 1;             /* Increase lower bound */
-            j -= 1;             /* Decrease upper bound */
-        }
-    }
+    reverse_bins(nbin, pi, inverse);
 }
 
 
@@ -236,3 +261,211 @@ partition_localidx(int nbin, const int *pi, const int *inverse,
         }
     }
 }
+
+
+/* ---------------------------------------------------------------------- */
+static void
+partition_destroy_c2c(int *pc2c, int *c2c)
+/* ---------------------------------------------------------------------- */
+{
+    free(c2c);  free(pc2c);
+}
+
+
+/* ---------------------------------------------------------------------- */
+static int
+partition_create_c2c(int nc, int nneigh, const int *neigh,
+                     int **pc2c, int **c2c)
+/* ---------------------------------------------------------------------- */
+{
+    int i, ret;
+
+    *pc2c = calloc(nc + 1, sizeof **pc2c);
+
+    if (*pc2c != NULL) {
+        for (i = 0; i < nneigh; i++) {
+            if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
+                (*pc2c)[neigh[2*i + 0]]++;
+                (*pc2c)[neigh[2*i + 1]]++;
+            }
+        }
+
+        for (i = 1; i < nc; i++) {
+            (*pc2c)[i] += (*pc2c)[i - 1];
+        }
+        (*pc2c)[nc] = (*pc2c)[nc - 1];
+
+        *c2c = malloc((*pc2c)[nc] * sizeof **c2c);
+
+        if (*c2c != NULL) {
+            for (i = 0; i < nneigh; i++) {
+                if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
+                    (*c2c)[-- (*pc2c)[neigh[2*i + 0]]] = neigh[2*i + 1];
+                    (*c2c)[-- (*pc2c)[neigh[2*i + 1]]] = neigh[2*i + 0];
+                }
+            }
+
+            reverse_bins(nc, *pc2c, *c2c);
+
+            ret = nc;
+        } else {
+            free(*pc2c);
+            *pc2c = NULL;
+
+            ret = 0;
+        }
+    } else {
+        *c2c = NULL;
+
+        ret = 0;
+    }
+
+    return ret;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+deallocate_dfs_arrays(int *ia, int *ja, int *colour, int *work)
+/* ---------------------------------------------------------------------- */
+{
+    free(work);  free(colour);  free(ja);  free(ia);
+}
+
+
+/* ---------------------------------------------------------------------- */
+static int
+allocate_dfs_arrays(int n, int nnz,
+                    int **ia, int **ja, int **colour, int **work)
+/* ---------------------------------------------------------------------- */
+{
+    int ret;
+
+    *ia     = malloc((n + 1) * sizeof **ia    );
+    *ja     = malloc(nnz     * sizeof **ja    );
+    *colour = malloc(n       * sizeof **colour);
+    *work   = malloc(n       * sizeof **work  );
+
+    if ((*ia     == NULL) || (*ja   == NULL) ||
+        (*colour == NULL) || (*work == NULL)) {
+        deallocate_dfs_arrays(*ia, *ja, *colour, *work);
+
+        *ia     = NULL;
+        *ja     = NULL;
+        *colour = NULL;
+        *work   = NULL;
+
+        ret = 0;
+    } else {
+        ret = n;
+    }
+
+    return ret;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+count_block_conns(int nblk,
+                  const int *pb2c, const int *b2c, const int *pc2c,
+                  int *max_blk_cells, int *max_blk_conn)
+/* ---------------------------------------------------------------------- */
+{
+    int b, i, n_blk_conn;
+
+    *max_blk_cells = 0;
+    *max_blk_conn  = 0;
+
+    i = 0;                      /* == pb2c[0] */
+    for (b = 0; b < nblk; b++) {
+        n_blk_conn = 0;
+
+        for (; i < pb2c[b + 1]; i++) {
+            n_blk_conn += pc2c[b2c[i] + 1] - pc2c[b2c[i]];
+        }
+
+        *max_blk_cells = MAX(*max_blk_cells, pb2c[b + 1] - pb2c[b]);
+        *max_blk_conn  = MAX(*max_blk_conn , n_blk_conn);
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+create_block_conns(int        b   ,
+                   const int *p   , const int *loc,
+                   const int *pb2c, const int *b2c,
+                   const int *pc2c, const int *c2c,
+                   int       *ia  , int       *ja )
+/* ---------------------------------------------------------------------- */
+{
+}
+
+
+/* ---------------------------------------------------------------------- */
+int
+partition_split_disconnected(int nc, int nneigh, const int *neigh, int *p)
+/* ---------------------------------------------------------------------- */
+{
+    int inv_ok, c2c_ok, dfs_ok;
+    int i, b, ret, maxblk, ncolour, max_blk_cells, max_blk_conn;
+
+    int *pb2c, *b2c, *loc, *pc2c, *c2c;
+    int *ia, *ja, *colour, *work;
+
+    maxblk = max_block(nc, p);
+
+    inv_ok = partition_allocate_inverse(nc, maxblk, &pb2c, &b2c);
+    c2c_ok = partition_create_c2c(nc, nneigh, neigh, &pc2c, &c2c);
+    loc    = malloc(nc * sizeof *loc);
+
+    if (inv_ok && c2c_ok && (loc != NULL)) {
+        partition_invert(nc, p, pb2c, b2c);
+        partition_localidx(maxblk + 1, pb2c, b2c, loc);
+
+        count_block_conns(maxblk + 1, pb2c, b2c, c2c,
+                          &max_blk_cells, &max_blk_conn);
+
+        dfs_ok = allocate_dfs_arrays(max_blk_cells, max_blk_conn,
+                                     &ia, &ja, &colour, &work);
+        if (dfs_ok) {
+            /* Target acquired.  Fire. */
+            ret = 0;
+
+            for (b = 0; b < maxblk + 1; b++) {
+                create_block_conns(b, p, loc, pb2c, b2c, pc2c, c2c, ia, ja);
+
+                dfs(pb2c[b + 1] - pb2c[b], ia, ja, &ncolour, colour, work);
+
+                if (ncolour > 1) {
+                    /* Block contains more than one component.  Assign
+                     * new block numbers for cells in components
+                     * 1:ncomp-1. */
+                    for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
+                        if (colour[i - pb2c[b]] > 0) {
+                            p[b2c[i]] = maxblk + ret + colour[i - pb2c[b]];
+                        }
+                    }
+
+                    ret += ncolour - 1;
+                }
+            }
+        } else {
+            ret = -1;
+        }
+
+        deallocate_dfs_arrays(ia, ja, colour, work);
+    } else {
+        ret = -1;
+    }
+
+    free(loc);
+    partition_destroy_c2c(pc2c, c2c);
+    partition_deallocate_inverse(pb2c, b2c);
+
+    return ret;
+}
+
+/* Local Variables:    */
+/* c-basic-offset:4    */
+/* End:                */

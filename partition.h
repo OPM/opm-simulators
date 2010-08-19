@@ -27,4 +27,8 @@ void
 partition_localidx(int nblk, const int *pi, const int *inverse,
                    int *localidx);
 
+
+int
+partition_split_disconnected(int nc, int nneigh, const int *neigh,
+                             int *p);
 #endif  /* PARTITION_H_INLCUDED */
