@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2010 SINTEF ICT, Applied Mathematics
+ */
+
 #ifndef PARTITION_H_INCLUDED
 #define PARTITION_H_INCLUDED
 

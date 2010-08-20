@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2010 SINTEF ICT, Applied Mathematics
+ */
+
 #ifndef MIMETIC_H_INCLUDED
 #define MIMETIC_H_INCLUDED
 

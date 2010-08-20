@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2010 SINTEF ICT, Applied Mathematics
+ */
+
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
