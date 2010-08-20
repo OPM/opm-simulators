@@ -16,30 +16,38 @@
 void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 {
     int i, c;
-
+    enum {UNVISITED = -1, VISITED = -2};
     int *stack  = work;
+    int *count  = work + size;
     int *bottom = stack;
 
     *ncolors = 0; /* colors are nonnegative */
   
     for (i=0; i<size; ++i) {
-        color [i] = -(ia[i+1]-ia[i]+1); 
+        color [i] = UNVISITED;
+        count [i] = ia[i+1]-ia[i];
     }
 
     /* Push seeds on stack */
     for (i=0; i<size; ++i) {
-        if(color[i] >= 0) {
+        if(color[i] >= 0) {  /* FINISHED */
             continue;
         }
 
         *stack++ = i; /* push i */
-     
+        color[i] = VISITED;
+
         while ( stack != bottom ) {
             c = *(stack-1); /* peek */
-
-            if (color[c] < 0){
-                *stack++ = ja[ia[c]-color[c]-2];
-                ++color[c];
+            
+            if (count[c] > 0){
+                int child = ja[ia[c] + count[c]-1];
+                count[c]--;
+                
+                if (color[child] == UNVISITED) {
+                    *stack++ = child;
+                    color[c] = VISITED;
+                }
    
             } else {
                 color[c] = *ncolors;
@@ -65,12 +73,19 @@ int main (int argc, char *argv [])
 {
     int      *color, *work;
     int       j, ncolors;
+#if 0
     int size = 8;
     int ia[] = {0, 1, 2, 4, 5, 5, 7, 7, 8};
     int ja[] = {1, 2, 0, 3, 4, 5, 6, 6};
+#else
+    int size = 3;
+    int ia[] = {0,2,5,7};
+    int ja[] = {0,1,1,0,2,2,1};
+#endif
+
 
     color = malloc (size * sizeof *color);
-    work  = malloc (size * sizeof *work);
+    work  = malloc (2*size * sizeof *work);
     dfs(size, ia, ja, &ncolors, color, work);
 
 
