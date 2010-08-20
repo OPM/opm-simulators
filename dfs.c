@@ -10,6 +10,8 @@
   ====================================================================*/
 #include <assert.h>
 
+#include "dfs.h"
+
 /* 
  * Assign color (nonnegative number) to each connected component of graph 
  */
@@ -61,7 +63,7 @@ void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 
 
 
-#if TEST
+#if defined(TEST) && TEST
 #include <stdlib.h>
 #include <stdio.h>
 
