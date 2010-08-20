@@ -292,14 +292,21 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
             }
         }
 
+        (*pc2c)[0] += 1;        /* Self connection */
         for (i = 1; i < nc; i++) {
             (*pc2c)[i] += (*pc2c)[i - 1];
+            (*pc2c)[i] += 1;    /* Self connection */
         }
         (*pc2c)[nc] = (*pc2c)[nc - 1];
 
         *c2c = malloc((*pc2c)[nc] * sizeof **c2c);
 
         if (*c2c != NULL) {
+            /* Self connections */
+            for (i = 0; i < nc; i++) {
+                (*c2c)[-- (*pc2c)[i]] = i;
+            }
+            
             for (i = 0; i < nneigh; i++) {
                 if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
                     /* Symmetric Laplace matrix (undirected graph) */
@@ -347,7 +354,7 @@ allocate_dfs_arrays(int n, int nnz,
     *ia     = malloc((n + 1) * sizeof **ia    );
     *ja     = malloc(nnz     * sizeof **ja    );
     *colour = malloc(n       * sizeof **colour);
-    *work   = malloc(n       * sizeof **work  );
+    *work   = malloc(2 * n   * sizeof **work  );
 
     if ((*ia     == NULL) || (*ja   == NULL) ||
         (*colour == NULL) || (*work == NULL)) {
@@ -412,10 +419,7 @@ create_block_conns(int        b   ,
     for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
         c = b2c[i];   assert (loc[c] == i - pb2c[b]);
 
-        /* Connect cell to self */
-        ia[loc[c]] ++ ;
-
-        /* Handle neighbours (if any) */
+        /* Self connections inserted in partition_create_c2c()) */
         for (j = pc2c[c]; j < pc2c[c + 1]; j++) {
             if (p[c2c[j]] == b) {
                 /* Connection internal to block 'b'.  Add */
@@ -430,10 +434,7 @@ create_block_conns(int        b   ,
     for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
         c = b2c[i];
 
-        /* Connect cell to self */
-        ja[-- ia[loc[c]]] = loc[c];
-
-        /* Handle neighbours (if any) */
+        /* Create connections (self conn automatic) */
         for (j = pc2c[c]; j < pc2c[c + 1]; j++) {
             if (p[c2c[j]] == b) {
                 ja[-- ia[loc[c]]] = loc[c2c[j]];
@@ -467,7 +468,7 @@ partition_split_disconnected(int nc, int nneigh, const int *neigh, int *p)
         partition_invert(nc, p, pb2c, b2c);
         partition_localidx(maxblk + 1, pb2c, b2c, loc);
 
-        count_block_conns(maxblk + 1, pb2c, b2c, c2c,
+        count_block_conns(maxblk + 1, pb2c, b2c, pc2c,
                           &max_blk_cells, &max_blk_conn);
 
         dfs_ok = allocate_dfs_arrays(max_blk_cells, max_blk_conn,
