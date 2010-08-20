@@ -306,7 +306,7 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
             for (i = 0; i < nc; i++) {
                 (*c2c)[-- (*pc2c)[i]] = i;
             }
-            
+
             for (i = 0; i < nneigh; i++) {
                 if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
                     /* Symmetric Laplace matrix (undirected graph) */
