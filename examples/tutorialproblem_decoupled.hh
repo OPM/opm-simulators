@@ -1,4 +1,4 @@
-// $Id: tutorialproblem_decoupled.hh 3783 2010-06-24 11:33:53Z bernd $
+// $Id$
 /*****************************************************************************
 *   Copyright (C) 2007-2008 by Klaus Mosthaf                                *
 *   Copyright (C) 2007-2008 by Bernd Flemisch                               *

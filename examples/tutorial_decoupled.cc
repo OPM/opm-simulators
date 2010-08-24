@@ -1,4 +1,4 @@
-// $Id: tutorial_decoupled.cc 3636 2010-05-25 13:27:16Z bernd $
+// $Id$
 /*****************************************************************************
  *   Copyright (C) 20010 by Markus Wolff                                     *
  *   Copyright (C) 2007-2008 by Bernd Flemisch                               *
