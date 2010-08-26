@@ -29,8 +29,7 @@
 namespace Dumux
 {
 /*!
- * \brief A much simpler (and thus potentially less buggy) version of
- *        pure water.
+ * \brief A much simple component for an exemplary dense NAPL (TCE).
  */
 template <class Scalar>
 class SimpleDNAPL : public Component<Scalar, SimpleDNAPL<Scalar> >
@@ -39,89 +38,75 @@ class SimpleDNAPL : public Component<Scalar, SimpleDNAPL<Scalar> >
 
 public:
     /*!
-     * \brief A human readable name for the water.
+     * \brief A human readable name for the TCE.
      */
     static const char *name()
-    { return "DNAPL"; }
+    { return "TCE"; }
 
     /*!
-     * \brief The mass in [kg] of one mole of DNAPL.
+     * \brief The mass in [kg] of one mole of TCE.
      */
     static Scalar molarMass()
     {
-        DUNE_THROW(Dune::NotImplemented, "molarMass for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "molarMass for TCE");
     };
 
     /*!
-     * \brief Returns the critical temperature [K] of DNAPL
+     * \brief Returns the critical temperature [K] of TCE
      */
     static Scalar criticalTemperature()
     {
-        DUNE_THROW(Dune::NotImplemented, "criticalTemperature for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "criticalTemperature for TCE");
     };
 
     /*!
-     * \brief Returns the critical pressure [Pa] of DNAPL
+     * \brief Returns the critical pressure [Pa] of TCE
      */
     static Scalar criticalPressure()
     {
-        DUNE_THROW(Dune::NotImplemented, "criticalPressure for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "criticalPressure for TCE");
     };
 
     /*!
-     * \brief Returns the temperature [K]at DNAPL's triple point.
+     * \brief Returns the temperature [K]at TCE's triple point.
      */
     static Scalar tripleTemperature()
     {
-        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for TCE");
     };
 
     /*!
-     * \brief Returns the pressure [Pa] at DNAPL's triple point.
+     * \brief Returns the pressure [Pa] at TCE's triple point.
      */
     static Scalar triplePressure()
     {
-        DUNE_THROW(Dune::NotImplemented, "triplePressure for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "triplePressure for TCE");
     };
 
     /*!
-     * \brief The vapor pressure in [N/m^2] of pure DNAPL
+     * \brief The vapor pressure in [N/m^2] of pure TCE
      *        at a given temperature.
-     *
-     * See:
-     *
-     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
-     * 1997 for the Thermodynamic Properties of Water and Steam",
-     * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
     static Scalar vaporPressure(Scalar T)
     {
-        DUNE_THROW(Dune::NotImplemented, "vaporPressure for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "vaporPressure for TCE");
     };
     /*!
-     * \brief Specific enthalpy of DNAPL steam [J/kg].
+     * \brief Specific enthalpy of TCE steam [J/kg].
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
     {
-        DUNE_THROW(Dune::NotImplemented, "gasEnthalpy for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "gasEnthalpy for TCE");
     };
 
     /*!
-     * \brief Specific enthalpy of liquid DNAPL [J/kg].
+     * \brief Specific enthalpy of liquid TCE [J/kg].
      */
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
     {
-        DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for TCE");
     };
 
     /*!
@@ -129,12 +114,11 @@ public:
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
-        DUNE_THROW(Dune::NotImplemented, "gasDensity for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "gasDensity for TCE");
     };
 
     /*!
-     * \brief The density of pure DNAPL at a given pressure and temperature [kg/m^3].
+     * \brief The density of pure TCE at a given pressure and temperature [kg/m^3].
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -146,16 +130,15 @@ public:
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
     {
-        DUNE_THROW(Dune::NotImplemented, "gasViscosity for DNAPL");
-        return 0;
+        DUNE_THROW(Dune::NotImplemented, "gasViscosity for TCE");
     };
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of pure DNAPL.
+     * \brief The dynamic viscosity [N/m^3*s] of pure TCE.
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
-        return 5.7e-4;//[kg/(ms)]
+        return 5.7e-4;//[Pa s]
     };
 };
 
