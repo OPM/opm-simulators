@@ -22,6 +22,8 @@
 
 #include "linearmaterialparams.hh"
 
+#include <algorithm>
+
 namespace Dumux
 {
 /*!

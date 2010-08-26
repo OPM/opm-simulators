@@ -33,6 +33,12 @@
 
 namespace Dumux
 {
+// forward defintions of the property tags
+namespace Properties {
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(Components);
+};
+
 /*!
  * \brief A compositional fluid with water and molecular nitrogen as
  *        components in both, the liquid and the gas phase.

@@ -26,8 +26,6 @@
 
 #include <algorithm>
 
-#include <math.h>
-#include <assert.h>
 
 
 namespace Dumux

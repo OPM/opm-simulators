@@ -25,8 +25,18 @@
 #include "liquidphase.hh"
 #include "gasphase.hh"
 
-namespace Dumux
-{
+#include <dune/common/exceptions.hh>
+
+#include <dumux/common/propertysystem.hh>
+
+namespace Dumux {
+// forward defintions of the property tags
+namespace Properties {
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(WettingPhase);
+NEW_PROP_TAG(NonwettingPhase);
+};
+
 
 /*!
  * \brief A compositional fluid with water and molecular nitrogen as

@@ -21,14 +21,10 @@
 #ifndef DUMUX_BRINE_HH
 #define DUMUX_BRINE_HH
 
-#include <dune/common/exceptions.hh>
-
-#include "h2o.hh"
 
 #include "component.hh"
 
 #include <cmath>
-#include <iostream>
 
 namespace Dumux
 {

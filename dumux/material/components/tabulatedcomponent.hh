@@ -25,7 +25,11 @@
 #ifndef DUMUX_TABULATED_COMPONENT_HH
 #define DUMUX_TABULATED_COMPONENT_HH
 
+#include <dumux/common/exceptions.hh>
+
 #include <boost/math/special_functions/fpclassify.hpp>
+
+#include <iostream>
 
 namespace Dumux
 {

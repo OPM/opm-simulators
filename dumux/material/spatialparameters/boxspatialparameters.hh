@@ -29,8 +29,12 @@
 
 #include <dune/common/fmatrix.hh>
 
-namespace Dumux
-{
+namespace Dumux {
+// forward declation of property tags
+namespace Properties {
+NEW_PROP_TAG(SpatialParameters);
+};
+
 
 /**
  * \brief The base class for spatial parameters of problems using the

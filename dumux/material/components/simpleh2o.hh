@@ -23,12 +23,10 @@
 #define DUMUX_SIMPLE_H2O_HH
 
 #include <dumux/material/idealgas.hh>
-#include <dune/common/exceptions.hh>
 
 #include "component.hh"
 
 #include <cmath>
-#include <iostream>
 
 namespace Dumux
 {

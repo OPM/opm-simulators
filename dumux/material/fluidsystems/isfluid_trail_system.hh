@@ -20,6 +20,8 @@
 #ifndef DUMUX_ISFLUID_TRAIL_SYSTEM_HH
 #define DUMUX_ISFLUID_TRAIL_SYSTEM_HH
 
+#include <dune/common/exceptions.hh>
+
 #include <dumux/common/propertysystem.hh>
 #include <dumux/boxmodels/1p2c/1p2cproperties.hh>
 
@@ -29,6 +31,7 @@ namespace Dumux
 namespace Properties
 {
 NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(OnePTwoCIndices);
 };
 
 /*!
@@ -41,12 +44,13 @@ class ISFluid_Trail_System
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(OnePTwoCIndices)) Indices;
 
+public:
     enum {
-        isfluid = Indices::konti,
-        trail = Indices::transport
+        // component indices
+        isFluidIdx = 0,
+        trailIdx = 1
     };
 
-public:
     static void init()
     {}
 
@@ -57,14 +61,30 @@ public:
     {
         switch(compIdx)
         {
-        case isfluid:
+        case isFluidIdx:
             return "ISFluid";
-        case trail:
+        case trailIdx:
             return "Trail";
         default:
             DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
         }
     }
+
+    /*!
+     * \brief Return the molar mass of a component [kg/mol].
+     */
+    static Scalar molarMass(int compIdx)
+    {
+        switch (compIdx) {
+        case isFluidIdx:
+            // TODO: this is just a rough guess
+            return 22e-3; // [kg/mol]
+        case trailIdx:
+            return 567e-3; // [kg/mol]
+        };
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+    }
+
 
     /*!
      * \brief Given all mole fractions in a phase, return the phase
@@ -77,31 +97,13 @@ public:
                                const FluidState &fluidState)
     {
         if (phaseIdx == 0)
-            return 1.03e-9; // in [kg /microm^3]
-                            // Umwandlung in Pascal notwendig -> density*10^6
-                            // will man wieder mit kg/m^3 rechnen muss g auch wieder geändert werden
+            return 1.03e3; // in [kg /m^3]
 
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
     /*!
-     * \brief Given all mole fractions in a phase, return the phase
-     *        density [kg/m^3].
-     */
-    template <class FluidState>
-    static Scalar molarDensity(int phaseIdx,
-                               Scalar temperature,
-                               Scalar pressure,
-                               const FluidState &fluidState)
-    {
-        if (phaseIdx == 0)
-            return 3.035e-16;   // in [mol/microm^3] = 303.5 mol/m^3
-
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
-    }
-
-    /*!
-     * \brief Return the viscosity of a phase.
+     * \brief Return the dynamic viscosity of a phase.
      */
     template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
@@ -110,7 +112,7 @@ public:
                                  const FluidState &fluidState)
     {
         if (phaseIdx == 0)
-            return 0.00069152; // in [Pas]
+            return 0.00069152; // in [Pa*s]
 
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
@@ -127,7 +129,8 @@ public:
                             Scalar pressure,
                             const FluidState &fluidState)
     {
-        return 0.088786695; // in [microm^2/s] = 3.7378e-12 m^2/s
+        // 3.7378e-12
+        return 8.8786695-14; // in [m^2/s]
     }
 };
 

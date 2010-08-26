@@ -20,7 +20,6 @@
 #ifndef DUMUX_OIL_HH
 #define DUMUX_OIL_HH
 
-#include <dune/common/exceptions.hh>
 
 #include "component.hh"
 

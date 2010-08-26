@@ -22,7 +22,6 @@
 #define DUMUX_N2_HH
 
 #include <dumux/material/idealgas.hh>
-#include <dune/common/exceptions.hh>
 
 #include "component.hh"
 

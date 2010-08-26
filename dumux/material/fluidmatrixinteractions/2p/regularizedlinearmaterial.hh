@@ -20,12 +20,8 @@
 #define DUMUX_REGULARIZED_LINEAR_MATERIAL_HH
 
 #include "linearmaterial.hh"
-#include "linearmaterialparams.hh"
 
-#include <algorithm>
 
-#include <math.h>
-#include <assert.h>
 
 #include <dumux/common/spline.hh>
 

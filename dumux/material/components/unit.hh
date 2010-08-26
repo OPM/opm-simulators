@@ -21,7 +21,6 @@
 #ifndef DUMUX_UNIT_HH
 #define DUMUX_UNIT_HH
 
-#include <dune/common/exceptions.hh>
 
 #include "component.hh"
 

@@ -25,10 +25,7 @@
 #include "brookscorey.hh"
 #include "regularizedbrookscoreyparams.hh"
 
-#include <algorithm>
 
-#include <math.h>
-#include <assert.h>
 
 #include <dumux/common/spline.hh>
 

@@ -52,11 +52,22 @@ public:
      * \brief Threshold saturation below which the capillary pressure
      *        is regularized.
      *
-     * This is just 5%. If you need a different value, overload this
+     * This is just 1%. If you need a different value, overload this
      * class.
      */
     Scalar thresholdSw() const
-    { return 0.05; }
+    {
+        // Some problems are very sensitive to this value
+        // (e.g. makeing it smaller might result in negative
+        // pressures), if you change it here, you will almost
+        // certainly break someone's code!
+        //
+        // If you want to use a different regularization threshold,
+        // overload this class and supply the new class as second
+        // template parameter for the RegularizedVanGenuchten law!
+        return /* PLEASE DO _NOT_ */ 1e-2; /* CHANGE THIS VALUE. READ
+                                            * COMMENT ABOVE! */
+    }
 
 };
 }; // namespace Dumux

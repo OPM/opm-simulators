@@ -21,13 +21,11 @@
 #ifndef DUMUX_SIMPLE_CO2_HH
 #define DUMUX_SIMPLE_CO2_HH
 
-#include <dune/common/exceptions.hh>
 #include <dumux/material/idealgas.hh>
 
 #include "component.hh"
 
 #include <cmath>
-#include <iostream>
 
 namespace Dumux
 {

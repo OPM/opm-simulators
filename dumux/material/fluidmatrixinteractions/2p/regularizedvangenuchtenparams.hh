@@ -21,7 +21,6 @@
 #ifndef REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
 #define REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
 
-#include "vangenuchten.hh"
 #include "vangenuchtenparams.hh"
 
 namespace Dumux

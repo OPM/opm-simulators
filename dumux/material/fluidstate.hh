@@ -23,6 +23,8 @@
 #ifndef DUMUX_FLUID_STATE_HH
 #define DUMUX_FLUID_STATE_HH
 
+#include <dumux/common/exceptions.hh>
+
 namespace Dumux
 {
 /*!

@@ -22,12 +22,9 @@
 #ifndef DUMUX_SIMPLE_DNAPL_HH
 #define DUMUX_SIMPLE_DNAPL_HH
 
-#include <dune/common/exceptions.hh>
 
 #include "component.hh"
 
-#include <cmath>
-#include <iostream>
 
 namespace Dumux
 {
