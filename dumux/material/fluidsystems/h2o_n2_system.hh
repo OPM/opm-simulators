@@ -423,12 +423,15 @@ public:
                 N2::gasEnthalpy(temperature, pN2);
         }
         else {
-            Scalar pWater = fluidState.fugacity(H2OIdx);
-            Scalar pN2 = fluidState.fugacity(N2Idx);
+            Scalar cH2O = fluidState.concentration(gPhaseIdx, H2OIdx);
+            Scalar cN2 = fluidState.concentration(gPhaseIdx, N2Idx);
+            
+            Scalar pH2O = H2O::gasPressure(temperature, cH2O*H2O::molarMass());
+            Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
 
             Scalar result = 0;
             result +=
-                H2O::gasEnthalpy(temperature, pWater) *
+                H2O::gasEnthalpy(temperature, pH2O) *
                 fluidState.massFrac(gPhaseIdx, H2OIdx);
             result +=
                 N2::gasEnthalpy(temperature, pN2) *
