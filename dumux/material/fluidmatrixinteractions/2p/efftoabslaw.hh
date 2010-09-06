@@ -55,7 +55,7 @@ public:
     /*!
      * \brief The saturation-capillary pressure curve.
      *
-     * \param pC Capillary pressure \f$\p_C\f$
+     * \param pC Capillary pressure \f$p_C\f$
      * \return The absolute saturation of the wetting phase \f$S_w\f$
      */
     static Scalar Sw(const Params &params, Scalar pC)

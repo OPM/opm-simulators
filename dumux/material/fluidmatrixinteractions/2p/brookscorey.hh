@@ -71,7 +71,7 @@ public:
      \overline{S}_w = (\frac{p_C}{p_e})^{-\alpha}
      \f]
      *
-     * \param pC Capillary pressure \f$\p_C\f$
+     * \param pC Capillary pressure \f$p_C\f$
      * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
      */
     static Scalar Sw(const Params &params, Scalar pC)
