@@ -23,9 +23,11 @@
 namespace Dumux
 {
 
-template <class Scalar, class Component> class LiquidPhase
+template <class Scalar, class ComponentT> class LiquidPhase
 {
 public:
+    typedef ComponentT Component;
+
     /*!
      * \brief A human readable name for the compoent.
      */

@@ -23,9 +23,10 @@
 namespace Dumux
 {
 
-template <class Scalar, class Component> class GasPhase
+template <class Scalar, class ComponentT> class GasPhase
 {
 public:
+    typedef ComponentT Component;
     /*!
      * \brief A human readable name for the compoent.
      */
