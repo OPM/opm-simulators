@@ -482,6 +482,8 @@ public:
                 *
                 (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             
+            // calculate the partial derivative of the density to the
+            // pressure at vapor pressure
             Scalar drho_dp = - 1/(v0*v0)*dv_dp;
             
             // use a straight line for extrapolation
@@ -557,15 +559,24 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
-            Scalar dpi_dp = Region1::dpi_dp(pv);
-            Scalar dv_dp =
-                R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
-
-            // use a straight line for extrapolation
             Scalar v0 = volumeRegion1_(temperature, pv);
-            Scalar v = v0 + (pressure - pv)*dv_dp;
-            return 1.0/v;
+            Scalar pi = Region1::pi(pv);
+            Scalar dp_dpi = Region1::dp_dpi(pv);
+            Scalar dgamma_dpi = Region1::dgamma_dpi(temperature, pv);
+            Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
+            
+            Scalar RT = R*temperature;
+            Scalar dv_dp =
+                RT/(dp_dpi*pv)
+                *
+                (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
+            
+            // calculate the partial derivative of the density to the
+            // pressure at vapor pressure
+            Scalar drho_dp = - 1/(v0*v0)*dv_dp;
+            
+            // use a straight line for extrapolation
+            return 1.0/v0 + (pressure - pv)*drho_dp;
         };
 
         return 1/volumeRegion1_(temperature, pressure);
