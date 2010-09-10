@@ -470,14 +470,22 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
-            Scalar dpi_dp = Region2::dpi_dp(pv);
-            Scalar dv_dp =
-                R*temperature*dpi_dp*dpi_dp*ddgamma_ddpi;
-
-            // use a straight line for extrapolation
             Scalar v0 = volumeRegion2_(temperature, pv);
-            return 1.0/(v0 + (pressure - pv)*dv_dp);
+            Scalar pi = Region2::pi(pv);
+            Scalar dp_dpi = Region2::dp_dpi(pv);
+            Scalar dgamma_dpi = Region2::dgamma_dpi(temperature, pv);
+            Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
+            
+            Scalar RT = R*temperature;
+            Scalar dv_dp =
+                RT/(dp_dpi*pv)
+                *
+                (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
+            
+            Scalar drho_dp = - 1/(v0*v0)*dv_dp;
+            
+            // use a straight line for extrapolation
+            return 1.0/v0 + (pressure - pv)*drho_dp;
         };
 
         return 1.0/volumeRegion2_(temperature, pressure);

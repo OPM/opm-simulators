@@ -48,7 +48,7 @@ public:
      */
     static Scalar molarMass()
     {
-        DUNE_THROW(Dune::NotImplemented, "molarMass for TCE");
+        return 131.39e-3; // kg/mol
     };
 
     /*!
@@ -89,7 +89,7 @@ public:
      */
     static Scalar vaporPressure(Scalar T)
     {
-        DUNE_THROW(Dune::NotImplemented, "vaporPressure for TCE");
+        return 3900; // [Pa] (at 20°C)
     };
     /*!
      * \brief Specific enthalpy of TCE steam [J/kg].
@@ -114,7 +114,9 @@ public:
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
-        DUNE_THROW(Dune::NotImplemented, "gasDensity for TCE");
+        return IdealGas<Scalar>::density(molarMass(),
+                                         temperature,
+                                         pressure);
     };
 
     /*!

@@ -92,6 +92,13 @@ public:
     { return 1.0 / 1e6; }
 
     /*!
+     * \brief Returns the derivative of the pressure to the
+     *        reduced pressure for IAPWS region 2.
+     */
+    static Scalar dp_dpi(Scalar pressure)
+    { return 1e6; }
+
+    /*!
      * \brief The gibbs free energy for IAPWS region 2 (i.e. sub-critical
      *        steam)
      *
@@ -229,7 +236,7 @@ public:
         Scalar pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Scalar result = 1/pi_;
+        Scalar result = -1/(pi_*pi_);
 
         // residual part
         for (int i = 0; i < 43; i++) {
