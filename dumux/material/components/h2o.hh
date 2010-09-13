@@ -16,7 +16,7 @@
 /*!
  * \file
  *
- * \brief Properties of pure water \f$H_2O\f$.
+ * \brief Material properties of pure water \f$H_2O\f$.
  */
 #ifndef DUMUX_H2O_HH
 #define DUMUX_H2O_HH
@@ -38,7 +38,7 @@
 namespace Dumux
 {
 /*!
- * \brief Properties of pure water \f$H_2O\f$.
+ * \brief Material properties of pure water \f$H_2O\f$.
  *
  * See:
  *
@@ -147,11 +147,11 @@ public:
         if (pressure > pv) {
             // the pressure is too high, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
-            Scalar tau = Region2::tau(temperature);
             Scalar dh_dp =
-                R*temperature*tau*
-                Region2::ddgamma_dtaudpi(temperature, pv)*
-                Region2::dpi_dp(pv);
+                R*temperature*
+                Region2::tau(temperature)*
+                Region2::dpi_dp(pv),
+                Region2::ddgamma_dtaudpi(temperature, pv);
 
             return
                 enthalpyRegion2_(temperature, pv) +
@@ -187,9 +187,10 @@ public:
             // of the enthalpy at the vapor pressure to regularize
             Scalar tau = Region1::tau(temperature);
             Scalar dh_dp =
-                R*temperature*tau*
-                Region1::ddgamma_dtaudpi(temperature, pv)*
-                Region1::dpi_dp(pv);
+                R*temperature*
+                Region1::tau(temperature)*
+                Region1::dpi_dp(pv),
+                Region1::ddgamma_dtaudpi(temperature, pv);
 
             return
                 enthalpyRegion1_(temperature, pv) +
@@ -288,6 +289,7 @@ public:
             // of the internal energy at the vapor pressure to
             // regularize
 
+            /*
             // calculate the partial derivative of the internal energy
             // to the pressure at the vapor pressure.
             Scalar tau = Region1::tau(temperature);
@@ -299,9 +301,15 @@ public:
             Scalar du_dp =
                 R*temperature*
                 (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
+            */
 
-            // use a straight line for extrapolation
+            // use a straight line for extrapolation. use forward
+            // differences to calculate the partial derivative to the
+            // pressure at the vapor pressure
+            static const Scalar eps = 1e-7;
             Scalar uv = internalEnergyRegion1_(temperature, pv);
+            Scalar uvPEps = internalEnergyRegion1_(temperature, pv + eps);
+            Scalar du_dp = (uvPEps - uv)/eps;
             return uv + du_dp*(pressure - pv);
         };
 
@@ -346,7 +354,8 @@ public:
             // the pressure is too high, in this case we use the slope
             // of the internal energy at the vapor pressure to
             // regularize
-
+            
+            /*
             // calculate the partial derivative of the internal energy
             // to the pressure at the vapor pressure.
             Scalar tau = Region2::tau(temperature);
@@ -361,6 +370,16 @@ public:
 
             // use a straight line for extrapolation
             Scalar uv = internalEnergyRegion2_(temperature, pv);
+            return uv + du_dp*(pressure - pv);
+            */
+            
+            // use a straight line for extrapolation. use backward
+            // differences to calculate the partial derivative to the
+            // pressure at the vapor pressure
+            static const Scalar eps = 1e-7;
+            Scalar uv = internalEnergyRegion2_(temperature, pv);
+            Scalar uvMEps = internalEnergyRegion2_(temperature, pv - eps);
+            Scalar du_dp = (uv - uvMEps)/eps;
             return uv + du_dp*(pressure - pv);
         };
 
@@ -470,17 +489,22 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
+            const Scalar eps = pv*1e-8;
             Scalar v0 = volumeRegion2_(temperature, pv);
+            Scalar v1 = volumeRegion2_(temperature, pv + eps);
+            Scalar dv_dp = (v1 - v0)/eps;
+            /*
             Scalar pi = Region2::pi(pv);
             Scalar dp_dpi = Region2::dp_dpi(pv);
             Scalar dgamma_dpi = Region2::dgamma_dpi(temperature, pv);
             Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
-            
+
             Scalar RT = R*temperature;
             Scalar dv_dp =
                 RT/(dp_dpi*pv)
                 *
                 (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
+            */
             
             // calculate the partial derivative of the density to the
             // pressure at vapor pressure
@@ -559,17 +583,24 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
+            const Scalar eps = pv*1e-8;
+            Scalar v0 = volumeRegion1_(temperature, pv);
+            Scalar v1 = volumeRegion1_(temperature, pv + eps);
+            Scalar dv_dp = (v1 - v0)/eps;
+
+            /*
             Scalar v0 = volumeRegion1_(temperature, pv);
             Scalar pi = Region1::pi(pv);
             Scalar dp_dpi = Region1::dp_dpi(pv);
             Scalar dgamma_dpi = Region1::dgamma_dpi(temperature, pv);
             Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
-            
+
             Scalar RT = R*temperature;
             Scalar dv_dp =
                 RT/(dp_dpi*pv)
                 *
                 (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
+            */
             
             // calculate the partial derivative of the density to the
             // pressure at vapor pressure
