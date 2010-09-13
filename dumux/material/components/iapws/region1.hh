@@ -95,6 +95,13 @@ public:
     static Scalar dpi_dp(Scalar pressure)
     { return 1.0 / 16.53e6; }
 
+    /*!
+     * \brief Returns the derivative of the pressure to the
+     *        reduced pressure for IAPWS region 1.
+     */
+    static Scalar dp_dpi(Scalar pressure)
+    { return 16.53e6; }
+
 
     /*!
      * \brief The gibbs free energy for IAPWS region 1 (i.e. liquid)
