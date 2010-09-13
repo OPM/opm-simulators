@@ -6,15 +6,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#if defined(COMPILING_FOR_MATLAB) && COMPILING_FOR_MATLAB
-#include <mex.h>
-#define MAT_SIZE_T mwSignedIndex
-#endif
-
-#ifndef MAT_SIZE_T
-#define MAT_SIZE_T int
-#endif
-
 #include "blas_lapack.h"
 #include "mimetic.h"
 
