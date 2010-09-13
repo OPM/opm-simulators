@@ -4,7 +4,7 @@ if BUILD_HANDBOOK
 
 #EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 
-DOCSOURCE = dumux-handbook.tex intro.tex navigation.html css.html
+DOCSOURCE = dumux-handbook.tex intro.tex propertysystem.tex navigation.html css.html
 
 MAINDOCS = dumux-handbook.dvi dumux-handbook.pdf dumux-handbook.ps
 

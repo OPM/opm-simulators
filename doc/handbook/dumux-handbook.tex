@@ -13,6 +13,7 @@
 \usepackage{psfrag}
 \usepackage{makeidx}
 \usepackage{graphicx}
+\usepackage{xspace}
 \usepackage[htt]{hyphenat}
 \usepackage{color}
 \usepackage{lscape}
@@ -22,7 +23,7 @@
 \DeclareGraphicsExtensions{.eps, .jpg}
 
 \newcommand{\Dune}{{\sf\bfseries DUNE}}
-\newcommand{\Dumux}{DuMu$^\text{x}$ }
+\newcommand{\Dumux}{DuMu$^\text{x}$\xspace}
 \newcommand{\doxyref}[3]{\textnormal{#1}}
 \newenvironment{CompactList}
 {\begin{list}{}{
@@ -57,6 +58,7 @@
 \theorembodyfont{\upshape}
 \theoremheaderfont{\sffamily\bfseries}
 \newtheorem{exc}{Exercise}[chapter]
+\newtheorem{example}[exc]{Example}
 \newtheorem{rem}[exc]{Remark}
 \newtheorem{lst}{Listing}
 \newtheorem{warn}[exc]{Warning}
@@ -103,6 +105,7 @@ Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
 
 \input{intro}
 \input{getting-started}
+\input{propertysystem}
 \input{tutorial}
 \input{structure}
 \input{models}

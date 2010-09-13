@@ -1,0 +1,252 @@
+\chapter{The \Dumux Property System}
+\label{sec:propertysytem}
+
+This chapter tries to give high-level understanding of the motivation
+for the \Dumux property system and how to use it. First, an
+introduction to polymorphism is given. After this, the fundamental
+motivation and the ideas behind the \Dumux property system are
+highlighted and the implementation is outlined from a high-level
+perspective. The chapter concludes with a simple example of how to use
+the \Dumux property system.
+
+\section{Polymorphism}
+
+In object oriented programming, it often happens that some
+functionality make sense for all classes in a hierarchy, but what
+actually need to be \textit{done} can be quite different. This
+observation gives rise to \textit{polymorphism}. In polymorphism, a
+call to an object's method \textit{means} the same thing, but how this
+method is \textit{implemented} is case specific\footnote{This
+  \textit{poly} of polymorphism: There are multiple ways to achieve
+  the same goal.}.
+
+In C++, there are two common approaches to polymorphism: The
+traditional -- i.e. non-template programming -- dynamic polymorphism,
+and static polymorphism which is made possible by template
+programming.
+
+\subsection*{Dynamic Polymorphism}
+
+To utilize \textit{dynamic polymorphism} in C++, the polymorphic
+methods are marked with the \texttt{virtual} keyword in the base
+class. Internally, the compiler realizes dynamic polymorphism by
+storing a pointer to a so-called \texttt{vtable} within each object of
+polymorphic classes. The \texttt{vtable} itself stores the entry point
+of each method which is declared virtual. If such a method is called
+on an object, the compiler generates code which retrieves the method's
+address from the object's \texttt{vtable} and then calls it. This
+explains why this mechanism is called \textbf{dynamic} polymorphism:
+the methods which are actually called are dynamically determined at
+run time.
+
+\begin{example}
+  A class called \texttt{Car} could feature the methods
+  \texttt{gasUsage} which by default corrosponds to the current $CO_2$
+  emission goal of the European Union but can be overwritten by the
+  classes representing actual cars. Also, a method called
+  \texttt{fuelTankSize} makes sense for all cars, but since there is
+  no useful default, its \texttt{vtable} entry is set to $0$ in the
+  base class which tells the compiler that this method must
+  mandatorily be specified by all derived classes. Finally the method
+  \texttt{range} may calculate the expected remaining kilometers the
+  car can drive given a fill level of the fuel tank. Since the
+  \texttt{range} method can retrieve information it needs, it does not
+  need to be polymorphic.
+\begin{verbatim}
+// the base class
+class Car
+{public:
+  virtual double gasUsage() 
+  { return 4.5; };
+  virtual double fuelTankSize() = 0;
+  
+  double range(double fuelTankFillLevel) 
+  { return 100*fuelTankFillLevel*fuelTankSize()/gasUsage(); }
+}
+\end{verbatim}
+
+  Actual car models can now derived from the base class:
+\begin{verbatim}
+// a Mercedes S-class car
+class S : public Car
+{public:
+  virtual double gasUsage() { return 9.0; };
+  virtual double fuelTankSize() { return 65.0; };
+}
+
+// A VW Lupo
+class Lupo : public Car
+{public:
+  virtual double gasUsage() { return 2.99; };
+  virtual double fuelTankSize() { return 30.0; };
+}
+\end{verbatim}
+
+The \text{range} method called on the base class yields correct result
+for any car type:
+\begin{verbatim}
+void printMaxRange(Car &car)
+{ std::cout << "Maximum Range: " << car.range(1.00) << "\n"; }
+
+int main()
+{
+   Lupo lupo;
+   S s;
+   std::cout << "VW Lupo:"
+   std::cout << "Median range: " << lupo.range(0.50) << "\n";
+   printMaxRange(lupo);
+   std::cout << "Mercedes S-Class:"
+   std::cout << "Median range: " << s.range(0.50) << "\n";
+   printMaxRange(s);
+   return 0;
+}
+\end{verbatim}
+
+For both types of cars, \texttt{Lupo} and \texttt{S} the
+\texttt{printMaxRange} function works as expected, yielding
+$1003.3\;\mathrm{km}$ for the Lupo and $722.2\;\mathrm{km}$ for the
+S-Class.
+\end{example}
+
+\begin{exc}
+What happens if \dots 
+\begin{itemize}
+\item \dots the \texttt{gasUsage} method is removed from the \texttt{Lupo} class?
+\item \dots the \texttt{virtual} qualifier is removed in front of the
+  \texttt{gasUsage} method in the base class?
+\item \dots the \texttt{fuelTankSize} method is removed from the \texttt{Lupo} class?
+\item \dots the \texttt{range} method in the \texttt{S} class is
+  overwritten?
+\end{itemize}
+\end{exc}
+
+\subsection*{Static Polymorphism}
+
+
+
+
+%  can be written by specifying types as
+% template parameters
+%   \item For complex software, the number of template arguments can get
+%     quite large
+%   \item If an additional template argument is required for a base
+%     class template, all derived classes must also be adapted
+%   \end{itemize}
+% \end{frame}
+
+% \begin{frame}
+%   \frametitle{Dynamic Polymorphism}
+
+%   If a class wants to make a callback to a derived class, the
+%   repective method can be declared {\tt virtual}. This has drawbacks:
+%   \begin{itemize}
+%   \item Overhead due to indirect function call
+%   \item No way for the compiler to inline the method
+%   \end{itemize}
+% \end{frame}
+
+% \begin{frame}[fragile]
+%   \frametitle{Static Polymorphism}
+
+%   Static polymorphism can be used if the type of the derived class is
+%   known at compile time:
+%   \begin{itemize}
+%   \item Additional template parameter {\tt Implementation} for the base class:
+% {\scriptsize
+% \begin{verbatim}
+% template <class Implementation>
+% class Base;
+% \end{verbatim}
+% }
+% \item A static cast to {\tt Implementation} is done before each call-back:
+% {\scriptsize
+% \begin{verbatim}
+% static_cast<Implementation*>(this)->callToImplementation();
+% \end{verbatim}
+% }
+%   \item Derived classes are specified like this:
+% {\scriptsize
+% \begin{verbatim}
+% class Derived : public Base<Derived> {};
+% \end{verbatim}
+% }
+% \end{itemize}
+
+% \end{frame}
+
+% \begin{frame}[fragile]
+%   \frametitle{Nested template arguments}
+
+%   One problem of static Polymorphism: 
+%   \begin{itemize}
+%   \item Template arguments often also require template parameters
+%   \item ``Implementation'' arguments are especially nasty:
+%     \begin{itemize}
+%     \item Assume a base class Base<A, B, Imp>
+%     \item Assume a class Derived<B> and that A is C< Derived<B> >
+%     \item To specify Derived:
+%     \end{itemize}
+%   \end{itemize}
+% {\scriptsize
+% \begin{verbatim}
+%     template <class B>
+%     class Derived : public Base< C<Derived<B> >, B, Derived<B> >
+% \end{verbatim}
+% }
+% \end{frame}
+
+% \begin{frame}[fragile]
+%   \frametitle{A real-world example}
+
+% {\scriptsize
+% \begin{verbatim}
+% template<class ProblemT, class BoxTraitsT, class TwoPTwoCTraitsT>
+% class TwoPTwoCBoxJacobian
+%   : public TwoPTwoCBoxJacobianBase<
+%               ProblemT, 
+%               BoxTraitsT,
+%               TwoPTwoCTraitsT,
+%               TwoPTwoCElementData<TwoPTwoCTraitsT,ProblemT>,
+%               TwoPTwoCVertexData<TwoPTwoCTraitsT,ProblemT>,
+%               TwoPTwoCFluxData<TwoPTwoCTraitsT,
+%                                ProblemT,
+%                                TwoPTwoCVertexData<TwoPTwoCTraitsT,
+%                                                   ProblemT> >,
+%               TwoPTwoCBoxJacobian<ProblemT,
+%                                   BoxTraitsT,
+%                                   TwoPTwoCTraitsT> >
+% {
+% // ...
+% }
+% \end{verbatim}
+% }
+% \end{frame}
+
+% \begin{frame}[fragile]
+%   \frametitle{Traits}
+  
+%   A possible solution is to specify a class which specifies the
+%   template parameters as type definitions (often called a Traits
+%   class): {\scriptsize
+% \begin{verbatim}
+% class Traits
+% { public:
+%   typedef int A;
+%   typedef C<A> B;
+% };
+
+% template <class Traits, class Implementation>
+% class Base {};
+
+% template <class Traits>
+% class Derived : public class Base<Traits, Derived<Traits>
+% {};
+% \end{verbatim}
+% }
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "dumux-handbook"
+%%% End: 
