@@ -237,7 +237,7 @@ partition_invert(int nc, const int *p, int *pi, int *inverse)
         pi[b]  = pi[0] - pi[b];
     }
 
-    /* Reverse insert bin elements whilst deriving start pointers */
+    /* Insert bin elements whilst deriving start pointers */
     for (i = 0; i < nc; i++) {
         inverse[ pi[ p[i] + 1 ] ++ ] = i;
     }
