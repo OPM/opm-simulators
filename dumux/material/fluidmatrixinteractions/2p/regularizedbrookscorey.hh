@@ -178,9 +178,15 @@ public:
     {
         if (Sw <= 0)
             return 0;
-        else if (Sw >= 1) {
-            Scalar m = BrooksCorey::dkrw_dSw(params, 1.0);
-            return 1 + m*(Sw - 1.0);
+        else if (Sw > 0)
+            return 1.0;
+        else if (Sw >= 1 - 0.01) {
+            Scalar m1 = BrooksCorey::dkrw_dSw(params, 1.0 - 0.01);
+            Scalar y1 = BrooksCorey::krw(params, 1.0 - 0.01);
+            Dumux::Spline<Scalar> sp(1 - 0.01, 1.0,
+                                     y1, 1.0,
+                                     m1, 0);
+            return sp.eval(Sw);
         }
 
         return BrooksCorey::krw(params, Sw);
@@ -198,9 +204,15 @@ public:
         if (Sw >= 1)
             return 0;
         // check if we need to regularize the relative permeability
-        else if (Sw <= 0) {
-            Scalar m = BrooksCorey::dkrn_dSw(params, 0);
-            return 1 + m*(Sw - 0);
+        else if (Sw <= 0)
+            return 1.0;
+        else if (Sw < 0.01) {
+            Scalar m1 = BrooksCorey::dkrn_dSw(params, 0.01);
+            Scalar y1 = BrooksCorey::krn(params, 0.01);
+            Dumux::Spline<Scalar> sp(0.0, 0.01,
+                                     1.0, y1,
+                                     0, m1);
+            return sp.eval(Sw);
         }
 
         return BrooksCorey::krn(params, Sw);
