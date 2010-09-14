@@ -14,6 +14,7 @@
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 
 
+/* [cidx{1:ndims}] = ind2sub(size, idx) */
 /* ---------------------------------------------------------------------- */
 static void
 partition_coord_idx(int ndims, int idx, const int *size, int *cidx)
@@ -30,6 +31,7 @@ partition_coord_idx(int ndims, int idx, const int *size, int *cidx)
 }
 
 
+/* sub2ind(size, cidx{1:ndims}) */
 /* ---------------------------------------------------------------------- */
 static int
 partition_lin_idx(int ndims, const int *size, const int *cidx)
@@ -70,6 +72,14 @@ partition_loadbal_lin_dist(int ndims, const int *size, const int *nbins,
 }
 
 
+/* Partition 'nc' fine-scale Cartesian indices 'idx' from a box of
+ * dimension 'fine_d' into a coarse-scale box of dimension 'coarse_d'.
+ *
+ * Store partition in vector 'p' (assumed to hold at least 'nc'
+ * slots).
+ *
+ * Allocates a tiny work array to hold 'ndims' ints.  Returns 'nc' if
+ * successful and -1 if unable to allocate the work array. */
 /* ---------------------------------------------------------------------- */
 int
 partition_unif_idx(int ndims, int nc,
@@ -101,6 +111,10 @@ partition_unif_idx(int ndims, int nc,
 }
 
 
+/* Renumber blocks to create contiguous block numbers from 0..n-1
+ * (in other words: remove empty coarse blocks).
+ *
+ * Returns maximum new block number if successful and -1 if not. */
 /* ---------------------------------------------------------------------- */
 int
 partition_compress(int n, int *p)
@@ -137,6 +151,7 @@ partition_compress(int n, int *p)
 }
 
 
+/* Free memory resources for block->cell map. */
 /* ---------------------------------------------------------------------- */
 void
 partition_deallocate_inverse(int *pi, int *inverse)
@@ -147,6 +162,11 @@ partition_deallocate_inverse(int *pi, int *inverse)
 }
 
 
+/* Allocate memory for block->cell map (CSR representation).  Highest
+ * block number is 'max_bin'.  Grid contains 'nc' cells.
+ *
+ * Returns 'nc' (and sets CSR pointer pair (*pi, *inverse)) if
+ * successful, -1 and pointers to NULL if not. */
 /* ---------------------------------------------------------------------- */
 int
 partition_allocate_inverse(int nc, int max_bin,
@@ -179,30 +199,6 @@ partition_allocate_inverse(int nc, int max_bin,
 
 
 /* ---------------------------------------------------------------------- */
-static void
-reverse_bins(int nbin, const int *pbin, int *elements)
-/* ---------------------------------------------------------------------- */
-{
-    int b, i, j, tmp;
-
-    for (b = 0; b < nbin; b++) {
-        i = pbin[b + 0] + 0;
-        j = pbin[b + 1] - 1;
-
-        while (i < j) {
-            /* Swap reverse (lower <-> upper) */
-            tmp         = elements[i];
-            elements[i] = elements[j];
-            elements[j] = tmp;
-
-            i += 1;             /* Increase lower bound */
-            j -= 1;             /* Decrease upper bound */
-        }
-    }
-}
-
-
-/* ---------------------------------------------------------------------- */
 static int
 max_block(int nc, const int *p)
 /* ---------------------------------------------------------------------- */
@@ -219,6 +215,8 @@ max_block(int nc, const int *p)
 }
 
 
+/* Invert cell->block mapping 'p' (partition vector) to create
+ * block->cell mapping (CSR representation, pointer pair (pi,inverse)). */
 /* ---------------------------------------------------------------------- */
 void
 partition_invert(int nc, const int *p, int *pi, int *inverse)
@@ -229,29 +227,29 @@ partition_invert(int nc, const int *p, int *pi, int *inverse)
     nbin = max_block(nc, p) + 1; /* Adjust for bin 0 */
 
     /* Zero start pointers */
-    for (b = 0; b < nbin; b++) { pi[b] = 0; }
+    memset(pi, 0, (nbin + 1) * sizeof *pi);
 
     /* Count elements per bin */
-    for (i = 0; i < nc  ; i++) { pi[ p[i] ]++; }
+    for (i = 0; i < nc; i++) { pi[ p[i] + 1 ]++; }
 
-    /* Derive start pointers for b=1:nbin (== ubound for b=0:nbin-1) */
-    for (b = 1; b < nbin; b++) { pi[b] += pi[b - 1]; }
-
-    /* Set end pointer in last bin */
-    assert (pi[nbin - 1] == nc);
-    pi[nbin] = nc;
+    for (b = 1; b < nbin; b++) {
+        pi[0] += pi[b];
+        pi[b]  = pi[0] - pi[b];
+    }
 
     /* Reverse insert bin elements whilst deriving start pointers */
     for (i = 0; i < nc; i++) {
-        inverse[-- pi[ p[i] ]] = i;
+        inverse[ pi[ p[i] + 1 ] ++ ] = i;
     }
-    assert (pi[0] == 0);
 
-    /* Reverse the reverse order, creating final inverse mapping */
-    reverse_bins(nbin, pi, inverse);
+    /* Assert basic sanity */
+    assert (pi[nbin] == nc);
+    pi[0] = 0;
 }
 
 
+/* Create local cell numbering, within the cell's block, for each
+ * global cell. */
 /* ---------------------------------------------------------------------- */
 void
 partition_localidx(int nbin, const int *pi, const int *inverse,
@@ -268,6 +266,8 @@ partition_localidx(int nbin, const int *pi, const int *inverse,
 }
 
 
+/* Release memory resources for internal cell-to-cell connectivity
+ * (CSR representation). */
 /* ---------------------------------------------------------------------- */
 static void
 partition_destroy_c2c(int *pc2c, int *c2c)
@@ -277,6 +277,16 @@ partition_destroy_c2c(int *pc2c, int *c2c)
 }
 
 
+/* Create symmetric cell-to-cell (internal) connectivity for domain
+ * containing 'nc' cells.  CSR representation (*pc2c,*c2c).
+ *
+ * Neighbourship 'neigh' is 2*nneigh array such that cell neigh[2*i+0]
+ * is connected to cell neigh[2*i+1] for all i=0:nneigh-1.
+ *
+ * Negative 'neigh' entries represent invalid cells (outside domain).
+ *
+ * Returns 'nc' (and sets pointer pair) if successful, 0 (and pointer
+ * pair to NULL) if not. */
 /* ---------------------------------------------------------------------- */
 static int
 partition_create_c2c(int nc, int nneigh, const int *neigh,
@@ -291,35 +301,33 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
         for (i = 0; i < nneigh; i++) {
             if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
                 /* Symmetric Laplace matrix (undirected graph) */
-                (*pc2c)[neigh[2*i + 0]]++;
-                (*pc2c)[neigh[2*i + 1]]++;
+                (*pc2c)[ neigh[2*i + 0] + 1 ] ++;
+                (*pc2c)[ neigh[2*i + 1] + 1 ] ++;
             }
         }
 
-        (*pc2c)[0] += 1;        /* Self connection */
-        for (i = 1; i < nc; i++) {
-            (*pc2c)[i] += (*pc2c)[i - 1];
+        for (i = 1; i <= nc; i++) {
             (*pc2c)[i] += 1;    /* Self connection */
-        }
-        (*pc2c)[nc] = (*pc2c)[nc - 1];
 
-        *c2c = malloc((*pc2c)[nc] * sizeof **c2c);
+            (*pc2c)[0] += (*pc2c)[i];
+            (*pc2c)[i]  = (*pc2c)[0] - (*pc2c)[i];
+        }
+
+        *c2c = malloc((*pc2c)[0] * sizeof **c2c);
 
         if (*c2c != NULL) {
             /* Self connections */
             for (i = 0; i < nc; i++) {
-                (*c2c)[-- (*pc2c)[i]] = i;
+                (*c2c)[ (*pc2c)[i + 1] ++ ] = i;
             }
 
             for (i = 0; i < nneigh; i++) {
                 if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
                     /* Symmetric Laplace matrix (undirected graph) */
-                    (*c2c)[-- (*pc2c)[neigh[2*i + 0]]] = neigh[2*i + 1];
-                    (*c2c)[-- (*pc2c)[neigh[2*i + 1]]] = neigh[2*i + 0];
+                    (*c2c)[(*pc2c)[neigh[2*i + 0] + 1] ++] = neigh[2*i + 1];
+                    (*c2c)[(*pc2c)[neigh[2*i + 1] + 1] ++] = neigh[2*i + 0];
                 }
             }
-
-            reverse_bins(nc, *pc2c, *c2c);
 
             ret = nc;
         } else {
@@ -338,6 +346,7 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
 }
 
 
+/* Release dfs() memory resources. */
 /* ---------------------------------------------------------------------- */
 static void
 deallocate_dfs_arrays(int *ia, int *ja, int *colour, int *work)
@@ -347,6 +356,10 @@ deallocate_dfs_arrays(int *ia, int *ja, int *colour, int *work)
 }
 
 
+/* Allocate dfs() memory resources to support graph containing 'n'
+ * nodes and (at most) 'nnz' total connections.  Return 'n' if
+ * successful (and set pointers) and 0 (and set pointers to NULL) if
+ * not. */
 /* ---------------------------------------------------------------------- */
 static int
 allocate_dfs_arrays(int n, int nnz,
@@ -378,6 +391,8 @@ allocate_dfs_arrays(int n, int nnz,
 }
 
 
+/* Compute maximum number of cells (*max_blk_cells) and cell-to-cell
+ * connections (*max_blk_conn) over all blocks. */
 /* ---------------------------------------------------------------------- */
 static void
 count_block_conns(int nblk,
@@ -404,6 +419,9 @@ count_block_conns(int nblk,
 }
 
 
+/* Create block-internal (symmetric) connectivity graph (CSR
+ * representation ia,ja) for connected component labelling (used in
+ * splitting disconnected blocks). */
 /* ---------------------------------------------------------------------- */
 static void
 create_block_conns(int        b   ,
@@ -427,13 +445,17 @@ create_block_conns(int        b   ,
         for (j = pc2c[c]; j < pc2c[c + 1]; j++) {
             if (p[c2c[j]] == b) {
                 /* Connection internal to block 'b'.  Add */
-                ia[loc[c]] ++;
+                ia[loc[c] + 1] ++;
             }
         }
     }
 
-    assert (ia[nc] == 0);
-    for (i = 1; i <= nc; i++) { ia[i] += ia[i - 1]; }
+    assert (ia[0] == 0);
+
+    for (i = 1; i <= nc; i++) {
+        ia[0] += ia[i];
+        ia[i]  = ia[0] - ia[i];
+    }
 
     for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
         c = b2c[i];
@@ -441,16 +463,26 @@ create_block_conns(int        b   ,
         /* Create connections (self conn automatic) */
         for (j = pc2c[c]; j < pc2c[c + 1]; j++) {
             if (p[c2c[j]] == b) {
-                ja[-- ia[loc[c]]] = loc[c2c[j]];
+                ja[ ia[loc[c] + 1] ++ ] = loc[c2c[j]];
             }
         }
     }
-    assert (ia[0] == 0);
 
-    reverse_bins(nc, ia, ja);
+    assert (ia[nc] == nc);
+    ia[0] = 0;
 }
 
 
+/* Split disconnected coarse blocks.  Preserve block numbering where
+ * possible.
+ *
+ * Neighbourship definition 'neigh' is pointer to 2*nneigh array such
+ * that cell neigh[2*i+0] is connected to cell neigh[2*i+1] for all
+ * i=0:nneigh-1.  Negative entries in 'neigh' represent invalid cells
+ * (outside domain).
+ *
+ * Returns number of new blocks (0 if all blocks internally connected)
+ * if successful and -1 otherwise. */
 /* ---------------------------------------------------------------------- */
 int
 partition_split_disconnected(int nc, int nneigh, const int *neigh, int *p)
