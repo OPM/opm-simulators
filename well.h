@@ -28,4 +28,14 @@ typedef struct {
     WELL_CONNECTION_DATA
 } well_t;
 
+
+int
+allocate_cell_wells(int nc, well_t *W, int **cwpos, int **cwells);
+
+void
+deallocate_cell_wells(int *cvpos, int *cwells);
+
+void
+derive_cell_wells(int nc, well_t *W, int *cwpos, int *cwells);
+
 #endif
