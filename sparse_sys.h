@@ -3,6 +3,12 @@
 
 #include <stddef.h>
 
+#if defined(MATLAB_MEX_FILE) && MATLAB_MEX_FILE
+#include <mex.h>
+#undef  MAT_SIZE_T
+#define MAT_SIZE_T mwSignedIndex
+#endif
+
 #ifndef MAT_SIZE_T
 #define MAT_SIZE_T int
 #endif
