@@ -185,7 +185,6 @@ public:
         if (pressure < pv) {
             // the pressure is too low, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
-            Scalar tau = Region1::tau(temperature);
             Scalar dh_dp =
                 R*temperature*
                 Region1::tau(temperature)*
