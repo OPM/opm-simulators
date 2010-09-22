@@ -150,7 +150,7 @@ public:
             Scalar dh_dp =
                 R*temperature*
                 Region2::tau(temperature)*
-                Region2::dpi_dp(pv),
+                Region2::dpi_dp(pv)*
                 Region2::ddgamma_dtaudpi(temperature, pv);
 
             return
@@ -189,7 +189,7 @@ public:
             Scalar dh_dp =
                 R*temperature*
                 Region1::tau(temperature)*
-                Region1::dpi_dp(pv),
+                Region1::dpi_dp(pv)*
                 Region1::ddgamma_dtaudpi(temperature, pv);
 
             return
