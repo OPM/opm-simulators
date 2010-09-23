@@ -21,75 +21,68 @@ namely, by opening \texttt{doc/doxygen/html/index.html} with a web browser.
 \item \texttt{test}: tests for each numerical model and the property system. 
 See Section \ref{sec:test} for details. 
 \item \texttt{tutorial}: contains the tutorials described in Chapter \ref{chp:tutorial}. 
-\item \texttt{util}:   contains various auxiliary programs which are not
-directly related to the core \Dumux libraries like programs to generate
-tables for material laws, to fix the indentation of the source code,
-etc.
 \end{itemize}
 
 
 
 \section{The directory \texttt{dumux}}\label{sec:dumux}
 
-The directory \texttt{dumux} contains the \Dumux source files. It consists 
-of the following subdirectories: 
+The directory \texttt{dumux} contains the \Dumux source files. It consists of the following subdirectories (see Figure \ref{fig:dumux-structure}): 
+
 \begin{itemize} 
-\item \texttt{auxiliary}: 
-general stuff like the property system and the time management for the 
-fully coupled models. 
 
 \item \texttt{boxmodels}:
 the general fully implicit box method is contained in the subdirectory 
-\texttt{boxscheme}, while each of the other subdirectories contains 
-a derived specific numerical model. 
+\texttt{common}, while each of the other subdirectories contains 
+a derived specific numerical model. The subdirectory \texttt{common} also contains the file \texttt{boxfvelementgeometry.hh} employed by the box method to extract the dual mesh geometry information out of the primal one. The files \texttt{pdelabboxassembler.hh} and \texttt{pdelabboxlocaloperator.hh} allow the use of the DUNE module \texttt{dune-pdelab}. 
 
-\item \texttt{diffusion}: numerical models to solve the pressure equation 
-as part of the fractional flow formulation. The particular models are contained 
-in corresponding subdirectories, which are distinguished by the respectively employed 
-discretization scheme. 
+\item \texttt{common}:
+general stuff like the property system and the time management for the 
+fully coupled as well as the decoupled models, the interface for the Pardiso direct solver library,\cite{Pardiso}, and the \texttt{start.hh} file that includes the common routine for starting a model called in the main function. 
 
-\item \texttt{fractionalflow}:
-the (non-compositional) fractional flow model, which utilizes the IMPES method 
-contained in the subdirectory \texttt{impes}.
+\item \texttt{decoupled}:
+ numerical models to solve the pressure equation as part of the fractional flow formulation. The specific models are contained 
+ in corresponding subdirectories. In each model folder are subdirectories for the implicit pressure equation sorted by the employed discretization method, and for the explicit transport equation. The general decoupled formulation for the implicit pressure explicit transport formulation can be found in the subdirectory \texttt{common}.
 
-\item \texttt{functions}:
-the Crouzeix--Raviart function implemented in the style of \texttt{dune-disc}'s P1 function. 
+% \item \texttt{fractionalflow}:
+% the (non-compositional) fractional flow model, which utilizes the IMPES method 
+% contained in the subdirectory \texttt{impes}.
 
-\item \texttt{fvgeometry}:
-employed by the box method to extract the dual mesh geometry information out of the 
-primal one. 
+% \item \texttt{functions}:
+% the Crouzeix--Raviart function implemented in the style of \texttt{dune-disc}'s P1 function. 
 
-\item \texttt{io}: Additional in-/output possibilities like restart files 
+% \item \texttt{fvgeometry}:
+% employed by the box method to extract the dual mesh geometry information out of the 
+% primal one. 
+
+\item \texttt{io}: additional in-/output possibilities like restart files 
 and a VTKWriter extension. 
 
 \item \texttt{material}: everything related to material parameters and 
-constitutive equations. The base classes for matrix and fluid properties 
-can be found in \texttt{property\_baseclasses.hh}, while the base classes 
-for constitutive relations are in \texttt{twophaserelations.hh} and \texttt{multicomponentrelations.hh}.
-Derived particular properties and relations are contained in 
-\texttt{matrixproperties.hh} and in the subdirectories 
-\texttt{fluids} and \texttt{constrel}. 
+constitutive equations. The properties of a pure chemical substance (e.g. water) or pseudo substance (e.g. air) can be found in the subdirectory \texttt{components} with the base class \texttt{components/component.hh}. The fluidsytem in the folder \texttt{fluidsystems} collects the information from the respective component and binary coefficients files, and contains the fluid characteristics of phases (e.g. viscosity, density, enthalpy, diffusion coefficients) for compositional or non-compositional multi-phase flow. 
+
+The base class for all spatially dependend variables like permeability and porosity can be found in \texttt{spatialparameters}. The base class in \texttt{boxspatialparameters.hh} also provides spatial averaging routines. All other spatial properties are specified in the specific files of the respective models. Furthermoren, the constitutive relations are in \texttt{fluidmatrixinteractions}, while the necessary binary coefficients like the Henry coefficient or binary diffusion coefficients are definded in \texttt{binarycoefficients}.
 
 
 \item \texttt{nonlinear}: Newton's method.
 
 
-\item \texttt{operators}: based on \texttt{dune-disc}, assembly operators for Crouzeix--Raviart 
-elements and mimetic finite differences. 
-
-
-\item \texttt{pardiso}: interface to the Pardiso direct solver library, \cite{Pardiso}. 
-
-
-\item \texttt{shapefunctions}:  Crouzeix--Raviart element shape functions. 
-
-
-\item \texttt{timedisc}: time discretization for the decoupled models. 
-
-
-\item \texttt{transport}: numerical models to solve the pressure equation 
-as part of the fractional flow formulation analogous to the \texttt{diffusion} 
-directory. Moreover, the compositional decoupled models are included here. 
+% \item \texttt{operators}: based on \texttt{dune-disc}, assembly operators for Crouzeix--Raviart 
+% elements and mimetic finite differences. 
+% 
+% 
+% \item \texttt{pardiso}: interface to the Pardiso direct solver library, \cite{Pardiso}. 
+% 
+% 
+% \item \texttt{shapefunctions}:  Crouzeix--Raviart element shape functions. 
+% 
+% 
+% \item \texttt{timedisc}: time discretization for the decoupled models. 
+% 
+% 
+% \item \texttt{transport}: numerical models to solve the pressure equation 
+% as part of the fractional flow formulation analogous to the \texttt{diffusion} 
+% directory. Moreover, the compositional decoupled models are included here. 
 
 
 \end{itemize}
@@ -100,15 +93,25 @@ directory. Moreover, the compositional decoupled models are included here.
 
 
 The directory \texttt{test} contains a test for each numerical model and for 
-the property system. The subfolders \texttt{1p},  \texttt{1p2c},  \texttt{2p},  \texttt{2p2c},  
-\texttt{2p2cni},  \texttt{2pni},  and \texttt{richards} contain tests for the fully 
-coupled models, while \texttt{diffusion}, \texttt{fractionalflow}, and \texttt{transport} 
-correspond to the decoupled models. Each subdirectory 
-contains one or more program files \texttt{test\_*.cc}, where \texttt{*} usually is the 
+the property system. The tests for the property system and the pardiso solver can be found in \texttt{common}. 
+The subfolder \texttt{boxmodels} contains tests for the fully 
+coupled models (\texttt{1p},  \texttt{1p2c},  \texttt{2p},  \texttt{2p2c},  
+\texttt{2p2cni},  \texttt{2pni},  and \texttt{richards}), while the subdirectory \texttt{decoupled} corresponds to the decoupled models. 
+Each subdirectory contains one or more program files \texttt{test\_*.cc}, where \texttt{*} usually is the 
 name of the folder. Moreover, the problem definitions can be found 
-in the \texttt{*problem.hh} files. Simply executing the tests should either run the 
+in the \texttt{*problem.hh} files and the definition of the spatially dependend parameters in \texttt{*spatialparameters.hh}. Simply executing the tests should either run the 
 full test or give a list of required command line arguments. After test execution, 
 VTK output files should have been generated. 
 For more detailed descriptions of the tests, the problem definitions and their corresponding 
 Doxygen documentation should be considered. 
 
+\begin{landscape}
+\begin{figure}[hbt]
+  \centering 
+  \includegraphics[width=\linewidth, keepaspectratio]{EPS/dumux_strucutre_flowchart_horizontal_explained.eps}
+  \caption{
+    \label{fig:dumux-structure}
+    Structure of the directory \texttt{dumux} containing the \Dumux source files.
+  }
+\end{figure}
+\end{landscape}
