@@ -2,7 +2,7 @@
 
 \chapter{Newton in a Nutshell}
 
-When using a fully coupled numerical model, one timestep essentially consists of the applicaiotn of the \textsc{Newton} algorithm to solve the nonlinear system.
+When using a fully coupled numerical model, one timestep essentially consists of the application of the \textsc{Newton} algorithm to solve the nonlinear system.
 
 One step of the \textsc{Newton} method can be formalized as follows:
 
@@ -30,7 +30,7 @@ One step of the \textsc{Newton} method can be formalized as follows:
 \end{equation}
 The value of u (generally a vector of unknowns) for which f becomes zero is searched for. Therefore the quantity of interest is $\textbf{u}^{r+1}$.
 
-But the (BiCGSTAB / Pardiso ...-)linear solver solves systems of the form:
+But the (BiCGSTAB / Pardiso / ...) linear solver solves systems of the form:
 \begin{equation}
 \label{GenSysEq}
  A\textbf{x} = \textbf{b} .
@@ -43,6 +43,6 @@ Comparing (\ref{GenSysEq}) with (\ref{NewtonAsUsed}) leads to:
 \item $\textbf{x} = (\textbf{u}^{r+1} - \textbf{u}^{r})$ this is what the linear solver finds as an solution. 
 \end{itemize}
 
-This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more iteration.
+This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more \textsc{Newton-}iteration (not confuse with timestep!).
 
 In the rest of Dumux (everywhere besides in the solver), not the change of the solution is looked for, but the actual solution is used. Therefore the outcome of the linear solver needs to be reformulated as done in \verb+updateMethod.update(*this, u, *uOld, model);+. In this function the ``change in solution'' is changed to ``solution''. Afterwards the quantity \verb+*u+ stands for the solution.

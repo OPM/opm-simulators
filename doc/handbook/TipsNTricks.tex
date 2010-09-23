@@ -1,0 +1,90 @@
+\chapter{Tips \& Tricks}
+This chapter tries to be a useful collection of tips and tricks that can be handy when working with 
+\Dumux. One of the most prominent ideas for developing DUNE/\Dumux is that reinventing the wheel in terms of FEM-code should
+be avoided.  We try to follow this idea also in the day-to-day work by stating the \emph{tell us dogma}: "If you found something useful, 
+handy or for other reasons helping when working with \Dumux: put it into this chapter." (or at least write it to the mailing list \\ \verb+dumux@iws.uni-stuttgart.de so somebody else can+). 
+\begin{itemize}
+ \item Using the \Dumux-Eclipse profile:
+
+Everybody using the same profile has the advantage of  resulting in less conflicts when different developing environments are used:
+\begin{itemize}
+ \item in eclipse open: \verb#window->preferences->C/C++->Code Style#
+  \item press the \verb+Import+ button
+  \item choose the file \verb+eclipse_profile.xml+ from your dumux-devel directory
+  \item make sure that that now DuMux is chosen in "select a profile"
+\end{itemize}
+
+\item Checking whether commit worked:
+
+\Dumux is developed with the help of svn (which is pronounced ``subversion'', see \\\verb+http://subversion.apache.org/pronunciation/index.html+). This means that at some point you will commit your new 
+and/or advanced features (hereafter called ``stuff'') to the repository. But maybe you forgot to commit this one and tiny change in one file you forgot about. 
+This may result in \Dumux not compiling any more on another person's computer after updating . How to prevent this?
+
+Simply check out DUNE/\Dumux twice. How is this helping? Now you can work in one version and after commiting you can simply update the pristine version and see whether it still works there, too. 
+This approach really helps keeping the bumps in the work-flow small.
+
+\item Using DUNE debug streams:
+
+  DUNE provides a helpful feature, for keeping your debug-output organized. 
+  In stead of juggling with a bazillion \verb+std::cout<<+ statements or keeping some debug-precompiler statements organized (which are generally and strongly discouraged see \ref{guidelines} ) in order not to get 
+  flooded away by your output DUNE gives you a nice tool: so called debug streams. 
+
+  These are streams (like \verb+cout+) but they can be switched on and off for the whole project. 
+  May be if you are really in the  dark you want to see all your debug information. Another time you may only want to be warned if something is going seriously wrong during a simulation. 
+  This can be achieved by setting the debug streams to desired values. There are 5 levels:
+\begin{verbatim}
+5 - grave
+4 - warning
+3 - info
+2 - verbose
+1 - very verbose
+\end{verbatim}
+Which are used as follows:
+
+\verb+Dune::dinfo << "here I am \n " ;+\\
+or \\
+\verb+Dune::dgrave  << "This value should not be reached \n " ;+ . \\
+The debug streams are switched on/off via  setting  \\
+\verb+#define DUNE_MINIMAL_DEBUG_LEVEL 4 + \\ 
+in \\
+\verb+dumux-devel/config.h+ \\
+to the desired value and recompiling your application. E.g. if the value is set to 4 the out put generated after \verb+Dune::dinfo+ will printed anywhere. 
+
+ \item filename / line number predefined macro:
+
+If you want to  know where some output / debug information came from, you can use the predefined macros \verb+__FILE__+ and \verb+__LINE__+ 
+which are used like            
+
+\verb+ dataFile << "# This was written from "<< __FILE__ << ", line " <<__LINE__ << "\n";+
+
+which translates into a line in the output file reading 
+
+\verb+# This was written from [..]/DUMUX_kila/dumux/dumux/io/outputToFile.hh, line 261+
+
+This can also be very useful, if you want to have information about where some warning / debug information was issued. 
+
+\item optim.opts / debug.opts
+
+As explained on page \pageref{buildIt} DUNE and \Dumux are built with the help of the \verb+dunecontrol+ buildsystem. 
+A lot of options need to be specified for that, which is done in the \verb+debug.opts+ resp. \verb+optim.opts+ 
+(plus \verb+.suse11.2+ if applicable) in your \verb+dumux-devel+ directory. These two files differ in the way DUNE / \Dumux is compiled: either for debugging or for fast simulation. Switching between these two states is really 
+worth it: speedup of factor $\approx 2$. 
+
+If you want your \Dumux fast than simply build dunecontrol with the \verb+optim.opts+. BUT: Programs that are compiled with optimization can hardly 
+be debugged because the debugger gets confused. But the cool thing is, that you do NOT need to run dunecontrol if you want to start debugging. You can simply remove the optimization options from your application's Makefile:
+\begin{itemize}
+\item open your application's Makefile with the text editor of your choice
+\item find the line including \verb+CXXFLAGS = [...]+
+\item these are the options given to the C++ compiler
+\item add \verb+-g+ (debugging symbols)
+\item remove  \verb+-O3+ (third level optimization, i.e. do not care for anything but execution speed),  \verb+-march=native+ and \verb+-DNDEBUG+.
+\item build your application again. 
+\item as long as you only debug your application (and no DUNE stuff) this works, otherwise recompile with dunecontrol and \verb+debug.opts+
+\item compiling without optimization takes also shorter time
+\end{itemize}
+
+(The other possibility is to run dunecontrol with \verb+debug.opts+ and afterwards adding \verb+-O3+ into your application Makefile. The performance  penalty does not make a big difference and so do the other options besides \verb+-O3+.)
+
+Debugging with the optimization options  active will lead to erratic beviour while debugging. 
+\end{itemize}
+
