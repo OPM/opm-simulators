@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(MATLAB_MEX_FILE) && MATLAB_MEX_FILE
 #include <mex.h>
 #undef  MAT_SIZE_T
@@ -45,5 +49,9 @@ csrmatrix_delete(struct CSRMatrix *A);
 
 void
 csrmatrix_zero(struct CSRMatrix *A);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* SPARSE_SYS_H_INCLUDED */

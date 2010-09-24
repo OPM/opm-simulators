@@ -1,6 +1,11 @@
 #ifndef WELL_H_INCLUDED
 #define WELL_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 enum well_type    { INJECTOR, PRODUCER };
 enum well_control { BHP     , RATE     };
 
@@ -25,4 +30,9 @@ deallocate_cell_wells(int *cvpos, int *cwells);
 void
 derive_cell_wells(int nc, well_t *W, int *cwpos, int *cwells);
 
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* WELL_H_INCLUDED */
