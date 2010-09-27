@@ -62,8 +62,48 @@ by \texttt{localhost}.
 %\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-subgrid/trunk dune-subgrid}
 %\end{itemize} 
 
+\paragraph{Installation on a not-IWS PC}
+If \Dumux is not to be used on a PC maintained by LH$^2$ it is probable that one needs to install additional software. 
+Here is a (hopefully complete) list of packages that needed to  be installed on a fresh ubuntu 10.04 in order to get \verb+dunecontrol+ running.
+\begin{itemize}
+  \item build-essential
+  \item openmpi-common / openmpi-bin ...
+  \item gfortran
+  \item libtool
+  \item libboost-all-dev
+  \item bison
+  \item flex
+  \item gcc-4.3 (hard coded into installExternal.sh)
+  \item blas ???
+  \item pardiso
+\end{itemize}
+
+
 \paragraph{Build the external modules} 
 If you obtained a \Dumux tarball, you should skip this part. 
+
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+
+{\it
+
+  This  part needs to be extended in order to show which package is necessary for what purpose, 
+  so the user can decide whether getting all the grmblDamnItDamnbndfjk 
+  moduls working is worth it! \\
+
+  So could somebody please write something about the respective external modules!\\ 
+
+Also, the gcc version 4.3 is hard coded into the skript. }
+
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+\begin{turn}{45}\textbf{Attenschion}\end{turn}
+
 The external modules have to be built first. They consist of Alberta, ALUGrid, UG, and METIS.
 To install them all, execute the install script in the folder \texttt{external}:
 \begin{center}
