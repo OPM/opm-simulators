@@ -5,6 +5,9 @@
 #ifndef MIMETIC_H_INCLUDED
 #define MIMETIC_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void mim_ip_span_nullspace(int nf, int nconn, int d,
                            double *C,
@@ -29,5 +32,9 @@ void mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
                        int *fneighbour, double *fcentroid, double *fnormal,
                        double *farea, double *ccentroid, double *cvol,
                        double *perm, double *Binv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MIMETIC_H_INCLUDED */
