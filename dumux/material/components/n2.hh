@@ -16,6 +16,8 @@
 /*!
  * \file
  *
+ * \ingroup Components
+ *
  * \brief Properties of pure molecular nitrogen \f$N_2\f$.
  */
 #ifndef DUMUX_N2_HH
@@ -31,7 +33,11 @@ namespace Dumux
 {
 
 /*!
+ * \ingroup Components
+ *
  * \brief Properties of pure molecular nitrogen \f$N_2\f$.
+ *
+ * \tparam Scalar The type used for scalar values
  */
 template <class Scalar>
 class N2 : public Component<Scalar, N2<Scalar> >
@@ -80,6 +86,8 @@ public:
      * \brief The vapor pressure in [Pa] of pure molecular nitrogen
      *        at a given temperature.
      *
+     *\param T temperature of component
+     *
      * Taken from:
      *
      * R. Span, E.W. Lemmon, et al.: "A Reference Equation of State
@@ -114,6 +122,9 @@ public:
 
     /*!
      * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -121,8 +132,11 @@ public:
         return IdealGas::density(molarMass(), temperature, pressure);
     }
 
-    /*
+    /*!
      * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -132,19 +146,28 @@ public:
 
     /*!
      * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for N2"); }
 
-    /*
+    /*!
      * \brief The pressure of liquid nitrogen at a given density and
      *        temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for N2"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     *
+     * \param T temperature of component
+     * \param pressure pressure of component
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
@@ -173,12 +196,18 @@ public:
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for N2"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -191,12 +220,18 @@ public:
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of N2"); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -229,6 +264,9 @@ public:
 
     /*!
      * \brief The dynamic liquid viscosity [N/m^3*s] of pure N2.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for N2"); }

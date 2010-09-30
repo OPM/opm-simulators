@@ -16,6 +16,8 @@
 /*!
  * \file
  *
+ * \ingroup Components
+ *
  * \brief Material properties of pure water \f$H_2O\f$.
  */
 #ifndef DUMUX_H2O_HH
@@ -38,7 +40,11 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Components
+ *
  * \brief Material properties of pure water \f$H_2O\f$.
+ *
+ * \tparam Scalar The type used for scalar values
  *
  * See:
  *
@@ -83,7 +89,7 @@ public:
     { return Common::criticalPressure; }
 
     /*!
-     * \brief Returns the temperature [K]at water's triple point.
+     * \brief Returns the temperature [K] at water's triple point.
      */
     static Scalar tripleTemperature()
     { return Common::tripleTemperature; }
@@ -97,6 +103,8 @@ public:
     /*!
      * \brief The vapor pressure in [N/m^2] of pure water
      *        at a given temperature.
+     *
+     *\param T temperature of component
      *
      * See:
      *
@@ -116,6 +124,9 @@ public:
 
     /*!
      * \brief Specific enthalpy of water steam [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -164,6 +175,9 @@ public:
     /*!
      * \brief Specific enthalpy of liquid water [J/kg].
      *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -202,6 +216,9 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of water steam [J/kg].
      *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -234,6 +251,9 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of liquid water [J/kg].
      *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -263,6 +283,9 @@ public:
 
     /*!
      * \brief Specific internal energy of liquid water [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -317,6 +340,9 @@ public:
 
     /*!
      * \brief Specific internal energy of steam and water vapor [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -388,6 +414,9 @@ public:
     /*!
      * \brief Specific isochoric heat capacity of liquid water [J/kg].
      *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -419,6 +448,9 @@ public:
     /*!
      * \brief Specific isochoric heat capacity of steam and water vapor [J/kg].
      *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -449,6 +481,9 @@ public:
 
     /*!
      * \brief The density of steam at a given pressure and temperature [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -519,6 +554,9 @@ public:
     /*!
      * \brief The pressure of steam at a given density and temperature [Pa].
      *
+     * \param temperature temperature of component
+     * \param density of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -558,6 +596,9 @@ public:
 
     /*!
      * \brief The density of pure water at a given pressure and temperature [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -616,6 +657,9 @@ public:
      * \brief The pressure of liquid water at a given density and
      *        temperature [Pa].
      *
+     * \param temperature temperature of component
+     * \param density density of component
+     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
@@ -650,6 +694,9 @@ public:
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of steam.
      *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * This method is only valid if pressure is below or at the vapour
      * pressure of water.
      *
@@ -673,6 +720,9 @@ public:
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure water.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *

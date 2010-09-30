@@ -15,6 +15,8 @@
 /*!
  * \file
  *
+ * \ingroup Components
+ *
  * \brief Properties of pure molecular oxygen \f$O_2\f$.
  */
 #ifndef DUMUX_O2_HH
@@ -30,7 +32,11 @@ namespace Dumux
 {
 
 /*!
+ * \ingroup Components
+ *
  * \brief Properties of pure molecular oxygen \f$O_2\f$.
+ *
+ * \tparam Scalar The type used for scalar values
  */
 template <class Scalar>
 class O2 : public Component<Scalar, O2<Scalar> >
@@ -52,25 +58,25 @@ public:
     { return 32e-3; }
 
     /*!
-     * \brief Returns the critical temperature of molecular oxygen
+     * \brief Returns the critical temperature in [K] of molecular oxygen.
      */
     static Scalar criticalTemperature()
     { return 154.581; /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure of molecular oxygen
+     * \brief Returns the critical pressure in [Pa] of molecular oxygen.
      */
     static Scalar criticalPressure()
     { return 5.0804e6; /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature at molecular oxygen's triple point.
+     * \brief Returns the temperature in [K] at molecular oxygen's triple point.
      */
     static Scalar tripleTemperature()
     { return 54.359; /* [K] */ }
 
     /*!
-     * \brief Returns the pressure at molecular oxygen's triple point.
+     * \brief Returns the pressure in [Pa] at molecular oxygen's triple point.
      */
     static Scalar triplePressure()
     { return 148.0; /* [N/m^2] */ }
@@ -78,6 +84,8 @@ public:
     /*!
      * \brief The vapor pressure in [N/m^2] of pure molecular oxygen
      *        at a given temperature.
+     *
+     * \param T temperature of component
      *
      * Taken from:
      *
@@ -111,7 +119,10 @@ public:
     }
 
     /*!
-     * \brief The density of pure O2 at a given pressure and temperature.
+     * \brief The density in [kg/m^3] of pure O2 at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * \todo density liquid oxygen
      */
@@ -121,8 +132,11 @@ public:
         return IdealGas::density(molarMass(), temperature, pressure);
     }
 
-    /*
+    /*!
      * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -132,6 +146,9 @@ public:
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure oxygen gas.
+     *
+     * \param T temperature of component
+     * \param pressure pressure of component
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
@@ -160,25 +177,37 @@ public:
 
     /*!
      * \brief The density [kg/m^3] of gaseous O2 at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for O2"); }
 
-    /*
+    /*!
      * \brief The pressure of liquid oxygen at a given density and
      *        temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for O2"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid O2.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for O2"); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -211,6 +240,9 @@ public:
 
     /*!
      * \brief The dynamic liquid viscosity [N/m^3*s] of pure H2.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for O2"); }

@@ -16,6 +16,8 @@
 /*!
  * \file
  *
+ *\ingroup IAPWS
+ *
  * \brief Implements the equations for region 4 of the IAPWS '97 formulation.
  *
  * See:
@@ -36,7 +38,11 @@ namespace IAPWS
 {
 
 /*!
+ * \ingroup IAPWS
+ *
  * \brief Implements the equations for region 4 of the IAPWS '97 formulation.
+ *
+ * \tparam Scalar The type used for scalar values
  *
  * See:
  *
@@ -51,6 +57,8 @@ public:
     /*!
      * \brief Returns the saturation pressure of pure water at a given
      *        temperature.
+     *
+     *\param temperature temperature of component
      *
      * The saturation pressure is often also called vapor pressure.
      */

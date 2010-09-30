@@ -15,6 +15,8 @@
 /*!
  * \file
  *
+ * \ingroup Components
+ *
  * \brief Properties of methone (\f$CH_4\f$).
  */
 #ifndef DUMUX_CH4_HH
@@ -30,7 +32,11 @@ namespace Dumux
 {
 
 /*!
+ * \ingroup Components
+ *
  * \brief Properties of pure molecular methane \f$CH_4\f$.
+ *
+ * \tparam Scalar The type used for scalar values
  */
 template <class Scalar>
 class CH4 : public Component<Scalar, CH4<Scalar> >
@@ -78,6 +84,8 @@ public:
     /*!
      * \brief The vapor pressure in [Pa] of pure molecular methane
      *        at a given temperature.
+     *
+     *\param T temperature of component
      */
     static Scalar vaporPressure(Scalar T)
     { DUNE_THROW(Dune::NotImplemented, "vaporPressure for CH4"); }
@@ -85,6 +93,9 @@ public:
 
     /*!
      * \brief The density [kg/m^3] of CH4 gas at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -92,8 +103,11 @@ public:
         return IdealGas::density(molarMass(), temperature, pressure);
     }
 
-    /*
+    /*!
      * \brief The pressure of gaseous CH4 at a given density and temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -103,19 +117,28 @@ public:
 
     /*!
      * \brief The density [kg/m^3] of CH4 gas at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for CH4"); }
 
-    /*
+    /*!
      * \brief The pressure of liquid methane at a given density and
      *        temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for CH4"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure methane gas.
+     *
+     * \param T temperature of component
+     * \param pressure pressure of component
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 671
@@ -144,12 +167,18 @@ public:
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid CH4.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for CH4"); }
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure methane gas.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -162,12 +191,18 @@ public:
 
     /*!
      * \brief Specific enthalpy [J/kg] of pure liquid CH4.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of CH4"); }
 
     /*!
      * \brief The dynamic viscosity [Pa s] of CH4 at a given pressure and temperature.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      *
      * See:
      *
@@ -200,6 +235,9 @@ public:
 
     /*!
      * \brief The dynamic liquid viscosity [N/m^3*s] of pure CH4.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for CH4"); }

@@ -15,7 +15,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
+ * \ingroup Components
  * \brief Properties of pure water \f$H_2O\f$.
  */
 #ifndef DUMUX_UNIT_HH
@@ -27,7 +27,11 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Components
+ *
  * \brief Rough estimate for testing purposes of water.
+ *
+ * \tparam Scalar  The type used for scalar values
  */
 template <class Scalar>
 class Unit : public Component<Scalar, Unit<Scalar> >
@@ -43,6 +47,9 @@ public:
 
     /*!
      * \brief Rough estimate of the density of oil [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -51,6 +58,9 @@ public:
 
     /*!
      * \brief Rough estimate of the viscosity of oil kg/(ms).
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

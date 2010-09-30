@@ -16,6 +16,8 @@
 /*!
  * \file
  *
+ * \ingroup Components
+ *
  * \brief A class for the brine fluid properties
  */
 #ifndef DUMUX_BRINE_HH
@@ -29,7 +31,13 @@
 namespace Dumux
 {
 /*!
+ *
+ * \ingroup Components
+ *
  * \brief A class for the brine fluid properties
+ *
+ * \tparam Scalar The type used for scalar values
+ * \tparam H2O ???
  */
 template <class Scalar, class H2O>
 class Brine : public Component<Scalar, Brine<Scalar, H2O> >
@@ -70,7 +78,7 @@ public:
     { return H2O::criticalPressure(); /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature [K]at brine's triple point.
+     * \brief Returns the temperature [K] at brine's triple point.
      */
     static Scalar tripleTemperature()
     { return H2O::tripleTemperature(); /* [K] */ }
@@ -84,12 +92,18 @@ public:
     /*!
      * \brief The vapor pressure in [N/m^2] of pure brine
      *        at a given temperature.
+     *
+     * \param T temperature of component
+
      */
     static Scalar vaporPressure(Scalar T)
     { return H2O::vaporPressure(T); /* [N/m^2] */ }
 
     /*!
      * \brief Specific enthalpy of gaseous brine [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
@@ -97,6 +111,10 @@ public:
 
     /*!
      * \brief Specific enthalpy of liquid brine [J/kg].
+     *
+     * \param T temperature of component
+     * \param p pressure of component
+     *
      * Equations given in:    - Palliser & McKibbin 1997
      *                         - Michaelides 1981
      *                         - Daubert & Danner 1989
@@ -162,6 +180,9 @@ public:
 
     /*!
      * \brief Specific internal energy of steam [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -171,6 +192,9 @@ public:
 
     /*!
      * \brief Specific internal energy of liquid brine [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar liquidInternalEnergy(Scalar temperature,
                                              Scalar pressure)
@@ -182,12 +206,19 @@ public:
 
     /*!
      * \brief The density of steam at a given pressure and temperature [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     { return H2O::gasDensity(temperature, pressure); }
 
     /*!
      * \brief The density of pure brine at a given pressure and temperature [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * Equations given in:    - Batzle & Wang (1992)
      *                        - cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
      */
@@ -215,6 +246,9 @@ public:
 
     /*!
      * \brief The pressure of steam at a given density and temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density denstiy of component
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     { return H2O::gasPressure(temperature, density); }
@@ -222,6 +256,9 @@ public:
     /*!
      * \brief The pressure of liquid water at a given density and
      *        temperature [Pa].
+     *
+     * \param temperature temperature of component
+     * \param density density of component
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
@@ -250,12 +287,19 @@ public:
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of steam.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     { return H2O::gasViscosity(temperature, pressure); };
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure brine.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     *
      * Equation given in:    - Batzle & Wang (1992)
      *                         - cited by: Bachu & Adams (2002)
      *                           "Equations of State for basin geofluids"
@@ -274,6 +318,9 @@ public:
 };
 
 template <class Scalar, class H2O>
+/*!
+ * \brief Default value for the salinity of the brine.
+ */
 Scalar Brine<Scalar, H2O>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
 
 } // end namepace

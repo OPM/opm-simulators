@@ -15,7 +15,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
+ * \ingroup Components
  * \brief A much simpler (and thus potentially less buggy) version of
  *        pure water.
  */
@@ -29,7 +29,10 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Components
  * \brief A much simple component for an exemplary dense NAPL (TCE).
+ *
+ * \tparam Scalar The type used for scalar values
  */
 template <class Scalar>
 class SimpleDNAPL : public Component<Scalar, SimpleDNAPL<Scalar> >
@@ -52,7 +55,7 @@ public:
     };
 
     /*!
-     * \brief Returns the critical temperature [K] of TCE
+     * \brief Returns the critical temperature [K] of TCE.
      */
     static Scalar criticalTemperature()
     {
@@ -60,7 +63,7 @@ public:
     };
 
     /*!
-     * \brief Returns the critical pressure [Pa] of TCE
+     * \brief Returns the critical pressure [Pa] of TCE.
      */
     static Scalar criticalPressure()
     {
@@ -86,13 +89,18 @@ public:
     /*!
      * \brief The vapor pressure in [N/m^2] of pure TCE
      *        at a given temperature.
+     *
+     * \param T temperature of component
      */
     static Scalar vaporPressure(Scalar T)
     {
-        return 3900; // [Pa] (at 20°C)
+        return 3900; // [Pa] (at 20C)
     };
     /*!
      * \brief Specific enthalpy of TCE steam [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
@@ -102,6 +110,9 @@ public:
 
     /*!
      * \brief Specific enthalpy of liquid TCE [J/kg].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
@@ -111,6 +122,9 @@ public:
 
     /*!
      * \brief The density of steam at a given pressure and temperature [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -121,6 +135,9 @@ public:
 
     /*!
      * \brief The density of pure TCE at a given pressure and temperature [kg/m^3].
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -129,6 +146,10 @@ public:
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of steam.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
+     * \param regularize defines if the functions is regularized or not, set to true by default
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
     {
@@ -137,6 +158,9 @@ public:
 
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure TCE.
+     *
+     * \param temperature temperature of component
+     * \param pressure pressure of component
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

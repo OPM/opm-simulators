@@ -14,7 +14,13 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
+ * \ingroup Components
+ * \defgroup IAPWS
+ */
+/*!
  * \file
+ *
+ * \ingroup IAPWS
  *
  * \brief Implements relations common for all regions of the IAPWS '97
  *        formulation.
@@ -37,8 +43,12 @@ namespace IAPWS
 {
 
 /*!
+ *
+ *  \ingroup IAPWS
+ *
  * \brief Implements relations common for all regions of the IAPWS '97
  *        formulation.
+ * \tparam Scalar The type used for scalar values
  *
  * See:
  *
@@ -76,6 +86,9 @@ public:
      *
      * This relation is valid for all regions of the IAPWS '97
      * formulation.
+     *
+     * \param temperature temperature of component
+     * \param rho density of component
      *
      * See:
      *
