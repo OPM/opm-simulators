@@ -37,6 +37,38 @@ csrmatrix_new_count_nnz(size_t m)
 }
 
 
+/* Allocate CSR matrix, known nnz.  Allocation only.  Caller must
+ * build sparsity structure before using in global assembly.
+ *
+ * Returns fully allocated structure if successful and NULL otherwise. */
+/* ---------------------------------------------------------------------- */
+struct CSRMatrix *
+csrmatrix_new_known_nnz(size_t m, size_t nnz)
+/* ---------------------------------------------------------------------- */
+{
+    struct CSRMatrix *new;
+
+    new = malloc(1 * sizeof *new);
+
+    if (new != NULL) {
+        new->ia = malloc((m + 1) * sizeof *new->ia);
+        new->ja = malloc(nnz     * sizeof *new->ja);
+        new->sa = malloc(nnz     * sizeof *new->sa);
+
+        if ((new->ia == NULL) || (new->ja == NULL) || (new->sa == NULL)) {
+            csrmatrix_delete(new);
+            new = NULL;
+        } else {
+            new->m   = m;
+            new->n   = 0;
+            new->nnz = nnz;
+        }
+    }
+
+    return new;
+}
+
+
 /* ---------------------------------------------------------------------- */
 size_t
 csrmatrix_new_elms_pushback(struct CSRMatrix *A)

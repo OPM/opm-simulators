@@ -35,6 +35,9 @@ struct CSRMatrix
 struct CSRMatrix *
 csrmatrix_new_count_nnz(size_t m);
 
+struct CSRMatrix *
+csrmatrix_new_known_nnz(size_t m, size_t nnz);
+
 size_t
 csrmatrix_new_elms_pushback(struct CSRMatrix *A);
 
