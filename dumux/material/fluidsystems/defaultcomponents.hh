@@ -28,6 +28,7 @@
 #include <dumux/material/components/simpleco2.hh>
 #include <dumux/material/components/h2.hh>
 #include <dumux/material/components/o2.hh>
+#include <dumux/material/components/oil.hh>
 #include <dumux/material/components/n2.hh>
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/brine.hh>

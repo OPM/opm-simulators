@@ -26,6 +26,7 @@
 #include "gasphase.hh"
 
 #include <dune/common/exceptions.hh>
+#include "defaultcomponents.hh"
 
 #include <dumux/common/propertysystem.hh>
 
