@@ -15,9 +15,9 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
-#include "config.h"
+#include "config.h" /*@\label{tutorial-decoupled:include-begin}@*/
 
-#include "tutorialproblem_decoupled.hh"
+#include "tutorialproblem_decoupled.hh" /*@\label{tutorial-decoupled:include-problem-header}@*/
 
 #include <dune/grid/common/gridinfo.hh>
 
@@ -25,36 +25,37 @@
 #include <dune/common/mpihelper.hh>
 
 #include <iostream>
-#include <boost/format.hpp>
+#include <boost/format.hpp> /*@\label{tutorial-decoupled:include-end}@*/
 
 
-////////////////////////
-// the main function
-////////////////////////
+////////////////////////////////////////////
+// function to check the input parameters
+////////////////////////////////////////////
 void usage(const char *progname)
 {
     std::cout << boost::format("usage: %s [--restart restartTime] tEnd\n")%progname;
     exit(1);
 }
 
+////////////////////////
+// the main function
+////////////////////////
 int main(int argc, char** argv)
 {
     try {
-        typedef TTAG(TutorialProblemDecoupled) TypeTag;
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+        typedef TTAG(TutorialProblemDecoupled) TypeTag; /*@\label{tutorial-decoupled:set-type-tag}@*/
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;    /*@\label{tutorial-decoupled:retrieve-types-begin}@*/
         typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
         typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem;
-        typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition;
-
-        static const int dim = Grid::dimension;
+        typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition; /*@\label{tutorial-decoupled:retrieve-types-end}@*/
 
         // initialize MPI, finalize is done automatically on exit
-        Dune::MPIHelper::instance(argc, argv);
+        Dune::MPIHelper::instance(argc, argv);  /*@\label{tutorial-decoupled:init-mpi}@*/
 
         ////////////////////////////////////////////////////////////
         // parse the command line arguments
         ////////////////////////////////////////////////////////////
-        if (argc < 2)
+        if (argc < 2)   /*@\label{tutorial-decoupled:parse-args-begin}@*/
             usage(argv[0]);
 
         // deal with the restart stuff
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
 
             std::istringstream(argv[argPos++]) >> restartTime;
         }
-
+        // output in case of wrong numbers of input parameters
         if (argc - argPos != 1) {
             usage(argv[0]);
         }
@@ -75,29 +76,26 @@ int main(int argc, char** argv)
         // read the initial time step and the end time
         double tEnd, dt;
         std::istringstream(argv[argPos++]) >> tEnd;
-        dt = tEnd;
+        dt = tEnd;  /*@\label{tutorial-decoupled:parse-args-end}@*/
 
-        ////////////////////////////////////////////////////////////
         // create the grid
-        ////////////////////////////////////////////////////////////
-        Dune::FieldVector<int,dim> N(1); N[0] = 100;
-        Dune::FieldVector<double ,dim> L(0);
-        Dune::FieldVector<double,dim> H(60); H[0] = 300;
-        Grid grid(N,L,H);
+        Grid *gridPtr = GET_PROP(TypeTag, PTAG(Grid))::create(); /*@\label{tutorial-decoupled:create-grid}@*/
+
 
         ////////////////////////////////////////////////////////////
         // instantiate and run the concrete problem
         ////////////////////////////////////////////////////////////
 
-        Problem problem(grid.leafView(), L, H);
+        Problem problem(gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
 
         // load restart file if necessarry
-        if (restart)
+        if (restart)    /*@\label{tutorial-decoupled:restart}@*/
             problem.deserialize(restartTime);
 
+        // define simulation parameters
+        problem.timeManager().init(problem, 0, dt, tEnd, !restart); /*@\label{tutorial-decoupled:initTimeManager}@*/
         // run the simulation
-        problem.timeManager().init(problem, 0, dt, tEnd, !restart);
-        problem.timeManager().run();
+        problem.timeManager().run();    /*@\label{tutorial-decoupled:execute}@*/
         return 0;
     }
     catch (Dune::Exception &e) {

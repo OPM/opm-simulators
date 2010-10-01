@@ -25,9 +25,8 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/sgrid.hh>
 
-#include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/oil.hh>
-#include <dumux/material/fluidsystems/liquidphase.hh>
+// fluid properties
+#include <dumux/material/fluidsystems/2p_system.hh>
 
 #include <dumux/decoupled/2p/impes/impesproblem2p.hh>
 #include <dumux/decoupled/2p/diffusion/fv/fvvelocity2p.hh>
@@ -53,8 +52,21 @@ NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(DecoupledTwoP, Transport));
 // Set the grid type
 SET_PROP(TutorialProblemDecoupled, Grid)
 {
-    //    typedef Dune::YaspGrid<2> type;
     typedef Dune::SGrid<2, 2> type;
+    static type *create() /*@\label{tutorial-coupled:create-grid-method}@*/
+    {
+        typedef typename type::ctype ctype;
+        Dune::FieldVector<int, 2> cellRes;
+        Dune::FieldVector<ctype, 2> lowerLeft(0.0);
+        Dune::FieldVector<ctype, 2> upperRight;
+        upperRight[0] = 300;
+        upperRight[1] = 60;
+        cellRes[0] = 100;
+        cellRes[1] = 1;
+        return new Dune::SGrid<2,2>(cellRes,
+                                    lowerLeft,
+                                    upperRight);
+    } /*@\label{tutorial-decoupled:grid-end}@*/
 };
 
 // Set the problem property
@@ -65,7 +77,7 @@ public:
 };
 
 // Set the model properties
-SET_PROP(TutorialProblemDecoupled, SaturationModel)
+SET_PROP(TutorialProblemDecoupled, TransportModel)
 {
     typedef Dumux::FVSaturation2P<TTAG(TutorialProblemDecoupled)> type;
 };
@@ -151,7 +163,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDe
     typedef Dune::FieldVector<Scalar, dim> LocalPosition;
 
 public:
-    TutorialProblemDecoupled(const GridView &gridView, const GlobalPosition lowerLeft = 0, const GlobalPosition upperRight = 0) :
+    TutorialProblemDecoupled(const GridView &gridView, const GlobalPosition lowerLeft = GlobalPosition(0.), const GlobalPosition upperRight = GlobalPosition(0.)) :
         ParentType(gridView), lowerLeft_(lowerLeft), upperRight_(upperRight)
     {
     }
