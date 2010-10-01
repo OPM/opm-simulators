@@ -8,7 +8,7 @@ The process of solving a problem using \Dumux can be roughly divided into four p
  \item A suitable model has to be chosen.
 \end{enumerate}
 
-The problem which is solved in this tutorial is illustrated in figure \ref{tutorial-decoupled:problemfigure}. A rectangular domain with now flow boundaries on the top and at the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects as well as capillarity effects are neglected.
+The problem which is solved in this tutorial is illustrated in figure \ref{tutorial-decoupled:problemfigure}. A rectangular domain with now flow boundaries on the top and at the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects as well as are neglected.
 
 \begin{figure}[h]
 \psfrag{x}{x}
@@ -27,12 +27,68 @@ The problem which is solved in this tutorial is illustrated in figure \ref{tutor
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-decoupled:problemfigure}
 \end{figure}
 
-Listing \ref{tutorial-deoucpled:mainfile} shows how the main file, which has to be executed, has to be set up, if the problem described above is to be solved using a decoupled model. This main file can be found in the directory \texttt{/tutorial}.
+Listing \ref{tutorial-deoucpled:mainfile} shows how the main file, which has to be executed, has to be set up, if the problem described above is to be solved using a decoupled model. This main file can be found in the directory \texttt{/tutorial} of the stable part of \Dumux.
 
 \begin{lst}[File tutorial/tutorial\_decoupled.cc]\label{tutorial-deoucpled:mainfile} \mbox{}
 \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
 numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorial_decoupled.cc}
 \end{lst}
+
+First, from line \ref{tutorial-decoupled:include-begin} to line
+\ref{tutorial-decoupled:include-end} the Dune and \Dumux files containing
+essential functions and classes are included.
+
+At line \ref{tutorial-decoupled:set-type-tag} the type tag of the
+problem which is going to be simulated is set. All other data types
+can be retrieved by the \Dumux property system and only depend on this
+single type tag. Retrieving them is done between line
+\ref{tutorial-decoupled:retrieve-types-begin} and
+\ref{tutorial-decoupled:retrieve-types-end}. For an introduction to the
+property system, see section \ref{sec:propertysytem}.
+
+The first thing which should be done at run time is to initialize the
+message passing interface using DUNE's \texttt{MPIHelper} class. Line
+\ref{tutorial-decoupled:init-mpi} line is essential if the simulation is
+intended to be run on more than one processor at the same time. Next,
+the command line arguments are parsed starting at line
+\ref{tutorial-decoupled:parse-args-begin} until line
+\ref{tutorial-decoupled:parse-args-end}. In this case, we check if and
+at which time a previous run of the simulation should be restarted, and we
+parse the time when the simulation ends. As the maximum time-step in the 
+sequential model is strictly bound by a CFL-criterion, the first time-step
+size is initialized with the simulation time.
+
+After this, a grid is created on line \ref{tutorial-decoupled:create-grid} 
+and the problem is instantiated with information about the grid
+(via its leaf grid view) on line \ref{tutorial-coupled:instantiate-problem}.
+If demanded, on line \ref{tutorial-coupled:restart} a state written to
+disk by a previous simulation run is restored on request by the user.
+Finally, the time manager controlling the simulation run is instantiated 
+with the start parameters in line \ref{tutorial-coupled:initTimeManager}
+and the simulation proceedure is started by the time manager at line
+\ref{tutorial-coupled:execute}.
+
+
+
+\subsection{The problem class} \label{decoupled_problem}
+
+From line \ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end}, 
+the geometry is defined and the grid is generated. The three variables of 
+Type \texttt{Dune::FieldVector} define the lower left corner of the domain 
+(\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number 
+of cells in $x$ and $y$ direction (\texttt{N}), where the dimensions are 
+previously defined in line \ref{tutorial-decoupled:dim}. The grid of type 
+\texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. 
+For more information about the dune grid interface, the different grid types 
+that are supported and the generation of different grids it is referred to 
+the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}.
+
+
+
+
+
+
+
 
 First, in line \ref{tutorial-decoupled:include-begin} to \ref{tutorial-decoupled:include-end} the Dune and the \Dumux files respectively which contain the functions and classes that are needed in the main loop are included into the main file.
 
