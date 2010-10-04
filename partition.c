@@ -232,7 +232,7 @@ partition_invert(int nc, const int *p, int *pi, int *inverse)
     /* Count elements per bin */
     for (i = 0; i < nc; i++) { pi[ p[i] + 1 ]++; }
 
-    for (b = 1; b < nbin; b++) {
+    for (b = 1; b <= nbin; b++) {
         pi[0] += pi[b];
         pi[b]  = pi[0] - pi[b];
     }
