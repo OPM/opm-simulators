@@ -23,8 +23,7 @@
 
 namespace Dumux
 {
-
-/** \todo Please doc me! */
+//! Definition of the spatial parameters for the decoupled tutorial
 
 template<class TypeTag>
 class TutorialSpatialParametersDecoupled
@@ -42,35 +41,40 @@ class TutorialSpatialParametersDecoupled
     typedef Dune::FieldVector<CoordScalar, dim> LocalPosition;
     typedef Dune::FieldMatrix<Scalar,dim,dim> FieldMatrix;
 
+    // material law typedefs
     typedef RegularizedBrooksCorey<Scalar>                RawMaterialLaw;
 //    typedef LinearMaterial<Scalar>                        RawMaterialLaw;
 public:
     typedef EffToAbsLaw<RawMaterialLaw>               MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
+    //! Update the spatial parameters with the flow solution after a timestep.
+    /*! Function left blank as there is nothing to do for the tutorial.
+     */
     void update (Scalar saturationW, const Element& element)
-    {
-
-    }
-
+    {    }
+    //! Intrinsic permeability tensor
+    /*! Apply the intrinsic permeability tensor \f$[m^2]\f$ to a
+     *  pressure potential gradient.
+     */
     const FieldMatrix& intrinsicPermeability (const GlobalPosition& globalPos, const Element& element) const
     {
             return K_;
     }
 
+    //! Define the porosity \f$[-]\f$ of the spatial parameters
     double porosity(const GlobalPosition& globalPos, const Element& element) const
     {
         return 0.2;
     }
 
-
-    // return the brooks-corey context depending on the position
+    //! return the material law context (i.e. BC, regularizedVG, etc) depending on the position
     const MaterialLawParams& materialLawParams(const GlobalPosition& globalPos, const Element &element) const
     {
             return materialLawParams_;
     }
 
-
+    //! Constructor
     TutorialSpatialParametersDecoupled(const GridView& gridView)
     : K_(0)
     {
