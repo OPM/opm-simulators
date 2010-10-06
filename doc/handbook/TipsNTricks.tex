@@ -85,6 +85,10 @@ be debugged because the debugger gets confused. But the cool thing is, that you 
 
 (The other possibility is to run dunecontrol with \verb+debug.opts+ and afterwards adding \verb+-O3+ into your application Makefile. The performance  penalty does not make a big difference and so do the other options besides \verb+-O3+.)
 
-Debugging with the optimization options  active will lead to erratic beviour while debugging. 
+Debugging with the optimization options active will lead to erratic beviour while debugging. 
+
+\item Faster build with dunecontrol:\\
+A complete build using \texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/debug.opts all} takes some time. If there were just small changes in the folder structure, it is usually sufficient to run dunecontrol with option \texttt{autogen} instead of \texttt{all}, and afterwards creating the makefiles with option \texttt{configure}.
+
 \end{itemize}
 

@@ -1,5 +1,4 @@
 \section[Decoupled model]{Solving a problem using a Decoupled Model}\label{tutorial-decoupled}
-
 The process of solving a problem using \Dumux can be roughly divided into four parts: 
 \begin{enumerate}
  \item The geometry of the problem and correspondingly a grid have to be defined.
@@ -8,7 +7,20 @@ The process of solving a problem using \Dumux can be roughly divided into four p
  \item A suitable model has to be chosen.
 \end{enumerate}
 
-The problem which is solved in this tutorial is illustrated in figure \ref{tutorial-decoupled:problemfigure}. A rectangular domain with now flow boundaries on the top and at the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects as well as are neglected.
+In contrast to the last section, we now apply a decoupled solution procedure, a
+so-called \textit{IMPET} (\textit{IM}plicit \textit{P}ressure \textit{E}xplicit 
+\textit{T}ransport) algorithm. This means that the pressure equation is first 
+solved using an implicit method. The resulting velocities are then used to solve
+a transport equation explicitly.\\
+In this tutorial, pure fluid phases are solved with a finite volume discretization
+of both pressure- and transport step. Primary variables, according to default
+settings of the model, are the pressure and the saturation of the wetting phase.
+
+The problem which is solved in this tutorial is illustrated in figure 
+\ref{tutorial-decoupled:problemfigure}. A rectangular domain with now flow 
+boundaries on the top and at the bottom, which is initially saturated with oil, 
+is considered. Water infiltrates from the left side into the domain. Gravity 
+effects are neglected.
 
 \begin{figure}[h]
 \psfrag{x}{x}
@@ -60,162 +72,159 @@ size is initialized with the simulation time.
 
 After this, a grid is created on line \ref{tutorial-decoupled:create-grid} 
 and the problem is instantiated with information about the grid
-(via its leaf grid view) on line \ref{tutorial-coupled:instantiate-problem}.
-If demanded, on line \ref{tutorial-coupled:restart} a state written to
+(via its leaf grid view) on line \ref{tutorial-decoupled:instantiate-problem}.
+If demanded, on line \ref{tutorial-decoupled:restart} a state written to
 disk by a previous simulation run is restored on request by the user.
 Finally, the time manager controlling the simulation run is instantiated 
-with the start parameters in line \ref{tutorial-coupled:initTimeManager}
+with the start parameters in line \ref{tutorial-decoupled:initTimeManager}
 and the simulation proceedure is started by the time manager at line
-\ref{tutorial-coupled:execute}.
+\ref{tutorial-decoupled:execute}.
 
 
 
 \subsection{The problem class} \label{decoupled_problem}
 
-From line \ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end}, 
+When solving a problem using \Dumux, the most important file is the
+so-called \textit{problem file} as shown in listing
+\ref{tutorial-decoupled:problemfile} of
+\texttt{tutorialproblem\_decoupled.hh}.
+
+\begin{lst}[File tutorial/tutorialproblem\_decoupled.hh]\label{tutorial-decoupled:problemfile} \mbox{}
+\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
+numberstyle=\tiny, numbersep=5pt, firstline=17]{../../tutorial/tutorialproblem_decoupled.hh}
+\end{lst}
+
+First, both \Dune  grid handlers and the decoupled model of \Dumux 
+have to be included. Then, a new type tag is created for the problem 
+on line \ref{tutorial-decoupled:create-type-tag}.  In this case, the 
+new type tag inherits all properties defined for the \texttt{DecoupledTwoP} 
+type tag, which means that for this problem the two-phase decoupled approach
+is chosen as discretization scheme (defined via the include in line 
+\label{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
+a problem class is attached to the new type tag, while the grid which
+is going to be used is defined on line \ref{tutorial-decoupled:set-grid} --
+in this case it's \texttt{SGrid}.  Since in Dune, there's no uniform
+mechanism to allocate grids, the \texttt{Grid} property also contains
+a static \texttt{create()} method which provides just that: From line 
+\ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end}, 
 the geometry is defined and the grid is generated. The three variables of 
 Type \texttt{Dune::FieldVector} define the lower left corner of the domain 
 (\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number 
-of cells in $x$ and $y$ direction (\texttt{N}), where the dimensions are 
-previously defined in line \ref{tutorial-decoupled:dim}. The grid of type 
+of cells in $x$ and $y$ direction (\texttt{N}). The grid of type 
 \texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. 
 For more information about the dune grid interface, the different grid types 
 that are supported and the generation of different grids it is referred to 
-the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}.
+the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}. 
 
+Next, we select the the material of the simulation: As in the thwo-phase
+model, each phase is a pure fluid, the complex (compositional) fluidsystems
+do not need to be used. However, they can be used (see exercise XXXX). 
+Instead, we use a simplified fluidsystem container that provides classes 
+for liquid and gas phases, line \ref{tutorial-decoupled:2p-system-start} to 
+\ref{tutorial-decoupled:2p-system-end}. These are linked to the appropriate 
+chemical species in line \ref{tutorial-decoupled:wettingPhase} and 
+\ref{tutorial-decoupled:nonwettingPhase}. For all parameters that depend 
+on space, such as the properties of the soil, the specific spatial parameters 
+for the problem of interest are specified in line
+\ref{tutorial-decoupled:set-spatialparameters}. 
 
+Now we arrive at some model parameters of the applied two-phase decoupled 
+model. Line \ref{tutorial-decoupled:velocityFormulation} defines that the 
+wetting phase velocity rather than e.g. a total velocity is used for the 
+transport system. As we regard capillary pressure, a capillary diffusive 
+term is regarded, selected in line \ref{tutorial-decoupled:DiffusivePart}.
+Line \ref{tutorial-decoupled:cfl} assigns the CFL-factor to be used in the
+simulation run. The final property on line line \ref{tutorial-decoupled:gravity} 
+is optional and tells the model not to use gravity.
 
+After all necessary information is written into the property system and 
+its namespace is closed in line \ref{tutorial-decoupled:propertysystem-end},
+the problem class is defined in line \ref{tutorial-decoupled:def-problem}. 
+As its property, the problem class itsself is also derived from a parent, 
+\texttt{IMPESProblem2P}. The classes constructor (line 
+\ref{tutorial-decoupled:constructor-problem}) is able to hold two vectors,
+which is not needed in this tutorial.
 
+Besides the definition of the boundary and initial conditions (discussed in 
+subsection \label{decoupled-problem:boundary}), the problem class also contains
+general information about the current simulation. First, the name used by
+the \texttt{VTK-writer} to generate output is defined in the method of line
+\ref{tutorial-decoupled:name}, and line \ref{tutorial-decoupled:restart} indicates
+weather restart files are written. As decoupled schemes usually feature small 
+timesteps, the method controlling the output in line \ref{tutorial-decoupled:output}
+is very useful. The divisor of the modulo operation defines after how many timesteps
+output should be written out -- the default ``1'' resembles output after each 
+step.
 
-
-
-
-First, in line \ref{tutorial-decoupled:include-begin} to \ref{tutorial-decoupled:include-end} the Dune and the \Dumux files respectively which contain the functions and classes that are needed in the main loop are included into the main file.
-
-In line \ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end} the geometry is defined and the grid is generated. The three variables of Type \texttt{Dune::FieldVector} define the lower left corner of the domain (\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number of cells in $x$ and $y$ direction (\texttt{N}), where the dimensions are previously defined in line \ref{tutorial-decoupled:dim}. The grid of type \texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. For more information about the dune grid interface, the different grid types that are supported and the generation of different grids it is referred to the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}.
-
-The second point mentioned at the beginning of this section was the
-definition of material properties and constitutive relationships. The
-fluid properties of the two fluid phases considered here are defined
-in lines \ref{tutorial-decoupled:water} and
-\ref{tutorial-decoupled:oil}. The fluid classes including different
-kinds of fluids (here: \texttt{Dune::Water} and \texttt{Dune::LowViscosityOil})
-can be found in the folder \texttt{/dumux/material/fluids}. The
-properties of the solid matrix are defined in a special soil
-class. The \texttt{soil} object is generated in line
-\ref{tutorial-decoupled:soil}. As can be seen, the class type is
-\texttt{Dune::TutorialSoil}, which is defined in the file
-\texttt{tutorialspatialparameters\_decoupled.hh} in the folder
-\texttt{/tutorial}. A description of this file and the definition of a
-soil class including the soil parameters can be found in section
-\ref{tutorial-decoupled:description-soil-class}. Finally, in line
-\ref{tutorial-decoupled:twophaserelations} the information included in
-the fluid and soil objects is used to generate an object of type
-\texttt{Dune::TwoPhaseRelations}, which includes the constitutive
-relationships (capillary pressure-saturation relation, relative
-permeability-saturation relation, etc.). The file
-\texttt{twophaserelations.hh} can be found in the directory
-\texttt{/dumux/material}.
-
-The definition of boundary and initial conditions as well as source of sink terms is done by definition of a so-called \textit{problem} class. In case of this tutorial the problem class is defined in the file \texttt{tutorialproblem\_decoupled.hh} in the \texttt{/tutorial} folder. In the main file the problem object of type \texttt{Dune::TutorialProblemDecoupled} is then generated in line \ref{tutorial-decoupled:problem}. A further explanation of the definition of boundary and initial conditions, source and sink terms and the structure of the problem class can be found in section \ref{tutorial-decoupled:description-bc-ic}. Besides the definition of the boundary and initial conditions the problem class is also a kind of interface containing all the objects generated before (geometry, fluids, soil, constitutive relationships, etc.). Thus, as can be seen in line \ref{tutorial-decoupled:problem} all this objects are given as arguments when calling the constructor of the problem class.
-
-Following the steps listed at the beginning of this section, finally, a model has to be chosen. In case of this tutorial a decoupled isothermal two phase model is the choice. As explained before a decoupled model consists of a pressure equation which is decoupled or only weakly coupled to a saturation equation, concentration equations, energy balance equations, etc. In case of isothermal two phase flow one pressure equation and one saturation equation have to be solved. 
-
-The discretisation of the pressure equation is included in the object which is generated in line \ref{tutorial-decoupled:diffusion} of the main file. It is called \texttt{diffusion} and it is of type \texttt{Dune::FVTotalVelocity2P}. The definition of this class can be found in \texttt{/dumux/diffusion/fv} in the file \texttt{fvtotalvelocity2p.hh}. The \texttt{FV} in the class name indicates that a \textit{finite volume} discretisation is used. For the pressure equation also other discretisation methods like \textit{finite elements} or \textit{mimetic finite differences} are available.
-
-Similarly, an object containing the discretisation of the saturation equation is generated in line \ref{tutorial-decoupled:transport} of the main file. As can be seen, this object is called \texttt{transport}. The class  \texttt{Dune::FVSaturationWetting2P} can be found in the directory \texttt{/dumux/transport/fv}. Again, the \texttt{FV} in the class name indicates a \textit{finite volume} discretisation.
-
-For the decoupled model the so-called \textit{IMPES} (\textit{IM}plicit \textit{P}ressure \textit{E}xplicit \textit{S}aturation) algorithm is used. This means that the pressure equation is first solved using an implicit method. The resulting velocities are then used to solve the saturation equation explicitly. It is clear that depending on the non-linearity this is an iterative process within every timestep. The object \texttt{impes} of type \texttt{Dune::IMPES} which is generated in line \ref{tutorial-decoupled:impes} of the main file combines the objects \texttt{diffusion} and \texttt{transport} and proceeds the iterations of the IMPES algorithm within a timestep. The definition of the class \texttt{Dune::IMPES} can be found in the file \texttt{impes.hh} in the directory \texttt{/dumux/fractionalflow/impes}.
-
-Finally, an object called \texttt{timeloop} of type \texttt{Dune::TimeLoop} is generated in line \ref{tutorial-decoupled:timeloop} of the tutorial main file. The class \texttt{Dune::TimeLoop} is defined in the file \texttt{timeloop.hh} in the folder \texttt{/dumux/timedisc}. The object \texttt{timeloop} includes the type of timestep that is used (implicit, explicit, etc.) and contains the function \texttt{execute} which is called in line \ref{tutorial-decoupled:execute} of the main file. This function finally starts the computation and runs the (time)loop over all timesteps.
-
-\subsection{The definition of the fluid properties}\label{tutorial-decoupled:description-fluid-class}
-
-In \Dumux different fluids are already implemented. The definitions can be found in the directory \texttt{material/fluids}. As can be observed in these files, for each fluid a class named like the fluid is defined. These classes are derived from the fluid base class \texttt{Fluid} which is defined in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dumux/material} and include several functions returning different fluid properties.
-
-If a new fluid type is to be used or an existing type is to be used with different fluid parameters new fluid types can be defined derived from the base class \texttt{Fluid} comparable to the fluids already defined in the file \texttt{material/fluids/}.
-
-It is important to mention, that existing fluid classes should not be changed.
-
-\subsection{The definition of the soil parameters}\label{tutorial-decoupled:description-soil-class}
-
-Soil properties which can be defined in \Dumux are the \textit{intrinsic permeability}, the \textit{porosity} and the \textit{heat capacity} as well as the \textit{heat conductivity} of the solid matrix. Further the \textit{residual saturations} of the fluids, and the \textit{capillary pressures-saturation function} as well as the \textit{relative permeability-saturation functions} are depending on the soil.
-
-The base class \texttt{Dune::Matrix2p} for the definition of the soil parameters can be found in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dumux/material}. Derived from this base class, there exist two standard soil type classes named \texttt{HomogeneousSoil} and \texttt{HeterogeneousSoil}. Both can be found in the file \texttt{matrixproperties.hh} in the \texttt{/material} folder. If one wants to use a soil that differs from this standard soil types, new soil classes can be derived either from the base class (\texttt{Dune::Matrix2p}) or from the two standard soil classes (\texttt{Dune::HomogeneousSoil} and \texttt{Dune::HeterogeneousSoil}).
-
-For this tutorial problem a new soil class named \texttt{TutorialSoil} is derived from \texttt{Dune::Matrix2p} (listing \ref{tutorial-deoucpled:soilpropertiesfile}, line \ref{tutorial-decoupled:tutorialsoil}), which can be found in the file \texttt{tutorialspatialparameters\_decoupled.hh} in the directory \texttt{/tutorial}.
-
-Listing \ref{tutorial-deoucpled:soilpropertiesfile} shows the file \texttt{tutorialspatialparameters\_decoupled.hh}.
-
-\begin{lst}[File tutorial/tutorialspatialparametrs\_decoupled.hh]\label{tutorial-deoucpled:soilpropertiesfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
-numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorialspatialparameters_decoupled.hh}
-\end{lst}
-
-In line \ref{tutorial-decoupled:permeability} the function returning the intrinsic permeability can be found. As can be seen, the function has to be called with three different arguments. The first one (\texttt{x}) is a vector including the global coordinates of the current entity (can be an element, vertex, etc.), the second one (\texttt{e}) is the entity itself and the third one is a vector including the local coordinates of the current entity. The intrinsic permeability is a tensor and thus returned in form of a $n \times n$-matrix where $n$ is the dimension of the problem.
-
-The function \texttt{porosity()} defined in line \ref{tutorial-decoupled:porosity} is called with the same arguments as the permeability function described before and returns the porosity dependent on the position in the domain.
-
-The residual saturation functions \texttt{Sr\_w()} (line \ref{tutorial-decoupled:srw}) and \texttt{Sr\_n()} (line \ref{tutorial-decoupled:srn}) additionally have the temperature as function argument, which is set to a default value if a isothermal model is used.
-
-Finally, the functions defining the type of the capillary pressure function and the relative permeability functions have to be considered. In line \ref{tutorial-decoupled:flags} the function \texttt{relPermFlag()} is defined. This function returns a flag indicating the type of function which is used depending on the position. This could be a linear function, a \textit{Brooks-Corey} function, a \textit{van Genuchten} function, etc. The flags that can be chosen as return parameter are defined in the base soil class \texttt{Matrix2p} in the file \texttt{property\_baseclasses.hh}. The parameters used in the chosen function type can be defined in the function \texttt{paramRelPerm} (line \ref{tutorial-decoupled:parameters}). As can be seen in listing \ref{tutorial-deoucpled:soilpropertiesfile}, e.g. linear capillary pressure and relative permeability functions require a vector of two arguments, one defining the minimum and one defining the maximum capillary pressure. The parameters can again be defined depending on the position in the domain an on temperature.
-
-\subsection{The definition of boundary and initial conditions and source or sink terms}\label{tutorial-decoupled:description-bc-ic}
-
-Boundary and initial conditions are defined in a so-called problem class. The problem class of this tutorial has the name \texttt{TutorialProblemDecoupled} and is defined in the file \texttt{tutorialproblem\_decoupled.hh} which can be found in the directory \texttt{/tutorial}. Listing \ref{tutorial-deoucpled:problemfile} shows the class \texttt{TutorialProblemDecoupled}. As can be seen it is derived from the problem base class \texttt{FractionalFlowProblem} (line \ref{tutorial-decoupled:tutorialproblem}) which is defined in the file \texttt{fractionalflowproblem.hh} in the directory \texttt{/dumux/fractionalflow}. 
-
-\begin{lst}[File tutorial/tutorialproblem\_decoupled.hh]\label{tutorial-deoucpled:problemfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
-numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorialproblem_decoupled.hh}
-\end{lst}
-
-Listing \ref{tutorial-decoupled:tutorialproblem}) includes five types of functions. The type of each function can be identified by the first letter and the first part respectively of its name. Function names of functions returning
+The following methods all have in common that they may be dependent on space.
+Hence, they all feature a common argument list:
 \begin{itemize}
- \item a source or sink term start with a \textbf{source},
- \item a boundary condition type start with \textbf{bctype},
- \item a \textit{Dirichlet} boundary condition start with a \textbf{dirichlet},
- \item a \textit{Neumann} boundary condition start with a \textbf{neumann} and
- \item a initial condition start with \textbf{init}. 
+ \item \texttt{globalPos}: A vector holding the global Coordinates.
+ \item \texttt{element} or \texttt{intersection}: Input for an iterator, that is 
+    depending weather the parameter of the method is defined in an element, such as 
+    initial values, or on an intersection, such as a boundary condition.
 \end{itemize}
-The second part of the function name indicates if the return value is used for the pressure equation (\textbf{Press}) or for the saturation equation (\textbf{Sat}).
+In the following, there are the methods for general parameters, source- or
+sinkterms, boundary conditions (lines \ref{tutorial-decoupled:bctypePress} to
+\ref{tutorial-decoupled:neumannSat}) and initial values for the transported
+quantity in line \label{tutorial-decoupled:initSat}. For more information
+on the functions, it is referred to the documentation in the code.
 
-All different function types have to be called with three different arguments. The first one (\texttt{x}) is a vector including the global coordinates of the current entity (can be an element, vertex, etc.), the second one (\texttt{e}) is the entity itself and the third one is a vector including the local coordinates of the current entity. Thus, the return of the functions, which can be a boundary value, an initial value, a source/sink, etc., can be defined depending on the position in the domain.
+\subsection{The definition of the parameters that are dependent on space}\label{tutorial-decoupled:description-spatialParameters}
 
-The first function defined in the problem class \texttt{TutorialProblemDecoupled} is the function \texttt{sourcePress} (line \ref{tutorial-decoupled:qpress}). It returns a source or a sink term for the pressure equation. 
+Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
+\verb+tutorialspatialparameters_decoupled.hh+:
 
-In lines \ref{tutorial-decoupled:bctypepress} and \ref{tutorial-decoupled:bctypesat} the functions returning the boundary condition type are defined. Flags of type \texttt{Dune::BoundaryConditions::Flags} have to be used as return value of these functions. The flags that can be chosen are defined in the file \texttt{boundaryconditions.hh} in the directory \texttt{/dune-disc/disc/operators}.
-
-In lines \ref{tutorial-decoupled:gpress} and \ref{tutorial-decoupled:gsat} the functions returning the \textit{Dirichlet} boundary conditions and in line \ref{tutorial-decoupled:jpress} a function returning the \textit{Neumann} boundary conditions are defined.
-
-Finally, the function \texttt{initSat} is defined in line \ref{tutorial-decoupled:initsat}. This function returns the initial saturation distribution.
+\begin{lst}[File tutorial/tutorialspatialparameters\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
+\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
+numberstyle=\tiny, numbersep=5pt, firstline=16]{../../tutorial/tutorialspatialparameters_decoupled.hh}
+\end{lst}
+As this file only slightly differs from the coupled version, it is referred to 
+chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
+However, as a standard Finite-Volume--scheme is used, in contrast to the box-method
+in the coupled case, the argument list here is the same as for the problem 
+functions:
+\begin{itemize}
+ \item \texttt{globalPos}: A vector holding the global Coordinates.
+ \item \texttt{element}: Input for an element iterator, providing access
+	to the current element of interest.
+\end{itemize}
 
 \subsection{Exercise}
 \label{tutorial-deoucpled:exercises}
-The following exercises will give you the opportunity to learn how you can change soil parameters, boundary conditions and fluid properties in \Dumux. (In the future you will find the output file of the last timestep of each exercise simulation in the directory \texttt{/dumux/tutorial/results/decoupled}.)
+The following exercises will give you the opportunity to learn how you can change 
+soil parameters, boundary conditions and fluid properties in \Dumux and to play along 
+with the decoupled modelling framework.
 
 \subsubsection{Exercise 1}
 \renewcommand{\labelenumi}{\alph{enumi})}
 For Exercise 1 you only have to make some small changes in the tutorial files.
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. For the visualisation with paraview please refer to \ref{quick-start-guide}.
 \begin{enumerate}
+\item \textbf{Altering output}
+To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 4e3}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+As you can see, the simulation creates roughly 150 output files. To reduce these to perform longer simulations, change the method responsible for output in the file \texttt{tutorialproblem\_decoupled} to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 1e5 seconds.
+
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
 with edge lengths of x = 400 m \\  and y = 500 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 20$ m. \\
-Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil is extracted from the top boundary. The right and the left boundary should be closed for water and oil fluxes.  \\
-Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model.
+Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes.  \\
 
 \item \textbf{Changing Fluids} \\
-Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to change the file \texttt{tutorial\_decoupled.cc}. If you want to take a closer look how the fluid classes are defined and which fluids are already available please open the files \texttt{oil.hh} and \texttt{water.hh} in the directory
-\texttt{/dumux/material/fluids}.
+Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
+\begin{enumerate}
+ \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to pure water. Hence, it needs not only \texttt{<Scalar>} as a template argument, but also the complete water class used before (be aware to use the water class with its own template parameters).
+ \item DNAPL: A standard set of chemical substances is already included and hence easy accessible. This does not hold for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}.
+\end{enumerate}
+If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
+\texttt{/dumux/material/components}.
 
-\item \textbf{Changing Constitutive Relationships} \\
-Use a Brooks-Corey law with $\lambda$ = 2 and entry pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorialspatialparameters\_decoupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dumux/material}.  
-The available relative permeability and capillary pressure functions are defined in the file \texttt{/dumux/material/relperm\_pc\_law}.\\
-(Hint: The CFL-security-factor should be set to a value smaller than 1 if nonlinear relationships are used (Suggestion: 0.95). It can be found in the application file \texttt{tutorialproblem\_decoupled.hh}.)
+\item \textbf{Use the \Dumux fluid system} \\
+As you have experienced in the coupled tutorial (chapter \ref{tutorial-decoupled}), \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. This is also possible for the decoupled models: Uncomment, as we want to reuse it later on, the lines \ref{tutorial-decoupled:2p-system-start} to \ref{tutorial-decoupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::simpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. As water flow replacing a gas is much faster, test your simulation only until 1e4 seconds.\\
+Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
-Set up a model domain with the soil properties given in Figure \ref{tutorial-deoucpled:exercise1_d}. Adjust the boundary conditions so that water is still flowing from the bottom to the top of the domain. You can use the fluids of exercise 1b) and the constitutive relationship of exercise 1c). 
-
+Set up a model domain with the soil properties given in Figure \ref{tutorial-deoucpled:exercise1_d}. Adjust the boundary conditions so that water is again flowing from left to right.
 \begin{figure}[h]
 \psfrag{K1 =}{K $= 10^{-8}\text{ m}^2$}
 \psfrag{phi1 =}{$\phi = 0.15$}
@@ -227,25 +236,48 @@ Set up a model domain with the soil properties given in Figure \ref{tutorial-deo
 \includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
 \caption{Exercise 1d: Set-up of a model domain a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{tutorial-deoucpled:exercise1_d}
 \end{figure}
-
+When does the front cross the material border? In paraview, the option \textit{View} $\rightarrow$ \textit{Animation View} is nice to get a rough feeling of the timestep sizes.
 \end{enumerate}
 
 \subsubsection{Exercise 2}
-For this exercise you should create a new proplem file according to the file \texttt{tutorialproblem\_decoupled.hh} and a new soil property file according to the file \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to be included in the file \texttt{tutorial\_decoupled.cc}.\\
-The new soil file should contain the definition of a new soil class e.g. SoilEx2. Make sure that you also adjust the preprocessor commands (e.g. change TUTORIAL\_SOILPROPERTIES to TUTORIAL\_SOILEX2). 
-The new problem file should contain the definition of a new problem class e.g. ProblemEx2. Here you also need to adjust the preprocessor commands. 
-Replace the classes \texttt{TutorialSoil} and \texttt{TutorialProblemDecoupled} by the the new classes you just created. \\
-Now, set up a model that describes the processes given in the Figures \ref{tutorial-deoucpled:ex2_Domain} and \ref{tutorial-deoucpled:ex2_BC}. Initially the domain is fully saturated with water and the pressure is $p_w = 5 \times 10^5$ Pa. Oil infiltrates from the left side. Create a grid with 20 cells in x direction and 10 cells in y direction. The simulation time should be set to $4\times 10^7$ s.\\
-(Hint: Chose the CFL-security-factor as 0.95 - see Exercise 1 c).)
+For this exercise you should create a new proplem file analogous to
+the file \texttt{tutorialproblem\_coupled.hh} and new spatial parameters 
+just like \texttt{tutorialspatialparameters\_coupled.hh}. These files need to
+be included in the file \texttt{tutorial\_coupled.cc}. 
+
+The new file defining spatial parameters should contain the definition 
+of a new class, such as \texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
+macros in the header files (e.g. change \texttt{TUTORIALSPATIALPARAMETERS\_COUPLED} to
+\texttt{SPATIALPARAMETERSEX2}). Besides also adjusting the guardian macros, 
+the new problem file should define and use a new type tag for the problem as well as a new problem class
+e.g. \texttt{ProblemEx2}. Make sure you assign your newly defined spatial 
+parameter class to the \texttt{SpatialParameters} property for the new 
+type tag. 
+
+After this, change the \texttt{create()} method of the \texttt{Grid}
+property so that it matches the domain described
+by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the problem class
+so that the boundary conditions are consistent with figure
+\ref{tutorial-coupled:ex2_BC}. Initially the domain is fully saturated
+with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
+infiltrates from the left side. Create a grid with $20$ cells in
+$x$-direction and $10$ cells in $y$-direction. The simulation time
+should be set to $6000 \text{s}$.
+
+Now include your new problem file in the main file and replace the
+\texttt{TutorialProblemCoupled} type tag by the one you've created and
+compile the program.
+
 
 \begin{figure}[h]
 \psfrag{K1}{K $= 10^{-7}\text{ m}^2$}
 \psfrag{phi1}{$\phi = 0.2$}
-\psfrag{Lin}{Linear Law}
+\psfrag{Lin}{Brooks Corey Law} 
+\psfrag{Lin2}{$\lambda = 1.8$, $p_b = 10000$}
 \psfrag{K2}{K $= 10^{-9}\text{ m}^2$}
 \psfrag{phi2}{$\phi = 0.15$}
 \psfrag{BC1}{Brooks Corey Law} 
-\psfrag{BC2}{$\lambda = 1.8$, $p_b = 0.0$}
+\psfrag{BC2}{$\lambda = 2$, $p_b = 15000$}
 \psfrag{H1y}{50 m}
 \psfrag{H2y}{15 m}
 \psfrag{H3y}{20 m}
@@ -254,22 +286,32 @@ Now, set up a model that describes the processes given in the Figures \ref{tutor
 \psfrag{L3x}{25 m}
 \centering
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Domain.eps}
-\caption{Set-up of the model domain and the soil parameters}\label{tutorial-deoucpled:ex2_Domain}
+\caption{Set-up of the model domain and the soil parameters}\label{tutorial-coupled:ex2_Domain}
 \end{figure}
 
 \begin{figure}[h]
-\psfrag{pw}{$p_w = 1.5 \times 10^6$ \text{Pa}}
+\psfrag{pw}{$p_w = 5 \times 10^5$ \text{Pa}}
 \psfrag{S}{$S_n = 1.0$}
-\psfrag{qw}{$q_w = 2 \times 10^{-7}$ [kg/$\text{m}^2$s]}
+\psfrag{qw}{$q_w = 2 \times 10^{-4}$ [kg/$\text{m}^2$s]}
 \psfrag{qo}{$q_n = 0.0$ [kg/$\text{m}^2$s]}
 \psfrag{no flow}{no flow}
 \centering
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Boundary.eps}
-\caption{Boundary Conditions}\label{tutorial-deoucpled:ex2_BC}
+\caption{Boundary Conditions}\label{tutorial-coupled:ex2_BC}
 \end{figure}
 
+\begin{itemize}
+ \item Investigate the saturation: Is the value range reasonable?
+ \item What happens if you increase the resolution of the grid?
+ \item Try out a CFL-factor of 1 and investigate the whole simulation run.
+\end{itemize}
+
+
 \subsubsection{Exercise 3}
-Create a file called \texttt{new\_fluid.hh} and implement a new fluid class. This new fluid class should be derived from the base class Fluid which can be found in  \texttt{/dumux/material/property\_baseclasses.hh}. \\
-(You can look at existing fluid classes in the folder \texttt{/dumux/material/fluids}.)
-Use benzene as a new fluid and run the model of Exercise 2 with water and benzene. The properties of benzene are given in the following: \\
-density: 889.51 kg/$\text{m}^3$, viscosity: 0.00112 Pa s. 
+Create a new file for benzene called \texttt{benzene.hh} and implement
+a new fluid system. (You may get a hint by looking at existing fluid 
+systems in the directory \verb+/dumux/new_material/fluidsystems+.)
+
+Use benzene as a new fluid and run the model of Exercise 2 with water
+and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
+and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
