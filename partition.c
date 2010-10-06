@@ -468,7 +468,6 @@ create_block_conns(int        b   ,
         }
     }
 
-    assert (ia[nc] == nc);
     ia[0] = 0;
 }
 
