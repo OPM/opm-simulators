@@ -46,8 +46,9 @@ namespace IAPWS
  *
  *  \ingroup IAPWS
  *
- * \brief Implements relations common for all regions of the IAPWS '97
+ * \brief Implements relations which are common for all regions of the IAPWS '97
  *        formulation.
+ *
  * \tparam Scalar The type used for scalar values
  *
  * See:
@@ -87,8 +88,8 @@ public:
      * This relation is valid for all regions of the IAPWS '97
      * formulation.
      *
-     * \param temperature temperature of component
-     * \param rho density of component
+     * \param temperature temperature of component in [K]
+     * \param rho density of component in [kg/m^3]
      *
      * See:
      *

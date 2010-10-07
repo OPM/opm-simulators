@@ -56,11 +56,11 @@ class Region2
 {
 public:
     /*!
-     * \brief Returns true iff IAPWS region 2 applies for a
+     * \brief Returns true if IAPWS region 2 applies for a
      *        (temperature, pressure) pair.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static bool isValid(Scalar temperature, Scalar pressure)
     {
@@ -77,7 +77,7 @@ public:
     }
 
     /*!
-     * \brief Returns the reduced temperature for IAPWS region 2.
+     * \brief Returns the reduced temperature (dimensionless) for IAPWS region 2.
      *
      * \param temperature temperature of component
      */
@@ -88,43 +88,43 @@ public:
      * \brief Returns the derivative of the reduced temperature to the
      *        temperature for IAPWS region 2.
      *
-     * \param temperature temperature of component
+     * \param temperature temperature of component in [K]
      */
     static Scalar dtau_dT(Scalar temperature)
     { return - 540.0 / (temperature*temperature); }
 
     /*!
-     * \brief Returns the reduced pressure for IAPWS region 2.
+     * \brief Returns the reduced pressure (dimensionless) for IAPWS region 2.
      *
-     * \param pressure pressure of component
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar pi(Scalar pressure)
     { return pressure / 1e6; }
 
     /*!
      * \brief Returns the derivative of the reduced pressure to the
-     *        pressure for IAPWS region 2.
+     *        pressure for IAPWS region 2 in [1/Pa].
      *
-     * \param pressure pressure of component
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar dpi_dp(Scalar pressure)
     { return 1.0 / 1e6; }
 
     /*!
      * \brief Returns the derivative of the pressure to the
-     *        reduced pressure for IAPWS region 2.
+     *        reduced pressure for IAPWS region 2 (dimensionless).
      *
-     * \param pressure pressure of component
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar dp_dpi(Scalar pressure)
     { return 1e6; }
 
     /*!
-     * \brief The gibbs free energy for IAPWS region 2 (i.e. sub-critical
-     *        steam)
+     * \brief The Gibbs free energy for IAPWS region 2 (i.e. sub-critical
+     *        steam) (dimensionless).
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -152,12 +152,12 @@ public:
     }
 
     /*!
-     * \brief The partial derivative of the gibbs free energy to the
+     * \brief The partial derivative of the Gibbs free energy to the
      *        normalized temperature for IAPWS region 2 (i.e. sub-critical
-     *        steam)
+     *        steam) dimensionless).
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -190,12 +190,12 @@ public:
     }
 
     /*!
-     * \brief The partial derivative of the gibbs free energy to the
+     * \brief The partial derivative of the Gibbs free energy to the
      *        normalized pressure for IAPWS region 2 (i.e. sub-critical
-     *        steam)
+     *        steam) (dimensionless).
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -222,12 +222,12 @@ public:
     }
 
     /*!
-     * \brief The partial derivative of the gibbs free energy to the
+     * \brief The partial derivative of the Gibbs free energy to the
      *        normalized pressure and to the normalized temperature
-     *        for IAPWS region 2 (i.e. sub-critical steam)
+     *        for IAPWS region 2 (i.e. sub-critical steam)  (dimensionless).
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -255,12 +255,12 @@ public:
     }
 
     /*!
-     * \brief The second partial derivative of the gibbs free energy
+     * \brief The second partial derivative of the Gibbs free energy
      *        to the normalized pressure for IAPWS region 2
-     *        (i.e. sub-critical steam)
+     *        (i.e. sub-critical steam) (dimensionless).
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",

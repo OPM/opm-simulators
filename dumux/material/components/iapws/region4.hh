@@ -55,10 +55,10 @@ class Region4
 {
 public:
     /*!
-     * \brief Returns the saturation pressure of pure water at a given
+     * \brief Returns the saturation pressure in [Pa] of pure water at a given
      *        temperature.
      *
-     *\param temperature temperature of component
+     *\param temperature temperature of component in [K]
      *
      * The saturation pressure is often also called vapor pressure.
      */

@@ -18,7 +18,7 @@
  *
  * \ingroup Components
  *
- * \brief A class for the brine fluid properties
+ * \brief A class for the brine fluid properties,.
  */
 #ifndef DUMUX_BRINE_HH
 #define DUMUX_BRINE_HH
@@ -34,10 +34,10 @@ namespace Dumux
  *
  * \ingroup Components
  *
- * \brief A class for the brine fluid properties
+ * \brief A class for the brine fluid properties.
  *
  * \tparam Scalar The type used for scalar values
- * \tparam H2O ???
+ * \tparam H2O Static polymorphism: the Brine class can access all properties of the H2O class
  */
 template <class Scalar, class H2O>
 class Brine : public Component<Scalar, Brine<Scalar, H2O> >
@@ -53,9 +53,9 @@ public:
     { return "Brine"; }
 
     /*!
-     * \brief The mass in [kg] of one mole of brine.
+     * \brief The molar mass in [kg/mol] of brine.
      *
-     * This assumes that the salt is pure NaCl
+     * This assumes that the salt is pure NaCl.
      */
     static Scalar molarMass()
     {
@@ -66,13 +66,13 @@ public:
     };
 
     /*!
-     * \brief Returns the critical temperature [K] of brine
+     * \brief Returns the critical temperature [K] of brine.
      */
     static Scalar criticalTemperature()
     { return H2O::criticalTemperature(); /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of brine
+     * \brief Returns the critical pressure [Pa] of brine.
      */
     static Scalar criticalPressure()
     { return H2O::criticalPressure(); /* [N/m^2] */ }
@@ -90,10 +90,10 @@ public:
     { return H2O::triplePressure(); /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [N/m^2] of pure brine
+     * \brief The vapor pressure in [Pa] of pure brine
      *        at a given temperature.
      *
-     * \param T temperature of component
+     * \param T temperature of component in [K]
 
      */
     static Scalar vaporPressure(Scalar T)
@@ -102,8 +102,8 @@ public:
     /*!
      * \brief Specific enthalpy of gaseous brine [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
@@ -112,8 +112,8 @@ public:
     /*!
      * \brief Specific enthalpy of liquid brine [J/kg].
      *
-     * \param T temperature of component
-     * \param p pressure of component
+     * \param T temperature of component in [K]
+     * \param p pressure of component in [Pa]
      *
      * Equations given in:    - Palliser & McKibbin 1997
      *                         - Michaelides 1981
@@ -181,8 +181,8 @@ public:
     /*!
      * \brief Specific internal energy of steam [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -193,8 +193,8 @@ public:
     /*!
      * \brief Specific internal energy of liquid brine [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar liquidInternalEnergy(Scalar temperature,
                                              Scalar pressure)
@@ -207,8 +207,8 @@ public:
     /*!
      * \brief The density of steam at a given pressure and temperature [kg/m^3].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     { return H2O::gasDensity(temperature, pressure); }
@@ -216,8 +216,8 @@ public:
     /*!
      * \brief The density of pure brine at a given pressure and temperature [kg/m^3].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * Equations given in:    - Batzle & Wang (1992)
      *                        - cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
@@ -245,20 +245,20 @@ public:
     }
 
     /*!
-     * \brief The pressure of steam at a given density and temperature [Pa].
+     * \brief The pressure of steam in [Pa] at a given density and temperature.
      *
-     * \param temperature temperature of component
-     * \param density denstiy of component
+     * \param temperature temperature of component in [K]
+     * \param density denstiy of component in [kg/m^3]
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     { return H2O::gasPressure(temperature, density); }
 
     /*!
-     * \brief The pressure of liquid water at a given density and
-     *        temperature [Pa].
+     * \brief The pressure of liquid water in [Pa] at a given density and
+     *        temperature.
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
@@ -297,8 +297,8 @@ public:
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure brine.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * Equation given in:    - Batzle & Wang (1992)
      *                         - cited by: Bachu & Adams (2002)
@@ -319,7 +319,7 @@ public:
 
 template <class Scalar, class H2O>
 /*!
- * \brief Default value for the salinity of the brine.
+ * \brief Default value for the salinity of the brine (dimensionless).
  */
 Scalar Brine<Scalar, H2O>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
 

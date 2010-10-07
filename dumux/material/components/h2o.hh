@@ -71,19 +71,19 @@ public:
     { return "H2O"; }
 
     /*!
-     * \brief The mass in [kg] of one mole of water.
+     * \brief The molar mass in [kg] of water.
      */
     static Scalar molarMass()
     { return Common::molarMass; }
 
     /*!
-     * \brief Returns the critical temperature [K] of water
+     * \brief Returns the critical temperature [K] of water.
      */
     static Scalar criticalTemperature()
     { return Common::criticalTemperature; }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of water
+     * \brief Returns the critical pressure [Pa] of water.
      */
     static Scalar criticalPressure()
     { return Common::criticalPressure; }
@@ -104,7 +104,7 @@ public:
      * \brief The vapor pressure in [N/m^2] of pure water
      *        at a given temperature.
      *
-     *\param T temperature of component
+     *\param T temperature of component in [K]
      *
      * See:
      *
@@ -125,8 +125,8 @@ public:
     /*!
      * \brief Specific enthalpy of water steam [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -175,8 +175,8 @@ public:
     /*!
      * \brief Specific enthalpy of liquid water [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -216,8 +216,8 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of water steam [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -251,8 +251,8 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of liquid water [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -284,8 +284,8 @@ public:
     /*!
      * \brief Specific internal energy of liquid water [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -341,8 +341,8 @@ public:
     /*!
      * \brief Specific internal energy of steam and water vapor [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -414,8 +414,8 @@ public:
     /*!
      * \brief Specific isochoric heat capacity of liquid water [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -448,8 +448,8 @@ public:
     /*!
      * \brief Specific isochoric heat capacity of steam and water vapor [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -480,10 +480,10 @@ public:
     }
 
     /*!
-     * \brief The density of steam at a given pressure and temperature [kg/m^3].
+     * \brief The density of steam in [kg/m^3] at a given pressure and temperature.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -552,10 +552,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of steam at a given density and temperature [Pa].
+     * \brief The pressure of steam in [Pa] at a given density and temperature.
      *
-     * \param temperature temperature of component
-     * \param density of component
+     * \param temperature temperature of component in [K]
+     * \param density of component in [kg/m^3]
      *
      * See:
      *
@@ -595,10 +595,10 @@ public:
     }
 
     /*!
-     * \brief The density of pure water at a given pressure and temperature [kg/m^3].
+     * \brief The density of pure water in [kg/m^3] at a given pressure and temperature.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -654,11 +654,11 @@ public:
     }
 
     /*!
-     * \brief The pressure of liquid water at a given density and
-     *        temperature [Pa].
+     * \brief The pressure of liquid water in [Pa] at a given density and
+     *        temperature.
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      *
      * See:
      *
@@ -694,10 +694,10 @@ public:
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of steam.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
-     * This method is only valid if pressure is below or at the vapour
+     * This method is only valid if pressure is below or at the vapor
      * pressure of water.
      *
      * See:
@@ -721,8 +721,8 @@ public:
     /*!
      * \brief The dynamic viscosity [N/m^3*s] of pure water.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
