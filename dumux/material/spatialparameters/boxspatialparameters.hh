@@ -36,6 +36,16 @@ NEW_PROP_TAG(SpatialParameters);
 };
 
 
+/*!
+ * \ingroup Material
+ * \defgroup SpatialParameters Spatial parameters
+ */
+
+/*!
+ * \ingroup SpatialParameters
+ */
+
+
 /**
  * \brief The base class for spatial parameters of problems using the
  *        box method.
@@ -69,6 +79,11 @@ public:
      *        volume needs to be multiplied in order to get cubic
      *        meters.
      *
+     * \param element The current finite element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvIdx The index sub-control volume face where the
+     *                      factor ought to be calculated.
+     *
      * By default that's just 1.0
      */
     Scalar extrusionFactorScv(const Element &element,
@@ -80,6 +95,11 @@ public:
      * \brief Returns the factor by which the area of a sub control
      *        volume face needs to be multiplied in order to get
      *        square meters.
+     *
+     * \param element The current finite element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvIdx The index sub-control volume face where the
+     *                      factor ought to be calculated.
      *
      * By default it is the arithmetic mean of the extrusion factor of
      * the face's two sub-control volumes.
@@ -100,7 +120,10 @@ public:
     }
 
     /*!
-     * \brief Averages the intrinsic permeability.
+     * \brief Averages the intrinsic permeability (Scalar).
+     * \param result averaged intrinsic permeability
+     * \param K1 intrinsic permeability of the first node
+     * \param K2 intrinsic permeability of the second node
      */
     const void meanK(Tensor &result,
                      Scalar K1,
@@ -115,7 +138,10 @@ public:
     }
 
     /*!
-     * \brief Averages the intrinsic permeability.
+     * \brief Averages the intrinsic permeability (Tensor).
+     * \param result averaged intrinsic permeability
+     * \param K1 intrinsic permeability of the first node
+     * \param K2 intrinsic permeability of the second node
      */
     const void meanK(Tensor &result,
                      const Tensor &K1,
