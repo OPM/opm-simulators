@@ -16,6 +16,7 @@
 /*!
  * \file
  *
+ * \ingroup SpatialParameters
  * \brief The base class for spatial parameters of problems using the
  *        box method.
  */
