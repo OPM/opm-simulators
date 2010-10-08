@@ -1,7 +1,7 @@
 \section{Installation} 
 \label{install}
 
-For the installation of DuMu$^\text{x}$, the following steps have to be performed.  
+For the installation of DuMu$^\text{x}$, the following steps have to be performed:  
 
 \paragraph{Checkout of the core modules}
 From version 2.0 of DUNE, it was decided to stick to stable DUNE releases, comprising the core modules 
@@ -24,45 +24,46 @@ by
 \begin{center}
 \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto}
 \end{center}
-and work yourself through that tutorial in order to get an understanding of 
-the Dune grid interface. 
+and work yourself through that tutorial in order to get an understanding of the Dune grid interface. 
 
-\paragraph{Checkout of DuMu$^\text{x}$ and external modules} 
-If you obtained a \Dumux tarball, you should just extract the tarball as usual 
-and can skip this part. First of all, you need to ask one of the IWS system administrators to 
-add your account to the group \texttt{svndune}. \\
-On the repository, the \Dumux project is divided into a stable and developers part, which should stay seperate
-on the file system. If you are working on a LH2 computer, you then can checkout both parts of \Dumux
-and the external modules via 
+\paragraph{Obtain \Dumux}
+Two possibilities exist to obtain \Dumux. Either you register on the \Dumux website \cite{dumux-hp}, and download the tarball of a stable release, or 
+you checkout the (unstable) version from the \Dumux repository.
+
+\paragraph{Download of the \Dumux tarball from the website}
+The \Dumux tarball can be extracted as usual in the same folder, where you have performed the checkout of the DUNE modules. You can than skip the following paragraph.
+
+\paragraph{Checkout of \Dumux from the SVN repository} 
+On the repository, the \Dumux project is divided into a stable and a developers part which should stay seperate
+on the file system. You can checkout both parts of \Dumux via 
 \begin{itemize}
-\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dumux/trunk dumux}
-\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/dune-mux/trunk dumux-dev}
-\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
+ \item \texttt{svn checkout --username=anonymous --password='' \\ 
+      \hspace{2cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
+ \item \texttt{svn checkout --username=anonymous --password='' \\
+      \hspace{2cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
+%\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
 \end{itemize} 
-If you want to checkout from outside LH2, you first need to establish a tunnel. 
-To this end, you need to add once 
-\begin{center}
-\texttt{ssht = ssh -p 2022 -l login -o HostKeyAlias=luftig.iws.uni-stuttgart.de} 
-\end{center}
-with \texttt{login} replaced 
-by your actual IWS login name, to the section \texttt{[tunnels]} of the 
-file \texttt{\$HOME/} \texttt{.subversion/config}, 
-The tunnel then needs to be initialized every time you want 
-to connect to the repository by 
-\begin{center}
-\texttt{ssh -Nf -L 2022:luftig.iws.uni-stuttgart.de:22 login@login1.iws.uni-stuttgart.de}.
-\end{center}
-Then, you can checkout everything as described above, if you replace \texttt{luftig} 
-by \texttt{localhost}. 
+The repositories allow a read-only access. If you also want to commit new developments to the repositories, you can ask one of the LH$^2$ administrators to add you to the svn group ( \texttt{svndune}).
 
-%Moreover, the possibility to checkout a read-only version from outside exists. Therefor, no IWS-account is needed. The following commands can be used for an anonymous checkout:
-%\begin{itemize}
-%\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux}
-%\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}
-%\item \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/dune-subgrid/trunk dune-subgrid}
-%\end{itemize} 
+\paragraph{Required external modules}
+Among others, the following modules provide additional functionality, but are not required to run \Dumux:
+\begin{itemize}
+ \item grids: Alberta, AluGrid, UG
+ \item solvers: Pardiso, SuperLU
+ \item BLAS and METIS library 
+\end{itemize}
+If you are working on a LH$^2$ computer, you can checkout a set of external modules via \\
+\texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}. \\
+To install them all, execute the install script in the folder \texttt{external}:
+\begin{center}
+\texttt{./installExternal.sh all}
+\end{center}
+If you like to only install some of the external software, you can choose one of the 
+corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
+Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
 
-\paragraph{Installation on a not-IWS PC}
+
+\paragraph{Installation on a non-IWS PC}
 If \Dumux is not to be used on a PC maintained by LH$^2$ it is probable that one needs to install additional software. 
 Here is a (hopefully complete) list of packages that needed to  be installed on a fresh ubuntu 10.04 in order to get \verb+dunecontrol+ running.
 \begin{itemize}
@@ -80,7 +81,7 @@ Here is a (hopefully complete) list of packages that needed to  be installed on 
 
 
 \paragraph{Build the external modules} 
-If you obtained a \Dumux tarball, you should skip this part. 
+If you obtained a \Dumux tarball, you can skip this part. 
 
 \begin{turn}{45}\textbf{Attenschion}\end{turn}
 \begin{turn}{45}\textbf{Attenschion}\end{turn}
@@ -105,21 +106,21 @@ Also, the gcc version 4.3 is hard coded into the skript. }
 \begin{turn}{45}\textbf{Attenschion}\end{turn}
 
 The external modules have to be built first. They consist of Alberta, ALUGrid, UG, and METIS.
-To install them all, execute the install script in the folder \texttt{external}:
-\begin{center}
-\texttt{./installExternal.sh all}
-\end{center}
-If you like to only install some of the external software, you can choose one of the 
-corresponding options instead of \texttt{all}: \texttt{alberta, alu, metis, ug}.
-Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
 
-\paragraph{Build DUNE and DuMu$^\text{x}$}
+\paragraph{Build \Dune and \Dumux}
 \label{buildIt}
-Type in the folder \texttt{DUMUX}: 
+If you want to compile in the debugging mode, type in the folder \texttt{DUMUX}: 
 \begin{center}
 \texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/debug.opts all}
 \end{center}
-This uses the DUNE buildsystem. If it does not work, please consider
+
+Otherwise you can type
+\begin{center}
+\texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/optim.opts all}
+\end{center}
+in order to get an optimized compilation (better performance, but no possibility to use a debugger).
+
+This uses the DUNE buildsystem. If it does not work, please have a look at
 the file \texttt{INSTALL} in the \Dumux root directory (if you use
 SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use
 a released version it is usually \texttt{dumux-VERSION}). You can also
