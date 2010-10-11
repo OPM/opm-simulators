@@ -34,16 +34,22 @@ you checkout the (unstable) version from the \Dumux repository.
 The \Dumux tarball can be extracted as usual in the same folder, where you have performed the checkout of the DUNE modules. You can than skip the following paragraph.
 
 \paragraph{Checkout of \Dumux from the SVN repository} 
-On the repository, the \Dumux project is divided into a stable and a developers part which should stay seperate
-on the file system. You can checkout both parts of \Dumux via 
+On the repository, the \Dumux project is divided into a stable and a developer part which technically constitute two 
+\Dune modules although the developer part has dependencies to the stable part. 
+
+You can checkout stable part of \Dumux anonymously via
 \begin{itemize}
  \item \texttt{svn checkout --username=anonymous --password='' \\ 
       \hspace{2cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
- \item \texttt{svn checkout --username=anonymous --password='' \\
+\end{itemize} 
+The anonymous access is read only. If you also want to commit new developments to the repositories, you can ask the \Dumux project leaders to get developers access fully or in some certain parts.
+The developer part is only available to people which belong to the \Dumux developer group and have non anonymous accesss.
+The command to check out developers part looks like: 
+\begin{itemize}
+ \item \texttt{svn checkout --username=some\_user\_name  \\
       \hspace{2cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
 %\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
 \end{itemize} 
-The repositories allow a read-only access. If you also want to commit new developments to the repositories, you can ask one of the LH$^2$ administrators to add you to the svn group ( \texttt{svndune}).
 
 \paragraph{Required external modules}
 Among others, the following modules provide additional functionality, but are not required to run \Dumux:
