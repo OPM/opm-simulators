@@ -71,7 +71,7 @@ public:
     { return "H2O"; }
 
     /*!
-     * \brief The molar mass in [kg] of water.
+     * \brief The molar mass in [kg/mol] of water.
      */
     static Scalar molarMass()
     { return Common::molarMass; }
@@ -101,7 +101,7 @@ public:
     { return Common::triplePressure; }
 
     /*!
-     * \brief The vapor pressure in [N/m^2] of pure water
+     * \brief The vapor pressure in [Pa] of pure water
      *        at a given temperature.
      *
      *\param T temperature of component in [K]
@@ -692,7 +692,7 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of steam.
+     * \brief The dynamic viscosity [Pa*s] of steam.
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]
@@ -719,7 +719,7 @@ public:
     };
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of pure water.
+     * \brief The dynamic viscosity [Pa*s] of pure water.
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]

@@ -161,7 +161,7 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "Component::liquidInternalEnergy()"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa s] of the pure component at a given pressure in [Pa] and temperature in [K].
+     * \brief The dynamic viscosity [Pa*s] of the pure component at a given pressure in [Pa] and temperature in [K].
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]
@@ -170,7 +170,7 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "Component::gasViscosity()"); }
 
     /*!
-     * \brief The dynamic liquid viscosity [N/m^3*s] of the pure component.
+     * \brief The dynamic liquid viscosity [Pa*s] of the pure component.
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]

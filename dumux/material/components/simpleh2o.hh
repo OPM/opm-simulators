@@ -54,7 +54,7 @@ public:
     { return "H2O"; }
 
     /*!
-     * \brief The mass in [kg] of one mole of water.
+     * \brief The molar mass in [kg/mol] of water.
      */
     static Scalar molarMass()
     { return 18e-3; }
@@ -84,10 +84,10 @@ public:
     { return 611.657; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [N/m^2] of pure water
+     * \brief The vapor pressure in [Pa] of pure water
      *        at a given temperature.
      *
-     *\param T temperature of component
+     *\param T temperature of component in [K]
      *
      * See:
      *
@@ -125,8 +125,8 @@ public:
     /*!
      * \brief Specific enthalpy of water steam [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
@@ -135,8 +135,8 @@ public:
     /*!
      * \brief Specific enthalpy of liquid water [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
@@ -147,8 +147,8 @@ public:
     /*!
      * \brief Specific internal energy of steam [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -161,8 +161,8 @@ public:
     /*!
      * \brief Specific internal energy of liquid water [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar liquidInternalEnergy(Scalar temperature,
                                              Scalar pressure)
@@ -173,8 +173,8 @@ public:
     /*!
      * \brief The density [kg/m^3] of steam at a given pressure and temperature.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -183,10 +183,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of steam at a given density and temperature [Pa].
+     * \brief The pressure of steam in [Pa] at a given density and temperature.
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -197,8 +197,8 @@ public:
     /*!
      * \brief The density of pure water at a given pressure and temperature [kg/m^3].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -206,10 +206,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of water at a given density and temperature [Pa].
+     * \brief The pressure of water in [Pa] at a given density and temperature.
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
@@ -218,11 +218,11 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of steam.
+     * \brief The dynamic viscosity [Pa*s] of steam.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
-     * \param regularize defines if the functions is regularized or not, set to true by default
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
+     * \param regularize defines, if the functions is regularized or not, set to true by default
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
     {
@@ -230,10 +230,10 @@ public:
     };
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of pure water.
+     * \brief The dynamic viscosity [Pa*s] of pure water.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

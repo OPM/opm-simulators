@@ -16,7 +16,7 @@
 /*!
  * \file
  * \ingroup Components
- * \brief Properties of pure water \f$H_2O\f$.
+ * \brief Rough estimate of water \f$H_2O\f$ for testing purposes.
  */
 #ifndef DUMUX_UNIT_HH
 #define DUMUX_UNIT_HH
@@ -46,10 +46,10 @@ public:
     { return "Unit"; }
 
     /*!
-     * \brief Rough estimate of the density of oil [kg/m^3].
+     * \brief Rough estimate of the density of water [kg/m^3].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -57,10 +57,10 @@ public:
     }
 
     /*!
-     * \brief Rough estimate of the viscosity of oil kg/(ms).
+     * \brief Rough estimate of the viscosity of water in [Pa*s].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

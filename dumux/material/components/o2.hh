@@ -52,7 +52,7 @@ public:
     { return "O2"; }
 
     /*!
-     * \brief The mass in [kg] of one mole of molecular oxygen.
+     * \brief The molar mass in [kg/mol] of molecular oxygen.
      */
     static Scalar molarMass()
     { return 32e-3; }
@@ -82,10 +82,10 @@ public:
     { return 148.0; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [N/m^2] of pure molecular oxygen
+     * \brief The vapor pressure in [Pa] of pure molecular oxygen
      *        at a given temperature.
      *
-     * \param T temperature of component
+     * \param T temperature of component in [K]
      *
      * Taken from:
      *
@@ -121,8 +121,8 @@ public:
     /*!
      * \brief The density in [kg/m^3] of pure O2 at a given pressure and temperature.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * \todo density liquid oxygen
      */
@@ -133,10 +133,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
+     * \brief The pressure of gaseous N2 in [Pa] at a given density and temperature.
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -147,8 +147,8 @@ public:
     /*!
      * \brief Specific enthalpy [J/kg] of pure oxygen gas.
      *
-     * \param T temperature of component
-     * \param pressure pressure of component
+     * \param T temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
@@ -178,18 +178,18 @@ public:
     /*!
      * \brief The density [kg/m^3] of gaseous O2 at a given pressure and temperature.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for O2"); }
 
     /*!
-     * \brief The pressure of liquid oxygen at a given density and
+     * \brief The pressure of liquid oxygen  in [Pa] at a given density and
      *        temperature [Pa].
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for O2"); }
@@ -204,10 +204,10 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for O2"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
+     * \brief The dynamic viscosity [Pa*s] of N2 at a given pressure and temperature.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -239,10 +239,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [N/m^3*s] of pure H2.
+     * \brief The dynamic liquid viscosity [Pa*s] of pure H2.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for O2"); }

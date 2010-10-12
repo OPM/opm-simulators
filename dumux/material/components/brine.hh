@@ -286,7 +286,7 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of steam.
+     * \brief The dynamic viscosity [Pa*s] of steam.
      *
      * \param temperature temperature of component
      * \param pressure pressure of component
@@ -295,7 +295,7 @@ public:
     { return H2O::gasViscosity(temperature, pressure); };
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of pure brine.
+     * \brief The dynamic viscosity [Pa*s] of pure brine.
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]

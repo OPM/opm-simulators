@@ -17,7 +17,7 @@
  *
  * \ingroup Components
  *
- * \brief Properties of methane (\f$CH_4\f$).
+ * \brief Properties of methane \f$CH_4\f$.
  */
 #ifndef DUMUX_CH4_HH
 #define DUMUX_CH4_HH
@@ -234,7 +234,7 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [N/m^3*s] of pure CH4.
+     * \brief The dynamic liquid viscosity [Pa s] of pure CH4.
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]

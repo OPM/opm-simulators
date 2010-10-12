@@ -194,7 +194,7 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for H2"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa s] of H2 at a given pressure and temperature.
+     * \brief The dynamic viscosity [Pa*s] of H2 at a given pressure and temperature.
      *
      *\param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]
@@ -229,7 +229,7 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [N/m^3*s] of pure H2.
+     * \brief The dynamic liquid viscosity [Pa*s] of pure H2.
      *
      * \param temperature temperature of component in [K]
      * \param pressure pressure of component in [Pa]

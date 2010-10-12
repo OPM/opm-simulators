@@ -51,7 +51,7 @@ public:
     { return "CO2"; }
 
     /*!
-     * \brief The mass in [kg] of one mole of CO2.
+     * \brief The molar mass in [kg/mol] of CO2.
      */
     static Scalar molarMass()
     { return 44e-3; }
@@ -81,10 +81,10 @@ public:
     { return 5.11e5; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [N/m^2] of pure CO2
+     * \brief The vapor pressure in [Pa] of pure CO2
      *        at a given temperature.
      *
-     * \param T temperature of component
+     * \param T temperature of component in [K]
      */
     static Scalar vaporPressure(Scalar T)
     { DUNE_THROW(Dune::NotImplemented, "vaporPressure of simple CO2"); }
@@ -92,8 +92,8 @@ public:
     /*!
      * \brief Specific enthalpy of gaseous CO2 [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
@@ -102,8 +102,8 @@ public:
     /*!
      * \brief Specific enthalpy of liquid CO2 [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
@@ -112,8 +112,8 @@ public:
     /*!
      * \brief Specific internal energy of CO2 [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -126,8 +126,8 @@ public:
     /*!
      * \brief Specific internal energy of liquid CO2 [J/kg].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static const Scalar liquidInternalEnergy(Scalar temperature,
                                              Scalar pressure)
@@ -136,8 +136,8 @@ public:
     /*!
      * \brief The density of CO2 at a given pressure and temperature [kg/m^3].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -148,8 +148,8 @@ public:
     /*!
      * \brief The pressure of gaseous CO2 at a given density and temperature [Pa].
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -160,27 +160,27 @@ public:
     /*!
      * \brief The density of pure CO2 at a given pressure and temperature [kg/m^3].
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity of simple CO2"); }
 
     /*!
-     * \brief The pressure of liquid CO2 at a given density and
-     *        temperature [Pa].
+     * \brief The pressure of liquid CO2  in [Pa] at a given density and
+     *        temperature.
      *
-     * \param temperature temperature of component
-     * \param density density of component
+     * \param temperature temperature of component in [K]
+     * \param density density of component in [kg/m^3]
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for simple CO2"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa s] of CO2 at a given pressure and temperature.
+     * \brief The dynamic viscosity [Pa*s] of CO2 at a given pressure and temperature.
      *
-     *\param temperature temperature of component
-     * \param pressure pressure of component
+     *\param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      *
      * See:
      *
@@ -212,10 +212,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of pure CO2.
+     * \brief The dynamic viscosity [Pa*s] of pure CO2.
      *
-     * \param temperature temperature of component
-     * \param pressure pressure of component
+     * \param temperature temperature of component in [K]
+     * \param pressure pressure of component in [Pa]
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity of simple CO2"); }
