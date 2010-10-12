@@ -20,6 +20,10 @@
 #ifndef PARTITION_H_INCLUDED
 #define PARTITION_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 partition_unif_idx(int ndims, int nc,
                    const int *fine_d,
@@ -50,4 +54,9 @@ partition_localidx(int nblk, const int *pi, const int *inverse,
 int
 partition_split_disconnected(int nc, int nneigh, const int *neigh,
                              int *p);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif  /* PARTITION_H_INLCUDED */

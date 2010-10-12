@@ -20,6 +20,16 @@
 #ifndef DFS_H_INCLUDED
 #define DFS_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
