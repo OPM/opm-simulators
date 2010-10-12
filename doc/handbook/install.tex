@@ -1,70 +1,105 @@
-\section{Installation} 
-\label{install}
+\subsection{Preliminary remarks to the installation of \Dumux}
 
-For the installation of DuMu$^\text{x}$, the following steps have to be performed:  
+Please check the section prerequisites to evaluate whether it is possible for you to run \Dune and \Dumux.
+
+In this section about the installion of \Dumux it is assumed that you work on a UNIX compatible operating system and that you are a familiar with the use of a shell. Moreover, you should know,  if necessary, how to install
+new software packages or you should have a person aside which can give you assistance with the shell and
+the package installation.
+
+In a technical sense \Dumux is a module of \Dune. The installation procedure of \Dumux is strongly related to 
+that of \Dune.  Thus, for details of the installation please check also the {\Dune} website \cite{DUNE-HP}. If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.
+
+As in a \Dune installation, all \Dune modules including the modules for \Dumux as \texttt{dumux} should be extracted into a common directory named {\Dune}-ROOT. Each \Dune module is associated with a directory name in {\Dune}-ROOT. For convenience, this directory name is  also used as an alias for the module name, a practice we will follow here, too.
+After installing source code for all requirered \Dune modules including the \Dumux parts
+\Dune is being build by the shell-command \texttt{dunecontrol} which is part of {\Dune}-Build-System. The {\Dune}-Build-System is essentially a frontend of the gnu tool autoconf which was specialized for the \Dune project.
+
+\paragraph{basic prerequisites}
+The gnu toolchain of \texttt{g++}  and related gnu variants of developertools like \texttt{libtool}, \texttt{make} and
+and \texttt{automake} must be available in a recent version.
+
+% \section{Installation} 
+% \label{install}
+% 
+% For the installation of DuMu$^\text{x}$, the following steps have to be performed:  
+
+\subsection{Obtaining \Dune and \Dumux}
+Two possibilities exist to obtain \Dune and \Dumux. They can be obtained as so-called tarballs, i.e., \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and  {\Dumux} website. The shell command \texttt{tar} can be used to extract them on your filesystem. This is explained in the next paragraph. 
+
+\paragraph{Obtaining the software by installing tarballs}
+First, download the tarballs from the website. You can install the obtained tarballs as follows: Create a \Dune-Root-directory, which we call here DUMUX. For the installation in the shell, type the following commands: 
+\begin{itemize}
+\item \texttt{mkdir DUMUX}
+\item \texttt{cd DUMUX}
+\item \texttt{tar xzvf path\_to\_tarball\_of/pde-lab.tar.gz}
+\item \texttt{tar xzvf path\_to\_tarball\_of/dumux.tar.gz}
+\item \texttt{tar xzvf path\_to\_tarball\_of ...}
+\item \texttt{...}
+\end{itemize} 
+
+\paragraph{Obtaining \Dune and \Dumux from the SVN repositories} 
+The other possibility is to directly access the project archives of \Dune and \Dumux, the so-called software repositories. These are archives of a software version control system named apache subversion. From here on we refer to it as subversion.
+You need then a subversion client, with which you can access the repositories. This comes with a usual UNIX distribution or can be installed. Our description limits itself to a standard subversion shell client realized by the shell command called \texttt{svn}.
 
 \paragraph{Checkout of the core modules}
-From version 2.0 of DUNE, it was decided to stick to stable DUNE releases, comprising the core modules 
+From version 2.0 of DUNE on, it was decided to stick to stable DUNE releases, comprising the core modules 
 \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions}, and the external \texttt{dune-pdelab}.  
-First, create a directory where all the DUNE and \Dumux modules will be stored in. Then, enter the previously created folder. 
-The checkout has to be performed as described on 
-the DUNE webpage, \cite{DUNE-HP}: 
+First, create a directory where all the DUNE and \Dumux modules will be stored in. Then, enter the previously created folder and checkout the modules. Checkout means that you get a working copy of the code from the software repository. 
+The checkout has to be performed as described on the DUNE webpage, \cite{DUNE-HP}.
 \begin{itemize}
+\item \texttt{mkdir DUMUX}
+\item \texttt{cd DUMUX}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/releases/2.0 dune-common}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid/releases/2.0 dune-grid}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-istl/releases/2.0 dune-istl}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-localfunctions/releases/2.0 dune-localfunctions}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab}
 \end{itemize} 
-%The \Dumux webpage \cite{dumux-hp} contains the revision numbers of the core modules 
-%for which compatibility to \Dumux can be guaranteed. 
 
-Additionally, it is highly recommended that you also checkout the \texttt{dune-grid} HOWTO 
-by 
-\begin{center}
-\texttt{svn checkout https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto}
-\end{center}
+Additionally, it is highly recommended that you also checkout the \texttt{dune-grid} HOWTO by 
+\begin{itemize}
+\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto}
+\end{itemize}
 and work yourself through that tutorial in order to get an understanding of the Dune grid interface. 
 
-\paragraph{Obtain \Dumux}
-Two possibilities exist to obtain \Dumux. Either you register on the \Dumux website \cite{dumux-hp}, and download the tarball of a stable release, or 
-you checkout the (unstable) version from the \Dumux repository.
+\paragraph{Checkout of \Dumux}
 
-\paragraph{Download of the \Dumux tarball from the website}
-The \Dumux tarball can be extracted as usual in the same folder, where you have performed the checkout of the DUNE modules. You can than skip the following paragraph.
-
-\paragraph{Checkout of \Dumux from the SVN repository} 
-On the repository, the \Dumux project is divided into a stable and a developer part which technically constitute two 
-\Dune modules although the developer part has dependencies to the stable part. 
-
-You can checkout stable part of \Dumux anonymously via
+In order to access an anonymous read-only copy of the stable part of \Dumux from the reposoitory, the most simple way is to type
 \begin{itemize}
- \item \texttt{svn checkout --username=anonymous --password='' \\ 
-      \hspace{2cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
-\end{itemize} 
-The anonymous access is read only. If you also want to commit new developments to the repositories, you can ask the \Dumux project leaders to get developers access fully or in some certain parts.
-The developer part is only available to people which belong to the \Dumux developer group and have non anonymous accesss.
-The command to check out developers part looks like: 
-\begin{itemize}
- \item \texttt{svn checkout --username=some\_user\_name  \\
-      \hspace{2cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
-%\item \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}
-\end{itemize} 
+\item \texttt{svn checkout --username=anonymous --password='' \\ 
+svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
+\end{itemize}
+% On the subversion repository, the \Dumux project is divided into a stable and a developers part, which should stay in separate folders
 
-\paragraph{Required external modules}
+If you also want to commit new developments to the repositories, you can ask the \Dumux project leader to get developers access fully or in some certain parts. The developer part is only available to people which belong to the \Dumux developer group and have non-anonymous access. If you have developer rights the checkout looks as follows: 
+\begin{itemize}
+ \item \texttt{svn checkout --username=yourusername \\ 
+      \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
+ \item \texttt{svn checkout --username=yourusername \\
+      \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
+\end{itemize} 
+The two parts should be stored in separate folders. You can ommit the username option, if the username for the repository access is identical to the one for your system account. Please choose either not to store the password that way or store it by subversion in a secure way, check documentation of subversion for that. A leaked out password can be used by evil persons to vandalize a software repository.
+% If you also want to commit new developments or changes to the repositories, you can ask one of the LH$^2$ administrators to add you to the svn group ( \texttt{svndune}).
+
+When using subversion, it is possible, provided that to you are granted developer, i.e. write permissions to repositories, to feed back
+your own code or code changes to software repositories. With direct access to software repositories it is also easier for you to keep up with code changes as for important bug fixes or to keep up with general developments of code.
+
+
+\paragraph{External modules}
 Among others, the following modules provide additional functionality, but are not required to run \Dumux:
 \begin{itemize}
  \item grids: Alberta, AluGrid, UG
  \item solvers: Pardiso, SuperLU
  \item BLAS and METIS library 
 \end{itemize}
+These can be downloaded from the respective websites.
+
 If you are working on a LH$^2$ computer, you can checkout a set of external modules via \\
 \texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}. \\
 To install them all, execute the install script in the folder \texttt{external}:
 \begin{center}
 \texttt{./installExternal.sh all}
 \end{center}
-If you like to only install some of the external software, you can choose one of the 
+If you like to install only some of the external software, you can choose one of the 
 corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
 Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
 
@@ -126,11 +161,4 @@ Otherwise you can type
 \end{center}
 in order to get an optimized compilation (better performance, but no possibility to use a debugger).
 
-This uses the DUNE buildsystem. If it does not work, please have a look at
-the file \texttt{INSTALL} in the \Dumux root directory (if you use
-SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use
-a released version it is usually \texttt{dumux-VERSION}). You can also
-find more information in the DUNE Buildsystem HOWTO located at the
-DUNE webpage, \cite{DUNE-HP}.  Alternatively, the tool CMake can be
-used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for
-details.
+This uses the DUNE buildsystem. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use a released version it is usually \texttt{dumux-VERSION}). You can also find more information in the DUNE Buildsystem HOWTO located at the DUNE webpage, \cite{DUNE-HP}.  Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
