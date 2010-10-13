@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef DFS_H_INCLUDED
-#define DFS_H_INCLUDED
+#ifndef OPM_DFS_HEADER_INCLUDED
+#define OPM_DFS_HEADER_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {

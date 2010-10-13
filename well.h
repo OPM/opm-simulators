@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef WELL_H_INCLUDED
-#define WELL_H_INCLUDED
+#ifndef OPM_WELL_HEADER_INCLUDED
+#define OPM_WELL_HEADER_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,4 +54,4 @@ derive_cell_wells(int nc, well_t *W, int *cwpos, int *cwells);
 }
 #endif
 
-#endif /* WELL_H_INCLUDED */
+#endif /* OPM_WELL_HEADER_INCLUDED */

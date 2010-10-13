@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FLOW_BC_H_INCLUDED
-#define FLOW_BC_H_INCLUDED
+#ifndef OPM_FLOW_BC_HEADER_INCLUDED
+#define OPM_FLOW_BC_HEADER_INCLUDED
 
 #include <stddef.h>
 
@@ -46,4 +46,4 @@ deallocate_flowbc(flowbc_t *fbc);
 }
 #endif
 
-#endif  /* FLOW_BC_H_INCLUDED */
+#endif  /* OPM_FLOW_BC_HEADER_INCLUDED */

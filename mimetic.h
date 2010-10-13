@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef MIMETIC_H_INCLUDED
-#define MIMETIC_H_INCLUDED
+#ifndef OPM_MIMETIC_HEADER_INCLUDED
+#define OPM_MIMETIC_HEADER_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,4 +85,4 @@ void mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
 }
 #endif
 
-#endif /* MIMETIC_H_INCLUDED */
+#endif /* OPM_MIMETIC_HEADER_INCLUDED */

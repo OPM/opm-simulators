@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SPARSE_SYS_H_INCLUDED
-#define SPARSE_SYS_H_INCLUDED
+#ifndef OPM_SPARSE_SYS_HEADER_INCLUDED
+#define OPM_SPARSE_SYS_HEADER_INCLUDED
 
 #include <stddef.h>
 
@@ -76,4 +76,4 @@ csrmatrix_zero(struct CSRMatrix *A);
 }
 #endif
 
-#endif  /* SPARSE_SYS_H_INCLUDED */
+#endif  /* OPM_SPARSE_SYS_HEADER_INCLUDED */

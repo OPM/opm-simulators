@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef PARTITION_H_INCLUDED
-#define PARTITION_H_INCLUDED
+#ifndef OPM_PARTITION_HEADER_INCLUDED
+#define OPM_PARTITION_HEADER_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
