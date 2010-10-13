@@ -1,10 +1,9 @@
-\subsection{Preliminary remarks to the installation of \Dumux}
-
-Please check the section prerequisites to evaluate whether it is possible for you to run \Dune and \Dumux.
+\section{Installation of \Dumux} \label{install}
+\subsection{Preliminary remarks}
 
 In this section about the installion of \Dumux it is assumed that you work on a UNIX compatible operating system and that you are a familiar with the use of a shell. Moreover, you should know,  if necessary, how to install
 new software packages or you should have a person aside which can give you assistance with the shell and
-the package installation.
+the package installation. At the end of this chapter, we list some basic prerequesites for running \Dune and \Dumux. Please check this paragraph to evaluate whether it is possible for you to run \Dune and \Dumux.
 
 In a technical sense \Dumux is a module of \Dune. The installation procedure of \Dumux is strongly related to 
 that of \Dune.  Thus, for details of the installation please check also the {\Dune} website \cite{DUNE-HP}. If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.
@@ -13,20 +12,15 @@ As in a \Dune installation, all \Dune modules including the modules for \Dumux a
 After installing source code for all requirered \Dune modules including the \Dumux parts
 \Dune is being build by the shell-command \texttt{dunecontrol} which is part of {\Dune}-Build-System. The {\Dune}-Build-System is essentially a frontend of the gnu tool autoconf which was specialized for the \Dune project.
 
-\paragraph{basic prerequisites}
+\paragraph{Basic prerequisites} \label{prerequisites}
 The gnu toolchain of \texttt{g++}  and related gnu variants of developertools like \texttt{libtool}, \texttt{make} and
 and \texttt{automake} must be available in a recent version.
 
-% \section{Installation} 
-% \label{install}
-% 
-% For the installation of DuMu$^\text{x}$, the following steps have to be performed:  
-
 \subsection{Obtaining \Dune and \Dumux}
-Two possibilities exist to obtain \Dune and \Dumux. They can be obtained as so-called tarballs, i.e., \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and  {\Dumux} website. The shell command \texttt{tar} can be used to extract them on your filesystem. This is explained in the next paragraph. 
+Two possibilities exist to obtain \Dune and \Dumux. They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and {\Dumux} website. The shell command \texttt{tar} can be used to extract them on your filesystem. This is explained in the next paragraph. 
 
 \paragraph{Obtaining the software by installing tarballs}
-First, download the tarballs from the website. You can install the obtained tarballs as follows: Create a \Dune-Root-directory, which we call here DUMUX. For the installation in the shell, type the following commands: 
+Download the tarballs from the website. You can install the obtained tarballs as follows: Create a \Dune-Root-directory, which we call here DUMUX. For the installation in the shell, type the following commands: 
 \begin{itemize}
 \item \texttt{mkdir DUMUX}
 \item \texttt{cd DUMUX}
@@ -37,14 +31,14 @@ First, download the tarballs from the website. You can install the obtained tarb
 \end{itemize} 
 
 \paragraph{Obtaining \Dune and \Dumux from the SVN repositories} 
-The other possibility is to directly access the project archives of \Dune and \Dumux, the so-called software repositories. These are archives of a software version control system named apache subversion. From here on we refer to it as subversion.
-You need then a subversion client, with which you can access the repositories. This comes with a usual UNIX distribution or can be installed. Our description limits itself to a standard subversion shell client realized by the shell command called \texttt{svn}.
+The other possibility is to directly access the project archives of \Dune and \Dumux, the so-called software repositories. These are archives of a software version control system named apache subversion. From here on this is referred to as subversion.
+You need a subversion client, with which you can access the repositories. This comes with a usual UNIX distribution or can be installed. Our description is limited to a standard subversion shell client realized by the shell command \texttt{svn}.
 
 \paragraph{Checkout of the core modules}
-From version 2.0 of DUNE on, it was decided to stick to stable DUNE releases, comprising the core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions}, and the external \texttt{dune-pdelab}.  
-First, create a directory where all the DUNE and \Dumux modules will be stored in. Then, enter the previously created folder and checkout the modules. Checkout means that you get a working copy of the code from the software repository. 
-The checkout has to be performed as described on the DUNE webpage, \cite{DUNE-HP}.
+From version 2.0 of \Dune on, it was decided to stick to stable \Dune releases, comprising the core modules 
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} and the external \texttt{dune-pdelab}.  
+First, create a directory (here, we call it DUMUX) where all the \Dune and \Dumux modules will be stored in. Then, enter the previously created folder and checkout the modules. Checkout means that you get a working copy of the code from the software repository. 
+The checkout has to be performed as described on the \Dune webpage, \cite{DUNE-HP}. For the installation in the shell, type the following commands:
 \begin{itemize}
 \item \texttt{mkdir DUMUX}
 \item \texttt{cd DUMUX}
@@ -101,7 +95,7 @@ To install them all, execute the install script in the folder \texttt{external}:
 \end{center}
 If you like to install only some of the external software, you can choose one of the 
 corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
-Please also refer to the DUNE webpage for additional details, \cite{DUNE-HP}. 
+Please also refer to the \Dune webpage for additional details, \cite{DUNE-HP}. 
 
 
 \paragraph{Installation on a non-IWS PC}
@@ -161,4 +155,4 @@ Otherwise you can type
 \end{center}
 in order to get an optimized compilation (better performance, but no possibility to use a debugger).
 
-This uses the DUNE buildsystem. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use a released version it is usually \texttt{dumux-VERSION}). You can also find more information in the DUNE Buildsystem HOWTO located at the DUNE webpage, \cite{DUNE-HP}.  Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
+This uses the \Dune buildsystem. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use a released version it is usually \texttt{dumux-VERSION}). You can also find more information in the \Dune Buildsystem HOWTO located at the \Dune webpage, \cite{DUNE-HP}.  Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
