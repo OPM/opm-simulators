@@ -69,13 +69,13 @@ int main(int argc, char** argv)
         TimeManager timeManager;
 
         // instantiate the problem on the leaf grid
-        Problem problem(timeManager, gridPtr->leafView());
+        Problem problem(timeManager, gridPtr->leafView()); /*@\label{tutorial-coupled:instantiate-problem}@*/
         timeManager.init(problem, 0, dt, tEnd, !restart);
         // load the some previously saved state from disk
         if (restart)
-            problem.restart(restartTime);
+            problem.restart(restartTime); /*@\label{tutorial-coupled:restart}@*/
         // run the simulation
-        timeManager.run();
+        timeManager.run(); /*@\label{tutorial-coupled:execute}@*/
         return 0;
     }
     catch (Dune::Exception &e) { /*@\label{tutorial-coupled:catch-dune-exceptions}@*/
