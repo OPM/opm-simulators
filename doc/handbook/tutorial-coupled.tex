@@ -88,7 +88,7 @@ After this, a grid is created on line
 its leaf grid view on line \ref{tutorial-coupled:instantiate-problem}.
 Finally, on line \ref{tutorial-coupled:restart} a state written to
 disk by a previous simulation run is restored on request by the user
-and the simulation proceedure is started at line
+and the simulation procedure is started at line
 \ref{tutorial-coupled:execute}.
 
 \subsection{The problem class}
@@ -148,7 +148,7 @@ six parameters. The first parameter differs if the type of the boundary conditio
 is defined \texttt{boundaryTypes()}:
 \begin{description}
 \item[BCtypes:] A container which stores the type of the boundary condition
-for each equation. For the typical case where all eqations have the same boundary
+for each equation. For the typical case where all equations have the same boundary
 condition at a certain position, there are two methods that set the appropriate conditions
 for all primary variables / equations: Either \texttt{setAllDirichlet()} or \texttt{setAllNeumann()}.
 \item[element:] The element of the grid where the boundary segment
@@ -173,7 +173,7 @@ by the first function parameter:
   over the boundary segment.
 \end{description}
 
-Similarly, the \texttt{initial()} and \texttt{dirichlet()} methods
+Similarly, the \texttt{initial()} and \texttt{source()} methods
 specify properties of sub-control volumes and thus only get
 \texttt{values}, \texttt{element}, \texttt{fvElemGeom} and
 \texttt{scvIdx} as parameters.
@@ -190,20 +190,20 @@ depend on it, e.g. density.
 
 The \Dumux distribution includes some common substances which can be used
 out of the box. The properties of the pure substances (such as the component 
-Nitrogen, water, or pseudo-component air) are stored in header files in 
-the folder \verb+dumux/new_material/components+. Each of these files 
+nitrogen, water, or pseudo-component air) are stored in header files in 
+the folder \verb+dumux/material/components+. Each of these files 
 defines a class with the same name as the component but starting with a capital
 letter, e.g. \texttt{Water}, and are derived from \texttt{Component}.
 
-Mostoften, when two or more components are considered, fluid interactions 
+Most often, when two or more components are considered, fluid interactions 
 such as solubility effects come into play and properties of mixtures such as 
 the density are of interest. These interactions are defined in
-a specific \verb+fluidsystem+ in the folder \verb+dumux/new_material/fluidsystems+.
+a specific \verb+fluidsystem+ in the folder \verb+dumux/material/fluidsystems+.
 It features methods returning fluid properties like density, enthalpy, viscosity,
 etc. by accessing the pure components as well as binary coefficients such as
 Henry's or Diffusion coefficients, which are stored in 
-\verb+dumux/new_material/binarycoefficients+. New fluids which are not yet
- available in the \Dumux distribution can be defined analogous.
+\verb+dumux/material/binarycoefficients+. New fluids which are not yet
+ available in the \Dumux distribution can be defined analogously.
 
 \subsection{The definition of the parameters that are dependent on space}\label{tutorial-coupled:description-spatialParameters}
 
@@ -229,7 +229,7 @@ numberstyle=\tiny, numbersep=5pt, firstline=16]{../../tutorial/tutorialspatialpa
 First, a certain material law that best describes the problem at hand has to
 be selected in line \ref{tutorial-coupled:rawlaw}\label{tutorial-coupled:materialLaw}. 
 \Dumux provides several material laws in the folder 
-\verb+dumux/new_material/fluidmatrixinteractions+.
+\verb+dumux/material/fluidmatrixinteractions+.
 The selected one, here it is a simple linear relation, is included
 in line \ref{tutorial-coupled:rawLawInclude}. After the selection,
 an adapter in line \ref{tutorial-coupled:eff2abs} translates the raw 
@@ -261,8 +261,8 @@ material law should be applied at this specific position.
 While the selection of the type of this object was already explained (see 
 \ref{tutorial-coupled:materialLaw}), some specific parameter 
 values of the applied material law are still needed. This is 
-done in the constructor body (line \ref{tutorial-coupled:setLawParams}.
-Depending on the type of the materialLaw object, the adequate \texttt{set}-methods
+done in the constructor body (line \ref{tutorial-coupled:setLawParams}).
+Depending on the type of the \texttt{materialLaw} object, the adequate \texttt{set}-methods
 are provided by the object to access all necessary parameters 
 for the applied material law.
 
@@ -303,7 +303,7 @@ please refer to \ref{quick-start-guide}.
   that you have to change the problem file
   \texttt{tutorialproblem\_coupled.hh} and choose another \texttt{fluid system}. 
   If you want to take a closer look how the fluid systems are defined 
-  and which fluids are already available please look into the folder \verb+dumux/new_material/fluidsystems/+
+  and which fluids are already available please look into the folder \verb+dumux/material/fluidsystems/+
   for an example.
 
 
@@ -313,9 +313,9 @@ please refer to \ref{quick-start-guide}.
   relative-permeability saturation relationship. To do that you have
   to change the file \texttt{tutorialspatialparameters\_coupled.hh}. 
  You can find the material laws in the folder 
-  \verb+dumux/new_material/fluidmatrixinteractions+. The necessary parameters
+  \verb+dumux/material/fluidmatrixinteractions+. The necessary parameters
 of the Brooks-Corey law and the respective \texttt{set}-functions can be found
- in the file \verb+dumux/new_material/fluidmatrixinteractions/2p/brookscoreyparams.hh+.
+ in the file \verb+dumux/material/fluidmatrixinteractions/2p/brookscoreyparams.hh+.
  
 \item \textbf{Heterogeneities}  \\
   Set up a model domain with the soil properties given in Figure
@@ -403,7 +403,7 @@ compile the program.
 
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 
-systems in the directory \verb+/dumux/new_material/fluidsystems+.)
+systems in the directory \verb+/dumux/material/fluidsystems+.)
 
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
