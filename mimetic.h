@@ -81,6 +81,22 @@ void mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
                        double *farea, double *ccentroid, double *cvol,
                        double *perm, double *Binv);
 
+void
+mim_ip_compute_gpress(int nc, int d, const double *grav,
+                      const int *pconn, const int *conn,
+                      const double *fcentroid, const double *ccentroid,
+                      double *gpress);
+
+/* inv(B) <- \lambda_t(s)*inv(B) */
+void
+mim_ip_mobility_update(int nc, const int *pconn, const double *totmob,
+                       double *Binv);
+
+/* G <- \sum_i \rho_i f_i(s) * G */
+void
+mim_ip_density_update(int nc, const int *pconn, const double *omega,
+                      double *gpress);
+
 #ifdef __cplusplus
 }
 #endif

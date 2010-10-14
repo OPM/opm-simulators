@@ -183,3 +183,68 @@ mim_ip_linpress_exact(int nf, int nconn, int d,
     dgemm_("No Transpose", "Transpose", &m, &m, &n,
            &a1, work, &ld1, N, &ld1, &a2, Binv, &ldBinv);
 }
+
+
+/* ---------------------------------------------------------------------- */
+void
+mim_ip_compute_gpress(int nc, int d, const double *grav,
+                      const int *pconn, const int *conn,
+                      const double *fcentroid, const double *ccentroid,
+                      double *gpress)
+/* ---------------------------------------------------------------------- */
+{
+    int c, i, j;
+
+    const double *cc, *fc;
+
+    for (c = i = 0; c < nc; c++) {
+        cc = ccentroid + (c * d);
+
+        for (; i < pconn[c + 1]; i++) {
+            fc = fcentroid + (conn[i] * d);
+
+            gpress[i] = 0.0;
+            for (j = 0; j < d; j++) {
+                gpress[i] += grav[j] * (fc[j] - cc[j]);
+            }
+        }
+    }
+}
+
+
+/* inv(B) <- \lambda_t(s)*inv(B) */
+/* ---------------------------------------------------------------------- */
+void
+mim_ip_mobility_update(int nc, const int *pconn, const double *totmob,
+                       double *Binv)
+/* ---------------------------------------------------------------------- */
+{
+    int c, i, n, p2;
+
+    for (c = p2 = 0; c < nc; c++) {
+        n = pconn[c + 1] - pconn[c];
+
+        for (i = 0; i < n * n; i++) {
+            Binv[p2 + i] *= totmob[c];
+        }
+
+        p2 += n * n;
+    }
+}
+
+
+/* G <- \sum_i \rho_i f_i(s) * G */
+/* ---------------------------------------------------------------------- */
+void
+mim_ip_density_update(int nc, const int *pconn, const double *omega,
+                      double *gpress)
+/* ---------------------------------------------------------------------- */
+{
+    int c, i;
+
+    for (c = i = 0; c < nc; c++) {
+        for (; i < pconn[c + 1]; i++) {
+            gpress[i] *= omega[c];
+        }
+    }
+}
