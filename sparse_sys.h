@@ -72,6 +72,12 @@ csrmatrix_delete(struct CSRMatrix *A);
 void
 csrmatrix_zero(struct CSRMatrix *A);
 
+/* ---------------------------------------------------------------------- */
+/* v = zeros([n, 1]) */
+/* ---------------------------------------------------------------------- */
+void
+vector_zero(size_t n, double *v);
+
 #ifdef __cplusplus
 }
 #endif
