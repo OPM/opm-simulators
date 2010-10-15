@@ -127,14 +127,9 @@ public:
 
     // Specifies which kind of boundary condition should be used for
     // which equation on a given boundary segment.
-    void boundaryTypes(BoundaryTypes &BCtype,
-                       const Element &element,
-                       const FVElementGeometry &fvElemGeom,
-                       const Intersection &isIt,
-                       int scvIdx,
-                       int boundaryFaceIdx) const
+    void boundaryTypes(BoundaryTypes &BCtype, const Vertex &vertex) const
     {
-        const GlobalPosition &pos = element.geometry().corner(scvIdx);
+        const GlobalPosition &pos = vertex.geometry().center();
         if (pos[0] < eps_) // dirichlet conditions on left boundary
            BCtype.setAllDirichlet();
         else // neuman for the remaining boundaries
@@ -145,12 +140,7 @@ public:
     // Evaluate the boundary conditions for a dirichlet boundary
     // segment.  For this method, the 'values' parameter stores
     // primary variables.
-    void dirichlet(PrimaryVariables &values,
-                   const Element &element,
-                   const FVElementGeometry &fvElemGeom,
-                   const Intersection &isIt,
-                   int scvIdx,
-                   int boundaryFaceIdx) const
+    void dirichlet(PrimaryVariables &values, const Vertex &vertex) const
     {
         values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
