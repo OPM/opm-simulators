@@ -74,6 +74,18 @@ public:
     { Components::init(); }
 
     /*!
+     * \brief Return the human readable name of a phase
+     */
+    static const char *phaseName(int phaseIdx)
+    {
+        switch (phaseIdx) {
+        case lPhaseIdx: return "l";
+        case gPhaseIdx: return "g";
+        };
+        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+    }
+
+    /*!
      * \brief Return the human readable name of a component
      */
     static const char *componentName(int compIdx)

@@ -73,6 +73,12 @@ public:
     //! Critical pressure of water [Pa]
     static const Scalar criticalPressure = 22.064e6;
 
+    //! Critical molar volume of water [m^3/mol]
+    static const Scalar criticalMolarVolume = molarMass/322.0;
+
+    //! The acentric factor of water []
+    static const Scalar acentricFactor = 0.344;
+
     //! Density of water at the critical point [kg/m^3]
     static const Scalar criticalDensity = 322;
 

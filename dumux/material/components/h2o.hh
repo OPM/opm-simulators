@@ -77,7 +77,13 @@ public:
     { return Common::molarMass; }
 
     /*!
-     * \brief Returns the critical temperature [K] of water.
+     * \brief The acentric factor [] of water.
+     */
+    static Scalar acentricFactor()
+    { return Common::acentricFactor; }
+
+    /*!
+     * \brief Returns the critical temperature [K] of water
      */
     static Scalar criticalTemperature()
     { return Common::criticalTemperature; }
@@ -87,6 +93,12 @@ public:
      */
     static Scalar criticalPressure()
     { return Common::criticalPressure; }
+
+    /*!
+     * \brief Returns the molar volume [m^3/mol] of water at the critical point
+     */
+    static Scalar criticalMolarVolume()
+    { return Common::criticalMolarVolume; }
 
     /*!
      * \brief Returns the temperature [K] at water's triple point.

@@ -101,13 +101,17 @@ public:
         return EffLaw::krn(params, SwToSwe(params, Sw));
     }
 
-    // convert an absolute wetting saturation to an effective one
+    /*!
+     * \brief Convert an absolute wetting saturation to an effective one.
+     */
     static Scalar SwToSwe(const Params &params, Scalar Sw)
     {
         return (Sw - params.Swr())/(1 - params.Swr() - params.Snr());
     }
 
-    // convert an absolute wetting saturation to an effective one
+    /*!
+     * \brief convert an absolute wetting saturation to an effective one
+     */
     static Scalar SnToSne(const Params &params, Scalar Sn)
     {
         return (Sn - params.Snr())/(1 - params.Swr() - params.Snr());

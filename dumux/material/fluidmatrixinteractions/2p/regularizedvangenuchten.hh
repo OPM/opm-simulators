@@ -60,7 +60,7 @@ public:
      \f]
      * \param Sw Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
-    static Scalar pC(const Params &params, Scalar Sw)
+    static Scalar pC(const Params &params, Scalar Swe)
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
@@ -72,16 +72,16 @@ public:
         // newton solver (if the derivative is calculated numerically)
         // in order to get the saturation moving to the right
         // direction if it temporarily is in an 'illegal' range.
-        if (Sw < SwThLow) {
-            return VanGenuchten::pC(params, SwThLow) + mLow_(params)*(Sw - SwThLow);
+        if (Swe < SwThLow) {
+            return VanGenuchten::pC(params, SwThLow) + mLow_(params)*(Swe - SwThLow);
         }
-        else if (Sw > SwThHigh) {
-            return VanGenuchten::pC(params, SwThHigh) + mHigh_(params)*(Sw - SwThHigh);
+        else if (Swe > SwThHigh) {
+            return VanGenuchten::pC(params, SwThHigh) + mHigh_(params)*(Swe - SwThHigh);
         }
 
         // if the effective saturation is in an 'reasonable'
         // range, we use the real van genuchten law...
-        return VanGenuchten::pC(params, Sw);
+        return VanGenuchten::pC(params, Swe);
     }
 
     /*!
