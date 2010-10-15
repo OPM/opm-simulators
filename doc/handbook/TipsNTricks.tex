@@ -33,11 +33,11 @@ This approach really helps keeping the bumps in the work-flow small.
   May be if you are really in the  dark you want to see all your debug information. Another time you may only want to be warned if something is going seriously wrong during a simulation. 
   This can be achieved by setting the debug streams to desired values. There are 5 levels:
 \begin{verbatim}
-5 - grave
-4 - warning
-3 - info
-2 - verbose
-1 - very verbose
+5 - grave (dgrave)
+4 - warning (dwarn)
+3 - info (dinfo)
+2 - verbose (dverb)
+1 - very verbose (dvverb)
 \end{verbatim}
 Which are used as follows:
 
@@ -48,7 +48,7 @@ The debug streams are switched on/off via  setting  \\
 \verb+#define DUNE_MINIMAL_DEBUG_LEVEL 4 + \\ 
 in \\
 \verb+dumux-devel/config.h+ \\
-to the desired value and recompiling your application. E.g. if the value is set to 4 the out put generated after \verb+Dune::dinfo+ will printed anywhere. 
+to the desired value and recompiling your application. E.g. if the value is set to 4 the out put generated after \verb+Dune::dinfo+ (level 4 and 5) will printed anywhere. 
 
  \item filename / line number predefined macro:
 
