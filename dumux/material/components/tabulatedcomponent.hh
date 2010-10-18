@@ -67,6 +67,10 @@ public:
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
     {
+#ifndef NDEBUG
+        initialized_  = true;
+        warningPrinted_ = false;
+#endif
         tempMin_ = tempMin;
         tempMax_ = tempMax;
         nTemp_ = nTemp;
@@ -250,8 +254,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward gasEnthalpy("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("gasEnthalpy", temperature, pressure);
             return RawComponent::gasEnthalpy(temperature, pressure);
         }
         return result;
@@ -269,8 +272,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward liquidEnthalpy("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("liquidEnthalpy", temperature, pressure);
             return RawComponent::liquidEnthalpy(temperature, pressure);
         }
         return result;
@@ -288,8 +290,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward gasInternalEnergy("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("gasInternalEnergy", temperature, pressure);
             return RawComponent::gasInternalEnergy(temperature, pressure);
         }
         return result;
@@ -307,8 +308,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward liquidInternalEnergy("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("liquidInternalEnergy", temperature, pressure);
             return RawComponent::liquidInternalEnergy(temperature, pressure);
         }
         return result;
@@ -327,8 +327,7 @@ public:
                                             temperature,
                                             density);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward gasPressure("<<temperature<<", "<<density<<")\n";
+            printWarning_("gasPressure", temperature, density);
             return RawComponent::gasPressure(temperature,
                                              density);
         }
@@ -347,8 +346,7 @@ public:
                                                temperature,
                                                density);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward liquidPressure("<<temperature<<", "<<density<<")\n";
+            printWarning_("liquidPressure", temperature, density);
             return RawComponent::liquidPressure(temperature,
                                                 density);
         }
@@ -368,8 +366,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward gasDensity("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("gasDensity", temperature, pressure);
             return RawComponent::gasDensity(temperature, pressure);
         }
         return result;
@@ -388,8 +385,7 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward liquidDensity("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("liquidDensity", temperature, pressure);
             return RawComponent::liquidDensity(temperature, pressure);
         }
         return result;
@@ -407,8 +403,7 @@ public:
                                           temperature,
                                           pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward gasViscosity("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("gasViscosity", temperature, pressure);
             return RawComponent::gasViscosity(temperature, pressure);
         }
         return result;
@@ -426,14 +421,32 @@ public:
                                              temperature,
                                              pressure);
         if (std::isnan(result)) {
-            if (verbose)
-                std::cerr << "forward liquidViscosity("<<temperature<<", "<<pressure<<")\n";
+            printWarning_("liquidViscosity",temperature, pressure);
             return RawComponent::liquidViscosity(temperature, pressure);
         }
         return result;
     };
 
 private:
+    // prints a warning if the result is not in range or the table has
+    // not been initialized
+    static void printWarning_(const char *quantity, Scalar arg1, Scalar arg2)
+    {
+#ifndef NDEBUG
+        if (warningPrinted_)
+            return;
+
+        if (!initialized_)
+            std::cerr << "TABULATED COMPONENT '" << name()
+                      << "' WAS NOT INITIALIZED! "
+                      << "PLEASE CALL FluidSystem::init()\n";
+        else if (verbose)
+            std::cerr << "FORWARD METHOD CALL "<<quantity<<"("<<arg1<<", "<<arg2<<") OF COMPONENT '"<<name()<<"'. TABULATION TOO SMALL?\n";
+        warningPrinted_ = true;
+#endif
+    }
+    
+
     // returns an interpolated value depending on temperature
     static Scalar interpolateT_(const Scalar *values, Scalar T)
     {
@@ -640,6 +653,13 @@ private:
     { return maxGasDensity__[tempIdx]; }
 
 
+#ifndef NDEBUG
+    // specifies whether the table was initialized
+    static bool initialized_;
+    // specifies whether some warning was printed
+    static bool warningPrinted_;
+#endif
+
     // 1D fields with the temperature as degree of freedom
     static Scalar *vaporPressure_;
 
@@ -681,6 +701,14 @@ private:
     static Scalar densityMax_;
     static unsigned nDensity_;
 };
+
+#ifndef NDEBUG
+template <class Scalar, class RawComponent, bool verbose>
+bool TabulatedComponent<Scalar, RawComponent, verbose>::initialized_ = false;
+
+template <class Scalar, class RawComponent, bool verbose>
+bool TabulatedComponent<Scalar, RawComponent, verbose>::warningPrinted_ = false;
+#endif
 
 template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::vaporPressure_;
