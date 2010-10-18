@@ -70,7 +70,7 @@ can be retrieved by the \Dumux property system and only depend on this
 single type tag. Retrieving them is done between line
 \ref{tutorial-coupled:retrieve-types-begin} and
 \ref{tutorial-coupled:retrieve-types-end}. For an introduction to the
-property system, see section \textbf{TODO}.
+property system, see section \ref{sec:propertysytem}.
 
 The first thing which should be done at run time is to initialize the
 message passing interface using DUNE's \texttt{MPIHelper} class. Line
@@ -103,7 +103,7 @@ so-called \textit{problem file} as shown in listing
 numberstyle=\tiny, numbersep=5pt, firstline=17]{../../tutorial/tutorialproblem_coupled.hh}
 \end{lst}
 
-First, a new type tag is created for the problem on line
+First, a new type tag is created for the problem in line
 \ref{tutorial-coupled:create-type-tag}.  In this case, the new type
 tag inherits all properties defined for the \texttt{BoxTwoP} type tag,
 which means that for this problem the two-phase box model is chosen as
@@ -137,7 +137,7 @@ The problem class always has at least five methods:
   the Dirichlet conditions on a boundary segment
 \item A method \texttt{neumann()} specifying the actual values for
   the Neumann conditions on a boundary segment
-\item A method for source or sink terms called \texttt{source}
+\item A method for source or sink terms called \texttt{source()}
 \item A method called \texttt{initial()} for specifying the initial
   condition.
 \end{itemize}
@@ -201,7 +201,7 @@ the density are of interest. These interactions are defined in
 a specific \verb+fluidsystem+ in the folder \verb+dumux/material/fluidsystems+.
 It features methods returning fluid properties like density, enthalpy, viscosity,
 etc. by accessing the pure components as well as binary coefficients such as
-Henry's or Diffusion coefficients, which are stored in 
+Henry or diffusion coefficients, which are stored in 
 \verb+dumux/material/binarycoefficients+. New fluids which are not yet
  available in the \Dumux distribution can be defined analogously.
 

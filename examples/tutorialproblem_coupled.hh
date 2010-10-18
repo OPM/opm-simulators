@@ -1,6 +1,6 @@
 // $Id$
 /*****************************************************************************
- *   Copyright (C) 2008-2009 by Melanie Darcis                               *
+ *   Copyright (C) 2008-2009 by Melanie Darcis, Klaus Mosthaf                *
  *   Copyright (C) 2009 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
@@ -18,7 +18,7 @@
 #define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
 // fluid properties
-#include <dumux/material/fluidsystems/h2o_n2_system.hh>
+#include <dumux/material/fluidsystems/2p_system.hh>
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pmodel.hh>
@@ -68,11 +68,24 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     }
 };
 
-// Select fluid system
-SET_PROP(TutorialProblemCoupled,   FluidSystem) /*@\label{tutorial-coupled:set-fluidsystem}@*/
+// Set the wetting phase
+SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:2p-system-start}@*/
 {
-    typedef Dumux::H2O_N2_System<TypeTag> type;
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public:
+    typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{tutorial-coupled:wettingPhase}@*/
 };
+
+// Set the non-wetting phase
+SET_PROP(TutorialProblemCoupled, NonwettingPhase)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public:
+    typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
+}; /*@\label{tutorial-coupled:2p-system-end}@*/
+
 
 // Set the spatial parameters
 SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-spatialparameters}@*/
@@ -176,7 +189,7 @@ public:
             // oil outflux of 0.3 g/(m * s) on the right boundary of
             // the domain.
             values[Indices::contiWEqIdx] = 0;
-            values[Indices::contiNEqIdx] = 0.3e-3;
+            values[Indices::contiNEqIdx] = 3e-4;
         } else {
             // no-flow on the remaining neumann-boundaries
             values[Indices::contiWEqIdx] = 0;

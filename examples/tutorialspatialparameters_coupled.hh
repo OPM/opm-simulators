@@ -82,7 +82,8 @@ public:
 
     // constructor
     TutorialSpatialParametersCoupled(const GridView& gridView) :
-        BoxSpatialParameters<TypeTag>(gridView), K_(0)
+        BoxSpatialParameters<TypeTag>(gridView),
+        K_(0)
     {
         for (int i = 0; i < dim; i++)
             K_[i][i] = 1e-7;

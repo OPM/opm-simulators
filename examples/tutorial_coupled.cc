@@ -71,7 +71,7 @@ int main(int argc, char** argv)
         // instantiate the problem on the leaf grid
         Problem problem(timeManager, gridPtr->leafView()); /*@\label{tutorial-coupled:instantiate-problem}@*/
         timeManager.init(problem, 0, dt, tEnd, !restart);
-        // load the some previously saved state from disk
+        // load some previously saved state from disk
         if (restart)
             problem.restart(restartTime); /*@\label{tutorial-coupled:restart}@*/
         // run the simulation
