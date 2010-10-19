@@ -3,12 +3,12 @@
 The process of solving a problem using \Dumux can be roughly divided into four parts:
 \begin{enumerate}
  \item The geometry of the problem and correspondingly a grid have to be defined.
- \item Material properties and constitutive relationships have to be defined.
+ \item Material properties and constitutive relationships have to be selected.
  \item Boundary conditions as well as initial conditions have to be defined.
  \item A suitable model has to be chosen.
 \end{enumerate}
 
-The problem that is solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects as well as capillarity effects are neglected.
+The problem that is solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom which is initially saturated with oil is considered. Water infiltrates from the left side into the domain. Gravity effects as well as capillarity effects are neglected.
 
 \begin{figure}[h]
 \psfrag{x}{x}
@@ -51,7 +51,7 @@ water:
 \subsection{The main file}
 
 Listing \ref{tutorial-coupled:mainfile} shows the main file
-\texttt{tutorial/tutorial\_coupled.cc} for the coupled twophase
+\texttt{tutorial/tutorial\_coupled.cc} for the coupled two-phase
 model. This file needs to be executed to solve the problem described
 above.
 
@@ -74,21 +74,20 @@ property system, see section \ref{sec:propertysytem}.
 
 The first thing which should be done at run time is to initialize the
 message passing interface using DUNE's \texttt{MPIHelper} class. Line
-\ref{tutorial-coupled:init-mpi} line is essential if the simulation is
+\ref{tutorial-coupled:init-mpi} is essential if the simulation is
 intended to be run on more than one processor at the same time. Next,
 the command line arguments are parsed starting at line
 \ref{tutorial-coupled:parse-args-begin} until line
-\ref{tutorial-coupled:parse-args-end}. In this case, we check if and
-at which time a previous run of the simulation should be restarted, we
-parse the initial size of a time step and the time when the simulation
-ends.
+\ref{tutorial-coupled:parse-args-end}. In this example, it is checked if and
+from which time on a previous run of the simulation should be restarted. Furthermore, we
+parse the time when the simulation ends and the initial time step size.
 
-After this, a grid is created on line
+After this, a grid is created in line
 \ref{tutorial-coupled:create-grid} and the problem is instantiated for
-its leaf grid view on line \ref{tutorial-coupled:instantiate-problem}.
+its leaf grid view in line \ref{tutorial-coupled:instantiate-problem}.
 Finally, on line \ref{tutorial-coupled:restart} a state written to
-disk by a previous simulation run is restored on request by the user
-and the simulation procedure is started at line
+disk by a previous simulation run is restored if requested by the user.
+The simulation procedure is started at line
 \ref{tutorial-coupled:execute}.
 
 \subsection{The problem class}
@@ -109,9 +108,9 @@ tag inherits all properties defined for the \texttt{BoxTwoP} type tag,
 which means that for this problem the two-phase box model is chosen as
 discretization scheme. On line \ref{tutorial-coupled:set-problem}, a
 problem class is attached to the new type tag, while the grid which
-is going to be used is defined on line \ref{tutorial-coupled:set-grid} --
-in this case it's \texttt{SGrid}.  Since in Dune, there's no uniform
-mechanism to allocate grids, the \texttt{Grid} property also contains
+is going to be used is defined in line \ref{tutorial-coupled:set-grid} --
+in this case it's \texttt{SGrid}.  Since there's no uniform
+mechanism to allocate grids in \Dune, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that. Next,
 the appropriate fluid system, that specifies both information about
 the fluid mixture as well as about the pure substances, has to be chosen 
@@ -204,6 +203,9 @@ etc. by accessing the pure components as well as binary coefficients such as
 Henry or diffusion coefficients, which are stored in 
 \verb+dumux/material/binarycoefficients+. New fluids which are not yet
  available in the \Dumux distribution can be defined analogously.
+
+% In this example, a class for the definition of a two-phase system is used. This allows the choice 
+% of the two components oil and water and to access the parameters that are relevant for the two-phase model.
 
 \subsection{The definition of the parameters that are dependent on space}\label{tutorial-coupled:description-spatialParameters}
 
