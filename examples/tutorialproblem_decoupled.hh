@@ -123,7 +123,7 @@ SET_INT_PROP(TutorialProblemDecoupled, VelocityFormulation,
 SET_TYPE_PROP(TutorialProblemDecoupled, DiffusivePart,
         Dumux::CapillaryDiffusion<TypeTag>); /*@\label{tutorial-decoupled:DiffusivePart}@*/
 
-SET_SCALAR_PROP(TutorialProblemDecoupled, CFLFactor, 0.3); /*@\label{tutorial-decoupled:cfl}@*/
+SET_SCALAR_PROP(TutorialProblemDecoupled, CFLFactor, 0.5); /*@\label{tutorial-decoupled:cfl}@*/
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutorial-decoupled:gravity}@*/
@@ -224,7 +224,7 @@ public:
      */
     typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypePress}@*/
     {
-        if ((globalPos[0] < lowerLeft_[0] + eps_))
+        if ((globalPos[0] < this->bboxMin()[0] + eps_))
             return BoundaryConditions::dirichlet;
         // all other boundaries
         return BoundaryConditions::neumann;
@@ -236,7 +236,7 @@ public:
      */
     BoundaryConditions::Flags bctypeSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypeSat}@*/
     {
-        if (globalPos[0] < lowerLeft_[0] + eps_)
+        if (globalPos[0] < this->bboxMin()[0] + eps_)
             return Dumux::BoundaryConditions::dirichlet;
         else
             return Dumux::BoundaryConditions::neumann;
@@ -247,7 +247,7 @@ public:
      */
     Scalar dirichletPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletPress}@*/
     {
-        if (globalPos[0] < lowerLeft_[0] + eps_)
+        if (globalPos[0] < this->bboxMin()[0] + eps_)
             return 2e5;
         // all other boundaries
         return 0;
@@ -258,7 +258,7 @@ public:
      */
     Scalar dirichletSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletSat}@*/
     {
-        if (globalPos[0] < lowerLeft_[0] + eps_)
+        if (globalPos[0] < this->bboxMin()[0] + eps_)
             return 1;
         // all other boundaries
         return 0;
@@ -270,7 +270,7 @@ public:
     std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:neumannPress}@*/
     {
         std::vector<Scalar> neumannFlux(2,0.0);
-        if (globalPos[0] > upperRight_[0] - eps_)
+        if (globalPos[0] > this->bboxMax()[0] - eps_)
         {
             neumannFlux[nPhaseIdx] = 3e-4;
         }
