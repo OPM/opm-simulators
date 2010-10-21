@@ -68,9 +68,6 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     }
 };
 
-// Choose the fluid system
-SET_TYPE_PROP(BoxTwoP, FluidSystem, FluidSystem2P<TypeTag>); /*@\label{tutorial-coupled:set-fluidsystem}@*/
-
 // Set the wetting phase
 SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:2p-system-start}@*/
 {
