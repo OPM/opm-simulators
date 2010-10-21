@@ -16,6 +16,7 @@
 /*!
  * \file
  *
+ * \ingroup Binarycoefficients
  * \brief Various relations for molecular diffusion coefficients.
  */
 #ifndef DUMUX_FULLERMETHOD_HH
@@ -28,6 +29,11 @@ namespace BinaryCoeff
 /*!
  * \brief Estimate binary diffusion coefficents [m^2/s] in gases according to
  *        the method by Fuller.
+ *
+ * \param M molar masses [g/mol]
+ * \param SigmaNu atomic diffusion volume
+ * \param temperature The temperature [K]
+ * \param pressure phase pressure [Pa]
  *
  * This function estimates the diffusion coefficents in binary gases
  * using to the method proposed by Fuller. This method and is only
@@ -51,6 +57,6 @@ inline Scalar fullerMethod(const Scalar *M, // molar masses [g/mol]
 }
 
 } // end namepace BinaryCoeff
-} // end namepace Dune
+} // end namepace Dumux
 
 #endif

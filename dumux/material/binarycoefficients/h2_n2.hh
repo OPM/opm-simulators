@@ -15,6 +15,7 @@
 /*!
  * \file
  *
+ * \ingroup Binarycoefficients
  * \brief Binary coefficients for hydrogen and nitrogen.
  */
 #ifndef DUMUX_BINARY_COEFF_H2_N2_HH
@@ -39,6 +40,8 @@ class H2_N2
 public:
     /*!
      * \brief Henry coefficent \f$[N/m^2]\f$  for molecular nitrogen in liquid hydrogen.
+     *
+     * \param temperature the temperature [K]
      */
     template <class Scalar>
     static Scalar henry(Scalar temperature)
@@ -49,7 +52,7 @@ public:
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for molecular hydrogen and nitrogen.
      *
-     * \copybody fullerMethod()
+     * \copydetails Dumux::fullerMethod
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)

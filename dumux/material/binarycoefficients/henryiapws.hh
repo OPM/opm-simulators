@@ -14,8 +14,14 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
+ * \ingroup Material
+ * \defgroup Binarycoefficients
+ */
+
+/*!
  * \file
  *
+ * \ingroup Binarycoefficients
  * \brief The IAPWS formulation of Henry coefficients in water.
  */
 #ifndef DUMUX_HENRY_IAPWS_HH
@@ -29,9 +35,7 @@ namespace Dumux
  * \brief The Henry constants in liquid water using the IAPWS 2004
  *        formulation.
  *
- * This calculated \f$K_D\f$ from the reference.
- *
- * See:
+ * This function calculates \f$K_D\f$, see:
  *
  * IAPWS: "Guideline on the Henry's Constant and Vapor-Liquid
  * Distribution Constant for Gases in H2O and D2O at High

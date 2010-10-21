@@ -16,6 +16,7 @@
 /*!
  * \file
  *
+ * \ingroup Binarycoefficients
  * \brief Binary coefficients for water and nitrogen.
  */
 #ifndef DUMUX_BINARY_COEFF_H2O_N2_HH
@@ -41,12 +42,7 @@ public:
     /*!
      * \brief Henry coefficent \f$[N/m^2]\f$  for molecular nitrogen in liquid water.
      *
-     * See:
-     *
-     * IAPWS: "Guideline on the Henry's Constant and Vapor-Liquid
-     * Distribution Constant for Gases in H2O and D2O at High
-     * Temperatures"
-     * http://www.iapws.org/relguide/HenGuide.pdf
+     * \copydetails Dumux::henryIAPWS
      */
     template <class Scalar>
     static Scalar henry(Scalar temperature)
