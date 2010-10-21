@@ -15,7 +15,7 @@
  *****************************************************************************/
 /*!
  * \ingroup Components
- * \defgroup IAPWS
+ * \defgroup IAPWS IAPWS
  */
 /*!
  * \file

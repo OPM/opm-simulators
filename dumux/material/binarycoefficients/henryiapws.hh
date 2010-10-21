@@ -15,7 +15,7 @@
  *****************************************************************************/
 /*!
  * \ingroup Material
- * \defgroup Binarycoefficients
+ * \defgroup Binarycoefficients Binary Coefficients
  */
 
 /*!
