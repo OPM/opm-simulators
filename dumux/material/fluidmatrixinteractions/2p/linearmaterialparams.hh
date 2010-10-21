@@ -14,8 +14,10 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file linearmaterialparams.hh Reference implementation of params for
- *                           the linear material material.
+ * \file
+ *
+ * \brief Parameters for the linear capillary pressure and
+ * relative permeability <-> saturation relations
  */
 #ifndef LINEAR_MATERIAL_PARAMS_HH
 #define LINEAR_MATERIAL_PARAMS_HH

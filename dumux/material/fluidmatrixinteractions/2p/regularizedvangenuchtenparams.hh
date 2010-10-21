@@ -14,9 +14,9 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file RegularizedVanGenuchtenParams.hh
-
- * \brief Reference implementation of a regularized van Genuchten params
+ * \file
+ *
+ * \brief Parameters for the regularized van Genuchten constitutive relations
  */
 #ifndef REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
 #define REGULARIZED_VAN_GENUCHTEN_PARAMS_HH

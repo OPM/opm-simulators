@@ -14,8 +14,10 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file linearmaterial.hh Implements a linear saturation-capillary
- *                    pressure relation
+ * \file
+ *
+ * \brief Linear capillary pressure and
+ * relative permeability <-> saturation relations
  */
 #ifndef LINEAR_MATERIAL_HH
 #define LINEAR_MATERIAL_HH

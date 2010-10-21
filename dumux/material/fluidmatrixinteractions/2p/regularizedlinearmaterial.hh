@@ -13,8 +13,10 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file linearmaterial.hh Implements a linear saturation-capillary
- *                    pressure relation
+ * \file
+ *
+ * \brief Regularized linear capillary pressure and
+ * relative permeability <-> saturation relations.
  */
 #ifndef DUMUX_REGULARIZED_LINEAR_MATERIAL_HH
 #define DUMUX_REGULARIZED_LINEAR_MATERIAL_HH

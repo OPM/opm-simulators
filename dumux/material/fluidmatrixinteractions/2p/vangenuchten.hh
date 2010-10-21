@@ -14,8 +14,10 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file VanGenuchten.hh Implementation of van Genuchten's capillary
- *                       pressure <-> saturation relation
+ * \file
+ *
+ * \brief Implementation of the capillary pressure and
+ * relative permeability <-> saturation relations due to van Genuchten.
  */
 #ifndef VAN_GENUCHTEN_HH
 #define VAN_GENUCHTEN_HH

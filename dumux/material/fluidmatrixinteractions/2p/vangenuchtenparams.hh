@@ -14,8 +14,10 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file vangenuchtenparams.hh Specification of the material params
- *       for the van Genuchten capillary pressure model.
+ * \file
+ *
+ * \brief Specification of the material parameters
+ *       for the van Genuchten constitutive relations.
  */
 #ifndef VAN_GENUCHTEN_PARAMS_HH
 #define VAN_GENUCHTEN_PARAMS_HH
