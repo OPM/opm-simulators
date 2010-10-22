@@ -99,7 +99,7 @@ public:
      *
      * \param element The current finite element
      * \param fvElemGeom The current finite volume geometry of the element
-     * \param scvIdx The index sub-control volume face where the
+     * \param scvfIdx The index sub-control volume face where the
      *                      factor ought to be calculated.
      *
      * By default it is the arithmetic mean of the extrusion factor of
