@@ -46,7 +46,6 @@ ifs_tpfa_assemble(grid_t               *G,
 void
 ifs_tpfa_press_flux(grid_t               *G,
                     const double         *trans,
-                    const double         *src,
                     struct ifs_tpfa_data *h,
                     double               *cpress,
                     double               *fflux);
