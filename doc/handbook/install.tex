@@ -134,6 +134,32 @@ its license is not open. For research and education it is possibble to have a co
 A fortran compiler like gfortran is needed to compile it.
 \end{itemize}
 
+\paragraph{Hint for IWS Users} User of Institute of Hydraulic Engineering of Stuttgart University 
+can also svn check out a repository for external libraries: 
+
+\texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}. \\
+
+This directory \texttt{external} contains a script to install external libraries, i.e. 
+alberta, alu, blas, metis, ug: 
+\begin{center}
+\texttt{./installExternal.sh all}
+\end{center}
+it is also possible to install only parts, e.g.:\\ 
+\begin{center}
+\texttt{./installExternal.sh alberta}
+\end{center}
+
+These libraries are then build within this external-directory and not installed in 
+a different place. But a dune build still  has to know about where they are.
+You have to refer to them as options to \Dune build, e.g. from your options file \texttt{debug.opts}.
+
+%To install them all, execute the install script in the folder \texttt{external}:
+%\begin{center}
+%\texttt{./installExternal.sh all}
+%\end{center}
+%If you like to install only some of the external software, you can choose one of the 
+%corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
+%Please also refer to the \Dune webpage for additional details, \cite{DUNE-HP}. 
 
 % \paragraph{Installation on a non-IWS PC}
 % If \Dumux is not to be used on a PC maintained by LH$^2$ it is probable that one needs to install additional software. 
