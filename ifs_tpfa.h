@@ -41,6 +41,7 @@ void
 ifs_tpfa_assemble(grid_t               *G,
                   const double         *trans,
                   const double         *src,
+                  const double         *gpress,
                   struct ifs_tpfa_data *h);
 
 void

@@ -8,6 +8,8 @@
 
 
 struct ifs_tpfa_impl {
+    double *fgrav;              /* Accumulated grav contrib/face */
+
     /* Linear storage */
     double *ddata;
 };
@@ -36,6 +38,7 @@ impl_allocate(grid_t *G)
     size_t ddata_sz;
 
     ddata_sz  = 2 * G->number_of_cells;                /* b, x */
+    ddata_sz += 1 * G->number_of_faces;                /* fgrav */
 
     new = malloc(1 * sizeof *new);
 
@@ -142,6 +145,8 @@ ifs_tpfa_construct(grid_t *G)
     if (new != NULL) {
         new->b = new->pimpl->ddata;
         new->x = new->b             + new->A->m;
+
+        new->pimpl->fgrav = new->x  + new->A->m;
     }
 
     return new;
@@ -153,13 +158,15 @@ void
 ifs_tpfa_assemble(grid_t               *G,
                   const double         *trans,
                   const double         *src,
+                  const double         *gpress,
                   struct ifs_tpfa_data *h)
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, c, i, f, j1, j2;
 
-    csrmatrix_zero(         h->A);
-    vector_zero   (h->A->m, h->b);
+    csrmatrix_zero(                    h->A);
+    vector_zero   (h->A->m,            h->b);
+    vector_zero   (G->number_of_faces, h->pimpl->fgrav);
 
     for (c = i = 0; c < G->number_of_cells; c++) {
         j1 = csrmatrix_elm_index(c, c, h->A);
@@ -182,6 +189,8 @@ ifs_tpfa_assemble(grid_t               *G,
 
         h->b[c] += src[c];
     }
+
+    h->A->sa[0] *= 2;
 }
 
 
