@@ -106,7 +106,7 @@ If you going to use an external librara check information provided on \Dune webs
 \begin{itemize}
 \item \textbf{UG}: UG is toolbox for Unstructured Grids: for \Dumux is build by autotools and C++-Compiler. Additionally the tools \texttt{lex}/\texttt{yacc} or gnu-versions \texttt{flex}/\texttt{bison} are needed. 
 
-\item \textbf{Alberta}: Adaptive multiLevel finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A fortran compiler like \texttt{gfortran} is needed.  Alberta makes use of BLAS thus install libGOTO, ATLAS, unoptimized BLAS or BLAS by chipmanufacturer.\\
+\item \textbf{Alberta}: Adaptive multiLevel finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A fortran compiler like \texttt{gfortran} is needed.
 
 \item \textbf{Alugrid}: Alugrid is build by C++-compiler like \texttt{g++}. If you build a parallel version you will need MPI, it was successful run with \texttt{openmpi}. Parallel version need also a graph partitioner, i.e. METIS or PARTY. It was run successfuly in context with \Dune with \texttt{Metis}.
 
@@ -118,20 +118,28 @@ If you going to use an external librara check information provided on \Dune webs
 \item \textbf{\Dune multidomaingrid} If you going to run on the same grid different domains or subdomains, this can be a package of choice.
 \end{itemize}
 
-These modules are dependencies. You will need them depending of which parts of \Dune and external parts you run.
+These following are dependencies. You will need them depending of which parts of \Dune and external parts you run.
 \begin{itemize}
-\item \textbf{MPI}: parallel version of \Dune needs MPI also some of the external dependencies. \texttt{Openmpi} and \texttt{MPICH} in a recent version had been reported to work. 
+\item \textbf{MPI}: parallel version of \Dune needs MPI also some of the external dependencies when they are going to be build for parallel computing. \texttt{Openmpi} and \texttt{MPICH} in a recent version had been reported to work. 
 
-\item \textbf{lex/yacc} or \textbf{flex/bison} Is a dependency to UG.
+\item \textbf{lex/yacc} or \textbf{flex/bison}. These are quite common developing tools, code generators for lexical analyser a nd parser.  Is a dependency to UG.
 
 \item \textbf{libboost} Install a developer verssion. \Dumux property system makes use of libboost also \Dune Multidomaingrid.
 
 \item \textbf{BLAS}: Alberta makes use of BLAS thus install libGOTO, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that installation scripts select intended version of BLAS. 
 
-\item \textbf{Metis} Is a dependency to Alugrid.
+\item \textbf{Metis} Is a dependency to Alugrid, if you run it in parallel. It partitionates your grid.
+
 \item \textbf{libGOTO} Is an optimized version of BLAS. It's not always available for all architectures and 
 its license is not open. For research and education it is possibble to have a copy without additional costs.
 A fortran compiler like gfortran is needed to compile it.
+
+\item \textbf{make,autogen,automake,libtool} 
+For make use the gnu version of make, the other are also gnu building tools dependencies to build most code of \Dune and \Dumux. 
+
+\item \textbf{latex, convert, doxygen} For building \Dumux documentation one will need them. 
+Convert is a ImageMagicks image conversion tool. Latex is macro frontend to TeX font setting system, install for example texlive.  Many parts of code documentation is done inline, with doxygen will extract and make html or latex 
+from that.
 \end{itemize}
 
 \paragraph{Hint for IWS Users} User of Institute of Hydraulic Engineering of Stuttgart University 
@@ -140,7 +148,7 @@ can also svn check out a repository for external libraries:
 \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}. \\
 
 This directory \texttt{external} contains a script to install external libraries, i.e. 
-alberta, alu, blas, metis, ug: 
+alberta, alu, ug it also contains metis and the blas version libGOTO: 
 \begin{center}
 \texttt{./installExternal.sh all}
 \end{center}
