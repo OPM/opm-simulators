@@ -82,26 +82,10 @@ When using subversion, it is possible, provided that to you are granted develope
 your own code or code changes to software repositories. With direct access to software repositories it is also easier for you to keep up with code changes as for important bug fixes or to keep up with general developments of code.
 
 
-\paragraph{External modules}
-%\begin{itemize}
-% \item grids: Alberta, AluGrid, UG
-% \item solvers: Pardiso, SuperLU
-% \item BLAS and METIS library 
-%\end{itemize}
-%These can be downloaded from the respective websites.
-%
-%If you are working on a LH$^2$ computer, you can checkout a set of external modules via \\
-%\texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}. \\
-%To install them all, execute the install script in the folder \texttt{external}:
-%\begin{center}
-%\texttt{./installExternal.sh all}
-%\end{center}
-%If you like to install only some of the external software, you can choose one of the 
-%corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
-%Please also refer to the \Dune webpage for additional details, \cite{DUNE-HP}. 
+\paragraph{Dune External libraries}
 
-The following modules provide additional functionality, but are not required to run \Dumux.
-If you going to use an external librara check information provided on \Dune website.
+The following libraries provide additional functionality, but are not required to run \Dumux.
+If you going to use an external library check information provided on \Dune website.
 
 \begin{itemize}
 \item \textbf{UG}: UG is toolbox for Unstructured Grids: for \Dumux is build by autotools and C++-Compiler. Additionally the tools \texttt{lex}/\texttt{yacc} or gnu-versions \texttt{flex}/\texttt{bison} are needed. 
@@ -113,9 +97,9 @@ If you going to use an external librara check information provided on \Dune webs
 
 \item \textbf{pardiso} Is a solver for linear equation systems. It is only available as binary.
 
-\item \textbf{SuperLU} Another Solver.
+\item \textbf{SuperLU} Another solver for linear equation systems.
 
-\item \textbf{\Dune multidomaingrid} If you going to run on the same grid different domains or subdomains, this can be a package of choice.
+\item \textbf{\Dune multidomaingrid} If you going to run on the same grid different domains or subdomains, this can be a package of choice. To be precise this is an external \Dune module which as \Dumux gets build by \Dune build system, not only external library.
 \end{itemize}
 
 These following are dependencies. You will need them depending of which parts of \Dune and external parts you run.
@@ -124,22 +108,31 @@ These following are dependencies. You will need them depending of which parts of
 
 \item \textbf{lex/yacc} or \textbf{flex/bison}. These are quite common developing tools, code generators for lexical analyser a nd parser.  Is a dependency to UG.
 
-\item \textbf{libboost} Install a developer verssion. \Dumux property system makes use of libboost also \Dune Multidomaingrid.
+\item \textbf{boost} The Boost-C++-Libraries. Install a developer version. \Dumux property system makes use of libboost also \Dune Multidomaingrid.
 
 \item \textbf{BLAS}: Alberta makes use of BLAS thus install libGOTO, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that installation scripts select intended version of BLAS. 
 
-\item \textbf{Metis} Is a dependency to Alugrid, if you run it in parallel. It partitionates your grid.
+\item \textbf{METIS} Is a dependency to Alugrid, if you run it in parallel, this part is beeing used to partitionate your grid.
 
 \item \textbf{libGOTO} Is an optimized version of BLAS. It's not always available for all architectures and 
 its license is not open. For research and education it is possibble to have a copy without additional costs.
 A fortran compiler like gfortran is needed to compile it.
 
 \item \textbf{make,autogen,automake,libtool} 
-For make use the gnu version of make, the other are also gnu building tools dependencies to build most code of \Dune and \Dumux. 
+For make use the gnu version of make, the other are also gnu building tools dependencies to build most code of \Dune and \Dumux. Autogen, automake are referred as autools. 
 
 \item \textbf{latex, convert, doxygen} For building \Dumux documentation one will need them. 
 Convert is a ImageMagicks image conversion tool. Latex is macro frontend to TeX font setting system, install for example texlive.  Many parts of code documentation is done inline, with doxygen will extract and make html or latex 
 from that.
+
+\item \textbf{Compilers} We recommend to use gnu comiler suite, i.e. gcc/g++/gfortran version 4.5 or 4.4. It is also reported that \Dune was successfully build by Intel C++ compiler. \Dune is build by a C++ compiler. The C and Fortran compiler is only needed for few external libraries.
+
+\item \textbf{libgomp} Dune seems makes use of OpenMP. Thus it can be necessary to install it.
+% http://openmp.org/
+
+\item \textbf{libgmp} The Gnu Multiple Precision Arithmetic Library (GMP) is also a dependency to \Dune. it might be necessary to install it.
+% http://gmplib.org/
+
 \end{itemize}
 
 \paragraph{Hint for IWS Users} User of Institute of Hydraulic Engineering of Stuttgart University 
@@ -161,57 +154,6 @@ These libraries are then build within this external-directory and not installed 
 a different place. But a dune build still  has to know about where they are.
 You have to refer to them as options to \Dune build, e.g. from your options file \texttt{debug.opts}.
 
-%To install them all, execute the install script in the folder \texttt{external}:
-%\begin{center}
-%\texttt{./installExternal.sh all}
-%\end{center}
-%If you like to install only some of the external software, you can choose one of the 
-%corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
-%Please also refer to the \Dune webpage for additional details, \cite{DUNE-HP}. 
-
-% \paragraph{Installation on a non-IWS PC}
-% If \Dumux is not to be used on a PC maintained by LH$^2$ it is probable that one needs to install additional software. 
-% Here is a (hopefully complete) list of packages that needed to  be installed on a fresh ubuntu 10.04 in order to get \verb+dunecontrol+ running.
-% \begin{itemize}
-%   \item build-essential
-%   \item openmpi-common / openmpi-bin ...
-%   \item gfortran
-%   \item libtool
-%   \item libboost-all-dev
-%   \item bison
-%   \item flex
-%   \item gcc-4.3 (hard coded into installExternal.sh)
-%   \item blas ???
-%   \item pardiso
-% \end{itemize}
-% 
-% 
-% \paragraph{Build the external modules} 
-% If you obtained a \Dumux tarball, you can skip this part. 
-% 
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% 
-% {\it
-% 
-%   This  part needs to be extended in order to show which package is necessary for what purpose, 
-%   so the user can decide whether getting all the grmblDamnItDamnbndfjk 
-%   moduls working is worth it! \\
-% 
-%   So could somebody please write something about the respective external modules!\\ 
-% 
-% Also, the gcc version 4.3 is hard coded into the skript. }
-% 
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% \begin{turn}{45}\textbf{Attenschion}\end{turn}
-% 
-% The external modules have to be built first. They consist of Alberta, ALUGrid, UG, and METIS.
 
 \paragraph{Build \Dune and \Dumux}
 \label{buildIt}
