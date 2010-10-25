@@ -14,7 +14,11 @@ After installing source code for all requirered \Dune modules including the \Dum
 
 \paragraph{Basic prerequisites} \label{prerequisites}
 The gnu toolchain of \texttt{g++}  and related gnu variants of developertools like \texttt{libtool}, \texttt{make} and
-and \texttt{automake} must be available in a recent version.
+and \texttt{automake} must be available in a recent version. \Dumux property system (i.e. parts of code) makes use of libboost. It is thus necessary
+to install developer version of \testtt{boost}.
+The building of documentation requirers latex and auxiliary tools like dvipdf, bibtex (e.g. as of tex-live distribution) installed. Additionally the program convert of package ImageMagick is needed too build the handbook.  If you use configuration-switch --enable-doxygen for documentation you will also need doxygen.
+
+Depending on usage of external libraries the required software packages may vary. Beside the section on external properties below it is a good idea also to check \Dune-Wiki for informations about working with external packages. \\
 
 \subsection{Obtaining \Dune and \Dumux}
 Two possibilities exist to obtain \Dune and \Dumux. They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and {\Dumux} website. The shell command \texttt{tar} can be used to extract them on your filesystem. This is explained in the next paragraph. 
@@ -57,7 +61,7 @@ and work yourself through that tutorial in order to get an understanding of the 
 
 \paragraph{Checkout of \Dumux}
 
-In order to access an anonymous read-only copy of the stable part of \Dumux from the reposoitory, the most simple way is to type
+In order to access an anonymous read-only copy of the stable part of \Dumux from the reposository, the most simple way is to type
 \begin{itemize}
 \item \texttt{svn checkout --username=anonymous --password='' \\ 
 svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
@@ -71,7 +75,7 @@ If you also want to commit new developments to the repositories, you can ask the
  \item \texttt{svn checkout --username=yourusername \\
       \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
 \end{itemize} 
-The two parts should be stored in separate folders. You can ommit the username option, if the username for the repository access is identical to the one for your system account. Please choose either not to store the password that way or store it by subversion in a secure way, check documentation of subversion for that. A leaked out password can be used by evil persons to vandalize a software repository.
+The \texttt{dune-devel} makes use of \texttt{dumux} thats why it is also checked out. You can ommit the username option, if the username for the repository access is identical to the one for your system account. Please choose either not to store the password that way or store it by subversion in a secure way, check documentation of subversion for that. A leaked out password can be used by evil persons to vandalize a software repository.
 % If you also want to commit new developments or changes to the repositories, you can ask one of the LH$^2$ administrators to add you to the svn group ( \texttt{svndune}).
 
 When using subversion, it is possible, provided that to you are granted developer, i.e. write permissions to repositories, to feed back
@@ -79,74 +83,101 @@ your own code or code changes to software repositories. With direct access to so
 
 
 \paragraph{External modules}
-Among others, the following modules provide additional functionality, but are not required to run \Dumux:
+%\begin{itemize}
+% \item grids: Alberta, AluGrid, UG
+% \item solvers: Pardiso, SuperLU
+% \item BLAS and METIS library 
+%\end{itemize}
+%These can be downloaded from the respective websites.
+%
+%If you are working on a LH$^2$ computer, you can checkout a set of external modules via \\
+%\texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}. \\
+%To install them all, execute the install script in the folder \texttt{external}:
+%\begin{center}
+%\texttt{./installExternal.sh all}
+%\end{center}
+%If you like to install only some of the external software, you can choose one of the 
+%corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
+%Please also refer to the \Dune webpage for additional details, \cite{DUNE-HP}. 
+
+The following modules provide additional functionality, but are not required to run \Dumux.
+If you going to use an external librara check information provided on \Dune website.
+
 \begin{itemize}
- \item grids: Alberta, AluGrid, UG
- \item solvers: Pardiso, SuperLU
- \item BLAS and METIS library 
+\item \textbf{UG}: UG is toolbox for Unstructured Grids: for \Dumux is build by autotools and C++-Compiler. Additionally the tools \texttt{lex}/\texttt{yacc} or gnu-versions \texttt{flex}/\texttt{bison} are needed. 
+
+\item \textbf{Alberta}: Adaptive multiLevel finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A fortran compiler like \texttt{gfortran} is needed.  Alberta makes use of BLAS thus install libGOTO, ATLAS, unoptimized BLAS or BLAS by chipmanufacturer.\\
+
+\item \textbf{Alugrid}: Alugrid is build by C++-compiler like \texttt{g++}. If you build a parallel version you will need MPI, it was successful run with \texttt{openmpi}. Parallel version need also a graph partitioner, i.e. METIS or PARTY. It was run successfuly in context with \Dune with \texttt{Metis}.
+
+
+\item \textbf{pardiso} Is a solver for linear equation systems. It is only available as binary.
+
+\item \textbf{SuperLU} Another Solver.
+
+\item \textbf{\Dune multidomaingrid} If you going to run on the same grid different domains or subdomains, this can be a package of choice.
 \end{itemize}
-These can be downloaded from the respective websites.
 
-If you are working on a LH$^2$ computer, you can checkout a set of external modules via \\
-\texttt{svn checkout svn+ssh://luftig/home/svn/DUMUX/external/trunk external}. \\
-To install them all, execute the install script in the folder \texttt{external}:
-\begin{center}
-\texttt{./installExternal.sh all}
-\end{center}
-If you like to install only some of the external software, you can choose one of the 
-corresponding options instead of \texttt{all}: \texttt{alberta, alu, blas, metis, ug}.
-Please also refer to the \Dune webpage for additional details, \cite{DUNE-HP}. 
-
-
-\paragraph{Installation on a non-IWS PC}
-If \Dumux is not to be used on a PC maintained by LH$^2$ it is probable that one needs to install additional software. 
-Here is a (hopefully complete) list of packages that needed to  be installed on a fresh ubuntu 10.04 in order to get \verb+dunecontrol+ running.
+These modules are dependencies. You will need them depending of which parts of \Dune and external parts you run.
 \begin{itemize}
-  \item build-essential
-  \item openmpi-common / openmpi-bin ...
-  \item gfortran
-  \item libtool
-  \item libboost-all-dev
-  \item bison
-  \item flex
-  \item gcc-4.3 (hard coded into installExternal.sh)
-  \item blas ???
-  \item pardiso
+\item \textbf{MPI}: parallel version of \Dune needs MPI also some of the external dependencies. \texttt{Openmpi} and \texttt{MPICH} in a recent version had been reported to work. 
+
+\item \textbf{lex/yacc} or \textbf{flex/bison} Is a dependency to UG.
+
+\item \textbf{libboost} Install a developer verssion. \Dumux property system makes use of libboost also \Dune Multidomaingrid.
+
+\item \textbf{BLAS}: Alberta makes use of BLAS thus install libGOTO, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that installation scripts select intended version of BLAS. 
+
+\item \textbf{Metis} Is a dependency to Alugrid.
+\item \textbf{libGOTO} Is an optimized version of BLAS. It's not always available for all architectures and 
+its license is not open. For research and education it is possibble to have a copy without additional costs.
+A fortran compiler like gfortran is needed to compile it.
 \end{itemize}
 
 
-\paragraph{Build the external modules} 
-If you obtained a \Dumux tarball, you can skip this part. 
-
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-
-{\it
-
-  This  part needs to be extended in order to show which package is necessary for what purpose, 
-  so the user can decide whether getting all the grmblDamnItDamnbndfjk 
-  moduls working is worth it! \\
-
-  So could somebody please write something about the respective external modules!\\ 
-
-Also, the gcc version 4.3 is hard coded into the skript. }
-
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-\begin{turn}{45}\textbf{Attenschion}\end{turn}
-
-\paragraph{Pardiso} 
-In order to get the pardiso solver running one needs to install gfortran-4.3 (this very version) and use the provided option files that end on ``suse11.2'' for dunecontrol. 
-
-
-\textbf{What needs to be done in order to make pardiso use multiple cores?}
-
-The external modules have to be built first. They consist of Alberta, ALUGrid, UG, and METIS.
+% \paragraph{Installation on a non-IWS PC}
+% If \Dumux is not to be used on a PC maintained by LH$^2$ it is probable that one needs to install additional software. 
+% Here is a (hopefully complete) list of packages that needed to  be installed on a fresh ubuntu 10.04 in order to get \verb+dunecontrol+ running.
+% \begin{itemize}
+%   \item build-essential
+%   \item openmpi-common / openmpi-bin ...
+%   \item gfortran
+%   \item libtool
+%   \item libboost-all-dev
+%   \item bison
+%   \item flex
+%   \item gcc-4.3 (hard coded into installExternal.sh)
+%   \item blas ???
+%   \item pardiso
+% \end{itemize}
+% 
+% 
+% \paragraph{Build the external modules} 
+% If you obtained a \Dumux tarball, you can skip this part. 
+% 
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% 
+% {\it
+% 
+%   This  part needs to be extended in order to show which package is necessary for what purpose, 
+%   so the user can decide whether getting all the grmblDamnItDamnbndfjk 
+%   moduls working is worth it! \\
+% 
+%   So could somebody please write something about the respective external modules!\\ 
+% 
+% Also, the gcc version 4.3 is hard coded into the skript. }
+% 
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% \begin{turn}{45}\textbf{Attenschion}\end{turn}
+% 
+% The external modules have to be built first. They consist of Alberta, ALUGrid, UG, and METIS.
 
 \paragraph{Build \Dune and \Dumux}
 \label{buildIt}
