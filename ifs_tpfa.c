@@ -200,7 +200,7 @@ ifs_tpfa_assemble(grid_t               *G,
     vector_zero   (h->A->m, h->b);
 
     compute_grav_term(G, gpress, h->pimpl->fgrav);
-    
+
     for (c = i = 0; c < G->number_of_cells; c++) {
         j1 = csrmatrix_elm_index(c, c, h->A);
 
