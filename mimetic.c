@@ -216,7 +216,7 @@ mim_ip_compute_gpress(int nc, int d, const double *grav,
 /* ---------------------------------------------------------------------- */
 void
 mim_ip_mobility_update(int nc, const int *pconn, const double *totmob,
-                       double *Binv)
+                       const double *Binv0, double *Binv)
 /* ---------------------------------------------------------------------- */
 {
     int c, i, n, p2;
@@ -225,7 +225,7 @@ mim_ip_mobility_update(int nc, const int *pconn, const double *totmob,
         n = pconn[c + 1] - pconn[c];
 
         for (i = 0; i < n * n; i++) {
-            Binv[p2 + i] *= totmob[c];
+            Binv[p2 + i] = totmob[c] * Binv0[p2 + i];
         }
 
         p2 += n * n;
@@ -237,14 +237,14 @@ mim_ip_mobility_update(int nc, const int *pconn, const double *totmob,
 /* ---------------------------------------------------------------------- */
 void
 mim_ip_density_update(int nc, const int *pconn, const double *omega,
-                      double *gpress)
+                      const double *gpress0, double *gpress)
 /* ---------------------------------------------------------------------- */
 {
     int c, i;
 
     for (c = i = 0; c < nc; c++) {
         for (; i < pconn[c + 1]; i++) {
-            gpress[i] *= omega[c];
+            gpress[i] = omega[c] * gpress0[i];
         }
     }
 }

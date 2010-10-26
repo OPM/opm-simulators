@@ -90,12 +90,12 @@ mim_ip_compute_gpress(int nc, int d, const double *grav,
 /* inv(B) <- \lambda_t(s)*inv(B) */
 void
 mim_ip_mobility_update(int nc, const int *pconn, const double *totmob,
-                       double *Binv);
+                       const double *Binv0, double *Binv);
 
 /* G <- \sum_i \rho_i f_i(s) * G */
 void
 mim_ip_density_update(int nc, const int *pconn, const double *omega,
-                      double *gpress);
+                      const double *gpress0, double *gpress);
 
 #ifdef __cplusplus
 }
