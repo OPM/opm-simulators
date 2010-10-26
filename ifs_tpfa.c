@@ -118,6 +118,36 @@ ifs_tpfa_construct_matrix(grid_t *G)
 }
 
 
+/* ---------------------------------------------------------------------- */
+/* fgrav = accumarray(cf(j), grav(j).*sgn(j), [nf, 1]) */
+/* ---------------------------------------------------------------------- */
+static void
+compute_grav_term(grid_t *G, const double *gpress,
+                  double *fgrav)
+/* ---------------------------------------------------------------------- */
+{
+    int    c, i, f, c1, c2;
+    double s;
+
+    vector_zero(G->number_of_faces, fgrav);
+
+    for (c = i = 0; c < G->number_of_cells; c++) {
+        for (; i < G->cell_facepos[c + 1]; i++) {
+            f  = G->cell_faces[i];
+
+            c1 = G->face_cells[2*f + 0];
+            c2 = G->face_cells[2*f + 1];
+
+            s  = 2.0*(c1 == c) - 1.0;
+
+            if ((c1 >= 0) && (c2 >= 0)) {
+                fgrav[f] += s * gpress[i];
+            }
+        }
+    }
+}
+
+
 
 /* ======================================================================
  * Public interface below separator.
@@ -164,10 +194,13 @@ ifs_tpfa_assemble(grid_t               *G,
 {
     int c1, c2, c, i, f, j1, j2;
 
-    csrmatrix_zero(                    h->A);
-    vector_zero   (h->A->m,            h->b);
-    vector_zero   (G->number_of_faces, h->pimpl->fgrav);
+    double s;
 
+    csrmatrix_zero(         h->A);
+    vector_zero   (h->A->m, h->b);
+
+    compute_grav_term(G, gpress, h->pimpl->fgrav);
+    
     for (c = i = 0; c < G->number_of_cells; c++) {
         j1 = csrmatrix_elm_index(c, c, h->A);
 
@@ -177,7 +210,10 @@ ifs_tpfa_assemble(grid_t               *G,
             c1 = G->face_cells[2*f + 0];
             c2 = G->face_cells[2*f + 1];
 
+            s  = 2.0*(c1 == c) - 1.0;
             c2 = (c1 == c) ? c2 : c1;
+
+            h->b[c] -= trans[f] * (s * h->pimpl->fgrav[f]);
 
             if (c2 >= 0) {
                 j2 = csrmatrix_elm_index(c, c2, h->A);
