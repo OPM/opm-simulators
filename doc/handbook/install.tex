@@ -1,26 +1,21 @@
 \section{Installation of \Dumux} \label{install}
 \subsection{Preliminary remarks}
 
-In this section about the installion of \Dumux it is assumed that you work on a UNIX compatible operating system and that you are a familiar with the use of a shell. Moreover, you should know,  if necessary, how to install
-new software packages or you should have a person aside which can give you assistance with the shell and
-the package installation. At the end of this chapter, we list some basic prerequesites for running \Dune and \Dumux. Please check this paragraph to evaluate whether it is possible for you to run \Dune and \Dumux.
+In this section about the installation of \Dumux it is assumed that you work on a UNIX compatible operating system and that you are familiar with the use of a shell. Moreover, you should know,  if necessary, how to install new software packages or you should have a person aside which can give you assistance with the shell and the package installation. At the end of this chapter, we list some basic prerequisites for running \Dune and \Dumux. Please check this paragraph to evaluate whether it is possible for you to run \Dune and \Dumux. Moreover, some optional libraries and modules are listed, which can be helpful for the work with \Dumux. 
 
 In a technical sense \Dumux is a module of \Dune. The installation procedure of \Dumux is strongly related to 
-that of \Dune.  Thus, for details of the installation please check also the {\Dune} website \cite{DUNE-HP}. If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.
+that of \Dune. Thus, for details of the installation please check also the {\Dune} website \cite{DUNE-HP}. If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.
 
-As in a \Dune installation, all \Dune modules including the modules for \Dumux as \texttt{dumux} should be extracted into a common directory named {\Dune}-ROOT. Each \Dune module is associated with a directory name in {\Dune}-ROOT. For convenience, this directory name is  also used as an alias for the module name, a practice we will follow here, too.
-After installing source code for all requirered \Dune modules including the \Dumux parts
-\Dune is being build by the shell-command \texttt{dunecontrol} which is part of {\Dune}-Build-System. The {\Dune}-Build-System is essentially a frontend of the gnu tool autoconf which was specialized for the \Dune project.
+As in a \Dune installation, all \Dune modules including \Dumux should be extracted into a common directory named {\Dune}-ROOT. Each \Dune module is associated with a directory name in the folder {\Dune}-ROOT. For convenience, this directory name is  also used as an alias for the module name, a practice we will follow here, too. After installing source code for all required \Dune modules including the \Dumux parts, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the {\Dune}-Build-System. The {\Dune}-Build-System is essentially a front-end of the gnu tool \texttt{autoconf} which was specialized for the \Dune project.
 
 \paragraph{Basic prerequisites} \label{prerequisites}
-The gnu toolchain of \texttt{g++}  and related gnu variants of developertools like \texttt{libtool}, \texttt{make} and
-and \texttt{automake} must be available in a recent version. The \Dumux property system, which is used in most of the models, makes use of \texttt{libboost}. It is thus necessary to install the developer version of \texttt{boost}.
-The building of the documentation requires LaTeX and auxiliary tools like dvipdf and bibtex. Additionally, the program \texttt{convert} from the package ImageMagick is needed to build the handbook.  If you use the configuration switch \texttt{--enable-doxygen} in order to generate the doxygen files (automatic documentation) you will also need \texttt{doxygen}.
+The gnu toolchain of \texttt{g++}  and related gnu variants of developer tools like \texttt{libtool}, \texttt{make} and
+and \texttt{automake} must be available in a recent version. The \Dumux property system, which is used in most of the models, makes use of \texttt{libboost}. It is thus necessary to install the developer version of \texttt{boost}. The building of the documentation requires LaTeX and auxiliary tools like \texttt{dvipdf} and \texttt{bibtex}. Additionally, the program \texttt{convert} from the package ImageMagick is needed to build the handbook.  If you use the configuration switch \texttt{--enable-doxygen} in order to generate the doxygen files (documentation generator) you will also need \texttt{doxygen}.
 
-Depending on the usage of external libraries the required software packages may vary. Beside the section on external modules below it is a good idea to check \Dune-Wiki for information about the external packages.
+Depending on the usage of external libraries the required software packages may vary. Beside the section on external modules below it is a good idea to check the \Dune-Wiki \cite{DUNE-HP} for information about the external packages.
 
 \subsection{Obtaining \Dune and \Dumux}
-Two possibilities exist to obtain \Dune and \Dumux. They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and {\Dumux} website. The shell command \texttt{tar} can be used to extract them on your filesystem. This is explained in the next paragraph. 
+Two possibilities exist to obtain \Dune and \Dumux. They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and {\Dumux} website. The shell command \texttt{tar} can be used to extract them on your file system. This is explained in the next paragraph. 
 
 \paragraph{Obtaining the software by installing tarballs}
 Download the tarballs from the website. You can install the obtained tarballs as follows: Create a \Dune-Root-directory, which we call here DUMUX. For the installation in the shell, type the following commands: 
@@ -34,14 +29,13 @@ Download the tarballs from the website. You can install the obtained tarballs as
 \end{itemize} 
 
 \paragraph{Obtaining \Dune and \Dumux from the SVN repositories} 
-The other possibility is to directly access the project archives of \Dune and \Dumux, the so-called software repositories. These are archives of a software version control system named apache subversion. From here on this is referred to as subversion.
+The other possibility is to directly access the project archives of \Dune and \Dumux, the so-called software repositories. These are archives of a software version control system named \texttt{apache subversion}. From here on this is referred to as subversion.
 You need a subversion client, with which you can access the repositories. This comes with a usual UNIX distribution or can be installed. Our description is limited to a standard subversion shell client realized by the shell command \texttt{svn}.
 
 \paragraph{Checkout of the core modules}
 From version 2.0 of \Dune on, it was decided to stick to stable \Dune releases, comprising the core modules 
 \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} and the external \texttt{dune-pdelab}.  
-First, create a directory (here, we call it DUMUX) where all the \Dune and \Dumux modules will be stored in. Then, enter the previously created folder and checkout the modules. Checkout means that you get a working copy of the code from the software repository. 
-The checkout has to be performed as described on the \Dune webpage, \cite{DUNE-HP}. For the installation in the shell, type the following commands:
+First, create a directory (here, we call it DUMUX) where all the \Dune and \Dumux modules will be stored in. Then, enter the previously created folder and checkout the modules. Checkout means that you get a working copy of the code from the software repository. The checkout has to be performed as described on the \Dune web page, \cite{DUNE-HP}. For the installation in the shell, type the following commands:
 \begin{itemize}
 \item \texttt{mkdir DUMUX}
 \item \texttt{cd DUMUX}
@@ -74,50 +68,48 @@ If you also want to commit new developments to the repositories, you can ask the
  \item \texttt{svn checkout --username=yourusername \\
       \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
 \end{itemize} 
-\texttt{dumux-devel} is based on the stable part of \texttt{dumux} and hence it has to be also checked out. You can ommit the username option, if your username for the repository access is identical to the one for your system account. Please choose either not to store the password or to store it by subversion in a secure way (check the documentation of subversion for that). A leaked out password can be used by evil persons to vandalize a software repository.
+\texttt{dumux-devel} is based on the stable part of \texttt{dumux} and hence it has to be also checked out. You can omit the username option, if your username for the repository access is identical to the one for your system account. Please choose either not to store the password or to store it by subversion in a secure way (check the documentation of subversion for that). A leaked out password can be used by evil persons to vandalize a software repository.
 
-When using subversion, it is possible, provided that to you are granted developer and have write permissions to repositories, to feed back your own code or code modifications to the software repositories. Moreover, with direct access to the repositories it is easier to keep up with code changes, to recieve important bug fixes and to keep up with general developments of code.
+When using subversion it is possible, provided that to you are granted developer and have write permissions to repositories, to feed back your own code or code modifications to the software repositories. Moreover, with direct access to the repositories it is easier to keep up with code changes, to receive important bug fixes and to keep up with general developments of code.
 
-
-\paragraph{Dune External libraries}
+\paragraph{External libraries and modules}
 
 The following libraries provide additional functionality but are not required to run \Dumux. If you are going to use an external library check the information provided on the \Dune website.
 
 \begin{itemize}
 \item \textbf{UG}: UG is a toolbox for Unstructured Grids: As \Dumux, it is build by \texttt{autotools} and a C++-compiler. Additionally, the tools \texttt{lex}/\texttt{yacc} or the gnu-versions \texttt{flex}/\texttt{bison} are needed. 
 
-\item \textbf{Alberta}: Adaptive multiLevel finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A fortran compiler like \texttt{gfortran} is required.
+\item \textbf{Alberta}: Adaptive multiLevel finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A Fortran compiler like \texttt{gfortran} is required.
 
-\item \textbf{ALUGrid}: ALUGrid is build by a C++-compiler like \texttt{g++}. If you want to build a parallel version, you will need MPI. It was successfully run with \texttt{openmpi}. The parallel version needs also a graph partitioner, such as \texttt{METIS} or \texttt{PARTY}. It was run successfully in combination with \Dune using \texttt{METIS}.
+\item \textbf{ALUGrid}: ALUGrid is build by a C++-compiler like \texttt{g++}. If you want to build a parallel version, you will need \texttt{MPI}. It was successfully run with \texttt{openmpi}. The parallel version needs also a graph partitioner, such as \texttt{METIS} or \texttt{PARTY}. It was run successfully in combination with \Dune using \texttt{METIS}.
 
-\item \textbf{PARDISO} The package PARDISO is a thread-safe, high-performance, robust, memory efficient and easy to use software for solving large sparse symmetric and unsymmetric linear systems of equations on shared memory multiprocessors.
+\item \textbf{PARDISO} The package PARDISO is a thread-safe, high-performance, robust, memory efficient and easy to use software for solving large sparse symmetric and unsymmetric linear systems of equations on shared memory multiprocessors. The precompiled binary can be downloaded after personal registration from the PARDISO website.
 
 \item \textbf{SuperLU} SuperLU is a general purpose library for the direct solution of large, sparse, nonsymmetric systems of linear equations.
 
-\item \textbf{\Dune-multidomaingrid} If you going to run on the same grid different domains or subdomains, this can be a package of choice. To be precise, this is not only external library but an external \Dune module which like \Dumux is build by the \Dune build system. The dune-multidomaingrid module provides a meta grid that allows the subdivison of arbitrary \Dune grids into subdomains, e.g. for multi-physics approaches.
+\item \textbf{\Dune-multidomaingrid} If you going to run on the same grid different domains or subdomains, this can be the package of choice. To be precise, this is not only an external library but an external \Dune module which, like \Dumux, is built by the \Dune build system. The \Dune-multidomaingrid module provides a meta grid that allows the subdivison of arbitrary \Dune grids into subdomains, e.g. for multi-physics approaches.
 \end{itemize}
 
-The following are dependencies of some of the libraries above. You will need them depending on which modules of \Dune and which external libraries you use.
+The following are dependencies of some of the used libraries. You will need them depending on which modules of \Dune and which external libraries you use.
 \begin{itemize}
-\item \textbf{MPI}: The parallel version of \Dune and also some of the external dependencies need MPI when they are going to be build for parallel computing. \texttt{Openmpi} and \texttt{MPICH} in a recent version have been reported to work. 
+\item \textbf{MPI}: The parallel version of \Dune and also some of the external dependencies need MPI when they are going to be built for parallel computing. \texttt{Openmpi} and \texttt{MPICH} in a recent version have been reported to work. 
 
 \item \textbf{lex/yacc} or \textbf{flex/bison}. These are quite common developing tools, code generators for lexical analyzers and parsers. This is a prerequisite for UG.
 
 \item \textbf{boost} The Boost-C++-Libraries. Install a developer version. The \Dumux property system and \Dune-Multidomaingrid make use of \texttt{libboost}.
 
-\item \textbf{BLAS}: Alberta makes use of BLAS. Thus install libGOTO, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that the installation scripts select the intended version of BLAS. 
+\item \textbf{BLAS}: Alberta makes use of BLAS. Thus install \texttt{libGOTO}, \texttt{ATLAS}, non-optimized BLAS or BLAS by chipmanufacturer. Take care that the installation scripts select the intended version of BLAS. 
 
-\item \textbf{METIS} This is a dependency of Alugrid. If you run it parallel this part is beeing used to partitionate your grid.
+\item \textbf{METIS} This is a dependency of ALUGrid. If you run it parallel this part is being used to partition your grid.
 
-\item \textbf{libGOTO} is an optimized version of BLAS. It is not always available for all architectures and 
-the license is not open. For research and education it is possibble to obtain a copy without additional costs.
-A fortran compiler like \texttt{gfortran} is needed to compile it.
+\item \textbf{libGOTO} is an optimized version of \texttt{BLAS}. It is not always available for all architectures and 
+the license is not open. For research and education it is possible to obtain a copy without additional costs.
+A Fortran compiler like \texttt{gfortran} is needed to compile it.
 
 \item \textbf{make, autogen, automake, libtool} 
 You can make use of the gnu version of \texttt{make}. The other tools are also gnu building tools and they are required to build most of the \Dune and \Dumux code. \texttt{autogen} and \texttt{automake} are referred to as \texttt{autools}. 
 
-\item \textbf{LaTeX, convert, doxygen} In order to build the \Dumux documentation these tools are needed. 
-\texttt{convert} is a ImageMagicks image conversion tool. LaTeX is macro frontend to the TeX font setting system. Install for example texlive. Many parts of the code documentation is done inline using doxygen, which extracts the documentation and makes html or LaTeX out of that.
+\item \textbf{LaTeX, convert, doxygen} In order to build the \Dumux documentation these tools are needed. \texttt{convert} is a ImageMagicks image conversion tool. LaTeX is a front-end to the TeX font setting system. Install texlive for example. A great part of the code documentation is done inline using doxygen, which extracts the documentation and makes HTML or LaTeX out of that.
 
 \item \textbf{Compilers} We recommend to use the gnu compiler suite, i.e. \texttt{gcc}/\texttt{g++}/\texttt{gfortran} version 4.4 or 4.5. It is also reported that \Dune was successfully build with the Intel C++ compiler. \Dune is build by a C++ compiler. The C and Fortran compiler is only needed for a few external libraries.
 
@@ -134,11 +126,11 @@ can also checkout a svn repository with several external libraries:
 \texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}. \\
 
 This directory \texttt{external} contains a script to install external libraries, such as 
-\texttt{alberta}, \texttt{alu}, \texttt{ug}. It also contains \texttt{METIS} and the blas version of \texttt{libGOTO2}: 
+\texttt{alberta}, \texttt{alu}, \texttt{ug}. It also contains \texttt{METIS} and the BLAS version of \texttt{libGOTO2}: 
 \begin{center}
 \texttt{./installExternal.sh all}
 \end{center}
-it is also possible to install only certain parts of the external libraries:\\ 
+it is also possible to install only certain parts of the external libraries:
 \begin{center}
 \texttt{./installExternal.sh alberta}
 \end{center}
@@ -159,4 +151,4 @@ Otherwise you can type
 \end{center}
 in order to get an optimized compilation (better performance, but no possibility to use a debugger).
 
-This uses the \Dune buildsystem. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use a released version it is usually \texttt{dumux-VERSION}). You can also find more information in the \Dune Buildsystem HOWTO located at the \Dune webpage, \cite{DUNE-HP}.  Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
+This uses the \Dune build-system. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, if you use a released version it is usually \texttt{dumux-VERSION}). You can also find more information in the \Dune Buildsystem HOWTO located at the \Dune web page, \cite{DUNE-HP}.  Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
