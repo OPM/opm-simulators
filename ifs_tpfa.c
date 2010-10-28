@@ -108,6 +108,9 @@ ifs_tpfa_construct_matrix(grid_t *G)
             }
         }
 
+        /* The tpfa matrix is square */
+        A->n = A->m;
+
         assert ((size_t) A->ia[ G->number_of_cells ] == nnz);
 
         /* Guarantee sorted rows */
