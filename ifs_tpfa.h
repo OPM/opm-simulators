@@ -22,6 +22,10 @@
 
 #include "grid.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct ifs_tpfa_impl;
 struct CSRMatrix;
 
@@ -53,5 +57,9 @@ ifs_tpfa_press_flux(grid_t               *G,
 
 void
 ifs_tpfa_destroy(struct ifs_tpfa_data *h);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* OPM_IFS_TPFA_HEADER_INCLUDED */
