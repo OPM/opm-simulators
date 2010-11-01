@@ -147,7 +147,7 @@ public:
 
 
     /*!
-     * \brieg The partial derivative of the Gibbs free energy to the
+     * \brief The partial derivative of the Gibbs free energy to the
      *        normalized temperature for IAPWS region 1 (i.e. liquid) (dimensionless).
      *
      * \param temperature temperature of component in [K]
