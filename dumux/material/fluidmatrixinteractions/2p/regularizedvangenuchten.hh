@@ -58,7 +58,7 @@ public:
      * \f[
      p_C = (\overline{S}_w^{-1/m} - 1)^{1/n}/\alpha
      \f]
-     * \param Sw Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
