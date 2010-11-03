@@ -364,8 +364,8 @@ cfs_tpfa_sum_phase_contrib(grid_t       *G  ,
 
     const double *v;
 
-    for (c = i = 0, v = xcf; c < G->number_of_cells; c++, v += sz) {
-        for (; i < G->cell_facepos[c + 1]; i++) {
+    for (c = i = 0, v = xcf; c < G->number_of_cells; c++) {
+        for (; i < G->cell_facepos[c + 1]; i++, v += sz) {
 
             sum[i] = 0.0;
             for (j = 0; j < sz; j++) {
