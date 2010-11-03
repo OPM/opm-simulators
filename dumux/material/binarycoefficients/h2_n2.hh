@@ -52,7 +52,15 @@ public:
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for molecular hydrogen and nitrogen.
      *
-     * \copydetails Dumux::fullerMethod
+     * \param temperature The temperature [K]
+     * \param pressure phase pressure [Pa]
+     *
+     * This function estimates the diffusion coefficents in binary gases
+     * using to the method proposed by Fuller. This method and is only
+     * valid at "low" pressures.
+     *
+     * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
+     * edition, McGraw-Hill, 1987, pp. 587-588
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
