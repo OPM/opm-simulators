@@ -58,6 +58,26 @@ cfs_tpfa_press_flux(grid_t               *G,
 void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
 
+
+void
+cfs_tpfa_small_matvec(size_t n, int sz,
+                      const double *A,
+                      const double *X,
+                      double       *Y);
+
+int
+cfs_tpfa_solve_cellsys(grid_t       *G,
+                       size_t        sz,
+                       const double *Ac,
+                       const double *bf,
+                       double       *xcf);
+
+void
+cfs_tpfa_sum_phase_contrib(grid_t       *G  ,
+                           size_t        sz ,
+                           const double *xcf,
+                           double       *sum);
+
 #ifdef __cplusplus
 }
 #endif

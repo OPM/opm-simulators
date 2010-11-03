@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "blas_lapack.h"
+
 #include "cfs_tpfa.h"
 #include "sparse_sys.h"
 
@@ -118,6 +120,53 @@ cfs_tpfa_construct_matrix(grid_t *G)
     }
 
     return A;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+solve_cellsys_core(grid_t       *G   ,
+                   size_t        sz  ,
+                   const double *Ac  ,
+                   const double *bf  ,
+                   double       *xcf ,
+                   double       *luAc,
+                   MAT_SIZE_T   *ipiv)
+/* ---------------------------------------------------------------------- */
+{
+    int         c, i, f;
+    size_t      j, p2;
+    double     *v;
+
+    MAT_SIZE_T  nrows, ncols, ldA, ldX, nrhs, info;
+
+    nrows = ncols = ldA = ldX = sz;
+    info  = 0;
+
+    v     = xcf;
+
+    for (c = 0, p2 = 0; c < G->number_of_cells; c++) {
+        /* Define right-hand sides for local systems */
+        for (i = G->cell_facepos[c + 0], nrhs = 0;
+             i < G->cell_facepos[c + 1]; i++, nrhs++) {
+            f = G->cell_faces[i];
+
+            for (j = 0; j < sz; j++) {
+                v[nrhs*sz + j] = bf[f*sz + j];
+            }
+        }
+
+        /* Factor Ac */
+        memcpy(luAc, Ac + p2, sz * sz * sizeof *luAc);
+        dgetrf_(&nrows, &ncols, luAc, &ldA, ipiv, &info);
+
+        /* Solve local systems */
+        dgetrs_("No Transpose", &nrows, &nrhs,
+                luAc, &ldA, ipiv, v, &ldX, &info);
+
+        v  += nrhs * sz;
+        p2 += sz   * sz;
+    }
 }
 
 
@@ -240,4 +289,88 @@ cfs_tpfa_destroy(struct cfs_tpfa_data *h)
     }
 
     free(h);
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+cfs_tpfa_small_matvec(size_t n, int sz,
+                      const double *A,
+                      const double *X,
+                      double       *Y)
+/* ---------------------------------------------------------------------- */
+{
+    size_t i, p1, p2;
+
+    MAT_SIZE_T nrows, ncols, ld, incx, incy;
+    double     a1, a2;
+
+    nrows = ncols = ld = sz;
+    incx  = incy  = 1;
+
+    a1 = 1.0;
+    a2 = 0.0;
+    for (i = p1 = p2 = 0; i < n; i++) {
+        dgemv_("No Transpose", &nrows, &ncols,
+               &a1, A + p2, &ld, X + p1, &incx,
+               &a2,              Y + p1, &incy);
+
+        p1 += sz;
+        p2 += sz * sz;
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+int
+cfs_tpfa_solve_cellsys(grid_t       *G ,
+                       size_t        sz,
+                       const double *Ac,
+                       const double *bf,
+                       double       *xcf)
+/* ---------------------------------------------------------------------- */
+{
+    int     ret;
+    double *luAc;
+
+    MAT_SIZE_T *ipiv;
+
+    luAc = malloc(sz * sz * sizeof *luAc);
+    ipiv = malloc(sz      * sizeof *ipiv);
+
+    if ((luAc != NULL) && (ipiv != NULL)) {
+        solve_cellsys_core(G, sz, Ac, bf, xcf, luAc, ipiv);
+        ret = 1;
+    } else {
+        ret = 0;
+    }
+
+    free(ipiv);  free(luAc);
+
+    return ret;
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+cfs_tpfa_sum_phase_contrib(grid_t       *G  ,
+                           size_t        sz ,
+                           const double *xcf,
+                           double       *sum)
+/* ---------------------------------------------------------------------- */
+{
+    int    c, i;
+    size_t j;
+
+    const double *v;
+
+    for (c = i = 0, v = xcf; c < G->number_of_cells; c++, v += sz) {
+        for (; i < G->cell_facepos[c + 1]; i++) {
+
+            sum[i] = 0.0;
+            for (j = 0; j < sz; j++) {
+                sum[i] += v[j];
+            }
+        }
+    }
 }
