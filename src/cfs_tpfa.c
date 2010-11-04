@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "blas_lapack.h"
+#include "flow_bc.h"
 
 #include "cfs_tpfa.h"
 #include "sparse_sys.h"
@@ -210,6 +211,7 @@ void
 cfs_tpfa_assemble(grid_t               *G,
                   const double         *ctrans,
                   const double         *P,
+                  flowbc_t             *bc,
                   const double         *src,
                   struct cfs_tpfa_data *h)
 /* ---------------------------------------------------------------------- */
@@ -238,6 +240,9 @@ cfs_tpfa_assemble(grid_t               *G,
 
                 h->A->sa[j1] += ctrans[i];
                 h->A->sa[j2] -= ctrans[i];
+            } else if (bc->type[f] == PRESSURE) {
+                h->A->sa[j1] += ctrans[i];
+                h->b    [c ] += ctrans[i] * bc->bcval[f];
             }
         }
 

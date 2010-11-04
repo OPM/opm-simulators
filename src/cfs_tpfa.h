@@ -21,6 +21,7 @@
 #define OPM_CFS_TPFA_HEADER_INCLUDED
 
 #include "grid.h"
+#include "flow_bc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,6 +46,7 @@ void
 cfs_tpfa_assemble(grid_t               *G,
                   const double         *ctrans,
                   const double         *P,
+                  flowbc_t             *bc,
                   const double         *src,
                   struct cfs_tpfa_data *h);
 
