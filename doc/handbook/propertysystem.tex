@@ -40,6 +40,7 @@ the methods which are actually called are dynamically determined at
 run time.
 
 \begin{example}
+  \label{example:DynPoly}
   A class called \texttt{Car} could feature the methods
   \texttt{gasUsage} which by default corrosponds to the current $CO_2$
   emission goal of the European Union but can be overwritten by the
@@ -53,7 +54,7 @@ run time.
   \texttt{range} method can retrieve information it needs, it does not
   need to be polymorphic.
 \begin{verbatim}
-// the base class
+// The base class
 class Car
 {public:
   virtual double gasUsage() 
@@ -67,7 +68,7 @@ class Car
 
   Actual car models can now derived from the base class:
 \begin{verbatim}
-// a Mercedes S-class car
+// A Mercedes S-class car
 class S : public Car
 {public:
   virtual double gasUsage() { return 9.0; };
@@ -122,57 +123,124 @@ What happens if \dots
 
 \subsection*{Static Polymorphism}
 
+Static polymorphism has a few disadvantages, probably the most
+relevant in the context of \Dumux is that the compiler can not see
+``inside'' the called methods and thus cannot properly optimize
+them. For example modern C++ compilers 'inline' short methods, that is
+they copy the body the function body to where it is called which saves
+a few instructions as well as allows further optimizations across the
+function call. Inlining and other cross call optimizations are next to
+impossible in conjunction with dynamic polymorphism, since these
+techniques need to be done by the compiler (i.e. at compile time)
+while the actual code which gets called is only determined at run time
+for virtual methods. To overcome this issue, template programming
+allows a compile time polymorphism. This scheme works by supplying an
+additional template parameter to the base class which specifies the
+type of the derived class. Whenever the base class needs to call back
+at the derived class, the memory of the current object is
+reinterpreted as a derived object and the method is then called. This
+scheme gives the C++ compiler complete transparency of the code
+executed and thus opens for much better optimization
+oportunities. Also, since this mechanism completely happens at compile
+time, it is called ``static polymorphism'' because the called method
+cannot be changed dynamically at runtime.
+\begin{example}
+  Using static polymorphism, the base class of example \ref{example:DynPoly}
+  can be written as
+\begin{verbatim}
+// The base class. The 'Imp' template parameter is the
+// type of the implementation, i.e. the derived class 
+template <class Imp>
+class Car
+{public:
+  double gasUsage() 
+  { return 4.5; };
+  double fuelTankSize() 
+  { throw "The derived class needs to implement the fuelTankSize() method" };
+  
+  double range(double fuelTankFillLevel) 
+  { return 100*fuelTankFillLevel*asImp_().fuelTankSize()/asImp_().gasUsage(); }
 
+protected:
+  // reinterpret the 'this' object as an object of type 'Imp'
+  Imp &asImp_() { return *static_cast<Imp*>(this); }
+  // version for constant 'this' objects
+  const Imp &asImp_() const { return *static_cast<const Impl*>(this); }
+}
+\end{verbatim}
+(Note the \texttt{asImp\_()} calls in the \texttt{range} method.)
 
+The derived classes can now be defined like this
+\begin{verbatim}
+// A Mercedes S-class car
+class S : public Car<S>
+{public:
+  double gasUsage() { return 9.0; };
+  double fuelTankSize() { return 65.0; };
+}
 
-%  can be written by specifying types as
-% template parameters
-%   \item For complex software, the number of template arguments can get
-%     quite large
-%   \item If an additional template argument is required for a base
-%     class template, all derived classes must also be adapted
-%   \end{itemize}
-% \end{frame}
+// A VW Lupo
+class Lupo : public Car<Lupo>
+{public:
+  double gasUsage() { return 2.99; };
+  double fuelTankSize() { return 30.0; };
+}
+\end{verbatim}
+\end{example}
 
-% \begin{frame}
-%   \frametitle{Dynamic Polymorphism}
+Analogously to example \ref{example:DynPoly}, the two kinds of cars
+can be used generically within (template) functions:
+\begin{verbatim}
+template <class CarType>
+void printMaxRange(CarType &car)
+{ std::cout << "Maximum Range: " << car.range(1.00) << "\n"; }
 
-%   If a class wants to make a callback to a derived class, the
-%   repective method can be declared {\tt virtual}. This has drawbacks:
-%   \begin{itemize}
-%   \item Overhead due to indirect function call
-%   \item No way for the compiler to inline the method
-%   \end{itemize}
-% \end{frame}
+int main()
+{
+   Lupo lupo;
+   S s;
+   std::cout << "VW Lupo:"
+   std::cout << "Median range: " << lupo.range(0.50) << "\n";
+   printMaxRange(lupo);
+   std::cout << "Mercedes S-Class:"
+   std::cout << "Median range: " << s.range(0.50) << "\n";
+   printMaxRange(s);
+   return 0;
+}
+\end{verbatim}
 
-% \begin{frame}[fragile]
-%   \frametitle{Static Polymorphism}
+\textbf{TODO: Exercise}
 
-%   Static polymorphism can be used if the type of the derived class is
-%   known at compile time:
-%   \begin{itemize}
-%   \item Additional template parameter {\tt Implementation} for the base class:
-% {\scriptsize
-% \begin{verbatim}
-% template <class Implementation>
-% class Base;
-% \end{verbatim}
-% }
-% \item A static cast to {\tt Implementation} is done before each call-back:
-% {\scriptsize
-% \begin{verbatim}
-% static_cast<Implementation*>(this)->callToImplementation();
-% \end{verbatim}
-% }
-%   \item Derived classes are specified like this:
-% {\scriptsize
-% \begin{verbatim}
-% class Derived : public Base<Derived> {};
-% \end{verbatim}
-% }
-% \end{itemize}
+\subsection*{Explosion of Template Arguments}
 
-% \end{frame}
+A major drawback with template programming in general and with static
+polymorphism in particular is that the template arguments required for
+the base class tend to explode quickly. This is due to the fact that
+often template arguments are often used as arguments for other
+template classes. To demonstrate this point consider the local
+jacobian class of the two-phase, two-component box model before the
+\Dumux property system was introduced:
+\begin{verbatim}
+template<class ProblemT, class BoxTraitsT, class TwoPTwoCTraitsT>
+class TwoPTwoCBoxJacobian
+  : public TwoPTwoCBoxJacobianBase<
+              ProblemT, 
+              BoxTraitsT,
+              TwoPTwoCTraitsT,
+              TwoPTwoCElementData<TwoPTwoCTraitsT,ProblemT>,
+              TwoPTwoCVertexData<TwoPTwoCTraitsT,ProblemT>,
+              TwoPTwoCFluxData<TwoPTwoCTraitsT,
+                               ProblemT,
+                               TwoPTwoCVertexData<TwoPTwoCTraitsT,
+                                                  ProblemT> >,
+              TwoPTwoCBoxJacobian<ProblemT,
+                                  BoxTraitsT,
+                                  TwoPTwoCTraitsT> >
+{
+// ...
+}
+\end{verbatim}
+
 
 % \begin{frame}[fragile]
 %   \frametitle{Nested template arguments}
@@ -199,26 +267,6 @@ What happens if \dots
 %   \frametitle{A real-world example}
 
 % {\scriptsize
-% \begin{verbatim}
-% template<class ProblemT, class BoxTraitsT, class TwoPTwoCTraitsT>
-% class TwoPTwoCBoxJacobian
-%   : public TwoPTwoCBoxJacobianBase<
-%               ProblemT, 
-%               BoxTraitsT,
-%               TwoPTwoCTraitsT,
-%               TwoPTwoCElementData<TwoPTwoCTraitsT,ProblemT>,
-%               TwoPTwoCVertexData<TwoPTwoCTraitsT,ProblemT>,
-%               TwoPTwoCFluxData<TwoPTwoCTraitsT,
-%                                ProblemT,
-%                                TwoPTwoCVertexData<TwoPTwoCTraitsT,
-%                                                   ProblemT> >,
-%               TwoPTwoCBoxJacobian<ProblemT,
-%                                   BoxTraitsT,
-%                                   TwoPTwoCTraitsT> >
-% {
-% // ...
-% }
-% \end{verbatim}
 % }
 % \end{frame}
 
