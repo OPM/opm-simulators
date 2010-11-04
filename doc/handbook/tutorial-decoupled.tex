@@ -256,9 +256,9 @@ type tag.
 
 After this, change the \texttt{create()} method of the \texttt{Grid}
 property so that it matches the domain described
-by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the problem class
+by figure \ref{tutorial-decoupled:ex2_Domain}. Adapt the problem class
 so that the boundary conditions are consistent with figure
-\ref{tutorial-coupled:ex2_BC}. Initially the domain is fully saturated
+\ref{tutorial-decoupled:ex2_BC}. Initially the domain is fully saturated
 with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
@@ -286,7 +286,7 @@ compile the program.
 \psfrag{L3x}{25 m}
 \centering
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Domain.eps}
-\caption{Set-up of the model domain and the soil parameters}\label{tutorial-coupled:ex2_Domain}
+\caption{Set-up of the model domain and the soil parameters}\label{tutorial-decoupled:ex2_Domain}
 \end{figure}
 
 \begin{figure}[h]
@@ -297,7 +297,7 @@ compile the program.
 \psfrag{no flow}{no flow}
 \centering
 \includegraphics[width=0.8\linewidth,keepaspectratio]{EPS/Ex2_Boundary.eps}
-\caption{Boundary Conditions}\label{tutorial-coupled:ex2_BC}
+\caption{Boundary Conditions}\label{tutorial-decoupled:ex2_BC}
 \end{figure}
 
 \begin{itemize}
