@@ -31,6 +31,7 @@
 #include <dumux/material/components/oil.hh>
 #include <dumux/material/components/n2.hh>
 #include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/brine.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 
@@ -62,6 +63,7 @@ public:
     typedef Dumux::H2<Scalar> H2;
     typedef Dumux::CH4<Scalar> CH4;
     typedef Dumux::SimpleCO2<Scalar> SimpleCO2;
+    typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
     typedef Dumux::Brine<Scalar, H2O> Brine;
 
     static void init()
