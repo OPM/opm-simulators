@@ -75,7 +75,7 @@ void mim_ip_simple(int nf, int nconn, int d,
  *                  stored. Its size shall be equal to \f$\sum_i
  * n_i^2\f$.
  */
-void mim_ip_simple_all(int ncells, int d, int max_ncf, int *ncf,
+void mim_ip_simple_all(int ncells, int d, int max_ncf,
                        int *pconn, int *conn,
                        int *fneighbour, double *fcentroid, double *fnormal,
                        double *farea, double *ccentroid, double *cvol,

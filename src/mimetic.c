@@ -26,7 +26,7 @@
 
 /* ------------------------------------------------------------------ */
 void
-mim_ip_simple_all(int ncells, int d, int max_nconn, int *ncf,
+mim_ip_simple_all(int ncells, int d, int max_nconn,
                   int *pconn, int *conn,
                   int *fneighbour, double *fcentroid, double *fnormal,
                   double *farea, double *ccentroid, double *cvol,
@@ -53,23 +53,21 @@ mim_ip_simple_all(int ncells, int d, int max_nconn, int *ncf,
                 cc[j] = ccentroid[j + c*d];
             }
 
-            nf = ncf[c];
+            nconn = pconn[c + 1] - pconn[c];
 
-            for (i = 0; i < nf; i++) {
+            for (i = 0; i < nconn; i++) {
                 f = conn[pconn[c] + i];
                 s = 2.0*(fneighbour[2 * f] == c) - 1.0;
 
                 A[i] = farea[f];
 
                 for (j = 0; j < d; j++) {
-                    C[i + j*nf] = fcentroid  [j + f*d] - cc[j];
-                    N[i + j*nf] = s * fnormal[j + f*d];
+                    C[i + j*nconn] = fcentroid  [j + f*d] - cc[j];
+                    N[i + j*nconn] = s * fnormal[j + f*d];
                 }
             }
 
-            nconn = pconn[c + 1] - pconn[c];
-
-            mim_ip_simple(nf, nconn, d, cvol[c], &perm[c * d * d],
+            mim_ip_simple(nconn, nconn, d, cvol[c], &perm[c * d * d],
                           C, A, N, &Binv[fpos2], work, lwork);
 
             fpos2 += nconn * nconn;
