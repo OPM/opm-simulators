@@ -217,11 +217,14 @@ cfs_tpfa_assemble(grid_t               *G,
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, c, i, f, j1, j2;
+    int is_neumann;
 
     double s;
 
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
+
+    is_neumann = 1;
 
     for (c = i = 0; c < G->number_of_cells; c++) {
         j1 = csrmatrix_elm_index(c, c, h->A);
@@ -241,6 +244,8 @@ cfs_tpfa_assemble(grid_t               *G,
                 h->A->sa[j1] += ctrans[i];
                 h->A->sa[j2] -= ctrans[i];
             } else if (bc->type[f] == PRESSURE) {
+                is_neumann    = 0;
+
                 h->A->sa[j1] += ctrans[i];
                 h->b    [c ] += ctrans[i] * bc->bcval[f];
             }
@@ -252,7 +257,9 @@ cfs_tpfa_assemble(grid_t               *G,
         h->A->sa[j1] += P[c];
     }
 
-    h->A->sa[0] *= 2;
+    if (is_neumann) {
+        h->A->sa[0] *= 2;
+    }
 }
 
 
