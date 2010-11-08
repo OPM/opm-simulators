@@ -28,7 +28,7 @@ template <class Scalar, class ComponentT> class GasPhase
 public:
     typedef ComponentT Component;
     /*!
-     * \brief A human readable name for the compoent.
+     * \brief A human readable name for the component.
      */
     static const char *name()
     { return Component::name(); }

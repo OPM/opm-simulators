@@ -14,9 +14,15 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \file
+ * \ingroup Material
+ * \defgroup Fluidsystems Fluidsystems
+ */
+/*!
+ * \file A compositional fluid with water and molecular nitrogen as
+ *        components in both, the liquid and the gas phase.
  *
- * \brief A fluid system with water and gas as phases and \f$H_2O\f$ and \f$N_2\f$
+ * \ingroup Fluidsystems
+ * \brief A fluid system with a water and a gas phase and \f$H_2O\f$ and \f$N_2\f$
  *        as components.
  */
 #ifndef DUMUX_H2O_N2_SYSTEM_HH
@@ -40,6 +46,8 @@ NEW_PROP_TAG(Components);
 };
 
 /*!
+ * \ingroup Fluidsystems
+ *
  * \brief A compositional fluid with water and molecular nitrogen as
  *        components in both, the liquid and the gas phase.
  */
@@ -75,6 +83,8 @@ public:
 
     /*!
      * \brief Return the human readable name of a phase
+     *
+     * \param phaseIdx index of the phase
      */
     static const char *phaseName(int phaseIdx)
     {
@@ -87,6 +97,8 @@ public:
 
     /*!
      * \brief Return the human readable name of a component
+     *
+     * \param compIdx index of the component
      */
     static const char *componentName(int compIdx)
     {
@@ -99,6 +111,8 @@ public:
 
     /*!
      * \brief Return the molar mass of a component [kg/mol].
+     *
+     * \param compIdx index of the component
      */
     static Scalar molarMass(int compIdx)
     {
@@ -113,6 +127,13 @@ public:
      * \brief Given a phase's composition, temperature, pressure, and
      *        the partial pressures of all components, return its
      *        density [kg/m^3].
+     *
+     * \param phaseIdx index of the phase
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param fluidState the fluid state
+     *
+     * \tparam FluidState the fluid state class
      */
     template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
@@ -356,8 +377,9 @@ public:
 
     /*!
      * \brief Given a phase's composition, temperature and pressure,
-     *        return the binary diffusion coefficent for components
+     *        return the binary diffusion coefficient for components
      *        \f$i\f$ and \f$j\f$ in this phase.
+     *
      */
     template <class FluidState>
     static Scalar diffCoeff(int phaseIdx,

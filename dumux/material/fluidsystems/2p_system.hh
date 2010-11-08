@@ -16,8 +16,8 @@
 /*!
  * \file
  *
- * \brief A fluid system with water and gas as phases and \f$H_2O\f$ and \f$N_2\f$
- *        as components.
+ * \brief An adapter call for a pure two-phase system,
+ * where the wetting and the non-wetting phase can be defined.
  */
 #ifndef DUMUX_2P_SYSTEM_HH
 #define DUMUX_2P_SYSTEM_HH
@@ -40,8 +40,14 @@ NEW_PROP_TAG(NonwettingPhase);
 
 
 /*!
- * \brief A compositional fluid with water and molecular nitrogen as
- *        components in both, the liquid and the gas phase.
+ * \ingroup Fluidsystems
+ *
+ * \brief This is an adapter class for a pure two-phase system.
+ *
+ * In this adapter class, two fluid phases of the type liquidphase or gasphase
+ * can be defined. These phases consist of one pure component. With the help of
+ * this adapter class, the phase properties can be accessed. This is suitable
+ * for pure two-phase systems without compositional effects.
  */
 template <class TypeTag>
 class FluidSystem2P
@@ -71,6 +77,8 @@ public:
 
     /*!
      * \brief Return the human readable name of a component
+     *
+     * \param phaseIdx index of the phase
      */
     static const char *componentName(int phaseIdx)
     {
@@ -83,6 +91,8 @@ public:
 
     /*!
      * \brief Return the molar mass of a component in [kg/mol].
+     *
+     * \param phaseIdx index of the phase
      */
     static Scalar molarMass(int phaseIdx)
     {
@@ -95,6 +105,12 @@ public:
 
     /*!
      * \brief Return the density of a component for a phase [kg/m^3].
+     *
+     * \param phaseIdx index of the phase
+     * \param compIdx index of the component
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \return density of the phase, if phaseIdx = compIdx, otherwise 0
      */
     static Scalar componentDensity(int phaseIdx,
                                    int compIdx,
@@ -114,8 +130,14 @@ public:
 
 
     /*!
-     * \brief Given all mole fractions in a phase, return the phase
-     *        density [kg/m^3].
+     * \brief Return the density of a phase [kg/m^3].
+     *
+     * \param phaseIdx index of the phase
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param phaseState The fluid state of the two-phase model
+     * \tparam FluidState the fluid state class of the two-phase model
+     * \return returns the density of the phase
      */
     template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
@@ -133,7 +155,14 @@ public:
     }
 
     /*!
-     * \brief Return the viscosity of a phase.
+     * \brief Return the viscosity of a phase [Pa*s].
+     *
+     * \param phaseIdx index of the phase
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param phaseState The fluid state of the two-phase model
+     * \tparam FluidState the fluid state class of the two-phase model
+     * \return returns the viscosity of the phase [Pa*s]
      */
     template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
@@ -151,8 +180,14 @@ public:
     }
 
     /*!
-     * \brief Given all mole fractions in a phase, return the specific
-     *        phase enthalpy [J/kg].
+     * \brief Return the specific enthalpy of a phase [J/kg].
+     *
+     * \param phaseIdx index of the phase
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param phaseState The fluid state of the two-phase model
+     * \tparam FluidState the fluid state class of the two-phase model
+     * \return returns the specific enthalpy of the phase [J/kg]
      */
     template <class FluidState>
     static Scalar phaseEnthalpy(int phaseIdx,
@@ -170,8 +205,14 @@ public:
     }
 
     /*!
-     * \brief Given all mole fractions in a phase, return the specific
-     *        internal energy of the phase [J/kg].
+     * \brief Return the specific internal energy of a phase [J/kg].
+     *
+     * \param phaseIdx index of the phase
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param phaseState The fluid state of the two-phase model
+     * \tparam FluidState the fluid state class of the two-phase model
+     * \return returns the specific internal energy of the phase [J/kg]
      */
     template <class FluidState>
     static Scalar phaseInternalEnergy(int phaseIdx,

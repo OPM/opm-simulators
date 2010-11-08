@@ -35,7 +35,15 @@ NEW_PROP_TAG(OnePTwoCIndices);
 };
 
 /*!
- * \brief A fluid system with one phase and an arbitrary number of components.
+ * \ingroup Fluidsystems
+ *
+ * \file A fluid system with one phase and two components representing an
+ *        intersticial fluid that contains a medical trail.
+ *
+ *
+ * \brief A fluid system with one phase and two components representing an
+ *        intersticial fluid that contains a medical trail. This is used for
+ *        in the 1p2c model.
  */
 template <class TypeTag, bool verbose=true>
 class ISFluid_Trail_System
@@ -56,6 +64,7 @@ public:
 
     /*!
      * \brief Return the human readable name of a component
+     * \param compIdx the component index
      */
     static const char *componentName(int compIdx)
     {
@@ -72,6 +81,9 @@ public:
 
     /*!
      * \brief Return the molar mass of a component [kg/mol].
+     *
+     * \param compIdx the component index
+     *
      */
     static Scalar molarMass(int compIdx)
     {
@@ -87,8 +99,14 @@ public:
 
 
     /*!
-     * \brief Given all mole fractions in a phase, return the phase
-     *        density [kg/m^3].
+     * \brief Return the (constant) phase density [kg/m^3].
+     *
+     * \param phaseIdx index of the phase, only 0 is accepted (single-phase system)
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param fluidState the fluid state
+     *
+     * \tparam FluidState the fluid state class
      */
     template <class FluidState>
     static Scalar phaseDensity(int phaseIdx,
@@ -103,7 +121,14 @@ public:
     }
 
     /*!
-     * \brief Return the dynamic viscosity of a phase.
+     * \brief Return the (constant) dynamic viscosity of a phase [Pa/s].
+     *
+     * \param phaseIdx index of the phase, only 0 is accepted (single-phase system)
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param fluidState the fluid state
+     *
+     * \tparam FluidState the fluid state class
      */
     template <class FluidState>
     static Scalar phaseViscosity(int phaseIdx,
@@ -118,8 +143,16 @@ public:
     }
 
     /*!
-     * \brief Given all mole fractions, return the diffusion
-     *        coefficent of a component in a phase.
+     * \brief Return the (constant) binary diffusion coefficient [m^2/s].
+     *
+     * \param phaseIdx index of the phase, only 0 is accepted (single-phase system)
+     * \param compIIdx index of the first component in the binary mixture
+     * \param compJIdx index of second component in the binary mixture
+     * \param temperature phase temperature in [K]
+     * \param pressure phase pressure in [Pa]
+     * \param fluidState the fluid state
+     *
+     * \tparam FluidState the fluid state class
      */
     template <class FluidState>
     static Scalar diffCoeff(int phaseIdx,
