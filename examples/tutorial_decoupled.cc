@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 
         Problem problem(gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
 
-        // load restart file if necessarry
+        // load restart file if necessary
         if (restart)    /*@\label{tutorial-decoupled:restart}@*/
             problem.deserialize(restartTime);
 

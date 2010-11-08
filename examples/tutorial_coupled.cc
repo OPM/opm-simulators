@@ -31,8 +31,7 @@ int main(int argc, char** argv)
 {
     try {
         typedef TTAG(TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
         typedef GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
         typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem; /*@\label{tutorial-coupled:retrieve-types-end}@*/
 
