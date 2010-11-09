@@ -26,7 +26,7 @@ namespace Dumux
 {
 /*!
  * \brief Reference implementation of params for the linear material
- *        material.
+ *        law.
  */
 template<class ScalarT>
 class LinearMaterialParams
