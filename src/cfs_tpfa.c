@@ -219,8 +219,6 @@ cfs_tpfa_assemble(grid_t               *G,
     int c1, c2, c, i, f, j1, j2;
     int is_neumann;
 
-    double s;
-
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
@@ -235,7 +233,6 @@ cfs_tpfa_assemble(grid_t               *G,
             c1 = G->face_cells[2*f + 0];
             c2 = G->face_cells[2*f + 1];
 
-            s  = 2.0*(c1 == c) - 1.0;
             c2 = (c1 == c) ? c2 : c1;
 
             if (c2 >= 0) {
