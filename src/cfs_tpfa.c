@@ -11,7 +11,8 @@
 
 
 struct cfs_tpfa_impl {
-    double *fgrav;              /* Accumulated grav contrib/face */
+    double *fpress;             /* Face pressure */
+    double *fpaccum;
 
     /* Linear storage */
     double *ddata;
@@ -42,6 +43,7 @@ impl_allocate(grid_t *G)
 
     ddata_sz  = 2 * G->number_of_cells;                /* b, x */
     ddata_sz += 1 * G->number_of_faces;                /* fgrav */
+    ddata_sz += 1 * G->number_of_faces;                /* fpaccum */
 
     new = malloc(1 * sizeof *new);
 
@@ -171,6 +173,75 @@ solve_cellsys_core(grid_t       *G   ,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static void
+compute_fpress(grid_t               *G,
+               flowbc_t             *bc,
+               const double         *ctrans,
+               const double         *cpress,
+               struct cfs_tpfa_data *h)
+/* ---------------------------------------------------------------------- */
+{
+    int c, i, f;
+
+    for (f = 0; f < G->number_of_faces; f++) {
+        h->pimpl->fpress [f] = 0.0;
+        h->pimpl->fpaccum[f] = 0.0;
+    }
+
+    for (c = i = 0; c < G->number_of_cells; c++) {
+        for (; i < G->cell_facepos[c + 1]; i++) {
+            f = G->cell_faces[i];
+
+            h->pimpl->fpress [f] += ctrans[i] * cpress[c];
+            h->pimpl->fpaccum[f] += ctrans[i];
+        }
+    }
+
+    for (f = 0; f < G->number_of_faces; f++) {
+        h->pimpl->fpress[f] /= h->pimpl->fpaccum[f];
+
+        if (bc->type[f] == PRESSURE) {
+            h->pimpl->fpress[f] = bc->bcval[f];
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+compute_flux(grid_t               *G,
+             size_t                np,
+             const double         *cpress,
+             const double         *ptransf,
+             struct cfs_tpfa_data *h,
+             double               *fflux)
+/* ---------------------------------------------------------------------- */
+{
+    int    c1, c2, f;
+    size_t p;
+    double t, dp;
+
+    for (f = 0; f < G->number_of_faces; f++) {
+        c1 = G->face_cells[2*f + 0];
+        c2 = G->face_cells[2*f + 1];
+
+        t = 0.0;
+        for (p = 0; p < np; p++) { t += ptransf[f*np + p]; }
+
+        if ((c1 >= 0) && (c2 >= 0)) {
+            dp = cpress[c1] - cpress[c2];
+        } else if (c1 >= 0) {
+            dp = cpress[c1] - h->pimpl->fpress[f];
+        } else {
+            dp = h->pimpl->fpress[f] - cpress[c2];
+        }
+
+        fflux[f] = t * dp;
+    }
+}
+
+
 
 /* ======================================================================
  * Public interface below separator.
@@ -197,9 +268,10 @@ cfs_tpfa_construct(grid_t *G)
 
     if (new != NULL) {
         new->b = new->pimpl->ddata;
-        new->x = new->b             + new->A->m;
+        new->x = new->b               + new->A->m;
 
-        new->pimpl->fgrav = new->x  + new->A->m;
+        new->pimpl->fpress  = new->x             + new->A->m;
+        new->pimpl->fpaccum = new->pimpl->fpress + G->number_of_faces;
     }
 
     return new;
@@ -263,27 +335,32 @@ cfs_tpfa_assemble(grid_t               *G,
 /* ---------------------------------------------------------------------- */
 void
 cfs_tpfa_press_flux(grid_t               *G,
-                    const double         *trans,
+                    size_t                np,
+                    flowbc_t             *bc,
+                    const double         *ctrans,
+                    const double         *ptransf,
                     struct cfs_tpfa_data *h,
                     double               *cpress,
                     double               *fflux)
 /* ---------------------------------------------------------------------- */
 {
-    int c1, c2, f;
-
     /* Assign cell pressure directly from solution vector */
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
 
-    for (f = 0; f < G->number_of_faces; f++) {
-        c1 = G->face_cells[2*f + 0];
-        c2 = G->face_cells[2*f + 1];
+    compute_fpress(G, bc, ctrans, cpress, h);
+    compute_flux  (G, np, cpress, ptransf, h, fflux);
+}
 
-        if ((c1 >= 0) && (c2 >= 0)) {
-            fflux[f] = trans[f] * (cpress[c1] - cpress[c2]);
-        } else {
-            fflux[f] = 0.0;
-        }
-    }
+
+/* ---------------------------------------------------------------------- */
+void
+cfs_tpfa_fpress(grid_t               *G,
+                struct cfs_tpfa_data *h,
+                double               *fpress)
+/* ---------------------------------------------------------------------- */
+{
+    memcpy(fpress, h->pimpl->fpress,
+           G->number_of_faces * sizeof *fpress);
 }
 
 
