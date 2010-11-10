@@ -1,28 +1,27 @@
-\chapter{\Dumux Design Patterns}
+\chapter{Design Patterns}
 \label{chap:DesignPatterns}
 
-This chapter tries to give high-level understanding of some of the
-fundamental techniques which are used by \Dumux and the motivation
-behind these design decisions. It is assumed that the reader already
-posseses some basic knowledge in object oriented programming with C++.
+This chapter tries to give a high-level understanding of some of the
+fundamental techniques which are used by \Dune and \Dumux and the
+motivation behind these design decisions. It is assumed that the
+reader already has basic experience in object oriented programming
+with C++.
 
 First, a quick motivation of C++ template programming is given. Then
 follows an introduction to polymorphism and the opportunities for it
-opened by the template mechanism. After that, there is a look at some
-drawbacks associated with template programming. One of these drawbacks
--- deep nesting of template parameters -- motivates the \Dumux
-property system which, in this chapter is outlined from the user
-perspective. The chapter concludes with a simple example of how to use
-the \Dumux property system.
+opened by the template mechanism. After that, some drawbacks
+associated with template programming are discussed, in particular the
+blow-up of identifier names and proliferation of template arguments
+and some approaches on how to deal with these problems.
 
 \section{C++ Template Programming}
 
-One of the main features of modern versions of the C++ language is
-robust support for templates. Templates are a mechanism for code
-generation build directly into the compiler. To see the motivation of
-templates, consider a linked list of \texttt{double} values which
-could be implemented like this:
-\begin{verbatim}
+One of the main features of modern versions of the C++ programming
+language is robust support for templates. Templates are a mechanism
+for code generation build directly into the compiler.  For the
+motivation behind templates, consider a linked list of \texttt{double}
+values which could be implemented like this:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 struct DoubleList {
    DoubleList(const double &val, DoubleList *prevNode = 0)
    { value = val; if (prevNode) prevNode->next = this; };
@@ -35,16 +34,16 @@ int main() {
    tail = new DoubleList(2.34, tail);
    tail = new DoubleList(3.56, tail);
 };
-\end{verbatim}
-But what if a list of strings is also required? The only ``clean'' way
-to achive this without templates would be to copy
-\texttt{DoubleListNode}, then rename it and change the type of the
-\texttt{value} attribute. It should be clear that this is a very
-cumbersome and error-prone process, so recent standards of the C++
-programming language provide the template mechanism, which is a way
-let the compiler do the tedious work. Using templates, a generic
-linked list can be implemented like this:
-\begin{verbatim}
+\end{lstlisting}
+But what should be done if a list of strings is also required? The
+only ``clean'' way to achive this without templates would be to copy
+\texttt{DoubleList}, then rename it and change the type of the
+\texttt{value} attribute. It is obvious that this is a very
+cumbersome, error-prone and unproductive process. For this reason,
+recent standards of the C++ programming language specify the template
+mechanism, which is a way let the compiler do the tedious work. Using
+templates, a generic linked list can be implemented like this:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class ValueType>
 struct List {
    List(const ValueType &val, List *prevNode = 0)
@@ -65,18 +64,20 @@ int main() {
    tail2 = new StringList(", ", tail2);
    tail2 = new StringList("World!", tail2);
 };
-\end{verbatim}
+\end{lstlisting}
 
-Compared to code generation approaches using external tools -- which
-is the approach chosen for example by the FEniCS~\cite{FENICS-HP}
-project -- or heavy use of the C preprocessor -- as done for example
-within the UG framework~\cite{UG-HP} -- the template approach has
-several advantages:
+Compared to approaches which use external tools for code generation --
+which is the approach chosen for example by the
+FEniCS~\cite{FENICS-HP} project -- or heavy (ab)use of the C
+preprocessor -- as done for example by the UG framework~\cite{UG-HP}
+-- templates have several advantages:
 \begin{description}
 \item[Well Programmable:] Programming errors are directly detected by
-  the C++ compiler and compiler messages also yield useful information
-  since the actual source code is visible to the developer and not
-  obfuscated by macros or code generation.
+  the C++ compiler. Thus, diagnostic messages from the compiler are
+  directly useful because the source code which gets compiled is the
+  same as the one written by the developer. This is not the case
+  for code generators and C-preprocessor macros where the actual
+  statements processed by the compiler are obfuscated.
 \item[Easily Debugable:] Programs which use the template mechanism can be
   debugged almost as easily as C++ programs which do not use
   templates. This is due to the fact that the debugger always knows
@@ -90,19 +91,19 @@ quasi-standard Boost~\cite{BOOST-HP} libraries.
 
 \section{Polymorphism}
 
-In object oriented programming, some functionality often makes sense
-for all classes in a hierarchy, but what actually needs to be
-\textit{done} can differ for each concrete class. This observation
-motivates \textit{polymorphism}. Fundamentally, polymorphism is all
+In object oriented programming, some methods often makes sense for all
+classes in a hierarchy, but what actually needs to be \textit{done}
+can differ for each concrete class. This observation motivates
+\textit{polymorphism}. Fundamentally, polymorphism means all
 techniques where a method call results in the processor executing code
 which is specific to the type of object for which the method is
 called\footnote{This is \textit{poly} of polymorphism: There are
   multiple ways to achieve the same goal.}.
 
 In C++, there are two common ways to achieve polymorphism: The
-traditional dynamic polymorphism which is not based on template
-programming, and static polymorphism which is only made possible by
-template programming.
+traditional dynamic polymorphism which does not require template
+programming, and static polymorphism which is made possible by the
+template mechanism.
 
 \subsection*{Dynamic Polymorphism}
 
@@ -111,28 +112,28 @@ methods are marked with the \texttt{virtual} keyword in the base
 class. Internally, the compiler realizes dynamic polymorphism by
 storing a pointer to a so-called \texttt{vtable} within each object of
 polymorphic classes. The \texttt{vtable} itself stores the entry point
-of each method which is declared virtual. If such a method is called
-on an object, the compiler generates code which retrieves the method's
-address from the object's \texttt{vtable} and then calls it. This
-explains why this mechanism is called \textbf{dynamic} polymorphism:
-the code which is actually called are dynamically determined at run
-time.
+of each method which is declared \texttt{virtual}. If such a method is
+called on an object, the compiler generates code which retrieves the
+method's memory address from the object's \texttt{vtable} and then
+continues execution at this address. This explains why this mechanism
+is called \textbf{dynamic} polymorphism: the code which is actually
+executed is dynamically determined at run time.
 
 \begin{example}
   \label{example:DynPoly}
   A class called \texttt{Car} could feature the methods
-  \texttt{gasUsage} which by default corrosponds to the current $CO_2$
-  emission goal of the European Union but can be overwritten by the
+  \texttt{gasUsage}, which by default corrosponds to the current
+  $CO_2$ emission goal of the European Union but can be changed by
   classes representing actual cars. Also, a method called
   \texttt{fuelTankSize} makes sense for all cars, but since there is
   no useful default, its \texttt{vtable} entry is set to $0$ in the
-  base class which tells the compiler that this method must
-  mandatorily be specified by all derived classes. Finally the method
+  base class. This tells the compiler that it is mandatorily that this
+  method gets defined in derived classes. Finally, the method
   \texttt{range} may calculate the expected remaining kilometers the
   car can drive given a fill level of the fuel tank. Since the
   \texttt{range} method can retrieve information it needs, it does not
   need to be polymorphic.
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // The base class
 class Car
 {public:
@@ -143,10 +144,11 @@ class Car
   double range(double fuelTankFillLevel) 
   { return 100*fuelTankFillLevel*fuelTankSize()/gasUsage(); }
 };
-\end{verbatim}
+\end{lstlisting}
 
-  Actual car models can now derived from the base class:
-\begin{verbatim}
+\noindent
+Actual car models can now be derived from the base class like this:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // A Mercedes S-class car
 class S : public Car
 {public:
@@ -160,11 +162,12 @@ class Lupo : public Car
   virtual double gasUsage() { return 2.99; };
   virtual double fuelTankSize() { return 30.0; };
 };
-\end{verbatim}
+\end{lstlisting}
 
-The \text{range} method called on the base class yields correct result
-for any car type:
-\begin{verbatim}
+\noindent
+Calling the \texttt{range} method yields the correct result for any
+kind of car:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 void printMaxRange(Car &car)
 { std::cout << "Maximum Range: " << car.range(1.00) << "\n"; }
 
@@ -179,7 +182,7 @@ int main()
    std::cout << "Median range: " << s.range(0.50) << "\n";
    printMaxRange(s);
 }
-\end{verbatim}
+\end{lstlisting}
 
 For both types of cars, \texttt{Lupo} and \texttt{S} the
 \texttt{printMaxRange} function works as expected, yielding
@@ -201,32 +204,35 @@ What happens if \dots
 
 \subsection*{Static Polymorphism}
 
-Dynamic polymorphism has a few disadvantages, probably the most
-relevant in the context of \Dumux is that the compiler can not see
-``inside'' the called methods and thus cannot properly optimize. For
-example modern C++ compilers 'inline' short methods, i.e. they copy
-the body the method's body to where it is called. This allows to save
-a few instructions as well as enables further optimizations which may
-depend on specific properties of the function arguments (e.g. constant
-value elimination, etc). Inlining and other cross-method optimizations
-are next to impossible when using dynamic polymorphism, since these
-techniques need to be done by the compiler (i.e. at compile time)
-while, for virtual methods, the actual code that gets executed is
-determined at run time. To overcome this issue, template programming
-can be used to achive polymorphism at compile time. This works by
-supplying the type of the derived class as an additional template
-parameter to the base class. Whenever the base class needs to call
-back the derived class, the \texttt{this} pointer of the base class is
-reinterpreted as a derived object and the method is then called. This
-scheme gives the C++ compiler complete transparency of the code
-executed and thus opens much better optimization oportunities. Since
-this mechanism completely happens at compile time, it is called
-``static polymorphism'' because the called method cannot be changed
-dynamically at runtime.
+Dynamic polymorphism has a few disadvantages. The most relevant in the
+context of \Dumux is that the compiler can not see ``inside'' the
+called methods and thus cannot optimize properly. For example, modern
+C++ compilers 'inline' short methods, i.e. they copy the method's body
+to where it is called. First, inlining allows to save a few
+instructions by avoiding to jump into and out of the method. Second,
+and probably more importantly, inlining also allows further
+optimizations which depend on specific properties of the function
+arguments (e.g. constant value elimination) or the contents of the
+function body (e.g. loop unrolling). Unfortunately, inlining and other
+cross-method optimizations are made next to impossible by dynamic
+polymorphism. This is because these techniques are be done by the
+compiler (i.e. at compile time) whilst, the code which actually gets
+executed is only determined at run time for \texttt{virtual}
+methods. To overcome this issue, template programming can be used to
+achive polymorphism at compile time. This works by supplying the type
+of the derived class as an additional template parameter to the base
+class. Whenever the base class needs to call back the derived class,
+the \texttt{this} pointer of the base class is reinterpreted as a
+being a pointer to an object of the derived class and the method is
+then called on the reinterpreted pointer. This scheme gives the C++
+compiler complete transparency of the code executed and thus opens
+much better optimization oportunities. Since this mechanism completely
+happens at compile time, it is called ``static polymorphism'' because
+the called method cannot be dynamically changed at runtime.
 \begin{example}
   Using static polymorphism, the base class of example \ref{example:DynPoly}
-  can be written as
-\begin{verbatim}
+  can be implemented like:
+\begin{lstlisting}[name=staticcars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // The base class. The 'Imp' template parameter is the
 // type of the implementation, i.e. the derived class 
 template <class Imp>
@@ -244,11 +250,10 @@ protected:
   // reinterpret 'this' as a pointer to an object of type 'Imp'
   Imp &asImp_() { return *static_cast<Imp*>(this); }
 };
-\end{verbatim}
-(Note the \texttt{asImp\_()} calls in the \texttt{range} method.)
-
-The derived classes can now be defined like this
-\begin{verbatim}
+\end{lstlisting}
+(Notice the \texttt{asImp\_()} calls in the \texttt{range} method.) The
+derived classes may now be defined like this:
+\begin{lstlisting}[name=staticcars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // A Mercedes S-class car
 class S : public Car<S>
 {public:
@@ -262,12 +267,13 @@ class Lupo : public Car<Lupo>
   double gasUsage() { return 2.99; };
   double fuelTankSize() { return 30.0; };
 };
-\end{verbatim}
+\end{lstlisting}
 \end{example}
 
-Analogously to example \ref{example:DynPoly}, the two kinds of cars
-can be used generically within (template) functions:
-\begin{verbatim}
+\noindent
+Analogous to example \ref{example:DynPoly}, the two kinds of cars can
+be used generically within (template) functions:
+\begin{lstlisting}[name=staticcars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class CarType>
 void printMaxRange(CarType &car)
 { std::cout << "Maximum Range: " << car.range(1.00) << "\n"; }
@@ -284,24 +290,24 @@ int main()
    printMaxRange(s);
    return 0;
 }
-\end{verbatim}
+\end{lstlisting}
 
-\textbf{TODO: Exercise}
+%\textbf{TODO: Exercise}
 
 \section{Common Template Programming Related Problems}
 
 Although C++ template programming opens a few intriguing
 possibilities, it also has a few disadvantages. In this section a few
-of those are outlined and some hints how they can be dealt with are
+of those are outlined and some hints on how they can be dealt with are
 provided.
 
-\subsection*{Blow-Up of Identifiers}
+\subsection*{Identifier-Name Blow-Up}
 
-One particular problem with advanced use of templates is that the full
-identifier names for types and methods quickly become really long and
-unreadable. For example a typical line of an error message generated
-using GCC 4.5 in conjunction with \Dune-PDELab looks like
-\begin{verbatim}
+One particular problem with advanced use of C++ templates is that the
+canonical identifier names for types and methods quickly become really
+long and unreadable. For example, a typical line of an error message
+generated using GCC 4.5 and \Dune-PDELab looks like
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 test_pdelab.cc:171:9: error: no matching function for call to ‘Dune::\
 PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
 PDELab::GridFunctionSpace<Dune::GridView<Dune::DefaultLeafGridViewTraits\
@@ -319,28 +325,29 @@ PDELab::GridFunctionSpaceBlockwiseMapper>, Dumux::PDELab::BoxLocalOperator\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()’
-\end{verbatim}
+\end{lstlisting}
 This seriously complicates diagnostics. Although there is no full
 solution for this problem yet, an effective way of dealing with such
 kinds of error messages is to ignore the type information and to just
-go to the location given at the beginning of the line and also
-consider the error text. If nested templates are used and the given
-location looks well, the lines above the actual error specify how
-exactly the code was instantiated by the compiler (the lines starting
-with \texttt{instantiated from}). In this case it is advisable to look
-at the innermost location of the code which has been most recently
-added.
+go to the location given at the beginning of the line. If nested
+templates are used and the source code at the location seems to be
+correct, the lines printed by the compiler above the actual error
+message specify how exactly the code was instantiated (the lines
+starting with \texttt{instantiated from}). In this case it is
+advisable to look at the innermost source code location containing
+``new'' source code.
 
 \subsection*{Proliferation of Template Parameters}
 
 Writing flexible templates often requires a large -- and in some cases
-even unknown -- number of template parameters. As an example, the type
-of the global operator space from \Dune-PDELab which produced the error
-message above is specified like this:
-\begin{verbatim}
+even unknown -- number of template parameters. As an example, the
+error message above is produced by the following snipplet:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+int main()
+{
     enum {numEq = 2};
-    enum {dim = 2};
-    typedef Dune::UGGrid<2> Grid;
+    enum {dim = 3};
+    typedef Dune::UGGrid<dim> Grid;
     typedef Grid::LeafGridView GridView;
     typedef Dune::PDELab::Q1LocalFiniteElementMap<double,double,dim> FEM;
     typedef TTAG(LensProblem) TypeTag;
@@ -369,41 +376,33 @@ message above is specified like this:
     >
         GOS;
     GOS gos; // instantiate grid operator space
-\end{verbatim}
+}
+\end{lstlisting}
 
-Although the code above is not really intuitive, it is not a big
-problem if the type in case the grid operator space is only required
-at exactly one location. If, on the other hand, it needs to be
-consistend over many locations in the source code, something has to be
-done in order to keep the code maintainable. The next section outlines
-approaches on how to tackle this particular problem.
+Although the code above is not really intuitivly readable, this does
+not pose a severe problem as long as the type (in this case the grid
+operator space) needs to be specified exactly once in the whole
+program. If, on the other hand, it needs to be consistend over
+multiple locations in the source code, measures have to be taken in
+order to keep the code maintainable. 
 
-\section{The \Dumux Property System}
-\label{sec:propertysystem}
-
-This section is dedicated to means on how to solve the problem of
-template argument proliferation. First, a short look on the more
-traditional approach using traits classes is taken, then the design of
-the \Dumux property system is explained and finally a short example on
-how the system can be used is given.
-
-\subsection*{Traits Classes}
+\section{Traits Classes}
 
 A classic approach to reduce the number of template parameters is to
 gather the all arguments in a special class, a so-called traits
-class. For example instead of writing
-\begin{verbatim}
+class. Instead of writing
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class A, class B, class C, class D>
 class MyClass {};
-\end{verbatim}
-one can use 
-\begin{verbatim}
+\end{lstlisting}
+one could use 
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class Traits>
 class MyClass {};
-\end{verbatim}
+\end{lstlisting}
 where the \texttt{Traits} class contains public type definitions for
 \texttt{A}, \texttt{B}, \texttt{C} and \texttt{D}, e.g.
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 struct MyTraits 
 {
   typedef float A;
@@ -411,44 +410,52 @@ struct MyTraits
   typedef short C;
   typedef int D;
 };
-\end{verbatim}
+\end{lstlisting}
 
+\noindent
 As there is no a free lunch, the traits approach comes with a few
 disadvantages of its own:
 \begin{enumerate}
-\item Trait class hierarchies are problematic. This is due to the fact
-  that type defintions must always be defined for the lowest level
-  traits class if it is to be used by higher level classes.
-\item Traits quickly lead to circular dependencies. This implies that
-  types can not be extracted from classes which get the trait class as
-  an argument.
+\item Hierarchies of traits classes are problematic. This is due to
+  the fact each level of the hierarchy must be self contained. As a
+  result it is impossible to define parameters in the base class which
+  depend on parameters which only get specified by a derived traits
+  class.
+\item Traits quickly lead to circular type dependencies. In practice
+  this means that the traits class can not extract any information
+  from classes which get the traits class as an argument, even if the
+  extracted information does not require the traits class.
 \end{enumerate}
 
-To see the point of the first issue, consider the following example:
-\begin{verbatim}
+\noindent
+To see the point of the first issue, consider the following:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 struct MyBaseTraits {
   typedef int Scalar;
   typedef std::vector<Scalar> Vector;
+  typedef std::list<Scalar> List;
+  typedef std::array<Scalar> Array;
+  typedef std::set<Scalar> Set;
 };
 
-struct MyDerivedTraits : public MyBaseTraits {
+struct MyDoubleTraits : public MyBaseTraits {
   typedef double Scalar;
 };
 
 int main() {
-    MyDerivedTraits::Vector v{1.41421, 1.73205, 2};
+    MyDoubleTraits::Vector v{1.41421, 1.73205, 2};
     for (int i = 0; i < v.size(); ++i)
        std::cout << v[i]*v[i] << std::endl;
 }
-\end{verbatim}
-Contrary to what is wanted, the \texttt{v} variable is a vector of
-integers. In this case, static polymorphsism does not come to rescue,
-since it would lead to a dependency cycle between
-\texttt{MyBaseTraits} and \texttt{MyDerivedTraits}.
+\end{lstlisting}
+Contrary to what is intended, the \texttt{v} variable is a vector of
+integers. This problem cannot also be solved using static
+polymorphism, since it would lead to a dependency cycle between
+\texttt{MyBaseTraits} and \texttt{MyDoubleTraits}.
 
-The second point is illuminated by the following example, where one
-would expect the \texttt{MyTraits::\-VectorType} to be \texttt{std::vector<double>}:
-\begin{verbatim}
+The second issue is illuminated by the following example, where one
+would expect the \texttt{MyTraits:: VectorType} to be \texttt{std::vector<double>}:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class Traits>
 class MyClass {
 public:  typedef double ScalarType;
@@ -459,18 +466,33 @@ struct MyTraits {
     typedef MyClass<MyTraits>::ScalarType ScalarType;
     typedef std::vector<ScalarType> VectorType
 };
-\end{verbatim}
+\end{lstlisting}
 Although this example seems to be quite pathetic, it is often useful
 in reality to specify parameters in such a way.
 
-\subsection*{Features of the \Dumux Property System}
+
+% TODO: section about separation of functions, parameters and
+% independent variables. (e.g. the material laws: BrooksCorey
+% (function) (BrooksCoreyParams) function parameters, wetting
+% saturation/fluid state (independent variables)
+
+\chapter{The \Dumux Property System}
+\label{sec:propertysystem}
+
+This section is dedicated to the of the \Dumux property system. First
+a high level overview over its design and principle ideas is given,
+then follows a short reference and finally a short example on how the
+system can be used is given.
+
+
+\section{Concepts and Features of the \Dumux Property System}
 
 To get around the issues with traits classes, the \Dumux property
 system was designed. It can be seen as a traits system which allows
 easy type inheritance and any acyclic dependency of types. The scope
 at which the property system is executed is completely compile
 time. It is based on the following concepts:
-\begin{itemize}
+\begin{description}
 \item[Property:] In the context of the \Dumux property system, a
   property is an arbitrary class body which may contain type
   definitions, values and methods. Each property has a so-called
@@ -479,96 +501,209 @@ time. It is based on the following concepts:
   hierarchies, just like normal classes. Each in the context of the
   \Dumux property system the nodes in the inhertitance hierarchy on
   which the property is defined are called \textbf{type tags}.
-\item[Property Nesting:] The definition of a property can depend on
-  the value of other properties (as long as there are no cyclic
-  dependencies).
-\item[Introspection:] The \Dumux property systems supports
-  \textbf{diagnostic messages} which can be used to find out how a
-  certain property was inherited and where it was defined.
-\end{itemize}
+\end{description}
 
-\subsection*{\Dumux Property System Reference}
+It also supports \textbf{property nesting}, i.e. the definition of a
+property can depend on the value of other properties (as long as there
+are no cyclic dependencies) and \textbf{introspection}, i.e.  it can
+generate diagnostic messages which can be used to find out where a
+certain property was defined and how it was inherited.
+
+\section{\Dumux Property System Reference}
 
 All files where the \Dumux property system is utilized should include
-the header file \texttt{dumux/common/propertysystem.hh}, declaration
-of new type tags and property tags as well as property definitions
-must be done inside the namespace \texttt{Dumux::Properties}.
+the header file \texttt{dumux/ \hskip-1ex{}common/
+  \hskip-1ex{}propertysystem.hh}.  Declaring of type tags and property
+tags as well as property definitions must be done inside the namespace
+\texttt{Dumux::Properties}.
 
 \subsection*{Defining Type Tags}
 
 New nodes in the type tag hierarchy can be defined using
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 NEW_TYPE_TAG(NewTypeTagName, INHERITS_FROM(BaseTagName1, BaseTagName2, ...));
-\end{verbatim}
+\end{lstlisting}
 where the \texttt{INHERITS\_FROM} part is optional. To avoid
 inconsistencies in the hierarchy, type tags may only be defined
 exactly once in the whole program.
 
-\subsubsection*{Declaring Property Tags}
+\noindent
+Example:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+namespace Dumux {
+namespace Properties {
+NEW_TYPE_TAG(MyBaseTypeTag1);
+NEW_TYPE_TAG(MyBaseTypeTag2);
+
+NEW_TYPE_TAG(MyDerivedTypeTag, INHERITS_FROM(MyBaseTypeTag1, MyBaseTypeTag2));
+}}
+\end{lstlisting}
+
+\subsection*{Declaring Property Tags}
 
 New property tags -- i.e. labels for properties -- are be declared
 using
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 NEW_PROP_TAG(NewPropTagName);
-\end{verbatim}
+\end{lstlisting}
 A property tag can be declared arbitrarily often inside a program, in
 fact it is recomended that all properties are declared in each file
 where they are used.
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+namespace Dumux {
+namespace Properties {
+NEW_PROP_TAG(MyPropertyTag);
+}}
+\end{lstlisting}
 
-\subsubsection*{Defining Properties}
+\subsection*{Defining Properties}
 
 The actual value of a property on a given node of the type tag
 hierarchy is defined using 
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 SET_PROP(TypeTagName, PropertyTagName)
 {
   // arbitrary body of a struct
 };
-\end{verbatim}
-For each a program, a property itself can be declared at most once,
-although properties may be overwritten at derived type tags.
+\end{lstlisting}
+For each program, a property itself can be declared at most once,
+although properties may be overwritten for derived type tags.
 
 Also, the following convenience macros available to define simple
 properties:
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 SET_TYPE_PROP(TypeTagName, PropertyTagName, type);
 SET_BOOL_PROP(TypeTagName, PropertyTagName, booleanValue);
 SET_INT_PROP(TypeTagName, PropertyTagName, integerValue);
 SET_SCALAR_PROP(TypeTagName, PropertyTagName, floatingPointValue);
-\end{verbatim}
+\end{lstlisting}
 
-\subsubsection*{Unsetting Properties}
+\noindent
+Example:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+namespace Dumux {
+namespace Properties {
+NEW_TYPE_TAG(MyTypeTag);
 
-\subsubsection*{Converting Tag Names to Tag Types}
+NEW_PROP_TAG(MyCustomProperty);
+NEW_PROP_TAG(MyType);
 
-For the C++ compiler property and type tags look like ordinary
-types. Both can thus be used as template or function arguments,
-etc. To convert the name of a property tag or a type tag into the
-corrosponding type, the macros \texttt{TTAG(TypeTagName)} and
-\texttt{PTAG(PropertyTagName)} ought to be used.
+NEW_PROP_TAG(MyBoolValue);
+NEW_PROP_TAG(MyIntValue);
+NEW_PROP_TAG(MyScalarValue);
 
-\subsubsection*{Retrieving Property Values}
+SET_PROP(MyTypeTag, MyCustomProperty)
+{
+  static void print() { std::cout << "Hello, World!\n"; }
+};
+SET_TYPE_PROP(MyTypeTag, MyType, unsigned int);
 
-\begin{verbatim}
+SET_BOOL_PROP(MyTypeTag, MyBoolValue, true);
+SET_INT_PROP(MyTypeTag, MyIntValue, 12345);
+SET_SCALAR_PROP(MyTypeTag, MyScalarValue, 12345.67890);
+}}
+\end{lstlisting}
+
+\subsection*{Un-setting Properties}
+
+Sometimes some inherited properties do not make sense for a certain
+node in the type tag hierarchy. These properties can be explicitly
+un-set using
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+UNSET_PROP(TypeTagName, PropertyTagName);
+\end{lstlisting}
+The un-set property can not be set for the same type tag, but of
+course derived type tags may set it again.
+
+\noindent
+Example:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+namespace Dumux {
+namespace Properties {
+NEW_TYPE_TAG(BaseTypeTag);
+NEW_TYPE_TAG(DerivedTypeTag, INHERITS_FROM(BaseTypeTag));
+
+NEW_PROP_TAG(TestProp);
+
+SET_TYPE_PROP(BaseTypeTag, TestProp, int);
+UNSET_PROP(DerivedTypeTag, TestProp);
+// trying to access the 'TestProp' property for 'DerivedTypeTag' 
+// will trigger a compiler error!
+}}
+\end{lstlisting}
+
+\subsection*{Converting Tag Names to Tag Types}
+
+For the C++ compiler, property and type tags look like ordinary
+types. Both can thus be used as template arguments. To convert a
+property tag name or a type tag name into the corrosponding type, the
+macros \texttt{TTAG(TypeTagName)} and \texttt{PTAG(PropertyTagName)}
+ought to be used.
+
+\subsection*{Retrieving Property Values}
+
+The class bodies of a property can be retrieved using
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 GET_PROP(TypeTag, PropertyTag)
-\end{verbatim}
-
-Convenience macros:
-\begin{verbatim}
+\end{lstlisting}
+or using the convenience macros
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 GET_PROP_TYPE(TypeTag, PropertyTag)
 GET_PROP_VALUE(TypeTag, PropertyTag)
-\end{verbatim}
+\end{lstlisting}
+the first macro retrieves the type defined using
+\texttt{SET\_TYPE\_PROP} and is equivalent to
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+GET_PROP(TypeTag, PropertyTag)::type
+\end{lstlisting}
+while the second macro retrieves the value of any property defined
+using \texttt{SET\_\{INT,BOOL,SCALAR\}\_PROP} and is equivalent to
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+GET_PROP(TypeTag, PropertyTag)::value
+\end{lstlisting}
 
-\subsubsection*{Nesting Property definitions}
+\noindent
+Example:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+template <TypeTag>
+class MyClass {
+  // retrieve the ::value attribute of the 'NumEq' property
+  enum { numEq = GET_PROP(TypeTag, PTAG(NumEq))::value }; 
+  // retrieve the ::value attribute of the 'NumPhases' property using the convenience macro
+  enum { numPhases = GET_PROP_VALUE(TypeTag, PTAG(NumPhases)) }; 
 
-\subsection*{A Simple Example}
+  // retrieve the ::type attribute of the 'Scalar' property
+  typedef typename GET_PROP(TypeTag, PTAG(Scalar))::type Scalar; 
+  // retrieve the ::type attribute of the 'Vector' property using the convenience macro
+  typedef typename GET_PROP_TYPE(TypeTag, PTAG(Vector)) Vector;
+};
+\end{lstlisting}
+
+\subsection*{Nesting Property Definitions}
+
+Inside property definitions there is access to all other properties of
+the inheritance hierarchy. Inside property class bodies, the type tag
+for which the current property is requested is available as the
+keyword \texttt{TypeTag}. 
+
+Example:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+SET_PROP(MyModelTypeTag, Vector)
+{
+private: typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+public: typedef std::vector<Scalar> type;
+};
+\end{lstlisting}
+
+
+\section{A Self-Contained Example}
 
 As a concrete example, let us consider some kinds of cars: Compact
 cars, sedans, trucks, pickups, military tanks and the Hummer-H1 sports
-utility vehicle. Since all these cars share some characteristics it
-makes sense to derive the shared properties from the closest matching
-car type and only specify the properties which are different. Thus, an
-inheritance diagram for the car types above might look like in figure
+utility vehicle. Since all these cars share some characteristics, it
+makes sense to inherit those from the closest matching car type and
+only specify the properties which are different. Thus, an inheritance
+diagram for the car types above might look like outlined in figure
 \ref{fig:car-hierarchy}.
 
 \begin{figure}[t]
@@ -589,8 +724,11 @@ inheritance diagram for the car types above might look like in figure
 \end{figure}
 
 Using the \Dumux property system, the inheritance hierarchy can be
-defined using
-\begin{verbatim}
+defined by:
+\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+#include <dumux/common/propertysystem.hh>
+#include <iostream>
+
 namespace Dumux {
 namespace Properties {
 NEW_TYPE_TAG(CompactCar);
@@ -599,26 +737,23 @@ NEW_TYPE_TAG(Tank);
 NEW_TYPE_TAG(Sedan, INHERITS_FROM(CompactCar));
 NEW_TYPE_TAG(Pickup, INHERITS_FROM(Sedan, Truck));
 NEW_TYPE_TAG(HummerH1, INHERITS_FROM(Pickup, Tank));
-}}
-\end{verbatim}
+\end{lstlisting}
 
 Figure \ref{fig:car-propertynames} lists a few property names which
 make sense for at least one of the nodes of figure
 \ref{fig:car-hierarchy}. These property names can be declared as
 follows:
-\begin{verbatim}
-namespace Dumux {
-namespace Properties {
+\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 NEW_PROP_TAG(TopSpeed); // [km/h]
 NEW_PROP_TAG(NumSeats); // []
 NEW_PROP_TAG(CanonCaliber); // [mm]
 NEW_PROP_TAG(GasUsage); // [l/100km]
 NEW_PROP_TAG(AutomaticTransmission); // true/false
 NEW_PROP_TAG(Payload); // [t]
-}}
-\end{verbatim}
+\end{lstlisting}
 
-So far the inheritance hierarchy and the property names are completely
+\noindent
+So far, the inheritance hierarchy and the property names are completely
 separate. What is missing is setting some values for the property
 names on specific nodes of the inheritance hierarchy. Let us assume
 the following:
@@ -641,11 +776,10 @@ the following:
   but if in doubt more like a tank.
 \end{itemize}
 
+\noindent
 Using the \Dumux property system, these characteristics can be
 expressed using
-\begin{verbatim}
-namespace Dumux {
-namespace Properties {
+\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, PTAG(GasUsage)) * 30);
 SET_INT_PROP(CompactCar, NumSeats, 5);
 SET_INT_PROP(CompactCar, GasUsage, 4);
@@ -666,21 +800,21 @@ SET_INT_PROP(Pickup, TopSpeed, 120);
 SET_INT_PROP(Pickup, Payload, 5);
 
 SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), PTAG(TopSpeed)));
-}}
-\end{verbatim}
+\end{lstlisting}
 
+\noindent
 At this point, the Hummer-H1 has a $120\;mm$ canon which it inherited
 from its military ancestor. It can be removed by
-\begin{verbatim}
-namespace Dumux {
-namespace Properties {
+\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 UNSET_PROP(HummerH1, CanonCaliber);
-}}
-\end{verbatim}
 
+}} // close namespaces
+\end{lstlisting}
+
+\noindent
 Now the hierarchy can be queried and some diagnostic messages can be
 generated. For example
-\begin{verbatim}
+\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 int main()
 {
     std::cout << "top speed of sedan: " << GET_PROP_VALUE(TTAG(Sedan), PTAG(TopSpeed)) << "\n";
@@ -689,9 +823,9 @@ int main()
     std::cout << PROP_DIAGNOSTIC(TTAG(Sedan), PTAG(TopSpeed));
     std::cout << PROP_DIAGNOSTIC(TTAG(HummerH1), PTAG(CanonCaliber));
 }
-\end{verbatim}
+\end{lstlisting}
 will yield in the following output:
-\begin{verbatim}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 top speed of sedan: 210
 top speed of truck: 100
 Property 'TopSpeed' for type tag 'Sedan'
@@ -699,7 +833,7 @@ Property 'TopSpeed' for type tag 'Sedan'
     defined at test_propertysystem.cc:90
 Property 'CanonCaliber' for type tag 'HummerH1'
   explicitly unset at test_propertysystem.cc:113
-\end{verbatim}
+\end{lstlisting}
 
 
 %%% Local Variables: 
