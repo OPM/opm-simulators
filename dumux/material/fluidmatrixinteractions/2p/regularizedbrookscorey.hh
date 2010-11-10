@@ -73,7 +73,7 @@ public:
      *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
      *
-     *  Formula for not-regularized part.
+     *  For not-regularized part:
      *
          \copydetails BrooksCorey::pC()
      *
@@ -113,7 +113,9 @@ public:
      *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
      *
-     *  Formula for not-regularized part.
+     *  The according quantities are obtained by exploiting theorem of intersecting lines.
+     *
+     *  For not-regularized part:
      *
          \copydetails BrooksCorey::Sw()
      *
@@ -149,14 +151,19 @@ public:
     }
 
     /*!
-     * \brief Returns the partial derivative of the capillary
-     *        pressure to the effective saturation.
+     * \brief Regularized version of the partial derivative
+     *        of the \f$p_c(\overlineS_w)\f$ w.r.t. effective saturation
      *
-     *        Formula for not-regularized part.
+     * regularized part:
+     *    - low saturation:  use the slope of the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
+     *
+     *        For not-regularized part:
+     *
+       \copydetails BrooksCorey::dpC_dSw()
      *
     */
 
-    \copydoc BrooksCorey::dpC_dSw()
 
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
@@ -178,21 +185,22 @@ public:
     }
 
     /*!
-     * \brief Returns the partial derivative of the effective
-     *        saturation to the capillary pressure.
+     * \brief Regularized version of the partial derivative
+     *        of the \f$\overline S_w(p_c)\f$ w.r.t. effective cap.pressure
      *
-     *        Formula for not-regularized part.
+     *  regularized part:
+     *    - low saturation:  use the slope of the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
      *
+     *        For not-regularized part:
+        \copydoc BrooksCorey::dSw_dpc()
      */
-
-    \copydoc BrooksCorey::dSw_dpc()
-
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
         const Scalar Sthres = params.thresholdSw();
 
-        // calculate the saturation which corrosponds to the
-        // saturation in the non-regularized verision of the
+        // calculate the saturation which corresponds to the
+        // saturation in the non-regularized version of the
         // Brooks-Corey law
         Scalar Swe;
         if (pC < 0)
@@ -200,7 +208,7 @@ public:
         else
             Swe = BrooksCorey::Sw(params, pC);
 
-        // derivative of the regualarization
+        // derivative of the regularization
         if (Swe <= Sthres) {
             // calculate the slope of the straight line used in pC()
             Scalar m = BrooksCorey::dpC_dSw(params, Sthres);
@@ -211,35 +219,38 @@ public:
             Scalar m = BrooksCorey::dpC_dSw(params, 1.0);
             return 1/m;
         }
-
         return BrooksCorey::dpC_dSw(params, pC);
     }
 
     /*!
-     * \brief   The relative permeability for the wetting phase of
+     * \brief   Regularized version of the  relative permeability
+     *          for the wetting phase of
      *          the medium implied by the Brooks-Corey
      *          parameterization.
      *
+     *  regularized part:
+     *    - low saturation:     set relative permeability to zero
+     *    - high saturation:    set relative permeability to one
+     *
+     *  For not-regularized part:
+        \copydoc BrooksCorey::krw()
      */
-
-    \copydoc BrooksCorey::krw()
-
-    static Scalar krw(const Params &params, Scalar Sw)
+    static Scalar krw(const Params &params, Scalar Swe)
     {
-        if (Sw <= 0)
+        if (Swe <= 0)
             return 0;
-        else if (Sw >= 1)
+        else if (Swe >= 1)
             return 1.0;
-        else if (Sw >= 1 - 0.05) {
+        else if (Swe >= 1 - 0.05) {
             Scalar m1 = BrooksCorey::dkrw_dSw(params, 1.0 - 0.05);
             Scalar y1 = BrooksCorey::krw(params, 1.0 - 0.05);
             Dumux::Spline<Scalar> sp(1 - 0.05, 1.0,
                                      y1, 1.0,
                                      m1, 0);
-            return sp.eval(Sw);
+            return sp.eval(Swe);
         }
 
-        return BrooksCorey::krw(params, Sw);
+        return BrooksCorey::krw(params, Swe);
     };
 
     /*!
@@ -247,27 +258,27 @@ public:
      *        of the medium implied by the Brooks-Corey
      *        parameterization.
      *
+         \copydoc BrooksCorey::krn()
+     *
      */
 
-    \copydoc BrooksCorey::krn()
 
-    static Scalar krn(const Params &params, Scalar Sw)
+    static Scalar krn(const Params &params, Scalar Swe)
     {
-        if (Sw >= 1)
+        if (Swe >= 1)
             return 0;
         // check if we need to regularize the relative permeability
-        else if (Sw <= 0)
+        else if (Swe <= 0)
             return 1.0;
-        else if (Sw < 0.05) {
+        else if (Swe < 0.05) {
             Scalar m1 = BrooksCorey::dkrn_dSw(params, 0.05);
             Scalar y1 = BrooksCorey::krn(params, 0.05);
             Dumux::Spline<Scalar> sp(0.0, 0.05,
                                      1.0, y1,
                                      0, m1);
-            return sp.eval(Sw);
+            return sp.eval(Swe);
         }
-
-        return BrooksCorey::krn(params, Sw);
+        return BrooksCorey::krn(params, Swe);
     }
 };
 }
