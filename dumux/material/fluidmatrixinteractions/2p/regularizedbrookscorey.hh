@@ -16,8 +16,10 @@
 /*!
  * \file
  *
+ * \ingroup fluidmatrixinteractionslaws
+ *
  * \brief Implementation of a regularized version of the Brooks-Corey
- *        capillary pressure <-> saturation relation.
+ *        capillary pressure / relative permeability  <-> saturation relation.
  */
 #ifndef REGULARIZED_BROOKS_COREY_HH
 #define REGULARIZED_BROOKS_COREY_HH
@@ -31,14 +33,28 @@
 
 namespace Dumux
 {
-/*!\ingroup material
+/*!\ingroup fluidmatrixinteractionslaws
  *
- * \brief Implementation of the Brooks-Corey capillary pressure <->
- *        saturation relation. This class bundles the "raw" curves as
+ * \brief Implementation of the regularized  Brooks-Corey
+ *        capillary pressure / relative permeability  <-> saturation relation.
+ *        This class bundles the "raw" curves as
  *        static members and doesn't concern itself converting
- *        absolute to effective saturations and vince versa.
+ *        absolute to effective saturations and vice versa.
  *
- * \sa BrooksCorey, BrooksCoreyTwophase
+ *        In order to avoid very steep gradients the marginal values are "regularized".
+ *        This means that in stead of following the curve of the material law in these regions, some linear approximation is used.
+ *        Doing this is not worse than following the material law. E.g. for very low wetting phase values the material
+ *        laws predict infinite values for \f$p_c\f$ which is completely unphysical. In case of very high wetting phase
+ *        saturations the difference between regularized and "pure" material law is not big.
+ *
+ *        Regularizing has the additional benefit of being numerically friendly: Newton's method does not like infinite gradients.
+ *
+ *        The implementation is accomplished as follows:
+ *        - check whether we are in the range of regularization
+ *        yes: use the regularization
+ *        no: forward to the standard material law.
+ *
+ * \see BrooksCorey
  */
 template <class ScalarT, class ParamsT = RegularizedBrooksCoreyParams<ScalarT> >
 class RegularizedBrooksCorey
@@ -50,17 +66,28 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief A regularized Brooks-Corey capillary pressure-saturation
-     *        curve.
+     * \brief   A regularized Brooks-Corey capillary pressure-saturation
+     *          curve.
+     *
+     * regularized part:
+     *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
+     *
+     *  Formula for not-regularized part.
+     *
+         \copydetails BrooksCorey::pC()
+     *
      */
+
+
     static Scalar pC(const Params &params, Scalar Swe)
     {
         const Scalar Sthres = params.thresholdSw();
 
-        // make sure that the capilarry pressure observes a
+        // make sure that the capilary pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
         // required for example by newton solvers (if the
-        // derivative calculated numerically) in order to get the
+        // derivative is calculated numerically) in order to get the
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
         if (Swe <= Sthres) {
@@ -80,7 +107,16 @@ public:
     }
 
     /*!
-     * \brief The saturation-capillary pressure curve.
+     * \brief   The saturation-capillary pressure curve.
+     *
+     * regularized part:
+     *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
+     *
+     *  Formula for not-regularized part.
+     *
+         \copydetails BrooksCorey::Sw()
+     *
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -91,7 +127,7 @@ public:
         // the Brooks-Corey law
         Scalar Swe = BrooksCorey::Sw(params, pC);
 
-        // make sure that the capilarry pressure observes a
+        // make sure that the capilary pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
         // required for example by newton solvers (if the
         // derivative calculated numerically) in order to get the
@@ -115,7 +151,13 @@ public:
     /*!
      * \brief Returns the partial derivative of the capillary
      *        pressure to the effective saturation.
+     *
+     *        Formula for not-regularized part.
+     *
     */
+
+    \copydoc BrooksCorey::dpC_dSw()
+
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         const Scalar Sthres = params.thresholdSw();
@@ -138,7 +180,13 @@ public:
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
+     *
+     *        Formula for not-regularized part.
+     *
      */
+
+    \copydoc BrooksCorey::dSw_dpc()
+
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
         const Scalar Sthres = params.thresholdSw();
@@ -168,12 +216,14 @@ public:
     }
 
     /*!
-     * \brief The relative permeability for the wetting phase of
-     *        the medium implied by the Brooks-Corey
-     *        parameterization.
+     * \brief   The relative permeability for the wetting phase of
+     *          the medium implied by the Brooks-Corey
+     *          parameterization.
      *
-     * \param Sw The mobile saturation of the wetting phase.
      */
+
+    \copydoc BrooksCorey::krw()
+
     static Scalar krw(const Params &params, Scalar Sw)
     {
         if (Sw <= 0)
@@ -197,8 +247,10 @@ public:
      *        of the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw The mobile saturation of the wetting phase.
      */
+
+    \copydoc BrooksCorey::krn()
+
     static Scalar krn(const Params &params, Scalar Sw)
     {
         if (Sw >= 1)
