@@ -19,10 +19,6 @@
 #define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
 
 // the grid includes
-#if HAVE_UG
-#include <dune/grid/uggrid.hh>
-#endif
-#include <dune/grid/yaspgrid.hh>
 #include <dune/grid/sgrid.hh>
 
 // dumux 2p-decoupled environment
@@ -58,7 +54,7 @@ public:
 // Set the grid type
 SET_PROP(TutorialProblemDecoupled, Grid) /*@\label{tutorial-decoupled:grid-begin}@*/
 {
-    typedef Dune::SGrid<2, 2> type;
+    typedef Dune::SGrid<2, 2> type; /*@\label{tutorial-decoupled:set-grid-type}@*/
     static type *create() /*@\label{tutorial-decoupled:create-grid-method}@*/
     {
         typedef typename type::ctype ctype;

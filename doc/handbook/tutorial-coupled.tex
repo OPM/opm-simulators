@@ -113,12 +113,19 @@ in this case it's \texttt{SGrid}.  Since there's no uniform
 mechanism to allocate grids in \Dune, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that. Next,
 the appropriate fluid system, that specifies both information about
-the fluid mixture as well as about the pure substances, has to be chosen 
-in line \ref{tutorial-coupled:set-fluidsystem}. For all parameters that 
-depend on space, such as the properties of the soil, the specific spatial 
+the fluid mixture as well as about the pure substances, has to be chosen. 
+The two-phase model defaults to the \texttt{FluidSystem2P} which assumes 
+immiscibility of the phases, but requires that the wetting and non-wetting phases
+are explicitly set. In this case, liquid water which uses the relations from 
+IAPWS'97~\cite{IAPWS1997} is chosen as the wetting phase on line
+\ref{tutorial-coupled:wettingPhase} and a liquid model oil is chosen as the 
+non-wetting phase on line \ref{tutorial-coupled:nonwettingPhase}. 
+
+For all parameters that depend on space, such as the properties of the
+ soil, the specific spatial 
 parameters for the problem of interest are specified in line
-\ref{tutorial-coupled:set-spatialparameters}. The final property on line line
-\ref{tutorial-coupled:gravity} is optional and tells the model not to
+\ref{tutorial-coupled:set-spatialparameters}. The final property, which is set on line
+\ref{tutorial-coupled:gravity}, is optional and tells the model not to
 use gravity.
 
 Parameters which are specific to a set-up -- like boundary and initial

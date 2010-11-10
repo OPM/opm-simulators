@@ -56,7 +56,7 @@ can be retrieved by the \Dumux property system and only depend on this
 single type tag. Retrieving them is done between line
 \ref{tutorial-decoupled:retrieve-types-begin} and
 \ref{tutorial-decoupled:retrieve-types-end}. For an introduction to the
-property system, see section \ref{sec:propertysytem}.
+property system, see section \ref{sec:propertysystem}.
 
 The first thing which should be done at run time is to initialize the
 message passing interface using DUNE's \texttt{MPIHelper} class. Line
@@ -102,7 +102,7 @@ type tag, which means that for this problem the two-phase decoupled approach
 is chosen as discretization scheme (defined via the include in line 
 \label{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
 a problem class is attached to the new type tag, while the grid which
-is going to be used is defined on line \ref{tutorial-decoupled:set-grid} --
+is going to be used is defined on line \ref{tutorial-decoupled:set-grid-type} --
 in this case it's \texttt{SGrid}.  Since in Dune, there's no uniform
 mechanism to allocate grids, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that: From line 
@@ -315,3 +315,8 @@ systems in the directory \verb+/dumux/new_material/fluidsystems+.)
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "dumux-handbook"
+%%% End: 

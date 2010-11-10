@@ -210,13 +210,13 @@ called methods and thus cannot optimize properly. For example, modern
 C++ compilers 'inline' short methods, i.e. they copy the method's body
 to where it is called. First, inlining allows to save a few
 instructions by avoiding to jump into and out of the method. Second,
-and probably more importantly, inlining also allows further
-optimizations which depend on specific properties of the function
-arguments (e.g. constant value elimination) or the contents of the
-function body (e.g. loop unrolling). Unfortunately, inlining and other
-cross-method optimizations are made next to impossible by dynamic
-polymorphism. This is because these techniques are be done by the
-compiler (i.e. at compile time) whilst, the code which actually gets
+and more importantly, inlining also allows further optimizations which
+depend on specific properties of the function arguments (e.g. constant
+value elimination) or the contents of the function body (e.g. loop
+unrolling). Unfortunately, inlining and other cross-method
+optimizations are made next to impossible by dynamic
+polymorphism. This is because these optimizations are done by the
+compiler (i.e. at compile time) whilst the code which actually gets
 executed is only determined at run time for \texttt{virtual}
 methods. To overcome this issue, template programming can be used to
 achive polymorphism at compile time. This works by supplying the type
@@ -297,17 +297,17 @@ int main()
 \section{Common Template Programming Related Problems}
 
 Although C++ template programming opens a few intriguing
-possibilities, it also has a few disadvantages. In this section a few
-of those are outlined and some hints on how they can be dealt with are
+possibilities, it also has a few disadvantages. In this section, a few
+of them are outlined and some hints on how they can be dealt with are
 provided.
 
 \subsection*{Identifier-Name Blow-Up}
 
 One particular problem with advanced use of C++ templates is that the
 canonical identifier names for types and methods quickly become really
-long and unreadable. For example, a typical line of an error message
+long and unintelligible. For example, a typical error message
 generated using GCC 4.5 and \Dune-PDELab looks like
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize, numbersep=5pt]
 test_pdelab.cc:171:9: error: no matching function for call to ‘Dune::\
 PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
 PDELab::GridFunctionSpace<Dune::GridView<Dune::DefaultLeafGridViewTraits\
@@ -329,19 +329,18 @@ ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()’
 This seriously complicates diagnostics. Although there is no full
 solution for this problem yet, an effective way of dealing with such
 kinds of error messages is to ignore the type information and to just
-go to the location given at the beginning of the line. If nested
-templates are used and the source code at the location seems to be
-correct, the lines printed by the compiler above the actual error
-message specify how exactly the code was instantiated (the lines
-starting with \texttt{instantiated from}). In this case it is
-advisable to look at the innermost source code location containing
-``new'' source code.
+look at the location given at the beginning of the line. If nested
+templates are used, the lines printed by the compiler above the actual
+error message specify how exactly the code was instantiated (the lines
+starting with ``\texttt{instantiated from}''). In this case it is
+advisable to look at the innermost source code location of ``recently
+added'' source code.
 
 \subsection*{Proliferation of Template Parameters}
 
-Writing flexible templates often requires a large -- and in some cases
-even unknown -- number of template parameters. As an example, the
-error message above is produced by the following snipplet:
+Templates often need a large number of template parameters. For
+example, the error message above was produced by the following
+snipplet:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 int main()
 {
@@ -395,7 +394,7 @@ class. Instead of writing
 template <class A, class B, class C, class D>
 class MyClass {};
 \end{lstlisting}
-one could use 
+one can use 
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class Traits>
 class MyClass {};
@@ -417,13 +416,13 @@ As there is no a free lunch, the traits approach comes with a few
 disadvantages of its own:
 \begin{enumerate}
 \item Hierarchies of traits classes are problematic. This is due to
-  the fact each level of the hierarchy must be self contained. As a
-  result it is impossible to define parameters in the base class which
-  depend on parameters which only get specified by a derived traits
-  class.
-\item Traits quickly lead to circular type dependencies. In practice
-  this means that the traits class can not extract any information
-  from classes which get the traits class as an argument, even if the
+  the fact that each level of the hierarchy must be self-contained. As
+  a result it is impossible to define parameters in the base class
+  which depend on parameters which only later get specified by a
+  derived traits class.
+\item Traits quickly lead to circular dependencies. In practice
+  this means that traits classes can not extract any information from
+  templates which get the traits class as an argument -- even if the
   extracted information does not require the traits class.
 \end{enumerate}
 
@@ -448,10 +447,10 @@ int main() {
        std::cout << v[i]*v[i] << std::endl;
 }
 \end{lstlisting}
-Contrary to what is intended, the \texttt{v} variable is a vector of
-integers. This problem cannot also be solved using static
-polymorphism, since it would lead to a dependency cycle between
-\texttt{MyBaseTraits} and \texttt{MyDoubleTraits}.
+Contrary to what is intended, \texttt{v} is a vector of integers. This
+problem cannot also be solved using static polymorphism, since it
+would lead to a cyclic dependency between \texttt{MyBaseTraits} and
+\texttt{MyDoubleTraits}.
 
 The second issue is illuminated by the following example, where one
 would expect the \texttt{MyTraits:: VectorType} to be \texttt{std::vector<double>}:
@@ -467,55 +466,55 @@ struct MyTraits {
     typedef std::vector<ScalarType> VectorType
 };
 \end{lstlisting}
-Although this example seems to be quite pathetic, it is often useful
-in reality to specify parameters in such a way.
-
+Although this example seems to be quite pathetic, in practice it is
+often useful to specify parameters in such a way.
 
 % TODO: section about separation of functions, parameters and
 % independent variables. (e.g. the material laws: BrooksCorey
-% (function) (BrooksCoreyParams) function parameters, wetting
+% (function), BrooksCoreyParams (function parameters), wetting
 % saturation/fluid state (independent variables)
 
 \chapter{The \Dumux Property System}
 \label{sec:propertysystem}
 
-This section is dedicated to the of the \Dumux property system. First
-a high level overview over its design and principle ideas is given,
-then follows a short reference and finally a short example on how the
-system can be used is given.
-
+This section is dedicated to the \Dumux property system. First, a high
+level overview over its design and principle ideas is given, then
+follows a short reference and a short self-contained example.
 
 \section{Concepts and Features of the \Dumux Property System}
 
-To get around the issues with traits classes, the \Dumux property
-system was designed. It can be seen as a traits system which allows
-easy type inheritance and any acyclic dependency of types. The scope
-at which the property system is executed is completely compile
-time. It is based on the following concepts:
+The \Dumux property system was designed as an attept to mitigate the
+problems of traits classes. In fact, it can be seen as a traits system
+which allows easy inheritance and any acyclic dependency of parameter
+definitions. Just like traits, the \Dumux property system is a compile
+time mechanism, which means that there are no run-time performance
+penalties associated with it. It is based on the following concepts:
 \begin{description}
 \item[Property:] In the context of the \Dumux property system, a
   property is an arbitrary class body which may contain type
   definitions, values and methods. Each property has a so-called
   \textbf{property tag} which can be seen as a label with its name.
-\item[Property Inheritance:] Properties can be arranged in
-  hierarchies, just like normal classes. Each in the context of the
-  \Dumux property system the nodes in the inhertitance hierarchy on
-  which the property is defined are called \textbf{type tags}.
+\item[Property Inheritance:] Just like normal classes, properties can
+  be arranged in hierarchies. In the context of the \Dumux property
+  system, nodes of the inheritance hierarchy are called \textbf{type
+    tags}.
 \end{description}
 
-It also supports \textbf{property nesting}, i.e. the definition of a
-property can depend on the value of other properties (as long as there
-are no cyclic dependencies) and \textbf{introspection}, i.e.  it can
-generate diagnostic messages which can be used to find out where a
-certain property was defined and how it was inherited.
+It also supports \textbf{property nesting} and
+\textbf{introspection}. Property nesting means that the definition of
+a property can depend on the value of other properties which may be
+defined for arbitrary levels of the inheritance hierarchy.  The term
+introspection denotes the ability to generate diagnostic messages
+which can be used to find out where a certain property was defined and
+how it was inherited.
 
 \section{\Dumux Property System Reference}
 
-All files where the \Dumux property system is utilized should include
+All source files which use the \Dumux property system should include
 the header file \texttt{dumux/ \hskip-1ex{}common/
-  \hskip-1ex{}propertysystem.hh}.  Declaring of type tags and property
-tags as well as property definitions must be done inside the namespace
-\texttt{Dumux::Properties}.
+  \hskip-1ex{}propertysystem.hh}.  Declaration of type tags and
+property tags as well as defining properties must be done inside the
+namespace \texttt{Dumux::Properties}.
 
 \subsection*{Defining Type Tags}
 
@@ -524,10 +523,10 @@ New nodes in the type tag hierarchy can be defined using
 NEW_TYPE_TAG(NewTypeTagName, INHERITS_FROM(BaseTagName1, BaseTagName2, ...));
 \end{lstlisting}
 where the \texttt{INHERITS\_FROM} part is optional. To avoid
-inconsistencies in the hierarchy, type tags may only be defined
-exactly once in the whole program.
+inconsistencies in the hierarchy, each type tag may be defined only
+once for a program.
 
-\noindent
+\vskip1ex\noindent
 Example:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 namespace Dumux {
@@ -541,14 +540,17 @@ NEW_TYPE_TAG(MyDerivedTypeTag, INHERITS_FROM(MyBaseTypeTag1, MyBaseTypeTag2));
 
 \subsection*{Declaring Property Tags}
 
-New property tags -- i.e. labels for properties -- are be declared
+New property tags -- i.e. labels for properties -- are declared
 using
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 NEW_PROP_TAG(NewPropTagName);
 \end{lstlisting}
-A property tag can be declared arbitrarily often inside a program, in
-fact it is recomended that all properties are declared in each file
-where they are used.
+A property tag can be declared arbitrarily often, in fact it is
+recomended that all properties are declared in each file where they
+are used.
+
+\vskip1ex\noindent
+Example:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 namespace Dumux {
 namespace Properties {
@@ -558,8 +560,8 @@ NEW_PROP_TAG(MyPropertyTag);
 
 \subsection*{Defining Properties}
 
-The actual value of a property on a given node of the type tag
-hierarchy is defined using 
+The value of a property on a given node of the type tag hierarchy is
+defined using
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 SET_PROP(TypeTagName, PropertyTagName)
 {
@@ -578,7 +580,7 @@ SET_INT_PROP(TypeTagName, PropertyTagName, integerValue);
 SET_SCALAR_PROP(TypeTagName, PropertyTagName, floatingPointValue);
 \end{lstlisting}
 
-\noindent
+\vskip1ex\noindent
 Example:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 namespace Dumux {
@@ -615,7 +617,7 @@ UNSET_PROP(TypeTagName, PropertyTagName);
 The un-set property can not be set for the same type tag, but of
 course derived type tags may set it again.
 
-\noindent
+\vskip1ex\noindent
 Example:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 namespace Dumux {
@@ -634,7 +636,7 @@ UNSET_PROP(DerivedTypeTag, TestProp);
 
 \subsection*{Converting Tag Names to Tag Types}
 
-For the C++ compiler, property and type tags look like ordinary
+For the C++ compiler, property and type tags are like ordinary
 types. Both can thus be used as template arguments. To convert a
 property tag name or a type tag name into the corrosponding type, the
 macros \texttt{TTAG(TypeTagName)} and \texttt{PTAG(PropertyTagName)}
@@ -642,7 +644,7 @@ ought to be used.
 
 \subsection*{Retrieving Property Values}
 
-The class bodies of a property can be retrieved using
+The value of a property can be retrieved using
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 GET_PROP(TypeTag, PropertyTag)
 \end{lstlisting}
@@ -651,19 +653,23 @@ or using the convenience macros
 GET_PROP_TYPE(TypeTag, PropertyTag)
 GET_PROP_VALUE(TypeTag, PropertyTag)
 \end{lstlisting}
-the first macro retrieves the type defined using
+
+\vskip1ex
+\noindent
+The first convenience macro retrieves the type defined using
 \texttt{SET\_TYPE\_PROP} and is equivalent to
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 GET_PROP(TypeTag, PropertyTag)::type
 \end{lstlisting}
-while the second macro retrieves the value of any property defined
-using \texttt{SET\_\{INT,BOOL,SCALAR\}\_PROP} and is equivalent to
+while the second convenience macro retrieves the value of any property
+defined using \texttt{SET\_\{INT,BOOL,SCALAR\}\_PROP} and is
+equivalent to
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 GET_PROP(TypeTag, PropertyTag)::value
 \end{lstlisting}
 
-\noindent
-Example:
+\vskip1ex\noindent
+Example:\nolinebreak
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 template <TypeTag>
 class MyClass {
@@ -681,11 +687,13 @@ class MyClass {
 
 \subsection*{Nesting Property Definitions}
 
-Inside property definitions there is access to all other properties of
-the inheritance hierarchy. Inside property class bodies, the type tag
-for which the current property is requested is available as the
-keyword \texttt{TypeTag}. 
+Inside property definitions there is access to all other properties
+which are defined somewhere on the type tag hierarchy. The node for
+which the current property is requested is available via the keyword
+\texttt{TypeTag}. Inside property class bodies this can be used to
+retrieve other properties using the \texttt{GET\_PROP} macros.
 
+\vskip1ex\noindent
 Example:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 SET_PROP(MyModelTypeTag, Vector)
@@ -703,7 +711,7 @@ cars, sedans, trucks, pickups, military tanks and the Hummer-H1 sports
 utility vehicle. Since all these cars share some characteristics, it
 makes sense to inherit those from the closest matching car type and
 only specify the properties which are different. Thus, an inheritance
-diagram for the car types above might look like outlined in figure
+diagram for the car types above might look like outlined in Figure
 \ref{fig:car-hierarchy}.
 
 \begin{figure}[t]
@@ -723,7 +731,7 @@ diagram for the car types above might look like outlined in figure
     which make sense for at least one of the car types of (a).  }
 \end{figure}
 
-Using the \Dumux property system, the inheritance hierarchy can be
+Using the \Dumux property system, this inheritance hierarchy is
 defined by:
 \begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 #include <dumux/common/propertysystem.hh>
@@ -740,7 +748,7 @@ NEW_TYPE_TAG(HummerH1, INHERITS_FROM(Pickup, Tank));
 \end{lstlisting}
 
 Figure \ref{fig:car-propertynames} lists a few property names which
-make sense for at least one of the nodes of figure
+make sense for at least one of the nodes of Figure
 \ref{fig:car-hierarchy}. These property names can be declared as
 follows:
 \begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
@@ -777,8 +785,8 @@ the following:
 \end{itemize}
 
 \noindent
-Using the \Dumux property system, these characteristics can be
-expressed using
+Using the \Dumux property system, these assumptions are formulated
+using
 \begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, PTAG(GasUsage)) * 30);
 SET_INT_PROP(CompactCar, NumSeats, 5);
@@ -812,8 +820,8 @@ UNSET_PROP(HummerH1, CanonCaliber);
 \end{lstlisting}
 
 \noindent
-Now the hierarchy can be queried and some diagnostic messages can be
-generated. For example
+Now property values can be retrieved and some diagnostic messages can
+be generated. For example
 \begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 int main()
 {
@@ -824,7 +832,7 @@ int main()
     std::cout << PROP_DIAGNOSTIC(TTAG(HummerH1), PTAG(CanonCaliber));
 }
 \end{lstlisting}
-will yield in the following output:
+will yield the following output:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 top speed of sedan: 210
 top speed of truck: 100
