@@ -43,7 +43,6 @@ public:
     typedef AbsParamsT Params;
     typedef typename EffLaw::Scalar Scalar;
 
-
     /*!
      * \brief The capillary pressure-saturation curve.
      */
