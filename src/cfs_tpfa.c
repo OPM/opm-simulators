@@ -213,7 +213,8 @@ static void
 compute_flux(grid_t               *G,
              size_t                np,
              const double         *cpress,
-             const double         *ptransf,
+             const double         *pmobf,
+             const double         *trans,
              struct cfs_tpfa_data *h,
              double               *fflux)
 /* ---------------------------------------------------------------------- */
@@ -227,7 +228,8 @@ compute_flux(grid_t               *G,
         c2 = G->face_cells[2*f + 1];
 
         t = 0.0;
-        for (p = 0; p < np; p++) { t += ptransf[f*np + p]; }
+        for (p = 0; p < np; p++) { t += pmobf[f*np + p]; }
+        t *= trans[f];
 
         if ((c1 >= 0) && (c2 >= 0)) {
             dp = cpress[c1] - cpress[c2];
@@ -338,7 +340,8 @@ cfs_tpfa_press_flux(grid_t               *G,
                     size_t                np,
                     flowbc_t             *bc,
                     const double         *ctrans,
-                    const double         *ptransf,
+                    const double         *trans,
+                    const double         *pmobf,
                     struct cfs_tpfa_data *h,
                     double               *cpress,
                     double               *fflux)
@@ -348,7 +351,7 @@ cfs_tpfa_press_flux(grid_t               *G,
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
 
     compute_fpress(G, bc, ctrans, cpress, h);
-    compute_flux  (G, np, cpress, ptransf, h, fflux);
+    compute_flux  (G, np, cpress, pmobf, trans, h, fflux);
 }
 
 
