@@ -15,7 +15,6 @@
 /*!
  * \file
  *
- * \ingroup Binarycoefficients
  * \brief Binary coefficients for hydrogen and nitrogen.
  */
 #ifndef DUMUX_BINARY_COEFF_H2_N2_HH
@@ -33,6 +32,7 @@ namespace BinaryCoeff
 {
 
 /*!
+ * \ingroup Binarycoefficients
  * \brief Binary coefficients for hydrogen and nitrogen.
  */
 class H2_N2
@@ -52,15 +52,14 @@ public:
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for molecular hydrogen and nitrogen.
      *
-     * \param temperature The temperature [K]
-     * \param pressure phase pressure [Pa]
-     *
      * This function estimates the diffusion coefficents in binary gases
      * using to the method proposed by Fuller. This method and is only
      * valid at "low" pressures.
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp. 587-588
+     * \param temperature the temperature [K]
+     * \param pressure the phase pressure [Pa]
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
@@ -78,6 +77,9 @@ public:
 
     /*!
      * \brief Diffusion coefficent [m^2/s] for molecular nitrogen in liquid hydrogen.
+     *
+     * \param temperature the temperature [K]
+     * \param pressure the phase pressure [Pa]
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)

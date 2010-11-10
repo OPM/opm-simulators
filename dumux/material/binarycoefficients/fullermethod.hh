@@ -15,8 +15,6 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \ingroup Binarycoefficients
  * \brief Various relations for molecular diffusion coefficients.
  */
 #ifndef DUMUX_FULLERMETHOD_HH
@@ -27,6 +25,7 @@ namespace Dumux
 namespace BinaryCoeff
 {
 /*!
+ * \ingroup Binarycoefficients
  * \brief Estimate binary diffusion coefficents [m^2/s] in gases according to
  *        the method by Fuller.
  *

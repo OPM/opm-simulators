@@ -16,7 +16,6 @@
 /*!
  * \file
  *
- * \ingroup Binarycoefficients
  * \brief Binary coefficients for water and nitrogen.
  */
 #ifndef DUMUX_BINARY_COEFF_H2O_N2_HH
@@ -34,6 +33,7 @@ namespace BinaryCoeff
 {
 
 /*!
+ * \ingroup Binarycoefficients
  * \brief Binary coefficients for water and nitrogen.
  */
 class H2O_N2
@@ -58,7 +58,9 @@ public:
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for molecular water and nitrogen.
      *
-     * \copybody fullerMethod()
+     * Uses fullerMethod to determine the diffusion of water in nitrogen.
+     * \param temperature the temperature [K]
+     * \param pressure the phase pressure [Pa]
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)

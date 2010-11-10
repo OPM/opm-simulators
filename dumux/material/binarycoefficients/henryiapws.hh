@@ -21,7 +21,6 @@
 /*!
  * \file
  *
- * \ingroup Binarycoefficients
  * \brief The IAPWS formulation of Henry coefficients in water.
  */
 #ifndef DUMUX_HENRY_IAPWS_HH
@@ -32,6 +31,7 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Binarycoefficients
  * \brief The Henry constants in liquid water using the IAPWS 2004
  *        formulation.
  *
