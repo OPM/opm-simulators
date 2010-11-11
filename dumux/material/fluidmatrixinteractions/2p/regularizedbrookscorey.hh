@@ -193,7 +193,7 @@ public:
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
      *
      *        For not-regularized part:
-        \copydoc BrooksCorey::dSw_dpc()
+        \copydoc BrooksCorey::dSw_dpC()
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {

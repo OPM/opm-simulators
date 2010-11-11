@@ -45,6 +45,10 @@ public:
 
     /*!
      * \brief The capillary pressure-saturation curve.
+     *
+     * \param params material law parameters
+     * \param Sw wetting phase saturation
+     * \return the capillary pressure
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
@@ -54,8 +58,9 @@ public:
     /*!
      * \brief The saturation-capillary pressure curve.
      *
-     * \param pC Capillary pressure \f$p_C\f$
-     * \return The absolute saturation of the wetting phase \f$S_w\f$
+     * \param params material law parameters
+     * \param pC capillary pressure
+     * \return the absolute saturation of the wetting phase \f$S_w\f$
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -65,6 +70,10 @@ public:
     /*!
      * \brief Returns the partial derivative of the capillary
      *        pressure to the absolute saturation.
+     *
+     * \param params material law parameters
+     * \param Sw wetting phase saturation
+     * \return the derivative of the capillary pressure w.r.t. saturation
     */
     static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
@@ -74,6 +83,10 @@ public:
     /*!
      * \brief Returns the partial derivative of the absolute
      *        saturation to the capillary pressure.
+     *
+     * \param params material law parameters
+     * \param pC capillary pressure
+     * \return the derivative of the saturation w.r.t. capillary pressure
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -83,7 +96,9 @@ public:
     /*!
      * \brief The relative permeability for the wetting phase.
      *
-     * \param Sw The absolute saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Sw wetting phase saturation
+     * \return the relative permeability of the wetting phase
      */
     static Scalar krw(const Params &params, Scalar Sw)
     {
@@ -93,7 +108,9 @@ public:
     /*!
      * \brief The relative permeability for the non-wetting phase.
      *
-     * \param Sw The absolute saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Sw wetting phase saturation
+     * \return the relative permeability of the nonwetting phase
      */
     static Scalar krn(const Params &params, Scalar Sw)
     {
@@ -102,6 +119,10 @@ public:
 
     /*!
      * \brief Convert an absolute wetting saturation to an effective one.
+     *
+     * \param params material law parameters
+     * \param Sw absolute wetting phase saturation
+     * \return effective wetting phase saturation
      */
     static Scalar SwToSwe(const Params &params, Scalar Sw)
     {
@@ -110,6 +131,10 @@ public:
 
     /*!
      * \brief convert an absolute wetting saturation to an effective one
+     *
+     * \param params material law parameters
+     * \param Sn absolute nonwetting phase saturation
+     * \return effective nonwetting phase saturation
      */
     static Scalar SnToSne(const Params &params, Scalar Sn)
     {

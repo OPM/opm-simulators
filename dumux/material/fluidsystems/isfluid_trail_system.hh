@@ -37,13 +37,12 @@ NEW_PROP_TAG(OnePTwoCIndices);
 /*!
  * \ingroup Fluidsystems
  *
- * \file A fluid system with one phase and two components representing an
+ * \brief A fluid system with one phase and two components representing an
  *        intersticial fluid that contains a medical trail.
  *
- *
- * \brief A fluid system with one phase and two components representing an
- *        intersticial fluid that contains a medical trail. This is used for
- *        in the 1p2c model.
+ * A fluid system with one phase and two components representing an
+ * intersticial fluid that contains a medical trail. This is used for
+ * in the 1p2c model.
  */
 template <class TypeTag, bool verbose=true>
 class ISFluid_Trail_System

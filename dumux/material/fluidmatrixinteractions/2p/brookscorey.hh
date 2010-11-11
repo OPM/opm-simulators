@@ -142,16 +142,16 @@ public:
      *        the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw        The mobile saturation of the wetting phase.
+     * \param Swe       effective saturation of the wetting phase.
      * \param params    A container object that is populated with the appropriate coefficients for the respective law.
      *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
      *                  is constructed accordingly. Afterwards the values are set there, too.
      */
-    static Scalar krw(const Params &params, Scalar Sw)
+    static Scalar krw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
-        return pow(Sw, 2.0/params.alpha() + 3);
+        return pow(Swe, 2.0/params.alpha() + 3);
     };
 
     /*!
@@ -159,16 +159,16 @@ public:
      *        wetting phase with regard to the wetting saturation of the
      *        medium implied by the Brooks-Corey parameterization.
      *
-     * \param Sw        The mobile saturation of the wetting phase.
+     * \param Swe       effective saturation of the wetting phase.
      * \param params    A container object that is populated with the appropriate coefficients for the respective law.
      *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
      *                  is constructed accordingly. Afterwards the values are set there, too.
      */
-    static Scalar dkrw_dSw(const Params &params, Scalar Sw)
+    static Scalar dkrw_dSw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
-        return (2.0/params.alpha() + 3)*pow(Sw, 2.0/params.alpha() + 2);
+        return (2.0/params.alpha() + 3)*pow(Swe, 2.0/params.alpha() + 2);
     };
 
     /*!
@@ -176,18 +176,18 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw        The mobile saturation of the wetting phase.
+     * \param Swe       effective saturation of the wetting phase.
      * \param params    A container object that is populated with the appropriate coefficients for the respective law.
      *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
      *                  is constructed accordingly. Afterwards the values are set there, too.
      */
-    static Scalar krn(const Params &params, Scalar Sw)
+    static Scalar krn(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
         Scalar exponent = 2.0/params.alpha() + 1;
-        Scalar tmp = 1. - Sw;
-        return tmp*tmp*(1. - pow(Sw, exponent));
+        Scalar tmp = 1. - Swe;
+        return tmp*tmp*(1. - pow(Swe, exponent));
     }
 
     /*!
@@ -196,21 +196,21 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw        The mobile saturation of the wetting phase.
+     * \param Swe       effective saturation of the wetting phase.
      * \param params    A container object that is populated with the appropriate coefficients for the respective law.
      *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
      *                  is constructed accordingly. Afterwards the values are set there, too.
      */
-    static Scalar dkrn_dSw(const Params &params, Scalar Sw)
+    static Scalar dkrn_dSw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
         return
-            2.0*(Sw - 1)*(
+            2.0*(Swe - 1)*(
                 1 +
-                pow(Sw, 2.0/params.alpha())*(
+                pow(Swe, 2.0/params.alpha())*(
                     1.0/params.alpha() + 1.0/2 -
-                    Sw*(1.0/params.alpha() + 1.0/2)
+                    Swe*(1.0/params.alpha() + 1.0/2)
                     )
                 );
     };

@@ -57,7 +57,9 @@ public:
      p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
      \f]
      *
-     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the capillary pressure
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
@@ -72,8 +74,9 @@ public:
      S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
      \f]
      *
-     * \param pC Capillary pressure \f$p_C\f$
-     * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
+     * \param params material law parameters
+     * \param pC capillary pressure
+     * \return the effective saturation of the wetting phase
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -89,6 +92,10 @@ public:
      \frac{\partial p_C}{\partial \overline{S}_w} =
      - (p_{C,max} - p_{C,min})
      \f]
+     *
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the derivative of capillary pressure w.r.t. saturation
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
@@ -98,6 +105,10 @@ public:
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
+     *
+     * \param params material law parameters
+     * \param pC capillary pressure
+     * \return the derivative of saturation w.r.t. capillary pressure
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -107,7 +118,9 @@ public:
     /*!
      * \brief The relative permeability for the wetting phase.
      *
-     * \param Swe The mobile saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the relative permability of the wetting phase
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
@@ -117,7 +130,9 @@ public:
     /*!
      * \brief The relative permeability for the non-wetting phase.
      *
-     * \param Swe The mobile saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the relative permability of the nonwetting phase
      */
     static Scalar krn(const Params &params, Scalar Swe)
     {

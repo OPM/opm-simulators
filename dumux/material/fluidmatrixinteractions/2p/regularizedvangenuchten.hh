@@ -51,14 +51,9 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief The capillary pressure-saturation curve.
+     * \brief \copybrief VanGenuchten::pC
      *
-     * Van Genuchten's empirical capillary pressure <-> saturation
-     * function is given by
-     * \f[
-     p_C = (\overline{S}_w^{-1/m} - 1)^{1/n}/\alpha
-     \f]
-     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \copydetails VanGenuchten::pC
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
@@ -85,15 +80,9 @@ public:
     }
 
     /*!
-     * \brief The saturation-capillary pressure curve.
+     * \brief \copybrief VanGenuchten::Sw
      *
-     * This is the inverse of the capillary pressure-saturation curve:
-     * \f[
-     \overline{S}_w = {p_C}^{-1} = ((\alpha p_C)^n + 1)^{-m}
-     \f]
-     *
-     * \param pC Capillary pressure \f$p_C\f$
-     * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
+     * \copydetails VanGenuchten::Sw
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -128,34 +117,29 @@ public:
     }
 
     /*!
-     * \brief Returns the partial derivative of the capillary
-     *        pressure to the effective saturation.
+     * \brief \copybrief VanGenuchten::dpC_dSw
      *
-     * This is equivalent to
-     * \f[
-     \frac{\partial p_C}{\partial \overline{S}_w} =
-     -\frac{1}{\alpha} (\overline{S}_w^{-1/m} - 1)^{1/n - }
-     \overline{S}_w^{-1/m} / \overline{S}_w / m
-     \f]
-    */
-    static Scalar dpC_dSw(const Params &params, Scalar Sw)
+     * \copydetails VanGenuchten::dpC_dSw
+     */
+    static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         // derivative of the regualarization
-        if (Sw < params.pCLowSw()) {
+        if (Swe < params.pCLowSw()) {
             // the slope of the straight line used in pC()
             return mLow_(params);
         }
-        else if (Sw > params.pCHighSw()) {
+        else if (Swe > params.pCHighSw()) {
             // the slope of the straight line used in pC()
             return mHigh_(params);
         }
 
-        return VanGenuchten::dpC_dSw(params, Sw);
+        return VanGenuchten::dpC_dSw(params, Swe);
     }
 
     /*!
-     * \brief Returns the partial derivative of the effective
-     *        saturation to the capillary pressure.
+     * \brief \copybrief VanGenuchten::dSw_dpC
+     *
+     * \copydetails VanGenuchten::dSw_dpC
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -182,61 +166,57 @@ public:
     }
 
     /*!
-     * \brief The relative permeability for the wetting phase of
-     *        the medium implied by van Genuchten's
-     *        parameterization.
+     * \brief \copybrief VanGenuchten::krw
      *
-     * \param Sw The mobile saturation of the wetting phase.
+     * \copydetails VanGenuchten::krw
      */
-    static Scalar krw(const Params &params, Scalar Sw)
+    static Scalar krw(const Params &params, Scalar Swe)
     {
         // retrieve the high threshold saturation for the
         // unregularized relative permeability curve of the wetting
         // phase from the parameters
         const Scalar SwThHigh = params.krwHighSw();
 
-        if (Sw < 0)
+        if (Swe < 0)
             return 0;
-        else if (Sw > 1)
+        else if (Swe > 1)
             return 1;
-        else if (Sw > SwThHigh) {
+        else if (Swe > SwThHigh) {
             typedef Dumux::Spline<Scalar> Spline;
             Spline sp(SwThHigh, 1.0, // x1, x2
                       VanGenuchten::krw(params, SwThHigh), 1.0, // y1, y2
                       VanGenuchten::dkrw_dSw(params, SwThHigh), 0); // m1, m2
-            return sp.eval(Sw);
+            return sp.eval(Swe);
         }
 
-        return VanGenuchten::krw(params, Sw);
+        return VanGenuchten::krw(params, Swe);
     };
 
     /*!
-     * \brief The relative permeability for the non-wetting phase
-     *        of the medium implied by van Genuchten's
-     *        parameterization.
+     * \brief \copybrief VanGenuchten::krn
      *
-     * \param Sw The mobile saturation of the wetting phase.
+     * \copydetails VanGenuchten::krn
      */
-    static Scalar krn(const Params &params, Scalar Sw)
+    static Scalar krn(const Params &params, Scalar Swe)
     {
         // retrieve the low threshold saturation for the unregularized
         // relative permeability curve of the non-wetting phase from
         // the parameters
         const Scalar SwThLow = params.krnLowSw();
 
-        if (Sw <= 0)
+        if (Swe <= 0)
             return 1;
-        else if (Sw >= 1)
+        else if (Swe >= 1)
             return 0;
-        else if (Sw < SwThLow) {
+        else if (Swe < SwThLow) {
             typedef Dumux::Spline<Scalar> Spline;
             Spline sp(0.0, SwThLow, // x1, x2
                       1.0, VanGenuchten::krn(params, SwThLow), // y1, y2
                       0.0, VanGenuchten::dkrn_dSw(params, SwThLow)); // m1, m2
-            return sp.eval(Sw);
+            return sp.eval(Swe);
         }
 
-        return VanGenuchten::krn(params, Sw);
+        return VanGenuchten::krn(params, Swe);
     }
 
 private:

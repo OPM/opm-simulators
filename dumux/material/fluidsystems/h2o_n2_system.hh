@@ -18,11 +18,10 @@
  * \defgroup Fluidsystems Fluidsystems
  */
 /*!
- * \file A compositional fluid with water and molecular nitrogen as
- *        components in both, the liquid and the gas phase.
+ * \file
  *
  * \ingroup Fluidsystems
- * \brief A fluid system with a water and a gas phase and \f$H_2O\f$ and \f$N_2\f$
+ * \brief A fluid system with a liquid and a gaseous phase and \f$H_2O\f$ and \f$N_2\f$
  *        as components.
  */
 #ifndef DUMUX_H2O_N2_SYSTEM_HH

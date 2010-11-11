@@ -54,12 +54,15 @@ public:
      * \f[
      p_C = (\overline{S}_w^{-1/m} - 1)^{1/n}/\alpha
      \f]
-     * \param Sw Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     *
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the capillary pressure
      */
-    static Scalar pC(const Params &params, Scalar Sw)
+    static Scalar pC(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
-        return pow(pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+        assert(0 <= Swe && Swe <= 1);
+        return pow(pow(Swe, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
     }
 
     /*!
@@ -70,8 +73,9 @@ public:
      \overline{S}_w = {p_C}^{-1} = ((\alpha p_C)^n + 1)^{-m}
      \f]
      *
-     * \param pC Capillary pressure \f$p_C\f$
-     * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
+     * \param params material law parameters
+     * \param pC capillary pressure
+     * \return the effective saturation of the wetting phase
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -90,19 +94,27 @@ public:
      -\frac{1}{\alpha} (\overline{S}_w^{-1/m} - 1)^{1/n - }
      \overline{S}_w^{-1/m} / \overline{S}_w / m
      \f]
+     *
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the derivative of capillary pressure w.r.t. saturation
     */
-    static Scalar dpC_dSw(const Params &params, Scalar Sw)
+    static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
-        Scalar powSw = pow(Sw, -1/params.vgM());
+        Scalar powSw = pow(Swe, -1/params.vgM());
         return - 1/params.vgAlpha() * pow(powSw - 1, 1/params.vgN() - 1)/params.vgN()
-            * powSw/Sw/params.vgM();
+            * powSw/Swe/params.vgM();
     }
 
     /*!
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
+     *
+     * \param params material law parameters
+     * \param pC capillary pressure
+     * \return the derivative of saturation w.r.t. capillary pressure
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -118,14 +130,16 @@ public:
      *        the medium implied by van Genuchten's
      *        parameterization.
      *
-     * \param Sw The mobile saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the relative permability of the wetting phase
      */
-    static Scalar krw(const Params &params, Scalar Sw)
+    static Scalar krw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
-        Scalar r = 1. - pow(1 - pow(Sw, 1/params.vgM()), params.vgM());
-        return sqrt(Sw)*r*r;
+        Scalar r = 1. - pow(1 - pow(Swe, 1/params.vgM()), params.vgM());
+        return sqrt(Swe)*r*r;
     };
 
     /*!
@@ -133,15 +147,17 @@ public:
      *        wetting phase in regard to the wetting saturation of the
      *        medium implied by the van Genuchten parameterization.
      *
-     * \param Sw The mobile saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the derivative of the wetting phase relative permability w.r.t. saturation
      */
-    static Scalar dkrw_dSw(const Params &params, Scalar Sw)
+    static Scalar dkrw_dSw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
-        const Scalar x = 1 - std::pow(Sw, 1.0/params.vgM());
+        const Scalar x = 1 - std::pow(Swe, 1.0/params.vgM());
         const Scalar xToM = std::pow(x, params.vgM());
-        return (1 - xToM)/std::sqrt(Sw) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );
+        return (1 - xToM)/std::sqrt(Swe) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );
     };
 
 
@@ -150,15 +166,17 @@ public:
      *        of the medium implied by van Genuchten's
      *        parameterization.
      *
-     * \param Sw The mobile saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the relative permability of the nonwetting phase
      */
-    static Scalar krn(const Params &params, Scalar Sw)
+    static Scalar krn(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
         return
-            pow(1 - Sw, 1.0/3) *
-            pow(1 - pow(Sw, 1/params.vgM()), 2*params.vgM());
+            pow(1 - Swe, 1.0/3) *
+            pow(1 - pow(Swe, 1/params.vgM()), 2*params.vgM());
     };
 
     /*!
@@ -167,17 +185,19 @@ public:
      *        the medium as implied by the van Genuchten
      *        parameterization.
      *
-     * \param Sw The mobile saturation of the wetting phase.
+     * \param params material law parameters
+     * \param Swe effective saturation of the wetting phase
+     * \return the derivative of the nonwetting phase relative permability w.r.t. saturation
      */
-    static Scalar dkrn_dSw(const Params &params, Scalar Sw)
+    static Scalar dkrn_dSw(const Params &params, Scalar Swe)
     {
-        assert(0 <= Sw && Sw <= 1);
+        assert(0 <= Swe && Swe <= 1);
 
-        const Scalar x = std::pow(Sw, 1.0/params.vgM());
+        const Scalar x = std::pow(Swe, 1.0/params.vgM());
         return
             -std::pow(1 - x, 2*params.vgM())
-            *std::pow(1 - Sw, -2/3)
-            *(1.0/3 + 2*x/Sw);
+            *std::pow(1 - Swe, -2/3)
+            *(1.0/3 + 2*x/Swe);
     }
 
 };
