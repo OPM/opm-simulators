@@ -35,6 +35,9 @@ namespace Dumux
  *
  * \brief Implements a linear saturation-capillary pressure relation
  *
+ * The entry pressure is reached at \f$\overline S_w = 1\f$, the maximum
+ * capillary pressure is observed at \f$\overline S_w = 0\f$.
+ *
  * It may seem strange to regularize a linear material, here comes the rationale:
  *
  * The relative permeabilities are 0 or 1 outside of the range of effective saturation.
@@ -43,10 +46,9 @@ namespace Dumux
  * regions with a spline.
  *
  * An example of the regularization of the relative permeability is shown below:
- * \image html  /temp/philippKila/DUMUX_kila/dumux/doc/doxygen/html/regularizedLinearKr.png
+ * \image html  /temp/philippKila/DUMUX_kila/dumux/doc/doxygen/regularizedLinearKr.png
  *
- * The entry pressure is reached at \f$\overline S_w = 1\f$, the maximum
- * capillary pressure is observed at \f$\overline S_w = 0\f$.
+
  *
  * \see LinearMaterial
  */
