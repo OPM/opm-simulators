@@ -33,7 +33,7 @@ mim_ip_simple_all(int ncells, int d, int max_nconn,
                   double *perm, double *Binv)
 /* ------------------------------------------------------------------ */
 {
-    int i, j, c, f, nf, nconn, fpos2, lwork;
+    int i, j, c, f, nconn, fpos2, lwork;
 
     double *C, *N, *A, *work, s;
 

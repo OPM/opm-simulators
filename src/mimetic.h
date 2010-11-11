@@ -49,7 +49,6 @@ void mim_ip_simple(int nf, int nconn, int d,
  * @param ncells Number of cells in grid.
  * @param d Number of space dimensions.
  * @param max_ncf Maximum number of faces per cell.
- * @param ncf Number of faces per cell.
  * @param pconn Start indices in conn for each cell, plus end
  *              marker. The size of pconn is (ncells + 1), and for a
  *              cell i, [conn[pconn[i]], conn[pconn[i+1]]) is a
