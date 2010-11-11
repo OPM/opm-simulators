@@ -20,7 +20,7 @@
 #include <dumux/material/spatialparameters/boxspatialparameters.hh>
 
 // include material laws
-#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 namespace Dumux
@@ -45,7 +45,7 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
     typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
     // select material law to be used
-    typedef LinearMaterial<Scalar>        RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
+    typedef RegularizedBrooksCorey<Scalar>        RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
 
 public:
     // adapter for absolute law
@@ -93,8 +93,8 @@ public:
         materialParams_.setSnr(0.0);
 
         //linear material law
-        materialParams_.setEntryPC(0.0);
-        materialParams_.setMaxPC(0.0);
+        materialParams_.setPe(1000.0);
+        materialParams_.setAlpha(2);
     }
 
 private:
