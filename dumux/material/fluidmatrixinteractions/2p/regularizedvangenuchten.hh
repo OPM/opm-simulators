@@ -153,7 +153,7 @@ public:
 
     /*!
     * \brief A regularized version of the partial derivative
-    *        of the \f$p_c(\overlineS_w)\f$ w.r.t. effective saturation
+    *        of the \f$p_c(\overline S_w)\f$ w.r.t. effective saturation
     *        according to van Genuchten.
     *
     * regularized part:
