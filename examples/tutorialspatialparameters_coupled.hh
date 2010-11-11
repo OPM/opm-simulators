@@ -13,6 +13,12 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
+/*!
+ * \file
+ *
+ * \brief The spatial parameters for the fully coupled tutorial problem
+ *        which uses the twophase box model.
+ */
 #ifndef TUTORIALSPATIALPARAMETERS_COUPLED_HH
 #define TUTORIALSPATIALPARAMETERS_COUPLED_HH
 
@@ -25,7 +31,12 @@
 
 namespace Dumux
 {
-
+/*!
+ * \ingroup TwoPBoxModel
+ *
+ * \brief The spatial parameters for the fully coupled tutorial problem
+ *        which uses the twophase box model.
+ */
 template<class TypeTag>
 class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@\label{tutorial-coupled:tutorialSpatialParameters}@*/
 {

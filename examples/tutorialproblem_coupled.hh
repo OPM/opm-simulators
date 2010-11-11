@@ -14,6 +14,11 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
+/*!
+ * \file
+ *
+ * \brief Tutorial problem for a fully coupled twophase box model.
+ */
 #ifndef DUMUX_TUTORIALPROBLEM_COUPLED_HH
 #define DUMUX_TUTORIALPROBLEM_COUPLED_HH
 
@@ -84,6 +89,12 @@ SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:s
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
 }
+
+/*!
+* \ingroup TwoPBoxModel
+*
+* \brief Tutorial problem for a fully coupled twophase box model.
+*/
 
 // Definition of the actual problem
 template <class TypeTag>
