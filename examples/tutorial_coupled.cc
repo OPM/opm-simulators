@@ -15,6 +15,11 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
+/*!
+ * \file
+ *
+ * \brief Main file of the tutorial for a fully coupled twophase box model.
+ */
 #include "config.h" /*@\label{tutorial-coupled:include-begin}@*/
 #include "tutorialproblem_coupled.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/
 
