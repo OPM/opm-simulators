@@ -16,8 +16,8 @@
 /*!
  * \file
  *
- * \brief Implementation of a regularized version of van Genuchten's
- *        capillary pressure <-> saturation relation.
+ * \brief Implementation of the regularized version of the van Genuchten's
+ *        capillary pressure / relative permeability  <-> saturation relation.
  */
 #ifndef REGULARIZED_VAN_GENUCHTEN_HH
 #define REGULARIZED_VAN_GENUCHTEN_HH
@@ -32,14 +32,33 @@
 
 namespace Dumux
 {
-/*!\ingroup material
+/*!\ingroup fluidmatrixinteractionslaws
+
+
+ * \brief Implementation of the regularized  van Genuchten's
+ *        capillary pressure / relative permeability  <-> saturation relation.
  *
- * \brief Implementation of a regularized version of van Genuchten's
- *        capillary pressure <-> saturation relation.
+ *        This class bundles the "raw" curves as
+ *        static members and doesn't concern itself converting
+ *        absolute to effective saturations and vice versa.
  *
- * This class bundles the "raw" curves as static members and doesn't
- * concern itself converting absolute to effective saturations and
- * vince versa.
+ *        In order to avoid very steep gradients the marginal values are "regularized".
+ *        This means that in stead of following the curve of the material law in these regions, some linear approximation is used.
+ *        Doing this is not worse than following the material law. E.g. for very low wetting phase values the material
+ *        laws predict infinite values for \f$p_c\f$ which is completely unphysical. In case of very high wetting phase
+ *        saturations the difference between regularized and "pure" material law is not big.
+ *
+ *        Regularizing has the additional benefit of being numerically friendly: Newton's method does not like infinite gradients.
+ *
+ *        The implementation is accomplished as follows:
+ *        - check whether we are in the range of regularization
+ *         - yes: use the regularization
+ *         - no: forward to the standard material law.
+ *
+ *        An example of the regularization of the capillary pressure curve is shown below:
+ *        \image html  /temp/philippKila/DUMUX_kila/dumux/doc/doxygen/html/regularizedVanGenuchten.png
+ *
+ * \see VanGenuchten
  */
 template <class ScalarT, class ParamsT = RegularizedVanGenuchtenParams<ScalarT> >
 class RegularizedVanGenuchten
@@ -51,9 +70,16 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief \copybrief VanGenuchten::pC
+     * \brief A regularized van Genuchten capillary pressure-saturation
+     *          curve.
      *
-     * \copydetails VanGenuchten::pC
+     * regularized part:
+     *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
+     *
+     *  For not-regularized part:
+     *
+         \copydetails VanGenuchten::pC()
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
@@ -80,9 +106,18 @@ public:
     }
 
     /*!
-     * \brief \copybrief VanGenuchten::Sw
+     * \brief   A regularized van Genuchten saturation-capillary pressure curve.
      *
-     * \copydetails VanGenuchten::Sw
+     * regularized part:
+     *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
+     *
+     *  The according quantities are obtained by exploiting theorem of intersecting lines.
+     *
+     *  For not-regularized part:
+     *
+         \copydetails VanGenuchten::Sw()
+     *
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -117,10 +152,19 @@ public:
     }
 
     /*!
-     * \brief \copybrief VanGenuchten::dpC_dSw
-     *
-     * \copydetails VanGenuchten::dpC_dSw
-     */
+    * \brief A regularized version of the partial derivative
+    *        of the \f$p_c(\overlineS_w)\f$ w.r.t. effective saturation
+    *        according to van Genuchten.
+    *
+    * regularized part:
+    *    - low saturation:  use the slope of the regularization point (i.e. no kink).
+    *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
+    *
+    *        For not-regularized part:
+    *
+      \copydetails VanGenuchten::dpC_dSw()
+    *
+    */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         // derivative of the regualarization
@@ -133,13 +177,20 @@ public:
             return mHigh_(params);
         }
 
-        return VanGenuchten::dpC_dSw(params, Swe);
+        return VanGenuchten::dpC_dSw(params, Sw);
     }
 
     /*!
-     * \brief \copybrief VanGenuchten::dSw_dpC
+     * \brief A regularized version of the partial derivative
+     *        of the \f$\overline S_w(p_c)\f$ w.r.t. cap.pressure
+     *        according to van Genuchten.
      *
-     * \copydetails VanGenuchten::dSw_dpC
+     *  regularized part:
+     *    - low saturation:  use the slope of the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
+     *
+     *        For not-regularized part:
+        \copydetails VanGenuchten::dSw_dpC()
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -166,9 +217,18 @@ public:
     }
 
     /*!
-     * \brief \copybrief VanGenuchten::krw
+     * \brief   Regularized version of the  relative permeability
+     *          for the wetting phase of
+     *          the medium implied by the van Genuchten
+     *          parameterization.
      *
-     * \copydetails VanGenuchten::krw
+     *  regularized part:
+     *    - below \f$ \overline S_w =0\f$:                  set relative permeability to zero
+     *    - above \f$ \overline S_w =1\f$:                  set relative permeability to one
+     *    - between \f$ 0.95 \leq \overline S_w \leq 1\f$:  use a spline as interpolation
+     *
+     *  For not-regularized part:
+        \copydetails VanGenuchten::krw()
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
@@ -189,13 +249,22 @@ public:
             return sp.eval(Swe);
         }
 
-        return VanGenuchten::krw(params, Swe);
+        return VanGenuchten::krw(params, Sw);
     };
 
     /*!
-     * \brief \copybrief VanGenuchten::krn
+     * \brief   Regularized version of the  relative permeability
+     *          for the non-wetting phase of
+     *          the medium implied by the van Genuchten
+     *          parameterization.
      *
-     * \copydetails VanGenuchten::krn
+     * regularized part:
+     *    - below \f$ \overline S_w =0\f$:                  set relative permeability to zero
+     *    - above \f$ \overline S_w =1\f$:                  set relative permeability to one
+     *    - for \f$ 0 \leq \overline S_w \leq 0.05 \f$:     use a spline as interpolation
+     *
+         \copydetails VanGenuchten::krn()
+     *
      */
     static Scalar krn(const Params &params, Scalar Swe)
     {
@@ -216,12 +285,21 @@ public:
             return sp.eval(Swe);
         }
 
-        return VanGenuchten::krn(params, Swe);
+        return VanGenuchten::krn(params, Sw);
     }
 
 private:
     // the slope of the straight line used to regularize saturations
     // below the minimum saturation
+
+    /*!
+     * \brief   The slope of the straight line used to regularize
+     *          saturations below the minimum saturation.
+     *
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     */
     static Scalar mLow_(const Params &params)
     {
         const Scalar SwThLow = params.pCLowSw();
@@ -229,8 +307,14 @@ private:
         return VanGenuchten::dpC_dSw(params, SwThLow);
     }
 
-    // the slope of the straight line used to regularize saturations
-    // above the maximum saturation
+    /*!
+     * \brief   The slope of the straight line used to regularize
+     *          saturations above the minimum saturation.
+     *
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     */
     static Scalar mHigh_(const Params &params)
     {
         const Scalar SwThHigh = params.pCHighSw();

@@ -16,8 +16,8 @@
 /*!
  * \file
  *
- * \brief Parameters for the linear capillary pressure and
- * relative permeability <-> saturation relations
+ * \brief   Parameters for the linear capillary pressure and
+ *          relative permeability <-> saturation relations
  */
 #ifndef LINEAR_MATERIAL_PARAMS_HH
 #define LINEAR_MATERIAL_PARAMS_HH
@@ -27,6 +27,8 @@ namespace Dumux
 /*!
  * \brief Reference implementation of params for the linear material
  *        law.
+ *
+ *        \ingroup fluidmatrixinteractionsparams
  */
 template<class ScalarT>
 class LinearMaterialParams
@@ -43,19 +45,11 @@ public:
         setMaxPC(maxPC);
     };
 
-    /*!
-     * \brief Return the threshold saturation at which the relative
-     *        permeability starts to get regularized.
-     *
-     * This is simply 10%
-     */
-    Scalar Sreg() const
-    { return 0.10; }
 
     /*!
      * \brief Return the entry pressure for the linear material law.
      *
-     * The entry pressure is reached at \f$S_w = 1\f$
+     * The entry pressure is reached at \f$\overline S_w = 1\f$
      */
     Scalar entryPC() const
     { return entryPC_; }
@@ -63,7 +57,7 @@ public:
     /*!
      * \brief Set the entry pressure for the linear material law.
      *
-     * The entry pressure is reached at \f$S_w = 1\f$
+     * The entry pressure is reached at \f$ \overline S_w = 1\f$
      */
     void setEntryPC(Scalar v)
     { entryPC_ = v; }
@@ -71,7 +65,7 @@ public:
     /*!
      * \brief Return the maximum capillary pressure for the linear material law.
      *
-     * The maximum capillary pressure is reached at \f$S_w = 0\f$
+     * The maximum capillary pressure is reached at \f$ \overline S_w = 0\f$
      */
     Scalar maxPC() const
     { return maxPC_; }
@@ -79,30 +73,11 @@ public:
     /*!
      * \brief Set the maximum capillary pressure for the linear material law.
      *
-     * The maximum capillary pressure is reached at \f$S_w = 0\f$
+     * The maximum capillary pressure is reached at \f$ \overline S_w = 0\f$
      */
     void setMaxPC(Scalar v)
     { maxPC_ = v; }
 
-    /*!
-     * \brief Return the threshold saturation respective phase below
-     *        which the relative permeability gets regularized.
-     *
-     * This is just 5%. If you need a different value, write your own
-     * parameter class.
-     */
-    Scalar krLowS() const
-    { return 0.05; }
-
-    /*!
-     * \brief Return the threshold saturation of the respective phase
-     *        above which the relative permeability gets regularized.
-     *
-     * This is just 95%. If you need a different value, write your own
-     * parameter class.
-     */
-    Scalar krHighS() const
-    { return 0.95; }
 
 private:
     Scalar entryPC_;

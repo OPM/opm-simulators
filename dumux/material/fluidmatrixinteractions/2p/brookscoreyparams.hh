@@ -14,10 +14,15 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
+ * \ingroup fluidmatrixinteractions
+ *  \defgroup fluidmatrixinteractionsparams FluidMatrixInteractions Parameters
+ */
+
+/*!
  * \file
  *
- * \brief Specification of the params API for the Brooks-Corey
- *        capillary pressure model.
+ * \brief Specification of the material parameters
+ *       for the Brooks Corey constitutive relations.
  */
 #ifndef DUMUX_BROOKS_COREY_PARAMS_HH
 #define DUMUX_BROOKS_COREY_PARAMS_HH
@@ -28,8 +33,12 @@ namespace Dumux
 {
 
 /*!
- * \brief A reference implementation of the params API class for the
- *        Brooks-Corey Sw-pC relation.
+ * \brief Specification of the material parameters
+ *       for the Brooks Corey constitutive relations.
+ *
+ *        \ingroup fluidmatrixinteractionsparams
+ *
+ *\see BrooksCorey
  */
 template <class ScalarT>
 class BrooksCoreyParams

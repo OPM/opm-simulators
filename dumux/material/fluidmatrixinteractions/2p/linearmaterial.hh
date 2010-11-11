@@ -16,8 +16,8 @@
 /*!
  * \file
  *
- * \brief Linear capillary pressure and
- * relative permeability <-> saturation relations
+ * \brief   Linear capillary pressure and
+ *          relative permeability <-> saturation relations
  */
 #ifndef LINEAR_MATERIAL_HH
 #define LINEAR_MATERIAL_HH
@@ -29,15 +29,17 @@
 namespace Dumux
 {
 /*!
- * \ingroup material
+ * \ingroup fluidmatrixinteractionslaws
  *
- * \brief Implements a linear saturation-capillary pressure relation
+ * \brief Linear capillary pressure and
+ * relative permeability <-> saturation relations
  *
+ * The entry pressure is reached at \f$ \overline S_w = 1\f$, the maximum
+ * capillary pressure is observed at \f$ \overline S_w = 0\f$.
  *
- * The entry pressure is reached at \f$S_w = 1\f$, the maximum
- * capillary pressure is observed at \f$S_w = 0\f$.
+ * For general info: EffToAbsLaw
  *
- * \sa LinearMaterialParams
+ * \see LinearMaterialParams
  */
 template <class ScalarT, class ParamsT = LinearMaterialParams<ScalarT> >
 class LinearMaterial
@@ -54,9 +56,11 @@ public:
      p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
      \f]
      *
-     * \param params material law parameters
-     * \param Swe effective saturation of the wetting phase
-     * \return the capillary pressure
+     * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$ conversion from absolute saturation happened in EffToAbsLaw.
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \return          Capillary pressure calculated by linear constitutive relation.
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
@@ -68,12 +72,14 @@ public:
      *
      * This is the inverse of the capillary pressure-saturation curve:
      * \f[
-     S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
+         S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
      \f]
      *
-     * \param params material law parameters
-     * \param pC capillary pressure
-     * \return the effective saturation of the wetting phase
+     * \param pC        Capillary pressure \f$p_C\f$
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \return          Effective wetting phase saturation calculated as inverse of the linear constitutive relation.
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -82,17 +88,18 @@ public:
 
     /*!
      * \brief Returns the partial derivative of the capillary
-     *        pressure to the effective saturation.
+     *        pressure w.r.t. the effective saturation.
      *
      * This is equivalent to
      * \f[
      \frac{\partial p_C}{\partial \overline{S}_w} =
      - (p_{C,max} - p_{C,min})
      \f]
-     *
-     * \param params material law parameters
-     * \param Swe effective saturation of the wetting phase
-     * \return the derivative of capillary pressure w.r.t. saturation
+     * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$ conversion from absolute saturation happened in EffToAbsLaw.
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \return          Partial derivative of \f$p_c\f$ w.r.t. effective saturation according to linear material relation.
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
@@ -103,9 +110,11 @@ public:
      * \brief Returns the partial derivative of the effective
      *        saturation to the capillary pressure.
      *
-     * \param params material law parameters
-     * \param pC capillary pressure
-     * \return the derivative of saturation w.r.t. capillary pressure
+     * \param pC        Capillary pressure \f$p_C\f$
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \return          Partial derivative of effective saturation w.r.t. \f$p_c\f$ according to linear relation.
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -115,9 +124,11 @@ public:
     /*!
      * \brief The relative permeability for the wetting phase.
      *
-     * \param params material law parameters
-     * \param Swe effective saturation of the wetting phase
-     * \return the relative permability of the wetting phase
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$ conversion from absolute saturation happened in EffToAbsLaw.
+     * \return          Relative permeability of the wetting phase calculated as linear relation.
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
@@ -127,9 +138,11 @@ public:
     /*!
      * \brief The relative permeability for the non-wetting phase.
      *
-     * \param params material law parameters
-     * \param Swe effective saturation of the wetting phase
-     * \return the relative permability of the nonwetting phase
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$ conversion from absolute saturation happened in EffToAbsLaw.
+     * \return          Relative permeability of the non-wetting phase calculated as linear relation.
      */
     static Scalar krn(const Params &params, Scalar Swe)
     {

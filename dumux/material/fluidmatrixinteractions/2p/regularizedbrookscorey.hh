@@ -16,8 +16,6 @@
 /*!
  * \file
  *
- * \ingroup fluidmatrixinteractionslaws
- *
  * \brief Implementation of a regularized version of the Brooks-Corey
  *        capillary pressure / relative permeability  <-> saturation relation.
  */
@@ -51,8 +49,10 @@ namespace Dumux
  *
  *        The implementation is accomplished as follows:
  *        - check whether we are in the range of regularization
- *        yes: use the regularization
- *        no: forward to the standard material law.
+ *         - yes: use the regularization
+ *         - no: forward to the standard material law.
+ *
+ *         For an example figure of the regularization: RegularizedVanGenuchten
  *
  * \see BrooksCorey
  */
@@ -76,7 +76,6 @@ public:
      *  For not-regularized part:
      *
          \copydetails BrooksCorey::pC()
-     *
      */
 
 
@@ -107,7 +106,7 @@ public:
     }
 
     /*!
-     * \brief   The saturation-capillary pressure curve.
+     * \brief   A regularized Brooks-Corey saturation-capillary pressure curve.
      *
      * regularized part:
      *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
@@ -151,8 +150,9 @@ public:
     }
 
     /*!
-     * \brief Regularized version of the partial derivative
+     * \brief A regularized version of the partial derivative
      *        of the \f$p_c(\overlineS_w)\f$ w.r.t. effective saturation
+     *        according to Brooks & Corey.
      *
      * regularized part:
      *    - low saturation:  use the slope of the regularization point (i.e. no kink).
@@ -163,8 +163,6 @@ public:
        \copydetails BrooksCorey::dpC_dSw()
      *
     */
-
-
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         const Scalar Sthres = params.thresholdSw();
@@ -185,15 +183,16 @@ public:
     }
 
     /*!
-     * \brief Regularized version of the partial derivative
-     *        of the \f$\overline S_w(p_c)\f$ w.r.t. effective cap.pressure
+     * \brief A regularized version of the partial derivative
+     *        of the \f$\overline S_w(p_c)\f$ w.r.t. cap.pressure
+     *        according to Brooks & Corey.
      *
      *  regularized part:
      *    - low saturation:  use the slope of the regularization point (i.e. no kink).
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
      *
      *        For not-regularized part:
-        \copydoc BrooksCorey::dSw_dpC()
+        \copydetails BrooksCorey::dSw_dpC()
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -229,11 +228,12 @@ public:
      *          parameterization.
      *
      *  regularized part:
-     *    - low saturation:     set relative permeability to zero
-     *    - high saturation:    set relative permeability to one
+     *    - below \f$ \overline S_w =0\f$:                  set relative permeability to zero
+     *    - above \f$ \overline S_w =1\f$:                  set relative permeability to one
+     *    - between \f$ 0.95 \leq \overline S_w \leq 1\f$:  use a spline as interpolation
      *
      *  For not-regularized part:
-        \copydoc BrooksCorey::krw()
+        \copydetails BrooksCorey::krw()
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
@@ -254,15 +254,19 @@ public:
     };
 
     /*!
-     * \brief The relative permeability for the non-wetting phase
-     *        of the medium implied by the Brooks-Corey
-     *        parameterization.
+     * \brief   Regularized version of the  relative permeability
+     *          for the non-wetting phase of
+     *          the medium implied by the Brooks-Corey
+     *          parameterization.
      *
-         \copydoc BrooksCorey::krn()
+     * regularized part:
+     *    - below \f$ \overline S_w =0\f$:                  set relative permeability to zero
+     *    - above \f$ \overline S_w =1\f$:                  set relative permeability to one
+     *    - for \f$ 0 \leq \overline S_w \leq 0.05 \f$:     use a spline as interpolation
+     *
+         \copydetails BrooksCorey::krn()
      *
      */
-
-
     static Scalar krn(const Params &params, Scalar Swe)
     {
         if (Swe >= 1)

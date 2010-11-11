@@ -16,8 +16,8 @@
 /*!
  * \file
  *
- * \brief Specification of the params API for the Brooks-Corey
- *        capillary pressure model.
+ * \brief   Parameters that are necessary for the \em regularization of
+ *          the Brooks-Corey capillary pressure model.
  */
 #ifndef DUMUX_REGULARIZED_BROOKS_COREY_PARAMS_HH
 #define DUMUX_REGULARIZED_BROOKS_COREY_PARAMS_HH
@@ -27,8 +27,10 @@
 namespace Dumux
 {
 /*!
- * \brief A reference implementation of the params class for the
- *        regularized Brooks-Corey Sw-pC relation.
+ * \brief   Parameters that are necessary for the \em regularization of
+ *          the Brooks-Corey capillary pressure model.
+ *
+ *        \ingroup fluidmatrixinteractionsparams
  */
 template <class ScalarT>
 class RegularizedBrooksCoreyParams : public Dumux::BrooksCoreyParams<ScalarT>
