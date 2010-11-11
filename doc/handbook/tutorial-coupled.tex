@@ -21,7 +21,7 @@ The problem that is solved in this tutorial is illustrated in Figure \ref{tutori
 \psfrag{S_n = 0}{$S_n = 0$}
 \psfrag{S_n_initial = 0}{\textcolor{white}{$\mathbf{S_{n_{initial}} = 1}$}}
 \psfrag{q_w = 0 [kg/m^2s]}{$q_w = 0$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
-\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
+\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^{-4}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
 \centering
 \includegraphics[width=0.9\linewidth,keepaspectratio]{EPS/tutorial-problemconfiguration}
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-coupled:problemfigure}
@@ -33,17 +33,17 @@ water:
   \label{massbalancewater}
   \frac {\partial (\phi \, S_{w}\, \varrho_{w})}{\partial t}
   +
-  \nabla \cdot \left( \varrho_{w} \, \frac{k_{rw}}{\mu_{w}} \, \mathbf{K}\;\nabla p \right)
+  \nabla \cdot \left( \varrho_{w} \, \frac{k_{rw}}{\mu_{w}} \, \mathbf{K}\;\nabla p_w \right)
   -
-  q
+  q_w
   & =
   0 \\
   \label{massbalanceoil}
   \frac {\partial (\phi \, S_{o}\, \varrho_{o})}{\partial t}
   +
-  \nabla \cdot \left( \varrho_{o} \, \frac{k_{ro}}{\mu_{o}} \, \mathbf{K}\;\nabla p \right)
+  \nabla \cdot \left( \varrho_{o} \, \frac{k_{ro}}{\mu_{o}} \, \mathbf{K}\;\nabla p_o \right)
   -
-  q 
+  q_o 
   & =
   0
 \end{align}
@@ -239,12 +239,12 @@ First, a certain material law that best describes the problem at hand has to
 be selected in line \ref{tutorial-coupled:rawlaw}\label{tutorial-coupled:materialLaw}. 
 \Dumux provides several material laws in the folder 
 \verb+dumux/material/fluidmatrixinteractions+.
-The selected one, here it is a simple linear relation, is included
+The selected one, here it is a relation according to Brooks Corey, is included
 in line \ref{tutorial-coupled:rawLawInclude}. After the selection,
 an adapter in line \ref{tutorial-coupled:eff2abs} translates the raw 
 law to effective values (residual saturations are considered). As the
 applied raw law knows best which kind of parameters are necessary,
-it provides a parameter class \texttt{LinearMaterialParams} that is
+it provides a parameter class \texttt{RegularizedBrooksCoreyParams} that is
 accessible via the member \texttt{Params} and defined in line 
 \ref{tutorial-coupled:matLawObjectType}. The material law object 
 could now be instantiated correctly as a private object
@@ -284,14 +284,14 @@ timestep in the directory \texttt{tutorial/results/coupled}.
 
 \subsubsection{Exercise 1}
 \renewcommand{\labelenumi}{\alph{enumi})} For Exercise 1 you only have
-to make some small changes in the tutorial files.  To get an
-impression what the results should look like you can first run the
-original version of the fully-coupled tutorial model by typing
-\texttt{./tutorial\_coupled}. For the visualisation with paraview
-please refer to \ref{quick-start-guide}.
-\begin{enumerate}
-\item \textbf{Changing the Model Domain and the Boundary Conditions} \\
+to make some small changes in the tutorial files.  
 
+\begin{enumerate}
+
+\item \textbf{Run the Model} \\
+To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 1e5 10}. The first number behind the simulation name defines the timespan of the simulation run in seconds, the second number defines the initial time step size. Note that the time step size is automatically optimized during the simulation. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+
+\item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
   edge lengths of $\text{x} = 400 m$ and $\text{y} = 500 m$ and with
   discretization lengths of $\Delta \text{x} = 20$ m and $\Delta
@@ -307,32 +307,36 @@ please refer to \ref{quick-start-guide}.
 
 
 \item \textbf{Changing Fluids} \\
-  Now you can change the fluids. Use \texttt{Carbon dioxide} instead of
-  \texttt{Nitrogen} and \texttt{Brine} instead of \texttt{Water}. To do
-  that you have to change the problem file
-  \texttt{tutorialproblem\_coupled.hh} and choose another \texttt{fluid system}. 
-  If you want to take a closer look how the fluid systems are defined 
-  and which fluids are already available please look into the folder \verb+dumux/material/fluidsystems/+
-  for an example.
+  Now you can change the fluids. Use \texttt{DNAPL} instead of
+  \texttt{Oil} and \texttt{Brine} instead of \texttt{Water}. To do
+  that you have to change the problem file:
+  \begin{enumerate}
+  \item Brine: The class \texttt{Dumux::Brine} acts as an adapter to pure water. Hence, it needs not only \texttt{<Scalar>} as a template argument, but also the complete water class used before (be aware to use the water class with its own template parameters).
+ \item DNAPL: A standard set of chemical substances represented by the class \texttt{Dumux::SimpleDNAPL} is located in the folder \texttt{dumux/material/components/} and needs to be included in the problem file.
+\end{enumerate}
+  If you want to take a closer look how the fluid classes are defined 
+  and which substances are already available please browse through the files in the directory
+  \texttt{/dumux/material/components}.
 
+\item \textbf{Use the \Dumux fluid system} \\
+\Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to uncomment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 1e4 seconds and start with a time step of 1 second.\\
+Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
-  Use a regularized Brooks-Corey law with $\lambda = 2$ and entry pressure $p_e =
-  0.0$ instead of using an unregularized linear law for the
-  relative-permeability saturation relationship. To do that you have
+  Use an unregularized linear law with an entry pressure of $p_e = 0.0$ and maximal capillary pressure of $p_{c_{max}} = 0.0$ instead of using a regularized Brooks-Corey law for the
+  relative permeability and for the capillary pressure saturation relationship. To do that you have
   to change the file \texttt{tutorialspatialparameters\_coupled.hh}. 
  You can find the material laws in the folder 
   \verb+dumux/material/fluidmatrixinteractions+. The necessary parameters
-of the Brooks-Corey law and the respective \texttt{set}-functions can be found
- in the file \verb+dumux/material/fluidmatrixinteractions/2p/brookscoreyparams.hh+.
+of the linear law and the respective \texttt{set}-functions can be found
+ in the file \\
+ \verb+dumux/material/fluidmatrixinteractions/2p/linearmaterialparams.hh+.
  
 \item \textbf{Heterogeneities}  \\
   Set up a model domain with the soil properties given in Figure
   \ref{tutorial-coupled:exercise1_d}. Adjust the boundary conditions
-  so that water is still flowing from the bottom to the top of the
-  domain. You can use the fluids of exercise 1b) and the constitutive
-  relationship of exercise 1c).
-
+  so that water is again flowing from the left to the right of the
 \begin{figure}[h]
 \psfrag{K1 =}{K $= 10^{-8}\text{ m}^2$}
 \psfrag{phi1 =}{$\phi = 0.15$}
@@ -342,26 +346,27 @@ of the Brooks-Corey law and the respective \texttt{set}-functions can be found
 \psfrag{300 m}{300 m}
 \centering
 \includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
-\caption{Exercise 1d: Set-up of a model domain with a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{tutorial-coupled:exercise1_d}
+\caption{Exercise 1f: Set-up of a model domain with a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{tutorial-coupled:exercise1_d}
 \end{figure}
-
+domain. You can use the fluids of exercise 1c). 
+When does the front cross the material border? In paraview, the option \textit{View} $\rightarrow$ \textit{Animation View} is nice to get a rough feeling of the timestep sizes.
 \end{enumerate}
 
 \subsubsection{Exercise 2}
 For this exercise you should create a new proplem file analogous to
 the file \texttt{tutorialproblem\_coupled.hh} and new spatial parameters 
 just like \texttt{tutorialspatialparameters\_coupled.hh}. The new problem file needs to
-be included in the file \texttt{tutorial\_coupled.cc}. 
-
+be included in the file \texttt{tutorial\_coupled.cc}.  \\
 The new file defining spatial parameters should contain the definition 
-of a new class, such as \texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
-macros in the header files (e.g. change \texttt{TUTORIALSPATIALPARAMETERS\_COUPLED} to
+of a new class, such as \\
+\texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
+macros in the header files (e.g. change \\
+\texttt{TUTORIALSPATIALPARAMETERS\_COUPLED} to
 \texttt{SPATIALPARAMETERSEX2}). Besides also adjusting the guardian macros, 
 the new problem file should define and use a new type tag for the problem as well as a new problem class
 e.g. \texttt{ProblemEx2}. Make sure you assign your newly defined spatial 
 parameter class to the \texttt{SpatialParameters} property for the new 
-type tag. 
-
+type tag. \\
 After this, change the \texttt{create()} method of the \texttt{Grid}
 property so that it matches the domain described
 by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the problem class
@@ -370,8 +375,8 @@ so that the boundary conditions are consistent with figure
 with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
-should be set to $4\times 10^7 \text{s}$ with an initial time step size of
-$100 \text{s}$.
+should be set to $1\times 10^6 \text{ s}$ with an initial time step size of
+$100 \text{ s}$.
 
 Now include your new problem file in the main file and replace the
 \texttt{TutorialProblemCoupled} type tag by the one you've created and
@@ -409,12 +414,16 @@ compile the program.
 \caption{Boundary Conditions}\label{tutorial-coupled:ex2_BC}
 \end{figure}
 
+\begin{itemize}
+ \item Increase the simulation time to e.g. $4\times 10^7 \text{ s}$. Investigate the saturation: Is the value range reasonable?
+ \item What happens if you increase the resolution of the grid?
+\end{itemize}
+
 \subsubsection{Exercise 3}
 
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 
-systems in the directory \verb+/dumux/material/fluidsystems+.)
-
+systems in the directory \verb+/dumux/material/fluidsystems+.) \\
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
