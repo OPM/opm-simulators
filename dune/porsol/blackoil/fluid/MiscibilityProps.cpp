@@ -14,7 +14,7 @@
 
 using namespace std;
 
-namespace samcode
+namespace Opm
 {
 
 
@@ -31,4 +31,4 @@ namespace samcode
     {
     }
 
-} // namespace samcode
+} // namespace Opm
