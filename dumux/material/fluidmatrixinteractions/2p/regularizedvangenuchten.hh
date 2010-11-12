@@ -249,7 +249,7 @@ public:
             return sp.eval(Swe);
         }
 
-        return VanGenuchten::krw(params, Sw);
+        return VanGenuchten::krw(params, Swe);
     };
 
     /*!
@@ -285,7 +285,7 @@ public:
             return sp.eval(Swe);
         }
 
-        return VanGenuchten::krn(params, Sw);
+        return VanGenuchten::krn(params, Swe);
     }
 
 private:

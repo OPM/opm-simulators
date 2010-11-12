@@ -166,7 +166,7 @@ public:
 
         const Scalar x = 1 - std::pow(Swe, 1.0/params.vgM());
         const Scalar xToM = std::pow(x, params.vgM());
-        return (1 - xToM)/std::sqrt(Sw) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );
+        return (1 - xToM)/std::sqrt(Swe) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );
     };
 
 
@@ -207,7 +207,7 @@ public:
         const Scalar x = std::pow(Swe, 1.0/params.vgM());
         return
             -std::pow(1 - x, 2*params.vgM())
-            *std::pow(1 - Sw, -2/3)
+            *std::pow(1 - Swe, -2/3)
             *(1.0/3 + 2*x/Swe);
     }
 
