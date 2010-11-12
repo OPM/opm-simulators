@@ -56,7 +56,7 @@ namespace Dumux
  *         - no: forward to the standard material law.
  *
  *        An example of the regularization of the capillary pressure curve is shown below:
- *        \image html  /temp/philippKila/DUMUX_kila/dumux/doc/doxygen/regularizedVanGenuchten.png
+ *        \image html regularizedVanGenuchten.png
  *
  * \see VanGenuchten
  */
