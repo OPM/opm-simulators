@@ -23,7 +23,11 @@
 namespace Dumux
 {
 
-template <class Scalar, class ComponentT> class GasPhase
+/*!
+ * \brief gaseous phase consisting of a single component
+ */
+template <class Scalar, class ComponentT>
+class GasPhase
 {
 public:
     typedef ComponentT Component;
