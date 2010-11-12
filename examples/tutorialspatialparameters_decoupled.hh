@@ -13,6 +13,11 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
+/*!
+ * \file
+ *
+ * \brief spatial parameters for the sequential tutorial
+ */
 #ifndef TUTORIALSPATIALPARAMETERS_DECOUPLED_HH
 #define TUTORIALSPATIALPARAMETERS_DECOUPLED_HH
 

@@ -15,6 +15,11 @@
 *                                                                           *
 *   This program is distributed WITHOUT ANY WARRANTY.                       *
 *****************************************************************************/
+/*!
+ * \file
+ *
+ * \brief problem for the sequential tutorial
+ */
 #ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
 #define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
 
