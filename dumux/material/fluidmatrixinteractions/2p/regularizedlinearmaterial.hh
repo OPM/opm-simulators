@@ -46,7 +46,7 @@ namespace Dumux
  * regions with a spline.
  *
  * An example of the regularization of the relative permeability is shown below:
- * \image html  /temp/philippKila/DUMUX_kila/dumux/doc/doxygen/regularizedLinearKr.png
+ * \image html regularizedLinearKr.png
  *
 
  *
