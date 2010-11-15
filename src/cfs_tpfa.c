@@ -256,7 +256,7 @@ compute_flux(grid_t       *G,
             if (c1 < 0) {
                 dp = bc->bcval[f] - cpress[c2];
             } else {
-                dp = cpress[c2] - bc->bcval[f];
+                dp = cpress[c1] - bc->bcval[f];
             }
         }
 
