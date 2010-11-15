@@ -53,8 +53,10 @@ cfs_tpfa_assemble(grid_t               *G,
 void
 cfs_tpfa_press_flux(grid_t               *G,
                     flowbc_t             *bc,
+                    int                   np,
+                    const double         *trans,
                     const double         *htrans,
-                    const double         *totmob,
+                    const double         *pmobf,
                     struct cfs_tpfa_data *h,
                     double               *cpress,
                     double               *fflux);
