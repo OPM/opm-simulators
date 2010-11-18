@@ -29,6 +29,7 @@ extern "C" {
 
 struct cfs_tpfa_impl;
 struct CSRMatrix;
+struct compr_quantities;
 
 struct cfs_tpfa_data {
     struct CSRMatrix     *A;
@@ -40,15 +41,19 @@ struct cfs_tpfa_data {
 
 
 struct cfs_tpfa_data *
-cfs_tpfa_construct(grid_t *G);
+cfs_tpfa_construct(grid_t *G, int nphases);
 
 void
-cfs_tpfa_assemble(grid_t               *G,
-                  const double         *ctrans,
-                  const double         *P,
-                  flowbc_t             *bc,
-                  const double         *src,
-                  struct cfs_tpfa_data *h);
+cfs_tpfa_assemble(grid_t                  *G,
+                  double                   dt,
+                  flowbc_t                *bc,
+                  const double            *src,
+                  struct compr_quantities *cq,
+                  const double            *trans,
+                  const double            *gravcap_f,
+                  const double            *cpress0,
+                  const double            *porevol,
+                  struct cfs_tpfa_data    *h);
 
 void
 cfs_tpfa_press_flux(grid_t               *G,
@@ -67,26 +72,6 @@ cfs_tpfa_fpress(grid_t               *G,
 
 void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
-
-
-void
-cfs_tpfa_small_matvec(size_t n, int sz,
-                      const double *A,
-                      const double *X,
-                      double       *Y);
-
-int
-cfs_tpfa_solve_cellsys(grid_t       *G,
-                       size_t        sz,
-                       const double *Ac,
-                       const double *bf,
-                       double       *xcf);
-
-void
-cfs_tpfa_sum_phase_contrib(grid_t       *G  ,
-                           size_t        sz ,
-                           const double *xcf,
-                           double       *sum);
 
 #ifdef __cplusplus
 }

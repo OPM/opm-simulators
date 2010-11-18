@@ -24,6 +24,20 @@
 
 #include "grid.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct compr_quantities {
+    int     nphases;
+
+    double *totcompr;
+    double *voldiscr;
+    double *Ac;                 /* RB^{-1} per cell */
+    double *Af;                 /* RB^{-1} per face */
+    double *phasemobf;          /* Phase mobility per face */
+};
+
 void
 compr_flux_term(grid_t       *G,
                 const double *fflux,
@@ -42,5 +56,9 @@ compr_src_add_press_accum(size_t        nc,
                           const double *p0,
                           const double *P,
                           double       *src);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* OPM_COMPR_QUANT_HEADER_INCLUDED */
