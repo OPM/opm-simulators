@@ -97,11 +97,6 @@ public:
 // Set the spatial parameters
 SET_PROP(TutorialProblemDecoupled, SpatialParameters) /*@\label{tutorial-decoupled:set-spatialparameters}@*/
 {
-private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-
-public:
     typedef Dumux::TutorialSpatialParametersDecoupled<TypeTag> type;
 };
 
@@ -203,7 +198,8 @@ public:
 
     //! Returns a constant pressure to enter material laws
     /* For incrompressible simulations, a constant pressure is necessary
-     * to enter the material laws to gain a constant density etc.
+     * to enter the material laws to gain a constant density etc. In the compressible
+     * case, the pressure is used for the initialization of material laws.
      */
     Scalar referencePressure(const GlobalPosition& globalPos, const Element& element) const /*@\label{tutorial-decoupled:refPressure}@*/
     {
@@ -225,7 +221,7 @@ public:
      */
     typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypePress}@*/
     {
-        if ((globalPos[0] < this->bboxMin()[0] + eps_))
+        if (globalPos[0] < this->bboxMin()[0] + eps_)
             return BoundaryConditions::dirichlet;
         // all other boundaries
         return BoundaryConditions::neumann;
@@ -248,21 +244,15 @@ public:
      */
     Scalar dirichletPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletPress}@*/
     {
-        if (globalPos[0] < this->bboxMin()[0] + eps_)
-            return 2e5;
-        // all other boundaries
-        return 0;
+        return 2e5;
     }
     //! Value for transport dirichlet boundary condition (dimensionless).
     /*! In case of a dirichlet BC for the transport equation, a saturation
-     *  have to be defined on boundaries.
+     *  has to be defined on boundaries.
      */
     Scalar dirichletSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletSat}@*/
     {
-        if (globalPos[0] < this->bboxMin()[0] + eps_)
-            return 1;
-        // all other boundaries
-        return 0;
+        return 1;
     }
     //! Value for pressure neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$.
     /*! In case of a neumann boundary condition, the flux of matter

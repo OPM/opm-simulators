@@ -92,7 +92,7 @@ public:
 
         // parameters for the Brooks-Corey Law
         // entry pressures
-        materialLawParams_.setPe(10000);
+        materialLawParams_.setPe(1000);
 
         // Brooks-Corey shape parameters
         materialLawParams_.setAlpha(2);

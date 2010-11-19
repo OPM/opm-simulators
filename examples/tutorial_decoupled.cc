@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         Problem problem(gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
 
         // load restart file if necessary
-        if (restart)    /*@\label{tutorial-decoupled:restart}@*/
+        if (restart)    /*@\label{tutorial-decoupled:mainRestart}@*/
             problem.deserialize(restartTime);
 
         // define simulation parameters
