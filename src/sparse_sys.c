@@ -18,6 +18,7 @@
 */
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "sparse_sys.h"
@@ -34,7 +35,7 @@ csrmatrix_new_count_nnz(size_t m)
 
     new = malloc(1 * sizeof *new);
     if (new != NULL) {
-        new->ia = malloc((m + 1) * sizeof *new->ia);
+        new->ia = calloc(m + 1, sizeof *new->ia);
 
         if (new->ia != NULL) {
             new->m   = m;
@@ -43,9 +44,6 @@ csrmatrix_new_count_nnz(size_t m)
 
             new->ja  = NULL;
             new->sa  = NULL;
-
-            /* MAT_SIZE_T might not be 'int' so no memset() here */
-            for (m = 0; m <= new->m; m++) { new->ia[m] = 0; }
         } else {
             csrmatrix_delete(new);
             new = NULL;
@@ -126,12 +124,7 @@ static int
 cmp_row_elems(const void *a0, const void *b0)
 /* ---------------------------------------------------------------------- */
 {
-    MAT_SIZE_T a, b;
-
-    a = *(const MAT_SIZE_T * const) a0;
-    b = *(const MAT_SIZE_T * const) b0;
-
-    return (int)a - (int)b;
+    return *(const int * const)a0 - *(const int * const)b0;
 }
 
 
@@ -154,10 +147,10 @@ csrmatrix_sortrows(struct CSRMatrix *A)
 
 /* ---------------------------------------------------------------------- */
 size_t
-csrmatrix_elm_index(size_t i, MAT_SIZE_T j, const struct CSRMatrix *A)
+csrmatrix_elm_index(int i, int j, const struct CSRMatrix *A)
 /* ---------------------------------------------------------------------- */
 {
-    MAT_SIZE_T *p;
+    int *p;
 
     p = bsearch(&j, A->ja + A->ia[i], A->ia[i + 1] - A->ia[i],
                 sizeof A->ja[A->ia[i]], cmp_row_elems);
@@ -204,4 +197,49 @@ vector_zero(size_t n, double *v)
     size_t i;
 
     for (i = 0; i < n; i++) { v[i] = 0.0; }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+csrmatrix_write(const struct CSRMatrix *A, const char *fn)
+/* ---------------------------------------------------------------------- */
+{
+    int   i, j;
+    FILE *fp;
+
+    fp = fopen(fn, "wt");
+
+    if (fp != NULL) {
+        for (i = j = 0; i < A->m; i++) {
+            for (; j < A->ia[i + 1]; j++) {
+                fprintf(fp, "%lu %lu %26.18e\n",
+                        (unsigned long) (i + 1),
+                        (unsigned long) (A->ja[j] + 1),
+                        A->sa[j]);
+            }
+        }
+    }
+
+    fclose(fp);
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+vector_write(size_t n, const double *v, const char *fn)
+/* ---------------------------------------------------------------------- */
+{
+    size_t  i;
+    FILE   *fp;
+
+    fp = fopen(fn, "wt");
+
+    if (fp != NULL) {
+        for (i = 0; i < n; i++) {
+            fprintf(fp, "%26.18e\n", v[i]);
+        }
+    }
+    
+    fclose(fp);
 }

@@ -27,19 +27,14 @@ extern "C" {
 #endif
 
 
-#ifndef MAT_SIZE_T
-#define MAT_SIZE_T int
-#endif
-
-
 struct CSRMatrix
 {
     size_t      m;
     size_t      n;
     size_t      nnz;
 
-    MAT_SIZE_T *ia;
-    MAT_SIZE_T *ja;
+    int        *ia;
+    int        *ja;
 
     double     *sa;
 };
@@ -56,7 +51,7 @@ size_t
 csrmatrix_new_elms_pushback(struct CSRMatrix *A);
 
 size_t
-csrmatrix_elm_index(size_t i, MAT_SIZE_T j, const struct CSRMatrix *A);
+csrmatrix_elm_index(int i, int j, const struct CSRMatrix *A);
 
 void
 csrmatrix_sortrows(struct CSRMatrix *A);
@@ -72,6 +67,12 @@ csrmatrix_zero(struct CSRMatrix *A);
 /* ---------------------------------------------------------------------- */
 void
 vector_zero(size_t n, double *v);
+
+void
+csrmatrix_write(const struct CSRMatrix *A, const char *fn);
+
+void
+vector_write(size_t n, const double *v, const char *fn);
 
 #ifdef __cplusplus
 }
