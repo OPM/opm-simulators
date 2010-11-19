@@ -73,7 +73,7 @@ size is initialized with the simulation time.
 After this, a grid is created on line \ref{tutorial-decoupled:create-grid} 
 and the problem is instantiated with information about the grid
 (via its leaf grid view) on line \ref{tutorial-decoupled:instantiate-problem}.
-If demanded, on line \ref{tutorial-decoupled:restart} a state written to
+If demanded, on line \ref{tutorial-decoupled:mainRestart} a state written to
 disk by a previous simulation run is restored on request by the user.
 Finally, the time manager controlling the simulation run is instantiated 
 with the start parameters in line \ref{tutorial-decoupled:initTimeManager}
@@ -100,10 +100,10 @@ on line \ref{tutorial-decoupled:create-type-tag}.  In this case, the
 new type tag inherits all properties defined for the \texttt{DecoupledTwoP} 
 type tag, which means that for this problem the two-phase decoupled approach
 is chosen as discretization scheme (defined via the include in line 
-\label{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
+\ref{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
 a problem class is attached to the new type tag, while the grid which
 is going to be used is defined on line \ref{tutorial-decoupled:set-grid-type} --
-in this case it's \texttt{SGrid}.  Since in Dune, there's no uniform
+in this case an \texttt{SGrid} is created.  Since in Dune, there's no uniform
 mechanism to allocate grids, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that: From line 
 \ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end}, 
@@ -116,9 +116,9 @@ For more information about the dune grid interface, the different grid types
 that are supported and the generation of different grids it is referred to 
 the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}. 
 
-Next, we select the the material of the simulation: As in the thwo-phase
-model, each phase is a pure fluid, the complex (compositional) fluidsystems
-do not need to be used. However, they can be used (see exercise XXXX). 
+Next, we select the material of the simulation: In case of a pure two-phase
+model, each phase is a bulk fluid, and the complex (compositional) fluidsystems
+do not need to be used. However, they can be used (see exercise 1 \ref{dec-ex1-fluidsystem}). 
 Instead, we use a simplified fluidsystem container that provides classes 
 for liquid and gas phases, line \ref{tutorial-decoupled:2p-system-start} to 
 \ref{tutorial-decoupled:2p-system-end}. These are linked to the appropriate 
@@ -134,14 +134,14 @@ wetting phase velocity rather than e.g. a total velocity is used for the
 transport system. As we regard capillary pressure, a capillary diffusive 
 term is regarded, selected in line \ref{tutorial-decoupled:DiffusivePart}.
 Line \ref{tutorial-decoupled:cfl} assigns the CFL-factor to be used in the
-simulation run. The final property on line line \ref{tutorial-decoupled:gravity} 
+simulation run. The final property on line \ref{tutorial-decoupled:gravity} 
 is optional and tells the model not to use gravity.
 
 After all necessary information is written into the property system and 
 its namespace is closed in line \ref{tutorial-decoupled:propertysystem-end},
 the problem class is defined in line \ref{tutorial-decoupled:def-problem}. 
 As its property, the problem class itsself is also derived from a parent, 
-\texttt{IMPESProblem2P}. The classes constructor (line 
+\texttt{IMPESProblem2P}. The class constructor (line 
 \ref{tutorial-decoupled:constructor-problem}) is able to hold two vectors,
 which is not needed in this tutorial.
 
@@ -201,8 +201,8 @@ with the decoupled modelling framework.
 For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 4e3}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
-As you can see, the simulation creates roughly 150 output files. To reduce these to perform longer simulations, change the method responsible for output in the file \texttt{tutorialproblem\_decoupled} to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 1e5 seconds.
+To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 1e4}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+As you can see, the simulation creates roughly 50 output files. To reduce these to perform longer simulations, change the method responsible for output in the file \texttt{tutorialproblem\_decoupled} to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 1e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
@@ -212,15 +212,15 @@ Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
 \begin{enumerate}
- \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to pure water. Hence, it needs not only \texttt{<Scalar>} as a template argument, but also the complete water class used before (be aware to use the water class with its own template parameters).
- \item DNAPL: A standard set of chemical substances is already included and hence easy accessible. This does not hold for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}.
+ \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be aware to use the complete water class with its own template parameter).
+ \item DNAPL: A standard set of chemical substances is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
 If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components}.
 
-\item \textbf{Use the \Dumux fluid system} \\
-As you have experienced in the coupled tutorial (chapter \ref{tutorial-decoupled}), \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. This is also possible for the decoupled models: Uncomment, as we want to reuse it later on, the lines \ref{tutorial-decoupled:2p-system-start} to \ref{tutorial-decoupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::simpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. As water flow replacing a gas is much faster, test your simulation only until 1e4 seconds.\\
+\item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
+As you have experienced in the coupled tutorial (chapter \ref{tutorial-decoupled}), \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. This is also possible for the decoupled models: Uncomment, as we want to reuse it later on, the lines \ref{tutorial-decoupled:2p-system-start} to \ref{tutorial-decoupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7}, the same shortcut works to cancel the comment later on.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. As water flow replacing a gas is much faster, test your simulation only until 1e4 seconds.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
@@ -241,9 +241,9 @@ When does the front cross the material border? In paraview, the option \textit{V
 
 \subsubsection{Exercise 2}
 For this exercise you should create a new proplem file analogous to
-the file \texttt{tutorialproblem\_coupled.hh} and new spatial parameters 
-just like \texttt{tutorialspatialparameters\_coupled.hh}. These files need to
-be included in the file \texttt{tutorial\_coupled.cc}. 
+the file \texttt{tutorialproblem\_decoupled.hh} and new spatial parameters 
+just like \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to
+be included in the file \texttt{tutorial\_decoupled.cc}. 
 
 The new file defining spatial parameters should contain the definition 
 of a new class, such as \texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
@@ -273,11 +273,11 @@ compile the program.
 \psfrag{K1}{K $= 10^{-7}\text{ m}^2$}
 \psfrag{phi1}{$\phi = 0.2$}
 \psfrag{Lin}{Brooks Corey Law} 
-\psfrag{Lin2}{$\lambda = 1.8$, $p_b = 10000$}
+\psfrag{Lin2}{$\lambda = 1.8$, $p_b = 1000$}
 \psfrag{K2}{K $= 10^{-9}\text{ m}^2$}
 \psfrag{phi2}{$\phi = 0.15$}
 \psfrag{BC1}{Brooks Corey Law} 
-\psfrag{BC2}{$\lambda = 2$, $p_b = 15000$}
+\psfrag{BC2}{$\lambda = 2$, $p_b = 1500$}
 \psfrag{H1y}{50 m}
 \psfrag{H2y}{15 m}
 \psfrag{H3y}{20 m}
