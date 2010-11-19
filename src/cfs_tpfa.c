@@ -487,7 +487,10 @@ compute_flux(grid_t       *G,
     double t, dp;
 
     for (f = 0; f < G->number_of_faces; f++) {
-        if (bc->type[f] == FLUX) {
+        c1 = G->face_cells[2*f + 0];
+        c2 = G->face_cells[2*f + 1];
+
+        if (((c1 < 0) || (c2 < 0)) && (bc->type[f] == FLUX)) {
             fflux[f] = bc->bcval[f];
             continue;
         }
@@ -497,9 +500,6 @@ compute_flux(grid_t       *G,
             t += pmobf[f*np + p];
         }
         t *= trans[f];
-
-        c1 = G->face_cells[2*f + 0];
-        c2 = G->face_cells[2*f + 1];
 
         if ((c1 >= 0) && (c2 >= 0)) {
             dp = cpress[c1] - cpress[c2];
