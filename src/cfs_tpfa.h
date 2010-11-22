@@ -60,15 +60,19 @@ cfs_tpfa_press_flux(grid_t               *G,
                     flowbc_t             *bc,
                     int                   np,
                     const double         *trans,
-                    const double         *htrans,
                     const double         *pmobf,
                     struct cfs_tpfa_data *h,
                     double               *cpress,
                     double               *fflux);
 void
-cfs_tpfa_fpress(grid_t               *G,
-                struct cfs_tpfa_data *h,
-                double               *fpress);
+cfs_tpfa_fpress(grid_t       *G,
+                flowbc_t     *bc,
+                int           np,
+                const double *htrans,
+                const double *pmobf,
+                const double *cpress,
+                const double *fflux,
+                double       *fpress);
 
 void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
