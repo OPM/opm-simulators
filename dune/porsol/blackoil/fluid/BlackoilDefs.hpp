@@ -20,6 +20,10 @@
 #ifndef OPM_BLACKOILDEFS_HEADER_INCLUDED
 #define OPM_BLACKOILDEFS_HEADER_INCLUDED
 
+
+#include <dune/common/fvector.hh>
+
+
 namespace Opm
 {
 
@@ -31,6 +35,10 @@ namespace Opm
 
         enum ComponentIndex { Water = 0, Gas = 1, Oil = 2 };
         enum PhaseIndex { Aqua = 0, Vapour = 1, Liquid = 2 };
+
+        typedef double Scalar;
+        typedef Dune::FieldVector<Scalar, numComponents> CompVec;
+        typedef Dune::FieldVector<Scalar, numPhases> PhaseVec;
     };
 
 } // namespace Opm
