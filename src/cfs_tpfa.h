@@ -75,6 +75,18 @@ cfs_tpfa_fpress(grid_t       *G,
                 double       *fpress);
 
 void
+cfs_tpfa_retrieve_masstrans(grid_t               *G,
+                            int                   np,
+                            struct cfs_tpfa_data *h,
+                            double               *masstrans_f);
+
+void
+cfs_tpfa_retrieve_gravtrans(grid_t               *G,
+                            int                   np,
+                            struct cfs_tpfa_data *h,
+                            double               *gravtrans_f);
+
+void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
 
 #ifdef __cplusplus

@@ -657,6 +657,32 @@ cfs_tpfa_fpress(grid_t       *G,
 
 /* ---------------------------------------------------------------------- */
 void
+cfs_tpfa_retrieve_masstrans(grid_t               *G,
+                            int                   np,
+                            struct cfs_tpfa_data *h,
+                            double               *masstrans_f)
+/* ---------------------------------------------------------------------- */
+{
+    memcpy(masstrans_f, h->pimpl->masstrans_f,
+           np * G->number_of_faces * sizeof *masstrans_f);
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+cfs_tpfa_retrieve_gravtrans(grid_t               *G,
+                            int                   np,
+                            struct cfs_tpfa_data *h,
+                            double               *gravtrans_f)
+/* ---------------------------------------------------------------------- */
+{
+    memcpy(gravtrans_f, h->pimpl->gravtrans_f,
+           np * G->number_of_faces * sizeof *gravtrans_f);
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h)
 /* ---------------------------------------------------------------------- */
 {
