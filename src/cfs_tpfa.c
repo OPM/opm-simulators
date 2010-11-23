@@ -683,6 +683,44 @@ cfs_tpfa_retrieve_gravtrans(grid_t               *G,
 
 /* ---------------------------------------------------------------------- */
 void
+cfs_tpfa_expl_mass_transport(grid_t       *G,
+                             int           np,
+                             double        dt,
+                             const double *porevol,
+                             const double *masstrans_f,
+                             const double *gravtrans_f,
+                             const double *cpress,
+                             double       *surf_vol)
+/* ---------------------------------------------------------------------- */
+{
+    int    c, i, f, c2, p;
+    double dp, dz;
+
+    for (c = i = 0; c < G->number_of_cells; c++) {
+        for (; i < G->cell_facepos[c + 1]; i++) {
+            f  = G->cell_faces[i];
+
+            if ((c2 = G->face_cells[2*f + 0]) == c) {
+                c2  = G->face_cells[2*f + 1];
+            }
+            
+            if (c2 >= 0) {
+                dp = cpress[c] - cpress[c2];
+
+                for (p = 0; p < np; p++) {
+                    dz  = masstrans_f[f*np + p] * dp;
+                    dz += gravtrans_f[f*np + p]     ;
+
+                    surf_vol[c*np + p] -= dz * dt / porevol[c];
+                }
+            }
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h)
 /* ---------------------------------------------------------------------- */
 {

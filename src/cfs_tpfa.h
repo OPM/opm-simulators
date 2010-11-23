@@ -87,6 +87,16 @@ cfs_tpfa_retrieve_gravtrans(grid_t               *G,
                             double               *gravtrans_f);
 
 void
+cfs_tpfa_expl_mass_transport(grid_t       *G,
+                             int           np,
+                             double        dt,
+                             const double *porevol,
+                             const double *masstrans_f,
+                             const double *gravtrans_f,
+                             const double *cpress,
+                             double       *surf_vol);
+    
+void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
 
 #ifdef __cplusplus
