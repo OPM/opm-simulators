@@ -455,7 +455,7 @@ compute_fpress(grid_t       *G,
             t *= htrans[i];
 
             s = 2.0*(G->face_cells[2*f + 0] == c) - 1.0;
-            
+
             fpress[f] += cpress[c] - (s * fflux[f] / t);
         }
     }
@@ -703,7 +703,7 @@ cfs_tpfa_expl_mass_transport(grid_t       *G,
             if ((c2 = G->face_cells[2*f + 0]) == c) {
                 c2  = G->face_cells[2*f + 1];
             }
-            
+
             if (c2 >= 0) {
                 dp = cpress[c] - cpress[c2];
 
