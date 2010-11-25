@@ -510,6 +510,9 @@ compute_flux(grid_t       *G,
             } else {
                 dp = cpress[c1] - bc->bcval[f];
             }
+        } else {
+            /* No BC -> no-flow (== zero pressure drop) */
+            dp = 0.0;
         }
 
         fflux[f] = t * dp;
