@@ -104,7 +104,7 @@ public:
         materialParams_.setSnr(0.0);
 
         //linear material law
-        materialParams_.setPe(1000.0);
+        materialParams_.setPe(500.0);
         materialParams_.setAlpha(2);
     }
 

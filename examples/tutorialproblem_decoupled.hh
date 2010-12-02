@@ -184,7 +184,7 @@ public:
     bool shouldWriteOutput() const /*@\label{tutorial-decoupled:output}@*/
     {
         return this->timeManager().timeStepIndex() > 0 &&
-        (this->timeManager().timeStepIndex() % 1 == 0);
+        (this->timeManager().timeStepIndex() % 20 == 0);
     }
 
     //! Returns the temperature within the domain.
@@ -262,7 +262,7 @@ public:
         std::vector<Scalar> neumannFlux(2,0.0);
         if (globalPos[0] > this->bboxMax()[0] - eps_)
         {
-            neumannFlux[nPhaseIdx] = 3e-4;
+            neumannFlux[nPhaseIdx] = 3e-2;
         }
         return neumannFlux;
     }

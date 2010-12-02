@@ -57,8 +57,8 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
         Dune::FieldVector<int, 2> cellRes;
         Dune::FieldVector<ctype, 2> lowerLeft(0.0);
         Dune::FieldVector<ctype, 2> upperRight;
-        cellRes[0] = 30;
-        cellRes[1] = 10;
+        cellRes[0] = 100;
+        cellRes[1] = 1;
         upperRight[0] = 300;
         upperRight[1] = 60;
         return new Dune::SGrid<2,2>(cellRes,
@@ -192,10 +192,10 @@ public:
             fvElemGeom.boundaryFace[boundaryFaceIdx].ipGlobal;
         Scalar right = this->bboxMax()[0];
         // extraction of oil on the right boundary for approx. 1.e6 seconds
-        if (pos[0] > right - eps_ && this->timeManager().time() <= 1.e6) {
-            // oil outflux of 0.3 g/(m * s) on the right boundary.
+        if (pos[0] > right - eps_) {
+            // oil outflux of 30 g/(m * s) on the right boundary.
             values[Indices::contiWEqIdx] = 0;
-            values[Indices::contiNEqIdx] = 3e-4;
+            values[Indices::contiNEqIdx] = 3e-2;
         } else {
             // no-flow on the remaining Neumann-boundaries.
             values[Indices::contiWEqIdx] = 0;
