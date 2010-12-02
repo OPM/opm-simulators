@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
+
 <svg
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
@@ -12,7 +13,7 @@
    height="744.09448"
    id="svg2"
    sodipodi:version="0.32"
-   inkscape:version="0.46"
+   inkscape:version="0.48.0 r9654"
    version="1.0"
    sodipodi:docname="dumux_strucutre_flowchart_horizontal_explained.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape">
@@ -56,10 +57,11 @@
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1680"
-     inkscape:window-height="990"
-     inkscape:window-x="-4"
+     inkscape:window-height="992"
+     inkscape:window-x="-3"
      inkscape:window-y="-3"
-     showguides="false">
+     showguides="false"
+     inkscape:window-maximized="1">
     <inkscape:grid
        type="xygrid"
        id="grid2383"
@@ -549,7 +551,7 @@
          style="font-size:11px;text-align:start;text-anchor:start">general fully implicit boxmethod: assembling in <flowSpan
    style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;font-family:CMU Typewriter Text;-inkscape-font-specification:CMU Typewriter Text"
    id="flowSpan4343">boxlocaljacobian.hh</flowSpan>, evaluation of partial derivative in <flowSpan
-   style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;font-family:CMU Typewriter Text;-inkscape-font-specification:CMU Typewriter Text"
+   style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;font-family:'B&amp;H LucidaTypewriter';-inkscape-font-specification:'B&amp;H LucidaTypewriter'"
    id="flowSpan4345">boxlocalresidual.hh</flowSpan>, dual mesh geometry in <flowSpan
    style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;font-family:CMU Typewriter Text;-inkscape-font-specification:CMU Typewriter Text"
    id="flowSpan4349">fvelementgeometry.hh</flowSpan>, base clases for model and problem definition, interface for compatibility with <flowSpan
@@ -619,7 +621,7 @@
          id="flowPara2556">binary coefficients (like binary diffusion coefficients) and  those needed for the constitutive relationships (e.g. Henry coefficient).</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot2558"
-       style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
        transform="translate(161.64072,416.00405)"><flowRegion
          id="flowRegion2560"><rect
            id="rect2562"
@@ -628,7 +630,7 @@
            x="339.13889"
            y="43.877808" /></flowRegion><flowPara
          style="font-size:11px;text-align:start;text-anchor:start"
-         id="flowPara2564">properties of a pure chemical substance (e.g. water) or pseudo substance (e.g. air)</flowPara></flowRoot>    <flowRoot
+         id="flowPara2564">properties of a pure chemical substance (e.g. water) or pseudo substance (e.g. air).</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot2566"
        style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
@@ -655,7 +657,7 @@
          style="font-size:11px;text-align:start;text-anchor:start">the fluid system collects the information (e.g. from components, binary coefficients ...)  and  contains the fluid characteristics of phases (e.g. viscosity, density, enthalpy, diffusion coefficients) for compositional or non-compositional multi-phase flow. </flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot2588"
-       style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
        transform="translate(2.01001,33.035148)"><flowRegion
          id="flowRegion2590"><rect
            id="rect2592"
@@ -664,7 +666,7 @@
            x="498.19592"
            y="545.73022" /></flowRegion><flowPara
          id="flowPara2594"
-         style="font-size:11px;text-align:start;text-anchor:start">base class for all spatially dependend variables, like permeability and porosity, includes spatial averaging routines. All other properties are specified in the specific files of the respective models.</flowPara></flowRoot>    <flowRoot
+         style="font-size:11px;text-align:start;text-anchor:start">base class for all spatially dependent variables, like permeability and porosity, includes spatial averaging routines. All other properties are specified in the specific files of the respective models.</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot2596"
        style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
@@ -686,7 +688,7 @@
            height="31.994234"
            x="501.85242"
            y="542.98785" /></flowRegion><flowPara
-         id="flowPara2732"></flowPara></flowRoot>    <path
+         id="flowPara2732" /></flowRoot>    <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        d="M 280.63514,309.88701 L 298.91756,309.88701 L 298.91756,288.86223 L 309.88701,288.86223"
        id="path2762" />
@@ -694,15 +696,5 @@
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        d="M 298.91756,309.88701 L 298.91756,331.82592 L 310.80114,331.82592"
        id="path2764" />
-    <text
-       xml:space="preserve"
-       style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
-       x="960.74115"
-       y="469.85818"
-       id="text2768"><tspan
-         sodipodi:role="line"
-         id="tspan2770"
-         x="960.74115"
-         y="469.85818">.</tspan></text>
   </g>
 </svg>
