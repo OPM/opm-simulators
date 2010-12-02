@@ -184,7 +184,7 @@ public:
     bool shouldWriteOutput() const /*@\label{tutorial-decoupled:output}@*/
     {
         return this->timeManager().timeStepIndex() > 0 &&
-        (this->timeManager().timeStepIndex() % 20 == 0);
+        (this->timeManager().timeStepIndex() % 1 == 0);
     }
 
     //! Returns the temperature within the domain.
