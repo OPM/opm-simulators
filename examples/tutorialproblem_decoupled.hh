@@ -52,8 +52,7 @@ NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(DecoupledTwoP)); /*@\label{
 // Set the problem property
 SET_PROP(TutorialProblemDecoupled, Problem) /*@\label{tutorial-decoupled:set-problem}@*/
 {
-public:
-    typedef Dumux::TutorialProblemDecoupled<TTAG(TutorialProblemDecoupled)> type;
+    typedef Dumux::TutorialProblemDecoupled<TypeTag> type;
 };
 
 // Set the grid type
@@ -128,7 +127,7 @@ SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutoria
 /*! \ingroup DecoupledProblems
  * @brief Problem class for the decoupled tutorial
 */
-template<class TypeTag = TTAG(TutorialProblemDecoupled)>
+template<class TypeTag>
 class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDecoupled<TypeTag> > /*@\label{tutorial-decoupled:def-problem}@*/
 {
     typedef TutorialProblemDecoupled<TypeTag> ThisType;
