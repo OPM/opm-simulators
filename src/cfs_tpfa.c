@@ -102,19 +102,25 @@ impl_deallocate(struct cfs_tpfa_impl *pimpl)
 
 /* ---------------------------------------------------------------------- */
 static struct cfs_tpfa_impl *
-impl_allocate(grid_t *G, int np)
+impl_allocate(grid_t *G, well_t *W, int np)
 /* ---------------------------------------------------------------------- */
 {
+    size_t                nnu;
     struct cfs_tpfa_impl *new;
 
     size_t ddata_sz;
 
-    ddata_sz  = 2 * G->number_of_cells;                /* b, x */
+    nnu = G->number_of_cells;
+    if (W != NULL) {
+        nnu += W->number_of_wells;
+    }
 
-    ddata_sz += 1 * G->number_of_faces;                /* fpress */
-    ddata_sz += 1 * G->number_of_faces;                /* accum */
-    ddata_sz += np * G->number_of_faces;               /* masstrans_f */
-    ddata_sz += np * G->number_of_faces;               /* gravtrans_f */
+    ddata_sz  = 2  * nnu;                /* b, x */
+
+    ddata_sz += 1  * G->number_of_faces; /* fpress */
+    ddata_sz += 1  * G->number_of_faces; /* accum */
+    ddata_sz += np * G->number_of_faces; /* masstrans_f */
+    ddata_sz += np * G->number_of_faces; /* gravtrans_f */
 
     new = malloc(1 * sizeof *new);
 
@@ -146,7 +152,7 @@ construct_matrix(grid_t *G, well_t *W)
     if (W != NULL) {
         nnu += W->number_of_wells;
     }
-    
+
     A = csrmatrix_new_count_nnz(nnu);
 
     if (A != NULL) {
@@ -563,7 +569,7 @@ cfs_tpfa_construct(grid_t *G, int nphases)
     new = malloc(1 * sizeof *new);
 
     if (new != NULL) {
-        new->pimpl = impl_allocate(G, nphases);
+        new->pimpl = impl_allocate(G, NULL, nphases);
         new->A     = construct_matrix(G, NULL);
 
         if ((new->pimpl == NULL) || (new->A == NULL)) {
