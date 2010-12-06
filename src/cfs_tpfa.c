@@ -216,7 +216,7 @@ construct_matrix(grid_t *G, well_t *W)
 
         assert ((size_t) A->ia[ nnu ] == nnz);
 
-        /* Guarantee sorted rows */
+        /* Enforce sorted connection structure per row */
         csrmatrix_sortrows(A);
     }
 
