@@ -5,6 +5,7 @@
 
 #include "blas_lapack.h"
 #include "flow_bc.h"
+#include "well.h"
 
 #include "compr_quant.h"
 #include "trans_tpfa.h"
@@ -133,20 +134,25 @@ impl_allocate(grid_t *G, int np)
 
 /* ---------------------------------------------------------------------- */
 static struct CSRMatrix *
-construct_matrix(grid_t *G)
+construct_matrix(grid_t *G, well_t *W)
 /* ---------------------------------------------------------------------- */
 {
-    int    f, c1, c2;
+    int    f, c1, c2, w, i, nc, nnu;
     size_t nnz;
 
     struct CSRMatrix *A;
 
-    A = csrmatrix_new_count_nnz(G->number_of_cells);
+    nc = nnu = G->number_of_cells;
+    if (W != NULL) {
+        nnu += W->number_of_wells;
+    }
+    
+    A = csrmatrix_new_count_nnz(nnu);
 
     if (A != NULL) {
         /* Self connections */
-        for (c1 = 0; c1 < G->number_of_cells; c1++) {
-            A->ia[ c1 + 1 ] = 1;
+        for (i = 0; i < nnu; i++) {
+            A->ia[ i + 1 ] = 1;
         }
 
         /* Other connections */
@@ -160,6 +166,18 @@ construct_matrix(grid_t *G)
             }
         }
 
+        if (W != NULL) {
+            /* Well <-> cell connections */
+            for (w = i = 0; w < W->number_of_wells; w++) {
+                for (; i < W->well_connpos[w + 1]; i++) {
+                    c1 = W->well_cells[i];
+
+                    A->ia[ 0  + c1 + 1 ] += 1; /* c -> w */
+                    A->ia[ nc + w  + 1 ] += 1; /* w -> c */
+                }
+            }
+        }
+
         nnz = csrmatrix_new_elms_pushback(A);
         if (nnz == 0) {
             csrmatrix_delete(A);
@@ -169,8 +187,8 @@ construct_matrix(grid_t *G)
 
     if (A != NULL) {
         /* Fill self connections */
-        for (c1 = 0; c1 < G->number_of_cells; c1++) {
-            A->ja[ A->ia[ c1 + 1 ] ++ ] = c1;
+        for (i = 0; i < nnu; i++) {
+            A->ja[ A->ia[ i + 1 ] ++ ] = i;
         }
 
         /* Fill other connections */
@@ -184,10 +202,19 @@ construct_matrix(grid_t *G)
             }
         }
 
-        /* The tpfa matrix is square */
-        A->n = A->m;
+        if (W != NULL) {
+            /* Fill well <-> cell connections */
+            for (w = i = 0; w < W->number_of_wells; w++) {
+                for (; i < W->well_connpos[w + 1]; i++) {
+                    c1 = W->well_cells[i];
 
-        assert ((size_t) A->ia[ G->number_of_cells ] == nnz);
+                    A->ja[ A->ia[ 0  + c1 + 1 ] ++ ] = nc + w;
+                    A->ja[ A->ia[ nc + w  + 1 ] ++ ] = c1    ;
+                }
+            }
+        }
+
+        assert ((size_t) A->ia[ nnu ] == nnz);
 
         /* Guarantee sorted rows */
         csrmatrix_sortrows(A);
@@ -537,7 +564,7 @@ cfs_tpfa_construct(grid_t *G, int nphases)
 
     if (new != NULL) {
         new->pimpl = impl_allocate(G, nphases);
-        new->A     = construct_matrix(G);
+        new->A     = construct_matrix(G, NULL);
 
         if ((new->pimpl == NULL) || (new->A == NULL)) {
             cfs_tpfa_destroy(new);
