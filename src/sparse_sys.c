@@ -39,7 +39,6 @@ csrmatrix_new_count_nnz(size_t m)
 
         if (new->ia != NULL) {
             new->m   = m;
-            new->n   = 0;
             new->nnz = 0;
 
             new->ja  = NULL;
@@ -77,7 +76,6 @@ csrmatrix_new_known_nnz(size_t m, size_t nnz)
             new = NULL;
         } else {
             new->m   = m;
-            new->n   = 0;
             new->nnz = nnz;
         }
     }
