@@ -21,7 +21,7 @@ The problem that is solved in this tutorial is illustrated in Figure \ref{tutori
 \psfrag{S_n = 0}{$S_n = 0$}
 \psfrag{S_n_initial = 0}{\textcolor{white}{$\mathbf{S_{n_{initial}} = 1}$}}
 \psfrag{q_w = 0 [kg/m^2s]}{$q_w = 0$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
-\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^{-4}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
+\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^{-2}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
 \centering
 \includegraphics[width=0.9\linewidth,keepaspectratio]{EPS/tutorial-problemconfiguration}
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-coupled:problemfigure}
@@ -289,7 +289,7 @@ to make some small changes in the tutorial files.
 \begin{enumerate}
 
 \item \textbf{Run the Model} \\
-To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 1e5 10}. The first number behind the simulation name defines the timespan of the simulation run in seconds, the second number defines the initial time step size. Note that the time step size is automatically optimized during the simulation. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 5e5 10}. The first number behind the simulation name defines the timespan of the simulation run in seconds, the second number defines the initial time step size. Note that the time step size is automatically optimized during the simulation. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
@@ -320,7 +320,7 @@ To get an impression what the results should look like you can first run the ori
 
 \item \textbf{Use the \Dumux fluid system} \\
 \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to uncomment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 1e4 seconds and start with a time step of 1 second.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
