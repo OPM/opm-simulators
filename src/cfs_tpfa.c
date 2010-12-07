@@ -653,6 +653,28 @@ compute_flux(grid_t       *G,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static void
+compute_wflux(well_t       *W,
+              const double *WI,
+              const double *wdp,
+              const double *cpress,
+              const double *wpress,
+              double       *wflux)
+/* ---------------------------------------------------------------------- */
+{
+    int c, i, w;
+
+    for (w = i = 0; w < W->number_of_wells; w++) {
+        for (; i < W->well_connpos[w + 1]; i++) {
+            c = W->well_cells[i];
+
+            wflux[i] = WI[i] * (wpress[w] + wdp[i] - cpress[c]);
+        }
+    }
+}
+
+
 
 /* ======================================================================
  * Public interface below separator.
@@ -737,18 +759,34 @@ cfs_tpfa_assemble(grid_t                  *G,
 void
 cfs_tpfa_press_flux(grid_t               *G,
                     flowbc_t             *bc,
+                    well_t               *W,
                     int                   np,
                     const double         *trans,
                     const double         *pmobf,
+                    const double         *WI,
+                    const double         *wdp,
                     struct cfs_tpfa_data *h,
                     double               *cpress,
-                    double               *fflux)
+                    double               *fflux,
+                    double               *wpress,
+                    double               *wflux)
 /* ---------------------------------------------------------------------- */
 {
     /* Assign cell pressure directly from solution vector */
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
 
     compute_flux(G, bc, np, trans , pmobf, cpress, fflux);
+
+    if ((W != NULL) && (WI != NULL) && (wdp != NULL)) {
+        assert (wpress != NULL);
+        assert (wflux  != NULL);
+
+        /* Assign well BHP directly from solution vector */
+        memcpy(wpress, h->x + G->number_of_cells,
+               W->number_of_wells * sizeof *wpress);
+
+        compute_wflux(W, WI, wdp, cpress, wpress, wflux);
+    }
 }
 
 
