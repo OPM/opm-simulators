@@ -459,6 +459,106 @@ compute_psys_contrib(grid_t                  *G,
 
 
 /* ---------------------------------------------------------------------- */
+static int
+assemble_cell_contrib(grid_t               *G,
+                      flowbc_t             *bc,
+                      const double         *src,
+                      struct cfs_tpfa_data *h)
+/* ---------------------------------------------------------------------- */
+{
+    int c1, c2, c, i, f, j1, j2;
+    int is_neumann;
+
+    const double *ctrans = h->pimpl->dd->ctrans;
+
+    is_neumann = 0;
+
+    for (c = i = 0; c < G->number_of_cells; c++) {
+        j1 = csrmatrix_elm_index(c, c, h->A);
+
+        for (; i < G->cell_facepos[c + 1]; i++) {
+            f = G->cell_faces[i];
+
+            c1 = G->face_cells[2*f + 0];
+            c2 = G->face_cells[2*f + 1];
+
+            c2 = (c1 == c) ? c2 : c1;
+
+            if (c2 >= 0) {
+                j2 = csrmatrix_elm_index(c, c2, h->A);
+
+                h->A->sa[j1] += ctrans[i];
+                h->A->sa[j2] -= ctrans[i];
+            } else if (bc->type[f] == PRESSURE) {
+                is_neumann    = 0;
+
+                h->A->sa[j1] += ctrans[i];
+                h->b    [c ] += ctrans[i] * bc->bcval[f];
+            }
+        }
+
+        h->b[c] += src[c];
+
+        /* Compressible accumulation term */
+        h->A->sa[j1] += h->pimpl->dd->P[c];
+    }
+
+    return is_neumann;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static int
+assemble_well_contrib(size_t                nc,
+                      well_t               *W,
+                      well_control_t       *wctrl,
+                      const double         *WI,
+                      const double         *wdp,
+                      struct cfs_tpfa_data *h)
+/* ---------------------------------------------------------------------- */
+{
+    int c, i, w;
+    int is_neumann, is_bhp, is_inj;
+
+    size_t jc, jw;
+
+    is_neumann = 1;
+
+    for (w = i = 0; w < W->number_of_wells; w++) {
+        is_bhp = wctrl->ctrl[w] == BHP;
+        is_inj = wctrl->type[w] == INJECTOR;
+
+        for (; i < W->well_connpos[w + 1]; i++) {
+            c = W->well_cells[i];
+
+            if (is_bhp) {
+                h->b[0  + c] += WI[i] * (wctrl->target[w] + wdp[i]);
+                h->b[nc + w] += WI[i] *  wctrl->target[w];
+            } else {
+                jc = csrmatrix_elm_index(c, nc + w, h->A);
+                h->A->sa[jc] -= WI[i];
+                h->b    [ c] += WI[i] * wdp[i];
+
+                jc = csrmatrix_elm_index(nc + w, c, h->A);
+                h->A->sa[jc] -= WI[i];
+                h->b[nc + w] -= WI[i] * wdp[i];
+            }
+
+            jc = csrmatrix_elm_index(0  + c, 0  + c, h->A);
+            jw = csrmatrix_elm_index(nc + w, nc + w, h->A);
+
+            h->A->sa[jc] += WI[i];
+            h->A->sa[jw] += WI[i];
+        }
+
+        is_neumann = is_neumann && (! is_bhp);
+    }
+
+    return is_neumann;
+}
+
+
+/* ---------------------------------------------------------------------- */
 static void
 compute_fpress(grid_t       *G,
                flowbc_t     *bc,
@@ -560,7 +660,7 @@ compute_flux(grid_t       *G,
 
 /* ---------------------------------------------------------------------- */
 struct cfs_tpfa_data *
-cfs_tpfa_construct(grid_t *G, int nphases)
+cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
 /* ---------------------------------------------------------------------- */
 {
     size_t                nf;
@@ -569,8 +669,8 @@ cfs_tpfa_construct(grid_t *G, int nphases)
     new = malloc(1 * sizeof *new);
 
     if (new != NULL) {
-        new->pimpl = impl_allocate(G, NULL, nphases);
-        new->A     = construct_matrix(G, NULL);
+        new->pimpl = impl_allocate(G, W, nphases);
+        new->A     = construct_matrix(G, W);
 
         if ((new->pimpl == NULL) || (new->A == NULL)) {
             cfs_tpfa_destroy(new);
@@ -598,56 +698,33 @@ cfs_tpfa_construct(grid_t *G, int nphases)
 void
 cfs_tpfa_assemble(grid_t                  *G,
                   double                   dt,
+                  well_t                  *W,
                   flowbc_t                *bc,
                   const double            *src,
                   struct compr_quantities *cq,
                   const double            *trans,
                   const double            *gravcap_f,
+                  well_control_t          *wctrl,
+                  const double            *WI,
+                  const double            *wdp,
                   const double            *cpress0,
                   const double            *porevol,
                   struct cfs_tpfa_data    *h)
 /* ---------------------------------------------------------------------- */
 {
-    int c1, c2, c, i, f, j1, j2;
     int is_neumann;
-
-    double *ctrans = h->pimpl->dd->ctrans;
 
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
     compute_psys_contrib(G, cq, dt, trans, gravcap_f, cpress0, porevol, h);
 
-    is_neumann = 1;
+    is_neumann = assemble_cell_contrib(G, bc, src, h);
 
-    for (c = i = 0; c < G->number_of_cells; c++) {
-        j1 = csrmatrix_elm_index(c, c, h->A);
-
-        for (; i < G->cell_facepos[c + 1]; i++) {
-            f = G->cell_faces[i];
-
-            c1 = G->face_cells[2*f + 0];
-            c2 = G->face_cells[2*f + 1];
-
-            c2 = (c1 == c) ? c2 : c1;
-
-            if (c2 >= 0) {
-                j2 = csrmatrix_elm_index(c, c2, h->A);
-
-                h->A->sa[j1] += ctrans[i];
-                h->A->sa[j2] -= ctrans[i];
-            } else if (bc->type[f] == PRESSURE) {
-                is_neumann    = 0;
-
-                h->A->sa[j1] += ctrans[i];
-                h->b    [c ] += ctrans[i] * bc->bcval[f];
-            }
-        }
-
-        h->b[c] += src[c];
-
-        /* Compressible accumulation term */
-        h->A->sa[j1] += h->pimpl->dd->P[c];
+    if ((W != NULL) && (wctrl != NULL) &&
+        (WI != NULL) && (wdp != NULL)) {
+        is_neumann = is_neumann &&
+            assemble_well_contrib(G->number_of_cells, W, wctrl, WI, wdp, h);
     }
 
     if (is_neumann) {

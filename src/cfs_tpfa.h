@@ -22,6 +22,7 @@
 
 #include "grid.h"
 #include "flow_bc.h"
+#include "well.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,16 +42,20 @@ struct cfs_tpfa_data {
 
 
 struct cfs_tpfa_data *
-cfs_tpfa_construct(grid_t *G, int nphases);
+cfs_tpfa_construct(grid_t *G, well_t *W, int nphases);
 
 void
 cfs_tpfa_assemble(grid_t                  *G,
                   double                   dt,
+                  well_t                  *W,
                   flowbc_t                *bc,
                   const double            *src,
                   struct compr_quantities *cq,
                   const double            *trans,
                   const double            *gravcap_f,
+                  well_control_t          *wctrl,
+                  const double            *WI,
+                  const double            *wdp,
                   const double            *cpress0,
                   const double            *porevol,
                   struct cfs_tpfa_data    *h);
