@@ -471,7 +471,7 @@ assemble_cell_contrib(grid_t               *G,
 
     const double *ctrans = h->pimpl->dd->ctrans;
 
-    is_neumann = 0;
+    is_neumann = 1;
 
     for (c = i = 0; c < G->number_of_cells; c++) {
         j1 = csrmatrix_elm_index(c, c, h->A);
@@ -734,22 +734,24 @@ cfs_tpfa_assemble(grid_t                  *G,
                   struct cfs_tpfa_data    *h)
 /* ---------------------------------------------------------------------- */
 {
-    int is_neumann;
+    int res_is_neumann, well_is_neumann;
 
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
     compute_psys_contrib(G, cq, dt, trans, gravcap_f, cpress0, porevol, h);
 
-    is_neumann = assemble_cell_contrib(G, bc, src, h);
+    res_is_neumann = assemble_cell_contrib(G, bc, src, h);
 
     if ((W != NULL) && (wctrl != NULL) &&
         (WI != NULL) && (wdp != NULL)) {
-        is_neumann = is_neumann &&
-            assemble_well_contrib(G->number_of_cells, W, wctrl, WI, wdp, h);
+        well_is_neumann = assemble_well_contrib(G->number_of_cells,
+                                                W, wctrl, WI, wdp, h);
+    } else {
+        well_is_neumann = 1;
     }
 
-    if (is_neumann) {
+    if (res_is_neumann && well_is_neumann) {
         h->A->sa[0] *= 2;
     }
 }
