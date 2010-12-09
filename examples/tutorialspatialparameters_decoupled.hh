@@ -47,10 +47,10 @@ class TutorialSpatialParametersDecoupled
     typedef Dune::FieldMatrix<Scalar,dim,dim> FieldMatrix;
 
     // material law typedefs
-    typedef RegularizedBrooksCorey<Scalar>                RawMaterialLaw;
-//    typedef LinearMaterial<Scalar>                        RawMaterialLaw;
+    typedef RegularizedBrooksCorey<Scalar> EffectiveMaterialLaw;
+//    typedef LinearMaterial<Scalar> EffectiveMaterialLaw;
 public:
-    typedef EffToAbsLaw<RawMaterialLaw>               MaterialLaw;
+    typedef EffToAbsLaw<EffectiveMaterialLaw> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
     //! Update the spatial parameters with the flow solution after a timestep.
@@ -73,7 +73,8 @@ public:
         return 0.2;
     }
 
-    //! return the material law context (i.e. BC, regularizedVG, etc) depending on the position
+    //! return the parameter object for the material law (i.e. Brooks-Corey)
+    //! which may vary with the spatial position
     const MaterialLawParams& materialLawParams(const GlobalPosition& globalPos, const Element &element) const
     {
             return materialLawParams_;

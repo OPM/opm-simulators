@@ -56,11 +56,11 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
     typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
     // select material law to be used
-    typedef RegularizedBrooksCorey<Scalar>        RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
+    typedef RegularizedBrooksCorey<Scalar> EffectiveMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
 
 public:
     // adapter for absolute law
-    typedef EffToAbsLaw<RawMaterialLaw> MaterialLaw;        /*@\label{tutorial-coupled:eff2abs}@*/
+    typedef EffToAbsLaw<EffectiveMaterialLaw> MaterialLaw;        /*@\label{tutorial-coupled:eff2abs}@*/
     // determine appropriate parameters depening on selected materialLaw
     typedef typename MaterialLaw::Params MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
@@ -83,10 +83,11 @@ public:
         return 0.2;
     }
 
-    // return the materialLaw context (i.e. BC, regularizedVG, etc) depending on the position
+    // return the parameter object for the material law (i.e. Brooks-Corey)
+    // which may vary with the spatial position
     const MaterialLawParams& materialLawParams(const Element &element,            /*@\label{tutorial-coupled:matLawParams}@*/
-                                            const FVElementGeometry &fvElemGeom,
-                                            int scvIdx) const
+                                               const FVElementGeometry &fvElemGeom,
+                                               int scvIdx) const
     {
         return materialParams_;
     }
