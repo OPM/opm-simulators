@@ -135,7 +135,7 @@ public:
      * \param phaseIdx index of the phase
      * \param temperature phase temperature in [K]
      * \param pressure phase pressure in [Pa]
-     * \param phaseState The fluid state of the two-phase model
+     * \param fluidState The fluid state of the two-phase model
      * \tparam FluidState the fluid state class of the two-phase model
      * \return returns the density of the phase
      */
@@ -143,7 +143,7 @@ public:
     static Scalar phaseDensity(int phaseIdx,
                                Scalar temperature,
                                Scalar pressure,
-                               const FluidState &phaseState)
+                               const FluidState &fluidState)
     {
         switch (phaseIdx) {
         case wPhaseIdx:
@@ -160,7 +160,7 @@ public:
      * \param phaseIdx index of the phase
      * \param temperature phase temperature in [K]
      * \param pressure phase pressure in [Pa]
-     * \param phaseState The fluid state of the two-phase model
+     * \param fluidState The fluid state of the two-phase model
      * \tparam FluidState the fluid state class of the two-phase model
      * \return returns the viscosity of the phase [Pa*s]
      */
@@ -168,7 +168,7 @@ public:
     static Scalar phaseViscosity(int phaseIdx,
                                  Scalar temperature,
                                  Scalar pressure,
-                                 const FluidState &phaseState)
+                                 const FluidState &fluidState)
     {
         switch (phaseIdx) {
         case wPhaseIdx:
@@ -185,15 +185,15 @@ public:
      * \param phaseIdx index of the phase
      * \param temperature phase temperature in [K]
      * \param pressure phase pressure in [Pa]
-     * \param phaseState The fluid state of the two-phase model
+     * \param fluidState The fluid state of the two-phase model
      * \tparam FluidState the fluid state class of the two-phase model
      * \return returns the specific enthalpy of the phase [J/kg]
      */
     template <class FluidState>
     static Scalar phaseEnthalpy(int phaseIdx,
-                           Scalar temperature,
-                           Scalar pressure,
-                           const FluidState &phaseState)
+                                Scalar temperature,
+                                Scalar pressure,
+                                const FluidState &fluidState)
     {
         switch (phaseIdx) {
         case wPhaseIdx:
@@ -210,15 +210,15 @@ public:
      * \param phaseIdx index of the phase
      * \param temperature phase temperature in [K]
      * \param pressure phase pressure in [Pa]
-     * \param phaseState The fluid state of the two-phase model
+     * \param fluidState The fluid state of the two-phase model
      * \tparam FluidState the fluid state class of the two-phase model
      * \return returns the specific internal energy of the phase [J/kg]
      */
     template <class FluidState>
     static Scalar phaseInternalEnergy(int phaseIdx,
-                                 Scalar temperature,
-                                 Scalar pressure,
-                                 const FluidState &phaseState)
+                                      Scalar temperature,
+                                      Scalar pressure,
+                                      const FluidState &fluidState)
     {
         switch (phaseIdx) {
         case wPhaseIdx:
