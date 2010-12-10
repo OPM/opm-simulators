@@ -41,7 +41,7 @@ only ``clean'' way to achive this without templates would be to copy
 \texttt{value} attribute. It is obvious that this is a very
 cumbersome, error-prone and unproductive process. For this reason,
 recent standards of the C++ programming language specify the template
-mechanism, which is a way let the compiler do the tedious work. Using
+mechanism, which is a way to let the compiler do the tedious work. Using
 templates, a generic linked list can be implemented like this:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class ValueType>
@@ -122,13 +122,13 @@ executed is dynamically determined at run time.
 \begin{example}
   \label{example:DynPoly}
   A class called \texttt{Car} could feature the methods
-  \texttt{gasUsage}, which by default corrosponds to the current
-  $CO_2$ emission goal of the European Union but can be changed by
+  \texttt{gasUsage}, which by default corresponds to the current
+  $CO_2$ emission goal of the European Union -- line \ref{designpatterns:virtual-usage} -- but can be changed by
   classes representing actual cars. Also, a method called
   \texttt{fuelTankSize} makes sense for all cars, but since there is
-  no useful default, its \texttt{vtable} entry is set to $0$ in the
-  base class. This tells the compiler that it is mandatorily that this
-  method gets defined in derived classes. Finally, the method
+  no useful default, its \texttt{vtable} entry is set to $0$ -- line \ref{designpatterns:totally-virtual} -- in the
+  base class. This tells the compiler that it is mandatory for this
+  method to be defined in derived classes. Finally, the method
   \texttt{range} may calculate the expected remaining kilometers the
   car can drive given a fill level of the fuel tank. Since the
   \texttt{range} method can retrieve information it needs, it does not
@@ -138,8 +138,8 @@ executed is dynamically determined at run time.
 class Car
 {public:
   virtual double gasUsage() 
-  { return 4.5; };
-  virtual double fuelTankSize() = 0;
+  { return 4.5; };/*@\label{designpatterns:virtual-usage}@*/
+  virtual double fuelTankSize() = 0;/*@\label{designpatterns:totally-virtual}@*/
   
   double range(double fuelTankFillLevel) 
   { return 100*fuelTankFillLevel*fuelTankSize()/gasUsage(); }
@@ -388,7 +388,7 @@ order to keep the code maintainable.
 \section{Traits Classes}
 
 A classic approach to reduce the number of template parameters is to
-gather the all arguments in a special class, a so-called traits
+gather all the arguments in a special class, a so-called traits
 class. Instead of writing
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class A, class B, class C, class D>
@@ -412,7 +412,7 @@ struct MyTraits
 \end{lstlisting}
 
 \noindent
-As there is no a free lunch, the traits approach comes with a few
+As there is no free lunch, the traits approach comes with a few
 disadvantages of its own:
 \begin{enumerate}
 \item Hierarchies of traits classes are problematic. This is due to
@@ -448,7 +448,7 @@ int main() {
 }
 \end{lstlisting}
 Contrary to what is intended, \texttt{v} is a vector of integers. This
-problem cannot also be solved using static polymorphism, since it
+problem can also not be solved using static polymorphism, since it
 would lead to a cyclic dependency between \texttt{MyBaseTraits} and
 \texttt{MyDoubleTraits}.
 

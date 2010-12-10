@@ -32,7 +32,7 @@ water:
 \begin{align}
   \label{massbalancewater}
   \frac {\partial (\phi \, S_{w}\, \varrho_{w})}{\partial t}
-  +
+  -
   \nabla \cdot \left( \varrho_{w} \, \frac{k_{rw}}{\mu_{w}} \, \mathbf{K}\;\nabla p_w \right)
   -
   q_w
@@ -40,7 +40,7 @@ water:
   0 \\
   \label{massbalanceoil}
   \frac {\partial (\phi \, S_{o}\, \varrho_{o})}{\partial t}
-  +
+  -
   \nabla \cdot \left( \varrho_{o} \, \frac{k_{ro}}{\mu_{o}} \, \mathbf{K}\;\nabla p_o \right)
   -
   q_o 
@@ -61,7 +61,7 @@ above.
 \end{lst}
 
 From line \ref{tutorial-coupled:include-begin} to line
-\ref{tutorial-coupled:include-end} the Dune and \Dumux files which
+\ref{tutorial-coupled:include-end} the \Dune and \Dumux files which
 contain the needed functions and classes are included.
 
 At line \ref{tutorial-coupled:set-type-tag} the type tag of the
@@ -73,7 +73,7 @@ single type tag. Retrieving them is done between line
 property system, see section \ref{sec:propertysystem}.
 
 The first thing which should be done at run time is to initialize the
-message passing interface using DUNE's \texttt{MPIHelper} class. Line
+message passing interface using \Dune's \texttt{MPIHelper} class. Line
 \ref{tutorial-coupled:init-mpi} is essential if the simulation is
 intended to be run on more than one processor at the same time. Next,
 the command line arguments are parsed starting at line
@@ -85,7 +85,7 @@ parse the time when the simulation ends and the initial time step size.
 After this, a grid is created in line
 \ref{tutorial-coupled:create-grid} and the problem is instantiated for
 its leaf grid view in line \ref{tutorial-coupled:instantiate-problem}.
-Finally, on line \ref{tutorial-coupled:restart} a state written to
+Finally, on line \ref{tutorial-coupled:begin-restart} a state written to
 disk by a previous simulation run is restored if requested by the user.
 The simulation procedure is started at line
 \ref{tutorial-coupled:execute}.
@@ -109,7 +109,7 @@ which means that for this problem the two-phase box model is chosen as
 discretization scheme. On line \ref{tutorial-coupled:set-problem}, a
 problem class is attached to the new type tag, while the grid which
 is going to be used is defined in line \ref{tutorial-coupled:set-grid} --
-in this case it's \texttt{SGrid}.  Since there's no uniform
+in this case that is  \texttt{SGrid}.  Since there's no uniform
 mechanism to allocate grids in \Dune, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that. Next,
 the appropriate fluid system, that specifies both information about
@@ -173,7 +173,7 @@ assigned with the methods \texttt{dirichlet()} and \texttt{neumann()} which only
 by the first function parameter:
 \begin{description}
  \item[values:] A vector which stores the result of the method. What
-  the values in this vector means is dependent on the method: For
+  the values in this vector mean is dependent on the method: For
   \texttt{dirichlet()} it contains the values of the primary
   variables, for \texttt{neumann()} the mass fluxes per area unit
   over the boundary segment.
@@ -239,15 +239,15 @@ First, a certain material law that best describes the problem at hand has to
 be selected in line \ref{tutorial-coupled:rawlaw}\label{tutorial-coupled:materialLaw}. 
 \Dumux provides several material laws in the folder 
 \verb+dumux/material/fluidmatrixinteractions+.
-The selected one, here it is a relation according to Brooks Corey, is included
+The selected one -- here it is a relation according to a regularized version of Brooks \& Corey --  is included
 in line \ref{tutorial-coupled:rawLawInclude}. After the selection,
-an adapter in line \ref{tutorial-coupled:eff2abs} translates the raw 
-law to effective values (residual saturations are considered). As the
-applied raw law knows best which kind of parameters are necessary,
+an adapter in line \ref{tutorial-coupled:eff2abs} translates between the law
+for effective values (the Brooks \& Corey model) and the saturations generated as simulations results, i.e. residual saturations are considered. 
+As the applied raw law knows best which kind of parameters are necessary,
 it provides a parameter class \texttt{RegularizedBrooksCoreyParams} that is
 accessible via the member \texttt{Params} and defined in line 
 \ref{tutorial-coupled:matLawObjectType}. The material law object 
-could now be instantiated correctly as a private object
+is now instantiated correctly as a private object
 in line \ref{tutorial-coupled:matParamsObject}.
 
 In line \ref{tutorial-coupled:permeability} the function returning the
@@ -259,21 +259,26 @@ about its geometry and position, the second argument
 by the box-method, and the third defines the index of the current sub-control 
 volume. The intrinsic permeability is a tensor and is thus returned in form of
 a $\texttt{dim} \times \texttt{dim}$-matrix where \texttt{dim} is the dimension 
-of the problem.\\
+of the problem. 
+
 The function \texttt{porosity()} defined in line
 \ref{tutorial-coupled:porosity} is called with the same arguments as
 the permeability function described before and returns the porosity
-dependent on the position in the domain.\\
+dependent on the position in the domain.
+
 Next, the method \texttt{materialLawParams()} defines in line 
-\ref{tutorial-coupled:matLawParams} which object of a considered 
-material law should be applied at this specific position. 
-While the selection of the type of this object was already explained (see 
-\ref{tutorial-coupled:materialLaw}), some specific parameter 
+\ref{tutorial-coupled:matLawParams} which \verb+materialLawParams+ object 
+ should be applied at this specific position. Although in this case only one objects is returned, 
+in general the problem may be heterogeneous, demanding for different objects at different positions in space. 
+While the selection of the type of this object was already explained (line \ref{tutorial-coupled:rawLawInclude}),
+ some specific parameter 
 values of the applied material law are still needed. This is 
 done in the constructor body (line \ref{tutorial-coupled:setLawParams}).
 Depending on the type of the \texttt{materialLaw} object, the adequate \texttt{set}-methods
 are provided by the object to access all necessary parameters 
-for the applied material law.
+for the applied material law. The name of the access / set functions as well as the rest of the implementation 
+of the material description can be found in 
+\verb+dumux/dumux/material/fluidmatrixinteractions/2p+.
 
 \subsection{Exercises}
 \label{tutorial-coupled:exercises}
@@ -319,12 +324,13 @@ To get an impression what the results should look like you can first run the ori
   \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system} \\
-\Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to uncomment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
+\Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
 Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
-  Use an unregularized linear law with an entry pressure of $p_e = 0.0$ and maximal capillary pressure of $p_{c_{max}} = 0.0$ instead of using a regularized Brooks-Corey law for the
+  Use an unregularized linear law with an entry pressure of $p_e = 0.0$ and maximal capillary pressure of e.g. $p_{c_{max}} = 2000.0$ instead of using a
+ regularized Brooks-Corey law for the
   relative permeability and for the capillary pressure saturation relationship. To do that you have
   to change the file \texttt{tutorialspatialparameters\_coupled.hh}. 
  You can find the material laws in the folder 
@@ -372,7 +378,7 @@ property so that it matches the domain described
 by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the problem class
 so that the boundary conditions are consistent with figure
 \ref{tutorial-coupled:ex2_BC}. Initially the domain is fully saturated
-with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
+with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$. Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
 should be set to $1\times 10^6 \text{ s}$ with an initial time step size of
@@ -387,11 +393,11 @@ compile the program.
 \psfrag{K1}{K $= 10^{-7}\text{ m}^2$}
 \psfrag{phi1}{$\phi = 0.2$}
 \psfrag{Lin}{Brooks-Corey Law}
-\psfrag{Lin2}{$\lambda = 1.8$, $p_b = 1000$}
+\psfrag{Lin2}{$\lambda = 1.8$, $p_e = 1000$}
 \psfrag{K2}{K $= 10^{-9}\text{ m}^2$}
 \psfrag{phi2}{$\phi = 0.15$}
 \psfrag{BC1}{Brooks-Corey Law} 
-\psfrag{BC2}{$\lambda = 2$, $p_b = 1500$}
+\psfrag{BC2}{$\lambda = 2$, $p_e = 1500$}
 \psfrag{H1y}{50 m}
 \psfrag{H2y}{15 m}
 \psfrag{H3y}{20 m}
@@ -404,7 +410,7 @@ compile the program.
 \end{figure}
 
 \begin{figure}[h]
-\psfrag{pw}{$p_w = 5 \times 10^5$ \text{Pa}}
+\psfrag{pw}{$p_w = 5 \times 10^5$ [\text{Pa}]}
 \psfrag{S}{$S_n = 1.0$}
 \psfrag{qw}{$q_w = 2 \times 10^{-4}$ [kg/$\text{m}^2$s]}
 \psfrag{qo}{$q_n = 0.0$ [kg/$\text{m}^2$s]}

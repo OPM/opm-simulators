@@ -29,7 +29,7 @@ Beside the section on external modules below it is a good idea to check the {\Du
 
 \subsection{Obtaining \Dune and \Dumux}
 Two possibilities exist to obtain \Dune and \Dumux. 
-They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the the respective {\Dune} and {\Dumux} website. 
+They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of a certain version are packed into tar-archive files for download from the respective {\Dune} and {\Dumux} website. 
 The shell command \texttt{tar} can be used to extract them on your file system. This is explained in the next paragraph. 
 
 \paragraph{Obtaining the software by installing tarballs}
@@ -85,7 +85,7 @@ In order to obtain an anonymous read-only copy of the stable part of \Dumux from
 
 If you also want to commit new developments to the repositories, you can ask the \Dumux project leader to get either full developers access or access for certain parts of \Dumux. 
 The developer part \texttt{dumux-devel} is only available for people who belong to the \Dumux developer group and have non-anonymous access to the subversion repositories. 
-If you have developer rights the checkout looks as follows: 
+If you have developer rights the checkout looks as follows (system administrators will have to add you to the developer group and  give you a password for this access): 
 \begin{itemize}
  \item \texttt{svn checkout --username=yourusername \\ 
       \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
@@ -174,7 +174,7 @@ But a \Dune build still needs to know where they are. You have to refer to them 
 
 \paragraph{Build \Dune and \Dumux}
 \label{buildIt}
-To compile \Dumux with out additional options file, type in the {\Dune}-Root-directory (called \texttt{DUMUX} before):
+To compile \Dumux without additional options file, type in the {\Dune}-Root-directory (called \texttt{DUMUX} before):
 \begin{center}
  \texttt{./dune-common/bin/dunecontrol all}
 \end{center}

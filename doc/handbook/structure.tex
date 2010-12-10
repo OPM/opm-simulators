@@ -38,7 +38,7 @@ a derived specific numerical model. The subdirectory \texttt{common} also contai
 
 \item \texttt{common}:
 general stuff like the property system and the time management for the 
-fully coupled as well as the decoupled models, the interface for the Pardiso direct solver library,\cite{Pardiso}, and the \texttt{start.hh} file that includes the common routine for starting a model called in the main function. 
+fully coupled as well as the decoupled models, the interface for the Pardiso direct solver library \cite{Pardiso}, and the \texttt{start.hh} file that includes the common routine for starting a model called in the main function. 
 
 \item \texttt{decoupled}:
  numerical models to solve the pressure equation as part of the fractional flow formulation. The specific models are contained 
@@ -61,7 +61,12 @@ and a VTKWriter extension.
 \item \texttt{material}: everything related to material parameters and 
 constitutive equations. The properties of a pure chemical substance (e.g. water) or pseudo substance (e.g. air) can be found in the subdirectory \texttt{components} with the base class \texttt{components/component.hh}. The fluidsytem in the folder \texttt{fluidsystems} collects the information from the respective component and binary coefficients files, and contains the fluid characteristics of phases (e.g. viscosity, density, enthalpy, diffusion coefficients) for compositional or non-compositional multi-phase flow. 
 
-The base class for all spatially dependend variables like permeability and porosity can be found in \texttt{spatialparameters}. The base class in \texttt{boxspatialparameters.hh} also provides spatial averaging routines. All other spatial properties are specified in the specific files of the respective models. Furthermoren, the constitutive relations are in \texttt{fluidmatrixinteractions}, while the necessary binary coefficients like the Henry coefficient or binary diffusion coefficients are definded in \texttt{binarycoefficients}.
+The base class for all spatially dependend variables -- like permeability and porosity  -- 
+can be found in \texttt{spatialparameters}. The base class in \texttt{boxspatialparameters.hh} 
+also provides spatial averaging routines. All other spatial properties are specified in the specific
+ files of the respective models. Furthermore, the constitutive relations -- e.g. $p_c(S_w) $ -- are in \texttt{fluidmatrixinteractions}, 
+while the necessary binary coefficients like the Henry coefficient or binary diffusion coefficients are definded in
+ \texttt{binarycoefficients}.
 
 
 \item \texttt{nonlinear}: Newton's method.
