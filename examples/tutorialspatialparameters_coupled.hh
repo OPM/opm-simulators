@@ -97,6 +97,8 @@ public:
         BoxSpatialParameters<TypeTag>(gridView),
         K_(0)
     {
+        //set main diagonal entries of the permeability tensor to a value
+        //setting to one value means: isotropic, homogeneous
         for (int i = 0; i < dim; i++)
             K_[i][i] = 1e-7;
 
@@ -104,14 +106,14 @@ public:
         materialParams_.setSwr(0.0);                /*@\label{tutorial-coupled:setLawParams}@*/
         materialParams_.setSnr(0.0);
 
-        //linear material law
+        //parameters of Brooks & Corey Law
         materialParams_.setPe(500.0);
         materialParams_.setAlpha(2);
     }
 
 private:
     Dune::FieldMatrix<Scalar, dim, dim> K_;
-    // Object that helds the values/parameters of the selected material law.
+    // Object that holds the values/parameters of the selected material law.
     MaterialLawParams materialParams_;                 /*@\label{tutorial-coupled:matParamsObject}@*/
 };
 } // end namespace

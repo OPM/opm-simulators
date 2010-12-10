@@ -58,7 +58,7 @@ int main(int argc, char** argv)
             std::istringstream(argv[argPos++]) >> restartTime;
         }
 
-        // read the the initial time step and the end time
+        // read the initial time step and the end time
         if (argc - argPos != 2)
             usage(argv[0]);
 
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
         timeManager.init(problem, 0, dt, tEnd, !restart);
         // load some previously saved state from disk
         if (restart)
-            problem.restart(restartTime); /*@\label{tutorial-coupled:restart}@*/
+            problem.restart(restartTime); /*@\label{tutorial-coupled:begin-restart}@*/
         // run the simulation
         timeManager.run(); /*@\label{tutorial-coupled:execute}@*/
         return 0;
