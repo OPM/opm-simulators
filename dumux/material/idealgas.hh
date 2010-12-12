@@ -31,11 +31,11 @@ template <class Scalar>
 class IdealGas
 {
 public:
-    //! The ideal gas constant [J/mol/K]
+    //! The ideal gas constant \f$\mathrm{[J/mol/K]}\f$
     static const Scalar R = 8.3144;
 
     /*!
-     * \brief The density of the gas in [kg/m^3], depending on
+     * \brief The density of the gas in \f$\mathrm{[kg/m^3]}\f$, depending on
      *        pressure, temperature and average molar mass of the gas.
      */
     static Scalar density(Scalar avgMolarMass,
@@ -44,7 +44,7 @@ public:
     { return pressure*avgMolarMass/(R*temperature); }
 
     /*!
-     * \brief The pressure of the gas in [N/m^2], depending on
+     * \brief The pressure of the gas in \f$\mathrm{[N/m^2]}\f$, depending on
      *        concentration and temperature.
      */
     static Scalar pressure(Scalar temperature,
@@ -52,7 +52,7 @@ public:
     { return R*temperature*concentration; }
 
     /*!
-     * \brief The molar concentration of the gas in [mol/m^3], depending on
+     * \brief The molar concentration of the gas in \f$\mathrm{[mol/m^3]}\f$, depending on
      *        pressure and temperature.
      */
     static Scalar concentration(Scalar temperature,

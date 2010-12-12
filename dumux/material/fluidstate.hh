@@ -79,7 +79,7 @@ public:
      * \brief Return the sum of the concentrations of all components
      *        for a phase.
      *
-     * Unit: [mol/m^3]
+     * Unit: \f$\mathrm{[mol/m^3]}\f$
      */
     Scalar phaseConcentration(int phaseIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::phaseConcentration()"); }
@@ -88,7 +88,7 @@ public:
      * \brief Return the concentrations of an individual component in
      *        a phase.
      *
-     * Unit: [mol/m^3]
+     * Unit: \f$\mathrm{[mol/m^3]}\f$
      */
     Scalar concentration(int phaseIdx, int compIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::concentration()"); }
@@ -96,7 +96,7 @@ public:
     /*!
      * \brief Return the density of a phase.
      *
-     * Unit: [kg/m^3]
+     * Unit: \f$\mathrm{[kg/m^3]}\f$
      */
     Scalar density(int phaseIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::density()"); }
@@ -107,7 +107,7 @@ public:
      * This is the sum of all molar masses times their respective mole
      * fractions in the phase.
      *
-     * Unit: [kg/m^3]
+     * Unit: \f$\mathrm{[kg/m^3]}\f$
      */
     Scalar averageMolarMass(int phaseIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::averageMolarMass()"); }
@@ -115,9 +115,9 @@ public:
     /*!
      * \brief Return the partial pressure of a component in the gas phase.
      *
-     * For an ideal gas, this means R*T*c.
+     * For an ideal gas, this means \f$R*T*c\f$.
      *
-     * Unit: [Pa] = [N/m^2]
+     * Unit: \f$\mathrm{[Pa] = [N/m^2]}\f$
      */
     Scalar fugacity(int componentIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::fugacity()"); }
@@ -125,7 +125,7 @@ public:
     /*!
      * \brief Return the total pressure of the gas phase.
      *
-     * Unit: [Pa] = [N/m^2]
+     * Unit: \f$\mathrm{[Pa] = [N/m^2]}\f$
      */
     Scalar phasePressure(int phaseIdx) const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::totalPressure()"); }
@@ -134,7 +134,7 @@ public:
      * \brief Return the temperature at which the equilibrium was
      *        calculated.
      *
-     * Unit: [Pa] = [N/m^2]
+     * Unit: \f$\mathrm{[Pa] = [N/m^2]}\f$
      */
     Scalar temperature() const
     { DUNE_THROW(Dune::NotImplemented, "FluidState::temperature()"); }

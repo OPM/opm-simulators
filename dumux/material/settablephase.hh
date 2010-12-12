@@ -53,7 +53,7 @@ public:
      * \brief Return the sum of the concentrations of all components
      *        for a phase.
      *
-     * Unit: [mol/m^3]
+     * Unit: \f$\mathrm{[mol/m^3]}\f$
      */
     Scalar phaseConcentration() const
     { return density_/meanMolarMass_; }
@@ -62,7 +62,7 @@ public:
      * \brief Return the concentrations of an individual component in
      *        a phase.
      *
-     * Unit: [mol/m^3]
+     * Unit: \f$\mathrm{[mol/m^3]}\f$
      */
     Scalar concentration(int compIdx) const
     { return moleFrac_[compIdx]*phaseConcentration(); }
@@ -70,7 +70,7 @@ public:
     /*!
      * \brief Return the density of a phase.
      *
-     * Unit: [kg/m^3]
+     * Unit: \f$\mathrm{[kg/m^3]}\f$
      */
     Scalar density() const
     { return density_; }
@@ -81,7 +81,7 @@ public:
      * This is the sum of all molar masses times their respective mole
      * fractions in the phase.
      *
-     * Unit: [kg/m^3]
+     * Unit: \f$\mathrm{[kg/m^3]}\f$
      */
     Scalar meanMolarMass() const
     { return meanMolarMass_; }
@@ -89,7 +89,7 @@ public:
     /*!
      * \brief Return the total pressure of the phase.
      *
-     * Unit: [Pa] = [N/m^2]
+     * Unit: \f$\mathrm{[Pa] = [N/m^2]}\f$
      */
     Scalar pressure() const
     { return pressure_; };
