@@ -39,9 +39,9 @@ class H2_N2
 {
 public:
     /*!
-     * \brief Henry coefficent \f$[N/m^2]\f$  for molecular nitrogen in liquid hydrogen.
+     * \brief Henry coefficent \f$\mathrm{[N/m^2]}\f$ for molecular nitrogen in liquid hydrogen.
      *
-     * \param temperature the temperature [K]
+     * \param temperature the temperature \f$\mathrm{[K]}\f$
      */
     template <class Scalar>
     static Scalar henry(Scalar temperature)
@@ -50,7 +50,7 @@ public:
     };
 
     /*!
-     * \brief Binary diffusion coefficent [m^2/s] for molecular hydrogen and nitrogen.
+     * \brief Binary diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular hydrogen and nitrogen.
      *
      * This function estimates the diffusion coefficents in binary gases
      * using to the method proposed by Fuller. This method and is only
@@ -58,8 +58,8 @@ public:
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp. 587-588
-     * \param temperature the temperature [K]
-     * \param pressure the phase pressure [Pa]
+     * \param temperature the temperature \f$\mathrm{[K]}\f$
+     * \param pressure the phase pressure \f$\mathrm{[Pa]}\f$
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
@@ -76,10 +76,10 @@ public:
     };
 
     /*!
-     * \brief Diffusion coefficent [m^2/s] for molecular nitrogen in liquid hydrogen.
+     * \brief Diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular nitrogen in liquid hydrogen.
      *
-     * \param temperature the temperature [K]
-     * \param pressure the phase pressure [Pa]
+     * \param temperature the temperature \f$\mathrm{[K]}\f$
+     * \param pressure the phase pressure \f$\mathrm{[Pa]}\f$
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
