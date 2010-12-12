@@ -55,10 +55,10 @@ class Region1
 public:
     /*!
      * \brief Returns true if IAPWS region 1 applies for a
-     *        (temperature in [K], pressure in [Pa]) pair.
+     *        (temperature in \f$\mathrm{[K]}\f$, pressure in \f$\mathrm{[Pa]}\f$) pair.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static bool isValid(Scalar temperature, Scalar pressure)
     {
@@ -81,16 +81,16 @@ public:
     /*!
      * \brief Returns the reduced temperature for IAPWS region 1.
      *
-     * \param temperature temperature of component in [K]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar tau(Scalar temperature)
     { return 1386.0 / temperature; }
 
     /*!
      * \brief Returns the derivative of the reduced temperature to the
-     *        temperature for IAPWS region 1 in [1/K].
+     *        temperature for IAPWS region 1 in \f$\mathrm{[1/K]}\f$.
      *
-     * \param temperature temperature of component in [K]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar dtau_dT(Scalar temperature)
     { return - 1386.0 / (temperature*temperature); }
@@ -98,25 +98,25 @@ public:
     /*!
      * \brief Returns the reduced pressure for IAPWS region 1.
      *
-     * \param pressure pressure of component in [Pa]
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar pi(Scalar pressure)
     { return pressure / 16.53e6; }
 
     /*!
      * \brief Returns the derivative of the reduced pressure to the
-     *        pressure for IAPWS region 1 in [1/Pa].
+     *        pressure for IAPWS region 1 in \f$\mathrm{[1/Pa]}\f$.
      *
-     * \param pressure temperature of component in [Pa]
+     * \param pressure temperature of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar dpi_dp(Scalar pressure)
     { return 1.0 / 16.53e6; }
 
     /*!
      * \brief Returns the derivative of the pressure to the
-     *        reduced pressure for IAPWS region 1 in [Pa].
+     *        reduced pressure for IAPWS region 1 in \f$\mathrm{[Pa]}\f$.
      *
-     * \param pressure pressure of component in [Pa]
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar dp_dpi(Scalar pressure)
     { return 16.53e6; }
@@ -125,8 +125,8 @@ public:
     /*!
      * \brief The Gibbs free energy (dimensionless) for IAPWS region 1 (i.e. liquid)
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -150,8 +150,8 @@ public:
      * \brief The partial derivative of the Gibbs free energy to the
      *        normalized temperature for IAPWS region 1 (i.e. liquid) (dimensionless).
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -178,8 +178,8 @@ public:
      * \brief The partial derivative of the Gibbs free energy to the
      *        normalized pressure for IAPWS region 1 (i.e. liquid) dimensionless).
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -207,8 +207,8 @@ public:
      *        normalized pressure and to the normalized temperature
      *        for IAPWS region 1 (i.e. liquid water) (dimensionless).
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
@@ -237,8 +237,8 @@ public:
      *        to the normalized pressure for IAPWS region 1
      *        (i.e. liquid water) (dimensionless).
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",

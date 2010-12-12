@@ -61,41 +61,41 @@ template <class Scalar>
 class Common
 {
 public:
-    //! The molar mass of water [kg/mol]
+    //! The molar mass of water \f$\mathrm{[kg/mol]}\f$
     static const Scalar molarMass = 18.01518e-3;
 
-    //! Specific gas constant of water [J/(kg*K)]
+    //! Specific gas constant of water \f$\mathrm{[J/(kg*K)]}\f$
     static const Scalar R = 461.526;
 
-    //! Critical temperature of water [K]
+    //! Critical temperature of water \f$\mathrm{[K]}\f$
     static const Scalar criticalTemperature = 647.096;
 
-    //! Critical pressure of water [Pa]
+    //! Critical pressure of water \f$\mathrm{[Pa]}\f$
     static const Scalar criticalPressure = 22.064e6;
 
-    //! Critical molar volume of water [m^3/mol]
+    //! Critical molar volume of water \f$\mathrm{[m^3/mol]}\f$
     static const Scalar criticalMolarVolume = molarMass/322.0;
 
-    //! The acentric factor of water []
+    //! The acentric factor of water \f$\mathrm{[-]}\f$
     static const Scalar acentricFactor = 0.344;
 
-    //! Density of water at the critical point [kg/m^3]
+    //! Density of water at the critical point \f$\mathrm{[kg/m^3]}\f$
     static const Scalar criticalDensity = 322;
 
-    //! Triple temperature of water [K]
+    //! Triple temperature of water \f$\mathrm{[K]}\f$
     static const Scalar tripleTemperature = 273.16;
 
-    //! Triple pressure of water [Pa]
+    //! Triple pressure of water \f$\mathrm{[Pa]}\f$
     static const Scalar triplePressure = 611.657;
 
     /*!
-     * \brief The dynamic viscosity [N/m^3*s] of pure water.
+     * \brief The dynamic viscosity \f$\mathrm{[(N/m^2)*s]}\f$of pure water.
      *
      * This relation is valid for all regions of the IAPWS '97
      * formulation.
      *
-     * \param temperature temperature of component in [K]
-     * \param rho density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param rho density of component in \f$\mathrm{[kg/m^3]}\f$
      *
      * See:
      *
