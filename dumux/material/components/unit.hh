@@ -46,10 +46,10 @@ public:
     { return "Unit"; }
 
     /*!
-     * \brief Rough estimate of the density of water [kg/m^3].
+     * \brief Rough estimate of the density of water \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -57,10 +57,10 @@ public:
     }
 
     /*!
-     * \brief Rough estimate of the viscosity of water in [Pa*s].
+     * \brief Rough estimate of the viscosity of water in \f$\mathrm{[Pa*s]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

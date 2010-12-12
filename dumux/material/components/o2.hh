@@ -46,46 +46,46 @@ class O2 : public Component<Scalar, O2<Scalar> >
 
 public:
     /*!
-     * \brief A human readable name for the O2.
+     * \brief A human readable name for the \f$O_2\f$.
      */
     static const char *name()
     { return "O2"; }
 
     /*!
-     * \brief The molar mass in [kg/mol] of molecular oxygen.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of molecular oxygen.
      */
     static Scalar molarMass()
     { return 32e-3; }
 
     /*!
-     * \brief Returns the critical temperature in [K] of molecular oxygen.
+     * \brief Returns the critical temperature in \f$\mathrm{[K]}\f$ of molecular oxygen.
      */
     static Scalar criticalTemperature()
     { return 154.581; /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure in [Pa] of molecular oxygen.
+     * \brief Returns the critical pressure in \f$\mathrm{[Pa]}\f$ of molecular oxygen.
      */
     static Scalar criticalPressure()
     { return 5.0804e6; /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature in [K] at molecular oxygen's triple point.
+     * \brief Returns the temperature in \f$\mathrm{[K]}\f$ at molecular oxygen's triple point.
      */
     static Scalar tripleTemperature()
     { return 54.359; /* [K] */ }
 
     /*!
-     * \brief Returns the pressure in [Pa] at molecular oxygen's triple point.
+     * \brief Returns the pressure in \f$\mathrm{[Pa]}\f$ at molecular oxygen's triple point.
      */
     static Scalar triplePressure()
     { return 148.0; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure molecular oxygen
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure molecular oxygen
      *        at a given temperature.
      *
-     * \param T temperature of component in [K]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
      *
      * Taken from:
      *
@@ -119,10 +119,10 @@ public:
     }
 
     /*!
-     * \brief The density in [kg/m^3] of pure O2 at a given pressure and temperature.
+     * \brief The density in \f$\mathrm{[kg/m^3]}\f$ of pure \f$O_2\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * \todo density liquid oxygen
      */
@@ -133,10 +133,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of gaseous N2 in [Pa] at a given density and temperature.
+     * \brief The pressure of gaseous \f$O_2\f$ in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -145,10 +145,10 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure oxygen gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure oxygen gas.
      *
-     * \param T temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
@@ -176,26 +176,26 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of gaseous O2 at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of gaseous \f$O_2\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for O2"); }
 
     /*!
-     * \brief The pressure of liquid oxygen  in [Pa] at a given density and
-     *        temperature [Pa].
+     * \brief The pressure of liquid oxygen in \f$\mathrm{[Pa]}\f$ at a given density and
+     *        temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for O2"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid O2.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$O_2\f$.
      *
      * \param temperature temperature of component
      * \param pressure pressure of component
@@ -204,10 +204,10 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for O2"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of N2 at a given pressure and temperature.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$O_2\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See:
      *
@@ -239,10 +239,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [Pa*s] of pure H2.
+     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$O_2\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for O2"); }

@@ -53,40 +53,40 @@ public:
     { return "N2"; }
 
     /*!
-     * \brief The molar mass in [kg/mol] of molecular nitrogen.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of molecular nitrogen.
      */
     static Scalar molarMass()
     { return 28.0134e-3;}
 
     /*!
-     * \brief Returns the critical temperature [K] of molecular nitrogen
+     * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of molecular nitrogen
      */
     static Scalar criticalTemperature()
     { return 126.192; /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of molecular nitrogen.
+     * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of molecular nitrogen.
      */
     static Scalar criticalPressure()
     { return 3.39858e6; /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature [K] at molecular nitrogen's triple point.
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at molecular nitrogen's triple point.
      */
     static Scalar tripleTemperature()
     { return 63.151; /* [K] */ }
 
     /*!
-     * \brief Returns the pressure [Pa] at molecular nitrogen's triple point.
+     * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at molecular nitrogen's triple point.
      */
     static Scalar triplePressure()
     { return 12.523e3; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure molecular nitrogen
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure molecular nitrogen
      *        at a given temperature.
      *
-     *\param T temperature of component in [K]
+     *\param T temperature of component in \f$\mathrm{[K]}\f$
      *
      * Taken from:
      *
@@ -121,10 +121,10 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$N_2\f$ gas at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -133,10 +133,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of gaseous N2 in [Pa] at a given density and temperature.
+     * \brief The pressure of gaseous \f$N_2\f$ in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -145,29 +145,29 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$N_2\f$ gas at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for N2"); }
 
     /*!
-     * \brief The pressure of liquid nitrogen  in [Pa] at a given density and
+     * \brief The pressure of liquid nitrogen  in \f$\mathrm{[Pa]}\f$ at a given density and
      *        temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for N2"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure nitrogen gas.
      *
-     * \param T temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
@@ -195,19 +195,19 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$N_2\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for N2"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure nitrogen gas.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -219,19 +219,19 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$N_2\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of N2"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of N2 at a given pressure and temperature.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$N_2\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See:
      *
@@ -263,10 +263,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [Pa*s] of pure N2.
+     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$N_2\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for N2"); }

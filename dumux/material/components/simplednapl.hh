@@ -47,7 +47,7 @@ public:
     { return "TCE"; }
 
     /*!
-     * \brief The molar mass in [kg/mol] of TCE.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
      */
     static Scalar molarMass()
     {
@@ -55,7 +55,7 @@ public:
     };
 
     /*!
-     * \brief Returns the critical temperature [K] of TCE.
+     * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of TCE.
      */
     static Scalar criticalTemperature()
     {
@@ -63,7 +63,7 @@ public:
     };
 
     /*!
-     * \brief Returns the critical pressure [Pa] of TCE.
+     * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of TCE.
      */
     static Scalar criticalPressure()
     {
@@ -71,7 +71,7 @@ public:
     };
 
     /*!
-     * \brief Returns the temperature [K] at TCE's triple point.
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at TCE's triple point.
      */
     static Scalar tripleTemperature()
     {
@@ -79,7 +79,7 @@ public:
     };
 
     /*!
-     * \brief Returns the pressure [Pa] at TCE's triple point.
+     * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at TCE's triple point.
      */
     static Scalar triplePressure()
     {
@@ -87,20 +87,20 @@ public:
     };
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure TCE
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure TCE
      *        at a given temperature.
      *
-     * \param T temperature of component in [K]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
     {
         return 3900; // [Pa] (at 20C)
     };
     /*!
-     * \brief Specific enthalpy of TCE steam [J/kg].
+     * \brief Specific enthalpy of TCE steam \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
@@ -109,10 +109,10 @@ public:
     };
 
     /*!
-     * \brief Specific enthalpy of liquid TCE [J/kg].
+     * \brief Specific enthalpy of liquid TCE \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
@@ -121,10 +121,10 @@ public:
     };
 
     /*!
-     * \brief The density of steam at a given pressure and temperature [kg/m^3].
+     * \brief The density of steam at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -134,10 +134,10 @@ public:
     };
 
     /*!
-     * \brief The density of pure TCE at a given pressure and temperature [kg/m^3].
+     * \brief The density of pure TCE at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -145,10 +145,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of steam.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of steam.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      * \param regularize defines, if the functions is regularized or not, set to true by default
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
@@ -157,10 +157,10 @@ public:
     };
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of pure TCE.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure TCE.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {

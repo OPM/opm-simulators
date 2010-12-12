@@ -52,50 +52,50 @@ public:
     { return "CH4"; }
 
     /*!
-     * \brief The molar mass in [kg/mol] of molecular methane.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of molecular methane.
      */
     static Scalar molarMass()
     { return 16.043e-3;}
 
     /*!
-     * \brief Returns the critical temperature [K] of molecular methane
+     * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of molecular methane
      */
     static Scalar criticalTemperature()
     { return 190.4; /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of molecular methane
+     * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of molecular methane
      */
     static Scalar criticalPressure()
     { return 46e5; /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature [K] at molecular methane's triple point.
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at molecular methane's triple point.
      */
     static Scalar tripleTemperature()
     { return 90.7; /* [K] */ }
 
     /*!
-     * \brief Returns the pressure [Pa] at molecular methane's triple point.
+     * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at molecular methane's triple point.
      */
     static Scalar triplePressure()
     { return 0; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure molecular methane
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure molecular methane
      *        at a given temperature.
      *
-     *\param T temperature of component in [K]
+     *\param T temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
     { DUNE_THROW(Dune::NotImplemented, "vaporPressure for CH4"); }
 
 
     /*!
-     * \brief The density [kg/m^3] of CH4 gas at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$CH_4\f$ gas at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -104,10 +104,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of gaseous CH4 in [Pa] at a given density and temperature.
+     * \brief The pressure of gaseous \f$CH_4\f$ in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -116,29 +116,29 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of CH4 gas at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$CH_4\f$ gas at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for CH4"); }
 
     /*!
-     * \brief The pressure of liquid methane in [Pa] at a given density and
+     * \brief The pressure of liquid methane in \f$\mathrm{[Pa]}\f$ at a given density and
      *        temperature.
     *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for CH4"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure methane gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure methane gas.
      *
-     * \param T temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 671
@@ -166,19 +166,19 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid CH4.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$CH_4\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for CH4"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure methane gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure methane gas.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -190,19 +190,19 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid CH4.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$CH_4\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of CH4"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa s] of CH4 at a given pressure and temperature.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$CH_4\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See:
      *
@@ -234,10 +234,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [Pa s] of pure CH4.
+     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$CH_4\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for CH4"); }

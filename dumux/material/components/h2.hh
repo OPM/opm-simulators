@@ -17,7 +17,7 @@
  *
  * \ingroup Components
  *
- * \brief Properties of pure molecular nitrogen \f$H_2\f$.
+ * \brief Properties of pure molecular hydrogen \f$H_2\f$.
  */
 #ifndef DUMUX_H2_HH
 #define DUMUX_H2_HH
@@ -46,46 +46,46 @@ class H2 : public Component<Scalar, H2<Scalar> >
 
 public:
     /*!
-     * \brief A human readable name for the H2.
+     * \brief A human readable name for the \f$H_2\f$.
      */
     static const char *name()
     { return "H2"; }
 
     /*!
-     * \brief The molar mass in [kg/mol] of molecular hydrogen.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of molecular hydrogen.
      */
     static Scalar molarMass()
     { return 1.0e-3; }
 
     /*!
-     * \brief Returns the critical temperature [K] of molecular hydrogen.
+     * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of molecular hydrogen.
      */
     static Scalar criticalTemperature()
     { return 33.2; /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of molecular hydrogen.
+     * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of molecular hydrogen.
      */
     static Scalar criticalPressure()
     { return 13.0e5; /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature [K] at molecular hydrogen's triple point.
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at molecular hydrogen's triple point.
      */
     static Scalar tripleTemperature()
     { return 14.0; /* [K] */ }
 
     /*!
-     * \brief Returns the pressure [Pa] at molecular hydrogen's triple point.
+     * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at molecular hydrogen's triple point.
      */
     static Scalar triplePressure()
     { DUNE_THROW(Dune::NotImplemented, "triplePressure for H2"); }
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure molecular hydrogen
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure molecular hydrogen
      *        at a given temperature.
      *
-     *\param temperature temperature of component in [K]
+     *\param temperature temperature of component in \f$\mathrm{[K]}\f$
      *
      * Taken from:
      *
@@ -111,10 +111,10 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of H2 at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$H_2\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -123,10 +123,10 @@ public:
     }
 
     /*!
-     * \brief The pressure of gaseous N2 in [Pa] at a given density and temperature.
+     * \brief The pressure of gaseous \f$H_2\f$ in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -135,10 +135,10 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure hydrogen gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure hydrogen gas.
      *
-     * \param T temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
@@ -166,38 +166,38 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of liquid hydrogen at a given pressure and temperature.
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of liquid hydrogen at a given pressure and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidDensity for H2"); }
 
     /*!
-     * \brief The pressure of liquid hydrogen in [Pa] at a given density and
+     * \brief The pressure of liquid hydrogen in \f$\mathrm{[Pa]}\f$ at a given density and
      *        temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     { DUNE_THROW(Dune::NotImplemented, "liquidPressure for H2"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid H2 .
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$H_2\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for H2"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of H2 at a given pressure and temperature.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$H_2\f$ at a given pressure and temperature.
      *
-     *\param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     *\param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See:
      *
@@ -229,10 +229,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [Pa*s] of pure H2.
+     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$H_2\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for H2"); }

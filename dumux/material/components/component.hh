@@ -48,11 +48,11 @@ public:
     /*!
      * \brief A default routine for initialization, not needed for components and must not be called.
      *
-     * \param tempMin The minimum of the temperature range in [K]
-     * \param tempMax The maximum of the temperature range in [K]
+     * \param tempMin The minimum of the temperature range in \f$\mathrm{[K]}\f$
+     * \param tempMax The maximum of the temperature range in \f$\mathrm{[K]}\f$
      * \param nTemp The number of entries/steps within the temperature range
-     * \param pressMin The minimum of the pressure range in [Pa]
-     * \param pressMax The maximum of the pressure range in [Pa]
+     * \param pressMin The minimum of the pressure range in \f$\mathrm{[Pa]}\f$
+     * \param pressMax The maximum of the pressure range in \f$\mathrm{[Pa]}\f$
      * \param nPress The number of entries/steps within the pressure range
      *
      * This function throws a warning when called: "No init routine defined - make sure that this is not necessary!"
@@ -68,112 +68,113 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "Component::name()"); }
 
     /*!
-     * \brief The molar mass in [kg] of the component.
+     * \brief The molar mass in \f$\mathrm{[kg]}\f$ of the component.
      */
     static Scalar molarMass()
     { DUNE_THROW(Dune::NotImplemented, "Component::molarMass()"); }
 
     /*!
-     * \brief Returns the critical temperature in [K] of the component.
+     * \brief Returns the critical temperature in \f$\mathrm{[K]}\f$ of the component.
      */
     static Scalar criticalTemperature()
     { DUNE_THROW(Dune::NotImplemented, "Component::criticalTemperature()"); }
 
     /*!
-     * \brief Returns the critical pressure in [Pa] of the component.
+     * \brief Returns the critical pressure in \f$\mathrm{[Pa]}\f$ of the component.
      */
     static Scalar criticalPressure()
     { DUNE_THROW(Dune::NotImplemented, "Component::criticalPressure()"); }
 
     /*!
-     * \brief Returns the temperature in [K] at the component's triple point.
+     * \brief Returns the temperature in \f$\mathrm{[K]}\f$ at the component's triple point.
      */
     static Scalar tripleTemperature()
     { DUNE_THROW(Dune::NotImplemented, "Component::tripleTemperature()"); }
 
     /*!
-     * \brief Returns the pressure in [Pa] at the component's triple point.
+     * \brief Returns the pressure in \f$\mathrm{[Pa]}\f$ at the component's triple point.
      */
     static Scalar triplePressure()
     { DUNE_THROW(Dune::NotImplemented, "Component::triplePressure()"); }
 
     /*!
-     * \brief The vapor pressure in [Pa] of the component at a given
-     *        temperature in [K].
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of the component at a given
+     *        temperature in \f$\mathrm{[K]}\f$.
      *
-     * \param T temperature of the component in [K]
+     * \param T temperature of the component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
     { DUNE_THROW(Dune::NotImplemented, "Component::vaporPressure()"); }
 
     /*!
-     * \brief The density in [kg/m^3] of the component at a given pressure in [Pa] and temperature in [K].
+     * \brief The density in \f$\mathrm{[kg/m^3]}\f$ of the component at a given pressure in \f$\mathrm{[Pa]}\f$ and temperature in \f$\mathrm{[K]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::density()"); }
 
     /*!
-     * \brief The density [kg/m^3] of the liquid component at a given pressure in [Pa] and temperature in [K].
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of the liquid component at a given pressure in \f$\mathrm{[Pa]}\f$ and temperature in \f$\mathrm{[K]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::density()"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of the pure component in gas.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of the pure component in gas.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::gasEnthalpy()"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of the pure component in liquid.
+     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of the pure component in liquid.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::liquidEnthalpy()"); }
 
     /*!
-     * \brief Specific internal energy [J/kg] of the pure component in gas.
+     * \brief Specific internal energy \f$\mathrm{[J/kg]}\f$ of the pure component in gas.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::gasInternalEnergy()"); }
 
     /*!
-     * \brief Specific internal energy [J/kg] of pure the pure component in liquid.
+     * \brief Specific internal energy \f$\mathrm{[J/kg]}\f$ of pure the pure component in liquid.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::liquidInternalEnergy()"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of the pure component at a given pressure in [Pa] and temperature in [K].
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of the pure component at a given pressure in \f$\mathrm{[Pa]}\f$ and
+     * temperature in \f$\mathrm{[K]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::gasViscosity()"); }
 
     /*!
-     * \brief The dynamic liquid viscosity [Pa*s] of the pure component.
+     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of the pure component.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::liquidViscosity()"); }

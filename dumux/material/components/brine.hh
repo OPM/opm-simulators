@@ -53,7 +53,7 @@ public:
     { return "Brine"; }
 
     /*!
-     * \brief The molar mass in [kg/mol] of brine.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of brine.
      *
      * This assumes that the salt is pure NaCl.
      */
@@ -66,54 +66,54 @@ public:
     };
 
     /*!
-     * \brief Returns the critical temperature [K] of brine.
+     * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of brine.
      */
     static Scalar criticalTemperature()
     { return H2O::criticalTemperature(); /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of brine.
+     * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of brine.
      */
     static Scalar criticalPressure()
     { return H2O::criticalPressure(); /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature [K] at brine's triple point.
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at brine's triple point.
      */
     static Scalar tripleTemperature()
     { return H2O::tripleTemperature(); /* [K] */ }
 
     /*!
-     * \brief Returns the pressure [Pa] at brine's triple point.
+     * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at brine's triple point.
      */
     static Scalar triplePressure()
     { return H2O::triplePressure(); /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure brine
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure brine
      *        at a given temperature.
      *
-     * \param T temperature of component in [K]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
 
      */
     static Scalar vaporPressure(Scalar T)
     { return H2O::vaporPressure(T); /* [N/m^2] */ }
 
     /*!
-     * \brief Specific enthalpy of gaseous brine [J/kg].
+     * \brief Specific enthalpy of gaseous brine \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasEnthalpy(Scalar temperature,
                                     Scalar pressure)
     { return H2O::gasEnthalpy(temperature, pressure); /* [J/kg] */ }
 
     /*!
-     * \brief Specific enthalpy of liquid brine [J/kg].
+     * \brief Specific enthalpy of liquid brine \f$\mathrm{[J/kg]}\f$.
      *
-     * \param T temperature of component in [K]
-     * \param p pressure of component in [Pa]
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param p pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * Equations given in:    - Palliser & McKibbin 1997
      *                         - Michaelides 1981
@@ -179,10 +179,10 @@ public:
     }
 
     /*!
-     * \brief Specific internal energy of steam [J/kg].
+     * \brief Specific internal energy of steam \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -191,10 +191,10 @@ public:
     }
 
     /*!
-     * \brief Specific internal energy of liquid brine [J/kg].
+     * \brief Specific internal energy of liquid brine \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidInternalEnergy(Scalar temperature,
                                              Scalar pressure)
@@ -205,19 +205,19 @@ public:
     }
 
     /*!
-     * \brief The density of steam at a given pressure and temperature [kg/m^3].
+     * \brief The density of steam at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     { return H2O::gasDensity(temperature, pressure); }
 
     /*!
-     * \brief The density of pure brine at a given pressure and temperature [kg/m^3].
+     * \brief The density of pure brine at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * Equations given in:    - Batzle & Wang (1992)
      *                        - cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
@@ -245,20 +245,20 @@ public:
     }
 
     /*!
-     * \brief The pressure of steam in [Pa] at a given density and temperature.
+     * \brief The pressure of steam in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density denstiy of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density denstiy of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     { return H2O::gasPressure(temperature, density); }
 
     /*!
-     * \brief The pressure of liquid water in [Pa] at a given density and
+     * \brief The pressure of liquid water in \f$\mathrm{[Pa]}\f$ at a given density and
      *        temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
@@ -286,7 +286,7 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of steam.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of steam.
      *
      * \param temperature temperature of component
      * \param pressure pressure of component
@@ -295,10 +295,10 @@ public:
     { return H2O::gasViscosity(temperature, pressure); };
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of pure brine.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure brine.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * Equation given in:    - Batzle & Wang (1992)
      *                         - cited by: Bachu & Adams (2002)

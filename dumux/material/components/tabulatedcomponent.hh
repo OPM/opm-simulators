@@ -57,11 +57,11 @@ public:
     /*!
      * \brief Initialize the tables.
      *
-     * \param tempMin The minimum of the temperature range in [K]
-     * \param tempMax The maximum of the temperature range in [K]
+     * \param tempMin The minimum of the temperature range in \f$\mathrm{[K]}\f$
+     * \param tempMax The maximum of the temperature range in \f$\mathrm{[K]}\f$
      * \param nTemp The number of entries/steps within the temperature range
-     * \param pressMin The minimum of the pressure range in [Pa]
-     * \param pressMax The maximum of the pressure range in [Pa]
+     * \param pressMin The minimum of the pressure range in \f$\mathrm{[Pa]}\f$
+     * \param pressMax The maximum of the pressure range in \f$\mathrm{[Pa]}\f$
      * \param nPress The number of entries/steps within the pressure range
      */
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
@@ -198,37 +198,37 @@ public:
     { return RawComponent::name(); }
 
     /*!
-     * \brief The molar mass in [kg/mol] of the component.
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of the component.
      */
     static Scalar molarMass()
     { return RawComponent::molarMass(); }
 
     /*!
-     * \brief Returns the critical temperature in [K] of the component.
+     * \brief Returns the critical temperature in \f$\mathrm{[K]}\f$ of the component.
      */
     static Scalar criticalTemperature()
     { return RawComponent::criticalTemperature(); }
 
     /*!
-     * \brief Returns the critical pressure in [Pa] of the component.
+     * \brief Returns the critical pressure in \f$\mathrm{[Pa]}\f$ of the component.
      */
     static Scalar criticalPressure()
     { return RawComponent::criticalPressure(); }
 
     /*!
-     * \brief Returns the temperature in [K] at the component's triple point.
+     * \brief Returns the temperature in \f$\mathrm{[K]}\f$ at the component's triple point.
      */
     static Scalar tripleTemperature()
     { return RawComponent::tripleTemperature(); }
 
     /*!
-     * \brief Returns the pressure in [Pa] at the component's triple point.
+     * \brief Returns the pressure in \f$\mathrm{[Pa]}\f$ at the component's triple point.
      */
     static Scalar triplePressure()
     { return RawComponent::triplePressure(); }
 
     /*!
-     * \brief The vapor pressure in [Pa] of the component at a given
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of the component at a given
      *        temperature.
      *
      * \param T temperature of component
@@ -243,10 +243,10 @@ public:
     };
 
     /*!
-     * \brief Specific enthalpy of the gas [J/kg].
+     * \brief Specific enthalpy of the gas \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
     {
@@ -261,10 +261,10 @@ public:
     }
 
     /*!
-     * \brief Specific internal energy of the liquid [J/kg].
+     * \brief Specific internal energy of the liquid \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     {
@@ -279,10 +279,10 @@ public:
     }
 
     /*!
-     * \brief Specific internal energy of the gas [J/kg].
+     * \brief Specific internal energy of the gas \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
     {
@@ -297,10 +297,10 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy of the liquid [J/kg].
+     * \brief Specific enthalpy of the liquid \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     {
@@ -316,10 +316,10 @@ public:
 
 
     /*!
-     * \brief The pressure of gas in [Pa] at a given density and temperature.
+     * \brief The pressure of gas in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -335,10 +335,10 @@ public:
     };
 
     /*!
-     * \brief The pressure of liquid in [Pa] at a given density and temperature [Pa].
+     * \brief The pressure of liquid in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in [K]
-     * \param density density of component in [kg/m^3]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
@@ -355,10 +355,10 @@ public:
 
     /*!
      * \brief The density of gas at a given pressure and temperature
-     *        [kg/m^3].
+     *        \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -374,10 +374,10 @@ public:
 
     /*!
      * \brief The density of liquid at a given pressure and
-     *        temperature [kg/m^3].
+     *        temperature \f$\mathrm{[kg/m^3]}\f$.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -392,10 +392,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of gas.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of gas.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
@@ -410,10 +410,10 @@ public:
     };
 
     /*!
-     * \brief The dynamic viscosity [Pa*s] of liquid.
+     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of liquid.
      *
-     * \param temperature temperature of component in [K]
-     * \param pressure pressure of component in [Pa]
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
