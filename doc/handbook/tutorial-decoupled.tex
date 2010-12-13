@@ -33,7 +33,7 @@ effects are neglected.
 \psfrag{S_n = 0}{$S_w = 1$}
 \psfrag{S_n_initial = 0}{\textcolor{white}{$\mathbf{S_{w_{initial}} = 0}$}}
 \psfrag{q_w = 0 [kg/m^2s]}{$q_w = 0$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
-\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
+\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^-2$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
 \centering
 \includegraphics[width=0.9\linewidth,keepaspectratio]{EPS/tutorial-problemconfiguration}
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-decoupled:problemfigure}
@@ -201,8 +201,8 @@ with the decoupled modelling framework.
 For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 1e4}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
-As you can see, the simulation creates roughly 50 output files. To reduce these to perform longer simulations, change the method responsible for output in the file \texttt{tutorialproblem\_decoupled} to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 1e5 seconds.
+To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 1e5}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+As you can see, the simulation creates roughly 150 output files. To reduce these to perform longer simulations, change the method responsible for output in the file \texttt{tutorialproblem\_decoupled} to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
@@ -273,11 +273,11 @@ compile the program.
 \psfrag{K1}{K $= 10^{-7}\text{ m}^2$}
 \psfrag{phi1}{$\phi = 0.2$}
 \psfrag{Lin}{Brooks Corey Law} 
-\psfrag{Lin2}{$\lambda = 1.8$, $p_b = 1000$}
+\psfrag{Lin2}{$\lambda = 1.8$, $p_b = 100$}
 \psfrag{K2}{K $= 10^{-9}\text{ m}^2$}
 \psfrag{phi2}{$\phi = 0.15$}
 \psfrag{BC1}{Brooks Corey Law} 
-\psfrag{BC2}{$\lambda = 2$, $p_b = 1500$}
+\psfrag{BC2}{$\lambda = 2$, $p_b = 500$}
 \psfrag{H1y}{50 m}
 \psfrag{H2y}{15 m}
 \psfrag{H3y}{20 m}
