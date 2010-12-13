@@ -54,15 +54,15 @@ inline Scalar henryIAPWS(Scalar E,
     Scalar Tr = temperature/H2O::criticalTemperature();
     Scalar tau = 1 - Tr;
 
-    const Scalar c[6] = {
+    static const Scalar c[6] = {
         1.99274064, 1.09965342, -0.510839303,
         -1.75493479,-45.5170352, -6.7469445e5
     };
-    const Scalar d[6] = {
+    static const Scalar d[6] = {
         1/3.0, 2/3.0, 5/3.0,
         16/3.0, 43/3.0, 110/3.0
     };
-    const Scalar q = -0.023767;
+    static const Scalar q = -0.023767;
 
     Scalar f = 0;
     for (int i = 0; i < 6; ++i) {
