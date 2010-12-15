@@ -206,21 +206,21 @@ As you can see, the simulation creates roughly 150 output files. To reduce these
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
-with edge lengths of x = 400 m \\  and y = 500 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 20$ m. \\
+with edge lengths of x = 300 m \\  and y = 300 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 10$ m. \\
 Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes.  \\
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
 \begin{enumerate}
  \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be aware to use the complete water class with its own template parameter).
- \item DNAPL: A standard set of chemical substances is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
+ \item DNAPL: A standard set of chemical substances is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
 If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
 As you have experienced in the coupled tutorial (chapter \ref{tutorial-decoupled}), \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. This is also possible for the decoupled models: Uncomment, as we want to reuse it later on, the lines \ref{tutorial-decoupled:2p-system-start} to \ref{tutorial-decoupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7}, the same shortcut works to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. As water flow replacing a gas is much faster, test your simulation only until 1e4 seconds.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simultation duration to 1e5 seconds.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
@@ -259,10 +259,10 @@ property so that it matches the domain described
 by figure \ref{tutorial-decoupled:ex2_Domain}. Adapt the problem class
 so that the boundary conditions are consistent with figure
 \ref{tutorial-decoupled:ex2_BC}. Initially the domain is fully saturated
-with water and the pressure is $p_w = 5 \times 10^5 \text{Pa}$ . Oil
+with water and the pressure is $p_w = 2 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
-should be set to $6000 \text{s}$.
+should be set to $1e5 \text{s}$.
 
 Now include your new problem file in the main file and replace the
 \texttt{TutorialProblemCoupled} type tag by the one you've created and
@@ -290,9 +290,9 @@ compile the program.
 \end{figure}
 
 \begin{figure}[h]
-\psfrag{pw}{$p_w = 5 \times 10^5$ [\text{Pa}]}
-\psfrag{S}{$S_n = 1.0$}
-\psfrag{qw}{$q_w = 2 \times 10^{-4}$ [kg/$\text{m}^2$s]}
+\psfrag{pw}{$p_w = 2 \times 10^5$ [\text{Pa}]}
+\psfrag{S}{$S_w = 0.0$}
+\psfrag{qw}{$q_w = 3 \times 10^{-4}$ [kg/$\text{m}^2$s]}
 \psfrag{qo}{$q_n = 0.0$ [kg/$\text{m}^2$s]}
 \psfrag{no flow}{no flow}
 \centering
@@ -301,9 +301,9 @@ compile the program.
 \end{figure}
 
 \begin{itemize}
- \item Investigate the saturation: Is the value range reasonable?
- \item What happens if you increase the resolution of the grid?
- \item Try out a CFL-factor of 1 and investigate the whole simulation run.
+ \item What happens if you increase the resolution of the grid? Hint: Paraview can visualize the timesteps via the ``Animation View'' (to be enabled unter the button \textit{View}).
+ \item Set the CFL-factor to 1 and investigate the saturation: Is the value range reasonable?
+ \item Further increase the CFL-factor to 2 and investigate the saturation.
 \end{itemize}
 
 
