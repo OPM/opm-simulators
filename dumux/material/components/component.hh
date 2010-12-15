@@ -13,13 +13,7 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
-/*!
- * \defgroup Material Material Properties and Laws
- */
-/*!
- * \ingroup Material
- * \defgroup Components Components
- */
+
 /*!
  * \file
  *

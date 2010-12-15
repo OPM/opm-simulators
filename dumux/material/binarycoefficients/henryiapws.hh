@@ -14,11 +14,6 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \ingroup Material
- * \defgroup Binarycoefficients Binary Coefficients
- */
-
-/*!
  * \file
  *
  * \brief The IAPWS formulation of Henry coefficients in water.

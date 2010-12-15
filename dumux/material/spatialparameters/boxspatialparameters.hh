@@ -36,12 +36,6 @@ namespace Properties {
 NEW_PROP_TAG(SpatialParameters);
 };
 
-
-/*!
- * \ingroup Material
- * \defgroup SpatialParameters Spatial parameters
- */
-
 /*!
  * \ingroup SpatialParameters
  */

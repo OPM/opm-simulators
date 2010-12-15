@@ -13,10 +13,6 @@
  *                                                                           *
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
-/*!
- * \ingroup fluidmatrixinteractions
- *  \defgroup fluidmatrixinteractionsparams FluidMatrixInteractions Parameters
- */
 
 /*!
  * \file

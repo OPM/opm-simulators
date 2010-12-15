@@ -14,16 +14,6 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \ingroup Material
- *  \defgroup fluidmatrixinteractions FluidMatrixInteractions
- */
-
-/*!
- * \ingroup fluidmatrixinteractions
- *  \defgroup fluidmatrixinteractionslaws FluidMatrixInteractions Laws
- */
-
-/*!
  * \file
  *
  * \brief Implementation of the capillary pressure and

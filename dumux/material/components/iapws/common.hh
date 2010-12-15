@@ -14,10 +14,6 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \ingroup Components
- * \defgroup IAPWS IAPWS
- */
-/*!
  * \file
  *
  * \ingroup IAPWS

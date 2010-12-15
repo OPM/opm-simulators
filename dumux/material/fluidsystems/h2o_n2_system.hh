@@ -14,10 +14,6 @@
  *   This program is distributed WITHOUT ANY WARRANTY.                       *
  *****************************************************************************/
 /*!
- * \ingroup Material
- * \defgroup Fluidsystems Fluidsystems
- */
-/*!
  * \file
  *
  * \ingroup Fluidsystems
