@@ -39,6 +39,8 @@ template <class Scalar, class Implementation>
 class Component
 {
 public:
+    static const bool isTabulated = false;
+
     /*!
      * \brief A default routine for initialization, not needed for components and must not be called.
      *

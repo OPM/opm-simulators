@@ -54,6 +54,8 @@ template <class Scalar, class RawComponent, bool verbose=true>
 class TabulatedComponent
 {
 public:
+    static const bool isTabulated = true;
+
     /*!
      * \brief Initialize the tables.
      *
@@ -88,8 +90,6 @@ public:
 
         gasEnthalpy_ = new Scalar[nTemp_*nPress_];
         liquidEnthalpy_ = new Scalar[nTemp_*nPress_];
-        gasInternalEnergy_ = new Scalar[nTemp_*nPress_];
-        liquidInternalEnergy_ = new Scalar[nTemp_*nPress_];
         gasDensity_ = new Scalar[nTemp_*nPress_];
         liquidDensity_ = new Scalar[nTemp_*nPress_];
         gasViscosity_ = new Scalar[nTemp_*nPress_];
@@ -118,9 +118,6 @@ public:
 
                 try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { gasEnthalpy_[i] = NaN; };
-
-                try { gasInternalEnergy_[i] = RawComponent::gasInternalEnergy(temperature, pressure); }
-                catch (NumericalProblem) { gasInternalEnergy_[i] = NaN; };
 
                 try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
                 catch (NumericalProblem) { gasDensity_[i] = NaN; };
@@ -158,9 +155,6 @@ public:
 
                 try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { liquidEnthalpy_[i] = NaN; };
-
-                try { liquidInternalEnergy_[i] = RawComponent::liquidInternalEnergy(temperature, pressure); }
-                catch (NumericalProblem) { liquidInternalEnergy_[i] = NaN; };
 
                 try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
                 catch (NumericalProblem) { liquidDensity_[i] = NaN; };
@@ -261,7 +255,7 @@ public:
     }
 
     /*!
-     * \brief Specific internal energy of the liquid \f$\mathrm{[J/kg]}\f$.
+     * \brief Specific enthalpy of the liquid \f$\mathrm{[J/kg]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
@@ -286,34 +280,23 @@ public:
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
     {
-        Scalar result = interpolateGasTP_(gasInternalEnergy_,
-                                          temperature,
-                                          pressure);
-        if (std::isnan(result)) {
-            printWarning_("gasInternalEnergy", temperature, pressure);
-            return RawComponent::gasInternalEnergy(temperature, pressure);
-        }
+        Scalar result = 
+            gasEnthalpy(temperature, pressure) - pressure/gasDensity(temperature, pressure);
         return result;
     }
 
     /*!
-     * \brief Specific enthalpy of the liquid \f$\mathrm{[J/kg]}\f$.
+     * \brief Specific internal energy of the liquid \f$\mathrm{[J/kg]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     {
-        Scalar result = interpolateLiquidTP_(liquidInternalEnergy_,
-                                             temperature,
-                                             pressure);
-        if (std::isnan(result)) {
-            printWarning_("liquidInternalEnergy", temperature, pressure);
-            return RawComponent::liquidInternalEnergy(temperature, pressure);
-        }
+        Scalar result = 
+            liquidEnthalpy(temperature, pressure) - pressure/liquidDensity(temperature, pressure);
         return result;
     }
-
 
     /*!
      * \brief The pressure of gas in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
@@ -471,15 +454,15 @@ private:
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
 
-        unsigned iT = (unsigned) alphaT;
+        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
         Scalar alphaP1 = pressLiquidIdx_(p, iT);
         Scalar alphaP2 = pressLiquidIdx_(p, iT + 1);
 
-        unsigned iP1 = std::min(nPress_ - 2, (unsigned) alphaP1);
+        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP1));
+        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP2));
         alphaP1 -= iP1;
-        unsigned iP2 = std::min(nPress_ - 2, (unsigned) alphaP2);
         alphaP2 -= iP2;
 
         return
@@ -499,15 +482,14 @@ private:
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
 
-        unsigned iT = (unsigned) alphaT;
+        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
         Scalar alphaP1 = pressGasIdx_(p, iT);
         Scalar alphaP2 = pressGasIdx_(p, iT + 1);
-
-        unsigned iP1 = std::min(nPress_ - 2, (unsigned) alphaP1);
+        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP1));
+        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP2));
         alphaP1 -= iP1;
-        unsigned iP2 = std::min(nPress_ - 2, (unsigned) alphaP2);
         alphaP2 -= iP2;
 
         return
@@ -591,8 +573,9 @@ private:
     // returns the index of an entry in a temperature field
     static Scalar pressGasIdx_(Scalar pressure, unsigned tempIdx)
     {
-        Scalar pressMax = maxGasPressure_(tempIdx);
-        return (nPress_ - 1)*(pressure - pressMin_)/(pressMax - pressMin_);
+        Scalar pgMin = minGasPressure_(tempIdx);
+        Scalar pgMax = maxGasPressure_(tempIdx);
+        return (nPress_ - 1)*(pressure - pgMin)/(pgMax - pgMin);
     }
 
     // returns the index of an entry in a density field
@@ -674,9 +657,6 @@ private:
     static Scalar *gasEnthalpy_;
     static Scalar *liquidEnthalpy_;
 
-    static Scalar *gasInternalEnergy_;
-    static Scalar *liquidInternalEnergy_;
-
     static Scalar *gasDensity_;
     static Scalar *liquidDensity_;
 
@@ -724,10 +704,6 @@ template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasEnthalpy_;
 template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidEnthalpy_;
-template <class Scalar, class RawComponent, bool verbose>
-Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasInternalEnergy_;
-template <class Scalar, class RawComponent, bool verbose>
-Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidInternalEnergy_;
 template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasDensity_;
 template <class Scalar, class RawComponent, bool verbose>
