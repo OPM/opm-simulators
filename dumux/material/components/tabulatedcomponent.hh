@@ -100,7 +100,7 @@ public:
         assert(std::numeric_limits<Scalar>::has_quiet_NaN);
         Scalar NaN = std::numeric_limits<Scalar>::quiet_NaN();
 
-        // fill the arrays
+        // fill the temperature-pressure arrays
         for (unsigned iT = 0; iT < nTemp_; ++ iT) {
             Scalar temperature = iT * (tempMax_ - tempMin_)/(nTemp_ - 1) + tempMin_;
 
@@ -126,26 +126,6 @@ public:
                 catch (NumericalProblem) { gasViscosity_[i] = NaN; };
             };
 
-            // calculate the minimum and maximum values for the gas
-            // densities
-            minGasDensity__[iT] = RawComponent::gasDensity(temperature, pgMin);
-            maxGasDensity__[iT] = RawComponent::gasDensity(temperature, pgMax);
-
-            // fill the temperature, density gas arrays
-            for (unsigned iRho = 0; iRho < nDensity_; ++ iRho) {
-                Scalar density =
-                    iRho * (maxGasDensity__[iT] - minGasDensity__[iT])
-                    /
-                    (nDensity_ - 1)
-                    +
-                    minGasDensity__[iT];
-
-                unsigned i = iT + iRho*nTemp_;
-
-                try { gasPressure_[i] = RawComponent::gasPressure(temperature, density); }
-                catch (NumericalProblem) { gasPressure_[i] = NaN; };
-            };
-
             Scalar plMin = minLiquidPressure_(iT);
             Scalar plMax = maxLiquidPressure_(iT);
             for (unsigned iP = 0; iP < nPress_; ++ iP) {
@@ -162,18 +142,47 @@ public:
                 try { liquidViscosity_[i] = RawComponent::liquidViscosity(temperature, pressure); }
                 catch (NumericalProblem) { liquidViscosity_[i] = NaN; };
             }
+        }
+
+        // fill the temperature-density arrays
+        for (unsigned iT = 0; iT < nTemp_; ++ iT) {
+            Scalar temperature = iT * (tempMax_ - tempMin_)/(nTemp_ - 1) + tempMin_;
+
+            // calculate the minimum and maximum values for the gas
+            // densities
+            minGasDensity__[iT] = RawComponent::gasDensity(temperature, minGasPressure_(iT));
+            if (iT < nTemp_ - 1)
+                maxGasDensity__[iT] = RawComponent::gasDensity(temperature, maxGasPressure_(iT + 1));
+            else
+                maxGasDensity__[iT] = RawComponent::gasDensity(temperature, maxGasPressure_(iT));
+
+            // fill the temperature, density gas arrays
+            for (unsigned iRho = 0; iRho < nDensity_; ++ iRho) {
+                Scalar density =
+                    Scalar(iRho)/(nDensity_ - 1) * 
+                    (maxGasDensity__[iT] - minGasDensity__[iT])
+                    +
+                    minGasDensity__[iT];
+
+                unsigned i = iT + iRho*nTemp_;
+
+                try { gasPressure_[i] = RawComponent::gasPressure(temperature, density); }
+                catch (NumericalProblem) { gasPressure_[i] = NaN; };
+            };
 
             // calculate the minimum and maximum values for the liquid
             // densities
-            minLiquidDensity__[iT] = RawComponent::liquidDensity(temperature, plMin);
-            maxLiquidDensity__[iT] = RawComponent::liquidDensity(temperature, plMax);
+            minLiquidDensity__[iT] = RawComponent::liquidDensity(temperature, minLiquidPressure_(iT));
+            if (iT < nTemp_ - 1)
+                maxLiquidDensity__[iT] = RawComponent::liquidDensity(temperature, maxLiquidPressure_(iT + 1));
+            else
+                maxLiquidDensity__[iT] = RawComponent::liquidDensity(temperature, maxLiquidPressure_(iT));
 
             // fill the temperature, density liquid arrays
             for (unsigned iRho = 0; iRho < nDensity_; ++ iRho) {
                 Scalar density =
-                    iRho * (maxLiquidDensity__[iT] - minLiquidDensity__[iT])
-                    /
-                    (nDensity_ - 1)
+                    Scalar(iRho)/(nDensity_ - 1) * 
+                    (maxLiquidDensity__[iT] - minLiquidDensity__[iT])
                     +
                     minLiquidDensity__[iT];
 
@@ -306,7 +315,7 @@ public:
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
-        Scalar result = interpolateGasTRho_(liquidPressure_,
+        Scalar result = interpolateGasTRho_(gasPressure_,
                                             temperature,
                                             density);
         if (std::isnan(result)) {
@@ -454,14 +463,14 @@ private:
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
 
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        unsigned iT = std::max<long long>(0, std::min<long long>(nTemp_ - 2, (long long) alphaT));
         alphaT -= iT;
 
         Scalar alphaP1 = pressLiquidIdx_(p, iT);
         Scalar alphaP2 = pressLiquidIdx_(p, iT + 1);
 
-        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP1));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP2));
+        unsigned iP1 = std::max<long long>(0, std::min<long long>(nPress_ - 2, (long long) alphaP1));
+        unsigned iP2 = std::max<long long>(0, std::min<long long>(nPress_ - 2, (long long) alphaP2));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -482,13 +491,13 @@ private:
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
 
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        unsigned iT = std::max<long long>(0, std::min<long long>(nTemp_ - 2, (long long) alphaT));
         alphaT -= iT;
 
         Scalar alphaP1 = pressGasIdx_(p, iT);
         Scalar alphaP2 = pressGasIdx_(p, iT + 1);
-        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP1));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP2));
+        unsigned iP1 = std::max<long long>(0, std::min<long long>(nPress_ - 2, (long long) alphaP1));
+        unsigned iP2 = std::max<long long>(0, std::min<long long>(nPress_ - 2, (long long) alphaP2));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -504,20 +513,14 @@ private:
     static Scalar interpolateGasTRho_(const Scalar *values, Scalar T, Scalar rho)
     {
         Scalar alphaT = tempIdx_(T);
-        if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            // std::cerr << __LINE__ << " T: " << T << "\n";
-            return std::numeric_limits<Scalar>::quiet_NaN();
-        }
-
-        unsigned iT = (unsigned) alphaT;
+        unsigned iT = std::max<long long>(0, std::min<long long>(nTemp_ - 2, (long long) alphaT));
         alphaT -= iT;
 
         Scalar alphaP1 = densityGasIdx_(rho, iT);
         Scalar alphaP2 = densityGasIdx_(rho, iT + 1);
-
-        unsigned iP1 = std::min(nDensity_ - 2, (unsigned) alphaP1);
+        unsigned iP1 = std::max<long long>(0, std::min<long long>(nDensity_ - 2, (long long) alphaP1));
+        unsigned iP2 = std::max<long long>(0, std::min<long long>(nDensity_ - 2, (long long) alphaP2));
         alphaP1 -= iP1;
-        unsigned iP2 = std::min(nDensity_ - 2, (unsigned) alphaP2);
         alphaP2 -= iP2;
 
         return
@@ -532,20 +535,14 @@ private:
     static Scalar interpolateLiquidTRho_(const Scalar *values, Scalar T, Scalar rho)
     {
         Scalar alphaT = tempIdx_(T);
-        if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            // std::cerr << __LINE__ << " T: " << T << "\n";
-            return std::numeric_limits<Scalar>::quiet_NaN();
-        }
-
-        unsigned iT = (unsigned) alphaT;
+        unsigned iT = std::max<long long>(0, std::min<long long>(nTemp_ - 2, (long long) alphaT));
         alphaT -= iT;
 
         Scalar alphaP1 = densityLiquidIdx_(rho, iT);
         Scalar alphaP2 = densityLiquidIdx_(rho, iT + 1);
-
-        unsigned iP1 = std::min(nDensity_ - 2, (unsigned) alphaP1);
+        unsigned iP1 = std::max<long long>(0, std::min<long long>(nDensity_ - 2, (long long) alphaP1));
+        unsigned iP2 = std::max<long long>(0, std::min<long long>(nDensity_ - 2, (long long) alphaP2));
         alphaP1 -= iP1;
-        unsigned iP2 = std::min(nDensity_ - 2, (unsigned) alphaP2);
         alphaP2 -= iP2;
 
         return
@@ -583,7 +580,7 @@ private:
     {
         Scalar densityMin = minLiquidDensity_(tempIdx);
         Scalar densityMax = maxLiquidDensity_(tempIdx);
-        return (nDensity_ - 1)*(density - densityMin)/(densityMax - densityMin);
+        return (nDensity_ - 1) * (density - densityMin)/(densityMax - densityMin);
     }
 
     // returns the index of an entry in a density field
@@ -591,7 +588,7 @@ private:
     {
         Scalar densityMin = minGasDensity_(tempIdx);
         Scalar densityMax = maxGasDensity_(tempIdx);
-        return (nDensity_ - 1)*(density - densityMin)/(densityMax - densityMin);
+        return (nDensity_ - 1) * (density - densityMin)/(densityMax - densityMin);
     }
 
     // returns the minimum tabulized liquid pressure at a given

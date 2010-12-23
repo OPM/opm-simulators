@@ -27,12 +27,15 @@
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 
+bool success;
+
 template <class Scalar>
-void isSame(Scalar v, Scalar vRef, Scalar tol=5e-4)
+void isSame(const char *str, Scalar v, Scalar vRef, Scalar tol=5e-4)
 {
     if (std::abs( (v - vRef)/vRef ) > tol) {
-        std::cout << "\nerror: " << (v - vRef)/vRef << "\n";
-        exit(1);
+        std::cout << "error for \"" << str << "\": "  << (v - vRef)/vRef*100 << "% difference\n";
+        success = false;
+        //exit(1);
     }
 }
 
@@ -48,14 +51,14 @@ int main()
 
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);
-    int nPress = 600;
+    int nPress = 200;
     
     std::cout << "Creating tabulation with " << nTemp*nPress << " entries per quantity\n";
     TabulatedH2O::init(tempMin, tempMax, nTemp,
                        pMin, pMax, nPress);
     
     std::cout << "Checking tabulation\n";
-
+    success = true;
     int m = nTemp*3;
     int n = nPress*3;   
     for (int i = 0; i < m; ++i) {
@@ -66,7 +69,8 @@ int main()
             std::cout.flush();
         }
         
-        isSame(TabulatedH2O::vaporPressure(T), 
+        isSame("vaporPressure",
+               TabulatedH2O::vaporPressure(T), 
                IapwsH2O::vaporPressure(T), 
                1e-3);
         for (int j = 0; j < n; ++j) {
@@ -75,23 +79,34 @@ int main()
                 Scalar tol = 5e-4;
                 if (p > IapwsH2O::vaporPressure(T))
                     tol = 5e-2;
-                isSame(TabulatedH2O::gasEnthalpy(T,p), IapwsH2O::gasEnthalpy(T,p), tol);
-                isSame(TabulatedH2O::gasInternalEnergy(T,p), IapwsH2O::gasInternalEnergy(T,p), tol);
-                isSame(TabulatedH2O::gasDensity(T,p), IapwsH2O::gasDensity(T,p), tol);
-                isSame(TabulatedH2O::gasViscosity(T,p), IapwsH2O::gasViscosity(T,p), tol);
+                Scalar rho = IapwsH2O::gasDensity(T,p);
+                //std::cerr << T << " " << p << " " << IapwsH2O::gasPressure(T,rho) << " " << TabulatedH2O::gasPressure(T,rho) << "\n";
+                isSame("Iapws::gasPressure", IapwsH2O::gasPressure(T,rho), p, 1e-6);
+                isSame("gasPressure", TabulatedH2O::gasPressure(T,rho), p, 2e-2);
+                isSame("gasEnthalpy", TabulatedH2O::gasEnthalpy(T,p), IapwsH2O::gasEnthalpy(T,p), tol);
+                isSame("gasInternalEnergy", TabulatedH2O::gasInternalEnergy(T,p), IapwsH2O::gasInternalEnergy(T,p), tol);
+                isSame("gasDensity", TabulatedH2O::gasDensity(T,p), rho, tol);
+                isSame("gasViscosity", TabulatedH2O::gasViscosity(T,p), IapwsH2O::gasViscosity(T,p), tol);
             }
             
             if (p > IapwsH2O::vaporPressure(T) / 1.03) {
                 Scalar tol = 5e-4;
                 if (p < IapwsH2O::vaporPressure(T))
                     tol = 5e-2;
-                isSame(TabulatedH2O::liquidEnthalpy(T,p), IapwsH2O::liquidEnthalpy(T,p), tol);
-                isSame(TabulatedH2O::liquidInternalEnergy(T,p), IapwsH2O::liquidInternalEnergy(T,p), tol);
-                isSame(TabulatedH2O::liquidDensity(T,p), IapwsH2O::liquidDensity(T,p), tol);
-                isSame(TabulatedH2O::liquidViscosity(T,p), IapwsH2O::liquidViscosity(T,p), tol);
+                Scalar rho = IapwsH2O::liquidDensity(T,p);
+                //std::cerr << T << " " << p << " " << IapwsH2O::liquidPressure(T,rho) << " " << TabulatedH2O::liquidPressure(T,rho) << "\n";
+                isSame("Iapws::gasPressure", IapwsH2O::liquidPressure(T,rho), p, 1e-6);
+                isSame("liquidPressure", TabulatedH2O::liquidPressure(T,rho), p, 2e-2);
+                isSame("liquidEnthalpy", TabulatedH2O::liquidEnthalpy(T,p), IapwsH2O::liquidEnthalpy(T,p), tol);
+                isSame("liquidInternalEnergy", TabulatedH2O::liquidInternalEnergy(T,p), IapwsH2O::liquidInternalEnergy(T,p), tol);
+                isSame("liquidDensity", TabulatedH2O::liquidDensity(T,p), rho, tol);
+                isSame("liquidViscosity", TabulatedH2O::liquidViscosity(T,p), IapwsH2O::liquidViscosity(T,p), tol);
             }
         }
+        //std::cerr << "\n";
     }
-    std::cout << "\nsuccess\n";
+    
+    if (success)
+        std::cout << "\nsuccess\n";
     return 0;
 }
