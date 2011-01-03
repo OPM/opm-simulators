@@ -1,6 +1,7 @@
 \chapter{Tips \& Tricks}
+
 This chapter tries to be a useful collection of tips and tricks that can be handy when working with 
-\Dumux. One of the most prominent ideas for developing DUNE/\Dumux is that reinventing the wheel in terms of FEM-code should
+\Dumux. One of the most prominent ideas for developing \Dune / \Dumux is that reinventing the wheel in terms of FEM-code should
 be avoided.  We try to follow this idea also in the day-to-day work by stating the \emph{tell us dogma}: ``If you found something useful, 
 handy or for other reasons helping when working with \Dumux: put it into this chapter.'' (or at least write it to the mailing list \\ \verb+dumux@iws.uni-stuttgart.de+ so somebody else can). 
 \begin{itemize}
@@ -20,14 +21,14 @@ Everybody using the same profile has the advantage of  resulting in less conflic
 and/or advanced features (hereafter called ``stuff'') to the repository. But maybe you forgot to commit this one and tiny change in one file you forgot about. 
 This may result in \Dumux not compiling any more on another person's computer after updating . How to prevent this?
 
-Simply check out DUNE/\Dumux twice. How is this helping? Now you can work in one version and after commiting you can simply update the pristine version and see whether it still works there, too. 
+Simply check out \Dune / \Dumux twice. How is this helping? Now you can work in one version and after commiting you can simply update the pristine version and see whether it still works there, too. 
 This approach really helps keeping the bumps in the work-flow small.
 
-\item Using DUNE debug streams:
+\item Using \Dune debug streams:
 
-  DUNE provides a helpful feature, for keeping your debug-output organized. 
+  \Dune provides a helpful feature, for keeping your debug-output organized. 
   In stead of juggling with a bazillion \verb+std::cout<<+ statements or keeping some debug-precompiler statements organized (which are generally and strongly discouraged see \ref{guidelines} ) in order not to get 
-  flooded away by your output DUNE gives you a nice tool: so called debug streams. 
+  flooded away by your output \Dune gives you a nice tool: so called debug streams. 
 
   These are streams (like \verb+cout+) but they can be switched on and off for the whole project. 
   May be if you are really in the  dark you want to see all your debug information. Another time you may only want to be warned if something is going seriously wrong during a simulation. 
@@ -65,9 +66,9 @@ This can also be very useful, if you want to have information about where some w
 
 \item optim.opts / debug.opts
 
-As explained on page \pageref{buildIt} DUNE and \Dumux are built with the help of the \verb+dunecontrol+ buildsystem. 
+As explained on page \pageref{buildIt} \Dune and \Dumux are built with the help of the \verb+dunecontrol+ buildsystem. 
 A lot of options need to be specified for that, which is done in the \verb+debug.opts+ resp. \verb+optim.opts+ 
-(plus \verb+.suse11.2+ if applicable) in your \verb+dumux-devel+ directory. These two files differ in the way DUNE / \Dumux is compiled: either for debugging or for fast simulation. Switching between these two states is really 
+(plus \verb+.suse11.2+ if applicable) in your \verb+dumux-devel+ directory. These two files differ in the way \Dune / \Dumux is compiled: either for debugging or for fast simulation. Switching between these two states is really 
 worth it: speedup of factor $\approx 2$. 
 
 If you want your \Dumux fast than simply build dunecontrol with the \verb+optim.opts+. BUT: Programs that are compiled with optimization can hardly 
@@ -79,7 +80,7 @@ be debugged because the debugger gets confused. But the cool thing is, that you 
 \item add \verb+-g+ (debugging symbols)
 \item remove  \verb+-O3+ (third level optimization, i.e. do not care for anything but execution speed),  \verb+-march=native+ and \verb+-DNDEBUG+.
 \item build your application again. 
-\item as long as you only debug your application (and no DUNE stuff) this works, otherwise recompile with dunecontrol and \verb+debug.opts+
+\item as long as you only debug your application (and no \Dune stuff) this works, otherwise recompile with dunecontrol and \verb+debug.opts+
 \item compiling without optimization takes also shorter time
 \end{itemize}
 

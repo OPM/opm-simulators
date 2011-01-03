@@ -47,7 +47,7 @@ numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorial_decoupled.cc}
 \end{lst}
 
 First, from line \ref{tutorial-decoupled:include-begin} to line
-\ref{tutorial-decoupled:include-end} the Dune and \Dumux files containing
+\ref{tutorial-decoupled:include-end} the \Dune and \Dumux files containing
 essential functions and classes are included.
 
 At line \ref{tutorial-decoupled:set-type-tag} the type tag of the
@@ -59,7 +59,7 @@ single type tag. Retrieving them is done between line
 property system, see section \ref{sec:propertysystem}.
 
 The first thing which should be done at run time is to initialize the
-message passing interface using DUNE's \texttt{MPIHelper} class. Line
+message passing interface using \Dune's \texttt{MPIHelper} class. Line
 \ref{tutorial-decoupled:init-mpi} line is essential if the simulation is
 intended to be run on more than one processor at the same time. Next,
 the command line arguments are parsed starting at line
@@ -103,7 +103,7 @@ is chosen as discretization scheme (defined via the include in line
 \ref{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
 a problem class is attached to the new type tag, while the grid which
 is going to be used is defined on line \ref{tutorial-decoupled:set-grid-type} --
-in this case an \texttt{SGrid} is created.  Since in Dune, there's no uniform
+in this case an \texttt{SGrid} is created.  Since in \Dune, there's no uniform
 mechanism to allocate grids, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that: From line 
 \ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end}, 
@@ -112,7 +112,7 @@ Type \texttt{Dune::FieldVector} define the lower left corner of the domain
 (\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number 
 of cells in $x$ and $y$ direction (\texttt{N}). The grid of type 
 \texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. 
-For more information about the dune grid interface, the different grid types 
+For more information about the \Dune grid interface, the different grid types 
 that are supported and the generation of different grids it is referred to 
 the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}. 
 

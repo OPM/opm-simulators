@@ -19,9 +19,8 @@ Each \Dune module is associated with a directory name in the folder {\Dune}-ROOT
 The gnu toolchain of \texttt{g++}  and related gnu variants of developer tools like \texttt{libtool}, \texttt{make} and
 and \texttt{automake} must be available in a recent version. 
 The \Dumux property system, which is used in most of the models, makes use of \texttt{libboost}. 
-It is thus necessary to install the developer version of \texttt{boost}. 
+It is thus necessary to install a  \texttt{boost} version $\geqslant 1.33.1$. 
 The building of the documentation requires \LaTeX\ and auxiliary tools like \texttt{dvipdf} and \texttt{bibtex}. 
-Additionally, the program \texttt{convert} from the package ImageMagick is needed to build the handbook.  
 If you use the configuration switch \texttt{--enable-doxygen} in order to generate the doxygen files (documentation generator) you will also need \texttt{doxygen}.
 
 Depending on the usage of external libraries the required software packages may vary. 
@@ -33,7 +32,7 @@ They can be obtained as so-called tarballs, i.e. \Dumux and \Dune code files of 
 The shell command \texttt{tar} can be used to extract them on your file system. This is explained in the next paragraph. 
 
 \paragraph{Obtaining the software by installing tarballs}
-Download the tarballs from the website. You can install the obtained tarballs as follows: Create a {\Dune}-Root-directory, which we call here DUMUX. 
+Download the tarballs from the respective websites. You can install the obtained tarballs as follows: Create a {\Dune}-ROOT-directory, which we call here DUMUX. 
 For the installation in the shell, type the following commands: 
 \begin{itemize}
 \item \texttt{mkdir DUMUX}
@@ -77,7 +76,7 @@ and work yourself through that tutorial in order to get an understanding of the 
 
 \paragraph{Checkout of \Dumux}
 
-In order to obtain an anonymous read-only copy of the stable part of \Dumux from the repository, the most simple way is to type
+In order to obtain an anonymous read-only copy of the \emph{stable} part of \Dumux from the repository, the most simple way is to type
 \begin{itemize}
 \item \texttt{svn checkout --username=anonymous --password=''\\
     \hspace{4cm}  svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
@@ -97,7 +96,7 @@ You can omit the username option, if your username for the repository access is 
 Please choose either not to store the password or to store it by subversion in a secure way (check the documentation of subversion for that). 
 A leaked out password can be used by evil persons to vandalize a software repository.
 
-When using subversion it is possible, provided that to you are granted developer and have write permissions to repositories, to feed back your own code or code modifications to the software repositories. 
+When using subversion it is possible, provided that to you are granted developer access and have write permissions to repositories, to feed back your own code or code modifications to the software repositories. 
 Moreover, with direct access to the repositories it is easier to keep up with code changes, to receive important bug fixes and to keep up with general developments of code.
 
 \paragraph{External libraries and modules}
@@ -156,7 +155,7 @@ It is also reported that \Dune was successfully build with the Intel C++ compile
 \paragraph{Hint for IWS Users} Users from the Institute of Hydraulic Engineering, University of Stuttgart,
 can also checkout a svn repository with several external libraries: \\
 
-\texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}.\\
+\texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}\\
 
 This directory \texttt{external} contains a script to install external libraries, such as 
 \texttt{alberta}, \texttt{alu}, \texttt{ug}. It also contains METIS and the BLAS version of libGOTO2: 
@@ -174,7 +173,7 @@ But a \Dune build still needs to know where they are. You have to refer to them 
 
 \paragraph{Build \Dune and \Dumux}
 \label{buildIt}
-To compile \Dumux without additional options file, type in the {\Dune}-Root-directory (called \texttt{DUMUX} before):
+To compile \Dumux without additional options file, type in the {\Dune}-ROOT-directory (called \texttt{DUMUX} before):
 \begin{center}
  \texttt{./dune-common/bin/dunecontrol all}
 \end{center}
