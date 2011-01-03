@@ -253,11 +253,11 @@ public:
     {
         return 1;
     }
-    //! Value for pressure neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$.
+    //! Value for neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$.
     /*! In case of a neumann boundary condition, the flux of matter
      *  is returned as a vector.
      */
-    std::vector<Scalar> neumannPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:neumannPress}@*/
+    std::vector<Scalar> neumann(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:neumann}@*/
     {
         std::vector<Scalar> neumannFlux(2,0.0);
         if (globalPos[0] > this->bboxMax()[0] - eps_)
@@ -265,14 +265,6 @@ public:
             neumannFlux[nPhaseIdx] = 3e-2;
         }
         return neumannFlux;
-    }
-    //! Value for transport neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$.
-    /*! In case of a neumann boundary condition for the transport equation
-     *  the flux of matter for the primary variable is returned as a scalar.
-     */
-    Scalar neumannSat(const GlobalPosition& globalPos, const Intersection& intersection, Scalar factor) const /*@\label{tutorial-decoupled:neumannSat}@*/
-    {
-        return 0;
     }
     //! Saturation initial condition (dimensionless)
     /*! The problem is initialized with the following saturation.
