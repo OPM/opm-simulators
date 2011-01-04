@@ -1,6 +1,7 @@
 # $id: $
 
 if BUILD_HANDBOOK
+if BUILD_DOCS
 
 #EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 
@@ -11,10 +12,8 @@ MAINDOCS = dumux-handbook.dvi dumux-handbook.pdf dumux-handbook.ps
 EXTRA_DIST = dumux-handbook.pdf 
 #Makefile.dist.in Makefile.dist.am
 
-if BUILD_DOCS
 if CONVERT
  DOCS = $(HTDOCS) $(MAINDOCS) $(WMLDOCS)
-endif
 endif
 
 
@@ -53,4 +52,5 @@ EXTRA_TEXINPUTS=$(top_srcdir)
 include $(top_srcdir)/am/global-rules
 include $(top_srcdir)/am/latex
 
+endif
 endif
