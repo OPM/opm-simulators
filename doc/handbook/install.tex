@@ -16,10 +16,9 @@ As in a \Dune installation, all \Dune modules including \Dumux should be extract
 Each \Dune module is associated with a directory name in the folder {\Dune}-ROOT. For convenience, this directory name is  also used as an alias for the module name, a practice we will follow here, too. After installing source code for all required \Dune modules including the \Dumux parts, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the {\Dune}-Build-System. The {\Dune}-Build-System is essentially a front-end of the gnu tool \texttt{autoconf} which was specialized for the \Dune project.
 
 \paragraph{Basic prerequisites} \label{prerequisites}
-The gnu toolchain of \texttt{g++}  and related gnu variants of developer tools like \texttt{libtool}, \texttt{make} and
-and \texttt{automake} must be available in a recent version. 
+The gnu tool-chain of \texttt{g++}  and related gnu variants of autotools (ubuntu: autoconf, automake, libtool, build-essential) must be available in a recent version. 
 The \Dumux property system, which is used in most of the models, makes use of \texttt{libboost}. 
-It is thus necessary to install a  \texttt{boost} version $\geqslant 1.33.1$. 
+It is thus necessary to install a  \texttt{boost}  version $\geqslant 1.33.1$ (ubuntu: libboost*, libboost-dev). 
 The building of the documentation requires \LaTeX\ and auxiliary tools like \texttt{dvipdf} and \texttt{bibtex}. 
 If you use the configuration switch \texttt{--enable-doxygen} in order to generate the doxygen files (documentation generator) you will also need \texttt{doxygen}.
 
@@ -107,11 +106,11 @@ If you are going to use an external library check the information provided on th
 \begin{itemize}
 \item \textbf{UG}: UG is a toolbox for Unstructured Grids: As \Dumux, it is build by \texttt{autotools} and a C++-compiler. Additionally, the tools \texttt{lex}/\texttt{yacc} or the gnu-versions \texttt{flex}/\texttt{bison} are needed. 
 
-\item \textbf{Alberta}: Adaptive multiLevel finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A Fortran compiler like \texttt{gfortran} is required.
+\item \textbf{Alberta}: Adaptive multi Level finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A Fortran compiler like \texttt{gfortran} is required.
 
 \item \textbf{ALUGrid}: ALUGrid is build by a C++-compiler like \texttt{g++}. If you want to build a parallel version, you will need \texttt{MPI}. It was successfully run with \texttt{openmpi}. The parallel version needs also a graph partitioner, such as \texttt{METIS} or \texttt{PARTY}. It was run successfully in combination with \Dune using \texttt{METIS}.
 
-\item \textbf{PARDISO}: The package PARDISO is a thread-safe, high-performance, robust, memory efficient and easy to use software for solving large sparse symmetric and unsymmetric linear systems of equations on shared memory multiprocessors. The precompiled binary can be downloaded after personal registration from the PARDISO website (\texttt{\url{http://www.pardiso-project.org}}).
+\item \textbf{PARDISO}: The package PARDISO is a thread-safe, high-performance, robust, memory efficient and easy to use software for solving large sparse symmetric and asymmetric linear systems of equations on shared memory multiprocessors. The precompiled binary can be downloaded after personal registration from the PARDISO website (\texttt{\url{http://www.pardiso-project.org}}).
 
 \item \textbf{SuperLU}: SuperLU is a general purpose library for the direct solution of large, sparse, nonsymmetric systems of linear equations (\texttt{\url{http://crd.lbl.gov/~xiaoye/SuperLU}}).
 
@@ -125,7 +124,7 @@ The following are dependencies of some of the used libraries. You will need them
 
 \item \textbf{lex/yacc} or \textbf{flex/bison}: These are quite common developing tools, code generators for lexical analyzers and parsers. This is a prerequisite for UG.
 
-\item \textbf{boost}: The Boost-C++-Libraries. Install a developer version. The \Dumux property system and {\Dune}-Multidomaingrid make use of \texttt{libboost}.
+\item \textbf{boost}: The Boost-C++-Libraries. Install a  version $\geqslant 1.33.1$. The \Dumux property system and {\Dune}-Multidomaingrid make use of \texttt{libboost}.
 
 \item \textbf{BLAS}: Alberta makes use of BLAS. Thus install libGOTO, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that the installation scripts select the intended version of BLAS. 
 
@@ -136,9 +135,9 @@ the license is not open. For research and education it is possible to obtain a c
 A Fortran compiler like \texttt{gfortran} is needed to compile it.
 
 \item \textbf{make, autogen, automake, libtool}: You can make use of the gnu version of \texttt{make}. The other tools are also gnu building tools and they are required to build most of the \Dune and \Dumux code. 
-\texttt{autogen} and \texttt{automake} are referred to as \texttt{autools}. 
+\texttt{autogen} and \texttt{automake} are referred to as \texttt{autotools}. 
 
-\item \textbf{\LaTeX, convert, doxygen}: In order to build the \Dumux documentation these tools are needed. \texttt{convert} is a ImageMagicks image conversion tool. 
+\item \textbf{\LaTeX, doxygen}: In order to build the \Dumux documentation these tools are needed.  
 \LaTeX\ is a front-end to the \TeX\ font setting system. Install texlive for example. A great part of the code documentation is done inline using doxygen, which extracts the documentation and makes HTML or \LaTeX\ out of that.
 
 \item \textbf{Compilers}: We recommend to use the gnu compiler suite, i.e. \texttt{gcc}/\texttt{g++}/\texttt{gfortran} version 4.4 or 4.5.
