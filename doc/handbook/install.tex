@@ -124,8 +124,6 @@ The following are dependencies of some of the used libraries. You will need them
 
 \item \textbf{lex/yacc} or \textbf{flex/bison}: These are quite common developing tools, code generators for lexical analyzers and parsers. This is a prerequisite for UG.
 
-\item \textbf{boost}: The Boost-C++-Libraries. Install a  version $\geqslant 1.33.1$. The \Dumux property system and {\Dune}-Multidomaingrid make use of \texttt{libboost}.
-
 \item \textbf{BLAS}: Alberta makes use of BLAS. Thus install libGOTO, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that the installation scripts select the intended version of BLAS. 
 
 \item \textbf{METIS}: This is a dependency of ALUGrid. If you run it parallel this part is being used to partition your grid.
@@ -133,9 +131,6 @@ The following are dependencies of some of the used libraries. You will need them
 \item \textbf{libGOTO}: is an optimized version of BLAS. It is not always available for all architectures and 
 the license is not open. For research and education it is possible to obtain a copy without additional costs.
 A Fortran compiler like \texttt{gfortran} is needed to compile it.
-
-\item \textbf{make, autogen, automake, libtool}: You can make use of the gnu version of \texttt{make}. The other tools are also gnu building tools and they are required to build most of the \Dune and \Dumux code. 
-\texttt{autogen} and \texttt{automake} are referred to as \texttt{autotools}. 
 
 \item \textbf{\LaTeX, doxygen}: In order to build the \Dumux documentation these tools are needed.  
 \LaTeX\ is a front-end to the \TeX\ font setting system. Install texlive for example. A great part of the code documentation is done inline using doxygen, which extracts the documentation and makes HTML or \LaTeX\ out of that.
