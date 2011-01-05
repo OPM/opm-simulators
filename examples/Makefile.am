@@ -1,14 +1,7 @@
-# tests where program to build and program to run are equal
-NORMALTESTS = tutorial_decoupled tutorial_coupled
-
-EXTRA_DIST=results/*/*/*.vtu
-noinst_HEADERS= tutorialspatialparameters_decoupled.hh tutorialproblem_decoupled.hh tutorialspatialparameters_coupled.hh tutorialproblem_coupled.hh
-
-# list of tests to run
-#TESTS = $(NORMALTESTS)
-
 # programs just to build when "make check" is used
-check_PROGRAMS = $(NORMALTESTS)
+check_PROGRAMS = tutorial_decoupled tutorial_coupled
+
+noinst_HEADERS= tutorialspatialparameters_decoupled.hh tutorialproblem_decoupled.hh tutorialspatialparameters_coupled.hh tutorialproblem_coupled.hh
 
 tutorial_decoupleddir = $(datadir)/dumux/tutorial
 tutorial_decoupled_HEADERS = tutorialspatialparameters_decoupled.hh \
