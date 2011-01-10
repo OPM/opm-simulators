@@ -5,9 +5,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-Adaption of the BOX scheme to the one-\/phase two-\/component flow model. This model implements an one-\/phase flow of an incompressible fluid, that consists of two components, using a standard Darcy approach (neglecting gravitation) as the equation for the conservation of momentum: \[ v_{D} = - \frac{K}{\mu} \left(\text{grad} p - \varrho g \right) \]
+Adaption of the BOX scheme to the one-\/phase two-\/component flow model. This model implements an one-\/phase flow of an incompressible fluid, that consists of two components, using a standard Darcy approach as the equation for the conservation of momentum: \[ v_{D} = - \frac{K}{\mu} \left(\text{grad} p - \varrho g \right) \]
 
-By inserting this into the continuity equation, one gets \[ - \text{div} \left\{ \varrho \frac{K}{\mu} \left(\text{grad} p - \varrho g \right) \right\} = q \;, \]
+Gravity can be enabled or disabled via the Property system. By inserting this into the continuity equation, one gets \[ - \text{div} \left\{ \varrho \frac{K}{\mu} \left(\text{grad} p - \varrho g \right) \right\} = q \;, \]
 
 The transport of the components is described by the following equation: \[ \Phi \varrho \frac{ \partial x}{\partial t} - \text{div} \left( \varrho \frac{K x}{\mu} \left( \text{grad} p - \varrho g \right) + \varrho \tau \Phi D \text{grad} x \right) = q. \]
 
