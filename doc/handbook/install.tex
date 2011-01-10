@@ -169,7 +169,7 @@ But a \Dune build still needs to know where they are. You have to refer to them 
 \label{buildIt}
 To compile \Dumux without additional options file, type in the {\Dune}-ROOT-directory (called \texttt{DUMUX} before):
 \begin{center}
- \texttt{./dune-common/bin/dunecontrol all}
+ \texttt{./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all}
 \end{center}
 
 If you want to compile in the debugging mode, type in the folder \texttt{DUMUX}: 
@@ -181,7 +181,8 @@ Otherwise you can type
 \begin{center}
 \texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/optim.opts all}
 \end{center}
-in order to get an optimized compilation (better performance, but no possibility to use a debugger).
+in order to get an optimized compilation (better performance, but no possibility to use a debugger). The expression \verb+\$DUMUX\_ROOT+
+needs to be replaced by the path to the directory \texttt{dumux-devel} was checked out to. 
 
 This uses the \Dune build-system. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, 
 if you use a released version it is usually \texttt{dumux-VERSION}). 
