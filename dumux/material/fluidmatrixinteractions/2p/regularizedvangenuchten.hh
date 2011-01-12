@@ -182,7 +182,7 @@ public:
             return mHigh_(params);
         }
 
-        return VanGenuchten::dpC_dSw(params, Sw);
+        return VanGenuchten::dpC_dSw(params, Swe);
     }
 
     /*!
