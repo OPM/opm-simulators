@@ -223,7 +223,7 @@ public:
             Scalar m = BrooksCorey::dpC_dSw(params, 1.0);
             return 1/m;
         }
-        return BrooksCorey::dpC_dSw(params, pC);
+        return 1.0/BrooksCorey::dpC_dSw(params, Swe);
     }
 
     /*!
