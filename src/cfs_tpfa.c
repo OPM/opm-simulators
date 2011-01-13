@@ -675,6 +675,21 @@ compute_wflux(well_t       *W,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static int
+is_incompr(int nc, struct compr_quantities *cq)
+/* ---------------------------------------------------------------------- */
+{
+    int c, incompr;
+
+    for (c = 0, incompr = 1; (c < nc) && incompr; ++c) {
+        incompr = cq->totcompr[c] == 0.0;
+    }
+
+    return incompr;
+}
+
+
 
 /* ======================================================================
  * Public interface below separator.
@@ -749,6 +764,11 @@ cfs_tpfa_assemble(grid_t                  *G,
                                                 W, wctrl, WI, wdp, h);
     } else {
         well_is_neumann = 1;
+    }
+
+    if (res_is_neumann && well_is_neumann &&
+        is_incompr(G->number_of_cells, cq)) {
+        h->A->sa[0] *= 2;
     }
 }
 
