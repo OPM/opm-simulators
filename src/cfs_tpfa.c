@@ -750,10 +750,6 @@ cfs_tpfa_assemble(grid_t                  *G,
     } else {
         well_is_neumann = 1;
     }
-
-    if (res_is_neumann && well_is_neumann) {
-        h->A->sa[0] *= 2;
-    }
 }
 
 
