@@ -5,16 +5,26 @@ In this section about the installation of \Dumux it is assumed that you work on 
 Moreover, you should know,  if necessary, how to install new software packages or you should have a person aside which can give you assistance with the shell and the package installation. 
 Below, we list some basic prerequisites for running \Dune and \Dumux. 
 Please check this paragraph to evaluate whether it is possible for you to run \Dune and \Dumux. 
-Moreover, some optional libraries and modules are listed, which can be helpful for the work with \Dumux. 
+Moreover, some optional libraries and modules are listed, which can be helpful for the work with \Dumux. \\
 
 In a technical sense \Dumux is a module of \Dune. 
 The installation procedure of \Dumux is strongly related to that of \Dune. 
 Thus, for details of the installation please check also the {\Dune} website \cite{DUNE-HP}. 
-If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.
+If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.\\
 
 As in a \Dune installation, all \Dune modules including \Dumux should be extracted into a common directory. We refer to that directory for purpose of documentation abstactly as {\Dune}-ROOT direcory or shortly as {\Dune}-ROOT, but in real life the user is free to choose any valid directory name for his instance of {\Dune}-ROOT direcory.
 
-Each \Dune module is associated with a directory name in the folder {\Dune}-ROOT. For convenience, this directory name is  also used as an alias for the module name, a practice we will follow here, too. After installing source code for all required \Dune modules including the \Dumux parts, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the {\Dune}-Build-System. The {\Dune}-Build-System is essentially a front-end of the gnu tool \texttt{autoconf} which was specialized for the \Dune project.
+% subject to change
+Each \Dune module is associated with a directory name in the folder {\Dune}-ROOT. For convenience, this directory name is
+also used as an alias for the module name, a practice we will follow here, too.
+
+%But this convention is sometimes broken, e.g.
+%when you do the build out of tar-files. The associated directory name is not identical with module name but it is modulename
+%enhanced by a version suffix, e.g. version-number something like \texttt{dumux-2.0} which is also a valid directory name for modle  \Dune root for module \texttt{dumux} in version 2.0. 
+%To refer abstractly the directory name where the files of module named modulename are in we also use later on the term MODULENAME-ROOT, e.g. DUMUX-ROOT means just path to directory of module \texttt{dumux}.
+
+
+After installing source code for all required \Dune modules including the \Dumux parts, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the {\Dune}-Build-System. The {\Dune}-Build-System is essentially a front-end of the gnu tool \texttt{autoconf} which was specialized for the \Dune project.
 
 \paragraph{Basic prerequisites} \label{prerequisites}
 The gnu tool-chain of \texttt{g++}  and related gnu variants of autotools (ubuntu: autoconf, automake, libtool, build-essential) must be available in a recent version. 
@@ -26,19 +36,18 @@ If you use the configuration switch \texttt{--enable-doxygen} in order to genera
 Depending on the usage of external libraries the required software packages may vary. 
 Beside the section on external modules below it is a good idea to check the {\Dune}-Wiki \cite{DUNE-HP} for information about the external packages.
 
-\subsection{Obtaining \Dune and \Dumux}
+\subsection{Obtaining source code for \Dune and \Dumux}
 From version 2.0 of \Dune on, it was decided to stick to stable \Dune releases, comprising the core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} and the external \texttt{dune-pdelab}. Thus for a complete \Dumux installation these modules are required to be installed. Of course the external \texttt{dumux} from \Dumux website ist required too. Further modules can be requiered, if you are going to use more than basic features of \Dune or \Dumux, to these we only refer briefly in end of this chapter.
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} and the external dune module \texttt{dune-pdelab}. Thus for a complete \Dumux installation these modules are required to be installed. Of course the external dune module \texttt{dumux} from \Dumux website ist required too. Using further modules can be necessary, if you are going to use more than basic features of \Dune or \Dumux. To some of these we only refer briefly in end of this chapter.\\
 
 Two possibilities exist to get source code for \Dune and \Dumux.
 Firstly \Dune and \Dumux can obtained as tar-archive files by download from respective {\Dune} and {\Dumux} website. They then need to be extracted, as described in the next section.
-
 Secondly, described in the section next but one, is a method to obtain most recent source or even also every predecessors by direct access via internet to software repositories of software revision control system of the software developer. \Dune and \Dumux use for their software repositories \texttt{apache subversion} or more shortly \texttt{subversion} or \texttt{svn}.
 As a user does not always want the most recent version
 certain version tags (i.e. special names) and version numbers and even software branches are means of software revision control system to provide different versions of a software from a software repository.
 
 \paragraph{Obtaining the software by installing tar-files}
-The a bit old fashioned named tape-archive-file shortly named tarfile or tarball is a common file format for distributing collections of files contained in these archives.
+The a bit old fashioned named tape-archive-file shortly named tar-file or tarball is a common file format for distributing collections of files contained in these archives.
 This part of installation is done as follows: 
 Download the tarballs from the respective \Dune (version 2.0) and \Dumux websites to a certain path in your filesystem.
 Create the {\Dune}-ROOT directory, named here DUMUX, then extract content of tar-files by commandline program tar into it.
@@ -50,26 +59,28 @@ Above, except download, it can achieved by the following shell commands:
 \item \texttt{tar xzvf path\_to\_tarball\_of/dune-grid-2.0.tar.gz }
 \item \texttt{tar xzvf path\_to\_tarball\_of/dune-istl-2.0.tar.gz }
 \item \texttt{tar xzvf path\_to\_tarball\_of/dune-localfunctions-2.0.tar.gz }
-\item \texttt{tar xzvf path\_to\_tarball\_of/dumux.tar.gz}
+\item \texttt{tar xzvf path\_to\_tarball\_of/dumux-2.0.tar.gz}
 \end{itemize} 
 Optional:
 \begin{itemize}
 \item \texttt{tar xzvf path\_to\_tarball\_of/dune-grid-howto-2.0.tar.gz}
 \end{itemize} 
-However, the required \Dune-module \texttt{dune-pdelab} is not available as tarfile, thus you have to install from software repository by the second method.  Thus if svn command is available, it can done as follows: 
+However, the required \Dune-module \texttt{dune-pdelab} is not available as tar-file, thus you have to install from software repository by the second method.  Thus if svn command is available, it can done as follows: 
 \begin{itemize}
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab}
 \end{itemize} 
 
-\paragraph{Obtaining \Dune and \Dumux from the SVN repositories} 
+\paragraph{Obtaining \Dune and \Dumux from software repositories} 
+
+Using a software revision control system as subversion and its software repositories has beside it advantages for developer or developing groups as a tool for assisting them to keep the source code worked on in consistent fashion for an user, i.e. a member who is not in the developing group of a software project, of software also some advantages.
+In general With direct access to the software repositories it is easier to keep up with code changes, to receive important bug fixes and to keep up with general developments of code.
 
 To access apache subversion software repositories a certain program is needed which is referred here shortly as \texttt{subversion client} or \texttt{svn client}. We use in our description the svn client of the apache subversion software itself, which is a commandline (shell) tool, mostly named \texttt{svn}. 
 Apache subversion client is available for most Linux and UNIX distributions as software package by the distributor or can get installed by building it directly from source.
 
-In technical speach of apache subversion \'' checking out a certain software\'' version means nothing more then fetching 
-it from software repository and laying it out in the filesystem, additionally with software some files with metainformation regarding the software revision control itself are also laid out.
-
-(If you are a developer it is easily possible to do the opposite providing you have write access to software repository, i.e. uploading a modified version you created into software repository. This is named a check in, but this is not considered here.)
+In technical speach of apache subversion ``checking out a certain software" version means nothing more then fetching 
+it from software repository and laying it out in the filesystem, additionally with software some files with metainformation regarding the software revision control system itself are also laid out.
+For a developer in \Dumux project it is easily possible to do the opposite i.e. uploading a modified version he created into software repository. This is usually termed as ``software check in".
 
 The installation procedure is as follows:
 Create {\Dune}-ROOT directory, named here below DUMUX.
@@ -77,8 +88,7 @@ Then, enter the previously created directory and checkout the modules.
 As you see below the checkout uses two different servers for sources one for \Dune and one for \Dumux, also the 
 anonymous access to these repositories varies a little bit. 
 
-The checkout for \Dune should to be performed as described on the \Dune \cite{DUNE-HP}.
-It might happen that a path changes or something else.  As of time of writing this documentation the following worked: 
+The checkout for \Dune is as described on \Dune's website, \cite{DUNE-HP}.
 \begin{itemize}
 \item \texttt{mkdir DUMUX}
 \item \texttt{cd DUMUX}
@@ -89,37 +99,37 @@ It might happen that a path changes or something else.  As of time of writing th
 \item \texttt{svn checkout https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab}
 \end{itemize} 
 
-Additionally, we recommend for studying the \texttt{dune-grid} HOWTO to check it out by 
+The \texttt{dune-grid} HOWTO is a tutorial which aims to give an understanding of the \Dune grid interface, which can 
+give you an idea how abstractions in \Dune are done. \texttt{Dune-grid} HOWTO is not required by \Dumux, thus installing is optional. It is done by: 
 \begin{itemize}
 \item \texttt{svn checkout \\
       \hspace{4cm} https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto}
 \end{itemize}
-This tutorial aims to give an understanding of the \Dune grid interface. 
 
 %\paragraph{Checkout of \Dumux}
 
-In order to obtain an anonymous read-only copy of the \emph{stable} part of \Dumux from the repository, the most simple way is to type
+To obtain the needed \texttt{dumux} module, which is as mentioned in the above technical an external module of \Dune. You have to check it out as also described on \Dumux website. %, \cite{DUMUX-HP}
+Its filetree should laid out as for any other \Dune module directly into \Dune-ROOTs directory. This is done if you are in it and execute the following command within \Dune-ROOT.
+
 \begin{itemize}
 \item \texttt{svn checkout --username=anonymous --password=''\\
     \hspace{4cm}  svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
 \end{itemize}
 
-If you also want to commit new developments to the repositories, you can ask the \Dumux project leader to get either full developers access or access for certain parts of \Dumux. 
-The developer part \texttt{dumux-devel} is only available for people who belong to the \Dumux developer group and have non-anonymous access to the subversion repositories. 
-If you have developer rights the checkout looks as follows: 
+\paragraph{Hints for \Dumux-Developers}
+If you also want to check in your own \Dumux developments to \Dumux software repositories, you can apply for either full developers access or access for developer access on certain parts of \Dumux. Granted developer access means that you are allowed to check in own code to the software repository and that you can access the \texttt{dumux-devel} module which enhances \texttt{dumux} by staging code of developer group, which is unavailable for user not being member of the developer group.
+If you are member of developer group rights the checkout with developer access for \texttt{dumux} and \texttt{dumux-dev} is non-anonymously done with the commands below, for insert your username
+for accessing \Dumux software repository in place \texttt{yourusername} below.
 \begin{itemize}
  \item \texttt{svn checkout --username=yourusername \\ 
       \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
  \item \texttt{svn checkout --username=yourusername \\
       \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
 \end{itemize} 
-\texttt{dumux-devel} is based on the stable part of \texttt{dumux} and hence it has to be also checked out. 
-You can omit the username option, if your username for the repository access is identical to the one for your system account.
+\texttt{Dumux-devel} itself makes use of stable part \texttt{dumux} and hence it needs also being checked out. 
+You can omit in commands above the username option, if your username for the repository access is identical to the one for your system account.
 Please choose either not to store the password or to store it by subversion in a secure way (check the documentation of subversion for that). 
 A leaked out password can be used by evil persons to vandalize a software repository.
-
-When using subversion it is possible, provided that to you are granted developer access and have write permissions to repositories, to feed back your own code or code modifications to the software repositories. 
-Moreover, with direct access to the repositories it is easier to keep up with code changes, to receive important bug fixes and to keep up with general developments of code.
 
 \paragraph{External libraries and modules}
 
