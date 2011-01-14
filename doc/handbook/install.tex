@@ -10,16 +10,16 @@ Moreover, some optional libraries and modules are listed, which can be helpful f
 In a technical sense \Dumux is a module of \Dune. 
 The installation procedure of \Dumux is strongly related to that of \Dune. 
 Thus, for details of the installation please check also the {\Dune} website \cite{DUNE-HP}. 
-If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-HP}.\\
+If you are interested in more details of the build-system we refer to the {\Dune}-Build-System-Howto \cite{DUNE-BS}.\\
 
 As in a \Dune installation, all \Dune modules including \Dumux should be extracted into a common directory. We refer to that directory for purpose of documentation abstactly as {\Dune}-ROOT direcory or shortly as {\Dune}-ROOT, but in real life the user is free to choose any valid directory name for his instance of {\Dune}-ROOT direcory.
 
 % subject to change
-Each \Dune module is associated with a directory name in the folder {\Dune}-ROOT. For convenience, this directory name is
-also used as an alias for the module name, a practice we will follow here, too.
+Source code files for each \Dune module are contained in subdirectory in {\Dune}-ROOT which exactly is associated with module.
+We name that subdirectory of a certain module, ``modules root directory", or ``module-root-directory`, e.g. for module dune the name are  ``dunes root directory" rsp ``dune-root-directoray". These directory names can be choosen abitrary, in this manual they are the same as the module-name or the modulename extended by an version number suffix. The name of module is defined via the content of file \texttt{dune.module} in its root directory. Note that it also possible to have subdirectories in \Dune-Root which contain no module.
 
-%But this convention is sometimes broken, e.g.
-%when you do the build out of tar-files. The associated directory name is not identical with module name but it is modulename
+But this convention is sometimes broken, e.g.
+when you do the build out of tar-files. The associated directory name is not identical with module name but it is modulename
 %enhanced by a version suffix, e.g. version-number something like \texttt{dumux-2.0} which is also a valid directory name for modle  \Dune root for module \texttt{dumux} in version 2.0. 
 %To refer abstractly the directory name where the files of module named modulename are in we also use later on the term MODULENAME-ROOT, e.g. DUMUX-ROOT means just path to directory of module \texttt{dumux}.
 
@@ -34,7 +34,7 @@ The building of the documentation requires \LaTeX\ and auxiliary tools like \tex
 If you use the configuration switch \texttt{--enable-doxygen} in order to generate the doxygen files (documentation generator) you will also need \texttt{doxygen}.
 
 Depending on the usage of external libraries the required software packages may vary. 
-Beside the section on external modules below it is a good idea to check the {\Dune}-Wiki \cite{DUNE-HP} for information about the external packages.
+Beside the section on external modules below it is a good idea to check the {\Dune}-Wiki \cite{DUNE-WIKI} for information about the external packages.
 
 \subsection{Obtaining source code for \Dune and \Dumux}
 From version 2.0 of \Dune on, it was decided to stick to stable \Dune releases, comprising the core modules 
@@ -52,23 +52,28 @@ This part of installation is done as follows:
 Download the tarballs from the respective \Dune (version 2.0) and \Dumux websites to a certain path in your filesystem.
 Create the {\Dune}-ROOT directory, named here DUMUX, then extract content of tar-files by commandline program tar into it.
 Above, except download, it can achieved by the following shell commands:
-\begin{itemize}
-\item \texttt{mkdir DUMUX}
-\item \texttt{cd DUMUX}
-\item \texttt{tar xzvf path\_to\_tarball\_of/dune-common-2.0.tar.gz }
-\item \texttt{tar xzvf path\_to\_tarball\_of/dune-grid-2.0.tar.gz }
-\item \texttt{tar xzvf path\_to\_tarball\_of/dune-istl-2.0.tar.gz }
-\item \texttt{tar xzvf path\_to\_tarball\_of/dune-localfunctions-2.0.tar.gz }
-\item \texttt{tar xzvf path\_to\_tarball\_of/dumux-2.0.tar.gz}
-\end{itemize} 
+
+\begin{lstlisting}[style=Bash]
+$ mkdir DUMUX
+$ cd DUMUX
+$ tar xzvf path_to_tarball_of/dune-common-2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-grid-2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-istl-2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-localfunctions-2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dumux-2.0.tar.gz
+\end{lstlisting}
+
+To rephrase above remark about modules root directory, here dumux-root-directory name which came after extracting the tarfile is dumux-2.0.
+
 Optional:
-\begin{itemize}
-\item \texttt{tar xzvf path\_to\_tarball\_of/dune-grid-howto-2.0.tar.gz}
-\end{itemize} 
-However, the required \Dune-module \texttt{dune-pdelab} is not available as tar-file, thus you have to install from software repository by the second method.  Thus if svn command is available, it can done as follows: 
-\begin{itemize}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab}
-\end{itemize} 
+\begin{lstlisting}[style=Bash]
+$ tar xzvf path_to_tarball_of/dune-grid-howto-2.0.tar.gz
+\end{lstlisting}
+
+However, the required \Dune-module \texttt{dune-pdelab} is not available as tar-file, thus you have to install it from software repository by the second method.  Thus if svn command is available, it can done as follows: 
+\begin{lstlisting}[style=Bash]
+$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab
+\end{lstlisting}
 
 \paragraph{Obtaining \Dune and \Dumux from software repositories} 
 
@@ -88,44 +93,46 @@ Then, enter the previously created directory and checkout the modules.
 As you see below the checkout uses two different servers for sources one for \Dune and one for \Dumux, also the 
 anonymous access to these repositories varies a little bit. 
 
-The checkout for \Dune is as described on \Dune's website, \cite{DUNE-HP}.
-\begin{itemize}
-\item \texttt{mkdir DUMUX}
-\item \texttt{cd DUMUX}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-common/releases/2.0 dune-common}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-grid/releases/2.0 dune-grid}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-istl/releases/2.0 dune-istl}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-localfunctions/releases/2.0 dune-localfunctions}
-\item \texttt{svn checkout https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab}
-\end{itemize} 
+As described on \Dune's website, \cite{DUNE-DOWNLOAD-SVN}, we first do a checkout of some \Dune modules:
+
+\begin{lstlisting}[style=Bash]
+$ mkdir DUMUX}
+$ cd DUMUX}
+$ svn co https://svn.dune-project.org/svn/dune-common/releases/2.0 dune-common
+$ svn co https://svn.dune-project.org/svn/dune-grid/releases/2.0 dune-grid
+$ svn co https://svn.dune-project.org/svn/dune-istl/releases/2.0 dune-istl
+$ svn co https://svn.dune-project.org/svn/dune-localfunctions/releases/2.0 dune-localfunctions
+$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab
+\end{lstlisting}
 
 The \texttt{dune-grid} HOWTO is a tutorial which aims to give an understanding of the \Dune grid interface, which can 
 give you an idea how abstractions in \Dune are done. \texttt{Dune-grid} HOWTO is not required by \Dumux, thus installing is optional. It is done by: 
-\begin{itemize}
-\item \texttt{svn checkout \\
-      \hspace{4cm} https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto}
-\end{itemize}
+
+\begin{lstlisting}[style=Bash]
+$ svn co https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto
+\end{lstlisting}
 
 %\paragraph{Checkout of \Dumux}
 
 To obtain the needed \texttt{dumux} module, which is as mentioned in the above technical an external module of \Dune. You have to check it out as also described on \Dumux website. %, \cite{DUMUX-HP}
 Its filetree should laid out as for any other \Dune module directly into \Dune-ROOTs directory. This is done if you are in it and execute the following command within \Dune-ROOT.
 
-\begin{itemize}
-\item \texttt{svn checkout --username=anonymous --password=''\\
-    \hspace{4cm}  svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
-\end{itemize}
+\begin{lstlisting}[style=Bash]
+$ svn co --username=anonymous --password='' svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux
+\end{lstlisting}
 
 \paragraph{Hints for \Dumux-Developers}
 If you also want to check in your own \Dumux developments to \Dumux software repositories, you can apply for either full developers access or access for developer access on certain parts of \Dumux. Granted developer access means that you are allowed to check in own code to the software repository and that you can access the \texttt{dumux-devel} module which enhances \texttt{dumux} by staging code of developer group, which is unavailable for user not being member of the developer group.
-If you are member of developer group rights the checkout with developer access for \texttt{dumux} and \texttt{dumux-dev} is non-anonymously done with the commands below, for insert your username
-for accessing \Dumux software repository in place \texttt{yourusername} below.
-\begin{itemize}
- \item \texttt{svn checkout --username=yourusername \\ 
-      \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux}
- \item \texttt{svn checkout --username=yourusername \\
-      \hspace{4cm} svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel}
-\end{itemize} 
+If you are member of developer group rights the checkout with developer access for \texttt{dumux} and \texttt{dumux-dev} is non-anonymously done with the commands below, insert your username
+for accessing \Dumux software repository in place \texttt{joeuser} below.
+
+\begin{lstlisting}[style=Bash]
+$ svn co --username=joeuser svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux
+$ svn co --username=joeuser svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel
+\end{lstlisting}
+
+This time the name for dumux root directory is just as the name of the module ``dumux".
+
 \texttt{Dumux-devel} itself makes use of stable part \texttt{dumux} and hence it needs also being checked out. 
 You can omit in commands above the username option, if your username for the repository access is identical to the one for your system account.
 Please choose either not to store the password or to store it by subversion in a secure way (check the documentation of subversion for that). 
@@ -179,20 +186,22 @@ It is also reported that \Dune was successfully build with the Intel C++ compile
 % http://gmplib.org/
 \end{itemize}
 
-\paragraph{Hint for IWS Users} Users from the Institute of Hydraulic Engineering, University of Stuttgart,
+\paragraph{Hint for Users from IWS} Users from the Institute of Hydraulic Engineering, University of Stuttgart,
 can also checkout a svn repository with several external libraries: \\
 
-\texttt{svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external}\\
+\begin{lstlisting}[style=Bash]
+$ svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external
+\end{lstlisting}
 
 This directory \texttt{external} contains a script to install external libraries, such as 
 \texttt{alberta}, \texttt{alu}, \texttt{ug}. It also contains METIS and the BLAS version of libGOTO2: 
-\begin{center}
-\texttt{./installExternal.sh all}
-\end{center}
+\begin{lstlisting}[style=Bash]
+$ ./installExternal.sh all
+\end{lstlisting}
 it is also possible to install only certain parts of the external libraries:
-\begin{center}
-\texttt{./installExternal.sh alberta}
-\end{center}
+\begin{lstlisting}[style=Bash]
+$ ./installExternal.sh alberta
+\end{lstlisting}
 
 The libraries are then build within the external-directory and are not installed in a different place. 
 But a \Dune build still needs to know where they are. You have to refer to them as options for the \Dune build, for example in your options file \texttt{debug.opts}.
@@ -200,24 +209,35 @@ But a \Dune build still needs to know where they are. You have to refer to them 
 
 \paragraph{Build \Dune and \Dumux}
 \label{buildIt}
-To compile \Dumux without additional options file, type in the {\Dune}-ROOT-directory (called \texttt{DUMUX} before):
-\begin{center}
- \texttt{./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all}
-\end{center}
+Building of \Dune is done by \texttt{dunecontrol} as descibed in \Dune Installation Notes, \cite{DUNE-INST}, and in much more comprehensive form in \Dune Build System Howto, \cite{DUNE-BS}.
+If something fails with \texttt{dunecontrol} feel to report it to \Dune or \Dumux developer or mailing list, but also try to report also error details. People will likely help you.
 
-If you want to compile in the debugging mode, type in the folder \texttt{DUMUX}: 
-\begin{center}
-\texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/debug.opts all}
-\end{center}
 
-Otherwise you can type
-\begin{center}
-\texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/optim.opts all}
-\end{center}
-in order to get an optimized compilation (better performance, but no possibility to use a debugger). The expression \verb+\$DUMUX\_ROOT+
-needs to be replaced by the path to the directory \texttt{dumux-devel} was checked out to. 
+It is possible to compile \Dumux without nearly explicit options to the buildsystem but
+experience showed that the code quality through all parts of \Dune is not yet high enough to give the compiler full freedom for a certain kind optimizations. Thus this option \texttt{-fno-strict-aliasing} for the C++-compiler is still necessary, \cite{WIKIPED-ALIASING}, which is passed here as commandline argument to \texttt{dune-control}.
 
-This uses the \Dune build-system. If it does not work, please have a look at the file \texttt{INSTALL} in the \Dumux root directory (if you use SVN, this \texttt{\$DUMUX\_ROOT} is usually \texttt{dumux}, 
-if you use a released version it is usually \texttt{dumux-VERSION}). 
-You can also find more information in the \Dune Buildsystem HOWTO located at the \Dune web page, \cite{DUNE-HP}.  
-Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
+
+\begin{lstlisting}[style=Bash]
+$ ./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all
+\end{lstlisting}
+
+Too many options  can make life hard, thats why one usually uses optionfiles for dune-control and its subtools.
+Larger sets of options are kept in them. 
+If you are going to compile with options suited for code debugging with a debugger, the following
+can be a starting point:
+
+Insert below for \verb+$DUMUX_ROOT+ in shell-commandline just the name of dumux-root-directory, which is in case of installation from tarfiles dumux-2.0 or in case of installation from svn just \texttt{dumux} (or if one takes a version from developer-modulef available, \texttt{dumux-dev}.
+
+\begin{lstlisting}[style=Bash]
+$ ./dune-common/bin/dunecontrol --opts=$DUMUX_ROOT/debug.opts all
+\end{lstlisting}
+
+More optimized code, but which is typically not as useful for standard tasks in debugger can produced by 
+
+\begin{lstlisting}[style=Bash]
+$ ./dune-common/bin/dunecontrol --opts=$DUMUX_ROOT/optim.opts all
+\end{lstlisting}
+
+Sometimes it is necessary to have additional options which are specific to tools set of an operating system or just mirror your preferences, feel free to work with your own set of options which may evolve over time. Above option files are more to understand as examples as a starting setting up own customization than as something fixed to \Dumux.
+
+%Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
