@@ -382,17 +382,27 @@ sum_phase_contrib(grid_t       *G  ,
 /* ---------------------------------------------------------------------- */
 static void
 set_dynamic_grav(grid_t                  *G        ,
+                 flowbc_t                *bc       ,
                  const double            *trans    ,
                  const double            *gravcap_f,
                  struct compr_quantities *cq       ,
                  struct disc_data        *dd)
 /* ---------------------------------------------------------------------- */
 {
-    int f, p, i;
+    int f, p, i, c1, c2;
 
     for (f = i = 0; f < G->number_of_faces; f++) {
-        for (p = 0; p < cq->nphases; p++, i++) {
-            dd->Xf[i] = trans[f] * gravcap_f[i] * cq->phasemobf[i];
+        c1 = G->face_cells[2*f + 0];
+        c2 = G->face_cells[2*f + 1];
+
+        if (((c1 >= 0) && (c2 >= 0)) || (bc->type[f] == PRESSURE)) {
+            for (p = 0; p < cq->nphases; p++, i++) {
+                dd->Xf[i] = trans[f] * gravcap_f[i] * cq->phasemobf[i];
+            }
+        } else {
+            for (p = 0; p < cq->nphases; p++, i++) {
+                dd->Xf[i] = 0.0;
+            }
         }
     }
 }
@@ -417,6 +427,7 @@ compute_densrat_update(grid_t                  *G ,
 /* ---------------------------------------------------------------------- */
 static void
 compute_psys_contrib(grid_t                  *G,
+                     flowbc_t                *bc,
                      struct compr_quantities *cq,
                      double                   dt,
                      const double            *trans,
@@ -426,8 +437,9 @@ compute_psys_contrib(grid_t                  *G,
                      struct cfs_tpfa_data    *h)
 /* ---------------------------------------------------------------------- */
 {
-    int    c, nc, i;
+    int    c, nc, i, f;
     size_t nconn;
+    double s;
 
     nc    = G->number_of_cells;
     nconn = G->cell_facepos[nc];
@@ -441,14 +453,18 @@ compute_psys_contrib(grid_t                  *G,
            nconn * sizeof *h->pimpl->dd->ctrans);
 
     /* Compressible gravity contributions */
-    set_dynamic_grav(G, trans, gravcap_f, cq, h->pimpl->dd);
+    set_dynamic_grav(G, bc, trans, gravcap_f, cq, h->pimpl->dd);
     compute_densrat_update(G, cq, h->pimpl->dd,
                            h->pimpl->gravtrans_f);
 
     for (c = 0, i = 0; c < nc; c++) {
         for (; i < G->cell_facepos[c + 1]; i++) {
-            h->b[c] -= h->pimpl->dd->work[i];
+            f = G->cell_faces[i];
+            s = 1.0 - 2.0*(G->face_cells[2*f + 0] != c);
+
+            h->b[c] -= s * h->pimpl->dd->work[i];
         }
+
         h->b[c] += cq->voldiscr[c];
     }
 
@@ -754,7 +770,8 @@ cfs_tpfa_assemble(grid_t                  *G,
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
-    compute_psys_contrib(G, cq, dt, trans, gravcap_f, cpress0, porevol, h);
+    compute_psys_contrib(G, bc, cq, dt, trans, gravcap_f,
+                         cpress0, porevol, h);
 
     res_is_neumann = assemble_cell_contrib(G, bc, src, h);
 
