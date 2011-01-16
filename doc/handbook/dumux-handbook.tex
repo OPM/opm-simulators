@@ -11,20 +11,23 @@
   keywordstyle=\color{black}\bfseries, tabsize=4, stringstyle=\ttfamily,
   commentstyle=\it, extendedchars=true, escapeinside={/*@}{@*/}}
 
+% for listings of bash code in install.tex
 \definecolor{BashGrey}{rgb}{0.9,0.9,0.9}
 \lstdefinestyle{Bash}
  {language=Bash,
  backgroundcolor=\color{BashGrey},
- keywordstyle=\color{black}\bfseries,
- commentstyle=\color{black},
- stringstyle=\color{black}\ttfamily,
- showstringspaces=true,
- basicstyle=\small\color{black},
+ basicstyle=\ttfamily\small,
  numbers=none,
  captionpos=b,
  tabsize=4,
- breaklines=true
- }
+ breaklines=true,
+ breakatwhitespace=true,
+ frame=single,
+ rulecolor=\color{BashGrey},
+ framerule=1pt,
+ framesep=1pt,
+ rulesep=0pt
+}
 
 \usepackage{hyperref}
 \usepackage{psfrag}
