@@ -581,6 +581,7 @@ compute_fpress(grid_t       *G,
                int           np,
                const double *htrans,
                const double *pmobf,
+               const double *gravcap_f,
                const double *cpress,
                const double *fflux,
                double       *fpress)
@@ -629,12 +630,13 @@ compute_flux(grid_t       *G,
              int           np,
              const double *trans,
              const double *pmobf,
+             const double *gravcap_f,
              const double *cpress,
              double       *fflux)
 /* ---------------------------------------------------------------------- */
 {
     int    f, c1, c2, p;
-    double t, dp;
+    double t, dp, g;
 
     for (f = 0; f < G->number_of_faces; f++) {
         c1 = G->face_cells[2*f + 0];
@@ -645,26 +647,28 @@ compute_flux(grid_t       *G,
             continue;
         }
 
-        t = 0.0;
+        t = g = 0.0;
         for (p = 0; p < np; p++) {
             t += pmobf[f*np + p];
+            g += pmobf[f*np + p] * gravcap_f[f*np + p];
         }
-        t *= trans[f];
+        /* t *= trans[f]; */
 
         if ((c1 >= 0) && (c2 >= 0)) {
-            dp = cpress[c1] - cpress[c2];
+            dp  = cpress[c1] - cpress[c2];
         } else if (bc->type[f] == PRESSURE) {
             if (c1 < 0) {
                 dp = bc->bcval[f] - cpress[c2];
+                /* g  = -g; */
             } else {
                 dp = cpress[c1] - bc->bcval[f];
             }
         } else {
-            /* No BC -> no-flow (== zero pressure drop) */
-            dp = 0.0;
+            /* No BC -> no-flow (== pressure drop offsets gravity) */
+            dp = -g / t;
         }
 
-        fflux[f] = t * dp;
+        fflux[f] = trans[f] * (t*dp + g);
     }
 }
 
@@ -798,6 +802,7 @@ cfs_tpfa_press_flux(grid_t               *G,
                     int                   np,
                     const double         *trans,
                     const double         *pmobf,
+                    const double         *gravcap_f,
                     const double         *WI,
                     const double         *wdp,
                     struct cfs_tpfa_data *h,
@@ -810,7 +815,7 @@ cfs_tpfa_press_flux(grid_t               *G,
     /* Assign cell pressure directly from solution vector */
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
 
-    compute_flux(G, bc, np, trans , pmobf, cpress, fflux);
+    compute_flux(G, bc, np, trans, pmobf, gravcap_f, cpress, fflux);
 
     if ((W != NULL) && (WI != NULL) && (wdp != NULL)) {
         assert (wpress != NULL);
@@ -832,12 +837,14 @@ cfs_tpfa_fpress(grid_t       *G,
                 int           np,
                 const double *htrans,
                 const double *pmobf,
+                const double *gravcap_f,
                 const double *cpress,
                 const double *fflux,
                 double       *fpress)
 /* ---------------------------------------------------------------------- */
 {
-    compute_fpress(G, bc, np, htrans, pmobf, cpress, fflux, fpress);
+    compute_fpress(G, bc, np, htrans, pmobf, gravcap_f,
+                   cpress, fflux, fpress);
 }
 
 
