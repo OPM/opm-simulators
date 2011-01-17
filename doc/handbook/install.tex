@@ -25,34 +25,34 @@ module name or the module name extended by an version number suffix.
 The name of a \Dune module itself is always defined via the content of file \texttt{dune.module} in its own root
 directory, but this should not get changed by an user. The user is allowed to have own files and directories in \Dune-ROOT, which is not related to \Dune's need.
 
-After installing source code for all relevant \Dune modules including \Dumux, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the {\Dune} build system. The {\Dune} build system is a front-end suited to \Dune's needs to the gnu tool \texttt{autoconf}.
+After installing source code for all relevant \Dune modules including \Dumux, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the {\Dune} build system. The {\Dune} build system is a front-end suited to \Dune's needs to the GNU build system.
 
 \subsection{Prerequisites} \label{sec:prerequisites}
-The gnu tool-chain of \texttt{g++}  and related gnu variants of autotools
-(i.e. \texttt{autoconf}, \texttt{automake}, \texttt{libtool}) as well as gnus variant of \texttt{make}
-must be available in a recent version. E.g. for ubuntu Linux these are contained in
+The GNU tool chain of \texttt{g++}  and tools of GNU build system \cite{GNU-BS} also known as GNU autotools
+(i.e. \texttt{autoconf}, \texttt{automake}, \texttt{libtool}) as well as GNU's variant of \texttt{make}
+must be available in a recent version. E.g. for Ubuntu Linux these are contained in
 packages \texttt{autoconf}, \texttt{automake}, \texttt{libtool}
 and the C++ compiler \texttt{g++} and \texttt{make} are contained in \texttt{build-essential}.
-As of time of this writing \texttt{g++} of version $\geqslant$ 4.5.0, \texttt{automake} of version $\geqslant$ 1.11.1,
-\texttt{automake} of version $\geqslant$ 2.65,  \texttt{libtool} of version $\geqslant$ 2.2.6b
-and gnu \texttt{make} version $\geqslant$ 3.81 seemed to work for building \Dumux.\\
+At time of this writing it is expected that \texttt{g++} of version $\geqslant$ 4.4.1, \texttt{automake} of version $\geqslant$ 1.11,
+\texttt{automake} of version $\geqslant$ 2.65,  \texttt{libtool} of version $\geqslant$ 2.2.6
+and GNU \texttt{make} version $\geqslant$ 3.81 should do their job for building \Dumux.\\
 
-\Dumux makes use of library \texttt{boost} of version $\geqslant$ 1.33.1.
-It is thus necessary to install developer package of \texttt{boost}
-or sometimes named \texttt{libboost}, the matching ubuntu Linux package is \texttt{libboost-dev}. \\
+\Dumux makes use of library \texttt{boost} of version $\geqslant$ 1.33.1 but the external modules at times requiring a more recent version. 
+It is thus necessary to install an appropriate developer package of \texttt{boost}
+or sometimes named \texttt{libboost}, the matching Ubuntu Linux package is \texttt{libboost-dev}. \\
 
 The building of contained documentation like this handbook requires \LaTeX\  and auxiliary tools
 like \texttt{dvipdf} and \texttt{bibtex}. One usually chooses a \LaTeX\  distribution like \texttt{texlive} for doing that.
 It is possible to switch off building of documentation by \texttt{--disable-documentation} in building options, i.e. as switch to \texttt{CONFIGURE\_FLAGS}.
 Additional parts of documentation are contained in source code files as special formatted comments.
-For extracting them the program \texttt{doxygen} is needed we use here versions $\geqslant$ 1.7.2, see for this section \ref{sec:build-doxy-doc}.\\
+For extracting them might be done program \texttt{doxygen} (version $\geqslant$ 1.7.2 work). See for this optional step section \ref{sec:build-doxy-doc}.\\
 
 Depending whether you are going to use external libraries and modules for additional \Dune features 
 additional software packages  may required. Some hints on that are given in section \ref{sec:external-modules-libraries}.\\
 
-For code extraction out of tar-files gnus version of \texttt{tar} is used.
-For accessing software repositories we recommend Apache subversion command-line client \texttt{svn}
-contained in \texttt{apache subversion} of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}. 
+For code extraction out of tar-files GNU's version of \texttt{tar} is used.
+For accessing software repositories we recommend Apache Subversion command-line client \texttt{svn}
+contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}. 
 
 \subsection{Obtaining source code for \Dune and \Dumux}
 As written before \Dumux release 2.0 is based on \Dune release 2.0, comprising the core modules 
@@ -62,7 +62,7 @@ Of course the external dune module \texttt{dumux} from \Dumux website is require
 Use of optional further (external) \Dune modules  and/or external to \Dune libraries is possible and can provide additional features to the user. To some of these we refer briefly in section \ref{sec:external-modules-libraries}.\\
 
 Two possibilities exist to get source code for \Dune and \Dumux.
-Firstly \Dune and \Dumux can obtained as tar-archive files by download from respective {\Dune} and {\Dumux} website. They then need to be extracted, as described in the next section.
+Firstly \Dune and \Dumux can obtained as tar-files by download from respective {\Dune} and {\Dumux} website. They then need to be extracted, as described in the next section.
 Secondly, described in the section next but one, is a method to obtain most recent source or even also every predecessors by direct access via Internet to software repositories of software revision control system of the software developer. \Dune and \Dumux use for their software repositories \texttt{apache subversion} or more shortly \texttt{subversion} or \texttt{svn}.
 As a user does not always want the most recent version
 certain version tags (i.e. special names) and version numbers and even software branches are means of software revision control system to provide different versions of a software from a software repository.
@@ -99,13 +99,13 @@ $ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-
 \paragraph{Obtaining \Dune and \Dumux from software repositories} 
 
 Using a software revision control system as subversion and its software repositories has beside it advantages for developer or developing groups as a tool for assisting them to keep the source code worked on in consistent fashion for an user, i.e. a member who is not in the developing group of a software project, of software also some advantages.
-In general With direct access to the software repositories it is easier to keep up with code changes, to receive important bug fixes and to keep up with general developments of code.\\
+In general with direct access to the software repositories it is easier to keep up with code changes, as receive important bug fixes.\\
 
-To access Apache subversion software repositories a certain program is needed which is referred here shortly as \texttt{subversion client} or \texttt{svn client}. We use in our description the svn client of the apache subversion software itself, which is a command-line (shell) tool, mostly named \texttt{svn}. 
-Apache subversion client is available for most Linux and UNIX distributions as software package by the distributor or can get installed by building it directly from source.\\
+To access Apache Subversion software repositories a certain program is needed which is referred here shortly as \texttt{subversion client} or \texttt{svn client}. We use in our description the svn client of the Apache Subversion software itself, which is a command-line (shell) tool, mostly named \texttt{svn}. 
+Apache Subversion client is available for most Linux and UNIX distributions as software package by the distributor or can get installed by building it directly from source.\\
 
-In technical speech of Apache subversion ``checking out a certain software version" means nothing more then fetching 
-it from software repository and laying it out in the filesystem, additionally with software some files with meta information regarding the software revision control system itself are also laid out.
+In technical speech of Apache Subversion ``checking out a certain software version" means nothing more then fetching 
+it from software repository and laying it out in the filesystem, additionally with software some more files with information internal to the software revision control system itself, kept in directories named \texttt{.svn}, are also laid out.
 For a developer in \Dumux project it is easily possible to do the opposite i.e. uploading a modified version he created into software repository. This is usually termed as ``software check in".\\
 
 The installation procedure is as follows:
@@ -168,6 +168,7 @@ experience showed that the code quality through all parts of \Dune is not yet hi
 
 
 \begin{lstlisting}[style=Bash]
+$ # make sure you are in the directory DUNE-Root
 $ ./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all
 \end{lstlisting}
 
@@ -176,20 +177,24 @@ Larger sets of options are kept in them.
 If you are going to compile with options suited for code debugging with a debugger, the following
 can be a starting point:
 
-Insert below for \verb+$DUMUX_ROOT+ in shell-command-line just the name of dumux' (or dumux-devels) root directory, which is in case of installation from tar-files \texttt{dumux-2.0} or in case of installation from svn just \texttt{dumux} (or if one takes a version of option-file from module \texttt{dumux-devel} available only to members of \Dumux developers group, \texttt{dumux-devel}.
+Below in command-line make sure to insert the right name of dumux' (or dumux-devels) root directory, which is in case of installation from tar-files \texttt{dumux-2.0} or in case of installation from svn just \texttt{dumux}. For a developer it is also possible to take options file from \texttt{dumux-devel}.
 
 \begin{lstlisting}[style=Bash]
-$ ./dune-common/bin/dunecontrol --opts=$DUMUX_ROOT/debug.opts all
+$ # make sure you are in the directory DUNE-Root
+$ cp dumux/debug.opts my-debug.opts                  # create a personal version of debug opts my-debug.opts
+$ gedit my-debug.opts                  # optional editing options file and make there some choices,gedit stands here for some editor of your choice
+$ ./dune-common/bin/dunecontrol --opts=my-debug.opts all 
 \end{lstlisting}
 
 More optimized code, but which is typically not as useful for standard tasks in debugger can produced by 
 
 \begin{lstlisting}[style=Bash]
-$ ./dune-common/bin/dunecontrol --opts=$DUMUX_ROOT/optim.opts all
+$ cp dumux/optim.opts my-optim.opts 
+$ ./dune-common/bin/dunecontrol --opts=my-optim.opts all
 \end{lstlisting}
 
 Sometimes it is necessary to have additional options which are specific to tools set of an operating system or just mirror your preferences, feel free to work with your own set of options which may evolve over time. Above option files are more to understand as examples as a starting setting for own customization than as something fixed to \Dumux.
-It can be helpful to give your customized option file its own name, so one gets not confused with option files which came out of distribution and get possible updated through \texttt{subversion} later on.
+It can be helpful to give your customized option file its own name, so one gets not confused with option files which came out of distribution and get possible updated through \texttt{subversion} later on, as done above in the examples.
 
 \subsection{Building doxygen documentation} \label{sec:build-doxy-doc}
 
@@ -206,6 +211,13 @@ You then run within that directory the command \texttt{doxygen}. Point then your
 All here used \Dune-modules except \texttt{dune-grid-howto} so as well \texttt{dumux} contain some doxygen documentation.
 The external library UG has also a \texttt{doc/doxygen} directory for building its doxygen documentation.
 
+\begin{lstlisting}[style=Bash]
+$ # change before next command your directory to DUNE-Root
+$ cd dumux/doc/doxygen
+$ doxygen
+$ firefox html/index.html
+\end{lstlisting}
+
 \subsection{Building documentation of other \Dune modules}
 
 If the \texttt{--enable-documentation} switch is set to configure flags of \texttt{dunecontrol}, this means not necessarily that for any 
@@ -215,6 +227,7 @@ to guess the targets you can build.
 E.g. \texttt{dune-istl} you can build documentation \texttt{istl.pdf} by typing in if you where before in \Dune-Root:
 
 \begin{lstlisting}[style=Bash]
+$ # change before next command your directory to DUNE-Root
 $ cd dune-istl/doc
 $ make istl.pdf
 \end{lstlisting}
@@ -236,7 +249,7 @@ Too make the picture complete we list here complete some of external modules, so
 this can be the package of choice. 
 To be precise, this is an external \Dune module which, like \Dumux, is built by the \Dune build system. The \Dune-multidomaingrid module provides a meta grid that allows the subdivision of arbitrary \Dune grids into subdomains, e.g. for multi-physics approaches (\texttt{\url{http://gitorious.org/dune-multidomaingrid}}).
 
-\item \textbf{UG}: UG is a toolbox for Unstructured Grids: As \Dumux, it is build by \texttt{autotools} and a C++-compiler. Additionally, the tools \texttt{lex}/\texttt{yacc} or the gnu-versions \texttt{flex}/\texttt{bison} are needed. 
+\item \textbf{UG}: UG is a toolbox for Unstructured Grids: As \Dumux, it is build for \Dune by GNU buildsystem and a C++-compiler. Additionally, the tools \texttt{lex}/\texttt{yacc} or the GNU variants \texttt{flex}/\texttt{bison} are needed. 
 
 \item \textbf{Alberta}: Adaptive multi Level finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications: A Fortran compiler like \texttt{gfortran} is required.
 
@@ -254,21 +267,20 @@ The following are dependencies of some of the used libraries. You will need them
 
 \item \textbf{lex/yacc} or \textbf{flex/bison}: These are quite common developing tools, code generators for lexical analyzers and parsers. This is a prerequisite for UG.
 
-\item \textbf{BLAS}: Alberta makes use of BLAS. Thus install LibGOTO2, ATLAS, non-optimized BLAS or BLAS by chipmanufacturer. Take care that the installation scripts select the intended version of BLAS. 
+\item \textbf{BLAS}: Alberta makes use of BLAS. Thus install GotoBLAS2, ATLAS, non-optimized BLAS or BLAS provided by a chip manufacturer. Take care that the installation scripts select the intended version of BLAS. See \texttt{\url{http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms}}.
 
 \item \textbf{METIS}: This is a dependency of ALUGrid. If you run it parallel this part is being used to partition your grid.
 
-\item \textbf{LibGOTO2}: is an optimized version of BLAS. It is not always available for all architectures and 
-the license is not open. For research and education it is possible to obtain a copy without additional costs.
-A FORTRAN compiler like \texttt{gfortran} is needed to compile it.
+\item \textbf{GotoBLAS2}: is an optimized version of BLAS. It covers not always available all processors of the day, but quite a broad range. Its license is now very open.  A FORTRAN compiler like \texttt{gfortran} is needed to compile it.\\
+Available by \texttt{\url{http://www.tacc.utexas.edu/tacc-projects/gotoblas2/}}.
 
 \item \textbf{Compilers}: Beside \texttt{g++} it has been reported that \Dune was successfully build with the Intel C++ compiler. 
-C and FORTRAN compiler is needed for a some external libraries. As code of different compilers is linked together they have to be be compatible with each other. A good is the GNU compiler suite \texttt{gcc},\texttt{g++} and \texttt{gfortran}.
+C and FORTRAN compiler is needed for a some external libraries. As code of different compilers is linked together they have to be be compatible with each other. A good choice is the GNU compiler suite \texttt{gcc},\texttt{g++} and \texttt{gfortran}.
 
-\item \textbf{libgomp}: \Dune can make use of OpenMP. Thus it can be necessary to install the \texttt{libgomp} library.
+\item \textbf{libgomp}: external libraries ALUGrid when used together with METIS can make use of OpenMP. Thus it can be necessary to install the \texttt{libgomp} library.
 % http://openmp.org/
 
-\item \textbf{libgmp}: The Gnu Multiple Precision Arithmetic Library (GMP) is also a prerequisite for \Dune. It may be necessary to install it.
+%\item \textbf{libgmp}: The Gnu Multiple Precision Arithmetic Library (GMP) is also a prerequisite for \Dune. It may be necessary to install it.
 % http://gmplib.org/
 \end{itemize}
 
@@ -280,7 +292,7 @@ $ svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external
 \end{lstlisting}
 
 This directory \texttt{external} contains a script to install external libraries, such as 
-Alberta, ALUGrid, UG, METIS and an optimized version of BLAS named LibGOTO2: 
+Alberta, ALUGrid, UG, METIS and GotoBLAS2: 
 \begin{lstlisting}[style=Bash]
 $ ./installExternal.sh all
 \end{lstlisting}
