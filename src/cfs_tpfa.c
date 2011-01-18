@@ -356,31 +356,6 @@ set_dynamic_trans(grid_t                  *G    ,
 
 /* ---------------------------------------------------------------------- */
 static void
-sum_phase_contrib(grid_t       *G  ,
-                  size_t        sz ,
-                  const double *xcf,
-                  double       *sum)
-/* ---------------------------------------------------------------------- */
-{
-    int    c, i;
-    size_t j;
-
-    const double *v;
-
-    for (c = i = 0, v = xcf; c < G->number_of_cells; c++) {
-        for (; i < G->cell_facepos[c + 1]; i++, v += sz) {
-
-            sum[i] = 0.0;
-            for (j = 0; j < sz; j++) {
-                sum[i] += v[j];
-            }
-        }
-    }
-}
-
-
-/* ---------------------------------------------------------------------- */
-static void
 set_dynamic_grav(grid_t                  *G        ,
                  flowbc_t                *bc       ,
                  const double            *trans    ,
@@ -402,6 +377,31 @@ set_dynamic_grav(grid_t                  *G        ,
         } else {
             for (p = 0; p < cq->nphases; p++, i++) {
                 dd->Xf[i] = 0.0;
+            }
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+sum_phase_contrib(grid_t       *G  ,
+                  size_t        sz ,
+                  const double *xcf,
+                  double       *sum)
+/* ---------------------------------------------------------------------- */
+{
+    int    c, i;
+    size_t j;
+
+    const double *v;
+
+    for (c = i = 0, v = xcf; c < G->number_of_cells; c++) {
+        for (; i < G->cell_facepos[c + 1]; i++, v += sz) {
+
+            sum[i] = 0.0;
+            for (j = 0; j < sz; j++) {
+                sum[i] += v[j];
             }
         }
     }
