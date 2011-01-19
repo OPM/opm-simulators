@@ -35,12 +35,21 @@ struct densrat_util {
 
 
 struct cfs_tpfa_impl {
+    /* Reservoir flow */
     double              *ctrans;
     double              *accum;
 
     /* One entry per component per face */
     double              *masstrans_f; /* RB^{-1} [ phase-mobility ] */
     double              *gravtrans_f; /* RB^{-1} [ grav + capillary ] */
+
+    /* Compressible completion flow definition */
+    double              *wtrans; /* WI * sum((Ac \ Ap) [ pmob ]) */
+    double              *wgpot;  /* WI * sum((Ac \ Ap) [ pmob ]'*WdP) */
+
+    /* One entry per component per completion/perforation */
+    double              *masstrans_p; /* RB^{-1} [ phase-mobility ] */
+    double              *gravtrans_p; /* RB^{-1} [ grav ] */
 
     struct densrat_util *ratio;
 
@@ -127,24 +136,34 @@ static struct cfs_tpfa_impl *
 impl_allocate(grid_t *G, well_t *W, int np)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                nnu, ngconn;
+    size_t                nnu, ngconn, nwperf;
     struct cfs_tpfa_impl *new;
 
     size_t ddata_sz;
 
-    nnu = G->number_of_cells;
+    nnu    = G->number_of_cells;
+    ngconn = G->cell_facepos[ G->number_of_cells ];
+    nwperf = 0;
+
     if (W != NULL) {
-        nnu += W->number_of_wells;
+        nnu    += W->number_of_wells;
+        nwperf  = W->well_connpos[ W->number_of_wells ];
     }
 
-    ngconn = G->cell_facepos[ G->number_of_cells ];
-
+    /* Linear system */
     ddata_sz  = 2  * nnu;                /* b, x */
 
+    /* Reservoir */
     ddata_sz += 1  * ngconn;             /* ctrans */
     ddata_sz += 1  * G->number_of_cells; /* accum */
     ddata_sz += np * G->number_of_faces; /* masstrans_f */
     ddata_sz += np * G->number_of_faces; /* gravtrans_f */
+
+    /* Wells */
+    ddata_sz += 1  * nwperf;             /* wtrans */
+    ddata_sz += 1  * nwperf;             /* wgpot */
+    ddata_sz += np * nwperf;             /* masstrans_p */
+    ddata_sz += np * nwperf;             /* gravtrans_p */
 
     new = malloc(1 * sizeof *new);
 
@@ -395,6 +414,46 @@ set_dynamic_grav(grid_t                  *G        ,
 
 /* ---------------------------------------------------------------------- */
 static void
+set_dynamic_trans_well(well_t                 *W,
+                       size_t                  np,
+                       struct completion_data *wdata,
+                       struct densrat_util    *ratio)
+/* ---------------------------------------------------------------------- */
+{
+    size_t p, i, k, nconn;
+
+    nconn = W->well_connpos[ W->number_of_wells ];
+
+    for (i = k = 0; i < nconn; i++) {
+        for (p = 0; p < np; p++, k++) {
+            ratio->x[k] = wdata->WI[i] * wdata->phasemob[k];
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+set_dynamic_grav_well(well_t                 *W,
+                      size_t                  np,
+                      struct completion_data *wdata,
+                      struct densrat_util    *ratio)
+/* ---------------------------------------------------------------------- */
+{
+    size_t p, i, k, nconn;
+
+    nconn = W->well_connpos[ W->number_of_wells ];
+
+    for (i = k = 0; i < nconn; i++) {
+        for (p = 0; p < np; p++, k++) {
+            ratio->x[k] = wdata->WI[i] * wdata->gpot[k] * wdata->phasemob[k];
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
 sum_phase_contrib(grid_t       *G  ,
                   size_t        sz ,
                   const double *xcf,
@@ -439,7 +498,57 @@ compute_densrat_update(grid_t                  *G    ,
 
 /* ---------------------------------------------------------------------- */
 static void
+compute_densrat_update_well(well_t                  *W    ,
+                            struct completion_data  *wdata,
+                            struct compr_quantities *cq   ,
+                            struct densrat_util     *ratio,
+                            double                  *q)
+/* ---------------------------------------------------------------------- */
+{
+    size_t     c, i, nconn, p, np, np2;
+    MAT_SIZE_T nrows, ncols, ldA, ldX, nrhs, info, incx, incy;
+    double     a1, a2;
+
+    nconn = W->well_connpos[ W->number_of_wells ];
+    np    = cq->nphases;
+    np2   = np * np;
+
+    nrows = ncols = ldA  = ldX = np;
+    incx  = incy  = nrhs       = 1;
+
+    a1 = 1.0;
+    a2 = 0.0;
+    
+    for (i = 0; i < nconn; i++) {
+        c = W->well_cells[i];
+
+        /* Compute q = A*x on completion */
+        dgemv_("No Transpose", &nrows, &ncols,
+               &a1, wdata->A + i*np2, &ldA, ratio->x + i*np, &incx,
+               &a2,                         q        + i*np, &incy);
+
+        /* Form system RHS */
+        for (p = 0; p < np; p++) {
+            ratio->Ai_y[i*np + p] = q[i*np + p];
+        }
+
+        /* Factor A in cell 'c' */
+        memcpy(ratio->lu, cq->Ac + c*np2, np2 * sizeof *ratio->lu);
+        dgetrf_(&nrows, &ncols, ratio->lu, &ldA, ratio->ipiv, &info);
+
+        /* Solve local system (=> Ai_y = Ac \ (A*x)) */
+        dgetrs_("No Transpose"    , &nrows, &nrhs,
+                ratio->lu         , &ldA, ratio->ipiv,
+                ratio->Ai_y + i*np, &ldX, &info);
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
 compute_psys_contrib(grid_t                  *G,
+                     well_t                  *W,
+                     struct completion_data  *wdata,
                      flowbc_t                *bc,
                      struct compr_quantities *cq,
                      double                   dt,
@@ -484,6 +593,23 @@ compute_psys_contrib(grid_t                  *G,
     /* Compressible accumulation term (lhs and rhs) */
     compr_accum_term(nc, dt, porevol, cq->totcompr, h->pimpl->accum);
     compr_src_add_press_accum(nc, cpress0, h->pimpl->accum, h->b);
+
+    /* Compressible well contributions */
+    if ((W != NULL) && (wdata != NULL)) {
+        nconn = W->well_connpos[ W->number_of_wells ];
+
+        set_dynamic_trans_well(W, cq->nphases, wdata, h->pimpl->ratio);
+        compute_densrat_update_well(W, wdata, cq, h->pimpl->ratio,
+                                    h->pimpl->masstrans_p);
+        memcpy(h->pimpl->wtrans,
+               h->pimpl->ratio->psum, nconn * sizeof *h->pimpl->wtrans);
+
+        set_dynamic_grav_well(W, cq->nphases, wdata, h->pimpl->ratio);
+        compute_densrat_update_well(W, wdata, cq, h->pimpl->ratio,
+                                    h->pimpl->gravtrans_p);
+        memcpy(h->pimpl->wgpot,
+               h->pimpl->ratio->psum, nconn * sizeof *h->pimpl->wgpot);
+    }
 }
 
 
@@ -541,43 +667,45 @@ static int
 assemble_well_contrib(size_t                nc,
                       well_t               *W,
                       well_control_t       *wctrl,
-                      const double         *WI,
-                      const double         *wdp,
                       struct cfs_tpfa_data *h)
 /* ---------------------------------------------------------------------- */
 {
     int c, i, w;
-    int is_neumann, is_bhp, is_inj;
+    int is_neumann, is_bhp;
 
     size_t jc, jw;
+
+    double wtrans, dp;
 
     is_neumann = 1;
 
     for (w = i = 0; w < W->number_of_wells; w++) {
         is_bhp = wctrl->ctrl[w] == BHP;
-        is_inj = wctrl->type[w] == INJECTOR;
 
         for (; i < W->well_connpos[w + 1]; i++) {
             c = W->well_cells[i];
 
+            wtrans = h->pimpl->wtrans[i]; /* WI * sum((Ac\Ap)*[pmob] */
+            dp     = h->pimpl->wgpot [i]; /* WI * sum((Ac\Ap)*[pmob]'*dP */
+
             if (is_bhp) {
-                h->b[0  + c] += WI[i] * (wctrl->target[w] + wdp[i]);
-                h->b[nc + w] += WI[i] *  wctrl->target[w];
+                h->b[0  + c] += dp + wtrans * wctrl->target[w];
+                h->b[nc + w] +=      wtrans * wctrl->target[w];
             } else {
                 jc = csrmatrix_elm_index(c, nc + w, h->A);
-                h->A->sa[jc] -= WI[i];
-                h->b    [ c] += WI[i] * wdp[i];
+                h->A->sa[jc] -= wtrans;
+                h->b    [ c] += dp;
 
                 jc = csrmatrix_elm_index(nc + w, c, h->A);
-                h->A->sa[jc] -= WI[i];
-                h->b[nc + w] -= WI[i] * wdp[i];
+                h->A->sa[jc] -= wtrans;
+                h->b[nc + w] -= dp;
             }
 
             jc = csrmatrix_elm_index(0  + c, 0  + c, h->A);
             jw = csrmatrix_elm_index(nc + w, nc + w, h->A);
 
-            h->A->sa[jc] += WI[i];
-            h->A->sa[jw] += WI[i];
+            h->A->sa[jc] += wtrans;
+            h->A->sa[jw] += wtrans;
         }
 
         is_neumann = is_neumann && (! is_bhp);
@@ -688,21 +816,35 @@ compute_flux(grid_t       *G,
 
 /* ---------------------------------------------------------------------- */
 static void
-compute_wflux(well_t       *W,
-              const double *WI,
-              const double *wdp,
-              const double *cpress,
-              const double *wpress,
-              double       *wflux)
+compute_wflux(well_t                 *W,
+              size_t                  np,
+              struct completion_data *wdata,
+              const double           *cpress,
+              const double           *wpress,
+              double                 *wflux)
 /* ---------------------------------------------------------------------- */
 {
-    int c, i, w;
+    int    c, i, w;
+    size_t p;
+    double dp;
 
+    double *pmob, *gpot;
+
+    pmob = wdata->phasemob;
+    gpot = wdata->gpot;
+    
     for (w = i = 0; w < W->number_of_wells; w++) {
         for (; i < W->well_connpos[w + 1]; i++) {
             c = W->well_cells[i];
 
-            wflux[i] = WI[i] * (wpress[w] + wdp[i] - cpress[c]);
+            dp = wpress[w] - cpress[c];
+
+            wflux[i] = 0.0;
+            for (p = 0; p < np; p++) {
+                wflux[i] += pmob[i*np + p] * (dp + gpot[i*np + p]);
+            }
+            
+            wflux[i] *= wdata->WI[i];
         }
     }
 }
@@ -733,7 +875,7 @@ struct cfs_tpfa_data *
 cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                nc, nf, ngconn;
+    size_t                nc, nf, ngconn, nwconn;
     struct cfs_tpfa_data *new;
 
     new = malloc(1 * sizeof *new);
@@ -749,17 +891,30 @@ cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
     }
 
     if (new != NULL) {
-        new->b = new->pimpl->ddata;
-        new->x = new->b + new->A->m;
-
-        nc = G->number_of_cells;
-        nf = G->number_of_faces;
+        nc     = G->number_of_cells;
+        nf     = G->number_of_faces;
         ngconn = G->cell_facepos[nc];
+        nwconn = 0;
 
+        if (W != NULL) {
+            nwconn = W->well_connpos[ W->number_of_wells ];
+        }
+
+        /* Allocate linear system components */
+        new->b                  = new->pimpl->ddata       + 0;
+        new->x                  = new->b                  + new->A->m;
+
+        /* Allocate reservoir components */
         new->pimpl->ctrans      = new->x                  + new->A->m;
         new->pimpl->accum       = new->pimpl->ctrans      + ngconn;
         new->pimpl->masstrans_f = new->pimpl->accum       + nc;
         new->pimpl->gravtrans_f = new->pimpl->masstrans_f + (nphases * nf);
+
+        /* Allocate well components */
+        new->pimpl->wtrans      = new->pimpl->gravtrans_f + (nphases * nf);
+        new->pimpl->wgpot       = new->pimpl->wtrans      + nwconn;
+        new->pimpl->masstrans_p = new->pimpl->wgpot       + nwconn;
+        new->pimpl->gravtrans_p = new->pimpl->masstrans_p + (nphases * nwconn);
     }
 
     return new;
@@ -777,8 +932,7 @@ cfs_tpfa_assemble(grid_t                  *G,
                   const double            *trans,
                   const double            *gravcap_f,
                   well_control_t          *wctrl,
-                  const double            *WI,
-                  const double            *wdp,
+                  struct completion_data  *wdata,
                   const double            *cpress0,
                   const double            *porevol,
                   struct cfs_tpfa_data    *h)
@@ -789,15 +943,15 @@ cfs_tpfa_assemble(grid_t                  *G,
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
-    compute_psys_contrib(G, bc, cq, dt, trans, gravcap_f,
-                         cpress0, porevol, h);
+    compute_psys_contrib(G, W, wdata, bc, cq, dt,
+                         trans, gravcap_f, cpress0, porevol, h);
 
     res_is_neumann = assemble_cell_contrib(G, bc, src, h);
 
-    if ((W != NULL) && (wctrl != NULL) &&
-        (WI != NULL) && (wdp != NULL)) {
+    if ((W != NULL) && (wctrl != NULL)) {
+        assert (wdata != NULL);
         well_is_neumann = assemble_well_contrib(G->number_of_cells,
-                                                W, wctrl, WI, wdp, h);
+                                                W, wctrl, h);
     } else {
         well_is_neumann = 1;
     }
@@ -811,20 +965,19 @@ cfs_tpfa_assemble(grid_t                  *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_press_flux(grid_t               *G,
-                    flowbc_t             *bc,
-                    well_t               *W,
-                    int                   np,
-                    const double         *trans,
-                    const double         *pmobf,
-                    const double         *gravcap_f,
-                    const double         *WI,
-                    const double         *wdp,
-                    struct cfs_tpfa_data *h,
-                    double               *cpress,
-                    double               *fflux,
-                    double               *wpress,
-                    double               *wflux)
+cfs_tpfa_press_flux(grid_t                 *G,
+                    flowbc_t               *bc,
+                    well_t                 *W,
+                    int                     np,
+                    const double           *trans,
+                    const double           *pmobf,
+                    const double           *gravcap_f,
+                    struct completion_data *wdata,
+                    struct cfs_tpfa_data   *h,
+                    double                 *cpress,
+                    double                 *fflux,
+                    double                 *wpress,
+                    double                 *wflux)
 /* ---------------------------------------------------------------------- */
 {
     /* Assign cell pressure directly from solution vector */
@@ -832,7 +985,7 @@ cfs_tpfa_press_flux(grid_t               *G,
 
     compute_flux(G, bc, np, trans, pmobf, gravcap_f, cpress, fflux);
 
-    if ((W != NULL) && (WI != NULL) && (wdp != NULL)) {
+    if ((W != NULL) && (wdata != NULL)) {
         assert (wpress != NULL);
         assert (wflux  != NULL);
 
@@ -840,7 +993,7 @@ cfs_tpfa_press_flux(grid_t               *G,
         memcpy(wpress, h->x + G->number_of_cells,
                W->number_of_wells * sizeof *wpress);
 
-        compute_wflux(W, WI, wdp, cpress, wpress, wflux);
+        compute_wflux(W, np, wdata, cpress, wpress, wflux);
     }
 }
 

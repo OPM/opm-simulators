@@ -54,27 +54,26 @@ cfs_tpfa_assemble(grid_t                  *G,
                   const double            *trans,
                   const double            *gravcap_f,
                   well_control_t          *wctrl,
-                  const double            *WI,
-                  const double            *wdp,
+                  struct completion_data  *wdata,
                   const double            *cpress0,
                   const double            *porevol,
                   struct cfs_tpfa_data    *h);
 
 void
-cfs_tpfa_press_flux(grid_t               *G,
-                    flowbc_t             *bc,
-                    well_t               *W,
-                    int                   np,
-                    const double         *trans,
-                    const double         *pmobf,
-                    const double         *gravcap_f,
-                    const double         *WI,
-                    const double         *wdp,
-                    struct cfs_tpfa_data *h,
-                    double               *cpress,
-                    double               *fflux,
-                    double               *wpress,
-                    double               *wflux);
+cfs_tpfa_press_flux(grid_t                 *G,
+                    flowbc_t               *bc,
+                    well_t                 *W,
+                    int                     np,
+                    const double           *trans,
+                    const double           *pmobf,
+                    const double           *gravcap_f,
+                    struct completion_data *wdata,
+                    struct cfs_tpfa_data   *h,
+                    double                 *cpress,
+                    double                 *fflux,
+                    double                 *wpress,
+                    double                 *wflux);
+
 void
 cfs_tpfa_fpress(grid_t       *G,
                 flowbc_t     *bc,
@@ -107,7 +106,7 @@ cfs_tpfa_expl_mass_transport(grid_t       *G,
                              const double *gravtrans_f,
                              const double *cpress,
                              double       *surf_vol);
-    
+
 void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
 

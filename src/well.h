@@ -40,6 +40,13 @@ typedef struct {
     double            *target;
 } well_control_t;
 
+struct completion_data {
+    double *WI;                 /* Productivity index */
+    double *gpot;               /* Gravity potential */
+    double *A;                  /* RB^{-1} */
+    double *phasemob;           /* Phase mobility */
+};
+
 int
 allocate_cell_wells(int nc, well_t *W, int **cwpos, int **cwells);
 
