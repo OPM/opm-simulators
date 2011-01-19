@@ -132,7 +132,7 @@ The process of solving a problem using \Dumux can be roughly divided into four p
  \item A suitable model has to be chosen.
 \end{enumerate}
 
-The problem that is solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom which is initially saturated with oil is considered. Water infiltrates from the left side into the domain. Gravity effects as well as capillarity effects are neglected.
+The problem that is solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects are neglected.
 
 \begin{figure}[h]
 \psfrag{x}{x}
@@ -408,8 +408,7 @@ of the material description can be found in
 \label{tutorial-coupled:exercises}
 The following exercises will give you the opportunity to learn how you
 can change soil parameters, boundary conditions and fluid properties
-in \Dumux. For each exercise you can find the output file of the last
-timestep in the directory \texttt{tutorial/results/coupled}.
+in \Dumux. 
 
 \subsubsection{Exercise 1}
 \renewcommand{\labelenumi}{\alph{enumi})} For Exercise 1 you only have
@@ -449,7 +448,7 @@ To get an impression what the results should look like you can first run the ori
 
 \item \textbf{Use the \Dumux fluid system} \\
 \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initilized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
@@ -558,7 +557,7 @@ Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
 
-
+\clearpage \newpage
 %%% Local Variables: 
 %%% mode: latex
 %%% TeX-master: "dumux-handbook"
