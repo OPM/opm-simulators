@@ -13,73 +13,36 @@
 #include "sparse_sys.h"
 
 
-struct disc_data {
-    double *ctrans, *P, *Xf, *Yf, *work;
+#if defined(MAX)
+#undef MAX
+#endif
+
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
+
+
+
+struct densrat_util {
+    MAT_SIZE_T *ipiv;
+    double     *lu;
+
+    double     *x;
+    double     *Ai_y;
+    double     *psum;
+
+    /* Storage */
     double *ddata;
 };
 
 
-/* ---------------------------------------------------------------------- */
-static void
-deallocate_disc_data(struct disc_data *data)
-/* ---------------------------------------------------------------------- */
-{
-    if (data != NULL) {
-        free(data->ddata);
-    }
-
-    free(data);
-}
-
-
-/* ---------------------------------------------------------------------- */
-static struct disc_data *
-allocate_disc_data(grid_t *g, int np)
-/* ---------------------------------------------------------------------- */
-{
-    size_t nc, nf, ngconn, ddata_sz;
-    struct disc_data *new;
-
-    new = malloc(1 * sizeof *new);
-
-    if (new != NULL) {
-        nc      = g->number_of_cells;
-        nf      = g->number_of_faces;
-        ngconn  = g->cell_facepos[nc];
-
-        ddata_sz  = ngconn;      /* ctrans */
-        ddata_sz += nc;          /* P */
-        ddata_sz += np * nf;     /* Xf */
-        ddata_sz += np * ngconn; /* Yf */
-        ddata_sz += ngconn;      /* work */
-
-        new->ddata = malloc(ddata_sz * sizeof *new->ddata);
-
-        if (new->ddata == NULL) {
-            deallocate_disc_data(new);
-            new = NULL;
-        } else {
-            new->ctrans = new->ddata  + 0      ;
-            new->P      = new->ctrans + ngconn ;
-            new->Xf     = new->P      + nc     ;
-            new->Yf     = new->Xf     + np * nf;
-            new->work   = new->Yf     + np * ngconn;
-        }
-    }
-
-    return new;
-}
-
-
 struct cfs_tpfa_impl {
-    double           *fpress;   /* Face pressure */
-    double           *accum;
+    double              *ctrans;
+    double              *accum;
 
     /* One entry per component per face */
-    double           *masstrans_f; /* RB^{-1} [ phase-mobility ] */
-    double           *gravtrans_f; /* RB^{-1} [ grav + capillary ] */
+    double              *masstrans_f; /* RB^{-1} [ phase-mobility ] */
+    double              *gravtrans_f; /* RB^{-1} [ grav + capillary ] */
 
-    struct disc_data *dd;
+    struct densrat_util *ratio;
 
     /* Linear storage */
     double *ddata;
@@ -88,12 +51,71 @@ struct cfs_tpfa_impl {
 
 /* ---------------------------------------------------------------------- */
 static void
+deallocate_densrat(struct densrat_util *ratio)
+/* ---------------------------------------------------------------------- */
+{
+    if (ratio != NULL) {
+        free(ratio->ddata);
+        free(ratio->ipiv);
+    }
+
+    free(ratio);
+}
+
+
+/* ---------------------------------------------------------------------- */
+static struct densrat_util *
+allocate_densrat(grid_t *g, well_t *w, int np)
+/* ---------------------------------------------------------------------- */
+{
+    int    ntotperf;
+    size_t nglobconn, ntotconn, ddata_sz;
+
+    struct densrat_util *new;
+
+    new = malloc(1 * sizeof *new);
+
+    if (new != NULL) {
+        if (w != NULL) {
+            ntotperf = w->well_connpos[ w->number_of_wells ];
+        } else {
+            ntotperf = 0;
+        }
+
+        nglobconn = MAX(g->number_of_faces                   , ntotperf);
+        ntotconn  = MAX(g->cell_facepos[ g->number_of_cells ], ntotperf);
+
+        ddata_sz  = np * np;        /* lu */
+        ddata_sz += np * nglobconn; /* x */
+        ddata_sz += np * ntotconn;  /* Ai_y */
+        ddata_sz += ntotconn;       /* psum */
+
+        new->ipiv  = malloc(np       * sizeof *new->ipiv);
+        new->ddata = malloc(ddata_sz * sizeof *new->ddata);
+
+        if ((new->ipiv == NULL) || (new->ddata == NULL)) {
+            deallocate_densrat(new);
+            new = NULL;
+        } else {
+            new->lu   = new->ddata + 0             ;
+            new->x    = new->lu    + np * np       ;
+            new->Ai_y = new->x     + np * nglobconn;
+            new->psum = new->Ai_y  + np * ntotconn ;
+        }
+    }
+
+    return new;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
 impl_deallocate(struct cfs_tpfa_impl *pimpl)
 /* ---------------------------------------------------------------------- */
 {
     if (pimpl != NULL) {
-        free                (pimpl->ddata);
-        deallocate_disc_data(pimpl->dd);
+        free              (pimpl->ddata);
+        deallocate_densrat(pimpl->ratio);
     }
 
     free(pimpl);
@@ -105,7 +127,7 @@ static struct cfs_tpfa_impl *
 impl_allocate(grid_t *G, well_t *W, int np)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                nnu;
+    size_t                nnu, ngconn;
     struct cfs_tpfa_impl *new;
 
     size_t ddata_sz;
@@ -115,10 +137,12 @@ impl_allocate(grid_t *G, well_t *W, int np)
         nnu += W->number_of_wells;
     }
 
+    ngconn = G->cell_facepos[ G->number_of_cells ];
+
     ddata_sz  = 2  * nnu;                /* b, x */
 
-    ddata_sz += 1  * G->number_of_faces; /* fpress */
-    ddata_sz += 1  * G->number_of_faces; /* accum */
+    ddata_sz += 1  * ngconn;             /* ctrans */
+    ddata_sz += 1  * G->number_of_cells; /* accum */
     ddata_sz += np * G->number_of_faces; /* masstrans_f */
     ddata_sz += np * G->number_of_faces; /* gravtrans_f */
 
@@ -126,9 +150,9 @@ impl_allocate(grid_t *G, well_t *W, int np)
 
     if (new != NULL) {
         new->ddata = malloc(ddata_sz * sizeof *new->ddata);
-        new->dd    = allocate_disc_data(G, np);
+        new->ratio = allocate_densrat(G, W, np);
 
-        if (new->ddata == NULL || new->dd == NULL) {
+        if (new->ddata == NULL || new->ratio == NULL) {
             impl_deallocate(new);
             new = NULL;
         }
@@ -279,7 +303,8 @@ solve_cellsys_core(grid_t       *G   ,
 
 /* ---------------------------------------------------------------------- */
 static void
-small_matvec(size_t n, int sz,
+small_matvec(size_t        n,
+             int           sz,
              const double *A,
              const double *X,
              double       *Y)
@@ -287,14 +312,15 @@ small_matvec(size_t n, int sz,
 {
     size_t i, p1, p2;
 
-    MAT_SIZE_T nrows, ncols, ld, incx, incy;
-    double     a1, a2;
+    MAT_SIZE_T  nrows, ncols, ld, incx, incy;
+    double      a1, a2;
 
     nrows = ncols = ld = sz;
     incx  = incy  = 1;
 
     a1 = 1.0;
     a2 = 0.0;
+
     for (i = p1 = p2 = 0; i < n; i++) {
         dgemv_("No Transpose", &nrows, &ncols,
                &a1, A + p2, &ld, X + p1, &incx,
@@ -307,32 +333,16 @@ small_matvec(size_t n, int sz,
 
 
 /* ---------------------------------------------------------------------- */
-static int
-solve_cellsys(grid_t       *G ,
-              size_t        sz,
-              const double *Ac,
-              const double *bf,
-              double       *xcf)
+static void
+solve_cellsys(grid_t              *G ,
+              size_t               sz,
+              const double        *Ac,
+              const double        *bf,
+              struct densrat_util *ratio)
 /* ---------------------------------------------------------------------- */
 {
-    int     ret;
-    double *luAc;
-
-    MAT_SIZE_T *ipiv;
-
-    luAc = malloc(sz * sz * sizeof *luAc);
-    ipiv = malloc(sz      * sizeof *ipiv);
-
-    if ((luAc != NULL) && (ipiv != NULL)) {
-        solve_cellsys_core(G, sz, Ac, bf, xcf, luAc, ipiv);
-        ret = 1;
-    } else {
-        ret = 0;
-    }
-
-    free(ipiv);  free(luAc);
-
-    return ret;
+    solve_cellsys_core(G, sz, Ac, bf, ratio->Ai_y,
+                       ratio->lu, ratio->ipiv);
 }
 
 
@@ -341,14 +351,14 @@ static void
 set_dynamic_trans(grid_t                  *G    ,
                   const double            *trans,
                   struct compr_quantities *cq   ,
-                  struct disc_data        *dd)
+                  struct densrat_util     *ratio)
 /* ---------------------------------------------------------------------- */
 {
     int f, p, i;
 
     for (f = i = 0; f < G->number_of_faces; f++) {
         for (p = 0; p < cq->nphases; p++, i++) {
-            dd->Xf[i] = trans[f] * cq->phasemobf[i];
+            ratio->x[i] = trans[f] * cq->phasemobf[i];
         }
     }
 }
@@ -361,7 +371,7 @@ set_dynamic_grav(grid_t                  *G        ,
                  const double            *trans    ,
                  const double            *gravcap_f,
                  struct compr_quantities *cq       ,
-                 struct disc_data        *dd)
+                 struct densrat_util     *ratio)
 /* ---------------------------------------------------------------------- */
 {
     int f, p, i, c1, c2;
@@ -372,11 +382,11 @@ set_dynamic_grav(grid_t                  *G        ,
 
         if (((c1 >= 0) && (c2 >= 0)) || (bc->type[f] == PRESSURE)) {
             for (p = 0; p < cq->nphases; p++, i++) {
-                dd->Xf[i] = trans[f] * gravcap_f[i] * cq->phasemobf[i];
+                ratio->x[i] = trans[f] * gravcap_f[i] * cq->phasemobf[i];
             }
         } else {
             for (p = 0; p < cq->nphases; p++, i++) {
-                dd->Xf[i] = 0.0;
+                ratio->x[i] = 0.0;
             }
         }
     }
@@ -410,17 +420,20 @@ sum_phase_contrib(grid_t       *G  ,
 
 /* ---------------------------------------------------------------------- */
 static void
-compute_densrat_update(grid_t                  *G ,
-                       struct compr_quantities *cq,
-                       struct disc_data        *dd,
+compute_densrat_update(grid_t                  *G    ,
+                       struct compr_quantities *cq   ,
+                       struct densrat_util     *ratio,
                        double                  *q)
 /* ---------------------------------------------------------------------- */
 {
-    small_matvec(G->number_of_faces, cq->nphases, cq->Af, dd->Xf, q);
+    /* q = Af * x */
+    small_matvec(G->number_of_faces, cq->nphases, cq->Af, ratio->x, q);
 
-    solve_cellsys(G, cq->nphases, cq->Ac, q, dd->Yf);
+    /* ratio->Ai_y = Ac \ q */
+    solve_cellsys(G, cq->nphases, cq->Ac, q, ratio);
 
-    sum_phase_contrib(G, cq->nphases, dd->Yf, dd->work);
+    /* ratio->psum = sum_\alpha ratio->Ai_y */
+    sum_phase_contrib(G, cq->nphases, ratio->Ai_y, ratio->psum);
 }
 
 
@@ -445,16 +458,16 @@ compute_psys_contrib(grid_t                  *G,
     nconn = G->cell_facepos[nc];
 
     /* Compressible half-trans */
-    set_dynamic_trans(G, trans, cq, h->pimpl->dd);
-    compute_densrat_update(G, cq, h->pimpl->dd,
+    set_dynamic_trans(G, trans, cq, h->pimpl->ratio);
+    compute_densrat_update(G, cq, h->pimpl->ratio,
                            h->pimpl->masstrans_f);
-    memcpy(h->pimpl->dd->ctrans,
-           h->pimpl->dd->work,
-           nconn * sizeof *h->pimpl->dd->ctrans);
+    memcpy(h->pimpl->ctrans,
+           h->pimpl->ratio->psum,
+           nconn * sizeof *h->pimpl->ctrans);
 
     /* Compressible gravity contributions */
-    set_dynamic_grav(G, bc, trans, gravcap_f, cq, h->pimpl->dd);
-    compute_densrat_update(G, cq, h->pimpl->dd,
+    set_dynamic_grav(G, bc, trans, gravcap_f, cq, h->pimpl->ratio);
+    compute_densrat_update(G, cq, h->pimpl->ratio,
                            h->pimpl->gravtrans_f);
 
     for (c = 0, i = 0; c < nc; c++) {
@@ -462,15 +475,15 @@ compute_psys_contrib(grid_t                  *G,
             f = G->cell_faces[i];
             s = 1.0 - 2.0*(G->face_cells[2*f + 0] != c);
 
-            h->b[c] -= s * h->pimpl->dd->work[i];
+            h->b[c] -= s * h->pimpl->ratio->psum[i];
         }
 
         h->b[c] += cq->voldiscr[c];
     }
 
     /* Compressible accumulation term (lhs and rhs) */
-    compr_accum_term(nc, dt, porevol, cq->totcompr, h->pimpl->dd->P);
-    compr_src_add_press_accum(nc, cpress0, h->pimpl->dd->P, h->b);
+    compr_accum_term(nc, dt, porevol, cq->totcompr, h->pimpl->accum);
+    compr_src_add_press_accum(nc, cpress0, h->pimpl->accum, h->b);
 }
 
 
@@ -485,7 +498,7 @@ assemble_cell_contrib(grid_t               *G,
     int c1, c2, c, i, f, j1, j2;
     int is_neumann;
 
-    const double *ctrans = h->pimpl->dd->ctrans;
+    const double *ctrans = h->pimpl->ctrans;
 
     is_neumann = 1;
 
@@ -516,7 +529,7 @@ assemble_cell_contrib(grid_t               *G,
         h->b[c] += src[c];
 
         /* Compressible accumulation term */
-        h->A->sa[j1] += h->pimpl->dd->P[c];
+        h->A->sa[j1] += h->pimpl->accum[c];
     }
 
     return is_neumann;
@@ -720,7 +733,7 @@ struct cfs_tpfa_data *
 cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                nf;
+    size_t                nc, nf, ngconn;
     struct cfs_tpfa_data *new;
 
     new = malloc(1 * sizeof *new);
@@ -739,11 +752,13 @@ cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
         new->b = new->pimpl->ddata;
         new->x = new->b + new->A->m;
 
+        nc = G->number_of_cells;
         nf = G->number_of_faces;
+        ngconn = G->cell_facepos[nc];
 
-        new->pimpl->fpress      = new->x                  + new->A->m;
-        new->pimpl->accum       = new->pimpl->fpress      + nf;
-        new->pimpl->masstrans_f = new->pimpl->accum       + nf;
+        new->pimpl->ctrans      = new->x                  + new->A->m;
+        new->pimpl->accum       = new->pimpl->ctrans      + ngconn;
+        new->pimpl->masstrans_f = new->pimpl->accum       + nc;
         new->pimpl->gravtrans_f = new->pimpl->masstrans_f + (nphases * nf);
     }
 
