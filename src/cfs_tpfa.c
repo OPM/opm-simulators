@@ -540,6 +540,12 @@ compute_densrat_update_well(well_t                  *W    ,
         dgetrs_("No Transpose"    , &nrows, &nrhs,
                 ratio->lu         , &ldA, ratio->ipiv,
                 ratio->Ai_y + i*np, &ldX, &info);
+
+        /* Accumulate phase contributions */
+        ratio->psum[i] = 0.0;
+        for (p = 0; p < np; p++) {
+            ratio->psum[i] += ratio->Ai_y[i*np + p];
+        }
     }
 }
 
