@@ -151,7 +151,7 @@ public:
             // water molecule in the liquid
             return
                 clH2O*(H2O::molarMass()*fluidState.moleFrac(lPhaseIdx, H2OIdx)
-                      
+                       +
                        N2::molarMass()*fluidState.moleFrac(lPhaseIdx, N2Idx));
         }
         else if (phaseIdx == gPhaseIdx) {
@@ -162,7 +162,7 @@ public:
                 fluidState.moleFrac(gPhaseIdx, N2Idx)  *
                 fluidState.phasePressure(gPhaseIdx);
             return
-                H2O::gasDensity(temperature, fugH2O)
+                H2O::gasDensity(temperature, fugH2O) +
                 N2::gasDensity(temperature, fugN2);
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
@@ -452,7 +452,7 @@ public:
             return
                 fluidState.massFrac(lPhaseIdx, H2OIdx)*
                 H2O::liquidEnthalpy(temperature, pressure)
-               
+                +
                 fluidState.massFrac(lPhaseIdx, N2Idx)*
                 N2::gasEnthalpy(temperature, pN2);
         }
@@ -502,7 +502,7 @@ private:
         // water molecule in the liquid
         return
             clH2O*(xlH2O*H2O::molarMass()
-                  
+                   +
                    xlN2*N2::molarMass());
     }
 

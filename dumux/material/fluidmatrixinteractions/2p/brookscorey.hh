@@ -212,7 +212,7 @@ public:
 
         return
             2.0*(Swe - 1)*(
-                1
+                1 +
                 pow(Swe, 2.0/params.alpha())*(
                     1.0/params.alpha() + 1.0/2 -
                     Swe*(1.0/params.alpha() + 1.0/2)

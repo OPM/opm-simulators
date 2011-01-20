@@ -182,7 +182,7 @@ public:
                 Region2::ddgamma_dtaudpi(temperature, pv);
 
             return
-                enthalpyRegion2_(temperature, pv)
+                enthalpyRegion2_(temperature, pv) +
                 (pressure - pv)*dh_dp;
         };
 
@@ -223,7 +223,7 @@ public:
                 Region1::ddgamma_dtaudpi(temperature, pv);
 
             return
-                enthalpyRegion1_(temperature, pv)
+                enthalpyRegion1_(temperature, pv) +
                 (pressure - pv)*dh_dp;
         };
 
@@ -787,7 +787,7 @@ private:
 
         return
             - pow(tau, 2 ) *
-            Region1::ddgamma_ddtau(temperature, pressure) * R
+            Region1::ddgamma_ddtau(temperature, pressure) * R +
             diff;
     };
 

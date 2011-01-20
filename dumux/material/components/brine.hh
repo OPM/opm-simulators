@@ -234,18 +234,18 @@ public:
 
         Scalar rhow = H2O::liquidDensity(temperature, pressure);
         return
-            rhow
+            rhow +
             1000*salinity*(
-                0.668
-                0.44*salinity
+                0.668 +
+                0.44*salinity +
                 1.0E-6*(
                     300*pMPa -
-                    2400*pMPa*salinity
+                    2400*pMPa*salinity +
                     TempC*(
                         80.0 -
                         3*TempC -
                         3300*salinity -
-                        13*pMPa
+                        13*pMPa +
                         47*pMPa*salinity)));
     }
 

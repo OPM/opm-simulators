@@ -166,7 +166,7 @@ public:
                 Scalar density =
                     Scalar(iRho)/(nDensity_ - 1) * 
                     (maxGasDensity__[iT] - minGasDensity__[iT])
-                   
+                    +
                     minGasDensity__[iT];
 
                 unsigned i = iT + iRho*nTemp_;
@@ -188,7 +188,7 @@ public:
                 Scalar density =
                     Scalar(iRho)/(nDensity_ - 1) * 
                     (maxLiquidDensity__[iT] - minLiquidDensity__[iT])
-                   
+                    +
                     minLiquidDensity__[iT];
 
                 unsigned i = iT + iRho*nTemp_;
@@ -455,7 +455,7 @@ private:
         alphaT -= iT;
 
         return
-            values[iT    ]*(1 - alphaT)
+            values[iT    ]*(1 - alphaT) +
             values[iT + 1]*(    alphaT);
     }
 
@@ -480,9 +480,9 @@ private:
         alphaP2 -= iP2;
 
         return
-            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1)
-            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1)
-            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2)
+            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1) +
+            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1) +
+            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2) +
             values[(iT + 1) + (iP2 + 1)*nTemp_]*(    alphaT)*(    alphaP2);
     }
 
@@ -507,9 +507,9 @@ private:
         alphaP2 -= iP2;
 
         return
-            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1)
-            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1)
-            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2)
+            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1) +
+            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1) +
+            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2) +
             values[(iT + 1) + (iP2 + 1)*nTemp_]*(    alphaT)*(    alphaP2);
     }
 
@@ -529,9 +529,9 @@ private:
         alphaP2 -= iP2;
 
         return
-            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1)
-            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1)
-            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2)
+            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1) +
+            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1) +
+            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2) +
             values[(iT + 1) + (iP2 + 1)*nTemp_]*(    alphaT)*(    alphaP2);
     }
 
@@ -551,9 +551,9 @@ private:
         alphaP2 -= iP2;
 
         return
-            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1)
-            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1)
-            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2)
+            values[(iT    ) + (iP1    )*nTemp_]*(1 - alphaT)*(1 - alphaP1) +
+            values[(iT    ) + (iP1 + 1)*nTemp_]*(1 - alphaT)*(    alphaP1) +
+            values[(iT + 1) + (iP2    )*nTemp_]*(    alphaT)*(1 - alphaP2) +
             values[(iT + 1) + (iP2 + 1)*nTemp_]*(    alphaT)*(    alphaP2);
     }
 
