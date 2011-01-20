@@ -113,7 +113,7 @@ public:
             (asImp_().extrusionFactorScv(element,
                                          fvElemGeom,
                                          fvElemGeom.subContVolFace[scvfIdx].i)
-             +
+            
              asImp_().extrusionFactorScv(element,
                                          fvElemGeom,
                                          fvElemGeom.subContVolFace[scvfIdx].j));

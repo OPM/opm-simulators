@@ -117,8 +117,8 @@ public:
 
         return
             triplePressure()*
-            std::exp(X*(A +
-                        X*(B + C*X) +
+            std::exp(X*(A
+                        X*(B + C*X)
                         D*std::pow(1 - X,
                                    epsilon)));
     }
@@ -234,8 +234,8 @@ public:
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         Scalar Tstar = 1.2593 * temperature/Tc;
         Scalar Omega_v =
-            1.16145*std::pow(Tstar, -0.14874) +
-            0.52487*std::exp(- 0.77320*Tstar) +
+            1.16145*std::pow(Tstar, -0.14874)
+            0.52487*std::exp(- 0.77320*Tstar)
             2.16178*std::exp(- 2.43787*Tstar);
         Scalar mu = 40.785*Fc*std::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
 
