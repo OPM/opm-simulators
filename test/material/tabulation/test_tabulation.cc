@@ -57,15 +57,15 @@ int main()
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);
     int nPress = 200;
-    
+
     std::cout << "Creating tabulation with " << nTemp*nPress << " entries per quantity\n";
     TabulatedH2O::init(tempMin, tempMax, nTemp,
                        pMin, pMax, nPress);
-    
+
     std::cout << "Checking tabulation\n";
     success = true;
     int m = nTemp*3;
-    int n = nPress*3;   
+    int n = nPress*3;
     for (int i = 0; i < m; ++i) {
         Scalar T = tempMin + (tempMax - tempMin)*Scalar(i)/m;
 
@@ -73,10 +73,10 @@ int main()
             std::cout << Scalar(i)/m*100 << "% done        \r";
             std::cout.flush();
         }
-        
+
         isSame("vaporPressure",
-               TabulatedH2O::vaporPressure(T), 
-               IapwsH2O::vaporPressure(T), 
+               TabulatedH2O::vaporPressure(T),
+               IapwsH2O::vaporPressure(T),
                1e-3);
         for (int j = 0; j < n; ++j) {
             Scalar p = pMin + (pMax - pMin)*Scalar(j)/n;
@@ -93,7 +93,7 @@ int main()
                 isSame("gasDensity", TabulatedH2O::gasDensity(T,p), rho, tol);
                 isSame("gasViscosity", TabulatedH2O::gasViscosity(T,p), IapwsH2O::gasViscosity(T,p), tol);
             }
-            
+
             if (p > IapwsH2O::vaporPressure(T) / 1.03) {
                 Scalar tol = 5e-4;
                 if (p < IapwsH2O::vaporPressure(T))
@@ -110,7 +110,7 @@ int main()
         }
         //std::cerr << "\n";
     }
-    
+
     if (success)
         std::cout << "\nsuccess\n";
     return 0;

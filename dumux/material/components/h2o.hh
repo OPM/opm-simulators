@@ -396,7 +396,7 @@ public:
             // the pressure is too high, in this case we use the slope
             // of the internal energy at the vapor pressure to
             // regularize
-            
+
             /*
             // calculate the partial derivative of the internal energy
             // to the pressure at the vapor pressure.
@@ -414,7 +414,7 @@ public:
             Scalar uv = internalEnergyRegion2_(temperature, pv);
             return uv + du_dp*(pressure - pv);
             */
-            
+
             // use a straight line for extrapolation. use backward
             // differences to calculate the partial derivative to the
             // pressure at the vapor pressure
@@ -556,11 +556,11 @@ public:
                 *
                 (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             */
-            
+
             // calculate the partial derivative of the density to the
             // pressure at vapor pressure
             Scalar drho_dp = - 1/(v0*v0)*dv_dp;
-            
+
             // use a straight line for extrapolation
             return 1.0/v0 + (pressure - pv)*drho_dp;
         };
@@ -658,11 +658,11 @@ public:
                 *
                 (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             */
-            
+
             // calculate the partial derivative of the density to the
             // pressure at vapor pressure
             Scalar drho_dp = - 1/(v0*v0)*dv_dp;
-            
+
             // use a straight line for extrapolation
             return 1.0/v0 + (pressure - pv)*drho_dp;
         };

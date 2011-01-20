@@ -164,7 +164,7 @@ public:
             // fill the temperature, density gas arrays
             for (unsigned iRho = 0; iRho < nDensity_; ++ iRho) {
                 Scalar density =
-                    Scalar(iRho)/(nDensity_ - 1) * 
+                    Scalar(iRho)/(nDensity_ - 1) *
                     (maxGasDensity__[iT] - minGasDensity__[iT])
                     +
                     minGasDensity__[iT];
@@ -186,7 +186,7 @@ public:
             // fill the temperature, density liquid arrays
             for (unsigned iRho = 0; iRho < nDensity_; ++ iRho) {
                 Scalar density =
-                    Scalar(iRho)/(nDensity_ - 1) * 
+                    Scalar(iRho)/(nDensity_ - 1) *
                     (maxLiquidDensity__[iT] - minLiquidDensity__[iT])
                     +
                     minLiquidDensity__[iT];
@@ -294,7 +294,7 @@ public:
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
     {
-        Scalar result = 
+        Scalar result =
             gasEnthalpy(temperature, pressure) - pressure/gasDensity(temperature, pressure);
         return result;
     }
@@ -307,7 +307,7 @@ public:
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
     {
-        Scalar result = 
+        Scalar result =
             liquidEnthalpy(temperature, pressure) - pressure/liquidDensity(temperature, pressure);
         return result;
     }
@@ -442,7 +442,7 @@ private:
         warningPrinted_ = true;
 #endif
     }
-    
+
 
     // returns an interpolated value depending on temperature
     static Scalar interpolateT_(const Scalar *values, Scalar T)
