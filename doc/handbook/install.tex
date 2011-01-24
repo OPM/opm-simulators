@@ -172,6 +172,18 @@ choose to store it by subversion in a secure way like together with \texttt{kwal
 Check the documentation of subversion on how this is being done.
 A leaked out password can be used by evil persons to abuse a software repository.
 
+\paragraph{checkout-dumux script}
+The shell-script \texttt{checkout-dumux} facilitates setting up a {\Dune}/{\Dumux} directory tree.
+It is contained in the download section of \Dumux' webpage \cite{DUMUX-HP}.
+For example the second line below will check out the required \Dune modules and \texttt{dumux}, \texttt{dumux-devel} and \texttt{external}.
+
+\begin{lstlisting}[style=Bash]
+$ checkout-dumux -h      # show help,
+$ checkout-dumux -gme -u joeuser -p password -d DUMUX 
+\end{lstlisting}
+
+
+
 \subsection{Build of \Dune and \Dumux}
 \label{buildIt}
 Building of \Dune is done by \texttt{dunecontrol} as described in \Dune Installation Notes \cite{DUNE-INST}
@@ -324,7 +336,7 @@ The following are dependencies of some of the used libraries. You will need them
 
 \item \textbf{BLAS}: Alberta makes use of BLAS. Thus install GotoBLAS2, ATLAS, non-optimized BLAS or BLAS provided by a chip manufacturer. Take care that the installation scripts select the intended version of BLAS. See \texttt{\url{http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms}}.
 
-\item \textbf{METIS}: This is a dependency of ALUGrid, if you are going to run it parallel. METIS is being used to partition your grid.
+\item \textbf{METIS}: This is a dependency of ALUGrid, if you are going to run it parallel.
 
 \item \textbf{GotoBLAS2}: is an optimized version of BLAS. It covers not always available all processors of the day, but quite a broad range. Its license is now very open.  A FORTRAN compiler like \texttt{gfortran} is needed to compile it.\\
 Available by \texttt{\url{http://www.tacc.utexas.edu/tacc-projects/gotoblas2/}}.
@@ -369,14 +381,4 @@ $ ./installExternal.sh --parallel alu
 
 The libraries are then compiled within that directory and are not installed in a different place. 
 A \Dune build needs to know, where they are. That's why has to refer to them as options for \texttt{dunecontrol}, for example via options file \texttt{my-debug.opts}.
-
-\paragraph{checkout-dumux script}
-The shell-script \texttt{checkout-dumux} can make it easier to you, to set up a {\Dune}/{\Dumux} directory tree.
-It is already installed on IWS computers.
-For example the second line below will check out required \Dune modules, \texttt{dumux}, \texttt{dumux-devel}, \texttt{external} and \texttt{dune-multidomaingrid}.
-
-\begin{lstlisting}[style=Bash]
-$ checkout-dumux -h      # show help
-$ checkout-dumux -gme -u joeuser -p password -d DUMUX 
-\end{lstlisting}
 
