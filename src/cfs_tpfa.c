@@ -97,7 +97,7 @@ allocate_densrat(grid_t *g, well_t *w, int np)
         ddata_sz  = np * np;        /* lu */
         ddata_sz += np * nglobconn; /* x */
         ddata_sz += np * ntotconn;  /* Ai_y */
-        ddata_sz += ntotconn;       /* psum */
+        ddata_sz += 1  * ntotconn;  /* psum */
 
         new->ipiv  = malloc(np       * sizeof *new->ipiv);
         new->ddata = malloc(ddata_sz * sizeof *new->ddata);
