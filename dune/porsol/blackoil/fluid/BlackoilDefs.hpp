@@ -33,8 +33,8 @@ namespace Opm
         enum { numComponents = 3 };
         enum { numPhases = 3 };
 
-        enum ComponentIndex { Water = 0, Gas = 1, Oil = 2 };
-        enum PhaseIndex { Aqua = 0, Vapour = 1, Liquid = 2 };
+        enum ComponentIndex { Water = 0, Oil = 1, Gas = 2 };
+        enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
 
         typedef double Scalar;
         typedef Dune::FieldVector<Scalar, numComponents> CompVec;
