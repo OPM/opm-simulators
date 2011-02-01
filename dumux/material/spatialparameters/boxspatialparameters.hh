@@ -125,9 +125,9 @@ public:
      * \param K1 intrinsic permeability of the first node
      * \param K2 intrinsic permeability of the second node
      */
-    const void meanK(Tensor &result,
-                     Scalar K1,
-                     Scalar K2) const
+    void meanK(Tensor &result,
+               Scalar K1,
+               Scalar K2) const
     {
         const Scalar K = Dumux::harmonicMean(K1, K2);
         for (int i = 0; i < dimWorld; ++i) {
@@ -143,9 +143,9 @@ public:
      * \param K1 intrinsic permeability of the first node
      * \param K2 intrinsic permeability of the second node
      */
-    const void meanK(Tensor &result,
-                     const Tensor &K1,
-                     const Tensor &K2) const
+    void meanK(Tensor &result,
+               const Tensor &K1,
+               const Tensor &K2) const
     {
         // entry-wise harmonic mean. this is almost certainly wrong if
         // you have off-main diagonal entries in your permeabilities!
