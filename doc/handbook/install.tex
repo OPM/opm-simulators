@@ -182,7 +182,29 @@ $ checkout-dumux -h      # show help,
 $ checkout-dumux -gme -u joeuser -p password -d DUMUX 
 \end{lstlisting}
 
+\subsection{Patching \Dune or external libraries}
+Patching of \Dune modules in order to work together with \Dumux
+can be necessary for various reasons. \\
 
+Software like a compiler or even a standard library
+changes at times. But a certain release of a software-component, we depend on, does not reflect that change.
+In developing process of software which depends on other modules, it is not always feasible 
+to adapt it to the most recent version of module of the day. That's why for serious errors 
+there exist patches or they are be brought into existence, which fix problems with a certain module
+of a certain release but do not introduce to much structural change. It can also happen 
+that a release gets amendments (updates) and a formerly useful patch gets obsoleted.\\
+
+\Dumux carries within directory \texttt{dumux/patches} patches and documentation about their usage and application.
+Please check the README file in that directory for recent informations. 
+At the time of this writing one patch has to applied as follows, but things may vary over time.
+
+\begin{lstlisting}[style=Bash]
+$ # make sure you are in DUNE-Root
+$ cd dumux-istl
+$ patch -p1 < ../dumux/patches/dune-istl-2.0.patch
+\end{lstlisting}
+
+The \texttt{checkout-dumux} script will also apply patches, if not explicitly requested to do not so.
 
 \subsection{Build of \Dune and \Dumux}
 \label{buildIt}
