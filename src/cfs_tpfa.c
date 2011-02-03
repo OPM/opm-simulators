@@ -1050,25 +1050,37 @@ cfs_tpfa_retrieve_gravtrans(grid_t               *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_expl_mass_transport(grid_t       *G,
-                             int           np,
-                             double        dt,
-                             const double *porevol,
-                             const double *masstrans_f,
-                             const double *gravtrans_f,
-                             const double *cpress,
-                             double       *surf_vol)
+cfs_tpfa_expl_mass_transport(grid_t               *G,
+                             well_t               *W,
+                             int                   np,
+                             double                dt,
+                             const double         *porevol,
+                             struct cfs_tpfa_data *h,
+                             double               *surf_vol)
 /* ---------------------------------------------------------------------- */
 {
-    int    c, i, f, c2, p;
-    double dp, dz;
+    int    c, i, f, c2, p, w;
+    double dp, dz, gsgn;
+    const double *masstrans_f, *gravtrans_f, *masstrans_p;
+    const double *cpress, *wpress;
 
+    /* Set up convenience pointers */
+    masstrans_f = h->pimpl->masstrans_f;
+    gravtrans_f = h->pimpl->gravtrans_f;
+    masstrans_p = h->pimpl->masstrans_p;
+    cpress = h->x;
+    wpress = h->x + G->number_of_cells;
+
+    /* Transport through interiour faces */
     for (c = i = 0; c < G->number_of_cells; c++) {
         for (; i < G->cell_facepos[c + 1]; i++) {
             f  = G->cell_faces[i];
 
             if ((c2 = G->face_cells[2*f + 0]) == c) {
+              gsgn = 1.0;
                 c2  = G->face_cells[2*f + 1];
+            } else {
+              gsgn = -1.0;
             }
 
             if (c2 >= 0) {
@@ -1076,9 +1088,28 @@ cfs_tpfa_expl_mass_transport(grid_t       *G,
 
                 for (p = 0; p < np; p++) {
                     dz  = masstrans_f[f*np + p] * dp;
-                    dz += gravtrans_f[f*np + p]     ;
+                    dz += gravtrans_f[f*np + p] * gsgn;
 
+                    /* A positive dz means flow from the cell c into
+                       the cell c2. */
                     surf_vol[c*np + p] -= dz * dt / porevol[c];
+                }
+            }
+        }
+    }
+
+    /* Transport through well perforations */
+    if (W != NULL) {
+        for (w = i = 0; w < W->number_of_wells; w++) {
+            for (; i < W->well_connpos[w + 1]; i++) {
+                c = W->well_cells[i];
+                /* Get pressure difference between cell and well perforation */
+                dp = wpress[i] - cpress[c];
+                for (p = 0; p < np; p++) {
+                    dz = masstrans_p[i*np + p]* dp;
+                    /* A positive dz means flow from the well perforation
+                       i into the cell c */
+                    surf_vol[c*np + p] += dz * dt / porevol[c];
                 }
             }
         }
