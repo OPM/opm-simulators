@@ -334,7 +334,9 @@ public:
      * of component \f$\kappa\f$ by the following equation:
      *  \f[ f_\kappa = p_\alpha \gamma_{\alpha,\kappa} \f]
      * where \f$f_\kappa\f$  is the component's fugacity and \f$p_\alpha\f$
-     * is the phase' pressure
+     * is the phase' pressure. To yield a phase-independent name for this
+     * method, it also treats gaseous phases although the term "activity"
+     * might be misleading in that context.
      *
      * For liquids with very low miscibility this boils down to the
      * inverse Henry constant for the solutes and the partial pressure
