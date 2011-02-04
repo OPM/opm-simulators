@@ -49,12 +49,12 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-
     enum
     {
         dim = Grid::dimension,
         dimWorld = Grid::dimensionworld,
     };
+    typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
 
     // Get object types for function arguments
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;

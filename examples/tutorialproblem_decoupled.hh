@@ -67,13 +67,13 @@ SET_PROP(TutorialProblemDecoupled, Grid) /*@\label{tutorial-decoupled:grid-begin
     static type *create() /*@\label{tutorial-decoupled:create-grid-method}@*/
     {
         typedef typename type::ctype ctype;
-        Dune::FieldVector<int, 2> cellRes;
-        Dune::FieldVector<ctype, 2> lowerLeft(0.0);
-        Dune::FieldVector<ctype, 2> upperRight;
-        upperRight[0] = 300;
-        upperRight[1] = 60;
+        Dune::FieldVector<int, 2> cellRes;  // vector holding resolution of the grid
+        Dune::FieldVector<ctype, 2> lowerLeft(0.0); // Coordinate of lower left corner of the grid
+        Dune::FieldVector<ctype, 2> upperRight; // Coordinate of upper right corner of the grid
         cellRes[0] = 100;
         cellRes[1] = 1;
+        upperRight[0] = 300;
+        upperRight[1] = 60;
         return new Dune::SGrid<2,2>(cellRes,
                                     lowerLeft,
                                     upperRight);
@@ -227,8 +227,8 @@ public:
     {
         if (globalPos[0] < this->bboxMin()[0] + eps_)
             return BoundaryConditions::dirichlet;
-        // all other boundaries
-        return BoundaryConditions::neumann;
+        else    // all other boundaries
+            return BoundaryConditions::neumann;
     }
 
     //! Type of Transport boundary condition.
@@ -238,9 +238,9 @@ public:
     BoundaryConditions::Flags bctypeSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypeSat}@*/
     {
         if (globalPos[0] < this->bboxMin()[0] + eps_)
-            return Dumux::BoundaryConditions::dirichlet;
+            return BoundaryConditions::dirichlet;
         else
-            return Dumux::BoundaryConditions::neumann;
+            return BoundaryConditions::neumann;
     }
     //! Value for dirichlet pressure boundary condition \f$ [Pa] \f$.
     /*! In case of a dirichlet BC for the pressure equation, the pressure

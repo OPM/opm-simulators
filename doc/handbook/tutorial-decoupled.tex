@@ -60,11 +60,11 @@ property system, see section \ref{sec:propertysystem}.
 
 The first thing which should be done at run time is to initialize the
 message passing interface using \Dune's \texttt{MPIHelper} class. Line
-\ref{tutorial-decoupled:init-mpi} line is essential if the simulation is
+\ref{tutorial-decoupled:init-mpi} is essential if the simulation is
 intended to be run on more than one processor at the same time. Next,
 the command line arguments are parsed starting at line
 \ref{tutorial-decoupled:parse-args-begin} until line
-\ref{tutorial-decoupled:parse-args-end}. In this case, we check if and
+\ref{tutorial-decoupled:parse-args-end}. In this case, we check weather and
 at which time a previous run of the simulation should be restarted, and we
 parse the time when the simulation ends. As the maximum time-step in the 
 sequential model is strictly bound by a CFL-criterion, the first time-step
@@ -202,7 +202,7 @@ For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
 To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 1e5}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
-As you can see, the simulation creates roughly 150 output files. To reduce these to perform longer simulations, change the method responsible for output in the file \texttt{tutorialproblem\_decoupled} to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
+As you can see, the simulation creates roughly 150 output files. To reduce these to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:output} in the file \texttt{tutorialproblem\_decoupled}) to write an output only every 20 timesteps by changeing the divisor. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
@@ -213,14 +213,14 @@ Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
 \begin{enumerate}
  \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be aware to use the complete water class with its own template parameter).
- \item DNAPL: A standard set of chemical substances is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
+ \item DNAPL: A standard set of chemical substances, such as Oil and Brinde, is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
 If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
 As you have experienced in the coupled tutorial (chapter \ref{tutorial-decoupled}), \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. This is also possible for the decoupled models: Uncomment, as we want to reuse it later on, the lines \ref{tutorial-decoupled:2p-system-start} to \ref{tutorial-decoupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7}, the same shortcut works to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simultation duration to 1e5 seconds.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simultation duration to 2e4 seconds.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
@@ -241,16 +241,20 @@ When does the front cross the material border? In paraview, the option \textit{V
 
 \subsubsection{Exercise 2}
 For this exercise you should create a new proplem file analogous to
-the file \texttt{tutorialproblem\_decoupled.hh} and new spatial parameters 
+the file \texttt{tutorialproblem\_decoupled.hh} (e.g. with the name 
+\texttt{ex2\_tutorialproblem\_decoupled.hh} and new spatial parameters 
 just like \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to
 be included in the file \texttt{tutorial\_decoupled.cc}. 
 
-The new file defining spatial parameters should contain the definition 
-of a new class, such as \texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
-macros in the header files (e.g. change \texttt{TUTORIALSPATIALPARAMETERS\_COUPLED} to
-\texttt{SPATIALPARAMETERSEX2}). Besides also adjusting the guardian macros, 
+The new files should contain the definition of a new classes with 
+names that relate to the file name, such as \texttt{Ex2TutorialProblemDecoupled}. 
+Make sure that you also adjust the guardian
+macros in lines \ref{tutorial-decoupled:guardian1} and \ref{tutorial-decoupled:guardian1}
+ in the header files (e.g. change \\
+\texttt{DUMUX\_TUTORIALPROBLEM\_DECOUPLED\_HH} to
+\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_DECOUPLED\_HH}).  Besides also adjusting the guardian macros, 
 the new problem file should define and use a new type tag for the problem as well as a new problem class
-e.g. \texttt{ProblemEx2}. Make sure you assign your newly defined spatial 
+e.g. \texttt{Ex2TutorialProblemDecoupled}. Make sure you assign your newly defined spatial 
 parameter class to the \texttt{SpatialParameters} property for the new 
 type tag. 
 
@@ -262,7 +266,7 @@ so that the boundary conditions are consistent with figure
 with water and the pressure is $p_w = 2 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
-should be set to $1e5 \text{s}$.
+should be set to $2e4 \text{s}$.
 
 Now include your new problem file in the main file and replace the
 \texttt{TutorialProblemCoupled} type tag by the one you've created and
@@ -310,7 +314,7 @@ compile the program.
 \subsubsection{Exercise 3}
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 
-systems in the directory \verb+/dumux/new_material/fluidsystems+.)
+systems in the directory \verb+/dumux/material/fluidsystems+.)
 
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$

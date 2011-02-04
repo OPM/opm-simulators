@@ -18,7 +18,7 @@ If you are interested in more details of the build system, we use below,
 they are given in {\Dune}'s Build System Howto \cite{DUNE-BS}.\\
 
 
-As for a \Dune installation, all \Dune modules including \Dumux get extracted into a common directory. We refer to that directory for purpose of documentation abstractly as {\Dune} root directory or shortly as {\Dune}-Root or if it is used in directory path's of a shell command it is typed as \texttt{\Dune-Root}. For the real {\Dune} root directory in filesystem any valid directory name can be name chosen.\\
+As for a \Dune installation, all \Dune modules including \Dumux get extracted into a common directory. We refer to that directory for purpose of documentation abstractly as {\Dune} root directory or shortly as {\Dune}-Root. If it is used in directory path's of a shell command it is typed as \texttt{\Dune-Root}. For the real {\Dune} root directory in filesystem any valid directory name can be name chosen.\\
 
 Source code files for each \Dune module are contained in their own subdirectory within {\Dune}-Root.
 We name this directory of a certain module, ``module's root directory" or \texttt{module-root-directory} in directory path's,
@@ -228,7 +228,7 @@ $ ./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"
 Too many options can make life hard, that's why one usually uses option-files for dunecontrol and its sub-tools.
 Larger sets of options are kept in them. \\
 
-If you are going to compile with options suited for code debugging with a debugger, the following
+If you are going to compile with options suited for debugging of the code, the following
 can be a starting point:
 
 %Below in command-line make sure to insert the right name of dumux' root directory, which is in case of installation from tar-files \texttt{dumux-2.0} or in case of installation from subversion just \texttt{dumux}. For a developer it is also possible to take options file from \texttt{dumux-devel}.

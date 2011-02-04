@@ -235,7 +235,10 @@ problem class is attached to the new type tag, while the grid which
 is going to be used is defined in line \ref{tutorial-coupled:set-grid} --
 in this case that is  \texttt{SGrid}.  Since there's no uniform
 mechanism to allocate grids in \Dune, the \texttt{Grid} property also contains
-a static \texttt{create()} method which provides just that. Next,
+a static \texttt{create()} method which provides just that. Therein, the three variables of 
+Type \texttt{Dune::FieldVector} define the lower left corner of the domain 
+(\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number 
+of cells in $x$ and $y$ direction (\texttt{N}). Next,
 the appropriate fluid system, that specifies both information about
 the fluid mixture as well as about the pure substances, has to be chosen. 
 The two-phase model defaults to the \texttt{FluidSystem2P} which assumes 
@@ -292,6 +295,11 @@ for all primary variables / equations: Either \texttt{setAllDirichlet()} or \tex
 \item[boundaryFaceIdx:] The index of the boundary face in
   \texttt{fvElementGeometry} which represents the boundary segment.  
 \end{description}
+To ensure that no boundaries are undefined, a small safeguard value \texttt{eps\_}
+is usually added when compariing spatial coordinates. The left boundary is
+hence not assigned where the first coordinate is equal to zero, but where it is
+smaller than a very small value \texttt{eps\_}.
+
 After the type of the boundary condition is defined, their values have to be
 assigned with the methods \texttt{dirichlet()} and \texttt{neumann()} which only differ 
 by the first function parameter:
@@ -402,7 +410,7 @@ Depending on the type of the \texttt{materialLaw} object, the adequate \texttt{s
 are provided by the object to access all necessary parameters 
 for the applied material law. The name of the access / set functions as well as the rest of the implementation 
 of the material description can be found in 
-\verb+dumux/dumux/material/fluidmatrixinteractions/2p+.
+\verb+dumux/material/fluidmatrixinteractions/2p+.
 
 \subsection{Exercises}
 \label{tutorial-coupled:exercises}
@@ -435,16 +443,13 @@ To get an impression what the results should look like you can first run the ori
 
 
 \item \textbf{Changing Fluids} \\
-  Now you can change the fluids. Use \texttt{DNAPL} instead of
-  \texttt{Oil} and \texttt{Brine} instead of \texttt{Water}. To do
-  that you have to change the problem file:
-  \begin{enumerate}
-  \item Brine: The class \texttt{Dumux::Brine} acts as an adapter to pure water. Hence, it needs not only \texttt{<Scalar>} as a template argument, but also the complete water class used before (be aware to use the water class with its own template parameters).
- \item DNAPL: A standard set of chemical substances represented by the class \texttt{Dumux::SimpleDNAPL} is located in the folder \texttt{dumux/material/components/} and needs to be included in the problem file.
+Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
+\begin{enumerate}
+ \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be aware to use the complete water class with its own template parameter).
+ \item DNAPL: A standard set of chemical substances, such as Oil and Brinde, is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
-  If you want to take a closer look how the fluid classes are defined 
-  and which substances are already available please browse through the files in the directory
-  \texttt{/dumux/material/components}.
+If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
+\texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system} \\
 \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
@@ -477,23 +482,26 @@ of the linear law and the respective \texttt{set}-functions can be found
 \includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
 \caption{Exercise 1f: Set-up of a model domain with a heterogeneity. $\Delta \text{x} = 20$ m $\Delta \text{y} = 20$ m.}\label{tutorial-coupled:exercise1_d}
 \end{figure}
-domain. You can use the fluids of exercise 1c). 
+domain. You can use the fluids of exercise 1c).\\
+Hint: The current position of the element can be obtained via \texttt{element.geometry().center();}.\\
 When does the front cross the material border? In paraview, the option \textit{View} $\rightarrow$ \textit{Animation View} is nice to get a rough feeling of the timestep sizes.
 \end{enumerate}
 
 \subsubsection{Exercise 2}
 For this exercise you should create a new proplem file analogous to
-the file \texttt{tutorialproblem\_coupled.hh} and new spatial parameters 
+the file \texttt{tutorialproblem\_coupled.hh} (e.g. with the name 
+\texttt{ex2\_tutorialproblem\_coupled.hh} and new spatial parameters 
 just like \texttt{tutorialspatialparameters\_coupled.hh}. The new problem file needs to
-be included in the file \texttt{tutorial\_coupled.cc}.  \\
-The new file defining spatial parameters should contain the definition 
-of a new class, such as \\
-\texttt{SpatialParametersEx2}. Make sure that you also adjust the guardian
-macros in the header files (e.g. change \\
-\texttt{TUTORIALSPATIALPARAMETERS\_COUPLED} to
-\texttt{SPATIALPARAMETERSEX2}). Besides also adjusting the guardian macros, 
+be included in the file \texttt{tutorial\_coupled.cc}.\\
+The new files should contain the definition of a new classes with 
+names that relate to the file name, such as 
+\texttt{Ex2TutorialProblemCoupled}. Make sure that you also adjust the guardian
+macros in lines \ref{tutorial-coupled:guardian1} and \ref{tutorial-coupled:guardian1}
+ in the header files (e.g. change \\
+\texttt{DUMUX\_TUTORIALPROBLEM\_COUPLED\_HH} to
+\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}). Besides also adjusting the guardian macros, 
 the new problem file should define and use a new type tag for the problem as well as a new problem class
-e.g. \texttt{ProblemEx2}. Make sure you assign your newly defined spatial 
+e.g. \texttt{Ex2TutorialProblemCoupled}. Make sure you assign your newly defined spatial 
 parameter class to the \texttt{SpatialParameters} property for the new 
 type tag. \\
 After this, change the \texttt{create()} method of the \texttt{Grid}

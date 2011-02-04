@@ -24,8 +24,8 @@
  *
  * \brief Tutorial problem for a fully coupled twophase box model.
  */
-#ifndef DUMUX_TUTORIALPROBLEM_COUPLED_HH
-#define DUMUX_TUTORIALPROBLEM_COUPLED_HH
+#ifndef DUMUX_TUTORIALPROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
+#define DUMUX_TUTORIALPROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pmodel.hh>
@@ -59,9 +59,9 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
     static type *create() /*@\label{tutorial-coupled:create-grid-method}@*/
     {
         typedef typename type::ctype ctype;
-        Dune::FieldVector<int, 2> cellRes;
-        Dune::FieldVector<ctype, 2> lowerLeft(0.0);
-        Dune::FieldVector<ctype, 2> upperRight;
+        Dune::FieldVector<int, 2> cellRes;  // vector holding resolution of the grid
+        Dune::FieldVector<ctype, 2> lowerLeft(0.0); // Coordinate of lower left corner of the grid
+        Dune::FieldVector<ctype, 2> upperRight; // Coordinate of upper right corner of the grid
         cellRes[0] = 100;
         cellRes[1] = 1;
         upperRight[0] = 300;
