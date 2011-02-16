@@ -715,6 +715,11 @@ assemble_well_contrib(size_t                nc,
         }
 
         is_neumann = is_neumann && (! is_bhp);
+
+        if (! is_bhp) {
+            /* Enforce total (reservoir volume) rate constraint. */
+            h->b[nc + w] += wctrl->target[w];
+        }
     }
 
     return is_neumann;
