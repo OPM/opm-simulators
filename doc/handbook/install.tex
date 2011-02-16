@@ -1,81 +1,76 @@
 \section{Installation of \Dumux} \label{install}
 \subsection{Preliminary remarks}
 
-In this section about installation it is assumed that you work on a UNIX or Linux compatible operating system
-and that you are familiar with the use of a shell command-line.  You also should know how to install new software packages
-or you should have a person aside which can give you assistance with the shell command-line and package installation. 
-Below in section \ref{sec:prerequisites} we list prerequisites for running \Dune and \Dumux. 
-Please check this paragraph whether you can fulfill them.
-In addition in section \ref{sec:external-modules-libraries} some details on optional libraries and modules are given. \\
-
-Installation here means that you unpack \Dune together with \Dumux in a certain directory.
-You than compile it in that directory tree and do you further working on there too. Files do not get installed into a different place.\\
+In this section about the installation of \Dumux it is assumed that you work on a UNIX or Linux compatible operating system
+and that you are familiar with the use of a command line shell. Installation means that you unpack \Dune together with \Dumux in a certain directory.
+You than compile it in that directory tree and do you further working on there too. You also should know how to install new software packages
+or you should have a person aside which can give you assistance with the command line and package installation. In section \ref{sec:prerequisites} we list prerequisites for running \Dune and \Dumux. 
+Please check this paragraph whether you can fulfill them. In addition, section \ref{sec:external-modules-libraries} provides some details on optional libraries and modules are given. \\
 
 In a technical sense \Dumux is a module of \Dune. 
 That's why the installation procedure of \Dumux is the same as that of \Dune. 
-The details regarding the installation of \Dune are provided by \Dune website \cite{DUNE-INST}. 
-If you are interested in more details of the build system, we use below,
-they are given in {\Dune}'s Build System Howto \cite{DUNE-BS}.\\
+The details regarding the installation of \Dune are provided on the \Dune website \cite{DUNE-INST}. 
+If you are interested in more details of the build system that is used,
+you can find them in the {\Dune}'s Build System Howto \cite{DUNE-BS}.\\
 
 
-As for a \Dune installation, all \Dune modules including \Dumux get extracted into a common directory. We refer to that directory for purpose of documentation abstractly as {\Dune} root directory or shortly as {\Dune}-Root. If it is used in directory path's of a shell command it is typed as \texttt{\Dune-Root}. For the real {\Dune} root directory in filesystem any valid directory name can be name chosen.\\
+As in a \Dune installation, all \Dune modules including \Dumux get extracted into a common directory. We refer to that directory for purpose of documentation abstractly as {\Dune} root directory or shortly as {\Dune}-Root. If it is used as directory's path of a shell command it is typed as \texttt{\Dune-Root}. For the real {\Dune} root directory on your filesystem any valid directory name can be chosen.\\
 
 Source code files for each \Dune module are contained in their own subdirectory within {\Dune}-Root.
-We name this directory of a certain module, ``module's root directory" or \texttt{module-root-directory} in directory path's,
-e.g. for module \texttt{dumux} these names are  ``dumux' root directory" respective \texttt{dumux-root-directory}.
-The real directory names for modules can be chosen arbitrary, in this manual they are the same as the
+We name this directory of a certain module ``module root directory" or \texttt{module-root-directory} if it is a directory path's,
+e.g. for module \texttt{dumux} these names are  ``dumux root directory" respective \texttt{dumux-root-directory}.
+The real directory names for modules can be chosen arbitrarily, in this manual they are the same as the
 module name or the module name extended by a version number suffix.
 The name of a \Dune module itself is always defined via the content of file \texttt{dune.module} in its own root
 directory, but this should not get changed by an user. The user is allowed to have own files and directories in \Dune-Root, which are not related to \Dune's need.
 
-After installing source code for all relevant \Dune modules including \Dumux, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the \Dune build system. The \Dune build system is a front-end suited to \Dune's needs to the GNU build system.
+After installing source code for all relevant \Dune modules including \Dumux, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the \Dune build system. The \Dune build system is a front-end adapted to the needs of \Dune to the GNU build system.
 
 \subsection{Prerequisites} \label{sec:prerequisites}
 The GNU tool chain of \texttt{g++}  and tools of GNU build system \cite{GNU-BS} also known as GNU autotools
 (i.e. \texttt{autoconf}, \texttt{automake}, \texttt{autogen}, \texttt{libtool}) as well as GNU's variant of \texttt{make}
-must be available in a recent version. E.g. for Ubuntu Linux these are contained in
+must be available in a recent version. For Ubuntu Linux, e.g.,  these are contained in the
 packages \texttt{autoconf}, \texttt{automake}, \texttt{libtool}
 and the C++ compiler \texttt{g++} and \texttt{make} are contained in \texttt{build-essential}.
 
-At time of this writing it is expected that \texttt{g++} of version $\geqslant$ 4.4.1, \texttt{automake} of version $\geqslant$ 1.11,
+At the time of writing this manual, it is expected that \texttt{g++} of version $\geqslant$ 4.4.1, \texttt{automake} of version $\geqslant$ 1.11,
 \texttt{autoconf} of version $\geqslant$ 2.65, \texttt{autogen} of version $\geqslant$ 5.9.7,  \texttt{libtool} of version $\geqslant$ 2.2.6
 and GNU \texttt{make} version $\geqslant$ 3.81 should do their job for building \Dumux.\\
 
-\Dumux makes use of library \texttt{boost} of version $\geqslant$ 1.33.1 but optional external modules at times require a more recent version. 
+\Dumux makes use of the \texttt{boost} library in the version $\geqslant$ 1.33.1 but optional external modules may require a more recent version. 
 It is thus necessary to install an appropriate developer package of \texttt{boost}
-or sometimes named \texttt{libboost}. The matching Ubuntu Linux package is \texttt{libboost-dev}. \\
+which is sometimes also named \texttt{libboost}. The matching Ubuntu Linux package is \texttt{libboost-dev}. \\
 
-The building of contained documentation like this handbook requires \LaTeX\  and auxiliary tools
+The building of included documentation like this handbook requires \LaTeX\  and auxiliary tools
 like \texttt{dvipdf} and \texttt{bibtex}. One usually chooses a \LaTeX\  distribution like \texttt{texlive} for doing that.
-It is possible to switch off building of documentation by \texttt{--disable-documentation} in building options, i.e. as switch to \texttt{CONFIGURE\_FLAGS}.
+It is possible to switch off the building of the documentation by setting the switch \texttt{--disable-documentation} in the \texttt{CONFIGURE\_FLAGS} of the building options as.
 Additional parts of documentation are contained in source code files as special formatted comments.
 Extracting them can be done by program \texttt{doxygen} (version $\geqslant$ 1.7.2 works). See for this optional step section \ref{sec:build-doxy-doc}.\\
 
 Depending whether you are going to use external libraries and modules for additional \Dune features 
 additional software packages  may required. Some hints on that are given in section \ref{sec:external-modules-libraries}.\\
 
-For code extraction out of tar-files GNU's version of \texttt{tar} is used.
-For accessing software repositories we recommend Apache Subversion command-line client \texttt{svn}
+For the extraction of the content of tar-files, the GNU version of \texttt{tar} is used.
+The subversion (SVN) software repositories can be accessed with the help of a subversion client. We recommend the Apache Subversion command-line client \texttt{svn}
 contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}. 
 
 \subsection{Obtaining source code for \Dune and \Dumux}
-As written before \Dumux release 2.0 is based on \Dune release 2.0, comprising the core modules 
+As written before the \Dumux release 2.0 is based on the \Dune release 2.0, comprising the core modules 
 \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} and the external dune
-module \texttt{dune-pdelab}. Thus for a \Dumux installation these modules are required to be installed.
-Of course the external \Dune module \texttt{dumux} from \Dumux website is required too.\\
+module \texttt{dune-pdelab}. Thus, for a proper \Dumux installation these modules are required.
+Naturally, the external \Dune module \texttt{dumux} is required, too.\\
 
-Two possibilities exist to get source code for \Dune and \Dumux.
-Firstly, \Dune and \Dumux can obtained as tar-files by download from respective {\Dune} and {\Dumux} website. They then need to be extracted, as described in the next section.
-Secondly, described in the section next but one, is a method to obtain most recent source, but more generally even any of its predecessors, by direct access via Internet to software repositories of software revision control system of software developement. \Dune and \Dumux use for their software repositories Apache Subversion.
-As a user does not always want the most recent version
-certain version tags (i.e. special names) and version numbers and even software branches are means of software revision control system to provide access to different versions of a software from a software repository.
+Two possibilities exist to get the source code of \Dune and \Dumux.
+Firstly, \Dune and \Dumux can be downloaded as tar-files from the respective {\Dune} and {\Dumux} website. They have to be extracted as described in the next paragraph.
+Secondly, a method to obtain the most recent source code (or more generally any of its the previous revisions) by direct access via internet to the software repositories of the revision control system is described in the subsequent part. \Dune and \Dumux use Apache Subversion for their software repositories. However, if a user does not want to use the most recent version,
+certain version tags (i.e. special names), version numbers and even software branches are means of the software revision control system to provide access to different versions of the software.
 
 \paragraph{Obtaining the software by installing tar-files}
-The a bit old fashioned named tape-archive-file shortly named tar-file or tarball is a common file format for distributing collections of files contained in these archives.
-This part of installation is done as follows: 
-Download the tarballs from the respective \Dune (version 2.0) and \Dumux websites to a certain path in your filesystem.
-Create the {\Dune} root directory, named below in the examaple DUMUX, then extract content of tar-files by command-line program tar into it.
-Above, except download, can achieved by the following shell commands, replace in them \texttt{path\_to\_tarball} with the directory-name where the downloaded files are actually located.
+The slightly old-fashioned named tape-archive-file shortly named tar-file or tarball is a common file format for distributing collections of files contained in these archives.
+The extraction from the tar-files is done as follows: 
+Download the tarballs from the respective \Dune (version 2.0) and \Dumux websites to a certain folder in your filesystem.
+Create the {\Dune} root directory, named below in the examaple DUMUX, then extract the content of the tar-files by the command-line program tar there.
+This can be achieved by the following shell commands. Replace \texttt{path\_to\_tarball} with the directory name where the downloaded files are actually located.
 
 \begin{lstlisting}[style=Bash]
 $ mkdir DUMUX
@@ -87,9 +82,9 @@ $ tar xzvf path_to_tarball_of/dune-localfunctions-2.0.tar.gz
 $ tar xzvf path_to_tarball_of/dumux-2.0.tar.gz
 \end{lstlisting}
 
-After extraction it comes out that the actual dumux' root directory name is \texttt{dumux-2.0}.\\
+After extraction, the actual dumux root directory's name is \texttt{dumux-2.0}.\\
 
-Optional, if you with to install \Dune Grid Howto:
+Furthermore, if you with to install the optional \Dune Grid-Howto:
 
 \begin{lstlisting}[style=Bash]
 $ tar xzvf path_to_tarball_of/dune-grid-howto-2.0.tar.gz
@@ -97,7 +92,7 @@ $ tar xzvf path_to_tarball_of/dune-grid-howto-2.0.tar.gz
 
 However, the required \Dune-module \texttt{dune-pdelab} is not available as tar-file.
 That's why one has to install it from a software repository by the second method.
-If svn command is available, it can done as follows: 
+If the svn command is available in the command line, it can done as follows: 
 
 \begin{lstlisting}[style=Bash]
 $ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab
