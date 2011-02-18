@@ -189,14 +189,9 @@ public:
                                     pressure);
             /* Wilke method. See:
              *
-             * S.O.Ochs: "Development of a multiphase multicomponent
-             * model for PEMFC - Technical report: IRTG-NUPUS",
-             * University of Stuttgart, 2008
-             *
-             * and:
-             *
-             * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
-             * edition, McGraw-Hill, 1987, 407-410
+             * See: R. Reid, et al.: The Properties of Gases and Liquids,
+             * 4th edition, McGraw-Hill, 1987, 407-410
+             * 5th edition, McGraw-Hill, 20001, p. 9.21/22
              */
             Scalar muResult = 0;
             const Scalar mu[numComponents] = {
@@ -215,7 +210,7 @@ public:
                 Scalar divisor = 0;
                 for (int j = 0; j < numComponents; ++j) {
                     Scalar phiIJ = 1 + sqrt(mu[i]/mu[j] *
-                                            pow(M[i]/M[j], 1/4.0));
+                                            pow(M[j]/M[i], 1/4.0));
                     phiIJ *= phiIJ;
                     phiIJ /= sqrt(8*(1 + M[i]/M[j]));
                     divisor += fluidState.moleFrac(phaseIdx, j)*phiIJ;
@@ -496,6 +491,7 @@ private:
     static Scalar liquidPhaseDensity_(Scalar T, Scalar pl, Scalar xlH2O, Scalar xlN2)
     {
         // See: Ochs 2008
+        // Formula (2.6)
         // \todo: proper citation
         Scalar rholH2O = H2O::liquidDensity(T, pl);
         Scalar clH2O = rholH2O/H2O::molarMass();
