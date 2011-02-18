@@ -211,13 +211,15 @@ public:
      *
      * See:
      *
-     * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
-     * edition, McGraw-Hill, 1987, pp 396-397, 670
+     * See: R. Reid, et al.: The Properties of Gases and Liquids,
+     * 4th edition, McGraw-Hill, 1987, pp 396-397, 670
+     * 5th edition, McGraw-Hill, 2001  pp 9.7-9.8 (omega and V_c taken from p. A.5)
+     *
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
         const Scalar Tc = criticalTemperature();
-        const Scalar Vc = 99.2; // critical specific volume [cm^3/mol]
+        const Scalar Vc = 98.6; // critical specific volume [cm^3/mol]
         const Scalar omega = 0.011; // accentric factor
         const Scalar M = molarMass() * 1e3; // molar mas [g/mol]
         const Scalar dipole = 0.0; // dipole moment [debye]
