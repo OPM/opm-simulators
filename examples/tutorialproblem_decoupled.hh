@@ -162,7 +162,8 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDe
     typedef Dune::FieldVector<Scalar, dim> LocalPosition;
 
 public:
-    TutorialProblemDecoupled(const GridView &gridView, const GlobalPosition lowerLeft = GlobalPosition(0.),
+    TutorialProblemDecoupled(const GridView &gridView,
+            const GlobalPosition lowerLeft = GlobalPosition(0.),
             const GlobalPosition upperRight = GlobalPosition(0.)) : ParentType(gridView) /*@\label{tutorial-decoupled:constructor-problem}@*/
     {    }
 
@@ -223,7 +224,8 @@ public:
     /*! Defines the type the boundary condition for the pressure equation,
      *  either pressure (dirichlet) or flux (neumann).
      */
-    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypePress}@*/
+    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos,
+                                                   const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypePress}@*/
     {
         if (globalPos[0] < this->bboxMin()[0] + eps_)
             return BoundaryConditions::dirichlet;
@@ -235,7 +237,8 @@ public:
     /*! Defines the type the boundary condition for the transport equation,
      *  either saturation (dirichlet) or flux (neumann).
      */
-    BoundaryConditions::Flags bctypeSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypeSat}@*/
+    BoundaryConditions::Flags bctypeSat(const GlobalPosition& globalPos,
+                                        const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypeSat}@*/
     {
         if (globalPos[0] < this->bboxMin()[0] + eps_)
             return BoundaryConditions::dirichlet;
@@ -246,7 +249,8 @@ public:
     /*! In case of a dirichlet BC for the pressure equation, the pressure
      *  have to be defined on boundaries.
      */
-    Scalar dirichletPress(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletPress}@*/
+    Scalar dirichletPress(const GlobalPosition& globalPos,
+                          const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletPress}@*/
     {
         return 2e5;
     }
@@ -254,7 +258,8 @@ public:
     /*! In case of a dirichlet BC for the transport equation, a saturation
      *  has to be defined on boundaries.
      */
-    Scalar dirichletSat(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletSat}@*/
+    Scalar dirichletSat(const GlobalPosition& globalPos,
+                        const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletSat}@*/
     {
         return 1;
     }
@@ -262,7 +267,8 @@ public:
     /*! In case of a neumann boundary condition, the flux of matter
      *  is returned as a vector.
      */
-    std::vector<Scalar> neumann(const GlobalPosition& globalPos, const Intersection& intersection) const /*@\label{tutorial-decoupled:neumann}@*/
+    std::vector<Scalar> neumann(const GlobalPosition& globalPos,
+                                const Intersection& intersection) const /*@\label{tutorial-decoupled:neumann}@*/
     {
         std::vector<Scalar> neumannFlux(2,0.0);
         if (globalPos[0] > this->bboxMax()[0] - eps_)

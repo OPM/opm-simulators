@@ -67,7 +67,8 @@ public:
     /*! Apply the intrinsic permeability tensor \f$[m^2]\f$ to a
      *  pressure potential gradient.
      */
-    const FieldMatrix& intrinsicPermeability (const GlobalPosition& globalPos, const Element& element) const
+    const FieldMatrix& intrinsicPermeability (const GlobalPosition& globalPos,
+                                              const Element& element) const
     {
             return K_;
     }
@@ -80,7 +81,8 @@ public:
 
     //! return the parameter object for the material law (i.e. Brooks-Corey)
     //! which may vary with the spatial position
-    const MaterialLawParams& materialLawParams(const GlobalPosition& globalPos, const Element &element) const
+    const MaterialLawParams& materialLawParams(const GlobalPosition& globalPos,
+                                               const Element &element) const
     {
             return materialLawParams_;
     }
