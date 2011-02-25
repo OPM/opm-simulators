@@ -1,20 +1,20 @@
 \section{Setup of a New Folder}
 
-In this section setting up a new folder is described. In fact it is very easy to create a new folder, but getting \Dumux to know the new folder takes some steps which will be explained in mroe detail below:
+In this section setting up a new folder is described. In fact it is very easy to create a new folder, but getting \Dumux to know the new folder takes some steps which will be explained in more detail below:
 
 \begin{itemize}
  \item create new folder with content
  \item adapt \verb+Makefile.am+
  \item insert new folder in \verb+Makefile.am+ of the directory above
- \item adapt \verb+configure.ac+ in the \verb+$DUMUX_ROOT+ (the directory you checked out, probably dune-mux)
+ \item adapt \verb+configure.ac+ in the \verb+$DUMUX_ROOT+ (the directory you checked out, probably dumux)
  \item newly compile \Dumux
 \end{itemize}
 
 \noindent In more detail:
 
-\textbf{First} of all, the new folder including all relevant files needs to be created (see Section \ref{tutorial-coupled} and \ref{tutorial-decoupled} for desccription of a problem). 
+\textbf{First} of all, the new folder including all relevant files needs to be created (see Section \ref{tutorial-coupled} and \ref{tutorial-decoupled} for description of a problem). 
 
-\textbf{Second}, a new \verb+Makefile.am+ for the new Folder needs to be created. It is good practize to simply copy an existing file. For example the file \verb+$DUMUX_ROOT/test/2p/Makefile.am+ looks as follows:
+\textbf{Second}, a new \verb+Makefile.am+ for the new Folder needs to be created. It is good practice to simply copy an existing file. For example the file \verb+$DUMUX_ROOT/test/2p/Makefile.am+ looks as follows:
 \begin{verbatim}
 bin_PROGRAMS = test_2p
 
@@ -25,7 +25,7 @@ test_2p_LDADD = $(MPI_LDFLAGS)
 include $(top_srcdir)/am/global-rules
 \end{verbatim}
 
-All occurences of \verb+test_2p+ need to be replaced by the name of the new project, e.g. \verb+New_Project+. At least if the name of the source file as well as the name of the new project are \verb+New_Project+.
+All occurrences of \verb+test_2p+ need to be replaced by the name of the new project, e.g. \verb+New_Project+. At least if the name of the source file as well as the name of the new project are \verb+New_Project+.
 
 \textbf{Third}: In the directory above your new Project there is also a \verb+Makefile.am+ . In this file the subdirectories are listed. As you introduced a new subdirectory, it needs to be included here. In this case the name of the new Folder is \verb+New_Project+ . Don't forget the trailing backslash.
 

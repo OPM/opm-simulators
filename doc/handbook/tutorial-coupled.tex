@@ -275,40 +275,42 @@ The problem class always has at least five methods:
   condition.
 \end{itemize}
 
-Methods which make statements about boundary segments of the grid (i.e. 
-\texttt{boundaryTypes()}, \texttt{dirichlet()} and \texttt{neumann()}) get 
-six parameters. The first parameter differs if the type of the boundary condition
-is defined \texttt{boundaryTypes()}:
+For the definition of the the boundary condition types and of the values of the Dirichlet boundaries,
+two parameters are required: 
 \begin{description}
-\item[BCtypes:] A container which stores the type of the boundary condition
-for each equation. For the typical case where all equations have the same boundary
-condition at a certain position, there are two methods that set the appropriate conditions
-for all primary variables / equations: Either \texttt{setAllDirichlet()} or \texttt{setAllNeumann()}.
+ \item [values:]  A vector which stores the result of the method. What
+  the values in this vector mean is depending on the method: For
+  \texttt{dirichlet()} it contains the actual values of the primary
+  variables, for \texttt{boundaryTypes()} it contains the boundary 
+  condition type. It has as many entries as the model has primary variables / equations.
+  For the typical case where all equations have the same boundary
+  condition at a certain position, there are two methods that set the appropriate conditions
+  for all primary variables / equations: Either \texttt{setAllDirichlet()} or \texttt{setAllNeumann()}
+ \item [vertex:] The boundary condition and the Dirichlet values are specified at the vertex, which represents a
+  subcontrol volume. This avoids to specify two different boundary condition types at one subcontrol volume. 
+  Be aware that the second parameter is a Dune grid entity with the codimension dim. 
+\end{description}
+
+To ensure that no boundaries are undefined, a small safeguard value \texttt{eps\_}
+is usually added when comparing spatial coordinates. The left boundary is
+hence not assigned where the first coordinate is equal to zero, but where it is
+smaller than a very small value \texttt{eps\_}.
+
+Methods which make statements about boundary segments of the grid (i.e. 
+\texttt{neumann()}) get six parameters:
+\begin{description}
+\item[values:] A vector \texttt{neumann()}, in which the mass fluxes per area unit
+  over the boundary segment are specified.
 \item[element:] The element of the grid where the boundary segment
   is located.
 \item[fvElemGeometry:] The finite-volume geometry induced on the
   finite element by the box scheme.
-\item[isIt:] The \texttt{IntersectionIterator} of the boundary
-  segement as given by the grid
+\item[isIt:] The \texttt{Intersection} of the boundary
+  segment as given by the grid.
 \item[scvIdx:] The index of the sub-control volume in
   \texttt{fvElementGeometry} adjacent to the boundary segment.
 \item[boundaryFaceIdx:] The index of the boundary face in
   \texttt{fvElementGeometry} which represents the boundary segment.  
-\end{description}
-To ensure that no boundaries are undefined, a small safeguard value \texttt{eps\_}
-is usually added when compariing spatial coordinates. The left boundary is
-hence not assigned where the first coordinate is equal to zero, but where it is
-smaller than a very small value \texttt{eps\_}.
-
-After the type of the boundary condition is defined, their values have to be
-assigned with the methods \texttt{dirichlet()} and \texttt{neumann()} which only differ 
-by the first function parameter:
-\begin{description}
- \item[values:] A vector which stores the result of the method. What
-  the values in this vector mean is dependent on the method: For
-  \texttt{dirichlet()} it contains the values of the primary
-  variables, for \texttt{neumann()} the mass fluxes per area unit
-  over the boundary segment.
 \end{description}
 
 Similarly, the \texttt{initial()} and \texttt{source()} methods
@@ -321,7 +323,10 @@ methods. If the isothermal two-phase model is used, this includes
 for example a \texttt{temperature()} method which returns the temperature in Kelvin
 of the fluids and the rock matrix in the domain. This temperature is
 then used by the model to calculate fluid properties which possibly
-depend on it, e.g. density.
+depend on it, e.g. density. The \texttt{bboxMax()} method that is used here, is a vector
+that provides information about the spatial extends of the simulation domain. This method 
+and the respective \texttt{bboxMin()} method
+can be found in the base class \texttt{Dumux::BoxProblem<TypeTag>}.
 
 
 \subsection{Defining fluid properties}\label{tutorial-coupled:description-fluid-class}
@@ -425,7 +430,7 @@ to make some small changes in the tutorial files.
 \begin{enumerate}
 
 \item \textbf{Run the Model} \\
-To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 5e5 10}. The first number behind the simulation name defines the timespan of the simulation run in seconds, the second number defines the initial time step size. Note that the time step size is automatically optimized during the simulation. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 5e5 10}. The first number behind the simulation name defines the timespan of the simulation run in seconds, the second number defines the initial time step size. Note that the time step size is automatically optimized during the simulation. For the visualization with paraview please refer to \ref{quick-start-guide}.\\
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
@@ -446,13 +451,13 @@ To get an impression what the results should look like you can first run the ori
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
 \begin{enumerate}
  \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be aware to use the complete water class with its own template parameter).
- \item DNAPL: A standard set of chemical substances, such as Oil and Brinde, is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
+ \item DNAPL: A standard set of chemical substances, such as Oil and Brine, is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
 If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system} \\
-\Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
+\Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
 Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
@@ -488,7 +493,7 @@ When does the front cross the material border? In paraview, the option \textit{V
 \end{enumerate}
 
 \subsubsection{Exercise 2}
-For this exercise you should create a new proplem file analogous to
+For this exercise you should create a new problem file analogous to
 the file \texttt{tutorialproblem\_coupled.hh} (e.g. with the name 
 \texttt{ex2\_tutorialproblem\_coupled.hh} and new spatial parameters 
 just like \texttt{tutorialspatialparameters\_coupled.hh}. The new problem file needs to
