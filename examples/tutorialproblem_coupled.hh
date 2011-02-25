@@ -167,6 +167,8 @@ public:
     void boundaryTypes(BoundaryTypes &BCtypes, const Vertex &vertex) const
     {
         const GlobalPosition &pos = vertex.geometry().center();
+        Scalar right = this->bboxMax()[0];
+
         if (pos[0] < eps_) // Dirichlet conditions on left boundary
            BCtypes.setAllDirichlet();
         else // neuman for the remaining boundaries
@@ -179,6 +181,8 @@ public:
     // primary variables.
     void dirichlet(PrimaryVariables &values, const Vertex &vertex) const
     {
+        const GlobalPosition &pos = vertex.geometry().center();
+
         values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
     }
