@@ -25,8 +25,8 @@
  *
  * \brief problem for the sequential tutorial
  */
-#ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
-#define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH
+#ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian1}@*/
+#define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian2}@*/
 
 // the grid includes
 #include <dune/grid/sgrid.hh>
