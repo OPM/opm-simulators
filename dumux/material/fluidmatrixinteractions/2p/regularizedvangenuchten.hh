@@ -47,13 +47,18 @@ namespace Dumux
  *        static members and doesn't concern itself converting
  *        absolute to effective saturations and vice versa.
  *
- *        In order to avoid very steep gradients the marginal values are "regularized".
- *        This means that in stead of following the curve of the material law in these regions, some linear approximation is used.
- *        Doing this is not worse than following the material law. E.g. for very low wetting phase values the material
- *        laws predict infinite values for \f$p_c\f$ which is completely unphysical. In case of very high wetting phase
- *        saturations the difference between regularized and "pure" material law is not big.
+ *        In order to avoid very steep gradients the marginal values
+ *        are "regularized".  This means that in stead of following
+ *        the curve of the material law in these regions, some linear
+ *        approximation is used.  Doing this is not worse than
+ *        following the material law. E.g. for very low wetting phase
+ *        values the material laws predict infinite values for
+ *        \f$p_c\f$ which is completely unphysical. In case of very
+ *        high wetting phase saturations the difference between
+ *        regularized and "pure" material law is not big.
  *
- *        Regularizing has the additional benefit of being numerically friendly: Newton's method does not like infinite gradients.
+ *        Regularizing has the additional benefit of being numerically
+ *        friendly: Newton's method does not like infinite gradients.
  *
  *        The implementation is accomplished as follows:
  *        - check whether we are in the range of regularization
@@ -101,8 +106,23 @@ public:
         if (Swe < SwThLow) {
             return VanGenuchten::pC(params, SwThLow) + mLow_(params)*(Swe - SwThLow);
         }
-        else if (Swe > SwThHigh) {
-            return VanGenuchten::pC(params, SwThHigh) + mHigh_(params)*(Swe - SwThHigh);
+        else if (Swe > SwThHigh)
+        {
+            Scalar yTh = VanGenuchten::pC(params, SwThHigh);
+            Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
+            
+            if (Swe < 1.0) {
+                // use spline between threshold Swe and 1.0
+                Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
+                Spline<Scalar> sp(SwThHigh, 1.0, // x0, x1
+                                  yTh, 0, // m0, m1
+                                  mTh, m1); // m0, m1
+                return sp.eval(Swe);
+            } 
+            else {
+                // straight line for Swe > 1.0
+                return m1*(Swe - 1.0) + 0.0;
+            }
         }
 
         // if the effective saturation is in an 'reasonable'
@@ -126,20 +146,23 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        // calculate the saturation which corrosponds to the
-        // saturation in the non-regularized verision of van
-        // Genuchten's law
-        Scalar Sw;
-        if (pC <= 0)
-            // make sure we invert the regularization
-            Sw = 1.5;
-        else
-            Sw = VanGenuchten::Sw(params, pC);
-
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
         const Scalar SwThLow = params.pCLowSw();
         const Scalar SwThHigh = params.pCHighSw();
+
+        // calculate the saturation which corrosponds to the
+        // saturation in the non-regularized verision of van
+        // Genuchten's law
+        Scalar Sw;
+        if (pC <= 0) {
+            // invert straight line for Swe > 1.0
+            Scalar yTh = VanGenuchten::pC(params, SwThHigh);
+            Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
+            return pC/m1 + 1.0;
+        }
+        else
+            Sw = VanGenuchten::Sw(params, pC);
 
         // invert the regularization if necessary
         if (Sw <= SwThLow) {
@@ -147,10 +170,18 @@ public:
             Scalar pC_SwLow = VanGenuchten::pC(params, SwThLow);
             return (pC - pC_SwLow)/mLow_(params) + SwThLow;
         }
-        else if (Sw >= SwThHigh) {
-            // invert the high saturation regularization of pC()
-            Scalar pC_SwHigh = VanGenuchten::pC(params, SwThHigh);
-            return (pC - pC_SwHigh)/mHigh_(params) + SwThHigh;
+        else if (Sw > SwThHigh)
+        {
+            Scalar yTh = VanGenuchten::pC(params, SwThHigh);
+            Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
+            
+            // invert spline between threshold Swe and 1.0
+            Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
+            Spline<Scalar> sp(SwThHigh, 1.0, // x0, x1
+                              yTh, 0, // m0, m1
+                              mTh, m1); // m0, m1
+            return sp.intersectInterval(SwThHigh, 1.0,
+                                        0, 0, 0, pC);
         }
 
         return Sw;
