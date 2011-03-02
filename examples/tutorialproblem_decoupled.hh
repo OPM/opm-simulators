@@ -40,6 +40,10 @@
 // assign parameters dependent on space (e.g. spatial parameters)
 #include "tutorialspatialparameters_decoupled.hh" /*@\label{tutorial-decoupled:spatialparameters}@*/
 
+// the components that are used
+#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/oil.hh>
+
 namespace Dumux
 {
 
