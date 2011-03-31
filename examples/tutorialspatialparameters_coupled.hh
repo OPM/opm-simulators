@@ -113,7 +113,7 @@ public:
 
         //parameters of Brooks & Corey Law
         materialParams_.setPe(500.0);
-        materialParams_.setAlpha(2);
+        materialParams_.setLambda(2);
     }
 
 private:
