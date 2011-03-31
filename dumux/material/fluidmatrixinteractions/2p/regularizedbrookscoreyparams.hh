@@ -50,8 +50,8 @@ public:
     {
     }
 
-    RegularizedBrooksCoreyParams(Scalar pe, Scalar alpha)
-        : BrooksCoreyParams(pe, alpha)
+    RegularizedBrooksCoreyParams(Scalar pe, Scalar lambda)
+        : BrooksCoreyParams(pe, lambda)
     {
     }
 

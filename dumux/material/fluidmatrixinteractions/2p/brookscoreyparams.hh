@@ -52,8 +52,8 @@ public:
         Valgrind::SetUndefined(*this);
     }
 
-    BrooksCoreyParams(Scalar pe, Scalar alpha)
-        : pe_(pe), alpha_(alpha)
+    BrooksCoreyParams(Scalar pe, Scalar lambda)
+        : pe_(pe), lambda_(lambda)
     {
     }
 
@@ -71,20 +71,20 @@ public:
 
 
     /*!
-     * \brief Returns the alpha shape parameter
+     * \brief Returns the lambda shape parameter
      */
-    Scalar alpha() const
-    { return alpha_; }
+    Scalar lambda() const
+    { return lambda_; }
 
     /*!
-     * \brief Set the alpha shape parameter
+     * \brief Set the lambda shape parameter
      */
-    void setAlpha(Scalar v)
-    { alpha_ = v; }
+    void setLambda(Scalar v)
+    { lambda_ = v; }
 
 private:
     Scalar pe_;
-    Scalar alpha_;
+    Scalar lambda_;
 };
 }; // namespace Dumux
 

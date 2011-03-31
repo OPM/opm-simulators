@@ -60,7 +60,7 @@ public:
      * function is given by
      *
      *  \f[
-        p_C = p_e\overline{S}_w^{-1/\alpha}
+        p_C = p_e\overline{S}_w^{-1/\lambda}
     *  \f]
     *
      * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$
@@ -73,7 +73,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return params.pe()*pow(Swe, -1.0/params.alpha());
+        return params.pe()*pow(Swe, -1.0/params.lambda());
     }
 
     /*!
@@ -81,7 +81,7 @@ public:
      *
      * This is the inverse of the capillary pressure-saturation curve:
      * \f[
-     \overline{S}_w = (\frac{p_C}{p_e})^{-\alpha}
+     \overline{S}_w = (\frac{p_C}{p_e})^{-\lambda}
      \f]
      *
      * \param pC        Capillary pressure \f$p_C\f$
@@ -94,7 +94,7 @@ public:
     {
         assert(pC >= 0);
 
-        Scalar tmp = pow(pC/params.pe(), -params.alpha());
+        Scalar tmp = pow(pC/params.pe(), -params.lambda());
         return std::min(std::max(tmp, Scalar(0.0)), Scalar(1.0));
     }
 
@@ -105,7 +105,7 @@ public:
      * This is equivalent to
      * \f[
      \frac{\partial p_C}{\partial \overline{S}_w} =
-     -\frac{p_e}{\alpha} \overline{S}_w^{-1/\alpha - 1}
+     -\frac{p_e}{\lambda} \overline{S}_w^{-1/\lambda - 1}
      \f]
      *
      * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$
@@ -118,7 +118,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return - params.pe()/params.alpha() * pow(Swe, -1/params.alpha() - 1);
+        return - params.pe()/params.lambda() * pow(Swe, -1/params.lambda() - 1);
     }
 
     /*!
@@ -135,7 +135,7 @@ public:
     {
         assert(pC >= 0);
 
-        return -params.alpha()/params.pe() * pow(pC/params.pe(), - params.alpha() - 1);
+        return -params.lambda()/params.pe() * pow(pC/params.pe(), - params.lambda() - 1);
     }
 
     /*!
@@ -153,7 +153,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return pow(Swe, 2.0/params.alpha() + 3);
+        return pow(Swe, 2.0/params.lambda() + 3);
     };
 
     /*!
@@ -171,7 +171,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return (2.0/params.alpha() + 3)*pow(Swe, 2.0/params.alpha() + 2);
+        return (2.0/params.lambda() + 3)*pow(Swe, 2.0/params.lambda() + 2);
     };
 
     /*!
@@ -189,7 +189,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        Scalar exponent = 2.0/params.alpha() + 1;
+        Scalar exponent = 2.0/params.lambda() + 1;
         Scalar tmp = 1. - Swe;
         return tmp*tmp*(1. - pow(Swe, exponent));
     }
@@ -213,9 +213,9 @@ public:
         return
             2.0*(Swe - 1)*(
                 1 +
-                pow(Swe, 2.0/params.alpha())*(
-                    1.0/params.alpha() + 1.0/2 -
-                    Swe*(1.0/params.alpha() + 1.0/2)
+                pow(Swe, 2.0/params.lambda())*(
+                    1.0/params.lambda() + 1.0/2 -
+                    Swe*(1.0/params.lambda() + 1.0/2)
                     )
                 );
     };
