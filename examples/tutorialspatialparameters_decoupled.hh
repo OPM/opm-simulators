@@ -103,7 +103,7 @@ public:
         materialLawParams_.setPe(500);
 
         // Brooks-Corey shape parameters
-        materialLawParams_.setAlpha(2);
+        materialLawParams_.setLambda(2);
     }
 
 private:
