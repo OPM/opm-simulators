@@ -1063,7 +1063,8 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
                             const double            *porevol,
                             struct cfs_tpfa_data    *h,
                             const double            *dpmobf,
-                            const double            *surf_dens)
+                            const double            *surf_dens,
+                            const double            *gravity)
 /* ---------------------------------------------------------------------- */
 {
     /* Reference:
@@ -1072,10 +1073,11 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
        Capillary pressure parts not included.
     */
 
-    int i, j, f, c2;
+    int i, j, k, f, c2;
     double f11, f12, f21, f22;
-    double gsgn, dp, dz, tr, tmob, detF, eqv_flux;
+    double gsgn, dp, dzg, tr, tmob, detF, eqv_flux;
     const double *pmob;
+    const double *A;
     /* This is intended to be compatible with the dune-porsol blackoil
        code. This library is otherwise not depending on particular
        orderings of phases or components, so at some point this
@@ -1083,13 +1085,11 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
     assert (cq->nphases == 3);
     enum { Water = 0, Oil = 1, Gas = 2 };
     enum { num_phases = 3 };
-    double gamma[num_phases];
+    double rho[num_phases];
     double pot[num_phases];
     /* Notation: dpmob[Oil][Water] is d/ds_w(lambda_o) */
     double dpmob[num_phases][num_phases]
         = { {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0} };
-
-    /* Computing gamma */
 
     /* Filling the dpmob array from available data.
        Note that we only need the following combinations:
@@ -1120,11 +1120,24 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
 
         /* Initially only interiour faces */
         if (c2 >= 0) {
-            dp = h->x[c] - h->x[c2];
-            dz = G->cell_centroids[3*c + 2] = G->cell_centroids[3*c2 + 2];
+            /* Computing density */
+            A = cq->Af + f*(cq->nphases)*(cq->nphases);
             for (j = 0; j < cq->nphases; ++j) {
-                pot[j] = fabs(dp - gamma[j]*dz);
+                rho[j] = 0.0;
+                for (k = 0; k < cq->nphases; ++k) {
+                    rho[j] += A[cq->nphases*j + k]*surf_dens[k];
+                }
             }
+            /* Computing gravity potentials */
+            dp = h->x[c] - h->x[c2];
+            dzg = 0.0;
+            for (j = 0; j < G->dimensions; ++j) {
+                dzg += (G->cell_centroids[G->dimensions*c + j] - G->cell_centroids[G->dimensions*c2 + j])*gravity[j];
+            }
+            for (j = 0; j < cq->nphases; ++j) {
+                pot[j] = fabs(dp - rho[j]*dzg);
+            }
+            /* Computing the flux parts f_ij */
             pmob = cq->phasemobf + f*cq->nphases;
             tr = trans[f];
             tmob = pmob[Water] + pmob[Oil] + pmob[Gas];
@@ -1161,14 +1174,16 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
                        const double            *porevol,
                        struct cfs_tpfa_data    *h,
                        const double            *dpmobf,
-                       const double            *surf_dens)
+                       const double            *surf_dens,
+                       const double            *gravity)
 /* ---------------------------------------------------------------------- */
 {
     int c;
     double max_dt, cell_dt;
     max_dt = 1e100;
     for (c = 0; c < G->number_of_cells; ++c) {
-        cell_dt = cfs_tpfa_impes_maxtime_cell(c, G, cq, trans, porevol, h, dpmobf, surf_dens);
+        cell_dt = cfs_tpfa_impes_maxtime_cell(c, G, cq, trans, porevol, h,
+                                              dpmobf, surf_dens, gravity);
         if (cell_dt < max_dt) {
             max_dt = cell_dt;
         }

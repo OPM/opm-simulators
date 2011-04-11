@@ -104,7 +104,8 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
                        const double            *porevol,
                        struct cfs_tpfa_data    *h,
                        const double            *dpmobf,
-                       const double            *surf_dens);
+                       const double            *surf_dens,
+                       const double            *gravity);
 
 void
 cfs_tpfa_expl_mass_transport(grid_t               *G,
