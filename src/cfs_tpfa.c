@@ -1,8 +1,8 @@
 #include <assert.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "blas_lapack.h"
 #include "flow_bc.h"
