@@ -1075,7 +1075,7 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
 
     int i, j, k, f, c2;
     double f11, f12, f21, f22;
-    double gsgn, dp, dzg, tr, tmob, detF, eqv_flux;
+    double dp, dzg, tr, tmob, detF, eqv_flux;
     const double *pmob;
     const double *A;
     /* This is intended to be compatible with the dune-porsol blackoil
@@ -1090,68 +1090,71 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
     /* Notation: dpmob[Oil][Water] is d/ds_w(lambda_o) */
     double dpmob[num_phases][num_phases]
         = { {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0} };
-
-    /* Filling the dpmob array from available data.
-       Note that we only need the following combinations:
-       (Water, Water)
-       (Water, Gas)
-       (Oil, Water)
-       (Oil, Gas)
-       (Gas, Gas)
-
-       No derivatives w.r.t. Oil is needed, since there are only two
-       independent saturation variables.
-
-       The lack of (Gas, Water) may be due to assumptions on the
-       three-phase model used (should be checked to be compatible
-       with our choices).
-     */
-    
-
     f11 = f12 = f21 = f22 = 0.0;
+
+    /* Loop over neighbour faces to accumulate f11, f12 etc. */
     for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; ++i) {
         f  = G->cell_faces[i];
         if ((c2 = G->face_cells[2*f + 0]) == c) {
-            gsgn = 1.0;
             c2  = G->face_cells[2*f + 1];
-        } else {
-            gsgn = -1.0;
         }
 
         /* Initially only interiour faces */
-        if (c2 >= 0) {
-            /* Computing density */
-            A = cq->Af + f*(cq->nphases)*(cq->nphases);
-            for (j = 0; j < cq->nphases; ++j) {
-                rho[j] = 0.0;
-                for (k = 0; k < cq->nphases; ++k) {
-                    rho[j] += A[cq->nphases*j + k]*surf_dens[k];
-                }
-            }
-            /* Computing gravity potentials */
-            dp = h->x[c] - h->x[c2];
-            dzg = 0.0;
-            for (j = 0; j < G->dimensions; ++j) {
-                dzg += (G->cell_centroids[G->dimensions*c + j] - G->cell_centroids[G->dimensions*c2 + j])*gravity[j];
-            }
-            for (j = 0; j < cq->nphases; ++j) {
-                pot[j] = fabs(dp - rho[j]*dzg);
-            }
-            /* Computing the flux parts f_ij */
-            pmob = cq->phasemobf + f*cq->nphases;
-            tr = trans[f];
-            tmob = pmob[Water] + pmob[Oil] + pmob[Gas];
-            f11 += tr*((pmob[Oil] + pmob[Gas])*dpmob[Water][Water]*pot[Water]
-                      - pmob[Water]*dpmob[Oil][Water]*pot[Oil])/tmob;
-            f12 += -tr*(pmob[Water]*dpmob[Oil][Gas]*pot[Oil]
-                       + pmob[Water]*dpmob[Gas][Gas]*pot[Gas]
-                       - (pmob[Oil] + pmob[Gas])*dpmob[Water][Gas]*pot[Water])/tmob;
-            f21 += -tr*(pmob[Gas]*dpmob[Water][Water]*pot[Water]
-                       + pmob[Gas]*dpmob[Oil][Water]*pot[Oil])/tmob;
-            f22 += tr*(-pmob[Gas]*dpmob[Oil][Gas]*pot[Oil]
-                      + (pmob[Water] + pmob[Oil])*dpmob[Gas][Gas]*pot[Gas]
-                      - pmob[Gas]*dpmob[Water][Gas]*pot[Water])/tmob;
+        if (c2 < 0) {
+            continue;
         }
+
+        /* Computing density */
+        A = cq->Af + f*(cq->nphases)*(cq->nphases);
+        for (j = 0; j < cq->nphases; ++j) {
+            rho[j] = 0.0;
+            for (k = 0; k < cq->nphases; ++k) {
+                rho[j] += A[cq->nphases*j + k]*surf_dens[k];
+            }
+        }
+        /* Computing gravity potentials */
+        dp = h->x[c] - h->x[c2];
+        dzg = 0.0;
+        for (j = 0; j < G->dimensions; ++j) {
+            dzg += (G->cell_centroids[G->dimensions*c + j] - G->cell_centroids[G->dimensions*c2 + j])*gravity[j];
+        }
+        for (j = 0; j < cq->nphases; ++j) {
+            pot[j] = fabs(dp - rho[j]*dzg);
+        }
+        /* Filling the dpmob array from available data.
+           Note that we only need the following combinations:
+           (Water, Water)
+           (Water, Gas)
+           (Oil, Water)
+           (Oil, Gas)
+           (Gas, Gas)
+
+           No derivatives w.r.t. Oil is needed, since there are only two
+           independent saturation variables.
+
+           The lack of (Gas, Water) may be due to assumptions on the
+           three-phase model used (should be checked to be compatible
+           with our choices).
+        */
+        dpmob[Water][Water] = dpmobf[9*f];
+        dpmob[Water][Gas] = dpmobf[9*f + 2];
+        dpmob[Oil][Water] = dpmobf[9*f + 3];
+        dpmob[Oil][Gas] = dpmobf[9*f + 5];
+        dpmob[Gas][Gas] = dpmobf[9*f + 8];
+        /* Computing the flux parts f_ij */
+        pmob = cq->phasemobf + f*cq->nphases;
+        tr = trans[f];
+        tmob = pmob[Water] + pmob[Oil] + pmob[Gas];
+        f11 += tr*((pmob[Oil] + pmob[Gas])*dpmob[Water][Water]*pot[Water]
+                   - pmob[Water]*dpmob[Oil][Water]*pot[Oil])/tmob;
+        f12 += -tr*(pmob[Water]*dpmob[Oil][Gas]*pot[Oil]
+                    + pmob[Water]*dpmob[Gas][Gas]*pot[Gas]
+                    - (pmob[Oil] + pmob[Gas])*dpmob[Water][Gas]*pot[Water])/tmob;
+        f21 += -tr*(pmob[Gas]*dpmob[Water][Water]*pot[Water]
+                    + pmob[Gas]*dpmob[Oil][Water]*pot[Oil])/tmob;
+        f22 += tr*(-pmob[Gas]*dpmob[Oil][Gas]*pot[Oil]
+                   + (pmob[Water] + pmob[Oil])*dpmob[Gas][Gas]*pot[Gas]
+                   - pmob[Gas]*dpmob[Water][Gas]*pot[Water])/tmob;
     }
 
     /* (from eq. 3, 4a-e, 5a-c)
