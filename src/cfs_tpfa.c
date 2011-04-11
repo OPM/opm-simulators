@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "blas_lapack.h"
 #include "flow_bc.h"
@@ -1051,6 +1052,130 @@ cfs_tpfa_retrieve_gravtrans(grid_t               *G,
     memcpy(gravtrans_f, h->pimpl->gravtrans_f,
            np * G->number_of_faces * sizeof *gravtrans_f);
 }
+
+
+/* ---------------------------------------------------------------------- */
+static double
+cfs_tpfa_impes_maxtime_cell(int                      c,
+                            grid_t                  *G,
+                            struct compr_quantities *cq,
+                            const double            *trans,
+                            const double            *porevol,
+                            struct cfs_tpfa_data    *h,
+                            const double            *dpmobf,
+                            const double            *surf_dens)
+/* ---------------------------------------------------------------------- */
+{
+    /* Reference:
+       K. H. Coats, "IMPES Stability: The Stable Step", SPE 69225
+
+       Capillary pressure parts not included.
+    */
+
+    int i, j, f, c2;
+    double f11, f12, f21, f22;
+    double gsgn, dp, dz, tr, tmob, detF, eqv_flux;
+    const double *pmob;
+    /* This is intended to be compatible with the dune-porsol blackoil
+       code. This library is otherwise not depending on particular
+       orderings of phases or components, so at some point this
+       function should be generalized. */
+    assert (cq->nphases == 3);
+    enum { Water = 0, Oil = 1, Gas = 2 };
+    enum { num_phases = 3 };
+    double gamma[num_phases];
+    double pot[num_phases];
+    /* Notation: dpmob[Oil][Water] is d/ds_w(lambda_o) */
+    double dpmob[num_phases][num_phases]
+        = { {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0} };
+
+    /* Computing gamma */
+
+    /* Filling the dpmob array from available data.
+       Note that we only need the following combinations:
+       (Water, Water)
+       (Water, Gas)
+       (Oil, Water)
+       (Oil, Gas)
+       (Gas, Gas)
+
+       No derivatives w.r.t. Oil is needed, since there are only two
+       independent saturation variables.
+
+       The lack of (Gas, Water) may be due to assumptions on the
+       three-phase model used (should be checked to be compatible
+       with our choices).
+     */
+    
+
+    f11 = f12 = f21 = f22 = 0.0;
+    for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; ++i) {
+        f  = G->cell_faces[i];
+        if ((c2 = G->face_cells[2*f + 0]) == c) {
+            gsgn = 1.0;
+            c2  = G->face_cells[2*f + 1];
+        } else {
+            gsgn = -1.0;
+        }
+
+        /* Initially only interiour faces */
+        if (c2 >= 0) {
+            dp = h->x[c] - h->x[c2];
+            dz = G->cell_centroids[3*c + 2] = G->cell_centroids[3*c2 + 2];
+            for (j = 0; j < cq->nphases; ++j) {
+                pot[j] = fabs(dp - gamma[j]*dz);
+            }
+            pmob = cq->phasemobf + f*cq->nphases;
+            tr = trans[f];
+            tmob = pmob[Water] + pmob[Oil] + pmob[Gas];
+            f11 += tr*((pmob[Oil] + pmob[Gas])*dpmob[Water][Water]*pot[Water]
+                      - pmob[Water]*dpmob[Oil][Water]*pot[Oil])/tmob;
+            f12 += -tr*(pmob[Water]*dpmob[Oil][Gas]*pot[Oil]
+                       + pmob[Water]*dpmob[Gas][Gas]*pot[Gas]
+                       - (pmob[Oil] + pmob[Gas])*dpmob[Water][Gas]*pot[Water])/tmob;
+            f21 += -tr*(pmob[Gas]*dpmob[Water][Water]*pot[Water]
+                       + pmob[Gas]*dpmob[Oil][Water]*pot[Oil])/tmob;
+            f22 += tr*(-pmob[Gas]*dpmob[Oil][Gas]*pot[Oil]
+                      + (pmob[Water] + pmob[Oil])*dpmob[Gas][Gas]*pot[Gas]
+                      - pmob[Gas]*dpmob[Water][Gas]*pot[Water])/tmob;
+        }
+    }
+
+    /* (from eq. 3, 4a-e, 5a-c)
+       F_i = 1/2 |f11_i + f22_i + \sqrt{G}|
+       G = (f11_i + f22_i)^2 - 4 det(F_i)
+       fXX_i = \sum_j fXX_ij     (j runs over the neighbours)
+       det(F_i) = f11_i f22_i - f12_i f21_i
+    */
+    detF = f11*f22 - f12*f21;
+    eqv_flux = 0.5*fabs(f11 + f22 + sqrt((f11 + f22)*(f11 + f22) - 4*detF));
+    /* delta_t < porevol/eqv_flux */
+    return porevol[c]/eqv_flux;
+}
+
+/* ---------------------------------------------------------------------- */
+double
+cfs_tpfa_impes_maxtime(grid_t                  *G,
+                       struct compr_quantities *cq,
+                       const double            *trans,
+                       const double            *porevol,
+                       struct cfs_tpfa_data    *h,
+                       const double            *dpmobf,
+                       const double            *surf_dens)
+/* ---------------------------------------------------------------------- */
+{
+    int c;
+    double max_dt, cell_dt;
+    max_dt = 1e100;
+    for (c = 0; c < G->number_of_cells; ++c) {
+        cell_dt = cfs_tpfa_impes_maxtime_cell(c, G, cq, trans, porevol, h, dpmobf, surf_dens);
+        if (cell_dt < max_dt) {
+            max_dt = cell_dt;
+        }
+    }
+    return max_dt;
+}
+
 
 
 /* ---------------------------------------------------------------------- */

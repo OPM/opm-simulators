@@ -97,6 +97,15 @@ cfs_tpfa_retrieve_gravtrans(grid_t               *G,
                             struct cfs_tpfa_data *h,
                             double               *gravtrans_f);
 
+double
+cfs_tpfa_impes_maxtime(grid_t                  *G,
+                       struct compr_quantities *cq,
+                       const double            *trans,
+                       const double            *porevol,
+                       struct cfs_tpfa_data    *h,
+                       const double            *dpmobf,
+                       const double            *surf_dens);
+
 void
 cfs_tpfa_expl_mass_transport(grid_t               *G,
                              well_t               *W,
