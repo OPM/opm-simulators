@@ -1198,13 +1198,14 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_expl_mass_transport(grid_t               *G,
-                             well_t               *W,
-                             int                   np,
-                             double                dt,
-                             const double         *porevol,
-                             struct cfs_tpfa_data *h,
-                             double               *surf_vol)
+cfs_tpfa_expl_mass_transport(grid_t                 *G,
+                             well_t                 *W,
+                             struct completion_data *wdata,
+                             int                     np,
+                             double                  dt,
+                             const double           *porevol,
+                             struct cfs_tpfa_data   *h,
+                             double                 *surf_vol)
 /* ---------------------------------------------------------------------- */
 {
     int    c, i, f, c2, p, w;
@@ -1251,10 +1252,10 @@ cfs_tpfa_expl_mass_transport(grid_t               *G,
         for (w = i = 0; w < W->number_of_wells; w++) {
             for (; i < W->well_connpos[w + 1]; i++) {
                 c = W->well_cells[i];
-                /* Get pressure difference between cell and well perforation */
-                dp = wpress[i] - cpress[c];
+                /* Get difference between cell pressure and well bhp */
+                dp = wpress[w] - cpress[c];
                 for (p = 0; p < np; p++) {
-                    dz = masstrans_p[i*np + p]* dp;
+                    dz = masstrans_p[i*np + p] * (dp + wdata->gpot[i*np + p]);
                     /* A positive dz means flow from the well perforation
                        i into the cell c */
                     surf_vol[c*np + p] += dz * dt / porevol[c];

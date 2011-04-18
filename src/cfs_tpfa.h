@@ -108,13 +108,14 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
                        const double            *gravity);
 
 void
-cfs_tpfa_expl_mass_transport(grid_t               *G,
-                             well_t               *W,
-                             int                   np,
-                             double                dt,
-                             const double         *porevol,
-                             struct cfs_tpfa_data *h,
-                             double               *surf_vol);
+cfs_tpfa_expl_mass_transport(grid_t                 *G,
+                             well_t                 *W,
+                             struct completion_data *wdata,
+                             int                     np,
+                             double                  dt,
+                             const double           *porevol,
+                             struct cfs_tpfa_data   *h,
+                             double                 *surf_vol);
 
 void
 cfs_tpfa_destroy(struct cfs_tpfa_data *h);
