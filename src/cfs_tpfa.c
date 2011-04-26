@@ -1210,13 +1210,14 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
 {
     int    c, i, f, c2, p, w;
     double dp, dz, gsgn;
-    const double *masstrans_f, *gravtrans_f, *masstrans_p;
+    const double *masstrans_f, *gravtrans_f, *masstrans_p, *gravtrans_p;
     const double *cpress, *wpress;
 
     /* Set up convenience pointers */
     masstrans_f = h->pimpl->masstrans_f;
     gravtrans_f = h->pimpl->gravtrans_f;
     masstrans_p = h->pimpl->masstrans_p;
+    gravtrans_p = h->pimpl->gravtrans_p;
     cpress = h->x;
     wpress = h->x + G->number_of_cells;
 
@@ -1255,7 +1256,8 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
                 /* Get difference between cell pressure and well bhp */
                 dp = wpress[w] - cpress[c];
                 for (p = 0; p < np; p++) {
-                    dz = masstrans_p[i*np + p] * (dp + wdata->gpot[i*np + p]);
+                    dz = masstrans_p[i*np + p] * dp;
+                    dz += gravtrans_p[i*np + p];
                     /* A positive dz means flow from the well perforation
                        i into the cell c */
                     surf_vol[c*np + p] += dz * dt / porevol[c];
