@@ -1082,7 +1082,6 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
        code. This library is otherwise not depending on particular
        orderings of phases or components, so at some point this
        function should be generalized. */
-    assert (cq->nphases == 3);
     enum { Water = 0, Oil = 1, Gas = 2 };
     enum { num_phases = 3 };
     double rho[num_phases];
@@ -1090,6 +1089,9 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
     /* Notation: dpmob[Oil][Water] is d/ds_w(lambda_o) */
     double dpmob[num_phases][num_phases]
         = { {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0} };
+
+    assert (cq->nphases == 3);
+
     f11 = f12 = f21 = f22 = 0.0;
 
     /* Loop over neighbour faces to accumulate f11, f12 etc. */
