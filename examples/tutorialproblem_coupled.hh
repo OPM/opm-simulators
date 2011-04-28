@@ -238,7 +238,7 @@ public:
 
 private:
     // small epsilon value
-    static const Scalar eps_ = 3e-6;
+    static constexpr Scalar eps_ = 3e-6;
 };
 }
 
