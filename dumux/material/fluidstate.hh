@@ -48,12 +48,11 @@ public:
     FluidState()
     {
         if (0) {
-            int i;
             // make sure the implementation specifies the required
             // enums
-            i = Implementation::numPhases;
-            i = Implementation::numComponents;
-            i = Implementation::numSolvents;
+            enum { a1 = Implementation::numPhases };
+            enum { a2 = Implementation::numComponents };
+            enum { a3 = Implementation::numSolvents };
         }
     }
 
