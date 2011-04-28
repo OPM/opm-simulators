@@ -67,10 +67,14 @@ public:
     enum
     {
         wPhaseIdx = 0,
-        nPhaseIdx = 1
+        nPhaseIdx = 1,
+
+        wCompIdx = 0,
+        nCompIdx = 1
     };
 
     static const int numPhases = 2;
+    static const int numComponents = 2;
 
     FluidSystem2P()
     {
@@ -85,13 +89,13 @@ public:
      *
      * \param phaseIdx index of the phase
      */
-    static const char *componentName(int phaseIdx)
+    static const char *componentName(int compIdx)
     {
-        switch (phaseIdx) {
-        case wPhaseIdx: return WettingPhase::name();
-        case nPhaseIdx: return NonwettingPhase::name();
+        switch (compIdx) {
+        case wCompIdx: return WettingPhase::name();
+        case nCompIdx: return NonwettingPhase::name();
         };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
     /*!
@@ -99,13 +103,13 @@ public:
      *
      * \param phaseIdx index of the phase
      */
-    static Scalar molarMass(int phaseIdx)
+    static Scalar molarMass(int compIdx)
     {
-        switch (phaseIdx) {
-        case wPhaseIdx: return WettingPhase::molarMass();
-        case nPhaseIdx: return NonwettingPhase::molarMass();
+        switch (compIdx) {
+        case wCompIdx: return WettingPhase::molarMass();
+        case nCompIdx: return NonwettingPhase::molarMass();
         };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << phaseIdx);
+        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
     /*!
