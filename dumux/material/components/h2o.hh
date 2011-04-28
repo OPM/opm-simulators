@@ -67,7 +67,7 @@ class H2O : public Component<Scalar, H2O<Scalar> >
     typedef IAPWS::Region2<Scalar> Region2;
     typedef IAPWS::Region4<Scalar> Region4;
 
-    static const Scalar R = Common::R;  // specific gas constant of water
+    static constexpr Scalar R = Common::R;  // specific gas constant of water
 public:
     /*!
      * \brief A human readable name for the water.

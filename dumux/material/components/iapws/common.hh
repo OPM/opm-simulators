@@ -63,31 +63,31 @@ class Common
 {
 public:
     //! The molar mass of water \f$\mathrm{[kg/mol]}\f$
-    static const Scalar molarMass = 18.01518e-3;
+    static constexpr Scalar molarMass = 18.01518e-3;
 
     //! Specific gas constant of water \f$\mathrm{[J/(kg*K)]}\f$
-    static const Scalar R = 461.526;
+    static constexpr Scalar R = 461.526;
 
     //! Critical temperature of water \f$\mathrm{[K]}\f$
-    static const Scalar criticalTemperature = 647.096;
+    static constexpr Scalar criticalTemperature = 647.096;
 
     //! Critical pressure of water \f$\mathrm{[Pa]}\f$
-    static const Scalar criticalPressure = 22.064e6;
+    static constexpr Scalar criticalPressure = 22.064e6;
 
     //! Critical molar volume of water \f$\mathrm{[m^3/mol]}\f$
-    static const Scalar criticalMolarVolume = molarMass/322.0;
+    static constexpr Scalar criticalMolarVolume = molarMass/322.0;
 
     //! The acentric factor of water \f$\mathrm{[-]}\f$
-    static const Scalar acentricFactor = 0.344;
+    static constexpr Scalar acentricFactor = 0.344;
 
     //! Density of water at the critical point \f$\mathrm{[kg/m^3]}\f$
-    static const Scalar criticalDensity = 322;
+    static constexpr Scalar criticalDensity = 322;
 
     //! Triple temperature of water \f$\mathrm{[K]}\f$
-    static const Scalar tripleTemperature = 273.16;
+    static constexpr Scalar tripleTemperature = 273.16;
 
     //! Triple pressure of water \f$\mathrm{[Pa]}\f$
-    static const Scalar triplePressure = 611.657;
+    static constexpr Scalar triplePressure = 611.657;
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[(N/m^2)*s]}\f$of pure water.

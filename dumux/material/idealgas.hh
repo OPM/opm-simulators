@@ -37,7 +37,7 @@ class IdealGas
 {
 public:
     //! The ideal gas constant \f$\mathrm{[J/mol/K]}\f$
-    static const Scalar R = 8.3144;
+    static constexpr Scalar R = 8.3144;
 
     /*!
      * \brief The density of the gas in \f$\mathrm{[kg/m^3]}\f$, depending on
