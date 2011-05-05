@@ -167,7 +167,7 @@ public:
                             const FluidState &fluidState)
     {
         // 3.7378e-12
-        return 8.8786695-14; // in [m^2/s]
+        return 8.8786695e-14; // in [m^2/s]
     }
 };
 
