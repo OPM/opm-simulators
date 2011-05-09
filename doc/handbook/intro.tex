@@ -47,8 +47,7 @@ must be possible to express each entity as the convex hull of a set of
 vertices. For efficiency, all entities are further expressed in terms
 of so-called reference elements which are transformed to the actual
 spatial incarnation within the grid by a so-called geometry
-function\footnote{The same approach is also used by \texttt{dune-disc} for
-  finite element shape functions.}. Here, a reference element for an
+function. Here, a reference element for an
 entity can be thought of as a prototype for the actual grid
 entity. For example, if we used a grid that used hexahedrons as cells,
 the reference element for each cell would be the unit cube $[0, 1]^3$
