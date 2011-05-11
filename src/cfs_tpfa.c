@@ -524,7 +524,7 @@ compute_densrat_update_well(well_t                  *W    ,
 
     a1 = 1.0;
     a2 = 0.0;
-    
+
     for (i = 0; i < nconn; i++) {
         c = W->well_cells[i];
 
@@ -853,7 +853,7 @@ compute_wflux(well_t                 *W,
 
     pmob = wdata->phasemob;
     gpot = wdata->gpot;
-    
+
     for (w = i = 0; w < W->number_of_wells; w++) {
         for (; i < W->well_connpos[w + 1]; i++) {
             c = W->well_cells[i];
@@ -864,7 +864,7 @@ compute_wflux(well_t                 *W,
             for (p = 0; p < np; p++) {
                 wflux[i] += pmob[i*np + p] * (dp + gpot[i*np + p]);
             }
-            
+
             wflux[i] *= wdata->WI[i];
         }
     }
