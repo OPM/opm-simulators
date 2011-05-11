@@ -75,15 +75,16 @@ cfs_tpfa_press_flux(grid_t                 *G,
                     double                 *wflux);
 
 void
-cfs_tpfa_fpress(grid_t       *G,
-                flowbc_t     *bc,
-                int           np,
-                const double *htrans,
-                const double *pmobf,
-                const double *gravcap_f,
-                const double *cpress,
-                const double *fflux,
-                double       *fpress);
+cfs_tpfa_fpress(grid_t               *G,
+                flowbc_t             *bc,
+                int                   np,
+                const double         *htrans,
+                const double         *pmobf,
+                const double         *gravcap_f,
+                struct cfs_tpfa_data *h,
+                const double         *cpress,
+                const double         *fflux,
+                double               *fpress);
 
 void
 cfs_tpfa_retrieve_masstrans(grid_t               *G,

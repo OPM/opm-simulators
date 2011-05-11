@@ -52,6 +52,9 @@ struct cfs_tpfa_impl {
     double              *masstrans_p; /* RB^{-1} [ phase-mobility ] */
     double              *gravtrans_p; /* RB^{-1} [ grav ] */
 
+    /* Scratch array for face pressure calculation */
+    double              *scratch_f;
+
     struct densrat_util *ratio;
 
     /* Linear storage */
@@ -165,6 +168,8 @@ impl_allocate(grid_t *G, well_t *W, int np)
     ddata_sz += 1  * nwperf;             /* wgpot */
     ddata_sz += np * nwperf;             /* masstrans_p */
     ddata_sz += np * nwperf;             /* gravtrans_p */
+
+    ddata_sz += 1  * G->number_of_faces; /* scratch_f */
 
     new = malloc(1 * sizeof *new);
 
@@ -737,42 +742,45 @@ compute_fpress(grid_t       *G,
                const double *gravcap_f,
                const double *cpress,
                const double *fflux,
-               double       *fpress)
+               double       *fpress,
+               double       *scratch_f)
 /* ---------------------------------------------------------------------- */
 {
-    int    c, i, f, p, c1, c2;
-    double t, s;
+    int    c, i, f, c1, c2;
 
+    /*
+     * Equation used for face pressure pf:
+     *     pf = (h1 p1 + h2 p2) / (h1 + h2)
+     * where h{12} are half-transmissibilities
+     * and p{12} are cell pressures.
+     *
+     * NOTE: this should be modified to account for gravity and
+     * Neumann boundaries with nonzero flux!
+     */
     for (f = 0; f < G->number_of_faces; f++) {
-        fpress[f] = 0.0;
+        scratch_f[f] = fpress[f] = 0.0;
     }
 
+    /* Temporarily storing (h1 + h2) in scratch[f]
+     * and (h1 p1 + h2 p2) in fpress[f].
+     */
     for (c = i = 0; c < G->number_of_cells; c++) {
         for (; i < G->cell_facepos[c + 1]; i++) {
             f = G->cell_faces[i];
-
-            t = 0.0;
-            for (p = 0; p < np; p++) {
-                t += pmobf[f*np + p];
-            }
-            t *= htrans[i];
-
-            s = 2.0*(G->face_cells[2*f + 0] == c) - 1.0;
-
-            fpress[f] += cpress[c] - (s * fflux[f] / t);
+            scratch_f[f] += htrans[i];
+            fpress[f] += htrans[i]*cpress[c];
         }
     }
 
     for (f = 0; f < G->number_of_faces; f++) {
+        fpress[f] /= scratch_f[f];
         c1 = G->face_cells[2*f + 0];
         c2 = G->face_cells[2*f + 1];
-
-        fpress[f] /= (c1 >= 0) + (c2 >= 0);
-
         if (((c1 < 0) || (c2 < 0)) && (bc->type[f] == PRESSURE)) {
             fpress[f] = bc->bcval[f];
         }
     }
+
 }
 
 
@@ -927,6 +935,9 @@ cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
         new->pimpl->wgpot       = new->pimpl->wtrans      + nwconn;
         new->pimpl->masstrans_p = new->pimpl->wgpot       + nwconn;
         new->pimpl->gravtrans_p = new->pimpl->masstrans_p + (nphases * nwconn);
+
+        /* Allocate scratch array for face pressure calculations */
+        new->pimpl->scratch_f   = new->pimpl->gravtrans_p + (nphases * nwconn);
     }
 
     return new;
@@ -1012,19 +1023,20 @@ cfs_tpfa_press_flux(grid_t                 *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_fpress(grid_t       *G,
-                flowbc_t     *bc,
-                int           np,
-                const double *htrans,
-                const double *pmobf,
-                const double *gravcap_f,
-                const double *cpress,
-                const double *fflux,
-                double       *fpress)
+cfs_tpfa_fpress(grid_t               *G,
+                flowbc_t             *bc,
+                int                   np,
+                const double         *htrans,
+                const double         *pmobf,
+                const double         *gravcap_f,
+                struct cfs_tpfa_data *h,
+                const double         *cpress,
+                const double         *fflux,
+                double               *fpress)
 /* ---------------------------------------------------------------------- */
 {
     compute_fpress(G, bc, np, htrans, pmobf, gravcap_f,
-                   cpress, fflux, fpress);
+                   cpress, fflux, fpress, h->pimpl->scratch_f);
 }
 
 
