@@ -578,7 +578,7 @@ compute_psys_contrib(grid_t                  *G,
     nc    = G->number_of_cells;
     nconn = G->cell_facepos[nc];
 
-    /* Compressible half-trans */
+    /* Compressible one-sided transmissibilities */
     set_dynamic_trans(G, trans, cq, h->pimpl->ratio);
     compute_densrat_update(G, cq, h->pimpl->ratio,
                            h->pimpl->masstrans_f);
@@ -749,38 +749,39 @@ compute_fpress(grid_t       *G,
     int    c, i, f, c1, c2;
 
     /*
-     * Equation used for face pressure pf:
-     *     pf = (h1 p1 + h2 p2) / (h1 + h2)
-     * where h{12} are half-transmissibilities
-     * and p{12} are cell pressures.
+     * Define face pressures as weighted average of connecting cell
+     * pressures.  Specifically, we define
      *
-     * NOTE: this should be modified to account for gravity and
-     * Neumann boundaries with nonzero flux!
+     *     pf = (t1 p1 + t2 p2) / (t1 + t2)
+     *
+     * in which t1 and t2 are the one-sided transmissibilities and p1
+     * and p2 are the associated cell pressures.
+     *
+     * NOTE: The formula does not account for effects of gravity or
+     * flux boundary conditions.
      */
     for (f = 0; f < G->number_of_faces; f++) {
         scratch_f[f] = fpress[f] = 0.0;
     }
 
-    /* Temporarily storing (h1 + h2) in scratch[f]
-     * and (h1 p1 + h2 p2) in fpress[f].
-     */
     for (c = i = 0; c < G->number_of_cells; c++) {
         for (; i < G->cell_facepos[c + 1]; i++) {
             f = G->cell_faces[i];
             scratch_f[f] += htrans[i];
-            fpress[f] += htrans[i]*cpress[c];
+            fpress[f]    += htrans[i] * cpress[c];
         }
     }
 
     for (f = 0; f < G->number_of_faces; f++) {
         fpress[f] /= scratch_f[f];
+
         c1 = G->face_cells[2*f + 0];
         c2 = G->face_cells[2*f + 1];
+
         if (((c1 < 0) || (c2 < 0)) && (bc->type[f] == PRESSURE)) {
             fpress[f] = bc->bcval[f];
         }
     }
-
 }
 
 
