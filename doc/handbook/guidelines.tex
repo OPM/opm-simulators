@@ -1,17 +1,20 @@
 \section{Guidelines} 
 \label{guidelines}
 
-This section quotes the DUNE coding guidelines found at \cite{DUNE-HP}. 
+This section adaptes the DUNE coding guidelines found at \cite{DUNE-HP}. 
 These guidelines also should be followed by every \Dumux developer and user. \\
-``In order to keep the code maintainable we have decided upon a set of coding rules. 
+In order to keep the code maintainable we have decided upon a set of coding rules. 
 Some of them may seem like splitting hairs to you, but they do make it much easier 
 for everybody to work on code that hasn't been written by oneself.
 
 \begin{itemize}
 \item Naming: 
 \begin{itemize}
+\item Comments: they are helpful! Please document freely what each part of your code does. 
+\item all comments / documentation is in english
 \item Variables: Names for variables should only consist of letters and digits. The first letter should be a lower case one. If your variable names consists of several words, then the first letter of each new word should be capital. As we decided on the only exception are the begin and end methods.
-\item Private Data Variables: Names of private data variables end with an underscore.
+\item variables should be named as self-explaining as possible: especially abbreviations should be avoided (saturation in stead of S)
+\item Private Data Variables: Names of private data variables end with an underscore and are the only variables that contain udnerscores. 
 \item Typenames: For typenames, the same rules as for variables apply. The only difference is that the first letter should be a capital one.
 \item Macros: The use of preprocessor macros is strongly discouraged. If you have to use them for whatever reason, please use capital letters only.
 \item The Exlusive-Access Macro: Every header file traditionally begins with the definition of a preprocessor constant that is used to make sure that each header file is only included once. If your header file is called 'myheaderfile.hh', this constant should be DUNE\_MYHEADERFILE\_HH.
@@ -19,11 +22,11 @@ for everybody to work on code that hasn't been written by oneself.
 \end{itemize}
 \item Documentation:
       Dune, as any software project of similar complexity, will stand and fall with the quality of its documentation.
-Therefore it is of paramount importance that you document well everything you do! We use the doxygen system to extract easily-readable documentation from the source code. Please use its syntax everywhere. In particular, please comment all
+Therefore it is of paramount importance that you document well everything you do! We use the doxygen system to extract easily-readable documentation from the source code. Please use its syntax everywhere. In particular, please comment \textbf{all}
 \begin{itemize}
-\item Method Parameters
+\item Method Parameters (in / out)
 \item Template Parameters
-\item Return Values
+\item Return Values 
 \item Exceptions thrown by a method
  \end{itemize}
      Since we all know that writing documentation is not well-liked and is frequently defered to some vague 
@@ -34,5 +37,5 @@ of documentation is documented, and it is easier to get rid of it systematically
       The use of exceptions for error handling is encouraged. Until further notice, all exceptions thrown are DuneEx.
 \item Debugging Code:
       Global debugging code is switched off by setting the symbol NDEBUG. In particular, all asserts are 
-automatically removed. Use those asserts freely!''
+automatically removed. Use those asserts freely!
 \end{itemize}
