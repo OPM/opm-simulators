@@ -322,10 +322,10 @@ public:
     }
 };
 
-template <class Scalar, class H2O>
 /*!
  * \brief Default value for the salinity of the brine (dimensionless).
  */
+template <class Scalar, class H2O>
 Scalar Brine<Scalar, H2O>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
 
 } // end namepace
