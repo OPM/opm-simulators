@@ -1114,7 +1114,7 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
             c2  = G->face_cells[2*f + 1];
         }
 
-        /* Initially only interiour faces */
+        /* Initially only interior faces */
         if (c2 < 0) {
             continue;
         }
@@ -1236,7 +1236,7 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
     cpress = h->x;
     wpress = h->x + G->number_of_cells;
 
-    /* Transport through interiour faces */
+    /* Transport through interior faces */
     for (c = i = 0; c < G->number_of_cells; c++) {
         for (; i < G->cell_facepos[c + 1]; i++) {
             f  = G->cell_faces[i];
