@@ -203,14 +203,14 @@ void
 csrmatrix_write(const struct CSRMatrix *A, const char *fn)
 /* ---------------------------------------------------------------------- */
 {
-    int   i, j;
-    FILE *fp;
+    size_t  i, j;
+    FILE   *fp;
 
     fp = fopen(fn, "wt");
 
     if (fp != NULL) {
         for (i = j = 0; i < A->m; i++) {
-            for (; j < A->ia[i + 1]; j++) {
+            for (; j < (size_t) (A->ia[i + 1]); j++) {
                 fprintf(fp, "%lu %lu %26.18e\n",
                         (unsigned long) (i + 1),
                         (unsigned long) (A->ja[j] + 1),
