@@ -1,4 +1,3 @@
-// $Id: test_2p_spatialparamsinjection.hh 3456 2010-04-09 12:11:51Z mwolff $
 /*****************************************************************************
  *   Copyright (C) 2008-2009 by Markus Wolff                                 *
  *   Institute of Hydraulic Engineering                                      *
