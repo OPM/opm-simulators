@@ -1,4 +1,3 @@
-// $Id: regularizedlinearmaterialparams.hh 4488 2010-11-09  pnuske $
 /*****************************************************************************
  *   Copyright (C) 2008 by Andreas Lauser, Bernd Flemisch                    *
  *   Institute of Hydraulic Engineering                                      *

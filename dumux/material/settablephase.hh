@@ -1,4 +1,3 @@
-// $Id$
 /*****************************************************************************
  *   Copyright (C) 2010 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *
