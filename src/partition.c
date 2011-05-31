@@ -308,7 +308,7 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
                      int **pc2c, int **c2c)
 /* ---------------------------------------------------------------------- */
 {
-    int i, ret;
+    int i, ret, c1, c2;
 
     *pc2c = calloc(nc + 1, sizeof **pc2c);
 
@@ -337,10 +337,13 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
             }
 
             for (i = 0; i < nneigh; i++) {
-                if ((neigh[2*i + 0] >= 0) && (neigh[2*i + 1] >= 0)) {
+                c1 = neigh[2*i + 0];
+                c2 = neigh[2*i + 1];
+
+                if ((c1 >= 0) && (c2 >= 0)) {
                     /* Symmetric Laplace matrix (undirected graph) */
-                    (*c2c)[(*pc2c)[neigh[2*i + 0] + 1] ++] = neigh[2*i + 1];
-                    (*c2c)[(*pc2c)[neigh[2*i + 1] + 1] ++] = neigh[2*i + 0];
+                    (*c2c)[ (*pc2c)[ c1 + 1 ] ++ ] = c2;
+                    (*c2c)[ (*pc2c)[ c2 + 1 ] ++ ] = c1;
                 }
             }
 
