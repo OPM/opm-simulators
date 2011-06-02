@@ -66,7 +66,7 @@ class H2O : public Component<Scalar, H2O<Scalar> >
     typedef IAPWS::Region2<Scalar> Region2;
     typedef IAPWS::Region4<Scalar> Region4;
 
-    static constexpr Scalar R = Common::R;  // specific gas constant of water
+    static constexpr Scalar Rs = Common::Rs;  // specific gas constant of water
 public:
     /*!
      * \brief A human readable name for the water.
@@ -175,7 +175,7 @@ public:
             // the pressure is too high, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
             Scalar dh_dp =
-                R*temperature*
+                Rs*temperature*
                 Region2::tau(temperature)*
                 Region2::dpi_dp(pv)*
                 Region2::ddgamma_dtaudpi(temperature, pv);
@@ -216,7 +216,7 @@ public:
             // the pressure is too low, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
             Scalar dh_dp =
-                R*temperature*
+                Rs * temperature*
                 Region1::tau(temperature)*
                 Region1::dpi_dp(pv)*
                 Region1::ddgamma_dtaudpi(temperature, pv);
@@ -337,7 +337,7 @@ public:
             Scalar pi = Region1::pi(pv);
             Scalar dpi_dp = Region1::dpi_dp(pv);
             Scalar du_dp =
-                R*temperature*
+                Rs*temperature*
                 (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
             */
 
@@ -388,7 +388,7 @@ public:
             return
                 enthalpyRegion2_(temperature, triplePressure() - 100)
                 -
-                R*temperature; // = p*v   for an ideal gas!
+                Rs*temperature; // = p*v   for an ideal gas!
         }
         Scalar pv = vaporPressure(temperature);
         if (pressure > pv) {
@@ -406,7 +406,7 @@ public:
             Scalar pi = Region2::pi(pv);
             Scalar dpi_dp = Region2::dpi_dp(pv);
             Scalar du_dp =
-                R*temperature*
+                Rs*temperature*
                 (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
 
             // use a straight line for extrapolation
@@ -549,7 +549,7 @@ public:
             Scalar dgamma_dpi = Region2::dgamma_dpi(temperature, pv);
             Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
 
-            Scalar RT = R*temperature;
+            Scalar RT = Rs*temperature;
             Scalar dv_dp =
                 RT/(dp_dpi*pv)
                 *
@@ -651,7 +651,7 @@ public:
             Scalar dgamma_dpi = Region1::dgamma_dpi(temperature, pv);
             Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
 
-            Scalar RT = R*temperature;
+            Scalar RT = Rs*temperature;
             Scalar dv_dp =
                 RT/(dp_dpi*pv)
                 *
@@ -765,7 +765,7 @@ private:
         return
             Region1::tau(temperature) *
             Region1::dgamma_dtau(temperature, pressure) *
-            R*temperature;
+            Rs*temperature;
     };
 
     // the unregularized specific isobaric heat capacity
@@ -774,7 +774,7 @@ private:
         return
             - pow(Region1::tau(temperature), 2 ) *
             Region1::ddgamma_ddtau(temperature, pressure) *
-            R;
+            Rs;
     };
 
     // the unregularized specific isochoric heat capacity
@@ -786,7 +786,7 @@ private:
 
         return
             - pow(tau, 2 ) *
-            Region1::ddgamma_ddtau(temperature, pressure) * R +
+            Region1::ddgamma_ddtau(temperature, pressure) * Rs +
             diff;
     };
 
@@ -794,7 +794,7 @@ private:
     static Scalar internalEnergyRegion1_(Scalar temperature, Scalar pressure)
     {
         return
-            R * temperature *
+            Rs * temperature *
             ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) -
               Region1::pi(pressure)*Region1::dgamma_dpi(temperature, pressure));
     };
@@ -805,7 +805,7 @@ private:
         return
             Region1::pi(pressure)*
             Region1::dgamma_dpi(temperature, pressure) *
-            R * temperature / pressure;
+            Rs * temperature / pressure;
     };
 
     // the unregularized specific enthalpy for steam
@@ -814,14 +814,14 @@ private:
         return
             Region2::tau(temperature) *
             Region2::dgamma_dtau(temperature, pressure) *
-            R*temperature;
+            Rs*temperature;
     };
 
     // the unregularized specific internal energy for steam
     static Scalar internalEnergyRegion2_(Scalar temperature, Scalar pressure)
     {
         return
-            R * temperature *
+            Rs * temperature *
             ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) -
               Region2::pi(pressure)*Region2::dgamma_dpi(temperature, pressure));
     };
@@ -832,7 +832,7 @@ private:
         return
             - pow(Region2::tau(temperature), 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) *
-            R;
+            Rs;
     };
 
     // the unregularized specific isochoric heat capacity
@@ -844,7 +844,7 @@ private:
         double diff = num * num / (1 - pi * pi * Region2::ddgamma_ddpi(temperature, pressure));
         return
             - pow(tau, 2 ) *
-            Region2::ddgamma_ddtau(temperature, pressure) * R
+            Region2::ddgamma_ddtau(temperature, pressure) * Rs
             - diff;
     };
 
@@ -854,7 +854,7 @@ private:
         return
             Region2::pi(pressure)*
             Region2::dgamma_dpi(temperature, pressure) *
-            R * temperature / pressure;
+            Rs * temperature / pressure;
     };
 }; // end class
 

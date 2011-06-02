@@ -34,6 +34,8 @@
 #ifndef DUMUX_IAPWS_COMMON_HH
 #define DUMUX_IAPWS_COMMON_HH
 
+#include <dumux/material/constants.hh>
+
 #include <cmath>
 #include <iostream>
 
@@ -65,7 +67,7 @@ public:
     static constexpr Scalar molarMass = 18.01518e-3;
 
     //! Specific gas constant of water \f$\mathrm{[J/(kg*K)]}\f$
-    static constexpr Scalar R = 461.526;
+    static constexpr Scalar Rs = Dumux::Constants<Scalar>::R/molarMass;
 
     //! Critical temperature of water \f$\mathrm{[K]}\f$
     static constexpr Scalar criticalTemperature = 647.096;

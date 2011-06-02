@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Copyright (C) 2009 by Andreas Lauser
+ *   Copyright (C) 2011 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -18,54 +18,59 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file
- *
- * \brief Relations valid for an ideal gas.
+ * \file 
+ * 
+ * \brief A central place for various physical constants occuring in
+ *        some equations.
  */
-#ifndef DUMUX_IDEAL_GAS_HH
-#define DUMUX_IDEAL_GAS_HH
-
-#include <dumux/material/constants.hh>
+#ifndef DUMUX_CONSTANTS_HH
+#define DUMUX_CONSTANTS_HH
 
 namespace Dumux
 {
 
 /*!
- * \brief Relations valid for an ideal gas.
+ * \brief A central place for various physical constants occuring in
+ *        some equations.
  */
-template <class Scalar>
-class IdealGas
-{
-    //! The ideal gas constant \f$\mathrm{[J/mol/K]}\f$
-    static constexpr Scalar R = Dumux::Constants<Scalar>::R;
-
-public:
+template<class Scalar>
+class Constants
+{ public:
     /*!
-     * \brief The density of the gas in \f$\mathrm{[kg/m^3]}\f$, depending on
-     *        pressure, temperature and average molar mass of the gas.
+     * \brief The ideal gas constant [J/(mol K)]
      */
-    static Scalar density(Scalar avgMolarMass,
-                          Scalar temperature,
-                          Scalar pressure)
-    { return pressure*avgMolarMass/(R*temperature); }
-
+    static constexpr Scalar R = 8.314472;
+    
     /*!
-     * \brief The pressure of the gas in \f$\mathrm{[N/m^2]}\f$, depending on
-     *        concentration and temperature.
+     * \brief The Avogadro constant [1/mol]
      */
-    static Scalar pressure(Scalar temperature,
-                           Scalar concentration)
-    { return R*temperature*concentration; }
+    static constexpr Scalar Na = 6.02214179e23;
+    
+    /*!
+     * \brief The Boltzmann constant [J/K]
+     */
+    static constexpr Scalar kb = R/Na;
 
     /*!
-     * \brief The molar concentration of the gas in \f$\mathrm{[mol/m^3]}\f$, depending on
-     *        pressure and temperature.
+     * \brief Speed of light in vacuum [m/s]
      */
-    static Scalar concentration(Scalar temperature,
-                                Scalar pressure)
-    { return pressure/(R*temperature); }
+    static constexpr Scalar c = 299792458;
+
+    /*!
+     * \brief Newtonian constant of gravitation [m^3/(kg s^2)]
+     */
+    static constexpr Scalar G = 6.67428e-11;
+
+    /*!
+     * \brief Planck constant [J s]
+     */
+    static constexpr Scalar h = 6.62606896e-34;
+
+    /*!
+     * \brief Reduced Planck constant [J s]
+     */
+    static constexpr Scalar hRed = h / (2 * M_PI);
 };
-
-} // end namepace
+}
 
 #endif
