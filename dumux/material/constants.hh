@@ -26,6 +26,8 @@
 #ifndef DUMUX_CONSTANTS_HH
 #define DUMUX_CONSTANTS_HH
 
+#include <math.h>
+
 namespace Dumux
 {
 
