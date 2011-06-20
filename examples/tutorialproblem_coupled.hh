@@ -154,8 +154,9 @@ public:
      */
     bool shouldWriteOutput() const /*@\label{tutorial-coupled:output}@*/
     {
-        return this->timeManager().timeStepIndex() > 0 &&
-        (this->timeManager().timeStepIndex() % 1 == 0);
+        return 
+            this->timeManager().timeStepIndex() > 0 &&
+            (this->timeManager().timeStepIndex() % 1 == 0);
     }
 
     // Return the temperature within a finite volume. We use constant
