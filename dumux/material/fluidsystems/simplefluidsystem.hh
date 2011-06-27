@@ -76,20 +76,20 @@ public:
     };
 
     static Scalar computePureFugacity(const MutableParameters &params,
-                                      int phaseIdx, 
+                                      int phaseIdx,
                                       int compIdx)
     {
         const FluidState &fs = params.fluidState();
         Scalar T = fs.temperature(phaseIdx);
         switch (phaseIdx) {
-        case SP::lPhaseIdx: 
+        case SP::lPhaseIdx:
             switch (compIdx) {
             case SP::H2OIdx: return SP::H2O::vaporPressure(T);
             case SP::N2Idx: return BinaryCoeff::H2O_N2::henry(T);
             };
         case SP::gPhaseIdx: {
             switch (compIdx) {
-            case SP::H2OIdx: 
+            case SP::H2OIdx:
                 SP::H2O::vaporPressure(T);
             case SP::N2Idx:
                 // ideal gas
@@ -114,7 +114,7 @@ public:
      * pressure and temperature.
      */
     static Scalar computeFugacity(const MutableParameters &params,
-                                  int phaseIdx, 
+                                  int phaseIdx,
                                   int compIdx)
     {
         const FluidState &fs = params.fluidState();
@@ -135,7 +135,7 @@ public:
      * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
      */
     static Scalar computeFugacityCoeff(const MutableParameters &params,
-                                       int phaseIdx, 
+                                       int phaseIdx,
                                        int compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= SP::numPhases);
@@ -146,7 +146,7 @@ public:
         Scalar T = fs.temperature(phaseIdx);
         Scalar p = fs.pressure(phaseIdx);
         switch (phaseIdx) {
-        case SP::lPhaseIdx: 
+        case SP::lPhaseIdx:
             switch (compIdx) {
             case SP::H2OIdx: return SP::H2O::vaporPressure(T)/p;
             case SP::N2Idx: return BinaryCoeff::H2O_N2::henry(T)/p;
@@ -157,7 +157,7 @@ public:
 
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase or component index");
     }
-    
+
     /*!
      * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
      */
@@ -177,7 +177,7 @@ public:
             // assume pure water for the gas phase
             return SP::N2::gasViscosity(T, p);
         }
-        
+
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     };
 
@@ -188,7 +188,7 @@ public:
      * Molecular diffusion of a compoent $\kappa$ is caused by a
      * gradient of the chemical potential and follows the law
      *
-     * \f[ J = - D \grad mu_\kappa \f] 
+     * \f[ J = - D \grad mu_\kappa \f]
      *
      * where \f$\mu_\kappa\$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
@@ -200,7 +200,7 @@ public:
      * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
      * pressure and temperature.
      */
-    static Scalar computeDiffusionCoeff(const MutableParameters &params, 
+    static Scalar computeDiffusionCoeff(const MutableParameters &params,
                                         int phaseIdx,
                                         int compIdx)
     {
@@ -214,11 +214,11 @@ public:
      *        \f$i\f$ and \f$j\f$ in this phase.
      */
     template <class FluidState>
-    static Scalar binaryDiffCoeff(const MutableParameters &params, 
+    static Scalar binaryDiffCoeff(const MutableParameters &params,
                                   int phaseIdx,
                                   int compIIdx,
                                   int compJIdx)
-                                  
+
     {
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
@@ -237,7 +237,7 @@ public:
 
         const FluidState &fs = params.fluidState();
         Scalar T = fs.temperature(phaseIdx);
-        Scalar p = fs.pressure(phaseIdx);       
+        Scalar p = fs.pressure(phaseIdx);
 
         switch (phaseIdx) {
         case SP::lPhaseIdx:
@@ -270,7 +270,7 @@ public:
      * \brief Given a phase's composition, temperature, pressure and
      *        density, calculate its specific enthalpy [J/kg].
      */
-    static Scalar computeEnthalpy(const MutableParameters &params, 
+    static Scalar computeEnthalpy(const MutableParameters &params,
                                   int phaseIdx)
     {
         const FluidState &fs = params.fluidState();
@@ -297,13 +297,13 @@ public:
         else {
             Scalar cH2O = fs.molarity(SP::gPhaseIdx, SP::H2OIdx);
             Scalar cN2 = fs.molarity(SP::gPhaseIdx, SP::N2Idx);
-            
+
             // assume ideal gas
             Scalar pH2O = SP::H2O::gasPressure(T, cH2O*SP::H2O::molarMass());
             Scalar pN2 = SP::N2::gasPressure(T, cN2*SP::H2O::molarMass());
 
             Scalar XH2O = fs.massFrac(SP::lPhaseIdx, SP::H2OIdx);
-            Scalar XN2 = fs.massFrac(SP::lPhaseIdx, SP::N2Idx);          
+            Scalar XN2 = fs.massFrac(SP::lPhaseIdx, SP::N2Idx);
             Scalar result = 0;
             result +=
                 SP::H2O::gasEnthalpy(T, pH2O) *
@@ -321,7 +321,7 @@ public:
      * \brief Given a phase's composition, temperature, pressure and
      *        density, calculate its specific internal energy [J/kg].
      */
-    static Scalar internalEnergy(const MutableParameters &params, 
+    static Scalar internalEnergy(const MutableParameters &params,
                                  int phaseIdx)
     {
         const FluidState &fs = params.fluidState();

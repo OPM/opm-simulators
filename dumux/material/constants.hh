@@ -18,8 +18,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file 
- * 
+ * \file
+ *
  * \brief A central place for various physical constants occuring in
  *        some equations.
  */
@@ -42,12 +42,12 @@ class Constants
      * \brief The ideal gas constant [J/(mol K)]
      */
     static constexpr Scalar R = 8.314472;
-    
+
     /*!
      * \brief The Avogadro constant [1/mol]
      */
     static constexpr Scalar Na = 6.02214179e23;
-    
+
     /*!
      * \brief The Boltzmann constant [J/K]
      */

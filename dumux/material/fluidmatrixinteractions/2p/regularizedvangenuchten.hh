@@ -109,7 +109,7 @@ public:
         {
             Scalar yTh = VanGenuchten::pC(params, SwThHigh);
             Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
-            
+
             if (Swe < 1.0) {
                 // use spline between threshold Swe and 1.0
                 Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
@@ -117,7 +117,7 @@ public:
                                   yTh, 0, // m0, m1
                                   mTh, m1); // m0, m1
                 return sp.eval(Swe);
-            } 
+            }
             else {
                 // straight line for Swe > 1.0
                 return m1*(Swe - 1.0) + 0.0;
@@ -173,7 +173,7 @@ public:
         {
             Scalar yTh = VanGenuchten::pC(params, SwThHigh);
             Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
-            
+
             // invert spline between threshold Swe and 1.0
             Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
             Spline<Scalar> sp(SwThHigh, 1.0, // x0, x1
