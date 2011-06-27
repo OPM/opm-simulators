@@ -154,7 +154,7 @@ public:
      */
     bool shouldWriteOutput() const /*@\label{tutorial-coupled:output}@*/
     {
-        return 
+        return
             this->timeManager().timeStepIndex() > 0 &&
             (this->timeManager().timeStepIndex() % 1 == 0);
     }
