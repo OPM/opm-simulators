@@ -37,7 +37,7 @@ must be available in a recent version. For Ubuntu Linux, e.g.,  these are contai
 packages \texttt{autoconf}, \texttt{automake}, \texttt{libtool}
 and the C++ compiler \texttt{g++} and \texttt{make} are contained in \texttt{build-essential}.
 
-At the time of writing this manual, it is expected that \texttt{g++} of version $\geqslant$ 4.4.1, \texttt{automake} of version $\geqslant$ 1.11,
+At the time of writing this manual, it is expected that \texttt{g++} of version $\geqslant$ 4.5.0, \texttt{automake} of version $\geqslant$ 1.11,
 \texttt{autoconf} of version $\geqslant$ 2.65, \texttt{autogen} of version $\geqslant$ 5.9.7,  \texttt{libtool} of version $\geqslant$ 2.2.6
 and GNU \texttt{make} version $\geqslant$ 3.81 should do their job for building \Dumux.
 \Dumux makes use of the \texttt{boost} library in the version $\geqslant$ 1.33.1, but optional external modules may require a more recent version. 
@@ -60,9 +60,9 @@ The subversion (svn) software repositories can be accessed with help of a subver
 contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}. 
 
 \subsection{Obtaining source code for \Dune and \Dumux}
-As stated before, the \Dumux release 2.0 is based on the \Dune release 2.0, comprising the core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} and the external dune
-module \texttt{dune-pdelab}. Thus, for a proper \Dumux installation these modules are required.
+As stated before, the \Dumux release 2.0.2 and trunk (developer tree) is based on the \Dune release 2.1.0,
+comprising the core modules \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} 
+and the external dune module \texttt{dune-pdelab}. Thus, for a proper \Dumux installation these modules are required.
 
 Two possibilities exist to get the source code of \Dune and \Dumux.
 Firstly, \Dune and \Dumux can be downloaded as tar-files from the respective {\Dune} and {\Dumux} website. They have to be extracted as described in the next paragraph.
@@ -76,7 +76,7 @@ of the software revision control system to provide access to different versions 
 \paragraph{Obtaining the software by installing tar-files}
 The slightly old-fashioned named tape-archive-file shortly named tar-file or tarball is a common file format for distributing collections of files contained within these archives.
 The extraction from the tar-files is done as follows: 
-Download the tarballs from the respective \Dune (version 2.0) and \Dumux websites to a certain folder in your file system.
+Download the tarballs from the respective \Dune (version 2.1) and \Dumux websites to a certain folder in your file system.
 Create the {\Dune} root directory, named DUMUX in the example below. Then extract the content of the tar-files, e.g. with the command-line program \texttt{tar}.
 This can be achieved by the following shell commands. Replace \texttt{path\_to\_tarball} with the directory name where the downloaded files are actually located.
 After extraction, the actual name of the dumux root directory is \texttt{dumux-2.0}. 
@@ -84,17 +84,17 @@ After extraction, the actual name of the dumux root directory is \texttt{dumux-2
 \begin{lstlisting}[style=Bash]
 $ mkdir DUMUX
 $ cd DUMUX
-$ tar xzvf path_to_tarball_of/dune-common-2.0.tar.gz 
-$ tar xzvf path_to_tarball_of/dune-grid-2.0.tar.gz 
-$ tar xzvf path_to_tarball_of/dune-istl-2.0.tar.gz 
-$ tar xzvf path_to_tarball_of/dune-localfunctions-2.0.tar.gz 
-$ tar xzvf path_to_tarball_of/dumux-2.0.tar.gz
+$ tar xzvf path_to_tarball_of/dune-common-2.1.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-grid-2.1.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-istl-2.1.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-localfunctions-2.1.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dumux-2.1.0.tar.gz
 \end{lstlisting}
 
 Furthermore, if you wish to install the optional \Dune Grid-Howto which provides a tutorial on the Dune grid interface:
 
 \begin{lstlisting}[style=Bash]
-$ tar xzvf path_to_tarball_of/dune-grid-howto-2.0.tar.gz
+$ tar xzvf path_to_tarball_of/dune-grid-howto-2.1.0.tar.gz
 \end{lstlisting}
 
 However, the required \Dune-module \texttt{dune-pdelab} is not available as tar-file.
@@ -102,7 +102,7 @@ It can be installed from a software repository via svn.
 If \texttt{svn} is available in the command line, it can be done as follows: 
 
 \begin{lstlisting}[style=Bash]
-$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab
+$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.1snapshot dune-pdelab
 \end{lstlisting}
 
 \paragraph{Obtaining \Dune and \Dumux from software repositories} 
@@ -121,26 +121,26 @@ The installation procedure is done as follows:
 Create a  {\Dune} root directory, named DUMUX in the lines below.
 Then, enter the previously created directory and check out the desired modules. 
 As you see below, the check-out uses two different servers for getting the sources, one for \Dune and one for {\Dumux}.
-The \Dune modules of the stable 2.0 release are checked out as described on the \Dune website \cite{DUNE-DOWNLOAD-SVN}:
+The \Dune modules of the stable 2.1.0 release are checked out as described on the \Dune website \cite{DUNE-DOWNLOAD-SVN}:
 
 \begin{lstlisting}[style=Bash]
 $ mkdir DUMUX
 $ cd DUMUX
-$ svn co https://svn.dune-project.org/svn/dune-common/releases/2.0 dune-common
-$ svn co https://svn.dune-project.org/svn/dune-grid/releases/2.0 dune-grid
-$ svn co https://svn.dune-project.org/svn/dune-istl/releases/2.0 dune-istl
-$ svn co https://svn.dune-project.org/svn/dune-localfunctions/releases/2.0 dune-localfunctions
-$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.0snapshot dune-pdelab
+$ svn co https://svn.dune-project.org/svn/dune-common/tags/2.1.0 dune-common
+$ svn co https://svn.dune-project.org/svn/dune-grid/tags/2.1.0 dune-grid
+$ svn co https://svn.dune-project.org/svn/dune-istl/tags/2.1.0 dune-istl
+$ svn co https://svn.dune-project.org/svn/dune-localfunctions/tags/2.1.0 dune-localfunctions
+$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.1snapshot dune-pdelab
 \end{lstlisting}
 
-The newest (unstable) developments are also provided in these repositories, usually in a folder called ``trunk''. Please check the \Dune website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the current \Dumux release is based on the stable 2.0 release and it will not compile without further adaptations using the the newest versions of \Dune.
+% The newest (unstable) developments are also provided in these repositories, usually in a folder called ``trunk''. Please check the \Dune website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the current \Dumux release is based on the stable 2.1.0 release and it will not compile without further adaptations using the the newest versions of \Dune.
 
 The additional module \texttt{dune-grid-howto} is a tutorial which provides information about the \Dune grid interface.
 It may give you an idea how some abstractions in \Dune are done.
 The \texttt{dune-grid-howto} is not required by \Dumux, the installation is optional. It is done by: 
 
 \begin{lstlisting}[style=Bash]
-$ svn co https://svn.dune-project.org/svn/dune-grid-howto/releases/2.0 dune-grid-howto
+$ svn co https://svn.dune-project.org/svn/dune-grid-howto/tags/2.1.0 dune-grid-howto
 \end{lstlisting}
 
 The \texttt{dumux} module is checked out as described below (see also the \Dumux website \cite{DUMUX-HP}).
@@ -175,7 +175,7 @@ Check the documentation of subversion, how this is being done.
 A leaked out password can be used by evil persons to abuse a software repository.
 
 \paragraph{checkout-dumux script}
-The shell-script \texttt{checkout-dumux} facilitates setting up a {\Dune}/{\Dumux} directory tree.
+The shell-script \texttt{checkout-dumux} facilitates setting up a {\Dune}/{\Dumux} directory tree (currently for the trunk version).
 It is contained in the download section of the \Dumux web page \cite{DUMUX-HP}.
 For example the second line below will check out the required \Dune modules and \texttt{dumux}, \texttt{dumux-devel} and the \texttt{external} folder, which contains some useful external software and libraries.
 Again,  \texttt{joeuser} needs to be replaced by the actual user name.
@@ -198,6 +198,7 @@ that a release gets amendments (updates) and a formerly useful patch becomes obs
 \Dumux contains patches and documentation about their usage and application within the directory \texttt{dumux/patches}.
 Please check the README file in that directory for recent information. 
 In general, a patch can be applied as follows (the exact command or the used parameters may be slightly different).
+We include here an example of a patch against 2.0 release of \Dune for \Dumux release 2.0 for purpose of showing how a patch gets applied. Note this patch is no longer necessary for \Dune 2.1.0 releases.
 
 \begin{lstlisting}[style=Bash]
 $ # make sure you are in DUNE-Root
