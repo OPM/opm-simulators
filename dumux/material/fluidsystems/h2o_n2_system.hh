@@ -209,8 +209,8 @@ public:
             for (int i = 0; i < numComponents; ++i) {
                 Scalar divisor = 0;
                 for (int j = 0; j < numComponents; ++j) {
-                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j] *
-                                            pow(M[j]/M[i], 1/4.0));
+                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) *
+                                            pow(M[j]/M[i], 1/4.0);
                     phiIJ *= phiIJ;
                     phiIJ /= sqrt(8*(1 + M[i]/M[j]));
                     divisor += fluidState.moleFrac(phaseIdx, j)*phiIJ;
@@ -386,6 +386,9 @@ public:
                             Scalar pressure,
                             const FluidState &fluidState)
     {
+#warning Diffusion Coefficient switched off!!!
+        return 0;
+
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
 
