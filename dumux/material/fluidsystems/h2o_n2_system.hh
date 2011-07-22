@@ -386,9 +386,6 @@ public:
                             Scalar pressure,
                             const FluidState &fluidState)
     {
-#warning Diffusion Coefficient switched off!!!
-        return 0;
-
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
 
