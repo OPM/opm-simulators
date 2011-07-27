@@ -141,7 +141,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDe
     typedef TutorialProblemDecoupled<TypeTag> ThisType;
     typedef IMPESProblem2P<TypeTag, ThisType> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
 
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidSystem)) FluidSystem;
@@ -165,9 +165,10 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDe
     typedef Dune::FieldVector<Scalar, dim> LocalPosition;
 
 public:
-    TutorialProblemDecoupled(const GridView &gridView,
+    TutorialProblemDecoupled(TimeManager &timeManager, const GridView &gridView,
             const GlobalPosition lowerLeft = GlobalPosition(0.),
-            const GlobalPosition upperRight = GlobalPosition(0.)) : ParentType(gridView) /*@\label{tutorial-decoupled:constructor-problem}@*/
+            const GlobalPosition upperRight = GlobalPosition(0.))
+        : ParentType(timeManager, gridView) /*@\label{tutorial-decoupled:constructor-problem}@*/
     {    }
 
     //! The problem name.

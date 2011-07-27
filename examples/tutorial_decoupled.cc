@@ -56,6 +56,7 @@ int main(int argc, char** argv)
         typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;    /*@\label{tutorial-decoupled:retrieve-types-begin}@*/
         typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
         typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem;
+        typedef GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
         typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition; /*@\label{tutorial-decoupled:retrieve-types-end}@*/
 
         // initialize MPI, finalize is done automatically on exit
@@ -90,21 +91,23 @@ int main(int argc, char** argv)
         // create the grid
         Grid *gridPtr = GET_PROP(TypeTag, PTAG(Grid))::create(); /*@\label{tutorial-decoupled:create-grid}@*/
 
+        // create time manager responsible for global simulation control
+        TimeManager timeManager;
 
         ////////////////////////////////////////////////////////////
         // instantiate and run the concrete problem
         ////////////////////////////////////////////////////////////
+        Problem problem(timeManager, gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
 
-        Problem problem(gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
+        // define simulation parameters
+        timeManager.init(problem, 0, dt, tEnd, !restart); /*@\label{tutorial-decoupled:initTimeManager}@*/
 
         // load restart file if necessary
         if (restart)    /*@\label{tutorial-decoupled:mainRestart}@*/
             problem.deserialize(restartTime);
 
-        // define simulation parameters
-        problem.timeManager().init(problem, 0, dt, tEnd, !restart); /*@\label{tutorial-decoupled:initTimeManager}@*/
         // run the simulation
-        problem.timeManager().run();    /*@\label{tutorial-decoupled:execute}@*/
+        timeManager.run();    /*@\label{tutorial-decoupled:execute}@*/
         return 0;
     }
     catch (Dune::Exception &e) {

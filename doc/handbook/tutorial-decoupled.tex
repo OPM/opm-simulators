@@ -71,13 +71,13 @@ sequential model is strictly bound by a CFL-criterion, the first time-step
 size is initialized with the simulation time.
 
 After this, a grid is created on line \ref{tutorial-decoupled:create-grid} 
-and the problem is instantiated with information about the grid
+and the time manager controlling the simulation run is instantiated 
+with the start parameters in line \ref{tutorial-decoupled:initTimeManager}.
+The problem is instantiated with the time manager and information about the grid
 (via its leaf grid view) on line \ref{tutorial-decoupled:instantiate-problem}.
 If demanded, on line \ref{tutorial-decoupled:mainRestart} a state written to
 disk by a previous simulation run is restored on request by the user.
-Finally, the time manager controlling the simulation run is instantiated 
-with the start parameters in line \ref{tutorial-decoupled:initTimeManager}
-and the simulation proceedure is started by the time manager at line
+Finally, the simulation proceedure is started by the time manager at line
 \ref{tutorial-decoupled:execute}.
 
 
