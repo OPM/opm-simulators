@@ -136,16 +136,18 @@ SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutoria
  * @brief Problem class for the decoupled tutorial
 */
 template<class TypeTag>
-class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDecoupled<TypeTag> > /*@\label{tutorial-decoupled:def-problem}@*/
+class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutorial-decoupled:def-problem}@*/
 {
-    typedef TutorialProblemDecoupled<TypeTag> ThisType;
-    typedef IMPESProblem2P<TypeTag, ThisType> ParentType;
+    typedef IMPESProblem2P<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
 
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidSystem)) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidState)) FluidState;
+
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(BoundaryTypes)) BoundaryTypes;
+    typedef typename GET_PROP(TypeTag, PTAG(SolutionTypes))::PrimaryVariables PrimaryVariables;
 
     enum
     {
@@ -154,7 +156,8 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDe
 
     enum
     {
-        wPhaseIdx = Indices::wPhaseIdx, nPhaseIdx = Indices::nPhaseIdx
+        wPhaseIdx = Indices::wPhaseIdx, nPhaseIdx = Indices::nPhaseIdx,
+        eqIdxPress = Indices::pressureEq, eqIdxSat = Indices::saturationEq
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
@@ -165,9 +168,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag, TutorialProblemDe
     typedef Dune::FieldVector<Scalar, dim> LocalPosition;
 
 public:
-    TutorialProblemDecoupled(TimeManager &timeManager, const GridView &gridView,
-            const GlobalPosition lowerLeft = GlobalPosition(0.),
-            const GlobalPosition upperRight = GlobalPosition(0.))
+    TutorialProblemDecoupled(TimeManager &timeManager, const GridView &gridView)
         : ParentType(timeManager, gridView) /*@\label{tutorial-decoupled:constructor-problem}@*/
     {    }
 
@@ -197,102 +198,87 @@ public:
         (this->timeManager().timeStepIndex() % 1 == 0);
     }
 
-    //! Returns the temperature within the domain.
+    //! Returns the temperature within the domain at position globalPos.
     /*! This problem assumes a temperature of 10 degrees Celsius.
      */
-    Scalar temperature(const GlobalPosition& globalPos, const Element& element) const /*@\label{tutorial-decoupled:temperature}@*/
+    Scalar temperatureAtPos(const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:temperature}@*/
     {
         return 273.15 + 10; // -> 10°C
     }
 
-    //! Returns a constant pressure to enter material laws
+    //! Returns a constant pressure to enter material laws at position globalPos.
     /* For incrompressible simulations, a constant pressure is necessary
      * to enter the material laws to gain a constant density etc. In the compressible
      * case, the pressure is used for the initialization of material laws.
      */
-    Scalar referencePressure(const GlobalPosition& globalPos, const Element& element) const /*@\label{tutorial-decoupled:refPressure}@*/
+    Scalar referencePressureAtPos(const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:refPressure}@*/
     {
         return 2e5;
     }
-    //! Source of mass \f$ [\frac{kg}{m^3 \cdot s}] \f$
+
+    //! Source of mass \f$ [\frac{kg}{m^3 \cdot s}] \f$ at position globalPos.
     /*! Evaluate the source term for all phases within a given
      *  volume. The method returns the mass generated (positive) or
      *  annihilated (negative) per volume unit.
      */
-    std::vector<Scalar> source(const GlobalPosition& globalPos, const Element& element) /*@\label{tutorial-decoupled:source}@*/
+    void sourceAtPos(PrimaryVariables &values,const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:source}@*/
     {
-        return std::vector<Scalar>(2, 0.);
+        values = 0;
     }
 
-    //! Type of pressure boundary condition.
+    //! Type of boundary conditions at position globalPos.
     /*! Defines the type the boundary condition for the pressure equation,
-     *  either pressure (dirichlet) or flux (neumann).
-     */
-    typename BoundaryConditions::Flags bctypePress(const GlobalPosition& globalPos,
-                                                   const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypePress}@*/
-    {
-        if (globalPos[0] < this->bboxMin()[0] + eps_)
-            return BoundaryConditions::dirichlet;
-        else    // all other boundaries
-            return BoundaryConditions::neumann;
-    }
-
-    //! Type of Transport boundary condition.
-    /*! Defines the type the boundary condition for the transport equation,
+     *  either pressure (dirichlet) or flux (neumann),
+     *  and for the transport equation,
      *  either saturation (dirichlet) or flux (neumann).
      */
-    BoundaryConditions::Flags bctypeSat(const GlobalPosition& globalPos,
-                                        const Intersection& intersection) const /*@\label{tutorial-decoupled:bctypeSat}@*/
+    void boundaryTypesAtPos(BoundaryTypes &bcTypes, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:bctype}@*/
     {
-        if (globalPos[0] < this->bboxMin()[0] + eps_)
-            return BoundaryConditions::dirichlet;
-        else
-            return BoundaryConditions::neumann;
+            if (globalPos[0] < this->bboxMin()[0] + eps_)
+            {
+                bcTypes.setDirichlet(eqIdxPress);
+                bcTypes.setDirichlet(eqIdxSat);
+//                bcTypes.setAllDirichlet(); // alternative if the same BC is used for both types of equations
+            }
+            // all other boundaries
+            else
+            {
+                bcTypes.setNeumann(eqIdxPress);
+                bcTypes.setNeumann(eqIdxSat);
+//                bcTypes.setAllNeumann(); // alternative if the same BC is used for both types of equations
+            }
     }
-    //! Value for dirichlet pressure boundary condition \f$ [Pa] \f$.
-    /*! In case of a dirichlet BC for the pressure equation, the pressure
+    //! Value for dirichlet boundary condition at position globalPos.
+    /*! In case of a dirichlet BC for the pressure equation the pressure \f$ [Pa] \f$, and for the transport equation the saturation [-]
      *  have to be defined on boundaries.
      */
-    Scalar dirichletPress(const GlobalPosition& globalPos,
-                          const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletPress}@*/
+    void dirichletAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:dirichlet}@*/
     {
-        return 2e5;
+        values[eqIdxPress] = 2e5;
+        values[eqIdxSat] = 1.0;
     }
-    //! Value for transport dirichlet boundary condition (dimensionless).
-    /*! In case of a dirichlet BC for the transport equation, a saturation
-     *  has to be defined on boundaries.
-     */
-    Scalar dirichletSat(const GlobalPosition& globalPos,
-                        const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichletSat}@*/
-    {
-        return 1;
-    }
-    //! Value for neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$.
+    //! Value for neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$ at position globalPos.
     /*! In case of a neumann boundary condition, the flux of matter
      *  is returned as a vector.
      */
-    std::vector<Scalar> neumann(const GlobalPosition& globalPos,
-                                const Intersection& intersection) const /*@\label{tutorial-decoupled:neumann}@*/
+    void neumannAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:neumann}@*/
     {
-        std::vector<Scalar> neumannFlux(2,0.0);
+        values = 0;
         if (globalPos[0] > this->bboxMax()[0] - eps_)
         {
-            neumannFlux[nPhaseIdx] = 3e-2;
+            values[nPhaseIdx] = 3e-2;
         }
-        return neumannFlux;
     }
-    //! Saturation initial condition (dimensionless)
-    /*! The problem is initialized with the following saturation.
+    //! Initial condition at position globalPos.
+    /*! Only initial values for saturation have to be given!
      */
-    Scalar initSat(const GlobalPosition& globalPos, const Element& element) const /*@\label{tutorial-decoupled:initSat}@*/
+    void initialAtPos(PrimaryVariables &values,
+            const GlobalPosition &globalPos) const /*@\label{tutorial-decoupled:initial}@*/
     {
-        return 0;
+        values = 0;
     }
 
 private:
-    GlobalPosition lowerLeft_;
-    GlobalPosition upperRight_;
-
     static constexpr Scalar eps_ = 1e-6;
 };
 } //end namespace
