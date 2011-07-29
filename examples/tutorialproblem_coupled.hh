@@ -161,9 +161,7 @@ public:
 
     // Return the temperature within a finite volume. We use constant
     // 10 degrees Celsius.
-    Scalar temperature(const Element &element,
-                       const FVElementGeometry &fvElemGeom,
-                       int scvIdx) const
+    Scalar temperature() const
     { return 283.15; };
 
     // Specifies which kind of boundary condition should be used for
