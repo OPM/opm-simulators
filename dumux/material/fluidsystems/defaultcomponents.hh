@@ -54,6 +54,7 @@ NEW_PROP_TAG(DefaultComponents);
 //! system
 NEW_PROP_TAG(Components);
 
+NEW_PROP_TAG(EnableComplicatedFluidSystem);
 NEW_PROP_TAG(Scalar);
 
 SET_PROP_DEFAULT(DefaultComponents)
@@ -69,7 +70,7 @@ public:
     typedef Dumux::CH4<Scalar> CH4;
     typedef Dumux::SimpleCO2<Scalar> SimpleCO2;
     typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
-    typedef Dumux::Brine<Scalar, H2O> Brine;
+    typedef Dumux::TabulatedComponent<Scalar, Dumux::Brine<Scalar, H2O>> Brine;
 
     static void init()
     {
@@ -86,6 +87,19 @@ SET_PROP_DEFAULT(Components)
     : public GET_PROP(TypeTag, PTAG(DefaultComponents))
 {};
 
+//! Enables detailed description of fluidsystems
+/*
+ * Complicated but detailed members of fluidsystems (e.g. phase viscosity,
+ * phase density) can be simplified for efficiency reasons with this property.
+ * Typically, such high demands on accuracy are not needed, so this property
+ * is set to "false" as the default.
+ *
+ * To enable it, use
+ * SET_BOOL_PROP(MyTypeTag, EnableComplicatedFluidSystem, true);
+ */
+
+SET_PROP_DEFAULT(EnableComplicatedFluidSystem)
+{    static const bool value = false;};
 }; // namespace Properties
 }; // namespace Dumux
 
