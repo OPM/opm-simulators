@@ -49,7 +49,7 @@ class TutorialProblemCoupled;
 namespace Properties
 {
 // create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP)); /*@\label{tutorial-coupled:create-type-tag}@*/
+NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP, TutorialSpatialParametersCoupled)); /*@\label{tutorial-coupled:create-type-tag}@*/
 
 // Set the "Problem" property
 SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
@@ -88,11 +88,6 @@ SET_PROP(TutorialProblemCoupled, NonwettingPhase)
 private: typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 public: typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-coupled:2p-system-end}@*/
-
-
-// Set the spatial parameters
-SET_PROP(TutorialProblemCoupled, SpatialParameters) /*@\label{tutorial-coupled:set-spatialparameters}@*/
-{ typedef Dumux::TutorialSpatialParametersCoupled<TypeTag> type; };
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/

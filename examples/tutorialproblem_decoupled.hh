@@ -55,7 +55,7 @@ class TutorialProblemDecoupled;
 namespace Properties
 {
 // create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(DecoupledTwoP)); /*@\label{tutorial-decoupled:create-type-tag}@*/
+NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(DecoupledTwoP, TutorialSpatialParametersDecoupled)); /*@\label{tutorial-decoupled:create-type-tag}@*/
 
 // Set the problem property
 SET_PROP(TutorialProblemDecoupled, Problem) /*@\label{tutorial-decoupled:set-problem}@*/
@@ -100,12 +100,6 @@ private:
 public:
     typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-decoupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-decoupled:2p-system-end}@*/
-
-// Set the spatial parameters
-SET_PROP(TutorialProblemDecoupled, SpatialParameters) /*@\label{tutorial-decoupled:set-spatialparameters}@*/
-{
-    typedef Dumux::TutorialSpatialParametersDecoupled<TypeTag> type;
-};
 
 // Set the model properties
 SET_PROP(TutorialProblemDecoupled, TransportModel) /*@\label{tutorial-decoupled:TransportModel}@*/
@@ -156,8 +150,12 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
 
     enum
     {
-        wPhaseIdx = Indices::wPhaseIdx, nPhaseIdx = Indices::nPhaseIdx,
-        eqIdxPress = Indices::pressureEq, eqIdxSat = Indices::saturationEq
+        wPhaseIdx = Indices::wPhaseIdx,
+        nPhaseIdx = Indices::nPhaseIdx,
+        pWIdx = Indices::pwIdx,
+        SwIdx = Indices::SwIdx,
+        pressEqIdx = Indices::pressEqIdx,
+        satEqIdx = Indices::satEqIdx
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
@@ -200,8 +198,13 @@ public:
 
     //! Returns the temperature within the domain at position globalPos.
     /*! This problem assumes a temperature of 10 degrees Celsius.
+     *
+     *  \param element The finite volume element
+     *
+     * Alternatively, the function temperatureAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     * is the vector including the global coordinates of the finite volume.
      */
-    Scalar temperatureAtPos(const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:temperature}@*/
+    Scalar temperature(const Element& element) const /*@\label{tutorial-decoupled:temperature}@*/
     {
         return 273.15 + 10; // -> 10°C
     }
@@ -210,18 +213,31 @@ public:
     /* For incrompressible simulations, a constant pressure is necessary
      * to enter the material laws to gain a constant density etc. In the compressible
      * case, the pressure is used for the initialization of material laws.
+     *
+     * \param element The finite volume element
+     *
+     * Alternatively, the function referencePressureAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     * is the vector including the global coordinates of the finite volume.
      */
-    Scalar referencePressureAtPos(const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:refPressure}@*/
+    Scalar referencePressure(const Element& element) const /*@\label{tutorial-decoupled:refPressure}@*/
     {
         return 2e5;
     }
 
-    //! Source of mass \f$ [\frac{kg}{m^3 \cdot s}] \f$ at position globalPos.
+    //! Source of mass \f$ [\frac{kg}{m^3 \cdot s}] \f$ of a finite volume.
     /*! Evaluate the source term for all phases within a given
-     *  volume. The method returns the mass generated (positive) or
+     *  volume.
+     *
+     *  \param values Includes sources for the two phases
+     *  \param element The finite volume element
+     *
+     *  The method returns the mass generated (positive) or
      *  annihilated (negative) per volume unit.
+     *
+     * Alternatively, the function sourceAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) could be defined, where globalPos
+     * is the vector including the global coordinates of the finite volume.
      */
-    void sourceAtPos(PrimaryVariables &values,const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:source}@*/
+    void source(PrimaryVariables &values, const Element& element) const /*@\label{tutorial-decoupled:source}@*/
     {
         values = 0;
     }
@@ -231,35 +247,53 @@ public:
      *  either pressure (dirichlet) or flux (neumann),
      *  and for the transport equation,
      *  either saturation (dirichlet) or flux (neumann).
+     *
+     *  \param bcTypes Includes the types of boundary conditions
+     *  \param globalPos The position of the center of the finite volume
+     *
+     *  Alternatively, the function boundaryTypes(PrimaryVariables &values, const Intersection& intersection) could be defined,
+     *  where intersection is the boundary intersection.
      */
     void boundaryTypesAtPos(BoundaryTypes &bcTypes, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:bctype}@*/
     {
             if (globalPos[0] < this->bboxMin()[0] + eps_)
             {
-                bcTypes.setDirichlet(eqIdxPress);
-                bcTypes.setDirichlet(eqIdxSat);
+                bcTypes.setDirichlet(pressEqIdx);
+                bcTypes.setDirichlet(satEqIdx);
 //                bcTypes.setAllDirichlet(); // alternative if the same BC is used for both types of equations
             }
             // all other boundaries
             else
             {
-                bcTypes.setNeumann(eqIdxPress);
-                bcTypes.setNeumann(eqIdxSat);
+                bcTypes.setNeumann(pressEqIdx);
+                bcTypes.setNeumann(satEqIdx);
 //                bcTypes.setAllNeumann(); // alternative if the same BC is used for both types of equations
             }
     }
     //! Value for dirichlet boundary condition at position globalPos.
     /*! In case of a dirichlet BC for the pressure equation the pressure \f$ [Pa] \f$, and for the transport equation the saturation [-]
      *  have to be defined on boundaries.
+     *
+     *  \param values Values of primary variables at the boundary
+     *  \param intersection The boundary intersection
+     *
+     *  Alternatively, the function dirichletAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
      */
-    void dirichletAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:dirichlet}@*/
+    void dirichlet(PrimaryVariables &values, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichlet}@*/
     {
-        values[eqIdxPress] = 2e5;
-        values[eqIdxSat] = 1.0;
+        values[pWIdx] = 2e5;
+        values[SwIdx] = 1.0;
     }
     //! Value for neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$ at position globalPos.
     /*! In case of a neumann boundary condition, the flux of matter
      *  is returned as a vector.
+     *
+     *  \param values Boundary flux values for the different phases
+     *  \param globalPos The position of the center of the finite volume
+     *
+     *  Alternatively, the function neumann(PrimaryVariables &values, const Intersection& intersection) could be defined,
+     *  where intersection is the boundary intersection.
      */
     void neumannAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:neumann}@*/
     {
@@ -271,9 +305,15 @@ public:
     }
     //! Initial condition at position globalPos.
     /*! Only initial values for saturation have to be given!
+     *
+     *  \param values Values of primary variables
+     *  \param element The finite volume element
+     *
+     *  Alternatively, the function initialAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
      */
-    void initialAtPos(PrimaryVariables &values,
-            const GlobalPosition &globalPos) const /*@\label{tutorial-decoupled:initial}@*/
+    void initial(PrimaryVariables &values,
+            const Element &element) const /*@\label{tutorial-decoupled:initial}@*/
     {
         values = 0;
     }

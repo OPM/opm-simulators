@@ -26,17 +26,44 @@
 #define TUTORIALSPATIALPARAMETERS_DECOUPLED_HH
 
 
-//#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
+#include <dumux/material/spatialparameters/fvspatialparameters.hh>
+#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 namespace Dumux
 {
+
+//forward declaration
+template<class TypeTag>
+class TutorialSpatialParametersDecoupled;
+
+namespace Properties
+{
+// The spatial parameters TypeTag
+NEW_TYPE_TAG(TutorialSpatialParametersDecoupled);
+
+// Set the spatial parameters
+SET_TYPE_PROP(TutorialSpatialParametersDecoupled, SpatialParameters, Dumux::TutorialSpatialParametersDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
+
+// Set the material law
+SET_PROP(TutorialSpatialParametersDecoupled, MaterialLaw)
+{
+private:
+    // material law typedefs
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
+public:
+    typedef EffToAbsLaw<RawMaterialLaw> type;
+};
+}
+
 //! Definition of the spatial parameters for the decoupled tutorial
 
 template<class TypeTag>
-class TutorialSpatialParametersDecoupled
+class TutorialSpatialParametersDecoupled: public FVSpatialParameters<TypeTag>
 {
+    typedef FVSpatialParameters<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
@@ -50,45 +77,52 @@ class TutorialSpatialParametersDecoupled
     typedef Dune::FieldVector<CoordScalar, dim> LocalPosition;
     typedef Dune::FieldMatrix<Scalar,dim,dim> FieldMatrix;
 
-    // material law typedefs
-    typedef RegularizedBrooksCorey<Scalar> EffectiveMaterialLaw;
-//    typedef LinearMaterial<Scalar> EffectiveMaterialLaw;
 public:
-    typedef EffToAbsLaw<EffectiveMaterialLaw> MaterialLaw;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLaw)) MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
-    //! Update the spatial parameters with the flow solution after a timestep.
-    /*! Function left blank as there is nothing to do for the tutorial.
+    //! Intrinsic permeability tensor K \f$[m^2]\f$ depending
+    /*! on the position in the domain
+     *
+     *  \param element The finite volume element
+     *
+     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
      */
-    void update (Scalar saturationW, const Element& element)
-    {    }
-    //! Intrinsic permeability tensor
-    /*! Apply the intrinsic permeability tensor \f$[m^2]\f$ to a
-     *  pressure potential gradient.
-     */
-    const FieldMatrix& intrinsicPermeability (const GlobalPosition& globalPos,
-                                              const Element& element) const
+    const FieldMatrix& intrinsicPermeability (const Element& element) const
     {
             return K_;
     }
 
-    //! Define the porosity \f$[-]\f$ of the spatial parameters
-    double porosity(const GlobalPosition& globalPos, const Element& element) const
+    //! Define the porosity \f$[-]\f$ of the porous medium depending
+    /*! on the position in the domain
+     *
+     *  \param element The finite volume element
+     *
+     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
+    double porosity(const Element& element) const
     {
         return 0.2;
     }
 
-    //! return the parameter object for the material law (i.e. Brooks-Corey)
-    //! which may vary with the spatial position
-    const MaterialLawParams& materialLawParams(const GlobalPosition& globalPos,
-                                               const Element &element) const
+    /*! Return the parameter object for the material law (i.e. Brooks-Corey)
+     *  depending on the position in the domain
+     *
+     *  \param element The finite volume element
+     *
+     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
+    const MaterialLawParams& materialLawParams(const Element &element) const
     {
             return materialLawParams_;
     }
 
     //! Constructor
     TutorialSpatialParametersDecoupled(const GridView& gridView)
-    : K_(0)
+    : ParentType(gridView), K_(0)
     {
         for (int i = 0; i < dim; i++)
                 K_[i][i] = 1e-7;

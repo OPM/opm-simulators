@@ -35,6 +35,33 @@
 
 namespace Dumux
 {
+
+//forward declaration
+template<class TypeTag>
+class TutorialSpatialParametersCoupled;
+
+namespace Properties
+{
+// The spatial parameters TypeTag
+NEW_TYPE_TAG(TutorialSpatialParametersCoupled);/*@\label{tutorial-coupled:define-spatialparameters-typetag}@*/
+
+// Set the spatial parameters
+SET_TYPE_PROP(TutorialSpatialParametersCoupled, SpatialParameters, Dumux::TutorialSpatialParametersCoupled<TypeTag>); /*@\label{tutorial-coupled:set-spatialparameters}@*/
+
+// Set the material law
+SET_PROP(TutorialSpatialParametersCoupled, MaterialLaw)
+{
+private:
+    // material law typedefs
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    // select material law to be used
+    typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
+public:
+    // adapter for absolute law
+    typedef EffToAbsLaw<RawMaterialLaw> type;   /*@\label{tutorial-coupled:eff2abs}@*/
+};
+}
+
 /*!
  * \ingroup TwoPBoxModel
  *
@@ -59,18 +86,23 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
     typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
-    // select material law to be used
-    typedef RegularizedBrooksCorey<Scalar> EffectiveMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
-
 public:
-    // adapter for absolute law
-    typedef EffToAbsLaw<EffectiveMaterialLaw> MaterialLaw;        /*@\label{tutorial-coupled:eff2abs}@*/
+    // get material law from property system
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLaw)) MaterialLaw;
     // determine appropriate parameters depening on selected materialLaw
     typedef typename MaterialLaw::Params MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
 
-    // method returning the intrinsic permeability tensor K depending
-    // on the position within the domain
+    //! Intrinsic permeability tensor K \f$[m^2]\f$ depending
+    /*! on the position in the domain
+     *
+     *  \param element The finite volume element
+     *  \param fvElemGeom The finite-volume geometry in the box scheme
+     *  \param scvIdx The local vertex index
+     *
+     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
     const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
                                                     const FVElementGeometry &fvElemGeom,
                                                     int scvIdx) const
@@ -78,8 +110,16 @@ public:
         return K_;
     }
 
-    // method returning the porosity of the porous matrix depending on
-    // the position within the domain
+    //! Define the porosity \f$[-]\f$ of the porous medium depending
+    /*! on the position in the domain
+     *
+     *  \param element The finite volume element
+     *  \param fvElemGeom The finite-volume geometry in the box scheme
+     *  \param scvIdx The local vertex index
+     *
+     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
     double porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
                     const FVElementGeometry &fvElemGeom,
                     int scvIdx) const
@@ -87,8 +127,16 @@ public:
         return 0.2;
     }
 
-    // return the parameter object for the material law (i.e. Brooks-Corey)
-    // which may vary with the spatial position
+    /*! Return the parameter object for the material law (i.e. Brooks-Corey)
+     *  depending on the position in the domain
+     *
+     *  \param element The finite volume element
+     *  \param fvElemGeom The finite-volume geometry in the box scheme
+     *  \param scvIdx The local vertex index
+     *
+     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
     const MaterialLawParams& materialLawParams(const Element &element,            /*@\label{tutorial-coupled:matLawParams}@*/
                                                const FVElementGeometry &fvElemGeom,
                                                int scvIdx) const
