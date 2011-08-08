@@ -56,6 +56,10 @@ class BoxSpatialParameters
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(SpatialParameters)) Implementation;
 
+# ifndef OnePModel
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLawParams)) MaterialLawParams;
+#endif
+
     enum {
         dimWorld = GridView::dimensionworld
     };
@@ -65,6 +69,7 @@ class BoxSpatialParameters
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldMatrix<CoordScalar, dimWorld, dimWorld> Tensor;
+    typedef Dune::FieldVector<CoordScalar,dimWorld> GlobalPosition;
 
 public:
     BoxSpatialParameters(const GridView &gv)
@@ -152,6 +157,86 @@ public:
             for (int j = 0; j < dimWorld; ++j)
                 result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
     }
+
+    /*!
+     * \brief Function for defining the intrinsic (absolute) permeability.
+     *
+     * \return intrinsic (absolute) permeability
+     * \param element The element
+     */
+    const Tensor& intrinsicPermeability (const Element &element,
+            const FVElementGeometry &fvElemGeom,
+            int scvIdx) const
+    {
+        return asImp_().intrinsicPermeabilityAtPos(element.geometry().center());
+    }
+
+    /*!
+     * \brief Function for defining the intrinsic (absolute) permeability.
+     *
+     * \return intrinsic (absolute) permeability
+     * \param globalPos The position of the center of the element
+     */
+    const Tensor& intrinsicPermeabilityAtPos (const GlobalPosition& globalPos) const
+    {
+        DUNE_THROW(Dune::InvalidStateException,
+                   "The spatial parameters do not provide "
+                   "a intrinsicPermeabilityAtPos() method.");
+    }
+
+    /*!
+     * \brief Function for defining the porosity.
+     *
+     * \return porosity
+     * \param element The element
+     */
+    Scalar porosity(const Element &element,
+            const FVElementGeometry &fvElemGeom,
+            int scvIdx) const
+    {
+        return asImp_().porosityAtPos(element.geometry().center());
+    }
+
+    /*!
+     * \brief Function for defining the porosity.
+     *
+     * \return porosity
+     * \param globalPos The position of the center of the element
+     */
+    Scalar porosityAtPos(const GlobalPosition& globalPos) const
+    {
+        DUNE_THROW(Dune::InvalidStateException,
+                   "The spatial parameters do not provide "
+                   "a porosityAtPos() method.");
+    }
+
+# ifndef OnePModel
+    /*!
+     * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
+     *
+     * \return the material parameters object
+     * \param element The element
+     */
+    const MaterialLawParams& materialLawParams(const Element &element,
+            const FVElementGeometry &fvElemGeom,
+            int scvIdx) const
+    {
+            return asImp_().materialLawParamsAtPos(element.geometry().center());
+    }
+
+    /*!
+     * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
+     *
+     * \return the material parameters object
+     * \param globalPos The position of the center of the element
+     */
+    const MaterialLawParams& materialLawParamsAtPos(const GlobalPosition& globalPos) const
+    {
+        DUNE_THROW(Dune::InvalidStateException,
+                   "The spatial parameters do not provide "
+                   "a materialLawParamsAtPos() method.");
+    }
+#endif
 
 protected:
     Implementation &asImp_()
