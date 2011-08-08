@@ -230,7 +230,7 @@ First, a new type tag is created for the problem in line
 \ref{tutorial-coupled:create-type-tag}.  In this case, the new type
 tag inherits all properties defined for the \texttt{BoxTwoP} type tag,
 which means that for this problem the two-phase box model is chosen as
-discretization scheme. On line \ref{tutorial-coupled:set-problem}, a
+discretization scheme. Further, it inherits from the spatial parameters type tag which is defined in the problem dependent saptial parameters file (line \ref{tutorial-coupled:define-spatialparameters-typetag}). On line \ref{tutorial-coupled:set-problem}, a
 problem class is attached to the new type tag, while the grid which
 is going to be used is defined in line \ref{tutorial-coupled:set-grid} --
 in this case that is  \texttt{SGrid}.  Since there's no uniform
@@ -248,10 +248,7 @@ IAPWS'97~\cite{IAPWS1997} is chosen as the wetting phase on line
 \ref{tutorial-coupled:wettingPhase} and a liquid model oil is chosen as the 
 non-wetting phase on line \ref{tutorial-coupled:nonwettingPhase}. 
 
-For all parameters that depend on space, such as the properties of the
- soil, the specific spatial 
-parameters for the problem of interest are specified in line
-\ref{tutorial-coupled:set-spatialparameters}. The final property, which is set on line
+The final property, which is set on line
 \ref{tutorial-coupled:gravity}, is optional and tells the model not to
 use gravity.
 
@@ -372,8 +369,7 @@ Listing \ref{tutorial-coupled:spatialparametersfile} shows the file
 numberstyle=\tiny, numbersep=5pt, firstline=27]{../../tutorial/tutorialspatialparameters_coupled.hh}
 \end{lst}
 
-First, a certain material law that best describes the problem at hand has to
-be selected in line \ref{tutorial-coupled:rawlaw}\label{tutorial-coupled:materialLaw}. 
+First, a spatial parameters type tag has to be defined (line \ref{tutorial-coupled:define-spatialparameters-typetag}), from which the problem type tag inherits the properties, which can be classified as spatial parameter properties (problem file line \ref{tutorial-coupled:create-type-tag}). These are e.g. the spatial parameters class itself (line \ref{tutorial-coupled:set-spatialparameters}) or a certain material law  (line \ref{tutorial-coupled:rawlaw} \label{tutorial-coupled:materialLaw}). 
 \Dumux provides several material laws in the folder 
 \verb+dumux/material/fluidmatrixinteractions+.
 The selected one -- here it is a relation according to a regularized version of Brooks \& Corey --  is included
