@@ -152,18 +152,6 @@ public:
     }
 
     /*!
-     * \brief Specifies which kind of boundary condition should be
-     *        used for which equation on a given boundary segment.
-     *
-     * \param bcTypes The boundary types for the conservation equations
-     * \param globalPos The position of the center of the boundary intersection
-     */
-    void update (Scalar saturationW, const Element& element)
-    {
-
-    }
-
-    /*!
      * \brief Function for defining the intrinsic (absolute) permeability.
      *
      * \return intrinsic (absolute) permeability
