@@ -27,12 +27,7 @@
 #ifndef DUMUX_BOX_SPATIAL_PARAMETERS_HH
 #define DUMUX_BOX_SPATIAL_PARAMETERS_HH
 
-#include <dumux/common/propertysystem.hh>
-#include <dumux/common/math.hh>
-
-#include <dumux/boxmodels/common/boxproperties.hh>
-
-#include <dune/common/fmatrix.hh>
+#include "boxspatialparameters1p.hh"
 
 namespace Dumux {
 // forward declation of property tags
@@ -50,15 +45,13 @@ NEW_PROP_TAG(SpatialParameters);
  *        box method.
  */
 template<class TypeTag>
-class BoxSpatialParameters
+class BoxSpatialParameters: public BoxSpatialParametersOneP<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(SpatialParameters)) Implementation;
 
-# ifndef OnePModel
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLawParams)) MaterialLawParams;
-#endif
 
     enum {
         dimWorld = GridView::dimensionworld
@@ -68,149 +61,13 @@ class BoxSpatialParameters
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
 
     typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldMatrix<CoordScalar, dimWorld, dimWorld> Tensor;
     typedef Dune::FieldVector<CoordScalar,dimWorld> GlobalPosition;
 
 public:
     BoxSpatialParameters(const GridView &gv)
+    :BoxSpatialParametersOneP<TypeTag>(gv)
     { }
 
-    ~BoxSpatialParameters()
-    {}
-
-    /*!
-     * \brief Returns the factor by which the volume of a sub control
-     *        volume needs to be multiplied in order to get cubic
-     *        meters.
-     *
-     * \param element The current finite element
-     * \param fvElemGeom The current finite volume geometry of the element
-     * \param scvIdx The index sub-control volume face where the
-     *                      factor ought to be calculated.
-     *
-     * By default that's just 1.0
-     */
-    Scalar extrusionFactorScv(const Element &element,
-                              const FVElementGeometry &fvElemGeom,
-                              int scvIdx) const
-    { return 1.0; }
-
-    /*!
-     * \brief Returns the factor by which the area of a sub control
-     *        volume face needs to be multiplied in order to get
-     *        square meters.
-     *
-     * \param element The current finite element
-     * \param fvElemGeom The current finite volume geometry of the element
-     * \param scvfIdx The index sub-control volume face where the
-     *                      factor ought to be calculated.
-     *
-     * By default it is the arithmetic mean of the extrusion factor of
-     * the face's two sub-control volumes.
-     */
-    Scalar extrusionFactorScvf(const Element &element,
-                              const FVElementGeometry &fvElemGeom,
-                              int scvfIdx) const
-    {
-        return
-            0.5 *
-            (asImp_().extrusionFactorScv(element,
-                                         fvElemGeom,
-                                         fvElemGeom.subContVolFace[scvfIdx].i)
-             +
-             asImp_().extrusionFactorScv(element,
-                                         fvElemGeom,
-                                         fvElemGeom.subContVolFace[scvfIdx].j));
-    }
-
-    /*!
-     * \brief Averages the intrinsic permeability (Scalar).
-     * \param result averaged intrinsic permeability
-     * \param K1 intrinsic permeability of the first node
-     * \param K2 intrinsic permeability of the second node
-     */
-    void meanK(Tensor &result,
-               Scalar K1,
-               Scalar K2) const
-    {
-        const Scalar K = Dumux::harmonicMean(K1, K2);
-        for (int i = 0; i < dimWorld; ++i) {
-            for (int j = 0; j < dimWorld; ++j)
-                result[i][j] = 0;
-            result[i][i] = K;
-        }
-    }
-
-    /*!
-     * \brief Averages the intrinsic permeability (Tensor).
-     * \param result averaged intrinsic permeability
-     * \param K1 intrinsic permeability of the first node
-     * \param K2 intrinsic permeability of the second node
-     */
-    void meanK(Tensor &result,
-               const Tensor &K1,
-               const Tensor &K2) const
-    {
-        // entry-wise harmonic mean. this is almost certainly wrong if
-        // you have off-main diagonal entries in your permeabilities!
-        for (int i = 0; i < dimWorld; ++i)
-            for (int j = 0; j < dimWorld; ++j)
-                result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
-    }
-
-    /*!
-     * \brief Function for defining the intrinsic (absolute) permeability.
-     *
-     * \return intrinsic (absolute) permeability
-     * \param element The element
-     */
-    const Tensor& intrinsicPermeability (const Element &element,
-            const FVElementGeometry &fvElemGeom,
-            int scvIdx) const
-    {
-        return asImp_().intrinsicPermeabilityAtPos(element.geometry().center());
-    }
-
-    /*!
-     * \brief Function for defining the intrinsic (absolute) permeability.
-     *
-     * \return intrinsic (absolute) permeability
-     * \param globalPos The position of the center of the element
-     */
-    const Tensor& intrinsicPermeabilityAtPos (const GlobalPosition& globalPos) const
-    {
-        DUNE_THROW(Dune::InvalidStateException,
-                   "The spatial parameters do not provide "
-                   "a intrinsicPermeabilityAtPos() method.");
-    }
-
-    /*!
-     * \brief Function for defining the porosity.
-     *
-     * \return porosity
-     * \param element The element
-     */
-    Scalar porosity(const Element &element,
-            const FVElementGeometry &fvElemGeom,
-            int scvIdx) const
-    {
-        return asImp_().porosityAtPos(element.geometry().center());
-    }
-
-    /*!
-     * \brief Function for defining the porosity.
-     *
-     * \return porosity
-     * \param globalPos The position of the center of the element
-     */
-    Scalar porosityAtPos(const GlobalPosition& globalPos) const
-    {
-        DUNE_THROW(Dune::InvalidStateException,
-                   "The spatial parameters do not provide "
-                   "a porosityAtPos() method.");
-    }
-
-# ifndef OnePModel
     /*!
      * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
      *
@@ -236,9 +93,8 @@ public:
                    "The spatial parameters do not provide "
                    "a materialLawParamsAtPos() method.");
     }
-#endif
 
-protected:
+private:
     Implementation &asImp_()
     { return *static_cast<Implementation*>(this); }
 

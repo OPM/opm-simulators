@@ -27,32 +27,21 @@
 #ifndef DUMUX_FV_SPATIAL_PARAMETERS_HH
 #define DUMUX_FV_SPATIAL_PARAMETERS_HH
 
-#include <dumux/common/propertysystem.hh>
-#include <dumux/common/math.hh>
-
-#include <dumux/decoupled/common/decoupledproperties.hh>
-
-#include <dune/common/fmatrix.hh>
+#include "fvspatialparameters1p.hh"
 
 namespace Dumux
 {
-// forward declation of property tags
-namespace Properties
-{
-NEW_PROP_TAG( SpatialParameters);
-}
-;
 
 /*!
  * \ingroup SpatialParameters
  */
 
 /**
- * \brief The base class for spatial parameters of problems using the
+ * \brief The base class for spatial parameters of a multi-phase problem using the
  *        fv method.
  */
 template<class TypeTag>
-class FVSpatialParameters
+class FVSpatialParameters: public FVSpatialParametersOneP<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
@@ -65,156 +54,14 @@ class FVSpatialParameters
 
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> Tensor;
-# ifndef OnePModel
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLawParams)) MaterialLawParams;
-#endif
 
 public:
     FVSpatialParameters(const GridView &gv)
+    :FVSpatialParametersOneP<TypeTag>(gv)
     {
     }
 
-    ~FVSpatialParameters()
-    {
-    }
-
-    /*!
-     * \brief Averages the intrinsic permeability (Scalar).
-     * \param K1 intrinsic permeability of the first element
-     * \param K2 intrinsic permeability of the second element
-     */
-    Scalar meanK(Scalar K1, Scalar K2) const
-    {
-        const Scalar K = Dumux::harmonicMean(K1, K2);
-        return K;
-    }
-
-    /*!
-     * \brief Averages the intrinsic permeability (Scalar).
-     * \param result averaged intrinsic permeability
-     * \param K1 intrinsic permeability of the first element
-     * \param K2 intrinsic permeability of the second element
-     */
-    void meanK(Tensor &result, Scalar K1, Scalar K2) const
-    {
-        const Scalar K = Dumux::harmonicMean(K1, K2);
-        for (int i = 0; i < dimWorld; ++i)
-        {
-            for (int j = 0; j < dimWorld; ++j)
-                result[i][j] = 0;
-            result[i][i] = K;
-        }
-    }
-
-    /*!
-     * \brief Averages the intrinsic permeability (Tensor).
-     * \param result averaged intrinsic permeability
-     * \param K1 intrinsic permeability of the first element
-     * \param K2 intrinsic permeability of the second element
-     */
-    void meanK(Tensor &result, const Tensor &K1, const Tensor &K2) const
-    {
-        // entry-wise harmonic mean at the main diagonal and arithmetic mean at the off-diagonal
-        for (int i = 0; i < dimWorld; ++i)
-        {
-            result[i][i] = harmonicMean(K1[i][i], K2[i][i]);
-            for (int j = 0; j < dimWorld; ++j)
-            {
-                if (i != j)
-                {
-                    result[i][j] = 0.5 * (K1[i][j] + K2[i][j]);
-                }
-            }
-        }
-    }
-
-    /*!
-     * \brief Dummy function that can be used if only one value exist (boundaries).
-     * \param result intrinsic permeability
-     * \param K intrinsic permeability of the element
-     */
-    void meanK(Tensor &result, Scalar K) const
-    {
-        for (int i = 0; i < dimWorld; ++i)
-        {
-            for (int j = 0; j < dimWorld; ++j)
-                result[i][j] = 0;
-            result[i][i] = K;
-        }
-    }
-
-    /*!
-     * \brief Dummy function that can be used if only one value exist (boundaries).
-     * \param result intrinsic permeability
-     * \param K intrinsic permeability of the element
-     */
-    void meanK(Tensor &result, const Tensor &K) const
-    {
-        result = K;
-    }
-
-    /*!
-     * \brief Specifies which kind of boundary condition should be
-     *        used for which equation on a given boundary segment.
-     *
-     * \param bcTypes The boundary types for the conservation equations
-     * \param globalPos The position of the center of the boundary intersection
-     */
-    void update (Scalar saturationW, const Element& element)
-    {
-
-    }
-
-    /*!
-     * \brief Function for defining the intrinsic (absolute) permeability.
-     *
-     * \return intrinsic (absolute) permeability
-     * \param element The element
-     */
-    const Tensor& intrinsicPermeability (const Element& element) const
-    {
-        return asImp_().intrinsicPermeabilityAtPos(element.geometry().center());
-    }
-
-    /*!
-     * \brief Function for defining the intrinsic (absolute) permeability.
-     *
-     * \return intrinsic (absolute) permeability
-     * \param globalPos The position of the center of the element
-     */
-    const Tensor& intrinsicPermeabilityAtPos (const GlobalPosition& globalPos) const
-    {
-        DUNE_THROW(Dune::InvalidStateException,
-                   "The spatial parameters do not provide "
-                   "a intrinsicPermeabilityAtPos() method.");
-    }
-
-    /*!
-     * \brief Function for defining the porosity.
-     *
-     * \return porosity
-     * \param element The element
-     */
-    Scalar porosity(const Element& element) const
-    {
-        return asImp_().porosityAtPos(element.geometry().center());
-    }
-
-    /*!
-     * \brief Function for defining the porosity.
-     *
-     * \return porosity
-     * \param globalPos The position of the center of the element
-     */
-    Scalar porosityAtPos(const GlobalPosition& globalPos) const
-    {
-        DUNE_THROW(Dune::InvalidStateException,
-                   "The spatial parameters do not provide "
-                   "a porosityAtPos() method.");
-    }
-
-# ifndef OnePModel
     /*!
      * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
      *
@@ -238,9 +85,8 @@ public:
                    "The spatial parameters do not provide "
                    "a materialLawParamsAtPos() method.");
     }
-#endif
 
-protected:
+private:
     Implementation &asImp_()
     {
         return *static_cast<Implementation*> (this);
