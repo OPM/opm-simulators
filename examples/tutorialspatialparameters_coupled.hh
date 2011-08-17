@@ -23,8 +23,8 @@
  * \brief The spatial parameters for the fully coupled tutorial problem
  *        which uses the twophase box model.
  */
-#ifndef TUTORIALSPATIALPARAMETERS_COUPLED_HH
-#define TUTORIALSPATIALPARAMETERS_COUPLED_HH
+#ifndef DUMUX_TUTORIAL_SPATIAL_PARAMETERS_COUPLED_HH
+#define DUMUX_TUTORIAL_SPATIAL_PARAMETERS_COUPLED_HH
 
 // include parent spatialparameters
 #include <dumux/material/spatialparameters/boxspatialparameters.hh>
