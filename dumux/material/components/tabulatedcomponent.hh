@@ -31,8 +31,6 @@
 
 #include <dumux/common/exceptions.hh>
 
-#include <boost/math/special_functions/fpclassify.hpp>
-
 #include <iostream>
 
 namespace Dumux
