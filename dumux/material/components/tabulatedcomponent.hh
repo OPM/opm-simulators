@@ -30,6 +30,8 @@
 #define DUMUX_TABULATED_COMPONENT_HH
 
 #include <dumux/common/exceptions.hh>
+#include <limits>
+#include <assert.h>
 
 #include <iostream>
 
