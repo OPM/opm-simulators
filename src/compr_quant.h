@@ -31,11 +31,11 @@ extern "C" {
 struct compr_quantities {
     int           nphases;      /* Number of phases/components */
 
-    const double *totcompr;     /* Total compressibility per cell */
-    const double *voldiscr;     /* Volume discrepancy per cell */
-    const double *Ac;           /* RB^{-1} per cell */
-    const double *Af;           /* RB^{-1} per face */
-    const double *phasemobf;    /* Phase mobility per face */
+    double *totcompr;     /* Total compressibility per cell */
+    double *voldiscr;     /* Volume discrepancy per cell */
+    double *Ac;           /* RB^{-1} per cell */
+    double *Af;           /* RB^{-1} per face */
+    double *phasemobf;    /* Phase mobility per face */
 };
 
 void
