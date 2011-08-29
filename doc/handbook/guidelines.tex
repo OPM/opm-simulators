@@ -1,11 +1,20 @@
 \section{Guidelines} 
 \label{guidelines}
 
-This section adaptes the DUNE coding guidelines found at \cite{DUNE-HP}. 
-These guidelines also should be followed by every \Dumux developer and user. \\
-In order to keep the code maintainable we have decided upon a set of coding rules. 
-Some of them may seem like splitting hairs to you, but they do make it much easier 
-for everybody to work on code that hasn't been written by oneself.
+An important characteristic of source code is that it is written only
+once but usually it is read many times (e.g. when debugging things,
+adding features, etc.). For this reason, good programming frameworks
+always aim to be as readable as possible, even if comes with higher
+effort to write them in the first place. The remainder of this section
+is almost a verbatim copy of the DUNE coding guidelines found at
+\cite{DUNE-HP}. These guidelines are also recommended for coding with
+\Dumux as developer and user.
+\\
+
+In order to keep the code maintainable we have decided upon a set of
+coding rules.  Some of them may seem like splitting hairs to you, but
+they do make it much easier for everybody to work on code that hasn't
+been written by oneself.
 
 \begin{itemize}
 \item Naming: 
@@ -13,8 +22,13 @@ for everybody to work on code that hasn't been written by oneself.
 \item Comments: they are helpful! Please document freely what each part of your code does. 
 \item all comments / documentation is in english
 \item Variables: Names for variables should only consist of letters and digits. The first letter should be a lower case one. If your variable names consists of several words, then the first letter of each new word should be capital. As we decided on the only exception are the begin and end methods.
-\item variables should be named as self-explaining as possible: especially abbreviations should be avoided (saturation in stead of S)
-\item Private Data Variables: Names of private data variables end with an underscore and are the only variables that contain udnerscores. 
+\item Variables should be named as self-explaining as possible: especially abbreviations should be avoided (saturation in stead of S)
+\item Method parameters which are not self-explanatory should always
+  have a meaningful comment a at calling sites. Example:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+   localResidual.eval(/*includeBoundaries=*/true);
+\end{lstlisting}
+\item Private Data Variables: Names of private data variables end with an underscore and are the only variables that contain underscores. 
 \item Typenames: For typenames, the same rules as for variables apply. The only difference is that the first letter should be a capital one.
 \item Macros: The use of preprocessor macros is strongly discouraged. If you have to use them for whatever reason, please use capital letters only.
 \item The Exlusive-Access Macro: Every header file traditionally begins with the definition of a preprocessor constant that is used to make sure that each header file is only included once. If your header file is called 'myheaderfile.hh', this constant should be DUNE\_MYHEADERFILE\_HH.
