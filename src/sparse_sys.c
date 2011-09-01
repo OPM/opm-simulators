@@ -209,7 +209,7 @@ csrmatrix_write(const struct CSRMatrix *A, const char *fn)
     fp = fopen(fn, "wt");
 
     if (fp != NULL) {
-        for (i = j = 0; i < A->m; i++) {
+        for (i = j = 0; (size_t)i < A->m; i++) {
             for (; j < A->ia[i + 1]; j++) {
                 fprintf(fp, "%lu %lu %26.18e\n",
                         (unsigned long) (i + 1),
