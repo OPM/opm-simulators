@@ -8,17 +8,17 @@ reader already has basic experience in object oriented programming
 with C++.
 
 First, a quick motivation of C++ template programming is given. Then
-follows an introduction to polymorphism and the opportunities for it
+follows an introduction to polymorphism and its opportunities as
 opened by the template mechanism. After that, some drawbacks
 associated with template programming are discussed, in particular the
-blow-up of identifier names and proliferation of template arguments
+blow-up of identifier names, the proliferation of template arguments
 and some approaches on how to deal with these problems.
 
 \section{C++ Template Programming}
 
 One of the main features of modern versions of the C++ programming
 language is robust support for templates. Templates are a mechanism
-for code generation build directly into the compiler.  For the
+for code generation built directly into the compiler.  For the
 motivation behind templates, consider a linked list of \texttt{double}
 values which could be implemented like this:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
@@ -41,7 +41,7 @@ only ``clean'' way to achive this without templates would be to copy
 \texttt{value} attribute. It is obvious that this is a very
 cumbersome, error-prone and unproductive process. For this reason,
 recent standards of the C++ programming language specify the template
-mechanism, which is a way to let the compiler do the tedious work. Using
+mechanism, which is a way of letting the compiler do the tedious work. Using
 templates, a generic linked list can be implemented like this:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 template <class ValueType>
@@ -74,7 +74,7 @@ preprocessor -- as done for example by the UG framework~\cite{UG-HP}
 \begin{description}
 \item[Well Programmable:] Programming errors are directly detected by
   the C++ compiler. Thus, diagnostic messages from the compiler are
-  directly useful because the source code which gets compiled is the
+  directly useful because the source code compiled is the
   same as the one written by the developer. This is not the case
   for code generators and C-preprocessor macros where the actual
   statements processed by the compiler are obfuscated.
@@ -91,13 +91,13 @@ quasi-standard Boost~\cite{BOOST-HP} libraries.
 
 \section{Polymorphism}
 
-In object oriented programming, some methods often makes sense for all
+In object oriented programming, some methods often make sense for all
 classes in a hierarchy, but what actually needs to be \textit{done}
 can differ for each concrete class. This observation motivates
 \textit{polymorphism}. Fundamentally, polymorphism means all
-techniques where a method call results in the processor executing code
+techniques in which a method call results in the processor executing code
 which is specific to the type of object for which the method is
-called\footnote{This is \textit{poly} of polymorphism: There are
+called\footnote{This is the \textit{poly} of polymorphism: There are
   multiple ways to achieve the same goal.}.
 
 In C++, there are two common ways to achieve polymorphism: The
@@ -131,7 +131,7 @@ executed is dynamically determined at run time.
   method to be defined in derived classes. Finally, the method
   \texttt{range} may calculate the expected remaining kilometers the
   car can drive given a fill level of the fuel tank. Since the
-  \texttt{range} method can retrieve information it needs, it does not
+  \texttt{range} method can retrieve the information it needs, it does not
   need to be polymorphic.
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // The base class
@@ -215,14 +215,13 @@ depend on specific properties of the function arguments (e.g. constant
 value elimination) or the contents of the function body (e.g. loop
 unrolling). Unfortunately, inlining and other cross-method
 optimizations are made next to impossible by dynamic
-polymorphism. This is because these optimizations are done by the
+polymorphism. This is because these optimizations are accomplished by the
 compiler (i.e. at compile time) whilst the code which actually gets
 executed is only determined at run time for \texttt{virtual}
 methods. To overcome this issue, template programming can be used to
 achive polymorphism at compile time. This works by supplying the type
 of the derived class as an additional template parameter to the base
-class. Whenever the base class needs to call back the derived class,
-the \texttt{this} pointer of the base class is reinterpreted as a
+class. Whenever the base class needs to call back the derived class, \texttt{this} pointer of the base class is reinterpreted as
 being a pointer to an object of the derived class and the method is
 then called on the reinterpreted pointer. This scheme gives the C++
 compiler complete transparency of the code executed and thus opens
@@ -231,10 +230,10 @@ happens at compile time, it is called ``static polymorphism'' because
 the called method cannot be dynamically changed at runtime.
 \begin{example}
   Using static polymorphism, the base class of example \ref{example:DynPoly}
-  can be implemented like:
+  can be implemented like this:
 \begin{lstlisting}[name=staticcars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // The base class. The 'Imp' template parameter is the
-// type of the implementation, i.e. the derived class 
+// type of implementation, i.e. the derived class 
 template <class Imp>
 class Car
 {public:
@@ -303,10 +302,10 @@ provided.
 
 \subsection*{Identifier-Name Blow-Up}
 
-One particular problem with advanced use of C++ templates is that the
+One particular problem with the advanced use of C++ templates is that the
 canonical identifier names for types and methods quickly become really
 long and unintelligible. For example, a typical error message
-generated using GCC 4.5 and \Dune-PDELab looks like
+generated using GCC 4.5 and \Dune-PDELab looks like this
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize, numbersep=5pt]
 test_pdelab.cc:171:9: error: no matching function for call to ‘Dune::\
 PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
@@ -327,7 +326,7 @@ ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()’
 \end{lstlisting}
 This seriously complicates diagnostics. Although there is no full
-solution for this problem yet, an effective way of dealing with such
+solution to this problem yet, an effective way of dealing with such
 kinds of error messages is to ignore the type information and to just
 look at the location given at the beginning of the line. If nested
 templates are used, the lines printed by the compiler above the actual
@@ -387,7 +386,7 @@ order to keep the code maintainable.
 
 \section{Traits Classes}
 
-A classic approach to reduce the number of template parameters is to
+A classic approach to reducing the number of template parameters is to
 gather all the arguments in a special class, a so-called traits
 class. Instead of writing
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
@@ -417,7 +416,7 @@ disadvantages of its own:
 \begin{enumerate}
 \item Hierarchies of traits classes are problematic. This is due to
   the fact that each level of the hierarchy must be self-contained. As
-  a result it is impossible to define parameters in the base class
+  a result, it is impossible to define parameters in the base class
   which depend on parameters which only later get specified by a
   derived traits class.
 \item Traits quickly lead to circular dependencies. In practice
@@ -448,7 +447,7 @@ int main() {
 }
 \end{lstlisting}
 Contrary to what is intended, \texttt{v} is a vector of integers. This
-problem can also not be solved using static polymorphism, since it
+problem can not be solved using static polymorphism, either, since it
 would lead to a cyclic dependency between \texttt{MyBaseTraits} and
 \texttt{MyDoubleTraits}.
 

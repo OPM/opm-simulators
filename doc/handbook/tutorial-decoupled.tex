@@ -64,20 +64,20 @@ message passing interface using \Dune's \texttt{MPIHelper} class. Line
 intended to be run on more than one processor at the same time. Next,
 the command line arguments are parsed starting at line
 \ref{tutorial-decoupled:parse-args-begin} until line
-\ref{tutorial-decoupled:parse-args-end}. In this case, we check weather and
+\ref{tutorial-decoupled:parse-args-end}. In this case, we check whether and
 at which time a previous run of the simulation should be restarted, and we
 parse the time when the simulation ends. As the maximum time-step in the 
 sequential model is strictly bound by a CFL-criterion, the first time-step
 size is initialized with the simulation time.
 
-After this, a grid is created on line \ref{tutorial-decoupled:create-grid} 
+After this, a grid is created in line \ref{tutorial-decoupled:create-grid} 
 and the time manager controlling the simulation run is instantiated 
 with the start parameters in line \ref{tutorial-decoupled:initTimeManager}.
 The problem is instantiated with the time manager and information about the grid
 (via its leaf grid view) on line \ref{tutorial-decoupled:instantiate-problem}.
 If demanded, on line \ref{tutorial-decoupled:mainRestart} a state written to
 disk by a previous simulation run is restored on request by the user.
-Finally, the simulation proceedure is started by the time manager at line
+Finally, the simulation proceedure is started by the time manager in line
 \ref{tutorial-decoupled:execute}.
 
 
@@ -96,13 +96,13 @@ numberstyle=\tiny, numbersep=5pt, firstline=28]{../../tutorial/tutorialproblem_d
 
 First, both \Dune  grid handlers and the decoupled model of \Dumux 
 have to be included. Then, a new type tag is created for the problem 
-on line \ref{tutorial-decoupled:create-type-tag}.  In this case, the 
+in line \ref{tutorial-decoupled:create-type-tag}.  In this case, the 
 new type tag inherits all properties defined for the \texttt{DecoupledTwoP} 
 type tag, which means that for this problem the two-phase decoupled approach
 is chosen as discretization scheme (defined via the include in line 
 \ref{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
 a problem class is attached to the new type tag, while the grid which
-is going to be used is defined on line \ref{tutorial-decoupled:set-grid-type} --
+is going to be used is defined in line \ref{tutorial-decoupled:set-grid-type} --
 in this case an \texttt{SGrid} is created.  Since in \Dune, there's no uniform
 mechanism to allocate grids, the \texttt{Grid} property also contains
 a static \texttt{create()} method which provides just that: From line 
@@ -113,10 +113,10 @@ Type \texttt{Dune::FieldVector} define the lower left corner of the domain
 of cells in $x$ and $y$ direction (\texttt{N}). The grid of type 
 \texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. 
 For more information about the \Dune grid interface, the different grid types 
-that are supported and the generation of different grids it is referred to 
+that are supported and the generation of different grids consult 
 the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}. 
 
-Next, we select the material of the simulation: In case of a pure two-phase
+Next, we select the material of the simulation: In the case of a pure two-phase
 model, each phase is a bulk fluid, and the complex (compositional) fluidsystems
 do not need to be used. However, they can be used (see exercise 1 \ref{dec-ex1-fluidsystem}). 
 Instead, we use a simplified fluidsystem container that provides classes 
@@ -134,7 +134,7 @@ wetting phase velocity rather than e.g. a total velocity is used for the
 transport system. As we regard capillary pressure, a capillary diffusive 
 term is regarded, selected in line \ref{tutorial-decoupled:DiffusivePart}.
 Line \ref{tutorial-decoupled:cfl} assigns the CFL-factor to be used in the
-simulation run. The final property on line \ref{tutorial-decoupled:gravity} 
+simulation run. The final property in line \ref{tutorial-decoupled:gravity} 
 is optional and tells the model not to use gravity.
 
 After all necessary information is written into the property system and 
@@ -145,7 +145,7 @@ As its property, the problem class itsself is also derived from a parent,
 \ref{tutorial-decoupled:constructor-problem}) is able to hold two vectors,
 which is not needed in this tutorial.
 
-Besides the definition of the boundary and initial conditions (discussed in 
+Beside the definition of the boundary and initial conditions (discussed in 
 subsection \label{decoupled-problem:boundary}), the problem class also contains
 general information about the current simulation. First, the name used by
 the \texttt{VTK-writer} to generate output is defined in the method of line
@@ -161,14 +161,14 @@ Hence, they all feature a common argument list:
 \begin{itemize}
  \item \texttt{globalPos}: A vector holding the global Coordinates.
  \item \texttt{element} or \texttt{intersection}: Input for an iterator, that is 
-    depending weather the parameter of the method is defined in an element, such as 
+    depending on whether the parameter of the method is defined in an element, such as 
     initial values, or on an intersection, such as a boundary condition.
 \end{itemize}
 In the following, there are the methods for general parameters, source- or
 sinkterms, boundary conditions (lines \ref{tutorial-decoupled:bctype} to
 \ref{tutorial-decoupled:neumann}) and initial values for the transported
 quantity in line \label{tutorial-decoupled:init}. For more information
-on the functions, it is referred to the documentation in the code.
+on the functions, consult the documentation in the code.
 
 \subsection{The definition of the parameters that are dependent on space}\label{tutorial-decoupled:description-spatialParameters}
 
@@ -179,7 +179,7 @@ Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
 \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
 numberstyle=\tiny, numbersep=5pt, firstline=26]{../../tutorial/tutorialspatialparameters_decoupled.hh}
 \end{lst}
-As this file only slightly differs from the coupled version, it is referred to 
+As this file only slightly differs from the coupled version, consult 
 chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
 However, as a standard Finite-Volume--scheme is used, in contrast to the box-method
 in the coupled case, the argument list here is the same as for the problem 
@@ -202,7 +202,7 @@ For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
 To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 1e5}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
-As you can see, the simulation creates roughly 150 output files. To reduce these to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:output} in the file \texttt{tutorialproblem\_decoupled}) to write an output only every 20 timesteps by changeing the divisor. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
+As you can see, the simulation creates roughly 150 output files. To reduce these in order to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:output} in the file \texttt{tutorialproblem\_decoupled}) as to write an output only every 20 timesteps by changeing the divisor. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
@@ -212,10 +212,10 @@ Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
 \begin{enumerate}
- \item Brine: The class \texttt{Dumux::Brine} acts as a adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be aware to use the complete water class with its own template parameter).
- \item DNAPL: A standard set of chemical substances, such as Oil and Brinde, is already included (via a list of \texttt{\#include ..} commandos) and hence easy accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
+ \item Brine: The class \texttt{Dumux::Brine} acts as an adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be sure to use the complete water class with its own template parameter).
+ \item DNAPL: A standard set of chemical substances, such as Oil and Brine, is already included (via a list of \texttt{\#include ..} commandos) and hence easily accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
-If you want to take a closer look how the fluid classes are defined and which substances are already available please browse through the files in the directory
+If you want to take a closer look at how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
@@ -240,7 +240,7 @@ When does the front cross the material border? In paraview, the option \textit{V
 \end{enumerate}
 
 \subsubsection{Exercise 2}
-For this exercise you should create a new proplem file analogous to
+For this exercise you should create a new problem file analogous to
 the file \texttt{tutorialproblem\_decoupled.hh} (e.g. with the name 
 \texttt{ex2\_tutorialproblem\_decoupled.hh} and new spatial parameters 
 just like \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to
@@ -252,9 +252,9 @@ Make sure that you also adjust the guardian
 macros in lines \ref{tutorial-decoupled:guardian1} and \ref{tutorial-decoupled:guardian2}
  in the header files (e.g. change \\
 \texttt{DUMUX\_TUTORIALPROBLEM\_DECOUPLED\_HH} to
-\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_DECOUPLED\_HH}).  Besides also adjusting the guardian macros, 
+\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_DECOUPLED\_HH}).  Beside also adjusting the guardian macros, 
 the new problem file should define and use a new type tag for the problem as well as a new problem class
-e.g. \texttt{Ex2TutorialProblemDecoupled}. Make sure you assign your newly defined spatial 
+e.g. \texttt{Ex2TutorialProblemDecoupled}. Make sure to assign your newly defined spatial 
 parameter class to the \texttt{SpatialParameters} property for the new 
 type tag. 
 
@@ -262,7 +262,7 @@ After this, change the \texttt{create()} method of the \texttt{Grid}
 property so that it matches the domain described
 by figure \ref{tutorial-decoupled:ex2_Domain}. Adapt the problem class
 so that the boundary conditions are consistent with figure
-\ref{tutorial-decoupled:ex2_BC}. Initially the domain is fully saturated
+\ref{tutorial-decoupled:ex2_BC}. Initially, the domain is fully saturated
 with water and the pressure is $p_w = 2 \times 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time

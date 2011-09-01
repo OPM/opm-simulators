@@ -1,6 +1,6 @@
 \chapter{Introduction}
 
-\Dumux aims to be a generic framework for simulation of multiphase
+\Dumux aims to be a generic framework for the simulation of multiphase
 fluid flow and transport processes in porous media using contiuum
 mechanical approaches.  At the same time, \Dumux aims to deliver
 top-notch computational performance, high flexibility, a sound
@@ -10,7 +10,7 @@ hardware architectures.
 
 The means to achieve these somewhat contradictory goals are the
 thorough use of object oriented design in conjunction with template
-programming. These requirements lead to C++ as the implementation
+programming. These requirements call for C++ as the implementation
 language.
 
 One of the more complex issues when dealing with parallel continuum
@@ -31,7 +31,7 @@ libraries\footnote{In fact, the performance penalty resulting from the
   \includegraphics[width=.5\linewidth, keepaspectratio]{EPS/dunedesign}
   \caption{
     \label{fig:dune-design}
-    A high-level overview on DUNE's design as available on the project's
+    A high-level overview of DUNE's design is available on the project's
     web site~\cite{DUNE-HP}.
   }
 \end{figure}
@@ -44,12 +44,12 @@ cells, co-dimension $1$ are edges, and so on until co-dimension $n$
 which are the cell's vertices.  The DUNE grid interface generally
 assumes that all entities are convex polytopes, which means that it
 must be possible to express each entity as the convex hull of a set of
-vertices. For efficiency, all entities are further expressed in terms
+vertices. For the sake of efficiency, all entities are further expressed in terms
 of so-called reference elements which are transformed to the actual
 spatial incarnation within the grid by a so-called geometry
 function. Here, a reference element for an
 entity can be thought of as a prototype for the actual grid
-entity. For example, if we used a grid that used hexahedrons as cells,
+entity. For example, if we used a grid which applied hexahedrons as cells,
 the reference element for each cell would be the unit cube $[0, 1]^3$
 and the geometry function would scale and translate the cube so that
 it matches the grid's cell. For a more thorough description of DUNE's
@@ -59,9 +59,9 @@ In addition to the grid interface, DUNE also provides quite a few
 additional modules, of which the \texttt{dune-pdelab},
 \texttt{dune-localfunctions} and \texttt{dune-istl} modules are the
 most relevant in the context of this handbook.  \texttt{dune-pdelab}
-provides a toolbox for discretization and includes matrix assemblers
+provides a toolbox for discretization and includes, among other things, matrix assemblers
 for translating local stiffness matrices into a global linear system
-of equations and much more, while \texttt{dune-localfunctions}
+of equations, while \texttt{dune-localfunctions}
 provides a set of generic finite element shape
 functions. \texttt{dune-istl} is the \textbf{I}terative
 \textbf{S}olver \textbf{T}emplate \textbf{L}ibrary and provides
@@ -70,12 +70,12 @@ generated systems.
 
 \Dumux comes in form of an additional module \texttt{dumux}. 
 It depends on the DUNE core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions}, as well as from 
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions}, as well as on 
 the discretization module \texttt{dune-pdelab}. 
-The main intention of \Dumux is to provide a framework for easy and efficient 
+The main intention of \Dumux is to provide a framework for an easy and efficient 
 implementation of new physical models for porous media flow problems, 
-ranging from problem formulation, the selection of 
-spatial and temporal discretization schemes, as well as nonlinear solvers,  
-up to general concepts for model coupling.  
-Moreover, \Dumux includes ready to use numerical models and a few example applications. 
+ranging from problem formulation and the selection of 
+spatial and temporal discretization schemes as well as nonlinear solvers,  
+to general concepts for model coupling.  
+Moreover, \Dumux includes ready to use numerical models and a few example applications.  
 
