@@ -64,7 +64,7 @@ class BoxSpatialParametersOneP
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
 
     typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldMatrix<CoordScalar, dimWorld, dimWorld> Tensor;
+    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> Tensor;
     typedef Dune::FieldVector<CoordScalar,dimWorld> GlobalPosition;
 
 public:
