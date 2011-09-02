@@ -23,8 +23,8 @@
  *
  * \brief Tutorial problem for a fully coupled twophase box model.
  */
-#ifndef DUMUX_TUTORIALPROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
-#define DUMUX_TUTORIALPROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
+#ifndef DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
+#define DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
 
 // the numerical model
 #include <dumux/boxmodels/2p/2pmodel.hh>
