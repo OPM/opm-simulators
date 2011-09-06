@@ -1228,7 +1228,6 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
     const double *masstrans_f, *gravtrans_f, *masstrans_p, *gravtrans_p;
     const double *cpress, *wpress;
 
-    /* Set up convenience pointers */
     masstrans_f = h->pimpl->masstrans_f;
     gravtrans_f = h->pimpl->gravtrans_f;
     masstrans_p = h->pimpl->masstrans_p;
@@ -1255,8 +1254,7 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
                     dz  = masstrans_f[f*np + p] * dp;
                     dz += gravtrans_f[f*np + p] * gsgn;
 
-                    /* A positive dz means flow from the cell c into
-                       the cell c2. */
+                    /* dz > 0 => flow from c into c2. */
                     surf_vol[c*np + p] -= dz * dt / porevol[c];
                 }
             }
@@ -1268,13 +1266,13 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
         for (w = i = 0; w < W->number_of_wells; w++) {
             for (; i < W->well_connpos[w + 1]; i++) {
                 c = W->well_cells[i];
-                /* Get difference between cell pressure and well bhp */
                 dp = wpress[w] - cpress[c];
+
                 for (p = 0; p < np; p++) {
                     dz = masstrans_p[i*np + p] * dp;
                     dz += gravtrans_p[i*np + p];
-                    /* A positive dz means flow from the well perforation
-                       i into the cell c */
+
+                    /* dz > 0 => flow from perforation into c. */
                     surf_vol[c*np + p] += dz * dt / porevol[c];
                 }
             }
