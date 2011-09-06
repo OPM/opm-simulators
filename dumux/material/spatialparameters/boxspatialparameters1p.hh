@@ -75,6 +75,53 @@ public:
     {}
 
     /*!
+     * \brief Returns the factor by which the volume of a sub control
+     *        volume needs to be multiplied in order to get cubic
+     *        meters.
+     *
+     * \param element The current finite element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvIdx The index sub-control volume face where the
+     *                      factor ought to be calculated.
+     *
+     * By default that's just 1.0
+     */
+    Scalar extrusionFactorScv(const Element &element,
+                              const FVElementGeometry &fvElemGeom,
+                              int scvIdx) const
+    DUNE_DEPRECATED // use the extrusion factor of the volume variables
+    { return 1.0; }
+
+    /*!
+     * \brief Returns the factor by which the area of a sub control
+     *        volume face needs to be multiplied in order to get
+     *        square meters.
+     *
+     * \param element The current finite element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvfIdx The index sub-control volume face where the
+     *                      factor ought to be calculated.
+     *
+     * By default it is the arithmetic mean of the extrusion factor of
+     * the face's two sub-control volumes.
+     */
+    Scalar extrusionFactorScvf(const Element &element,
+                              const FVElementGeometry &fvElemGeom,
+                              int scvfIdx) const
+    DUNE_DEPRECATED // use the extrusion factor of the volume variables
+    {
+        return
+            0.5 *
+            (asImp_().extrusionFactorScv(element,
+                                         fvElemGeom,
+                                         fvElemGeom.subContVolFace[scvfIdx].i)
+             +
+             asImp_().extrusionFactorScv(element,
+                                         fvElemGeom,
+                                         fvElemGeom.subContVolFace[scvfIdx].j));
+    }
+
+    /*!
      * \brief Averages the intrinsic permeability (Scalar).
      * \param result averaged intrinsic permeability
      * \param K1 intrinsic permeability of the first node
