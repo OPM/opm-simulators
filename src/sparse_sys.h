@@ -21,6 +21,7 @@
 #define OPM_SPARSE_SYS_HEADER_INCLUDED
 
 #include <stddef.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,7 +72,13 @@ void
 csrmatrix_write(const struct CSRMatrix *A, const char *fn);
 
 void
+csrmatrix_write_stream(const struct CSRMatrix *A, FILE *fp);
+
+void
 vector_write(size_t n, const double *v, const char *fn);
+
+void
+vector_write_stream(size_t n, const double *v, FILE *fp);
 
 #ifdef __cplusplus
 }

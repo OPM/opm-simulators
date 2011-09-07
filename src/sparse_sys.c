@@ -203,20 +203,12 @@ void
 csrmatrix_write(const struct CSRMatrix *A, const char *fn)
 /* ---------------------------------------------------------------------- */
 {
-    size_t  i, j;
-    FILE   *fp;
+    FILE *fp;
 
     fp = fopen(fn, "wt");
 
     if (fp != NULL) {
-        for (i = j = 0; i < A->m; i++) {
-            for (; j < (size_t) (A->ia[i + 1]); j++) {
-                fprintf(fp, "%lu %lu %26.18e\n",
-                        (unsigned long) (i + 1),
-                        (unsigned long) (A->ja[j] + 1),
-                        A->sa[j]);
-            }
-        }
+        csrmatrix_write_stream(A, fp);
     }
 
     fclose(fp);
@@ -225,19 +217,46 @@ csrmatrix_write(const struct CSRMatrix *A, const char *fn)
 
 /* ---------------------------------------------------------------------- */
 void
+csrmatrix_write_stream(const struct CSRMatrix *A, FILE *fp)
+/* ---------------------------------------------------------------------- */
+{
+    size_t  i, j;
+    for (i = j = 0; i < A->m; i++) {
+        for (; j < (size_t) (A->ia[i + 1]); j++) {
+            fprintf(fp, "%lu %lu %26.18e\n",
+                    (unsigned long) (i + 1),
+                    (unsigned long) (A->ja[j] + 1),
+                    A->sa[j]);
+        }
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
 vector_write(size_t n, const double *v, const char *fn)
 /* ---------------------------------------------------------------------- */
 {
-    size_t  i;
-    FILE   *fp;
+    FILE *fp;
 
     fp = fopen(fn, "wt");
 
     if (fp != NULL) {
-        for (i = 0; i < n; i++) {
-            fprintf(fp, "%26.18e\n", v[i]);
-        }
+        vector_write_stream(n, v, fp);
     }
     
     fclose(fp);
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+vector_write_stream(size_t n, const double *v, FILE *fp)
+/* ---------------------------------------------------------------------- */
+{
+    size_t i;
+
+    for (i = 0; i < n; i++) {
+        fprintf(fp, "%26.18e\n", v[i]);
+    }
 }
