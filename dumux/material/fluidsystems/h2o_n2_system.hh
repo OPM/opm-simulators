@@ -77,8 +77,15 @@ public:
     static const int H2OIdx = 0;
     static const int N2Idx = 1;
 
+    static const bool complicatedFluidSystem_ = GET_PROP_VALUE(TypeTag, PTAG(EnableComplicatedFluidSystem));
+
     static void init()
-    { Components::init(); }
+    {
+        if (complicatedFluidSystem_)
+            Dune::dwarn << "using complicated H2O_N2 FluidSystem: Viscosity depends on composition" << std::endl;
+        else
+            Dune::dwarn << "using fast FluidSystem: Viscosity does not depend on composition" << std::endl;
+        Components::init(); }
 
     /*!
      * \brief Return the human readable name of a phase
@@ -184,41 +191,45 @@ public:
                                         pressure);
         }
         else {
-#warning "TODO: Viscosity of gas phase does not depend on composition!"
+            if(!complicatedFluidSystem_){
             return N2::gasViscosity(temperature,
                                     pressure);
-            /* Wilke method. See:
-             *
-             * See: R. Reid, et al.: The Properties of Gases and Liquids,
-             * 4th edition, McGraw-Hill, 1987, 407-410
-             * 5th edition, McGraw-Hill, 20001, p. 9.21/22
-             */
-            Scalar muResult = 0;
-            const Scalar mu[numComponents] = {
-                H2O::gasViscosity(temperature,
-                                  H2O::vaporPressure(temperature)),
-                N2::gasViscosity(temperature,
-                                 pressure)
-            };
-            // molar masses
-            const Scalar M[numComponents] = {
-                H2O::molarMass(),
-                N2::molarMass()
-            };
-
-            for (int i = 0; i < numComponents; ++i) {
-                Scalar divisor = 0;
-                for (int j = 0; j < numComponents; ++j) {
-                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) *
-                                            pow(M[j]/M[i], 1/4.0);
-                    phiIJ *= phiIJ;
-                    phiIJ /= sqrt(8*(1 + M[i]/M[j]));
-                    divisor += fluidState.moleFrac(phaseIdx, j)*phiIJ;
-                }
-                muResult += fluidState.moleFrac(phaseIdx, i)*mu[i] / divisor;
             }
+            else //using a complicated version of this fluid system
+            {
+                /* Wilke method. See:
+                 *
+                 * See: R. Reid, et al.: The Properties of Gases and Liquids,
+                 * 4th edition, McGraw-Hill, 1987, 407-410
+                 * 5th edition, McGraw-Hill, 20001, p. 9.21/22
+                 */
+                Scalar muResult = 0;
+                const Scalar mu[numComponents] = {
+                    H2O::gasViscosity(temperature,
+                                      H2O::vaporPressure(temperature)),
+                    N2::gasViscosity(temperature,
+                                     pressure)
+                };
+                // molar masses
+                const Scalar M[numComponents] = {
+                    H2O::molarMass(),
+                    N2::molarMass()
+                };
 
-            return muResult;
+                for (int i = 0; i < numComponents; ++i) {
+                    Scalar divisor = 0;
+                    for (int j = 0; j < numComponents; ++j) {
+                        Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) *
+                                                pow(M[j]/M[i], 1/4.0);
+                        phiIJ *= phiIJ;
+                        phiIJ /= sqrt(8*(1 + M[i]/M[j]));
+                        divisor += fluidState.moleFrac(phaseIdx, j)*phiIJ;
+                    }
+                    muResult += fluidState.moleFrac(phaseIdx, i)*mu[i] / divisor;
+                }
+
+                return muResult;
+            }
         }
     }
 
@@ -349,18 +360,23 @@ public:
                                 const FluidState &state)
     {
         if (phaseIdx == gPhaseIdx) {
-            return pressure;
-            Scalar fugH2O = std::max(1e-3, state.fugacity(H2OIdx));
-            Scalar fugN2 = std::max(1e-3, state.fugacity(N2Idx));
-            Scalar cH2O = H2O::gasDensity(temperature, fugH2O) / H2O::molarMass();
-            Scalar cN2 = N2::gasDensity(temperature, fugN2) / N2::molarMass();
+            if(!complicatedFluidSystem_){
+                return pressure;
+            }
+            else //using a complicated version of this fluid system
+            {
+                Scalar fugH2O = std::max(1e-3, state.fugacity(H2OIdx));
+                Scalar fugN2 = std::max(1e-3, state.fugacity(N2Idx));
+                Scalar cH2O = H2O::gasDensity(temperature, fugH2O) / H2O::molarMass();
+                Scalar cN2 = N2::gasDensity(temperature, fugN2) / N2::molarMass();
 
-            Scalar alpha = (fugH2O + fugN2)/pressure;
+                Scalar alpha = (fugH2O + fugN2)/pressure;
 
-            if (compIdx == H2OIdx)
-                return fugH2O/(alpha*cH2O/(cH2O + cN2));
-            else if (compIdx == N2Idx)
-                return fugN2/(alpha*cN2/(cH2O + cN2));
+                if (compIdx == H2OIdx)
+                    return fugH2O/(alpha*cH2O/(cH2O + cN2));
+                else if (compIdx == N2Idx)
+                    return fugN2/(alpha*cN2/(cH2O + cN2));
+            }
 
             DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
         }
