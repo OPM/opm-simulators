@@ -161,6 +161,10 @@ mim_ip_linpress_exact(int nf, int nconn, int d,
     double     a1, a2, t;
 
     assert (lwork >= d * nf);
+#if defined(NDEBUG)
+    /* Suppress warning about unused parameter. */
+    (void) lwork;
+#endif
 
     t = 0.0;
     for (i = 0; i < d; i++) {

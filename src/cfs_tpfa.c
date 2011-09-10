@@ -748,6 +748,9 @@ compute_fpress(grid_t       *G,
 {
     int    c, i, f, c1, c2;
 
+    /* Suppress warning about unused parameters. */
+    (void) np;  (void) pmobf;  (void) gravcap_f;  (void) fflux;
+
     /*
      * Define face pressures as weighted average of connecting cell
      * pressures.  Specifically, we define
@@ -1227,6 +1230,9 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
     double dp, dz, gsgn;
     const double *masstrans_f, *gravtrans_f, *masstrans_p, *gravtrans_p;
     const double *cpress, *wpress;
+
+    /* Suppress warning about unused parameter. */
+    (void) wdata;
 
     masstrans_f = h->pimpl->masstrans_f;
     gravtrans_f = h->pimpl->gravtrans_f;
