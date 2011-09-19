@@ -85,6 +85,33 @@ public:
     }
 
     /*!
+     * \brief The temperature dependent capillary pressure-saturation curve.
+     *
+     *
+     * \param Sw        Absolute saturation of the wetting phase \f$\overline{S}_w\f$. It is converted to effective saturation
+     *                  and then handed over to the material law actually used for calculation.
+     * \param temperature Absolute temperature (of the wetting phase?).
+     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
+     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
+     *                  is constructed accordingly. Afterwards the values are set there, too.
+     * \return          Capillary pressure calculated by specific constitutive relation (EffLaw e.g. Brooks & Corey, van Genuchten, linear...)
+     *
+     */
+    static Scalar pC(const Params &params, Scalar Sw, const Scalar temperature)
+    DUNE_DEPRECATED
+    /*
+     * We have to decide which kind of signature to use for pc.
+     * One possibility would look like:
+     * pC(const Params &params, Scalar Sw, const Scalar temperature = NAN)
+     * This would cause some noise if the function is called without the parameter being set.
+     *
+     * One implementation of pc(Sw, T) can be found in dumux-devel/dumux/material/fluidmatrixinteractions/2p/vangenuchtenoftemperature.hh
+     */
+    {
+        return EffLaw::pC(params, SwToSwe(params, Sw), temperature);
+    }
+
+    /*!
      * \brief The saturation-capillary pressure curve.
      *
      * \param pC        Capillary pressure \f$p_C\f$:
