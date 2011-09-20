@@ -239,7 +239,8 @@ ifs_tpfa_press_flux(grid_t               *G,
                     double               *fflux)
 /* ---------------------------------------------------------------------- */
 {
-    int c1, c2, f;
+    int    c1, c2, f;
+    double dh;
 
     /* Assign cell pressure directly from solution vector */
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
@@ -249,7 +250,8 @@ ifs_tpfa_press_flux(grid_t               *G,
         c2 = G->face_cells[2*f + 1];
 
         if ((c1 >= 0) && (c2 >= 0)) {
-            fflux[f] = trans[f] * (cpress[c1] - cpress[c2]);
+            dh = cpress[c1] - cpress[c2] + h->pimpl->fgrav[f];
+            fflux[f] = trans[f] * dh;
         } else {
             fflux[f] = 0.0;
         }
