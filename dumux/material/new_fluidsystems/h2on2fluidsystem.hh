@@ -111,6 +111,27 @@ struct H2ON2StaticParameters {
         return phaseIdx != gPhaseIdx;
     }
 
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal mixture.
+     *
+     * We define an ideal mixture as a fluid phase where the fugacity
+     * coefficients of all components times the pressure of the phase
+     * are indepent on the fluid composition. This assumtion is true
+     * if Henry's law and Rault's law apply. If you are unsure what
+     * this function should return, it is safe to return false. The
+     * only damage done will be (slightly) increased computation times
+     * in some cases.
+     */
+    static bool isIdealMixture(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        // we assume Henry's and Rault's laws for the water phase and
+        // and no interaction between gas molecules of different
+        // components, so all phases are ideal mixtures!
+        return true;
+    }
+
     /****************************************
      * Component related parameters
      ****************************************/
@@ -226,25 +247,6 @@ public:
     {
         SP::init(tempMin, tempMax, nTemp,
                  pressMin, pressMax, nPress);
-    }
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal mixture.
-     *
-     * We define an ideal mixture as a fluid phase where the fugacity
-     * coefficients of all components times the pressure of the phase
-     * are indepent on the fluid composition. This assumtion is true
-     * if Henry's law and Rault's law apply. If you are unsure what
-     * this function should return, it is safe to return false. The
-     * only damage done will be (slightly) increased computation times
-     * in some cases.
-     */
-    static bool isIdealMixture(int phaseIdx)
-    {
-        // we assume Henry's and Rault's laws for the water phase and
-        // and no interaction between gas molecules of different
-        // components, so all phases are ideal mixtures!
-        return true;
     }
 
     /*!
@@ -433,18 +435,6 @@ public:
                    << " in phase " << phaseIdx << " is undefined!\n");
     };
 
-    static Scalar binaryDiffCoeff(MutableParameters &params, 
-                                  int phaseIdx,
-                                  int compIIdx,
-                                  int compJIdx)
-        DUNE_DEPRECATED // use computeBinaryDiffCoeff()
-    {
-        return computeBinaryDiffCoeff(params, 
-                                      phaseIdx,
-                                      compIIdx,
-                                      compJIdx);
-    }
-
     /*!
      * \brief Given a phase's composition, temperature, pressure and
      *        density, calculate its specific enthalpy [J/kg].
@@ -504,6 +494,59 @@ public:
         return
             computeEnthalpy(params, phaseIdx) -
             p/rho;
+    }
+
+    /*!
+     * \brief Thermal conductivity of phases.
+     *
+     * Use the conductivity of air and water as a first approximation.
+     * Source:
+     * http://en.wikipedia.org/wiki/List_of_thermal_conductivities
+     */
+    static Scalar computeThermalConductivity(const MutableParameters &params,
+                                             int phaseIdx)
+    {
+//    	TODO thermal conductivity is a function of:
+//        Scalar p = params.pressure(phaseIdx);
+//        Scalar T = params.temperature(phaseIdx);
+//        Scalar x = params.moleFrac(phaseIdx,compIdx);
+#warning: so far rough estimates from wikipedia
+        switch (phaseIdx) {
+        case SP::lPhaseIdx: // use conductivity of pure water
+            return  0.6;   // conductivity of water[W / (m K ) ]
+        case SP::gPhaseIdx:// use conductivity of pure air
+            return  0.025; // conductivity of air [W / (m K ) ]
+        }
+        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
+    }
+    
+    /*!
+     * \brief Specific isobaric heat capacity of liquid water / air
+     *        \f$\mathrm{[J/kg]}\f$.
+     *
+     * \param params    mutable parameters
+     * \param phaseIdx  for which phase to give back the heat capacity
+     */
+    static Scalar computeHeatCapacity(const MutableParameters &params,
+                                      int phaseIdx)
+    {
+//        http://en.wikipedia.org/wiki/Heat_capacity
+#warning: so far rough estimates from wikipedia
+//      TODO heatCapacity is a function of composition.
+//        Scalar p = params.pressure(phaseIdx);
+//        Scalar T = params.temperature(phaseIdx);
+//        Scalar x = params.moleFrac(phaseIdx,compIdx);
+        switch (phaseIdx) {
+        case SP::lPhaseIdx: // use heat capacity of pure liquid water
+            return  4181.3;  // @(25°C) !!!
+            /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /* Dumux::H2O<Scalar>::liquidHeatCap_p(T,
+                                             p); */
+        case SP::gPhaseIdx:
+            return  1003.5 ; // @ (0°C) !!!
+            /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /*Dumux::H2O<Scalar>::gasHeatCap_p(T,
+                                          p) ;*/
+        }
+        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
 };
 
