@@ -113,13 +113,13 @@ public:
     }
 
     template <class Context>
-    const Tensor &intrinsicPermeability(const Context &context,
-                                        int localIdx) const
+    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
+    const Tensor intrinsicPermeability(const Context &context,
+                                       int localIdx) const
     {
-        return intrinsicPermeability(context.element(), 
-                                     context.fvElemGeom(),
-                                     localIdx);
-                                     
+        return toTensor_(asImp_().intrinsicPermeability(context.element(), 
+                                                        context.fvElemGeom(),
+                                                        localIdx));
     }
 
     /*!
@@ -130,12 +130,11 @@ public:
      * \param scvIdx The index of the sub-control volume.
      * \return the intrinsic permeability
      */
-    DUNE_DEPRECATED
-    const Tensor &intrinsicPermeability(const Element &element,
+    const Tensor intrinsicPermeability(const Element &element,
                                         const FVElementGeometry &fvElemGeom,
                                         int scvIdx) const
     {
-        return asImp_().intrinsicPermeabilityAtPos(element.geometry().center());
+        return toTensor_(asImp_().intrinsicPermeabilityAtPos(element.geometry().center()));
     }
 
     /*!
@@ -144,7 +143,6 @@ public:
      * \return intrinsic (absolute) permeability
      * \param globalPos The position of the center of the element
      */
-    DUNE_DEPRECATED
     const Tensor& intrinsicPermeabilityAtPos (const GlobalPosition& globalPos) const
     {
         DUNE_THROW(Dune::InvalidStateException,
@@ -153,13 +151,13 @@ public:
     }
 
     template <class Context>
+    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
     Scalar porosity(const Context &context,
                     int localIdx) const
     {
-        return porosity(context.element(), 
-                        context.fvElemGeom(),
-                        localIdx);
-                                     
+        return asImp_().porosity(context.element(), 
+                                 context.fvElemGeom(),
+                                 localIdx);
     }
 
     /*!
@@ -170,7 +168,6 @@ public:
      * \param scvIdx The index of the sub-control volume.
      * \return porosity
      */
-    DUNE_DEPRECATED
     Scalar porosity(const Element &element,
                     const FVElementGeometry &fvElemGeom,
                     int scvIdx) const
@@ -184,13 +181,85 @@ public:
      * \return porosity
      * \param globalPos The position of the center of the element
      */
-    DUNE_DEPRECATED
     Scalar porosityAtPos(const GlobalPosition& globalPos) const
     {
         DUNE_THROW(Dune::InvalidStateException,
                    "The spatial parameters do not provide "
-                   "a porosityAtPos() method.");
+                   "a porosity() method.");
     }
+
+    /*!
+     * \brief Returns the heat capacity [J/(K m^3)] of the solid phase
+     *        with no pores in the sub-control volume.
+     */
+    template <class Context>
+    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
+    Scalar heatCapacitySolid(const Context &context,
+                             int localIdx) const
+    {
+        return asImp_().heatCapacitySolid(context.element(), 
+                                          context.fvElemGeom(),
+                                          localIdx);
+    }
+
+    /*!
+     * \brief Returns the heat capacity [J/(K m^3)] of the solid phase
+     *        with no pores in the sub-control volume.
+     */
+    Scalar heatCapacitySolid(const Element &element,
+                        const FVElementGeometry &fvElemGeom,
+                        int scvIdx) const
+    {
+        return asImp_().heatCapacitySolidAtPos(element.geometry().center());
+    }
+
+    /*!
+     * \brief Returns the heat capacity [J/(K m^3)] of the solid phase
+     *        with no pores in the sub-control volume.
+     */
+    Scalar heatCapacitySolidAtPos(const GlobalPosition& globalPos) const
+    {
+        DUNE_THROW(Dune::InvalidStateException,
+                   "The spatial parameters do not provide "
+                   "a heatCapacitySolid() method.");
+    }
+
+    /*!
+     * \brief Returns the thermal conductivity [W / (K m)] of the solid
+     *        phase disregarding the pores in a sub-control volume.
+     */
+    template <class Context>
+    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
+    Scalar thermalConductivitySolid(const Context &context,
+                                    int localIdx) const
+    {
+        return asImp_().thermalConductivitySolid(context.element(), 
+                                                 context.fvElemGeom(),
+                                                 localIdx);
+    }
+
+    /*!
+     * \brief Returns the thermal conductivity [W / (K m)] of the solid
+     *        phase disregarding the pores in a sub-control volume.
+     */
+    Scalar thermalConductivitySolid(const Element &element,
+                                    const FVElementGeometry &fvElemGeom,
+                                    int scvIdx) const
+    {
+        return asImp_().thermalConductivitySolidAtPos(element.geometry().center());
+    }
+
+    /*!
+     * \brief Returns the thermal conductivity [W / (K m)] of the solid
+     *        phase disregarding the pores in a sub-control volume.
+     */
+    Scalar thermalConductivitySolidAtPos(const GlobalPosition& globalPos) const
+    {
+        DUNE_THROW(Dune::InvalidStateException,
+                   "The spatial parameters do not provide "
+                   "a thermalConductivitySolid() method.");
+    }
+
 
 private:
     Implementation &asImp_()
@@ -198,6 +267,17 @@ private:
 
     const Implementation &asImp_() const
     { return *static_cast<const Implementation*>(this); }
+
+    const Tensor &toTensor_(const Tensor &val) const
+    { return val; };
+
+    Tensor toTensor_(Scalar val) const
+    { 
+        Tensor ret(0.0);
+        for (int i = 0; i < Tensor::rows; ++i)
+            ret[i][i] = val;
+        return ret;
+    };
 };
 
 } // namespace Dumux

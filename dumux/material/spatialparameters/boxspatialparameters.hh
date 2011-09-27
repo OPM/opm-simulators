@@ -71,7 +71,7 @@ class BoxSpatialParameters: public BoxSpatialParametersOneP<TypeTag>
 
 public:
     BoxSpatialParameters(const GridView &gv)
-    :BoxSpatialParametersOneP<TypeTag>(gv)
+        : BoxSpatialParametersOneP<TypeTag>(gv)
     { }
 
     /*!
@@ -83,7 +83,7 @@ public:
      * \return the material parameters object
      */
     template <class Context>
-    DUNE_DEPRECATED
+    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
     const MaterialLawParams& materialLawParams(const Context &context, int localIdx) const
     {
         return asImp_().materialLawParams(context.element(),
@@ -91,14 +91,12 @@ public:
                                           localIdx);
     }
 
-    DUNE_DEPRECATED
     const MaterialLawParams& materialLawParams(const Element &element,
                                                const FVElementGeometry &fvElemGeom,
                                                int localIdx) const
     {
-        return asImp_().materialLawParams(fvElemGeom.subContVol[localIdx].global);
+        return asImp_().materialLawParamsAtPos(fvElemGeom.subContVol[localIdx].global);
     }
-
 
     /*!
      * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
