@@ -72,20 +72,30 @@ public:
      * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
      *
      * \return the material parameters object
-     * \param element The element
      */
-    const MaterialLawParams& materialLawParams(const Element &element,
-            const FVElementGeometry &fvElemGeom,
-            int scvIdx) const
+    template <class Context>
+    DUNE_DEPRECATED
+    const MaterialLawParams& materialLawParams(const Context &context, int localIdx) const
     {
-            return asImp_().materialLawParamsAtPos(element.geometry().center());
+        return asImp_().materialLawParams(context.element(),
+                                          context.fvElemGeom(),
+                                          localIdx);
     }
+
+    DUNE_DEPRECATED
+    const MaterialLawParams& materialLawParams(const Element &element,
+                                               const FVElementGeometry &fvElemGeom,
+                                               int localIdx) const
+    {
+        return asImp_().materialLawParams(fvElemGeom.subContVol[localIdx].global);
+    }
+
 
     /*!
      * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
      *
-     * \return the material parameters object
      * \param globalPos The position of the center of the element
+     * \return the material parameters object
      */
     const MaterialLawParams& materialLawParamsAtPos(const GlobalPosition& globalPos) const
     {
