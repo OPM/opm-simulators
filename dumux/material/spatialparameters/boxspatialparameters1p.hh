@@ -68,6 +68,7 @@ class BoxSpatialParametersOneP
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> Tensor;
     typedef Dune::FieldVector<CoordScalar,dimWorld> GlobalPosition;
+    typedef Dune::FieldVector<Scalar,dimWorld> Vector;
 
 public:
     BoxSpatialParametersOneP(const GridView &gv)
@@ -75,53 +76,6 @@ public:
 
     ~BoxSpatialParametersOneP()
     {}
-
-    /*!
-     * \brief Returns the factor by which the volume of a sub control
-     *        volume needs to be multiplied in order to get cubic
-     *        meters.
-     *
-     * \param element The current finite element
-     * \param fvElemGeom The current finite volume geometry of the element
-     * \param scvIdx The index sub-control volume face where the
-     *                      factor ought to be calculated.
-     *
-     * By default that's just 1.0
-     */
-    Scalar extrusionFactorScv(const Element &element,
-                              const FVElementGeometry &fvElemGeom,
-                              int scvIdx) const
-    DUNE_DEPRECATED // use the extrusion factor of the volume variables
-    { return 1.0; }
-
-    /*!
-     * \brief Returns the factor by which the area of a sub control
-     *        volume face needs to be multiplied in order to get
-     *        square meters.
-     *
-     * \param element The current finite element
-     * \param fvElemGeom The current finite volume geometry of the element
-     * \param scvfIdx The index sub-control volume face where the
-     *                      factor ought to be calculated.
-     *
-     * By default it is the arithmetic mean of the extrusion factor of
-     * the face's two sub-control volumes.
-     */
-    Scalar extrusionFactorScvf(const Element &element,
-                              const FVElementGeometry &fvElemGeom,
-                              int scvfIdx) const
-    DUNE_DEPRECATED // use the extrusion factor of the volume variables
-    {
-        return
-            0.5 *
-            (asImp_().extrusionFactorScv(element,
-                                         fvElemGeom,
-                                         fvElemGeom.subContVolFace[scvfIdx].i)
-             +
-             asImp_().extrusionFactorScv(element,
-                                         fvElemGeom,
-                                         fvElemGeom.subContVolFace[scvfIdx].j));
-    }
 
     /*!
      * \brief Averages the intrinsic permeability (Scalar).
@@ -158,6 +112,16 @@ public:
                 result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
     }
 
+    template <class Context>
+    const Tensor &intrinsicPermeability(const Context &context,
+                                        int localIdx) const
+    {
+        return intrinsicPermeability(context.element(), 
+                                     context.fvElemGeom(),
+                                     localIdx);
+                                     
+    }
+
     /*!
      * \brief Function for defining the intrinsic (absolute) permeability.
      *
@@ -166,9 +130,10 @@ public:
      * \param scvIdx The index of the sub-control volume.
      * \return the intrinsic permeability
      */
-    const Tensor& intrinsicPermeability (const Element &element,
-            const FVElementGeometry &fvElemGeom,
-            int scvIdx) const
+    DUNE_DEPRECATED
+    const Tensor &intrinsicPermeability(const Element &element,
+                                        const FVElementGeometry &fvElemGeom,
+                                        int scvIdx) const
     {
         return asImp_().intrinsicPermeabilityAtPos(element.geometry().center());
     }
@@ -179,11 +144,22 @@ public:
      * \return intrinsic (absolute) permeability
      * \param globalPos The position of the center of the element
      */
+    DUNE_DEPRECATED
     const Tensor& intrinsicPermeabilityAtPos (const GlobalPosition& globalPos) const
     {
         DUNE_THROW(Dune::InvalidStateException,
                    "The spatial parameters do not provide "
                    "a intrinsicPermeabilityAtPos() method.");
+    }
+
+    template <class Context>
+    Scalar porosity(const Context &context,
+                    int localIdx) const
+    {
+        return porosity(context.element(), 
+                        context.fvElemGeom(),
+                        localIdx);
+                                     
     }
 
     /*!
@@ -194,9 +170,10 @@ public:
      * \param scvIdx The index of the sub-control volume.
      * \return porosity
      */
+    DUNE_DEPRECATED
     Scalar porosity(const Element &element,
-            const FVElementGeometry &fvElemGeom,
-            int scvIdx) const
+                    const FVElementGeometry &fvElemGeom,
+                    int scvIdx) const
     {
         return asImp_().porosityAtPos(element.geometry().center());
     }
@@ -207,6 +184,7 @@ public:
      * \return porosity
      * \param globalPos The position of the center of the element
      */
+    DUNE_DEPRECATED
     Scalar porosityAtPos(const GlobalPosition& globalPos) const
     {
         DUNE_THROW(Dune::InvalidStateException,
