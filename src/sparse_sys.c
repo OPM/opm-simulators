@@ -29,15 +29,18 @@ struct CSRMatrix *
 csrmatrix_new_count_nnz(size_t m)
 /* ---------------------------------------------------------------------- */
 {
+    size_t            i;
     struct CSRMatrix *new;
 
     assert (m > 0);
 
     new = malloc(1 * sizeof *new);
     if (new != NULL) {
-        new->ia = calloc(m + 1, sizeof *new->ia);
+        new->ia = malloc((m + 1) * sizeof *new->ia);
 
         if (new->ia != NULL) {
+            for (i = 0; i < m + 1; i++) { new->ia[i] = 0; }
+
             new->m   = m;
             new->nnz = 0;
 

@@ -143,10 +143,11 @@ partition_compress(int n, int *p)
         max = MAX(max, p[i]);
     }
 
-    compr = calloc(max + 1, sizeof *compr);
+    compr = malloc((max + 1) * sizeof *compr);
 
     if (compr != NULL) {
-        for (i = 0; i < n; i++) { compr[p[i]]++; }
+        for (i = 0; i < max + 1; i++) { compr[i] = 0; }
+        for (i = 0; i < n; i++)       { compr[p[i]]++; }
 
         compr[0] = -1 + (compr[0] > 0);
         for (i = 1; i <= max; i++) {
@@ -242,7 +243,9 @@ partition_invert(int nc, const int *p, int *pi, int *inverse)
     nbin = max_block(nc, p) + 1; /* Adjust for bin 0 */
 
     /* Zero start pointers */
-    memset(pi, 0, (nbin + 1) * sizeof *pi);
+    for (i = 0; i < nbin + 1; i++) {
+        pi[i] = 0;
+    }
 
     /* Count elements per bin */
     for (i = 0; i < nc; i++) { pi[ p[i] + 1 ]++; }
@@ -310,9 +313,13 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
 {
     int i, ret, c1, c2;
 
-    *pc2c = calloc(nc + 1, sizeof **pc2c);
+    *pc2c = malloc((nc + 1) * sizeof **pc2c);
 
     if (*pc2c != NULL) {
+        for (i = 0; i < nc + 1; i++) {
+            (*pc2c)[i] = 0;
+        }
+
         for (i = 0; i < nneigh; i++) {
             c1 = neigh[2*i + 0];
             c2 = neigh[2*i + 1];
@@ -457,7 +464,9 @@ create_block_conns(int        b   ,
     nc = pb2c[b + 1] - pb2c[b];
 
     /* Clear start pointers */
-    memset(ia, 0, (nc + 1) * sizeof *ia);
+    for (i = 0; i < nc + 1; i++) {
+        ia[i] = 0;
+    }
 
     for (i = pb2c[b]; i < pb2c[b + 1]; i++) {
         c = b2c[i];   assert (loc[c] == i - pb2c[b]);
