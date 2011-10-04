@@ -48,7 +48,8 @@ namespace Opm {
                   const Vector&           b,
                   Vector&                 x) {
 
-                call_UMFPACK(&A, &b[0], &x[0]);
+                call_UMFPACK(const_cast<CSRMatrix*>(&A),
+                             &b[0], &x[0]);
             }
         };
     }
