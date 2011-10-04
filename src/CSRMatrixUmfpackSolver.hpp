@@ -36,9 +36,6 @@
 #ifndef OPM_CSRMATRIXUMFPACKSOLVER_HPP_HEADER
 #define OPM_CSRMATRIXUMFPACKSOLVER_HPP_HEADER
 
-#include <suitesparse/umfpack.h>
-
-#include <sparse_sys.h>
 #include <call_umfpack.h>
 
 namespace Opm {
