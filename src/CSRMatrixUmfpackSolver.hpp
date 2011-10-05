@@ -44,6 +44,16 @@ namespace Opm {
         public:
             template <class Vector>
             void
+            solve(const struct CSRMatrix* A,
+                  const Vector            b,
+                  Vector                  x) {
+
+                call_UMFPACK(const_cast<CSRMatrix*>(A),
+                             b, x);
+            }
+
+            template <class Vector>
+            void
             solve(const struct CSRMatrix& A,
                   const Vector&           b,
                   Vector&                 x) {
