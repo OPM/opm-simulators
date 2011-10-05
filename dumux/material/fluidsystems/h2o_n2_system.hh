@@ -451,6 +451,10 @@ public:
      * \brief Given a phase's composition, temperature and pressure,
      *        return its specific enthalpy [J/kg].
      */
+    /*!
+     *  \todo This system neglects the contribution of gas-molecules in the liquid phase.
+     *        This contribution is probably not big. Somebody would have to find out the enthalpy of solution for this system. ...
+     */
     template <class FluidState>
     static Scalar phaseEnthalpy(int phaseIdx,
                                 Scalar temperature,
@@ -458,32 +462,18 @@ public:
                                 const FluidState &fluidState)
     {
         if (phaseIdx == lPhaseIdx) {
-            Scalar cN2 = fluidState.concentration(lPhaseIdx, N2Idx);
-            Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
-
             // TODO: correct way to deal with the solutes???
             return
-                fluidState.massFrac(lPhaseIdx, H2OIdx)*
-                H2O::liquidEnthalpy(temperature, pressure)
-                +
-                fluidState.massFrac(lPhaseIdx, N2Idx)*
-                N2::gasEnthalpy(temperature, pN2);
+                H2O::liquidEnthalpy(temperature, pressure);
         }
         else {
-            Scalar cH2O = fluidState.concentration(gPhaseIdx, H2OIdx);
-            Scalar cN2 = fluidState.concentration(gPhaseIdx, N2Idx);
-
-            Scalar pH2O = H2O::gasPressure(temperature, cH2O*H2O::molarMass());
-            Scalar pN2 = N2::gasPressure(temperature, cN2*N2::molarMass());
-
             Scalar result = 0;
             result +=
-                H2O::gasEnthalpy(temperature, pH2O) *
+                H2O::gasEnthalpy(temperature, pressure) *
                 fluidState.massFrac(gPhaseIdx, H2OIdx);
             result +=
-                N2::gasEnthalpy(temperature, pN2) *
+                N2::gasEnthalpy(temperature, pressure) *
                 fluidState.massFrac(gPhaseIdx, N2Idx);
-
             return result;
         }
     }

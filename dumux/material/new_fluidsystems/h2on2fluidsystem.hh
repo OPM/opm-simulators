@@ -439,6 +439,11 @@ public:
      * \brief Given a phase's composition, temperature, pressure and
      *        density, calculate its specific enthalpy [J/kg].
      */
+
+    /*!
+     *  \todo This system neglects the contribution of gas-molecules in the liquid phase.
+     *        This contribution is probably not big. Somebody would have to find out the enthalpy of solution for this system. ...
+     */
     static Scalar computeEnthalpy(MutableParameters &params, 
                                   int phaseIdx)
     {
@@ -448,37 +453,20 @@ public:
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
         if (phaseIdx == SP::lPhaseIdx) {
-            Scalar cN2 = params.molarity(SP::lPhaseIdx, SP::N2Idx);
-            Scalar pN2 = SP::N2::gasPressure(T, cN2*SP::N2::molarMass());
-
-            Scalar XH2O = params.massFrac(SP::lPhaseIdx, SP::H2OIdx);
-            Scalar XN2 = params.massFrac(SP::lPhaseIdx, SP::N2Idx);
-            
             // TODO: correct way to deal with the solutes???
             return 
-                (XH2O*SP::H2O::liquidEnthalpy(T, p) +
-                 XN2*SP::N2::gasEnthalpy(T, pN2))
-                /
-                (XH2O + XN2);
+                SP::H2O::liquidEnthalpy(T, p) ;
         }
         else {
-            Scalar cH2O = params.molarity(SP::gPhaseIdx, SP::H2OIdx);
-            Scalar cN2 = params.molarity(SP::gPhaseIdx, SP::N2Idx);
-
             // assume ideal gas
-            Scalar pH2O = SP::H2O::gasPressure(T, cH2O*SP::H2O::molarMass());
-            Scalar pN2 = SP::N2::gasPressure(T, cN2*SP::H2O::molarMass());
-
             Scalar XH2O = params.massFrac(SP::gPhaseIdx, SP::H2OIdx);
             Scalar XN2 = params.massFrac(SP::gPhaseIdx, SP::N2Idx);          
             Scalar result = 0;
-            result += XH2O*SP::H2O::gasEnthalpy(T, pH2O);
-            result += XN2*SP::N2::gasEnthalpy(T, pN2);
-            result /= XH2O + XN2;
-
+            result += XH2O*SP::H2O::gasEnthalpy(T, p);
+            result += XN2*SP::N2::gasEnthalpy(T, p);
             return result;
         }
-    };
+    }
 
     /*!
      * \brief Given a phase's composition, temperature, pressure and
