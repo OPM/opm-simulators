@@ -260,6 +260,15 @@ public:
                    "a thermalConductivitySolid() method.");
     }
 
+    /*!
+     * \brief Used by the 1p2c model.
+     */
+    template <class Context>  
+    bool useTwoPointGradient(const Context &context,
+                             int scvfIdx) const
+    {
+        return false; // use finite element gradient!
+    }
 
 private:
     Implementation &asImp_()
