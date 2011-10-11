@@ -70,13 +70,14 @@ parse the time when the simulation ends. As the maximum time-step in the
 sequential model is strictly bound by a CFL-criterion, the first time-step
 size is initialized with the simulation time.
 
-After this, a grid is created in line \ref{tutorial-decoupled:create-grid} 
-and the time manager controlling the simulation run is instantiated 
-with the start parameters in line \ref{tutorial-decoupled:initTimeManager}.
+After this, a grid is created in line \ref{tutorial-decoupled:create-grid}. 
 The problem is instantiated with the time manager and information about the grid
 (via its leaf grid view) on line \ref{tutorial-decoupled:instantiate-problem}.
-If demanded, on line \ref{tutorial-decoupled:mainRestart} a state written to
-disk by a previous simulation run is restored on request by the user.
+The time manager controlling the simulation run is instantiated 
+with the start parameters in line \ref{tutorial-decoupled:initTimeManager}.
+If demanded, the time manager also restarts a state written to
+disk by a previous simulation run via the last flag, using the appropriate 
+starting time (which has to be the same as the restart file).
 Finally, the simulation proceedure is started by the time manager in line
 \ref{tutorial-decoupled:execute}.
 
@@ -150,7 +151,7 @@ subsection \label{decoupled-problem:boundary}), the problem class also contains
 general information about the current simulation. First, the name used by
 the \texttt{VTK-writer} to generate output is defined in the method of line
 \ref{tutorial-decoupled:name}, and line \ref{tutorial-decoupled:restart} indicates
-weather restart files are written. As decoupled schemes usually feature small 
+wether restart files are written. As decoupled schemes usually feature small 
 timesteps, the method controlling the output in line \ref{tutorial-decoupled:output}
 is very useful. The divisor of the modulo operation defines after how many timesteps
 output should be written out -- the default ``1'' resembles output after each 

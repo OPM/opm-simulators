@@ -71,12 +71,12 @@ int main(int argc, char** argv)
         // deal with the restart stuff
         int argPos = 1;
         bool restart = false;
-        double restartTime = 0;
+        double startTime = 0.;
         if (std::string("--restart") == argv[argPos]) {
             restart = true;
             ++argPos;
-
-            std::istringstream(argv[argPos++]) >> restartTime;
+            // use restart time as start time
+            std::istringstream(argv[argPos++]) >> startTime;
         }
         // output in case of wrong numbers of input parameters
         if (argc - argPos != 1) {
@@ -100,11 +100,7 @@ int main(int argc, char** argv)
         Problem problem(timeManager, gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
 
         // define simulation parameters
-        timeManager.init(problem, 0, dt, tEnd, !restart); /*@\label{tutorial-decoupled:initTimeManager}@*/
-
-        // load restart file if necessary
-        if (restart)    /*@\label{tutorial-decoupled:mainRestart}@*/
-            problem.deserialize(restartTime);
+        timeManager.init(problem, startTime, dt, tEnd, restart); /*@\label{tutorial-decoupled:initTimeManager}@*/
 
         // run the simulation
         timeManager.run();    /*@\label{tutorial-decoupled:execute}@*/

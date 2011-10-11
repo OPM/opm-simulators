@@ -54,12 +54,12 @@ int main(int argc, char** argv)
         // parse restart time if restart is requested
         int argPos = 1;
         bool restart = false;
-        double restartTime = 0;
+        double startTime = 0;
         if (std::string("--restart") == argv[argPos]) {
             restart = true;
             ++argPos;
-
-            std::istringstream(argv[argPos++]) >> restartTime;
+            // use restart time as start time
+            std::istringstream(argv[argPos++]) >> startTime;
         }
 
         // read the initial time step and the end time
@@ -78,10 +78,7 @@ int main(int argc, char** argv)
 
         // instantiate the problem on the leaf grid
         Problem problem(timeManager, gridPtr->leafView()); /*@\label{tutorial-coupled:instantiate-problem}@*/
-        timeManager.init(problem, 0, dt, tEnd, !restart);
-        // load some previously saved state from disk
-        if (restart)
-            problem.restart(restartTime); /*@\label{tutorial-coupled:begin-restart}@*/
+        timeManager.init(problem, startTime, dt, tEnd, restart); /*@\label{tutorial-coupled:initTimeManager}@*/
         // run the simulation
         timeManager.run(); /*@\label{tutorial-coupled:execute}@*/
         return 0;

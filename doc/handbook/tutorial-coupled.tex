@@ -209,8 +209,10 @@ parse the time when the simulation ends and the initial time step size.
 After this, a grid is created in line
 \ref{tutorial-coupled:create-grid} and the problem is instantiated for
 its leaf grid view in line \ref{tutorial-coupled:instantiate-problem}.
-Finally, on line \ref{tutorial-coupled:begin-restart} a state written to
-disk by a previous simulation run is restored if requested by the user.
+Finally, on line \ref{tutorial-coupled:initTimeManager} the time
+manager is created with the parsed starting parameters. If requested by
+the user, a state written to disk by a previous simulation run can be 
+restored if via the restart flag.
 The simulation procedure is started in line
 \ref{tutorial-coupled:execute}.
 
