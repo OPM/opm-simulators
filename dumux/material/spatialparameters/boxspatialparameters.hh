@@ -108,7 +108,28 @@ public:
     {
         DUNE_THROW(Dune::InvalidStateException,
                    "The spatial parameters do not provide "
-                   "a materialLawParamsAtPos() method.");
+                   "a materialLawParams() method.");
+    }
+
+    /*!
+     * \brief Returns the heat capacity [J/(kg K)] of the pure solid.
+     */
+    template <class Context>
+    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
+    Scalar heatCapacity(const Context &context, int localIdx) const
+    {
+        return asImp_().heatCapacity(context.element(),
+                                          context.fvElemGeom(),
+                                          localIdx);
+    }
+
+    Scalar heatCapacity(const Element &element,
+                        const FVElementGeometry &fvElemGeom,
+                        int localIdx) const
+    {
+        DUNE_THROW(Dune::InvalidStateException,
+                   "The spatial parameters do not provide "
+                   "a heatCapacity() method.");
     }
 
 private:
