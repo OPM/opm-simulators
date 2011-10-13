@@ -119,8 +119,8 @@ public:
     Scalar heatCapacity(const Context &context, int localIdx) const
     {
         return asImp_().heatCapacity(context.element(),
-                                          context.fvElemGeom(),
-                                          localIdx);
+                                     context.fvElemGeom(),
+                                     localIdx);
     }
 
     Scalar heatCapacity(const Element &element,
