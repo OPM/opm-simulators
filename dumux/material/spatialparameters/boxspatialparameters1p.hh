@@ -57,6 +57,7 @@ class BoxSpatialParametersOneP
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, SpatialParameters) Implementation;
+    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
 
     enum {
         dimWorld = GridView::dimensionworld
@@ -229,24 +230,12 @@ public:
      *        phase disregarding the pores in a sub-control volume.
      */
     template <class Context>
-    DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
-    Scalar thermalConductivitySolid(const Context &context,
-                                    int localIdx) const
+    const HeatConductionLawParams&
+    heatConducionParams(const Context &context, int localIdx) const
     {
-        return asImp_().thermalConductivitySolid(context.element(), 
-                                                 context.fvElemGeom(),
-                                                 localIdx);
-    }
-
-    /*!
-     * \brief Returns the thermal conductivity [W / (K m)] of the solid
-     *        phase disregarding the pores in a sub-control volume.
-     */
-    Scalar thermalConductivitySolid(const Element &element,
-                                    const FVElementGeometry &fvElemGeom,
-                                    int scvIdx) const
-    {
-        return asImp_().thermalConductivitySolidAtPos(element.geometry().center());
+        DUNE_THROW(Dune::InvalidStateException, 
+                   "Spatial parameters does not provide "
+                   "a heatConducionParams() method!");
     }
 
     /*!
