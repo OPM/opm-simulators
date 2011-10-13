@@ -36,7 +36,7 @@
 #ifndef OPM_CSRMATRIXUMFPACKSOLVER_HPP_HEADER
 #define OPM_CSRMATRIXUMFPACKSOLVER_HPP_HEADER
 
-#include <dune/porsol/opmtransport/examples/call_umfpack.h>
+#include <call_umfpack.h>
 
 namespace Opm {
     namespace ImplicitTransportLinAlgSupport {
