@@ -191,6 +191,7 @@ public:
             // for the other phase, we take the extremum of the EOS
             // with the largest distance from the intersection.
             Scalar VmCubic = Z[0]*RT/p;
+            Vm = VmCubic;
 
             if (T > criticalTemperature_(a, b)) {
                 // if the EOS does not exhibit any extrema, the fluid
