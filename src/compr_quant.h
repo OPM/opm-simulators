@@ -29,14 +29,20 @@ extern "C" {
 #endif
 
 struct compr_quantities {
-    int           nphases;      /* Number of phases/components */
+    int     nphases;      /* Number of phases/components */
 
-    double *totcompr;     /* Total compressibility per cell */
-    double *voldiscr;     /* Volume discrepancy per cell */
     double *Ac;           /* RB^{-1} per cell */
+    double *dAc;          /* d/dp (RB^{-1}) per cell */
     double *Af;           /* RB^{-1} per face */
     double *phasemobf;    /* Phase mobility per face */
+    double *voldiscr;     /* Volume discrepancy per cell */
 };
+
+struct compr_quantities *
+compr_quantities_allocate(size_t nc, size_t nf, int np);
+
+void
+compr_quantities_deallocate(struct compr_quantities *cq);
 
 void
 compr_flux_term(grid_t       *G,
