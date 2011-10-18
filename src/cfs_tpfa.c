@@ -992,47 +992,33 @@ cfs_tpfa_assemble(grid_t                  *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_press_increment(grid_t               *G,
-                         well_t               *W,
-                         struct cfs_tpfa_data *h,
-                         double               *cpress_inc,
-                         double               *wpress_inc)
+cfs_tpfa_press_flux(grid_t                 *G,
+                    flowbc_t               *bc,
+                    well_t                 *W,
+                    int                     np,
+                    const double           *trans,
+                    const double           *pmobf,
+                    const double           *gravcap_f,
+                    struct completion_data *wdata,
+                    struct cfs_tpfa_data   *h,
+                    double                 *cpress,
+                    double                 *fflux,
+                    double                 *wpress,
+                    double                 *wflux)
 /* ---------------------------------------------------------------------- */
 {
     /* Assign cell pressure directly from solution vector */
-    memcpy(cpress_inc, h->x, G->number_of_cells * sizeof *cpress_inc);
+    memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
 
-    if (W != NULL) {
-        assert (wpress_inc != NULL);
-
-        /* Assign well BHP directly from solution vector */
-        memcpy(wpress_inc, h->x + G->number_of_cells,
-               W->number_of_wells * sizeof *wpress_inc);
-    }
-}
-
-
-/* ---------------------------------------------------------------------- */
-void
-cfs_tpfa_flux(grid_t                 *G,
-              flowbc_t               *bc,
-              well_t                 *W,
-              int                     np,
-              const double           *trans,
-              const double           *pmobf,
-              const double           *gravcap_f,
-              const double           *cpress,
-              const double           *wpress,
-              struct completion_data *wdata,
-              double                 *fflux,
-              double                 *wflux)
-/* ---------------------------------------------------------------------- */
-{
     compute_flux(G, bc, np, trans, pmobf, gravcap_f, cpress, fflux);
 
     if ((W != NULL) && (wdata != NULL)) {
         assert (wpress != NULL);
         assert (wflux  != NULL);
+
+        /* Assign well BHP directly from solution vector */
+        memcpy(wpress, h->x + G->number_of_cells,
+               W->number_of_wells * sizeof *wpress);
 
         compute_wflux(W, np, wdata, cpress, wpress, wflux);
     }
