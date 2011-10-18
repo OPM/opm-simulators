@@ -47,38 +47,32 @@ cfs_tpfa_construct(grid_t *G, well_t *W, int nphases);
 void
 cfs_tpfa_assemble(grid_t                  *G,
                   double                   dt,
-                  well_t                  *W,
                   flowbc_t                *bc,
                   const double            *src,
+                  const double            *zc,
                   struct compr_quantities *cq,
                   const double            *trans,
                   const double            *gravcap_f,
-                  well_control_t          *wctrl,
-                  struct completion_data  *wdata,
-                  const double            *cpress0,
+                  const double            *cpress,
                   const double            *porevol,
                   struct cfs_tpfa_data    *h);
 
 void
 cfs_tpfa_press_increment(grid_t               *G,
-                         well_t               *W,
                          struct cfs_tpfa_data *h,
-                         double               *cpress_inc,
-                         double               *wpress_inc);
+                         double               *cpress_inc);
 
+#if 0
 void
 cfs_tpfa_flux(grid_t                 *G,
               flowbc_t               *bc,
-              well_t                 *W,
               int                     np,
               const double           *trans,
               const double           *pmobf,
               const double           *gravcap_f,
               const double           *cpress,
-              const double           *wpress,
-              struct completion_data *wdata,
-              double                 *fflux,
-              double                 *wflux);
+              double                 *fflux);
+#endif
 
 void
 cfs_tpfa_fpress(grid_t               *G,
