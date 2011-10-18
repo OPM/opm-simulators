@@ -25,7 +25,7 @@
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH
 
-#include <dumux/material/fluidstates/genericfluidstate.hh>
+#include <dumux/material/MpNcfluidstates/genericfluidstate.hh>
 
 #include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/h2o.hh>
@@ -34,7 +34,7 @@
 #include <dumux/material/idealgas.hh>
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
-#include <dumux/material/fluidstates/genericfluidstate.hh>
+#include <dumux/material/MpNcfluidstates/genericfluidstate.hh>
 
 #include <dumux/common/exceptions.hh>
 
@@ -94,8 +94,7 @@ struct H2ON2StaticParameters {
     {
         static const char *name[] = {
             "l",
-            "g",
-            "s"
+            "g"
         };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
