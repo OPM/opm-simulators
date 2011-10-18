@@ -247,7 +247,7 @@ vector_write(size_t n, const double *v, const char *fn)
     if (fp != NULL) {
         vector_write_stream(n, v, fp);
     }
-    
+
     fclose(fp);
 }
 
