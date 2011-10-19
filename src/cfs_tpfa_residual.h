@@ -28,52 +28,48 @@
 extern "C" {
 #endif
 
-struct cfs_tpfa_impl;
+struct cfs_tpfa_res_impl;
 struct CSRMatrix;
-struct compr_quantities;
+struct compr_quantities_gen;
 
-struct cfs_tpfa_data {
-    struct CSRMatrix     *A;
-    double               *b;
-    double               *x;
+struct cfs_tpfa_res_data {
+    struct CSRMatrix         *J;
+    double                   *F;
 
-    struct cfs_tpfa_impl *pimpl;
+    struct cfs_tpfa_res_impl *pimpl;
 };
 
 
-struct cfs_tpfa_data *
-cfs_tpfa_construct(grid_t *G, well_t *W, int nphases);
+struct cfs_tpfa_res_data *
+cfs_tpfa_res_construct(grid_t *G, int nphases);
 
 void
-cfs_tpfa_assemble(grid_t                  *G,
-                  double                   dt,
-                  flowbc_t                *bc,
-                  const double            *src,
-                  const double            *zc,
-                  struct compr_quantities *cq,
-                  const double            *trans,
-                  const double            *gravcap_f,
-                  const double            *cpress,
-                  const double            *porevol,
-                  struct cfs_tpfa_data    *h);
+cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h);
 
 void
-cfs_tpfa_press_increment(grid_t               *G,
-                         struct cfs_tpfa_data *h,
-                         double               *cpress_inc);
+cfs_tpfa_res_assemble(grid_t                      *G,
+                      double                       dt,
+                      flowbc_t                    *bc,
+                      const double                *src,
+                      const double                *zc,
+                      struct compr_quantities_gen *cq,
+                      const double                *trans,
+                      const double                *gravcap_f,
+                      const double                *cpress,
+                      const double                *porevol,
+                      struct cfs_tpfa_res_data    *h);
+
+void
+cfs_tpfa_res_flux(grid_t       *G,
+                  flowbc_t     *bc,
+                  int           np,
+                  const double *trans,
+                  const double *pmobf,
+                  const double *gravcap_f,
+                  const double *cpress,
+                  double       *fflux);
 
 #if 0
-void
-cfs_tpfa_flux(grid_t                 *G,
-              flowbc_t               *bc,
-              int                     np,
-              const double           *trans,
-              const double           *pmobf,
-              const double           *gravcap_f,
-              const double           *cpress,
-              double                 *fflux);
-#endif
-
 void
 cfs_tpfa_fpress(grid_t               *G,
                 flowbc_t             *bc,
@@ -118,8 +114,7 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
                              struct cfs_tpfa_data   *h,
                              double                 *surf_vol);
 
-void
-cfs_tpfa_destroy(struct cfs_tpfa_data *h);
+#endif
 
 #ifdef __cplusplus
 }

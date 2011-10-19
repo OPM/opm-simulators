@@ -8,9 +8,9 @@
 #include "flow_bc.h"
 #include "well.h"
 
-#include "compr_quant.h"
+#include "compr_quant_general.h"
 #include "trans_tpfa.h"
-#include "cfs_tpfa.h"
+#include "cfs_tpfa_residual.h"
 #include "sparse_sys.h"
 
 
@@ -35,7 +35,7 @@ struct densrat_util {
 };
 
 
-struct cfs_tpfa_impl {
+struct cfs_tpfa_res_impl {
     int                  is_incomp;
 
     /* One entry per component per face */
@@ -110,7 +110,7 @@ allocate_densrat(size_t max_conn, int np)
 
 /* ---------------------------------------------------------------------- */
 static void
-impl_deallocate(struct cfs_tpfa_impl *pimpl)
+impl_deallocate(struct cfs_tpfa_res_impl *pimpl)
 /* ---------------------------------------------------------------------- */
 {
     if (pimpl != NULL) {
@@ -123,12 +123,12 @@ impl_deallocate(struct cfs_tpfa_impl *pimpl)
 
 
 /* ---------------------------------------------------------------------- */
-static struct cfs_tpfa_impl *
-impl_allocate(grid_t *G, well_t *W, size_t max_conn, int np)
+static struct cfs_tpfa_res_impl *
+impl_allocate(grid_t *G, size_t max_conn, int np)
 /* ---------------------------------------------------------------------- */
 {
     size_t                nnu, ngconn, nwperf;
-    struct cfs_tpfa_impl *new;
+    struct cfs_tpfa_res_impl *new;
 
     size_t ddata_sz;
 
@@ -136,13 +136,8 @@ impl_allocate(grid_t *G, well_t *W, size_t max_conn, int np)
     ngconn = G->cell_facepos[ G->number_of_cells ];
     nwperf = 0;
 
-    if (W != NULL) {
-        nnu    += W->number_of_wells;
-        nwperf  = W->well_connpos[ W->number_of_wells ];
-    }
-
     /* Linear system */
-    ddata_sz  = 2  * nnu;                /* b, x */
+    ddata_sz  = nnu;            /* b */
 
     /* Reservoir */
     ddata_sz += np *      G->number_of_faces ; /* compflux_f */
@@ -170,18 +165,15 @@ impl_allocate(grid_t *G, well_t *W, size_t max_conn, int np)
 
 /* ---------------------------------------------------------------------- */
 static struct CSRMatrix *
-construct_matrix(grid_t *G, well_t *W)
+construct_matrix(grid_t *G)
 /* ---------------------------------------------------------------------- */
 {
-    int    f, c1, c2, w, i, nc, nnu;
+    int    f, c1, c2, i, nc, nnu;
     size_t nnz;
 
     struct CSRMatrix *A;
 
     nc = nnu = G->number_of_cells;
-    if (W != NULL) {
-        nnu += W->number_of_wells;
-    }
 
     A = csrmatrix_new_count_nnz(nnu);
 
@@ -199,18 +191,6 @@ construct_matrix(grid_t *G, well_t *W)
             if ((c1 >= 0) && (c2 >= 0)) {
                 A->ia[ c1 + 1 ] += 1;
                 A->ia[ c2 + 1 ] += 1;
-            }
-        }
-
-        if (W != NULL) {
-            /* Well <-> cell connections */
-            for (w = i = 0; w < W->number_of_wells; w++) {
-                for (; i < W->well_connpos[w + 1]; i++) {
-                    c1 = W->well_cells[i];
-
-                    A->ia[ 0  + c1 + 1 ] += 1; /* c -> w */
-                    A->ia[ nc + w  + 1 ] += 1; /* w -> c */
-                }
             }
         }
 
@@ -235,18 +215,6 @@ construct_matrix(grid_t *G, well_t *W)
             if ((c1 >= 0) && (c2 >= 0)) {
                 A->ja[ A->ia[ c1 + 1 ] ++ ] = c2;
                 A->ja[ A->ia[ c2 + 1 ] ++ ] = c1;
-            }
-        }
-
-        if (W != NULL) {
-            /* Fill well <-> cell connections */
-            for (w = i = 0; w < W->number_of_wells; w++) {
-                for (; i < W->well_connpos[w + 1]; i++) {
-                    c1 = W->well_cells[i];
-
-                    A->ja[ A->ia[ 0  + c1 + 1 ] ++ ] = nc + w;
-                    A->ja[ A->ia[ nc + w  + 1 ] ++ ] = c1    ;
-                }
             }
         }
 
@@ -358,7 +326,7 @@ compute_compflux_and_deriv(grid_t               *G     ,
                            const double         *pmobf ,
                            const double         *gcapf ,
                            const double         *Af    ,
-                           struct cfs_tpfa_impl *pimpl )
+                           struct cfs_tpfa_res_impl *pimpl )
 {
     int     c1, c2, f, np2;
     double  dp;
@@ -419,7 +387,7 @@ init_cell_contrib(grid_t               *G    ,
                   double                pvol ,
                   double                dt   ,
                   const double         *z    ,
-                  struct cfs_tpfa_impl *pimpl)
+                  struct cfs_tpfa_res_impl *pimpl)
 {
     int     c1, c2, f, i, conn, nconn;
     double *cflx, *dcflx;
@@ -469,7 +437,7 @@ compute_cell_contrib(grid_t               *G    ,
                      const double         *z    ,
                      const double         *Ac   ,
                      const double         *dAc  ,
-                     struct cfs_tpfa_impl *pimpl)
+                     struct cfs_tpfa_res_impl *pimpl)
 {
     int        c1, c2, f, i, nconn, np2, p;
     MAT_SIZE_T nrhs;
@@ -539,7 +507,7 @@ compute_cell_contrib(grid_t               *G    ,
 static int
 assemble_cell_contrib(grid_t               *G,
                       int                   c,
-                      struct cfs_tpfa_data *h)
+                      struct cfs_tpfa_res_data *h)
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, i, f, j1, j2;
@@ -547,9 +515,9 @@ assemble_cell_contrib(grid_t               *G,
 
     is_neumann = 1;
 
-    j1 = csrmatrix_elm_index(c, c, h->A);
+    j1 = csrmatrix_elm_index(c, c, h->J);
 
-    h->A->sa[j1] += h->pimpl->ratio->mat_row[ 0 ];
+    h->J->sa[j1] += h->pimpl->ratio->mat_row[ 0 ];
 
     for (; i < G->cell_facepos[c + 1]; i++) {
         f = G->cell_faces[i];
@@ -560,13 +528,13 @@ assemble_cell_contrib(grid_t               *G,
         c2 = (c1 == c) ? c2 : c1;
 
         if (c2 >= 0) {
-            j2 = csrmatrix_elm_index(c, c2, h->A);
+            j2 = csrmatrix_elm_index(c, c2, h->J);
 
-            h->A->sa[j2] -= h->pimpl->ratio->mat_row[ i ];
+            h->J->sa[j2] -= h->pimpl->ratio->mat_row[ i ];
         }
     }
 
-    h->b[ c ] = h->pimpl->ratio->residual;
+    h->F[ c ] = h->pimpl->ratio->residual;
 
     return 0;
 }
@@ -713,74 +681,83 @@ is_incompr(int nc, const double *accum)
  * Public interface below separator.
  * ====================================================================== */
 
+
 /* ---------------------------------------------------------------------- */
-struct cfs_tpfa_data *
-cfs_tpfa_construct(grid_t *G, well_t *W, int nphases)
+void
+cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                nc, nf, ngconn, nwconn;
-    struct cfs_tpfa_data *new;
+    if (h != NULL) {
+        csrmatrix_delete(h->J);
+        impl_deallocate (h->pimpl);
+    }
 
-    new = malloc(1 * sizeof *new);
+    free(h);
+}
 
-    if (new != NULL) {
-        new->pimpl = impl_allocate(G, W, maxconn(G), nphases);
-        new->A     = construct_matrix(G, W);
 
-        if ((new->pimpl == NULL) || (new->A == NULL)) {
-            cfs_tpfa_destroy(new);
-            new = NULL;
+/* ---------------------------------------------------------------------- */
+struct cfs_tpfa_res_data *
+cfs_tpfa_res_construct(grid_t *G, int nphases)
+/* ---------------------------------------------------------------------- */
+{
+    size_t                    nc, nf, ngconn;
+    struct cfs_tpfa_res_data *h;
+
+    h = malloc(1 * sizeof *h);
+
+    if (h != NULL) {
+        h->pimpl = impl_allocate(G, maxconn(G), nphases);
+        h->J     = construct_matrix(G);
+
+        if ((h->pimpl == NULL) || (h->J == NULL)) {
+            cfs_tpfa_res_destroy(h);
+            h = NULL;
         }
     }
 
-    if (new != NULL) {
+    if (h != NULL) {
         nc     = G->number_of_cells;
         nf     = G->number_of_faces;
         ngconn = G->cell_facepos[nc];
-        nwconn = 0;
-
-        if (W != NULL) {
-            nwconn = W->well_connpos[ W->number_of_wells ];
-        }
 
         /* Allocate linear system components */
-        new->b                       = new->pimpl->ddata + 0;
-        new->x                       = new->b            + new->A->m;
+        h->F                       = h->pimpl->ddata + 0;
 
-        new->pimpl->compflux_f       = new->x            + new->A->m;
-        new->pimpl->compflux_deriv_f =
-            new->pimpl->compflux_f                       + (nphases * nf);
+        h->pimpl->compflux_f       = h->F            + h->J->m;
+        h->pimpl->compflux_deriv_f =
+            h->pimpl->compflux_f                     + (nphases * nf);
 
-        new->pimpl->flux_work        =
-            new->pimpl->compflux_deriv_f                 + (nphases * 2 * nf);
+        h->pimpl->flux_work        =
+            h->pimpl->compflux_deriv_f               + (nphases * 2 * nf);
 
-        new->pimpl->scratch_f        =
-            new->pimpl->flux_work                        + (nphases * (1 + 2));
+        h->pimpl->scratch_f        =
+            h->pimpl->flux_work                      + (nphases * (1 + 2));
     }
 
-    return new;
+    return h;
 }
 
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_assemble(grid_t                  *G,
-                  double                   dt,
-                  flowbc_t                *bc,
-                  const double            *src,
-                  const double            *zc,
-                  struct compr_quantities *cq,
-                  const double            *trans,
-                  const double            *gravcap_f,
-                  const double            *cpress,
-                  const double            *porevol,
-                  struct cfs_tpfa_data    *h)
+cfs_tpfa_res_assemble(grid_t                      *G,
+                      double                       dt,
+                      flowbc_t                    *bc,
+                      const double                *src,
+                      const double                *zc,
+                      struct compr_quantities_gen *cq,
+                      const double                *trans,
+                      const double                *gravcap_f,
+                      const double                *cpress,
+                      const double                *porevol,
+                      struct cfs_tpfa_res_data    *h)
 /* ---------------------------------------------------------------------- */
 {
     int res_is_neumann, c, np2;
 
-    csrmatrix_zero(         h->A);
-    vector_zero   (h->A->m, h->b);
+    csrmatrix_zero(         h->J);
+    vector_zero   (h->J->m, h->F);
 
     h->pimpl->is_incomp = 1;
 
@@ -814,70 +791,37 @@ cfs_tpfa_assemble(grid_t                  *G,
 
     if (res_is_neumann && h->pimpl->is_incomp) {
         /*&& well_is_neumann && h->pimpl->is_incomp) {*/
-        h->A->sa[0] *= 2;
+        h->J->sa[0] *= 2;
     }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+cfs_tpfa_res_flux(grid_t       *G,
+                  flowbc_t     *bc,
+                  int           np,
+                  const double *trans,
+                  const double *pmobf,
+                  const double *gravcap_f,
+                  const double *cpress,
+                  double       *fflux)
+/* ---------------------------------------------------------------------- */
+{
+    compute_flux(G, bc, np, trans, pmobf, gravcap_f, cpress, fflux);
 }
 
 
 #if 0
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_press_increment(grid_t               *G,
-                         well_t               *W,
-                         struct cfs_tpfa_data *h,
-                         double               *cpress_inc,
-                         double               *wpress_inc)
-/* ---------------------------------------------------------------------- */
-{
-    /* Assign cell pressure directly from solution vector */
-    memcpy(cpress_inc, h->x, G->number_of_cells * sizeof *cpress_inc);
-
-    if (W != NULL) {
-        assert (wpress_inc != NULL);
-
-        /* Assign well BHP directly from solution vector */
-        memcpy(wpress_inc, h->x + G->number_of_cells,
-               W->number_of_wells * sizeof *wpress_inc);
-    }
-}
-
-
-/* ---------------------------------------------------------------------- */
-void
-cfs_tpfa_flux(grid_t                 *G,
-              flowbc_t               *bc,
-              well_t                 *W,
-              int                     np,
-              const double           *trans,
-              const double           *pmobf,
-              const double           *gravcap_f,
-              const double           *cpress,
-              const double           *wpress,
-              struct completion_data *wdata,
-              double                 *fflux,
-              double                 *wflux)
-/* ---------------------------------------------------------------------- */
-{
-    compute_flux(G, bc, np, trans, pmobf, gravcap_f, cpress, fflux);
-
-    if ((W != NULL) && (wdata != NULL)) {
-        assert (wpress != NULL);
-        assert (wflux  != NULL);
-
-        compute_wflux(W, np, wdata, cpress, wpress, wflux);
-    }
-}
-
-
-/* ---------------------------------------------------------------------- */
-void
-cfs_tpfa_fpress(grid_t               *G,
+cfs_tpfa_res_fpress(grid_t               *G,
                 flowbc_t             *bc,
                 int                   np,
                 const double         *htrans,
                 const double         *pmobf,
                 const double         *gravcap_f,
-                struct cfs_tpfa_data *h,
+                struct cfs_tpfa_res_data *h,
                 const double         *cpress,
                 const double         *fflux,
                 double               *fpress)
@@ -890,9 +834,9 @@ cfs_tpfa_fpress(grid_t               *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_retrieve_masstrans(grid_t               *G,
+cfs_tpfa_res_retrieve_masstrans(grid_t               *G,
                             int                   np,
-                            struct cfs_tpfa_data *h,
+                            struct cfs_tpfa_res_data *h,
                             double               *masstrans_f)
 /* ---------------------------------------------------------------------- */
 {
@@ -903,9 +847,9 @@ cfs_tpfa_retrieve_masstrans(grid_t               *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_retrieve_gravtrans(grid_t               *G,
+cfs_tpfa_res_retrieve_gravtrans(grid_t               *G,
                             int                   np,
-                            struct cfs_tpfa_data *h,
+                            struct cfs_tpfa_res_data *h,
                             double               *gravtrans_f)
 /* ---------------------------------------------------------------------- */
 {
@@ -916,12 +860,12 @@ cfs_tpfa_retrieve_gravtrans(grid_t               *G,
 
 /* ---------------------------------------------------------------------- */
 static double
-cfs_tpfa_impes_maxtime_cell(int                      c,
+cfs_tpfa_res_impes_maxtime_cell(int                      c,
                             grid_t                  *G,
                             struct compr_quantities *cq,
                             const double            *trans,
                             const double            *porevol,
-                            struct cfs_tpfa_data    *h,
+                            struct cfs_tpfa_res_data    *h,
                             const double            *dpmobf,
                             const double            *surf_dens,
                             const double            *gravity)
@@ -1033,11 +977,11 @@ cfs_tpfa_impes_maxtime_cell(int                      c,
 
 /* ---------------------------------------------------------------------- */
 double
-cfs_tpfa_impes_maxtime(grid_t                  *G,
+cfs_tpfa_res_impes_maxtime(grid_t                  *G,
                        struct compr_quantities *cq,
                        const double            *trans,
                        const double            *porevol,
-                       struct cfs_tpfa_data    *h,
+                       struct cfs_tpfa_res_data    *h,
                        const double            *dpmobf,
                        const double            *surf_dens,
                        const double            *gravity)
@@ -1047,7 +991,7 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
     double max_dt, cell_dt;
     max_dt = 1e100;
     for (c = 0; c < G->number_of_cells; ++c) {
-        cell_dt = cfs_tpfa_impes_maxtime_cell(c, G, cq, trans, porevol, h,
+        cell_dt = cfs_tpfa_res_impes_maxtime_cell(c, G, cq, trans, porevol, h,
                                               dpmobf, surf_dens, gravity);
         if (cell_dt < max_dt) {
             max_dt = cell_dt;
@@ -1060,13 +1004,13 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_expl_mass_transport(grid_t                 *G,
+cfs_tpfa_res_expl_mass_transport(grid_t                 *G,
                              well_t                 *W,
                              struct completion_data *wdata,
                              int                     np,
                              double                  dt,
                              const double           *porevol,
-                             struct cfs_tpfa_data   *h,
+                             struct cfs_tpfa_res_data   *h,
                              double                 *surf_vol)
 /* ---------------------------------------------------------------------- */
 {
@@ -1130,17 +1074,3 @@ cfs_tpfa_expl_mass_transport(grid_t                 *G,
     }
 }
 #endif
-
-
-/* ---------------------------------------------------------------------- */
-void
-cfs_tpfa_destroy(struct cfs_tpfa_data *h)
-/* ---------------------------------------------------------------------- */
-{
-    if (h != NULL) {
-        csrmatrix_delete(h->A);
-        impl_deallocate (h->pimpl);
-    }
-
-    free(h);
-}

@@ -22,13 +22,11 @@
 
 #include <stddef.h>
 
-#include "grid.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct compr_quantities {
+struct compr_quantities_gen {
     int     nphases;      /* Number of phases/components */
 
     double *Ac;           /* RB^{-1} per cell */
@@ -38,30 +36,11 @@ struct compr_quantities {
     double *voldiscr;     /* Volume discrepancy per cell */
 };
 
-struct compr_quantities *
-compr_quantities_allocate(size_t nc, size_t nf, int np);
+struct compr_quantities_gen *
+compr_quantities_gen_allocate(size_t nc, size_t nf, int np);
 
 void
-compr_quantities_deallocate(struct compr_quantities *cq);
-
-void
-compr_flux_term(grid_t       *G,
-                const double *fflux,
-                const double *zeta,
-                double       *Biv);
-
-void
-compr_accum_term(size_t        nc,
-                 double        dt,
-                 const double *porevol,
-                 const double *totcompr,
-                 double       *P);
-
-void
-compr_src_add_press_accum(size_t        nc,
-                          const double *p0,
-                          const double *P,
-                          double       *src);
+compr_quantities_gen_deallocate(struct compr_quantities_gen *cq);
 
 #ifdef __cplusplus
 }
