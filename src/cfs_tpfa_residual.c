@@ -9,10 +9,10 @@
 #include "well.h"
 
 #include "compr_quant_general.h"
-#include "trans_tpfa.h"
-#include "cfs_tpfa_residual.h"
 #include "sparse_sys.h"
+#include "trans_tpfa.h"
 
+#include "cfs_tpfa_residual.h"
 
 #if defined(MAX)
 #undef MAX
@@ -799,19 +799,18 @@ cfs_tpfa_res_flux(grid_t       *G,
 }
 
 
-#if 0
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_res_fpress(grid_t               *G,
-                flowbc_t             *bc,
-                int                   np,
-                const double         *htrans,
-                const double         *pmobf,
-                const double         *gravcap_f,
-                struct cfs_tpfa_res_data *h,
-                const double         *cpress,
-                const double         *fflux,
-                double               *fpress)
+cfs_tpfa_res_fpress(grid_t                   *G,
+                    flowbc_t                 *bc,
+                    int                       np,
+                    const double             *htrans,
+                    const double             *pmobf,
+                    const double             *gravcap_f,
+                    struct cfs_tpfa_res_data *h,
+                    const double             *cpress,
+                    const double             *fflux,
+                    double                   *fpress)
 /* ---------------------------------------------------------------------- */
 {
     compute_fpress(G, bc, np, htrans, pmobf, gravcap_f,
@@ -819,6 +818,7 @@ cfs_tpfa_res_fpress(grid_t               *G,
 }
 
 
+#if 0
 /* ---------------------------------------------------------------------- */
 void
 cfs_tpfa_res_retrieve_masstrans(grid_t               *G,
