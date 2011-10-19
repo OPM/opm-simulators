@@ -36,7 +36,7 @@ struct densrat_util {
 
 
 struct cfs_tpfa_res_impl {
-    int                  is_incomp;
+    int                  is_incomp
 
     /* One entry per component per face */
     double              *compflux_f;       /* A_{ij} v_{ij} */
@@ -663,21 +663,6 @@ maxconn(grid_t *G)
     }
 
     return m;
-}
-
-
-/* ---------------------------------------------------------------------- */
-static int
-is_incompr(int nc, const double *accum)
-/* ---------------------------------------------------------------------- */
-{
-    int c, incompr;
-
-    for (c = 0, incompr = 1; (c < nc) && incompr; c++) {
-        incompr = ! (fabs(accum[c]) > 0.0);
-    }
-
-    return incompr;
 }
 
 
