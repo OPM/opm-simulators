@@ -775,22 +775,9 @@ cfs_tpfa_res_assemble(grid_t                      *G,
         assemble_cell_contrib(G, c, h);
     }
 
-#if 0
-    res_is_neumann = assemble_cell_contrib(G, bc, src, h);
-
-    if ((W != NULL) && (wctrl != NULL)) {
-        assert (wdata != NULL);
-        well_is_neumann = assemble_well_contrib(G->number_of_cells,
-                                                W, wctrl, h);
-    } else {
-        well_is_neumann = 1;
-    }
-#endif
-
     res_is_neumann = 1;
 
     if (res_is_neumann && h->pimpl->is_incomp) {
-        /*&& well_is_neumann && h->pimpl->is_incomp) {*/
         h->J->sa[0] *= 2;
     }
 }
