@@ -85,7 +85,7 @@ allocate_densrat(size_t max_conn, int np)
 
         alloc_sz  = np             * np; /* lu */
         alloc_sz += 2              * np; /* t1, t2 */
-        alloc_sz += max_conn       * 1 ; /* mat_row */
+        alloc_sz += (max_conn + 1) * 1 ; /* mat_row */
         alloc_sz += (max_conn + 1) * 1 ; /* coeff */
         alloc_sz += n_buffer_col   * np; /* linsolve_buffer */
 
@@ -99,7 +99,7 @@ allocate_densrat(size_t max_conn, int np)
             ratio->t1              = ratio->lu      + (np             * np);
             ratio->t2              = ratio->t1      + (1              * np);
             ratio->mat_row         = ratio->t2      + (1              * np);
-            ratio->coeff           = ratio->mat_row + (max_conn       * 1 );
+            ratio->coeff           = ratio->mat_row + ((max_conn + 1) * 1 );
             ratio->linsolve_buffer = ratio->coeff   + ((max_conn + 1) * 1 );
         }
     }
@@ -402,7 +402,7 @@ init_cell_contrib(grid_t               *G    ,
     cflx  = pimpl->ratio->linsolve_buffer + (1 * np);
     dcflx = cflx + (nconn * np);
 
-    for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; c++) {
+    for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; i++) {
         f  = G->cell_faces[i];
         c1 = G->face_cells[2*f + 0];
         c2 = G->face_cells[2*f + 1];
@@ -439,7 +439,7 @@ compute_cell_contrib(grid_t               *G    ,
                      const double         *dAc  ,
                      struct cfs_tpfa_res_impl *pimpl)
 {
-    int        c1, c2, f, i, nconn, np2, p;
+    int        c1, c2, f, i, off, nconn, np2, p;
     MAT_SIZE_T nrhs;
     double     s, dF1, dF2, *dv, *dv1, *dv2;
 
@@ -479,8 +479,9 @@ compute_cell_contrib(grid_t               *G    ,
     pimpl->ratio->mat_row[ 0 ] = dF1 - dF2;
 
     /* Accumulate inter-cell Jacobian contributions */
-    dv = pimpl->ratio->linsolve_buffer + (1 + nconn)*np;
-    for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; i++) {
+    dv  = pimpl->ratio->linsolve_buffer + (1 + nconn)*np;
+    off = 0;
+    for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; i++, off++) {
 
         f  = G->cell_faces[i];
         c1 = G->face_cells[2*f + 0];
@@ -496,8 +497,8 @@ compute_cell_contrib(grid_t               *G    ,
                 dF2 += dv2[ p ];
             }
 
-            pimpl->ratio->mat_row[ 0 ] += s * dt * dF1;
-            pimpl->ratio->mat_row[ i ] += s * dt * dF2;
+            pimpl->ratio->mat_row[ 0       ] += s * dt * dF1;
+            pimpl->ratio->mat_row[ off + 1 ] += s * dt * dF2;
         }
     }
 }
@@ -510,7 +511,7 @@ assemble_cell_contrib(grid_t               *G,
                       struct cfs_tpfa_res_data *h)
 /* ---------------------------------------------------------------------- */
 {
-    int c1, c2, i, f, j1, j2;
+    int c1, c2, i, f, j1, j2, off;
     int is_neumann;
 
     is_neumann = 1;
@@ -519,7 +520,8 @@ assemble_cell_contrib(grid_t               *G,
 
     h->J->sa[j1] += h->pimpl->ratio->mat_row[ 0 ];
 
-    for (; i < G->cell_facepos[c + 1]; i++) {
+    off = 1;
+    for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; i++, off++) {
         f = G->cell_faces[i];
 
         c1 = G->face_cells[2*f + 0];
@@ -530,7 +532,7 @@ assemble_cell_contrib(grid_t               *G,
         if (c2 >= 0) {
             j2 = csrmatrix_elm_index(c, c2, h->J);
 
-            h->J->sa[j2] -= h->pimpl->ratio->mat_row[ i ];
+            h->J->sa[j2] += h->pimpl->ratio->mat_row[ off ];
         }
     }
 
@@ -761,8 +763,8 @@ cfs_tpfa_res_assemble(grid_t                      *G,
 
     h->pimpl->is_incomp = 1;
 
-    compute_compflux_and_deriv(G, cq->nphases, cpress, trans, gravcap_f,
-                               cq->phasemobf, cq->Af, h->pimpl);
+    compute_compflux_and_deriv(G, cq->nphases, cpress, trans,
+                               cq->phasemobf, gravcap_f, cq->Af, h->pimpl);
 
     np2 = cq->nphases * cq->nphases;
     for (c = 0; c < G->number_of_cells;
