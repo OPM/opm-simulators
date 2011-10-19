@@ -480,7 +480,7 @@ compute_cell_contrib(grid_t               *G    ,
 
     /* Accumulate inter-cell Jacobian contributions */
     dv  = pimpl->ratio->linsolve_buffer + (1 + nconn)*np;
-    off = 0;
+    off = 1;
     for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; i++, off++) {
 
         f  = G->cell_faces[i];
@@ -497,8 +497,8 @@ compute_cell_contrib(grid_t               *G    ,
                 dF2 += dv2[ p ];
             }
 
-            pimpl->ratio->mat_row[ 0       ] += s * dt * dF1;
-            pimpl->ratio->mat_row[ off + 1 ] += s * dt * dF2;
+            pimpl->ratio->mat_row[  0  ] += s * dt * dF1;
+            pimpl->ratio->mat_row[ off ] += s * dt * dF2;
         }
     }
 }
