@@ -507,6 +507,20 @@ compute_cell_contrib(grid_t               *G    ,
 }
 
 
+static void
+assemble_sources(struct compr_src *src, struct cfs_tpfa_res_data *h)
+{
+    int i;
+
+    for (i = 0; i < src->nsrc; i++) {
+        assert (src->cell[i]            >= 0      );
+        assert (((size_t) src->cell[i]) <  h->J->m);
+
+        h->F[ src->cell[ i ] ] += src->flux[ i ];
+    }
+}
+
+
 /* ---------------------------------------------------------------------- */
 static int
 assemble_cell_contrib(grid_t               *G,
@@ -763,6 +777,11 @@ cfs_tpfa_res_assemble(grid_t                      *G,
                              h->pimpl);
 
         assemble_cell_contrib(G, c, h);
+    }
+
+    if (src != NULL) {
+        assert (src->nphases == cq->nphases);
+        assemble_sources(src, h);
     }
 
     res_is_neumann = 1;
