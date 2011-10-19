@@ -9,6 +9,7 @@
 #include "well.h"
 
 #include "compr_quant_general.h"
+#include "compr_source.h"
 #include "sparse_sys.h"
 #include "trans_tpfa.h"
 
@@ -36,7 +37,7 @@ struct densrat_util {
 
 
 struct cfs_tpfa_res_impl {
-    int                  is_incomp
+    int                  is_incomp;
 
     /* One entry per component per face */
     double              *compflux_f;       /* A_{ij} v_{ij} */
@@ -733,7 +734,7 @@ void
 cfs_tpfa_res_assemble(grid_t                      *G,
                       double                       dt,
                       flowbc_t                    *bc,
-                      const double                *src,
+                      struct compr_src            *src,
                       const double                *zc,
                       struct compr_quantities_gen *cq,
                       const double                *trans,

@@ -31,6 +31,7 @@ extern "C" {
 struct cfs_tpfa_res_impl;
 struct CSRMatrix;
 struct compr_quantities_gen;
+struct compr_src;
 
 struct cfs_tpfa_res_data {
     struct CSRMatrix         *J;
@@ -50,7 +51,7 @@ void
 cfs_tpfa_res_assemble(grid_t                      *G,
                       double                       dt,
                       flowbc_t                    *bc,
-                      const double                *src,
+                      struct compr_src            *src,
                       const double                *zc,
                       struct compr_quantities_gen *cq,
                       const double                *trans,
