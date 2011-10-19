@@ -418,7 +418,7 @@ init_cell_contrib(grid_t               *G    ,
             cflx  += 1 * np;
             dcflx += 2 * np;
 
-            pimpl->ratio->coeff[ conn++ ] = dt;
+            pimpl->ratio->coeff[ conn++ ] = dt * (2*(c1 == c) - 1.0);
         }
     }
 
@@ -516,7 +516,7 @@ assemble_sources(struct compr_src *src, struct cfs_tpfa_res_data *h)
         assert (src->cell[i]            >= 0      );
         assert (((size_t) src->cell[i]) <  h->J->m);
 
-        h->F[ src->cell[ i ] ] += src->flux[ i ];
+        h->F[ src->cell[ i ] ] -= src->flux[ i ];
     }
 }
 
