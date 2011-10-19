@@ -465,6 +465,8 @@ compute_cell_contrib(grid_t               *G    ,
 
     /* Jacobian row */
 
+    vector_zero(1 + nconn, pimpl->ratio->mat_row);
+
     /* t2 <- A \ ((dA/dp) * t1) */
     matvec(np, np, dAc, pimpl->ratio->t1, pimpl->ratio->t2);
     solve_linear_systems(np, 1, pimpl->ratio, pimpl->ratio->t2);
