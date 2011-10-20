@@ -466,20 +466,20 @@ compute_cell_contrib(grid_t               *G    ,
 
     /* Jacobian row */
 
-    vector_zero(1 + nconn, pimpl->ratio->mat_row);
+    vector_zero(1 + (G->cell_facepos[c + 1] - G->cell_facepos[c]),
+                pimpl->ratio->mat_row);
 
     /* t2 <- A \ ((dA/dp) * t1) */
     matvec(np, np, dAc, pimpl->ratio->t1, pimpl->ratio->t2);
     solve_linear_systems(np, 1, pimpl->ratio, pimpl->ratio->t2);
 
-    dF1 = dF2 = 0.0;
+    dF2 = 0.0;
     for (p = 0; p < np; p++) {
-        dF1 += pimpl->ratio->t1[ p ];
         dF2 += pimpl->ratio->t2[ p ];
     }
 
     pimpl->is_incomp           = pimpl->is_incomp && (! (fabs(dF2) > 0));
-    pimpl->ratio->mat_row[ 0 ] = dF1 - dF2;
+    pimpl->ratio->mat_row[ 0 ] = - dF2;
 
     /* Accumulate inter-cell Jacobian contributions */
     dv  = pimpl->ratio->linsolve_buffer + (1 + nconn)*np;
