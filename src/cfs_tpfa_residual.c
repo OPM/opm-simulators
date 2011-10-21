@@ -369,6 +369,8 @@ count_internal_conn(grid_t *G, int c)
 {
     int c1, c2, f, i, nconn;
 
+    nconn = 0;
+
     for (i = G->cell_facepos[c]; i < G->cell_facepos[c + 1]; i++) {
         f  = G->cell_faces[i];
         c1 = G->face_cells[2*f + 0];
