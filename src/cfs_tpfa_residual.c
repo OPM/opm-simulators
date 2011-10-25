@@ -612,7 +612,8 @@ compute_fpress(grid_t       *G,
         c1 = G->face_cells[2*f + 0];
         c2 = G->face_cells[2*f + 1];
 
-        if (((c1 < 0) || (c2 < 0)) && (bc->type[f] == PRESSURE)) {
+        if (((c1 < 0) || (c2 < 0)) &&
+            (bc != NULL) && (bc->type[f] == PRESSURE)) {
             fpress[f] = bc->bcval[f];
         }
     }
@@ -638,7 +639,8 @@ compute_flux(grid_t       *G,
         c1 = G->face_cells[2*f + 0];
         c2 = G->face_cells[2*f + 1];
 
-        if (((c1 < 0) || (c2 < 0)) && (bc->type[f] == FLUX)) {
+        if (((c1 < 0) || (c2 < 0)) &&
+            (bc != NULL) && (bc->type[f] == FLUX)) {
             fflux[f] = bc->bcval[f];
             continue;
         }
@@ -652,7 +654,7 @@ compute_flux(grid_t       *G,
 
         if ((c1 >= 0) && (c2 >= 0)) {
             dp  = cpress[c1] - cpress[c2];
-        } else if (bc->type[f] == PRESSURE) {
+        } else if ((bc != NULL) && (bc->type[f] == PRESSURE)) {
             if (c1 < 0) {
                 dp = bc->bcval[f] - cpress[c2];
                 /* g  = -g; */
