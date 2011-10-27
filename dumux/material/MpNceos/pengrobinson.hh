@@ -192,9 +192,7 @@ public:
      * fraction of a component in a pure fluid is obviously always
      * 100%.
      *
-     * \param T pressure [K]
-     * \param p pressure [Pa]
-     * \param Vm Molar volume [m^3/mol]
+     * \param params Parameters
      */
     template <class Params>
     static Scalar computeFugacityCoeff(const Params &params)
@@ -226,9 +224,7 @@ public:
      * fraction of a component in a pure fluid is obviously always
      * 100%, so it is not required.
      *
-     * \param T pressure [K]
-     * \param p pressure [Pa]
-     * \param Vm Molar volume [m^3/mol]
+     * \param params Parameters
      */
     template <class Params>
     static Scalar computeFugacity(const Params &params)
@@ -463,10 +459,10 @@ protected:
      * \brief Returns the difference between the liquid and the gas phase
      *        fugacities in [bar]
      *
+     * \param params Parameters
+     * \param T Temperature [K] 
      * \param p Pressure [bar]
-     *
      * \param VmLiquid Molar volume of the liquid phase [cm^3/mol]
-     *
      * \param VmGas Molar volume of the gas phase [cm^3/mol]
      */
     template <class Params>

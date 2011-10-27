@@ -159,8 +159,10 @@ public:
     /*!
      * \brief Function for defining the intrinsic (absolute) permeability.
      *
-     * \return intrinsic (absolute) permeability
-     * \param element The element
+     * \param element The current element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvIdx The index of the sub-control volume.
+     * \return the intrinsic permeability
      */
     const Tensor& intrinsicPermeability (const Element &element,
             const FVElementGeometry &fvElemGeom,
@@ -185,8 +187,10 @@ public:
     /*!
      * \brief Function for defining the porosity.
      *
+     * \param element The current element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvIdx The index of the sub-control volume.
      * \return porosity
-     * \param element The element
      */
     Scalar porosity(const Element &element,
             const FVElementGeometry &fvElemGeom,

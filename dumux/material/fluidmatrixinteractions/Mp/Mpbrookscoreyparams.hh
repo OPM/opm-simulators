@@ -19,8 +19,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file Mpbrookscoreymaterialparams.hh 
- *
+ * \file 
  * Reference implementation of parameters for the M-phase brookscorey
  * material material.
  */

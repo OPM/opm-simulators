@@ -71,8 +71,10 @@ public:
     /*!
      * \brief Function for defining the parameters needed by constitutive relationships (kr-Sw, pc-Sw, etc.).
      *
+     * \param element The current element
+     * \param fvElemGeom The current finite volume geometry of the element
+     * \param scvIdx The index of the sub-control volume.
      * \return the material parameters object
-     * \param element The element
      */
     const MaterialLawParams& materialLawParams(const Element &element,
             const FVElementGeometry &fvElemGeom,

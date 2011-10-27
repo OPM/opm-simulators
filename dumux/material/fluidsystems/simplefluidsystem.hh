@@ -185,12 +185,12 @@ public:
      * \brief Calculate the binary molecular diffusion coefficient for
      *        a component in a fluid phase [mol^2 * s / (kg*m^3)]
      *
-     * Molecular diffusion of a compoent $\kappa$ is caused by a
+     * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
      * gradient of the chemical potential and follows the law
      *
      * \f[ J = - D \grad mu_\kappa \f]
      *
-     * where \f$\mu_\kappa\$ is the component's chemical potential,
+     * where \f$\mu_\kappa\f$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
      * diffusive flux. \f$mu_\kappa\f$ is connected to the component's
      * fugacity \f$f_\kappa\f$ by the relation

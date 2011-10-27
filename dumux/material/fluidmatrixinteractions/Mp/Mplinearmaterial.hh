@@ -58,7 +58,9 @@ public:
      p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
      \f]
      *
-     * \param Swe Effective saturation of of the wetting phase \f$\overline{S}_w\f$
+     * \param values Container for the return values 
+     * \param params Parameters
+     * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
     static void capillaryPressures(ContainerT &values,

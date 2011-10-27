@@ -35,7 +35,7 @@ namespace Dumux
 /*!
  * \ingroup material
  *
- * \brief Adapts the interface of the MpNc material law to the standard-\Dumux material law.
+ * \brief Adapts the interface of the MpNc material law to the standard-Dumux material law.
  *
  *        Also use the temperature dependent version of the material laws.
  */

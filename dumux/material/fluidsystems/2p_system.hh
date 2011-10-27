@@ -86,7 +86,7 @@ public:
     /*!
      * \brief Return the human readable name of a component
      *
-     * \param phaseIdx index of the phase
+     * \param compIdx index of the component
      */
     static const char *componentName(int compIdx)
     {
@@ -100,7 +100,7 @@ public:
     /*!
      * \brief Return the molar mass of a component in [kg/mol].
      *
-     * \param phaseIdx index of the phase
+     * \param compIdx index of the component
      */
     static Scalar molarMass(int compIdx)
     {

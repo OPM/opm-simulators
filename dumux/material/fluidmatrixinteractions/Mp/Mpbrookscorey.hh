@@ -18,8 +18,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file Mpbrookscoreymaterial.hh
- *
+ * \file 
  * Implements a Brooks-Corey saturation-capillary pressure relation
  * for M-phase fluid systems.
  */
@@ -82,8 +81,10 @@ public:
      S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
      \f]
      *
-     * \param pC Capillary pressure \f$\p_C\f$
-     * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
+     * \param saturations The container of saturation values to be filled
+     * \param params Parameters
+     * \param pc Capillary pressures
+     * \param temperature Temperature
      */
     template <class SatContainerT, class pcContainerT>
     static void S(SatContainerT &saturations,

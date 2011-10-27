@@ -58,25 +58,25 @@ public:
     { return 0.10; }
 
     /*!
-     * \brief Return the capillary pressure for a phase \alpha at S_\alpha=0.
+     * \brief Return the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=0\f$.
      */
     Scalar pcMinSat(int phaseIdx) const
     { return pcMinSat_[phaseIdx]; }
 
     /*!
-     * \brief Set the capillary pressure for a phase \alpha at S_\alpha=0.
+     * \brief Set the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=0\f$.
      */
     void setPcMinSat(int phaseIdx, Scalar val)
     { pcMinSat_[phaseIdx] = val; }
 
     /*!
-     * \brief Return the capillary pressure for a phase \alpha at S_\alpha=1.
+     * \brief Return the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=1\f$.
      */
     Scalar pcMaxSat(int phaseIdx) const
     { return pcMaxSat_[phaseIdx]; }
 
     /*!
-     * \brief Set the capillary pressure for a phase \alpha at S_\alpha=1.
+     * \brief Set the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=1\f$.
      */
     void setPcMaxSat(int phaseIdx, Scalar val)
     { pcMaxSat_[phaseIdx] = val; }
