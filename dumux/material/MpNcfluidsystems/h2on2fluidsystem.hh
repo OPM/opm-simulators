@@ -94,7 +94,8 @@ struct H2ON2StaticParameters {
     {
         static const char *name[] = {
             "l",
-            "g"
+            "g",
+            "s"
         };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
@@ -502,7 +503,7 @@ public:
         case SP::lPhaseIdx: // use conductivity of pure water
             return  0.6;   // conductivity of water[W / (m K ) ]
         case SP::gPhaseIdx:// use conductivity of pure air
-            return  0.025; // conductivity of air [W / (m K ) ]
+            return 0.025; // conductivity of air [W / (m K ) ]
         }
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
