@@ -126,7 +126,7 @@ public:
             std::cout << "\n";
             std::cout << FluidSystem::phaseName(phaseIdx) << "Phase phi: ";
             for (int i = 0; i < FluidSystem::numComponents; ++i)
-                std::cout << fluidState.fugacityCoeff(phaseIdx, i) << " ";
+                std::cout << fluidState.fugacityCoefficient(phaseIdx, i) << " ";
             std::cout << "\n";
             */
 
@@ -373,7 +373,7 @@ protected:
             result += std::abs(
                 (targetFug[i] - params.fugacity(phaseIdx, i))
                 /
-                params.fugacityCoeff(phaseIdx, i) );
+                params.fugacityCoefficient(phaseIdx, i) );
         };
         return result;
     }
