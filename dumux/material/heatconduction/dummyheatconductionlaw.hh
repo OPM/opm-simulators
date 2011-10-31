@@ -20,7 +20,7 @@
 /*!
  * \file dummyheatconductionlaw.hh
  *
- * \brief Implements a dumm law for heat conduction to which isothermal models 
+ * \brief Implements a dumm law for heat conduction to which isothermal models
  *        can fall back to
  *
  * If any method of this law is called, it throws an excetion
@@ -35,7 +35,7 @@ namespace Dumux
 /*!
  * \ingroup material
  *
- * \brief Implements a dumm law for heat conduction to which isothermal models 
+ * \brief Implements a dumm law for heat conduction to which isothermal models
  *        can fall back to
  *
  * If any method of this law is called, it throws an excetion
@@ -54,7 +54,7 @@ public:
      * If this method is called an exception is thrown at run time.
      */
     template <class FluidState>
-    static Scalar heatConductivity(const Params &params, 
+    static Scalar heatConductivity(const Params &params,
                                    const FluidState &fluidState)
     {
         DUNE_THROW(Dune::InvalidStateException,

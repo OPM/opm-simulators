@@ -65,7 +65,7 @@ namespace Dumux
  * thesis, Technical University of Braunschweig, 2000
  */
 template <int wPhaseIdx,
-          class ScalarT, 
+          class ScalarT,
           class ParamsT = SomertonParams</*numPhases=*/2, ScalarT> >
 class Somerton
 {
@@ -79,7 +79,7 @@ public:
      *
      * The Somerton law is given by:
      * \f[
-     \lambda_{pm} = 
+     \lambda_{pm} =
      \lambda_{vac} +
      \sqrt{S_w}(\lambda_{ful,w} - \lambda_{ful,n}) +
      \sqrt{S_n}(\lambda_{ful,n} - \lambda_{ful,w})
@@ -91,10 +91,10 @@ public:
      * phase \f$\alpha\f$ and \f$S_\alpha\f$ is the saturation of phase \f$\alpha\f$.
      */
     template <class FluidState>
-    static Scalar heatConductivity(const Params &params, 
+    static Scalar heatConductivity(const Params &params,
                                    const FluidState &fluidState)
     {
-        // the Somerton law as implemented here only 
+        // the Somerton law as implemented here only
         // applies to twophase flow...
         assert(FluidState::numPhases == 2);
 
@@ -103,13 +103,13 @@ public:
             params.fullySaturatedLambda(nPhaseIdx)
             +
             regularizedSqrt_(fluidState.saturation(wPhaseIdx))
-            * (params.fullySaturatedLambda(wPhaseIdx) - params.fullySaturatedLambda(wPhaseIdx)); 
+            * (params.fullySaturatedLambda(wPhaseIdx) - params.fullySaturatedLambda(wPhaseIdx));
     }
 
 protected:
     static Scalar regularizedSqrt_(Scalar x)
     {
-        const Scalar xMin = 1e-2; 
+        const Scalar xMin = 1e-2;
         const Scalar sqrtXMin = std::sqrt(xMin);
         const Scalar fPrimeXMin = 1.0/(2*std::sqrt(xMin));
         const Scalar fPrime0 = 2*fPrimeXMin;
@@ -117,7 +117,7 @@ protected:
         static Spline sqrtRegSpline(0, xMin, // x0, x1
                                     0, sqrtXMin, // y0, y1
                                     fPrime0, fPrimeXMin); // m0, m1
-        
+
         if (x > xMin)
             return std::sqrt(x);
         else if (x <= 0)

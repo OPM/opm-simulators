@@ -111,7 +111,7 @@ public:
                 fluidState.setMoleFraction(phaseIdx,
                                            compIdx,
                                            globalMolarities[compIdx]/sumMoles);
-            
+
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 1.0135e5);
 

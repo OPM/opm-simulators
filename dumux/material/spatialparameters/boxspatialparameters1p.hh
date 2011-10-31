@@ -118,7 +118,7 @@ public:
     const Tensor intrinsicPermeability(const Context &context,
                                        int localIdx) const
     {
-        return toTensor_(asImp_().intrinsicPermeability(context.element(), 
+        return toTensor_(asImp_().intrinsicPermeability(context.element(),
                                                         context.fvElemGeom(),
                                                         localIdx));
     }
@@ -156,7 +156,7 @@ public:
     Scalar porosity(const Context &context,
                     int localIdx) const
     {
-        return asImp_().porosity(context.element(), 
+        return asImp_().porosity(context.element(),
                                  context.fvElemGeom(),
                                  localIdx);
     }
@@ -198,7 +198,7 @@ public:
     Scalar heatCapacitySolid(const Context &context,
                              int localIdx) const
     {
-        return asImp_().heatCapacitySolid(context.element(), 
+        return asImp_().heatCapacitySolid(context.element(),
                                           context.fvElemGeom(),
                                           localIdx);
     }
@@ -233,7 +233,7 @@ public:
     const HeatConductionLawParams&
     heatConducionParams(const Context &context, int localIdx) const
     {
-        DUNE_THROW(Dune::InvalidStateException, 
+        DUNE_THROW(Dune::InvalidStateException,
                    "Spatial parameters does not provide "
                    "a heatConducionParams() method!");
     }
@@ -252,7 +252,7 @@ public:
     /*!
      * \brief Used by the 1p2c model.
      */
-    template <class Context>  
+    template <class Context>
     bool useTwoPointGradient(const Context &context,
                              int scvfIdx) const
     {
@@ -270,7 +270,7 @@ private:
     { return val; };
 
     Tensor toTensor_(Scalar val) const
-    { 
+    {
         Tensor ret(0.0);
         for (int i = 0; i < Tensor::rows; ++i)
             ret[i][i] = val;

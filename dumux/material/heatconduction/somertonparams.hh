@@ -18,7 +18,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file somertonparams.hh 
+ * \file somertonparams.hh
  *
  * Reference implementation of parameters for the Somerton law of
  * heat conductivity in a porous medium.
@@ -42,7 +42,7 @@
 namespace Dumux
 {
 /*!
- * \brief 
+ * \brief
  */
 template <int numPhases, class ScalarT>
 class SomertonParams
@@ -65,7 +65,7 @@ public:
      * space of the porous medium is filled by a given fluid phase.
      */
     Scalar fullySaturatedLambda(int phaseIdx) const
-    { 
+    {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         return fullySaturatedLambda_[phaseIdx];
@@ -79,7 +79,7 @@ public:
      * space of the porous medium is filled by a given fluid phase.
      */
     void setFullySaturatedLambda(int phaseIdx, Scalar value)
-    { 
+    {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         assert(value > 0);
 
