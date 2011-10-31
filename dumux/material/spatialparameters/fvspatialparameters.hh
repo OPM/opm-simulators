@@ -54,7 +54,7 @@ class FVSpatialParameters: public FVSpatialParametersOneP<TypeTag>
 
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLawParams)) MaterialLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLaw))::Params MaterialLawParams;
 
 public:
     FVSpatialParameters(const GridView &gv)
