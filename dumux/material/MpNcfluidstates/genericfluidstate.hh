@@ -39,12 +39,12 @@ namespace Dumux
  *        multi-phase, multi-component fluid system without using
  *        any assumptions.
  */
-template <class Scalar, class StaticParameters>
+template <class Scalar, class FluidSystem>
 class GenericFluidState
 {
 public:
-    enum { numComponents    = StaticParameters::numComponents };
-    enum { numPhases        = StaticParameters::numPhases };
+    enum { numPhases = FluidSystem::numPhases };
+    enum { numComponents = FluidSystem::numComponents };
 
     GenericFluidState()
     { Valgrind::SetUndefined(*this); }
@@ -62,20 +62,20 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFrac(int phaseIdx, int compIdx) const
-    { return moleFrac_[phaseIdx][compIdx]; }
+    Scalar moleFraction(int phaseIdx, int compIdx) const
+    { return moleFraction_[phaseIdx][compIdx]; }
 
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFrac(int phaseIdx, int compIdx) const
+    Scalar massFraction(int phaseIdx, int compIdx) const
     { 
         return
-            sumMassFrac(phaseIdx) *
-            moleFrac_[phaseIdx][compIdx] *
-            StaticParameters::molarMass(compIdx) /
-            meanMolarMass_[phaseIdx];
+            sumMassFraction(phaseIdx)
+            * moleFraction_[phaseIdx][compIdx]
+            * FluidSystem::molarMass(compIdx)
+            / averageMolarMass_[phaseIdx];
     }
 
     /*!
@@ -83,22 +83,22 @@ public:
      *
      * We define this to be the same as the sum of all mass fractions.
      */
-    Scalar sumMoleFrac(int phaseIdx) const
-    { return sumMoleFrac_[phaseIdx]; }
+    Scalar sumMoleFractions(int phaseIdx) const
+    { return sumMoleFractions_[phaseIdx]; }
 
     /*!
      * \brief The sum of all component mass fractions in a phase []
      *
      * We define this to be the same as the sum of all mole fractions.
      */
-    Scalar sumMassFrac(int phaseIdx) const
-    { return sumMoleFrac_[phaseIdx]; }
+    Scalar sumMassFraction(int phaseIdx) const
+    { return sumMoleFractions_[phaseIdx]; }
 
     /*!
      * \brief The mean molar mass of a fluid phase [kg/mol]
      */
-    Scalar meanMolarMass(int phaseIdx) const
-    { return meanMolarMass_[phaseIdx]; }
+    Scalar averageMolarMass(int phaseIdx) const
+    { return averageMolarMass_[phaseIdx]; }
 
     /*!
      * \brief The molar concentration of a component in a phase [mol/m^3]
@@ -109,40 +109,38 @@ public:
      * http://en.wikipedia.org/wiki/Concentration
      */
     Scalar molarity(int phaseIdx, int compIdx) const
-    { return molarDensity(phaseIdx)*moleFrac(phaseIdx, compIdx); }
+    { return molarDensity(phaseIdx)*moleFraction(phaseIdx, compIdx); }
 
     /*!
      * \brief The fugacity coefficient of a component in a phase []
      */
-    Scalar fugacityCoeff(int phaseIdx, int compIdx) const
-    { return fugacityCoeff_[phaseIdx][compIdx]; }
+    Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
+    { return fugacityCoefficient_[phaseIdx][compIdx]; }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
     Scalar fugacity(int phaseIdx, int compIdx) const
-    { return pressure_[phaseIdx]*fugacityCoeff_[phaseIdx][compIdx]*moleFrac_[phaseIdx][compIdx]; }
+    { return pressure_[phaseIdx]*fugacityCoefficient_[phaseIdx][compIdx]*moleFraction_[phaseIdx][compIdx]; }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
     Scalar molarVolume(int phaseIdx) const
-    { return molarVolume_[phaseIdx]; }
+    { return 1/molarDensity(phaseIdx); }
 
     /*!
      * \brief The mass density of a fluid phase [kg/m^3]
      */
     Scalar density(int phaseIdx) const
-    {
-        return 
-            meanMolarMass_[phaseIdx]/molarVolume_[phaseIdx];
-    }
+    { return density_[phaseIdx]; }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
     Scalar molarDensity(int phaseIdx) const
-    { return 1/molarVolume(phaseIdx); }
+    { return density_[phaseIdx]/averageMolarMass(phaseIdx); }
+
 
     /*!
      * \brief The temperature of a fluid phase [K]
@@ -157,16 +155,16 @@ public:
     { return pressure_[phaseIdx]; };
 
     /*!
-     * \brief The specific enthalpy of a fluid phase [J/kg]
-     */
-    Scalar enthalpy(int phaseIdx) const
-    { return enthalpy_[phaseIdx]; };
-
-    /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    { return enthalpy(phaseIdx) - pressure(phaseIdx)/(density(phaseIdx)); };
+    { return internalEnergy_[phaseIdx]; };
+
+    /*!
+     * \brief The specific enthalpy of a fluid phase [J/kg]
+     */
+    Scalar enthalpy(int phaseIdx) const
+    { return internalEnergy(phaseIdx) + pressure(phaseIdx)/density(phaseIdx); };
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
@@ -200,28 +198,26 @@ public:
     /*!
      * \brief Set the mole fraction of a component in a phase []
      */
-    void setMoleFrac(int phaseIdx, int compIdx, Scalar value)
-    { moleFrac_[phaseIdx][compIdx] = value; }   
+    void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
+    { moleFraction_[phaseIdx][compIdx] = value; }   
 
     /*!
      * \brief Set the fugacity of a component in a phase []
      */
-    void setFugacityCoeff(int phaseIdx, int compIdx, Scalar value)
-    { fugacityCoeff_[phaseIdx][compIdx] = value; }   
+    void setFugacityCoefficient(int phaseIdx, int compIdx, Scalar value)
+    { fugacityCoefficient_[phaseIdx][compIdx] = value; }   
 
     /*!
-     * \brief Set the molar volume of a phase [m^3/mol]
+     * \brief Set the density of a phase [kg / m^3]
      */
-    void setMolarVolume(int phaseIdx, Scalar value)
-    {
-        molarVolume_[phaseIdx] = value;
-    }
+    void setDensity(int phaseIdx, Scalar value)
+    { density_[phaseIdx] = value; }
 
     /*!
-     * \brief Set the specific enthalpy of a phase [J/m^3]
+     * \brief Set the specific internal energy of a phase [J/m^3]
      */
-    void setEnthalpy(int phaseIdx, Scalar value)
-    { enthalpy_[phaseIdx] = value; }
+    void setInternalEnergy(int phaseIdx, Scalar value)
+    { internalEnergy_[phaseIdx] = value; }
 
     /*!
      * \brief Set the dynamic viscosity of a phase [Pa s]
@@ -233,18 +229,18 @@ public:
      * \brief Calculatate the mean molar mass of a phase given that
      *        all mole fractions have been set
      */
-    void updateMeanMolarMass(int phaseIdx)
+    void updateAverageMolarMass(int phaseIdx)
     {
-        meanMolarMass_[phaseIdx] = 0;
-        sumMoleFrac_[phaseIdx] = 0;
+        averageMolarMass_[phaseIdx] = 0;
+        sumMoleFractions_[phaseIdx] = 0;
      
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            sumMoleFrac_[phaseIdx] += moleFrac_[phaseIdx][compIdx];
-            meanMolarMass_[phaseIdx] += moleFrac_[phaseIdx][compIdx]*StaticParameters::molarMass(compIdx);
+            sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];
+            averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
         }
-        sumMoleFrac_[phaseIdx] = std::max(1e-15, sumMoleFrac_[phaseIdx]);
-        Valgrind::CheckDefined(meanMolarMass_[phaseIdx]);
-        Valgrind::CheckDefined(sumMoleFrac_[phaseIdx]);
+        sumMoleFractions_[phaseIdx] = std::max(1e-15, sumMoleFractions_[phaseIdx]);
+        Valgrind::CheckDefined(averageMolarMass_[phaseIdx]);
+        Valgrind::CheckDefined(sumMoleFractions_[phaseIdx]);
     }
     
     /*!
@@ -256,15 +252,15 @@ public:
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                moleFrac_[phaseIdx][compIdx] = fs.moleFrac(phaseIdx, compIdx);
-                fugacityCoeff_[phaseIdx][compIdx] = fs.fugacityCoeff(phaseIdx, compIdx);
+                moleFraction_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
+                fugacityCoefficient_[phaseIdx][compIdx] = fs.fugacityCoefficient(phaseIdx, compIdx);
             }
-            updateMeanMolarMass(phaseIdx);
+            updateAverageMolarMass(phaseIdx);
 
             pressure_[phaseIdx] = fs.pressure(phaseIdx);
             saturation_[phaseIdx] = fs.saturation(phaseIdx);
-            molarVolume_[phaseIdx] = fs.molarVolume(phaseIdx);
-            enthalpy_[phaseIdx] = fs.enthalpy(phaseIdx);
+            density_[phaseIdx] = fs.density(phaseIdx);
+            internalEnergy_[phaseIdx] = fs.internalEnergy(phaseIdx);
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
             temperature_[phaseIdx] = fs.temperature(phaseIdx);
         }
@@ -283,30 +279,30 @@ public:
 #if HAVE_VALGRIND && ! defined NDEBUG
         for (int i = 0; i < numPhases; ++i) {
             for (int j = 0; j < numComponents; ++j) {
-                Valgrind::CheckDefined(fugacityCoeff_[i][j]);
-                Valgrind::CheckDefined(moleFrac_[i][j]);
+                Valgrind::CheckDefined(fugacityCoefficient_[i][j]);
+                Valgrind::CheckDefined(moleFraction_[i][j]);
             }
-            Valgrind::CheckDefined(meanMolarMass_[i]);
+            Valgrind::CheckDefined(averageMolarMass_[i]);
             Valgrind::CheckDefined(pressure_[i]);
             Valgrind::CheckDefined(saturation_[i]);
-            Valgrind::CheckDefined(molarVolume_[i]);
+            Valgrind::CheckDefined(density_[i]);
             Valgrind::CheckDefined(temperature_[i]);
-            //Valgrind::CheckDefined(enthalpy_[i]);
+            //Valgrind::CheckDefined(internalEnergy_[i]);
             Valgrind::CheckDefined(viscosity_[i]);
         }
 #endif // HAVE_VALGRIND
     }
 
 protected:
-    Scalar moleFrac_[numPhases][numComponents];
-    Scalar fugacityCoeff_[numPhases][numComponents];
+    Scalar moleFraction_[numPhases][numComponents];
+    Scalar fugacityCoefficient_[numPhases][numComponents];
 
-    Scalar meanMolarMass_[numPhases];
-    Scalar sumMoleFrac_[numPhases];
+    Scalar averageMolarMass_[numPhases];
+    Scalar sumMoleFractions_[numPhases];
     Scalar pressure_[numPhases];
     Scalar saturation_[numPhases];
-    Scalar molarVolume_[numPhases];
-    Scalar enthalpy_[numPhases];
+    Scalar density_[numPhases];
+    Scalar internalEnergy_[numPhases];
     Scalar viscosity_[numPhases];
     Scalar temperature_[numPhases];
 };

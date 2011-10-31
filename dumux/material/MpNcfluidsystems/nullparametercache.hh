@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Copyright (C) 2009 by Andreas Lauser
+ *   Copyright (C) 2011 by Andreas Lauser                                    *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -20,55 +20,35 @@
 /*!
  * \file
  *
- * \brief Relations valid for an ideal gas.
+ * \brief The a parameter cache which does nothing
  */
-#ifndef DUMUX_IDEAL_GAS_HH
-#define DUMUX_IDEAL_GAS_HH
+#ifndef DUMUX_NULL_PARAMETER_CACHE_HH
+#define DUMUX_NULL_PARAMETER_CACHE_HH
 
-#include <dumux/material/constants.hh>
+#include "parametercachebase.hh"
 
 namespace Dumux
 {
-
 /*!
- * \brief Relations valid for an ideal gas.
+ * \brief The a parameter cache which does nothing
  */
-template <class Scalar>
-class IdealGas
+class NullParameterCache : public ParameterCacheBase<NullParameterCache>
 {
 public:
-    //! The ideal gas constant \f$\mathrm{[J/mol/K]}\f$
-    static constexpr Scalar R = Dumux::Constants<Scalar>::R;
-
+    NullParameterCache() 
+    {};
+    
+    template <class FluidState>
+    void updateAll(const FluidState &fs)
+    {
+    };
+    
     /*!
-     * \brief The density of the gas in \f$\mathrm{[kg/m^3]}\f$, depending on
-     *        pressure, temperature and average molar mass of the gas.
+     * \brief Update all cached parameters of a specific fluid phase
      */
-    static Scalar density(Scalar avgMolarMass,
-                          Scalar temperature,
-                          Scalar pressure)
-    { return pressure*avgMolarMass/(R*temperature); }
-
-    /*!
-     * \brief The pressure of the gas in \f$\mathrm{[N/m^2]}\f$, depending on
-     *        the molar density and temperature.
-     */
-    static Scalar pressure(Scalar temperature,
-                           Scalar rhoMolar)
-    { return R*temperature*rhoMolar; }
-
-    /*!
-     * \brief The molar density of the gas \f$\mathrm{[mol/m^3]}\f$,
-     *        depending on pressure and temperature.
-     */
-    static Scalar molarDensity(Scalar temperature,
-                                Scalar pressure)
-    { return pressure/(R*temperature); }
-
-    DUMUX_DEPRECATED_MSG("use molarDensity()")
-    static Scalar concentration(Scalar temperature,
-                                Scalar pressure)
-    { return molarDensity(temperature, pressure); }
+    template <class FluidState>
+    void updatePhase(const FluidState &fs, int phaseIdx)
+    {};
 };
 
 } // end namepace

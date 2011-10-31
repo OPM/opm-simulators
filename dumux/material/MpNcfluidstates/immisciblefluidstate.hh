@@ -65,13 +65,13 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFrac(int phaseIdx, int compIdx) const
+    Scalar moleFraction(int phaseIdx, int compIdx) const
     { return (phaseIdx == compIdx)?1.0:0.0; }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFrac(int phaseIdx, int compIdx) const
+    Scalar massFraction(int phaseIdx, int compIdx) const
     { return (phaseIdx == compIdx)?1.0:0.0; }
 
     /*!
@@ -79,7 +79,7 @@ public:
      *
      * We define this to be the same as the sum of all mass fractions.
      */
-    Scalar sumMoleFrac(int phaseIdx) const
+    Scalar sumMoleFractions(int phaseIdx) const
     { return 1.0; }
 
     /*!
@@ -87,13 +87,13 @@ public:
      *
      * We define this to be the same as the sum of all mole fractions.
      */
-    Scalar sumMassFrac(int phaseIdx) const
+    Scalar sumMassFractions(int phaseIdx) const
     { return 1.0; }
 
     /*!
-     * \brief The mean molar mass of a fluid phase [kg/mol]
+     * \brief The average molar mass of a fluid phase [kg/mol]
      */
-    Scalar meanMolarMass(int phaseIdx) const
+    Scalar averageMolarMass(int phaseIdx) const
     { return StaticParameters::molarMass(/*compIdx=*/phaseIdx); }
 
     /*!
@@ -106,7 +106,7 @@ public:
      * http://en.wikipedia.org/wiki/Concentration
      */
     Scalar molarity(int phaseIdx, int compIdx) const
-    { return molarDensity(phaseIdx)*moleFrac(phaseIdx, compIdx); }
+    { return molarDensity(phaseIdx)*moleFraction(phaseIdx, compIdx); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
@@ -120,9 +120,9 @@ public:
     Scalar fugacity(int phaseIdx, int compIdx) const
     { 
         if (phaseIdx == compIdx)
-            return fugacityCoeff(phaseIdx, compIdx)*moleFrac(phaseIdx, compIdx)*pressure(phaseIdx);
+            return pressure(phaseIdx);
         else
-            return 0.0;
+            return 0;
     };
     
     /*!
@@ -133,10 +133,10 @@ public:
      * infinite. Beware that this will very likely break your code if
      * you don't keep that in mind.
      */
-    Scalar fugacityCoeff(int phaseIdx, int compIdx) const
+    Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
     {
         if (phaseIdx == compIdx)
-            return fugacityCoeff_[phaseIdx];
+            return 1.0;
         else
             return std::numeric_limits<Scalar>::infinity();
     }
@@ -145,19 +145,19 @@ public:
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
     Scalar molarVolume(int phaseIdx) const
-    { return molarVolume_[phaseIdx]; }
+    { return 1/molarDensity(phaseIdx); }
 
     /*!
      * \brief The mass density of a fluid phase [kg/m^3]
      */
     Scalar density(int phaseIdx) const
-    { return molarDensity(phaseIdx)*meanMolarMass(phaseIdx); }
+    { return density_[phaseIdx]; }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
     Scalar molarDensity(int phaseIdx) const
-    { return 1/molarVolume(phaseIdx); }
+    { return density_[phaseIdx]/averageMolarMass(phaseIdx); }
 
     /*!
      * \brief The temperature of a fluid phase [K]
@@ -175,13 +175,13 @@ public:
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
     Scalar enthalpy(int phaseIdx) const
-    { return enthalpy_[phaseIdx]; }
+    { return internalEnergy_[phaseIdx] + pressure(phaseIdx)/(density(phaseIdx)); }
 
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    { return enthalpy(phaseIdx) - pressure(phaseIdx)/density(phaseIdx); }
+    { return internalEnergy_[phaseIdx]; }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
@@ -228,11 +228,10 @@ public:
     void assign(const FluidState &fs)
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            fugacityCoeff_[phaseIdx] = fs.fugacityCoeff(phaseIdx, phaseIdx);
             pressure_[phaseIdx] = fs.pressure(phaseIdx);
             saturation_[phaseIdx] = fs.saturation(phaseIdx);
-            molarVolume_[phaseIdx] = fs.molarVolume(phaseIdx);
-            enthalpy_[phaseIdx] = fs.enthalpy(phaseIdx);
+            density_[phaseIdx] = fs.density(phaseIdx);
+            internalEnergy_[phaseIdx] = fs.internalEnergy(phaseIdx);
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
         }
         temperature_ = fs.temperature(0);
@@ -257,25 +256,16 @@ public:
     { saturation_[phaseIdx] = value; }   
 
     /*!
-     * \brief Set the fugacity coefficient of a component in a phase []
-     *
-     * The phase is always index the same as the component, since we
-     * assume immiscibility.
+     * \brief Set the density of a phase [kg / m^3]
      */
-    void setFugacityCoeff(int compIdx, Scalar value)
-    { fugacityCoeff_[compIdx] = value; }   
+    void setDensity(int phaseIdx, Scalar value)
+    { density_[phaseIdx] = value; }   
 
     /*!
-     * \brief Set the molar volume of a phase [m^3/mol]
+     * \brief Set the specific internal energy of a phase [J/m^3]
      */
-    void setMolarVolume(int phaseIdx, Scalar value)
-    { molarVolume_[phaseIdx] = value; }   
-
-    /*!
-     * \brief Set the specific enthalpy of a phase [J/m^3]
-     */
-    void setEnthalpy(int phaseIdx, Scalar value)
-    { enthalpy_[phaseIdx] = value; }   
+    void setInternalEnergy(int phaseIdx, Scalar value)
+    { internalEnergy_[phaseIdx] = value; }   
 
     /*!
      * \brief Set the dynamic viscosity of a phase [Pa s]
@@ -296,12 +286,12 @@ public:
 #if HAVE_VALGRIND && ! defined NDEBUG
         for (int i = 0; i < numPhases; ++i) {
             //for (int j = 0; j < numComponents; ++j) {
-            //    Valgrind::CheckDefined(fugacityCoeff_[i][j]);
+            //    Valgrind::CheckDefined(fugacityCoefficient_[i][j]);
             //}
             Valgrind::CheckDefined(pressure_[i]);
             Valgrind::CheckDefined(saturation_[i]);
-            Valgrind::CheckDefined(molarVolume_[i]);
-            //Valgrind::CheckDefined(enthalpy_[i]);
+            Valgrind::CheckDefined(density_[i]);
+            //Valgrind::CheckDefined(internalEnergy_[i]);
             Valgrind::CheckDefined(viscosity_[i]);
         }
 
@@ -310,12 +300,10 @@ public:
     }
 
 protected:
-    Scalar fugacityCoeff_[numComponents];
-
     Scalar pressure_[numPhases];
     Scalar saturation_[numPhases];
-    Scalar molarVolume_[numPhases];
-    Scalar enthalpy_[numPhases];
+    Scalar density_[numPhases];
+    Scalar internalEnergy_[numPhases];
     Scalar viscosity_[numPhases];
     Scalar temperature_;
 };
