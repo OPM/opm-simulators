@@ -81,6 +81,7 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
         dim = Grid::dimension,
         dimWorld = Grid::dimensionworld
     };
+    typedef Dune::FieldMatrix<Scalar, dim, dim> Tensor;
 
     // Get object types for function arguments
     typedef typename GET_PROP_TYPE(TypeTag, FVElementGeometry) FVElementGeometry;
@@ -95,52 +96,47 @@ public:
     /*! Intrinsic permeability tensor K \f$[m^2]\f$ depending
      *  on the position in the domain
      *
-     *  \param element The finite volume element
-     *  \param fvElemGeom The finite-volume geometry in the box scheme
-     *  \param scvIdx The local vertex index
+     *  \param context The execution context
+     *  \param scvIdx The local index of the degree of freedom
      *
      *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos)
      *  could be defined, where globalPos is the vector including the global coordinates
      *  of the finite volume.
      */
-    const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
-                                                    const FVElementGeometry &fvElemGeom,
-                                                    int scvIdx) const
+    template <class Context>
+    const Tensor &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
+                                        int localIdx) const
     { return K_; }
 
     /*! Defines the porosity \f$[-]\f$ of the porous medium depending
      * on the position in the domain
      *
-     *  \param element The finite volume element
-     *  \param fvElemGeom The finite-volume geometry in the box scheme
-     *  \param scvIdx The local vertex index
+     *  \param context The execution context
+     *  \param scvIdx The local index of the degree of freedom
      *
      *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos)
      *  could be defined, where globalPos is the vector including the global coordinates
      *  of the finite volume.
      */
-    Scalar porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
-                    const FVElementGeometry &fvElemGeom,
-                    int scvIdx) const
+    template <class Context>
+    Scalar porosity(const Context &context,                    /*@\label{tutorial-coupled:porosity}@*/
+                    int localIdx) const
     { return 0.2; }
 
     /*! Returns the parameter object for the material law (i.e. Brooks-Corey)
      *  depending on the position in the domain
      *
-     *  \param element The finite volume element
-     *  \param fvElemGeom The finite-volume geometry in the box scheme
-     *  \param scvIdx The local vertex index
+     *  \param context The execution context
+     *  \param scvIdx The local index of the degree of freedom
      *
      *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos)
      *  could be defined, where globalPos is the vector including the global coordinates
      *  of the finite volume.
      */
-    const MaterialLawParams& materialLawParams(const Element &element,            /*@\label{tutorial-coupled:matLawParams}@*/
-                                               const FVElementGeometry &fvElemGeom,
-                                               int scvIdx) const
-    {
-        return materialParams_;
-    }
+    template <class Context>
+    const MaterialLawParams& materialLawParams(const Context &context,            /*@\label{tutorial-coupled:matLawParams}@*/
+                                               int contextIdx) const
+    { return materialParams_; }
 
     // constructor
     TutorialSpatialParametersCoupled(const GridView& gridView) :
@@ -162,7 +158,7 @@ public:
     }
 
 private:
-    Dune::FieldMatrix<Scalar, dim, dim> K_;
+    Tensor K_;
     // Object that holds the values/parameters of the selected material law.
     MaterialLawParams materialParams_;                 /*@\label{tutorial-coupled:matParamsObject}@*/
 };

@@ -110,10 +110,18 @@ class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-co
 
     // Dumux specific types
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
-    typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryTypes) BoundaryTypes;
-    typedef typename GET_PROP_TYPE(TypeTag, FVElementGeometry) FVElementGeometry;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
+
+    // indices of the conservation equations
+    enum { contiWEqIdx = Indices::conti0EqIdx + FluidSystem::wPhaseIdx };
+    enum { contiNEqIdx = Indices::conti0EqIdx + FluidSystem::nPhaseIdx };
+
+    // indices of the primary variables
+    enum { pwIdx = Indices::pwIdx };
+    enum { SnIdx = Indices::SnIdx };
 
 public:
     TutorialProblemCoupled(TimeManager &timeManager)
@@ -142,25 +150,28 @@ public:
 
     //! Returns the temperature within a finite volume. We use constant
     //! 10 degrees Celsius.
-    Scalar temperature() const
+    template <class Context>
+    Scalar temperature(const Context &context, int localIdx) const
     { return 283.15; };
 
     //! Specifies which kind of boundary condition should be used for
     //! which equation for a finite volume on the boundary.
-    void boundaryTypes(BoundaryTypes &BCtypes, const Vertex &vertex) const
+    template <class Context>
+    void boundaryTypes(BoundaryTypes &bcTypes, const Context &context, int localIdx) const
     {
-        const GlobalPosition &pos = vertex.geometry().center();
+        const GlobalPosition &pos = context.pos(localIdx);
         if (pos[0] < eps_) // Dirichlet conditions on left boundary
-           BCtypes.setAllDirichlet();
+           bcTypes.setAllDirichlet();
         else // neuman for the remaining boundaries
-           BCtypes.setAllNeumann();
+           bcTypes.setAllNeumann();
 
     }
 
     //! Evaluates the Dirichlet boundary conditions for a finite volume
     //! on the grid boundary. Here, the 'values' parameter stores
     //! primary variables.
-    void dirichlet(PrimaryVariables &values, const Vertex &vertex) const
+    template <class Context>
+    void dirichlet(PrimaryVariables &values, const Context &context, int localIdx) const
     {
         values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
@@ -169,51 +180,41 @@ public:
     //! Evaluates the boundary conditions for a Neumann boundary
     //! segment. Here, the 'values' parameter stores the mass flux in
     //! [kg/(m^2 * s)] in normal direction of each phase. Negative
-    //! values mean influx.
-    void neumann(PrimaryVariables &values,
-                 const Element &element,
-                 const FVElementGeometry &fvElemGeom,
-                 const Intersection &isIt,
-                 int scvIdx,
-                 int boundaryFaceIdx) const
+    template <class Context>
+    void neumann(PrimaryVariables &values, const Context &context, int localIdx) const
     {
-        const GlobalPosition &pos =
-            fvElemGeom.boundaryFace[boundaryFaceIdx].ipGlobal;
+        const GlobalPosition &pos = context.pos(localIdx);
         Scalar right = this->bboxMax()[0];
         // extraction of oil on the right boundary for approx. 1.e6 seconds
         if (pos[0] > right - eps_) {
             // oil outflux of 30 g/(m * s) on the right boundary.
-            values[Indices::contiWEqIdx] = 0;
-            values[Indices::contiNEqIdx] = 3e-2;
+            values[contiWEqIdx] = 0;
+            values[contiNEqIdx] = 3e-2;
         } else {
             // no-flow on the remaining Neumann-boundaries.
-            values[Indices::contiWEqIdx] = 0;
-            values[Indices::contiNEqIdx] = 0;
+            values[contiWEqIdx] = 0;
+            values[contiNEqIdx] = 0;
         }
-    }
-
-    //! Evaluates the initial value for a control volume. For this
-    //! method, the 'values' parameter stores primary variables.
-    void initial(PrimaryVariables &values,
-                 const Element &element,
-                 const FVElementGeometry &fvElemGeom,
-                 int scvIdx) const
-    {
-        values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
-        values[Indices::SnIdx] = 1.0;
     }
 
     //! Evaluates the source term for all phases within a given
     //! sub-control-volume. In this case, the 'values' parameter
     //! stores the rate mass generated or annihilated per volume unit
     //! in [kg / (m^3 * s)]. Positive values mean that mass is created.
-    void source(PrimaryVariables &values,
-                const Element &element,
-                const FVElementGeometry &fvElemGeom,
-                int scvIdx) const
+    template <class Context>
+    void source(PrimaryVariables &values, const Context &context, int localIdx) const
     {
-        values[Indices::contiWEqIdx] = 0.0;
-        values[Indices::contiNEqIdx]= 0.0;
+        values[contiWEqIdx] = 0.0;
+        values[contiNEqIdx]= 0.0;
+    }
+
+    // Evaluates the initial value for a control volume. For this
+    // method, the 'values' parameter stores primary variables.
+    template <class Context>
+    void initial(PrimaryVariables &values, const Context &context, int localIdx) const
+    {
+        values[pwIdx] = 200.0e3; // 200 kPa = 2 bar
+        values[SnIdx] = 1.0;
     }
 
 private:
