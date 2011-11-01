@@ -23,7 +23,7 @@
  * \brief The Peng-Robinson parameters for a pure component
  *
  * See:
- *
+ * 
  * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
  * McGraw-Hill, 1987, pp. 43-44
  */
@@ -41,7 +41,7 @@ namespace Dumux
  *        parameters of a pure component.
  *
  * See:
- *
+ * 
  * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
  * McGraw-Hill, 1987, pp. 43-44
  */
@@ -49,7 +49,7 @@ template <class Scalar, class ComponentT>
 class PengRobinsonParamsPure : public PengRobinsonParams<Scalar>
 {
     typedef PengRobinsonParams<Scalar> ParentType;
-
+    
     // the ideal gas constant
     static const Scalar R = Dumux::Constants<Scalar>::R;
 
@@ -61,7 +61,7 @@ public:
      *        the component.
      *
      * See:
-     *
+     * 
      * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
      * McGraw-Hill, 1987, pp. 43-44
      */

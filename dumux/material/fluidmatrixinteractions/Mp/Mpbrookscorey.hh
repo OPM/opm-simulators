@@ -18,7 +18,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file
+ * \file 
  * Implements a Brooks-Corey saturation-capillary pressure relation
  * for M-phase fluid systems.
  */
@@ -49,7 +49,7 @@ public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
     enum { numPhases = numPhasesV };
-
+    
     /*!
      * \brief The Brooks-Corey capillary pressure-saturation curve.
      *
@@ -60,14 +60,14 @@ public:
     */
     template <class pcContainerT, class SatContainerT>
     static void pC(pcContainerT &pc,
-                   const Params &params,
+                   const Params &params, 
                    const SatContainerT &saturations,
                    Scalar temperature)
     {
         for (int i = 0; i < numPhases; ++i) {
             Scalar S = saturations[i];
             assert(0 <= S && S <= 1);
-            pc[i] =
+            pc[i] = 
                 params.entryPressure(i) *
                 std::pow(S, -1.0/params.alpha(i));
         }
@@ -88,7 +88,7 @@ public:
      */
     template <class SatContainerT, class pcContainerT>
     static void S(SatContainerT &saturations,
-                  const Params &params,
+                  const Params &params, 
                   const pcContainerT &pc,
                   Scalar temperature)
     {
@@ -139,7 +139,7 @@ public:
      */
     template <class krContainerT, class SatContainerT>
     static void kr(krContainerT &kr,
-                   const Params &params,
+                   const Params &params, 
                    const SatContainerT &saturations,
                    Scalar temperature)
     {

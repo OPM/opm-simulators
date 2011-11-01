@@ -50,7 +50,7 @@ public:
     { Valgrind::SetUndefined(*this); }
 
     /*****************************************************
-     * Generic access to fluid properties (No assumptions
+     * Generic access to fluid properties (No assumptions 
      * on thermodynamic equilibrium required)
      *****************************************************/
     /*!
@@ -70,7 +70,7 @@ public:
      * \brief The mass fraction of a component in a phase []
      */
     Scalar massFraction(int phaseIdx, int compIdx) const
-    {
+    { 
         return
             sumMassFraction(phaseIdx)
             * moleFraction_[phaseIdx][compIdx]
@@ -147,7 +147,7 @@ public:
      */
     Scalar temperature(int phaseIdx) const
     { return temperature_[phaseIdx]; }
-
+    
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
@@ -173,7 +173,7 @@ public:
     { return viscosity_[phaseIdx]; };
 
     /*****************************************************
-     * Setter methods. Note that these are not part of the
+     * Setter methods. Note that these are not part of the 
      * generic FluidState interface but specific for each
      * implementation...
      *****************************************************/
@@ -181,31 +181,31 @@ public:
      * \brief Set the temperature [K] of a fluid phase
      */
     void setTemperature(int phaseIdx, Scalar value)
-    { temperature_[phaseIdx] = value; }
+    { temperature_[phaseIdx] = value; }   
 
     /*!
      * \brief Set the fluid pressure of a phase [Pa]
      */
     void setPressure(int phaseIdx, Scalar value)
-    { pressure_[phaseIdx] = value; }
+    { pressure_[phaseIdx] = value; }   
 
     /*!
      * \brief Set the saturation of a phase []
      */
     void setSaturation(int phaseIdx, Scalar value)
-    { saturation_[phaseIdx] = value; }
+    { saturation_[phaseIdx] = value; }   
 
     /*!
      * \brief Set the mole fraction of a component in a phase []
      */
     void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
-    { moleFraction_[phaseIdx][compIdx] = value; }
+    { moleFraction_[phaseIdx][compIdx] = value; }   
 
     /*!
      * \brief Set the fugacity of a component in a phase []
      */
     void setFugacityCoefficient(int phaseIdx, int compIdx, Scalar value)
-    { fugacityCoefficient_[phaseIdx][compIdx] = value; }
+    { fugacityCoefficient_[phaseIdx][compIdx] = value; }   
 
     /*!
      * \brief Set the density of a phase [kg / m^3]
@@ -223,7 +223,7 @@ public:
      * \brief Set the dynamic viscosity of a phase [Pa s]
      */
     void setViscosity(int phaseIdx, Scalar value)
-    { viscosity_[phaseIdx] = value; }
+    { viscosity_[phaseIdx] = value; }   
 
     /*!
      * \brief Calculatate the mean molar mass of a phase given that
@@ -233,7 +233,7 @@ public:
     {
         averageMolarMass_[phaseIdx] = 0;
         sumMoleFractions_[phaseIdx] = 0;
-
+     
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];
             averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
@@ -242,9 +242,9 @@ public:
         Valgrind::CheckDefined(averageMolarMass_[phaseIdx]);
         Valgrind::CheckDefined(sumMoleFractions_[phaseIdx]);
     }
-
+    
     /*!
-     * \brief Retrieve all parameters from an arbitrary fluid
+     * \brief Retrieve all parameters from an arbitrary fluid 
      *        state.
      */
     template <class FluidState>

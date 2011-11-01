@@ -79,7 +79,7 @@ public:
      * \f[
      f_i = \phi_i x_i \;,
      \f]
-     * where \f$f_i\f$ is the component's fugacity and \f$x_i\f$ is
+     * where \f$f_i\f$ is the component's fugacity and \f$x_i\f$ is 
      * the component's mole fraction.
      *
      * See:
@@ -110,7 +110,7 @@ public:
         Scalar Astar = params.a(phaseIdx)*p/(RT*RT);
         Scalar Bstar = params.b(phaseIdx)*p/(RT);
 
-
+        
         // calculate delta_i (see: Reid, p. 145)
         Scalar deltai = 2*std::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
         Scalar tmp = 0;
@@ -122,7 +122,7 @@ public:
         };
         deltai *= tmp;
 
-        Scalar base =
+        Scalar base = 
             (2*Z + Bstar*(u + std::sqrt(u*u - 4*w))) /
             (2*Z + Bstar*(u - std::sqrt(u*u - 4*w)));
         Scalar expo =  Astar/(Bstar*std::sqrt(u*u - 4*w))*(bi_b - deltai);

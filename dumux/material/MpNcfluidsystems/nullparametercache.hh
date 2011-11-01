@@ -35,14 +35,14 @@ namespace Dumux
 class NullParameterCache : public ParameterCacheBase<NullParameterCache>
 {
 public:
-    NullParameterCache()
+    NullParameterCache() 
     {};
-
+    
     template <class FluidState>
     void updateAll(const FluidState &fs)
     {
     };
-
+    
     /*!
      * \brief Update all cached parameters of a specific fluid phase
      */

@@ -23,7 +23,7 @@
  * \brief The Peng-Robinson parameters for a mixture
  *
  * See:
- *
+ * 
  * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
  * McGraw-Hill, 1987, pp. 43-44
  */
@@ -41,7 +41,7 @@ namespace Dumux
  * \brief The mixing rule for the Peng-Robinson equation of state as given in Reid, p. 82
  *
  * See:
- *
+ * 
  * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
  * McGraw-Hill, 1987, p. 82
  */
@@ -49,16 +49,16 @@ template <class Scalar, class StaticParams, int phaseIdx>
 class PengRobinsonParamsMixture : public PengRobinsonParams<Scalar>
 {
     typedef Dumux::PengRobinsonParams<Scalar> ParentType;
-
+    
     // Peng-Robinson parameters for pure substances
     typedef Dumux::PengRobinsonParams<Scalar> PureParams;
-
+    
     // The Peng-Robinson EOS for this mixture
     typedef Dumux::PengRobinson<Scalar> PengRobinson;
 
     // number of components of which the fluid is composed
     enum { numComponents = StaticParams::numComponents };
-
+    
     // ideal gas constant
     static constexpr Scalar R = Dumux::Constants<Scalar>::R;
 
@@ -71,7 +71,7 @@ public:
     template <class FluidState>
     void updatePure(const FluidState &fluidState)
     {
-        updatePure(fluidState.temperature(phaseIdx),
+        updatePure(fluidState.temperature(phaseIdx), 
                    fluidState.pressure(phaseIdx));
     }
 
@@ -125,15 +125,15 @@ public:
 
                 // interaction coefficient as given in SPE5
                 Scalar Psi = StaticParams::interactionCoefficient(i, j);
-
+                
                 // mixing rule from Reid, page 82
-                a += xi*xj*std::sqrt(pureParams_[i].a()*pureParams_[j].a())*(1 - Psi);
+                a += xi*xj*std::sqrt(pureParams_[i].a()*pureParams_[j].a())*(1 - Psi); 
             }
 
             // mixing rule from Reid, page 82
             b += xi * pureParams_[i].b();
         }
-
+        
         this->setA(a);
         this->setB(b);
     }
@@ -165,8 +165,8 @@ public:
      */
     const PureParams &pureParams(int compIdx) const
     { return pureParams_[compIdx]; }
-
-
+      
+        
 protected:
     PureParams pureParams_[numComponents];
 };

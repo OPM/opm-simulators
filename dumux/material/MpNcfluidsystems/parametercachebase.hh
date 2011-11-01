@@ -34,16 +34,16 @@ template <class Implementation>
 class ParameterCacheBase
 {
 public:
-    ParameterCacheBase()
+    ParameterCacheBase() 
     {};
-
+    
     template <class FluidState>
     void updateAll(const FluidState &fs)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             updatePhase(fs, phaseIdx);
     };
-
+    
     /*!
      * \brief Update all cached parameters of a specific fluid phase
      */
@@ -103,7 +103,7 @@ public:
      * updatePhase()!
      */
     template <class FluidState>
-    void updatePhaseSingleMoleFraction(const FluidState &fs,
+    void updatePhaseSingleMoleFraction(const FluidState &fs, 
                                        int phaseIdx,
                                        int compIdx)
     {
@@ -112,7 +112,7 @@ public:
 
 private:
     Implementation &asImp_()
-    { return *static_cast<Implementation*>(this); }
+    { return *static_cast<Implementation*>(this); } 
 };
 
 } // end namepace

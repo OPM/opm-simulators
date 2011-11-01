@@ -55,14 +55,14 @@ public:
      */
     template <class ContainerT, class FluidState>
     static void capillaryPressures(ContainerT &values,
-                                   const Params &params,
+                                   const Params &params, 
                                    const FluidState &state)
     {
         // non-wetting phase gets the capillary pressure added
         values[nPhaseIdx] = 0;
 
         // wetting phase does not get anything added
-        values[wPhaseIdx] = - TwoPLaw::pC(params, state.saturation(wPhaseIdx));
+        values[wPhaseIdx] = - TwoPLaw::pC(params, state.saturation(wPhaseIdx)); 
     }
 
     /*!
@@ -70,7 +70,7 @@ public:
      */
     template <class ContainerT, class FluidState>
     static void relativePermeabilities(ContainerT &values,
-                                       const Params &params,
+                                       const Params &params, 
                                        const FluidState &state)
     {
         values[wPhaseIdx] = TwoPLaw::krw(params, state.saturation(wPhaseIdx));

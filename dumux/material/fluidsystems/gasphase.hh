@@ -22,8 +22,8 @@
  *
  * \brief A gaseous phase consisting of a single component.
  */
-#ifndef DUMUX_GAS_PHASE_HH
-#define DUMUX_GAS_PHASE_HH
+#ifndef DUMUX_GASPHASE_HH
+#define DUMUX_GASPHASE_HH
 
 namespace Dumux
 {
@@ -41,12 +41,6 @@ public:
      */
     static const char *name()
     { return Component::name(); }
-
-    /*!
-     * \brief Returs whether the fluid is a liquid
-     */
-    static bool isLiquid()
-    { return false; };
 
     /*!
      * \brief The mass in [kg] of one mole of the component.
@@ -98,13 +92,13 @@ public:
     {  return Component::gasPressure(temperature, density); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] the pure component as a gas.
+     * \brief Specific enthalpy [J/kg] the pure component in gas.
      */
     static const Scalar enthalpy(Scalar temperature, Scalar pressure)
-    {  return Component::gasEnthalpy(temperature, pressure); }
+    { return Component::gasEnthalpy(temperature, pressure); }
 
     /*!
-     * \brief Specific internal energy [J/kg] the pure component as a gas.
+     * \brief Specific internal energy [J/kg] the pure component in gas.
      */
     static const Scalar internalEnergy(Scalar temperature, Scalar pressure)
     { return Component::gasInternalEnergy(temperature, pressure); }
@@ -114,19 +108,7 @@ public:
      */
     static Scalar viscosity(Scalar temperature, Scalar pressure)
     {  return Component::gasViscosity(temperature, pressure); }
-
-    /*!
-     * \brief Thermal conductivity of the fluid [W/(m^2 K/m)].
-     */
-    static Scalar thermalConductivity(Scalar temperature, Scalar pressure)
-    { return Component::gasThermalConductivity(temperature, pressure); }
-
-    /*!
-     * \brief Specific isobaric heat capacity of the fluid [J/kg].
-     */
-    static Scalar heatCapacity(Scalar temperature, Scalar pressure)
-    { return Component::gasHeatCapacity(temperature, pressure); }
 };
 } // namespace
 
-#endif
+#endif /* DUMUX_AIRPHASE_HH */

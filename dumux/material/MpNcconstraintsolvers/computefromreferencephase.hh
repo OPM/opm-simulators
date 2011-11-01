@@ -104,9 +104,9 @@ public:
      *                    enthalpy/internal energy of each phase
      *                    should also be set.
      */
-    static void solve(MutableParameters &mutParams,
-                      int refPhaseIdx,
-                      bool setViscosity,
+    static void solve(MutableParameters &mutParams, 
+                      int refPhaseIdx, 
+                      bool setViscosity, 
                       bool setEnthalpy)
     {
         ComponentVector fugVec;
@@ -114,12 +114,12 @@ public:
         // compute the density and enthalpy of the
         // reference phase
         mutParams.updateMeanMolarMass(refPhaseIdx);
-        mutParams.setMolarVolume(refPhaseIdx,
+        mutParams.setMolarVolume(refPhaseIdx, 
                                  FluidSystem::computeMolarVolume(mutParams, refPhaseIdx));
 
         if (setEnthalpy)
             mutParams.setEnthalpy(refPhaseIdx,
-                                  FluidSystem::computeEnthalpy(mutParams, refPhaseIdx));
+                                  FluidSystem::computeEnthalpy(mutParams, refPhaseIdx));           
 
         if (setViscosity)
             mutParams.setViscosity(refPhaseIdx,
@@ -128,7 +128,7 @@ public:
         // compute the fugacities of all components in the reference phase
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             mutParams.setFugacityCoeff(refPhaseIdx, compIdx,
-                                       FluidSystem::computeFugacityCoeff(mutParams, refPhaseIdx, compIdx));
+                                       FluidSystem::computeFugacityCoeff(mutParams, refPhaseIdx, compIdx));           
             fugVec[compIdx] = mutParams.fugacity(refPhaseIdx, compIdx);
         }
 
@@ -136,7 +136,7 @@ public:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (phaseIdx == refPhaseIdx)
                 continue; // reference phase is already calculated
-
+            
             mutParams.setTemperature(phaseIdx, mutParams.temperature(refPhaseIdx));
 
             CompositionFromFugacities::guessInitial(mutParams, phaseIdx, fugVec);

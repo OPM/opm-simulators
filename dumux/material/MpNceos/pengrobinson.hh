@@ -76,7 +76,7 @@ public:
      * difference between the gas and liquid phase fugacity zero.
      */
     template <class Params>
-    static Scalar computeVaporPressure(const Params &params, Scalar T)
+    static Scalar computeVaporPressure(const Params &params, Scalar T) 
     {
         typedef typename Params::Component Component;
         if (T >= Component::criticalTemperature())
@@ -85,7 +85,7 @@ public:
         // initial guess of the vapor pressure
         Scalar Vm[3];
         const Scalar eps = Component::criticalPressure()*1e-10;
-
+        
         // use the Ambrose-Walton method to get an initial guess of
         // the vapor pressure
         Scalar pVap = ambroseWalton_(params, T);
@@ -97,19 +97,19 @@ public:
             assert(numSol == 3);
 
             Scalar f = fugacityDifference_(params, T, pVap, Vm[0], Vm[2]);
-            Scalar df_dp =
+            Scalar df_dp = 
                 fugacityDifference_(params, T, pVap  + eps, Vm[0], Vm[2])
                 -
                 fugacityDifference_(params, T, pVap - eps, Vm[0], Vm[2]);
             df_dp /= 2*eps;
-
+                        
             Scalar delta = f/df_dp;
             pVap = pVap - delta;
 
             if (std::abs(delta/pVap) < 1e-10)
                 break;
         }
-
+        
         return pVap;
     }
 
@@ -139,7 +139,7 @@ public:
         Scalar a2 = - (1 - Bstar);
         Scalar a3 = Astar - Bstar*(3*Bstar + 2);
         Scalar a4 = Bstar*(- Astar + Bstar*(1 + Bstar));
-
+        
         // ignore the first two results if the smallest
         // compressibility factor is <= 0.0. (this means that if we
         // would get negative molar volumes for the liquid phase, we
@@ -165,7 +165,7 @@ public:
             Scalar Vmin, Vmax;
             bool hasExtrema;
             hasExtrema = findExtrema_(Vmin, Vmax, params, phaseIdx);
-
+            
             if (!hasExtrema) {
                 // if the EOS does not exhibit any extrema, the fluid
                 // is critical...
@@ -205,8 +205,8 @@ public:
         Scalar Z = p*Vm/RT;
         Scalar Bstar = p*params.b() / RT;
 
-        Scalar tmp =
-            (Vm + params.b()*(1 + std::sqrt(2))) /
+        Scalar tmp = 
+            (Vm + params.b()*(1 + std::sqrt(2))) / 
             (Vm + params.b()*(1 - std::sqrt(2)));
         Scalar expo = - params.a()/(RT * 2 * params.b() * std::sqrt(2));
         Scalar fugCoeff =
@@ -239,8 +239,8 @@ protected:
     {
         Scalar Vcrit;
         findCriticalMolarVolume_(Vcrit,
-                                 params,
-                                 phaseIdx,
+                                 params, 
+                                 phaseIdx, 
                                  Vm,
                                  gasPhase);
         if (gasPhase)
@@ -250,7 +250,7 @@ protected:
     }
 
     template <class Params>
-    static void findCriticalMolarVolume_(Scalar &Vcrit,
+    static void findCriticalMolarVolume_(Scalar &Vcrit, 
                                          const Params &params,
                                          int phaseIdx,
                                          Scalar Vcubic,
@@ -267,10 +267,10 @@ protected:
         for (int i = 0; ; ++i) {
             tmpParams.setTemperature(phaseIdx, T);
             tmpParams.updateEosParams(phaseIdx);
-
+            
             if (findExtrema_(minVm, maxVm, tmpParams, phaseIdx, /*hintSet=*/false))
                 break;
-
+            
             T = (T + params.temperature(phaseIdx)) / 2;
             if (i >= 3) {
                 DUNE_THROW(NumericalProblem,
@@ -313,7 +313,7 @@ protected:
             // molar volume and the minimum's molar volume regarding
             // temperature
             Scalar fPrime = (fStar - f)/eps;
-
+                            
             // update value for the current iteration
             Scalar delta = f/fPrime;
             if (delta > 0)
@@ -328,7 +328,7 @@ protected:
                                "Could not determine the critical point of phase "
                                << phaseIdx);
                 }
-
+                
                 tmpParams.setTemperature(phaseIdx, Tstar);
                 tmpParams.updateEosParams(phaseIdx);
                 if (findExtrema_(minVm, maxVm, tmpParams, phaseIdx, /*hintSet=*/(j==0))) {
@@ -348,10 +348,10 @@ protected:
     // find the two molar volumes where the EOS exhibits extrema and
     // which are larger than the covolume of the phase
     template <class Params>
-    static bool findExtrema_(Scalar &Vmin,
+    static bool findExtrema_(Scalar &Vmin, 
                              Scalar &Vmax,
                              const Params &params,
-                             int phaseIdx,
+                             int phaseIdx, 
                              bool hintSet = false)
     {
         Scalar a = params.a(phaseIdx);
@@ -360,7 +360,7 @@ protected:
         Scalar w = -1;
 
         Scalar RT = R*params.temperature(phaseIdx);
-
+        
         // calculate coefficients of the 4th order polynominal in
         // monomial basis
         Scalar a1 = RT;
@@ -368,7 +368,7 @@ protected:
         Scalar a3 = 2*RT*w*b*b + RT*u*u*b*b  + 4*a*b - u*a*b;
         Scalar a4 = 2*RT*u*w*b*b*b + 2*u*a*b*b - 2*a*b*b;
         Scalar a5 = RT*w*w*b*b*b*b - u*a*b*b*b;
-
+            
         // Newton method to find first root
 
         // if the values which we got on Vmin and Vmax are usefull, we
@@ -379,14 +379,14 @@ protected:
         for (int i = 0; std::abs(delta) > 1e-9; ++i) {
             Scalar f = a5 + V*(a4 + V*(a3 + V*(a2 + V*a1)));
             Scalar fPrime = a4 + V*(2*a3 + V*(3*a2 + V*4*a1));
-
+            
             if (std::abs(fPrime) < 1e-20) {
                 // give up if the derivative is zero
                 Vmin = 0;
                 Vmax = 0;
                 return false;
             }
-
+                
 
             delta = f/fPrime;
             V -= delta;
@@ -398,14 +398,14 @@ protected:
                 return false;
             }
         }
-
+        
         // polynomial division
         Scalar b1 = a1;
         Scalar b2 = a2 + V*b1;
         Scalar b3 = a3 + V*b2;
         Scalar b4 = a4 + V*b3;
-
-        // invert resulting cubic polynomial analytically
+        
+        // invert resulting cubic polynomial analytically 
         Scalar allV[4];
         allV[0] = V;
         int numSol = 1 + Dumux::invertCubicPolynomial(&allV[1], b1, b2, b3, b4);
@@ -434,7 +434,7 @@ protected:
      * \return Vapor pressure estimate in bar
      *
      * See:
-     *
+     * 
      * D. Ambrose, J. Walton: "Vapor Pressures up to Their Critical
      * Temperatures of Normal Alkanes and 1-Alkanols", Pure
      * Appl. Chem., 61, 1395-1403, 1989
@@ -443,11 +443,11 @@ protected:
     static Scalar ambroseWalton_(const Params &params, Scalar T)
     {
         typedef typename Params::Component Component;
-
+        
         Scalar Tr = T / Component::criticalTemperature();
         Scalar tau = 1 - Tr;
         Scalar omega = Component::acentricFactor();
-
+        
         Scalar f0 = (tau*(-5.97616 + std::sqrt(tau)*(1.29874 - tau*0.60394)) - 1.06841*std::pow(tau, 5))/Tr;
         Scalar f1 = (tau*(-5.03365 + std::sqrt(tau)*(1.11505 - tau*5.41217)) - 7.46628*std::pow(tau, 5))/Tr;
         Scalar f2 = (tau*(-0.64771 + std::sqrt(tau)*(2.41539 - tau*4.26979)) + 3.25259*std::pow(tau, 5))/Tr;
@@ -460,7 +460,7 @@ protected:
      *        fugacities in [bar]
      *
      * \param params Parameters
-     * \param T Temperature [K]
+     * \param T Temperature [K] 
      * \param p Pressure [bar]
      * \param VmLiquid Molar volume of the liquid phase [cm^3/mol]
      * \param VmGas Molar volume of the gas phase [cm^3/mol]
