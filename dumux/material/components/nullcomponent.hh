@@ -40,7 +40,7 @@ namespace Dumux
  * Its main purpose is to make things compile and give runtime errors
  * if it is actually used.
  */
-template <class Scalar>
+template <class Scalar, int isLiquidV=-1>
 class NullComponent : public Component<Scalar, NullComponent<Scalar> >
 {
 };
