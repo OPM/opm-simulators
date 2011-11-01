@@ -99,7 +99,7 @@ public:
     /*!
      * \brief Return whether a phase is liquid
      */
-    static bool phaseIsLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
@@ -215,6 +215,10 @@ public:
         return accFac[compIdx];
     };
 
+    /****************************************
+     * thermodynamic relations
+     ****************************************/
+
     /*!
      * \brief Initialize the fluid system's static parameters generically
      *
@@ -256,7 +260,7 @@ public:
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -292,8 +296,8 @@ public:
                                       int phaseIdx,
                                       int compIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= compIdx  && compIdx <= numComponents);
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= compIdx  && compIdx < numComponents);
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -318,7 +322,7 @@ public:
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -456,7 +460,7 @@ public:
     }
 
     /*!
-     * \brief Thermal conductivity of a fluid phase.
+     * \brief Thermal conductivity of a fluid phase [W/(m^2 K/m)].
      *
      * Use the conductivity of air and water as a first approximation.
      * Source:

@@ -22,8 +22,8 @@
  *
  * \brief A liquid phase consisting of a single component.
  */
-#ifndef DUMUX_LIQUIDPHASE_HH
-#define DUMUX_LIQUIDPHASE_HH
+#ifndef DUMUX_LIQUID_PHASE_HH
+#define DUMUX_LIQUID_PHASE_HH
 
 namespace Dumux
 {
@@ -36,12 +36,18 @@ class LiquidPhase
 {
 public:
     typedef ComponentT Component;
-
+    
     /*!
      * \brief A human readable name for the compoent.
      */
     static const char *name()
     { return Component::name(); }
+
+    /*!
+     * \brief Returs whether the fluid is a liquid
+     */
+    static bool isLiquid()
+    { return true; };
 
     /*!
      * \brief The mass in [kg] of one mole of the component.
@@ -93,13 +99,13 @@ public:
     {  return Component::liquidPressure(temperature, density); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] the pure component in liquid.
+     * \brief Specific enthalpy [J/kg] the pure component as a liquid.
      */
     static const Scalar enthalpy(Scalar temperature, Scalar pressure)
     {  return Component::liquidEnthalpy(temperature, pressure); }
 
     /*!
-     * \brief Specific internal energy [J/kg] the pure component in gas.
+     * \brief Specific internal energy [J/kg] the pure component as a liquid.
      */
     static const Scalar internalEnergy(Scalar temperature, Scalar pressure)
     { return Component::liquidInternalEnergy(temperature, pressure); }
@@ -109,6 +115,19 @@ public:
      */
     static Scalar viscosity(Scalar temperature, Scalar pressure)
     {  return Component::liquidViscosity(temperature, pressure); }
+
+    /*!
+     * \brief Thermal conductivity of the fluid [W/(m^2 K/m)].
+     */
+    static Scalar thermalConductivity(Scalar temperature, Scalar pressure)
+    { return Component::liquidThermalConductivity(temperature, pressure); }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the fluid [J/kg].
+     */
+    static Scalar heatCapacity(Scalar temperature, Scalar pressure)
+    { return Component::liquidHeatCapacity(temperature, pressure); }
 };
 } // namespace
-#endif /* DUMUX_LIQUIDPHASE_HH */
+
+#endif 

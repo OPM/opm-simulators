@@ -179,6 +179,29 @@ public:
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::liquidViscosity()"); }
 
+    /*!
+     * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a gas.
+     */
+    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasThermalConductivity()"); }
+
+    /*!
+     * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a liquid.
+     */
+    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidThermalConductivity()"); }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the component [J/kg] as a gas.
+     */
+    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasHeatCapacity()"); }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the component [J/kg] as a liquid.
+     */
+    static Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidHeatCapacity()"); }
 };
 
 } // end namepace
