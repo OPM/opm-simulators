@@ -83,10 +83,10 @@ public:
     static const char *phaseName(int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        
+
         static const char *name[] = {
             "w",
-            "n"          
+            "n"
         };
         return name[phaseIdx];
     }
@@ -122,7 +122,7 @@ public:
         // we assume immisibility
         return true;
     }
-    
+
     /****************************************
      * Component related static parameters
      ****************************************/
@@ -172,7 +172,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::criticalTemperature();
-        return NonWettingPhase::criticalTemperature();     
+        return NonWettingPhase::criticalTemperature();
     };
 
     /*!
@@ -184,7 +184,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::criticalPressure();
-        return NonWettingPhase::criticalPressure();     
+        return NonWettingPhase::criticalPressure();
     };
 
     /*!
@@ -196,7 +196,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::acentricFactor();
-        return NonWettingPhase::acentricFactor();     
+        return NonWettingPhase::acentricFactor();
     };
 
     /****************************************
@@ -229,7 +229,7 @@ public:
                           int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        
+
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
@@ -264,7 +264,7 @@ public:
             return 1.0;
         return std::numeric_limits<Scalar>::infinity();
     }
-        
+
     /*!
      * \brief Return the viscosity of a phase [Pa*s].
      *
@@ -281,7 +281,7 @@ public:
                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        
+
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
@@ -296,7 +296,7 @@ public:
      * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
      * gradient of the chemical potential and follows the law
      *
-     * \f[ J = - D \grad mu_\kappa \f] 
+     * \f[ J = - D \grad mu_\kappa \f]
      *
      * where \f$\mu_\kappa\f$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
@@ -325,12 +325,12 @@ public:
      *        \f$i\f$ and \f$j\f$ in this phase.
      */
     template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState, 
+    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
                                              int phaseIdx,
                                              int compIIdx,
                                              int compJIdx)
-                                  
+
     {
         DUNE_THROW(Dune::InvalidStateException,
                    "Binary diffusion coefficients of components are meaningless if"
@@ -353,7 +353,7 @@ public:
                                  int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        
+
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
@@ -370,7 +370,7 @@ public:
                                       int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        
+
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
@@ -391,7 +391,7 @@ public:
                                int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        
+
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)

@@ -24,7 +24,7 @@
  *        single-component fluid or a mixture
  *
  * See:
- * 
+ *
  * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
  * McGraw-Hill, 1987, pp. 43-44
  */
@@ -37,7 +37,7 @@ namespace Dumux
  * \brief Stores and provides access to the Peng-Robinson parameters
  *
  * See:
- * 
+ *
  * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
  * McGraw-Hill, 1987, pp. 43-44
  */

@@ -36,7 +36,7 @@ class LiquidPhase
 {
 public:
     typedef ComponentT Component;
-    
+
     /*!
      * \brief A human readable name for the compoent.
      */
@@ -130,4 +130,4 @@ public:
 };
 } // namespace
 
-#endif 
+#endif

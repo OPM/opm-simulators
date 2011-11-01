@@ -73,7 +73,7 @@ public:
     static constexpr int lPhaseIdx = 0;
     //! Index of the gas phase
     static constexpr int gPhaseIdx = 1;
-    
+
     //! The components for pure water
     typedef TabulatedH2O H2O;
     //typedef SimpleH2O H2O;
@@ -81,7 +81,7 @@ public:
 
     //! The components for pure nitrogen
     typedef SimpleN2 N2;
- 
+
     /*!
      * \brief Return the human readable name of a fluid phase
      */
@@ -89,7 +89,7 @@ public:
     {
         static const char *name[] = {
             "l",
-            "g"          
+            "g"
         };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -132,7 +132,7 @@ public:
 
     //! Number of components in the fluid system
     static constexpr int numComponents = 2;
-    
+
     static constexpr int H2OIdx = 0;
     static constexpr int N2Idx = 1;
 
@@ -149,7 +149,7 @@ public:
         assert(0 <= compIdx && compIdx < numComponents);
         return name[compIdx];
     }
-    
+
     /*!
      * \brief Return the molar mass of a component in [kg/mol].
      */
@@ -227,8 +227,8 @@ public:
      */
     static void init()
     {
-        init(/*tempMin=*/273.15, 
-             /*tempMax=*/623.15, 
+        init(/*tempMin=*/273.15,
+             /*tempMax=*/623.15,
              /*numTemp=*/100,
              /*pMin=*/-10,
              /*pMax=*/20e6,
@@ -236,7 +236,7 @@ public:
     }
 
     /*!
-     * \brief Initialize the fluid system's static parameters using 
+     * \brief Initialize the fluid system's static parameters using
      *        problem specific temperature and pressure ranges
      */
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
@@ -246,7 +246,7 @@ public:
             std::cout << "Initializing tables for the H2O fluid properties ("
                       << nTemp*nPress
                       << " entries).\n";
-            
+
             TabulatedH2O::init(tempMin, tempMax, nTemp,
                                pressMin, pressMax, nPress);
         }
@@ -273,10 +273,10 @@ public:
         case gPhaseIdx:
             // assume ideal gas
             return
-                IdealGas::molarDensity(T, p) 
+                IdealGas::molarDensity(T, p)
                 * fluidState.averageMolarMass(gPhaseIdx);
         }
-        
+
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     };
 
@@ -302,7 +302,7 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
         switch (phaseIdx) {
-        case lPhaseIdx: 
+        case lPhaseIdx:
             switch (compIdx) {
             case H2OIdx: return H2O::vaporPressure(T)/p;
             case N2Idx: return BinaryCoeff::H2O_N2::henry(T)/p;
@@ -313,7 +313,7 @@ public:
 
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase or component index");
     }
-    
+
     /*!
      * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
      */
@@ -334,7 +334,7 @@ public:
             // assume pure water for the gas phase
             return N2::gasViscosity(T, p);
         }
-        
+
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     };
 
@@ -345,7 +345,7 @@ public:
      * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
      * gradient of the chemical potential and follows the law
      *
-     * \f[ J = - D \grad mu_\kappa \f] 
+     * \f[ J = - D \grad mu_\kappa \f]
      *
      * where \f$\mu_\kappa\f$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
@@ -373,12 +373,12 @@ public:
      *        \f$i\f$ and \f$j\f$ in this phase.
      */
     template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState, 
+    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
                                              int phaseIdx,
                                              int compIIdx,
                                              int compJIdx)
-                                  
+
     {
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
@@ -396,7 +396,7 @@ public:
 #endif
 
         Scalar T = fluidState.temperature(phaseIdx);
-        Scalar p = fluidState.pressure(phaseIdx);       
+        Scalar p = fluidState.pressure(phaseIdx);
 
         switch (phaseIdx) {
         case lPhaseIdx:
@@ -435,7 +435,7 @@ public:
      *        enthalpy of solution for this system. ...
      */
     template <class FluidState>
-    static Scalar internalEnergy(const FluidState &fluidState, 
+    static Scalar internalEnergy(const FluidState &fluidState,
                                  const ParameterCache &paramCache,
                                  int phaseIdx)
     {
@@ -445,13 +445,13 @@ public:
         Valgrind::CheckDefined(p);
         if (phaseIdx == lPhaseIdx) {
             // TODO: correct way to deal with the solutes???
-            return 
+            return
                 H2O::liquidInternalEnergy(T, p) ;
         }
         else {
             // assume ideal gas
             Scalar XH2O = fluidState.massFrac(gPhaseIdx, H2OIdx);
-            Scalar XN2 = fluidState.massFrac(gPhaseIdx, N2Idx);          
+            Scalar XN2 = fluidState.massFrac(gPhaseIdx, N2Idx);
             Scalar result = 0;
             result += XH2O*H2O::gasInternalEnergy(T, p);
             result += XN2*N2::gasInternalEnergy(T, p);
@@ -484,7 +484,7 @@ public:
         }
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
-    
+
     /*!
      * \brief Specific isobaric heat capacity of a fluid phase.
      *        \f$\mathrm{[J/kg]}\f$.

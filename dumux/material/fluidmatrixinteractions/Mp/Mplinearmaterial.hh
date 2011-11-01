@@ -58,19 +58,19 @@ public:
      p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
      \f]
      *
-     * \param values Container for the return values 
+     * \param values Container for the return values
      * \param params Parameters
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
     static void capillaryPressures(ContainerT &values,
-                                   const Params &params, 
+                                   const Params &params,
                                    const FluidState &state)
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar S = state.saturation(phaseIdx);
-            values[phaseIdx] = 
-                S*params.pcMaxSat(phaseIdx) + 
+            values[phaseIdx] =
+                S*params.pcMaxSat(phaseIdx) +
                 (1 - S)*params.pcMinSat(phaseIdx);
         }
     }
@@ -90,11 +90,11 @@ public:
      */
     template <class SatContainerT, class FluidState>
     static void saturations(SatContainerT &saturations,
-                            const Params &params, 
+                            const Params &params,
                             const FluidState &state)
     {
         for (int i = 0; i < numPhases; ++i) {
-            saturations[i] = 
+            saturations[i] =
                 (pc[i] - params.pcMaxSat(i))
                 /
                 (params.pcMinSat(i) - params.pcMaxSat(i));
@@ -108,7 +108,7 @@ public:
      */
     template <class ContainerT, class FluidState>
     static void relativePermeabilities(ContainerT &values,
-                                       const Params &params, 
+                                       const Params &params,
                                        const FluidState &state)
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
