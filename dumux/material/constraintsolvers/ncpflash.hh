@@ -346,7 +346,9 @@ protected:
 
         // fugacity of any component must be equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            Valgrind::CheckDefined(fluidState.fugacity(/*phaseIdx=*/0, compIdx));
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
+                Valgrind::CheckDefined(fluidState.fugacity(phaseIdx, compIdx));
                 b[eqIdx] =
                     fluidState.fugacity(/*phaseIdx=*/0, compIdx) -
                     fluidState.fugacity(phaseIdx, compIdx);
@@ -364,11 +366,14 @@ protected:
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             b[eqIdx] = 0.0;
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                Valgrind::CheckDefined(fluidState.saturation(phaseIdx));
+                Valgrind::CheckDefined(fluidState.molarity(phaseIdx, compIdx));
                 b[eqIdx] +=
                     fluidState.saturation(phaseIdx)
                     * fluidState.molarity(phaseIdx, compIdx);
             }
 
+            Valgrind::CheckDefined(globalMolarities[compIdx]);
             b[eqIdx] -= globalMolarities[compIdx];
             ++eqIdx;
         }

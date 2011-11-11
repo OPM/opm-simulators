@@ -57,13 +57,27 @@ public:
     template <class ContainerT, class FluidState>
     static void capillaryPressures(ContainerT &values,
                                    const Params &params,
-                                   const FluidState &state)
+                                   const FluidState &fluidState)
     {
         // non-wetting phase gets the capillary pressure added
         values[nPhaseIdx] = 0;
 
         // wetting phase does not get anything added
-        values[wPhaseIdx] = - TwoPLaw::pC(params, state.saturation(wPhaseIdx));
+        values[wPhaseIdx] = - TwoPLaw::pC(params, fluidState.saturation(wPhaseIdx));
+    }
+
+    /*!
+     * \brief The inverse of the capillary pressure-saturation curve.
+     */
+    template <class ContainerT, class FluidState>
+    static void saturations(ContainerT &values,
+                            const Params &params,
+                            const FluidState &fluidState)
+    {
+        // wetting phase does not get anything added
+        values[wPhaseIdx] = TwoPLaw::Sw(params, 
+                                        fluidState.pressure(nPhaseIdx) - fluidState.pressure(wPhaseIdx));
+        values[nPhaseIdx] = 1.0 - values[wPhaseIdx];
     }
 
     /*!
@@ -72,10 +86,10 @@ public:
     template <class ContainerT, class FluidState>
     static void relativePermeabilities(ContainerT &values,
                                        const Params &params,
-                                       const FluidState &state)
+                                       const FluidState &fluidState)
     {
-        values[wPhaseIdx] = TwoPLaw::krw(params, state.saturation(wPhaseIdx));
-        values[nPhaseIdx] = TwoPLaw::krn(params, state.saturation(wPhaseIdx));
+        values[wPhaseIdx] = TwoPLaw::krw(params, fluidState.saturation(wPhaseIdx));
+        values[nPhaseIdx] = TwoPLaw::krn(params, fluidState.saturation(wPhaseIdx));
     }
 };
 }
