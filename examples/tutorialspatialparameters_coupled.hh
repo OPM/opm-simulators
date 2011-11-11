@@ -105,7 +105,7 @@ public:
      */
     template <class Context>
     const Tensor &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
-                                        int localIdx) const
+                                        int spaceIdx, int timeIdx) const
     { return K_; }
 
     /*! Defines the porosity \f$[-]\f$ of the porous medium depending
@@ -120,7 +120,7 @@ public:
      */
     template <class Context>
     Scalar porosity(const Context &context,                    /*@\label{tutorial-coupled:porosity}@*/
-                    int localIdx) const
+                    int spaceIdx, int timeIdx) const
     { return 0.2; }
 
     /*! Returns the parameter object for the material law (i.e. Brooks-Corey)
@@ -135,7 +135,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams& materialLawParams(const Context &context,            /*@\label{tutorial-coupled:matLawParams}@*/
-                                               int contextIdx) const
+                                               int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
     // constructor

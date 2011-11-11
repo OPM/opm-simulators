@@ -151,15 +151,15 @@ public:
     //! Returns the temperature within a finite volume. We use constant
     //! 10 degrees Celsius.
     template <class Context>
-    Scalar temperature(const Context &context, int localIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 283.15; };
 
     //! Specifies which kind of boundary condition should be used for
     //! which equation for a finite volume on the boundary.
     template <class Context>
-    void boundaryTypes(BoundaryTypes &bcTypes, const Context &context, int localIdx) const
+    void boundaryTypes(BoundaryTypes &bcTypes, const Context &context, int spaceIdx, int timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(localIdx);
+        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (pos[0] < eps_) // Dirichlet conditions on left boundary
            bcTypes.setAllDirichlet();
         else // neuman for the remaining boundaries
@@ -171,7 +171,7 @@ public:
     //! on the grid boundary. Here, the 'values' parameter stores
     //! primary variables.
     template <class Context>
-    void dirichlet(PrimaryVariables &values, const Context &context, int localIdx) const
+    void dirichlet(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
@@ -181,9 +181,9 @@ public:
     //! segment. Here, the 'values' parameter stores the mass flux in
     //! [kg/(m^2 * s)] in normal direction of each phase. Negative
     template <class Context>
-    void neumann(PrimaryVariables &values, const Context &context, int localIdx) const
+    void neumann(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(localIdx);
+        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         Scalar right = this->bboxMax()[0];
         // extraction of oil on the right boundary for approx. 1.e6 seconds
         if (pos[0] > right - eps_) {
@@ -202,7 +202,7 @@ public:
     //! stores the rate mass generated or annihilated per volume unit
     //! in [kg / (m^3 * s)]. Positive values mean that mass is created.
     template <class Context>
-    void source(PrimaryVariables &values, const Context &context, int localIdx) const
+    void source(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         values[contiWEqIdx] = 0.0;
         values[contiNEqIdx]= 0.0;
@@ -211,7 +211,7 @@ public:
     // Evaluates the initial value for a control volume. For this
     // method, the 'values' parameter stores primary variables.
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int localIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         values[pwIdx] = 200.0e3; // 200 kPa = 2 bar
         values[SnIdx] = 1.0;
