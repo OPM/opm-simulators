@@ -116,11 +116,11 @@ public:
     template <class Context>
     DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
     const Tensor intrinsicPermeability(const Context &context,
-                                       int localIdx) const
+                                       int spaceIdx, int timeIdx) const
     {
         return toTensor_(asImp_().intrinsicPermeability(context.element(),
-                                                        context.fvElemGeom(),
-                                                        localIdx));
+                                                        context.fvElemGeom(timeIdx),
+                                                        spaceIdx));
     }
 
     /*!
@@ -154,11 +154,11 @@ public:
     template <class Context>
     DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
     Scalar porosity(const Context &context,
-                    int localIdx) const
+                    int spaceIdx, int timeIdx) const
     {
         return asImp_().porosity(context.element(),
-                                 context.fvElemGeom(),
-                                 localIdx);
+                                 context.fvElemGeom(timeIdx),
+                                 spaceIdx);
     }
 
     /*!
@@ -196,11 +196,11 @@ public:
     template <class Context>
     DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
     Scalar heatCapacitySolid(const Context &context,
-                             int localIdx) const
+                             int spaceIdx, int timeIdx) const
     {
         return asImp_().heatCapacitySolid(context.element(),
-                                          context.fvElemGeom(),
-                                          localIdx);
+                                          context.fvElemGeom(timeIdx),
+                                          spaceIdx);
     }
 
     /*!
@@ -208,8 +208,8 @@ public:
      *        with no pores in the sub-control volume.
      */
     Scalar heatCapacitySolid(const Element &element,
-                        const FVElementGeometry &fvElemGeom,
-                        int scvIdx) const
+                             const FVElementGeometry &fvElemGeom,
+                             int scvIdx) const
     {
         return asImp_().heatCapacitySolidAtPos(element.geometry().center());
     }
@@ -231,7 +231,7 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams&
-    heatConducionParams(const Context &context, int localIdx) const
+    heatConducionParams(const Context &context, int spaceIdx, int timeIdx) const
     {
         DUNE_THROW(Dune::InvalidStateException,
                    "Spatial parameters does not provide "
@@ -254,7 +254,8 @@ public:
      */
     template <class Context>
     bool useTwoPointGradient(const Context &context,
-                             int scvfIdx) const
+                             int spaceIdx,
+                             int timeIdx) const
     {
         return false; // use finite element gradient!
     }

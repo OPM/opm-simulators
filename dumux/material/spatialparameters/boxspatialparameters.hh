@@ -84,18 +84,18 @@ public:
      */
     template <class Context>
     DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
-    const MaterialLawParams& materialLawParams(const Context &context, int localIdx) const
+    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
     {
         return asImp_().materialLawParams(context.element(),
-                                          context.fvElemGeom(),
-                                          localIdx);
+                                          context.fvElemGeom(timeIdx),
+                                          spaceIdx);
     }
 
     const MaterialLawParams& materialLawParams(const Element &element,
                                                const FVElementGeometry &fvElemGeom,
-                                               int localIdx) const
+                                               int scvIdx) const
     {
-        return asImp_().materialLawParamsAtPos(fvElemGeom.subContVol[localIdx].global);
+        return asImp_().materialLawParamsAtPos(fvElemGeom.subContVol[scvIdx].global);
     }
 
     /*!
@@ -116,16 +116,16 @@ public:
      */
     template <class Context>
     DUMUX_DEPRECATED_MSG("Old problem API used. Please use context objects for your problem!")
-    Scalar heatCapacity(const Context &context, int localIdx) const
+    Scalar heatCapacity(const Context &context, int spaceIdx, int timeIdx) const
     {
         return asImp_().heatCapacity(context.element(),
-                                     context.fvElemGeom(),
-                                     localIdx);
+                                     context.fvElemGeom(timeIdx),
+                                     spaceIdx);
     }
 
     Scalar heatCapacity(const Element &element,
                         const FVElementGeometry &fvElemGeom,
-                        int localIdx) const
+                        int scvIdx) const
     {
         DUNE_THROW(Dune::InvalidStateException,
                    "The spatial parameters do not provide "
