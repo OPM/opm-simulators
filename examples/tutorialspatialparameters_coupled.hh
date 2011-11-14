@@ -34,6 +34,7 @@
 // include material laws
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <dumux/material/fluidmatrixinteractions/Mp/2padapter.hh>
 
 namespace Dumux {
 //forward declaration
@@ -57,9 +58,15 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     // select material law to be used
     typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
-public:
     // adapter for absolute law
-    typedef EffToAbsLaw<RawMaterialLaw> type;   /*@\label{tutorial-coupled:eff2abs}@*/
+    typedef EffToAbsLaw<RawMaterialLaw> TwoPMaterialLaw;   /*@\label{tutorial-coupled:eff2abs}@*/
+
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+
+public:
+    typedef TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+
 };
 }
 
