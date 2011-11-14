@@ -298,6 +298,7 @@ public:
                 Valgrind::CheckDefined(fugacityCoefficient_[i][j]);
                 Valgrind::CheckDefined(moleFraction_[i][j]);
             }
+            Valgrind::CheckDefined(sumMoleFractions_[i]);
             Valgrind::CheckDefined(averageMolarMass_[i]);
             Valgrind::CheckDefined(pressure_[i]);
             Valgrind::CheckDefined(saturation_[i]);

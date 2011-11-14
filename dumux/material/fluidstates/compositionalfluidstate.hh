@@ -323,6 +323,7 @@ public:
                 Valgrind::CheckDefined(fugacityCoefficient_[phaseIdx][compIdx]);
             }
             Valgrind::CheckDefined(averageMolarMass_[phaseIdx]);
+            Valgrind::CheckDefined(sumMoleFractions_[phaseIdx]);
             Valgrind::CheckDefined(pressure_[phaseIdx]);
             Valgrind::CheckDefined(saturation_[phaseIdx]);
             Valgrind::CheckDefined(density_[phaseIdx]);
