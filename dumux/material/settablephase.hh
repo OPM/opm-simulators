@@ -159,8 +159,7 @@ public:
             sumx += moleFrac_[i];
             meanMolarMass_ += moleFrac_[i] * FluidSystem::molarMass(i);
         }
-        meanMolarMass_ /= sumx;
-
+                
         // calculate mass fractions
         for (int i = 0; i < numComponents; ++i)
             massFrac_[i] = moleFrac_[i]*FluidSystem::molarMass(i)/meanMolarMass_;

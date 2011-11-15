@@ -148,28 +148,16 @@ public:
                                const FluidState &fluidState)
     {
         if (phaseIdx == lPhaseIdx) {
-            // See: Ochs 2008
-            // \todo: proper citation
-            Scalar rholH2O = H2O::liquidDensity(temperature, pressure);
-            Scalar clH2O = rholH2O/H2O::molarMass();
-
-            // this assumes each nitrogen molecule displaces exactly one
-            // water molecule in the liquid
-            return
-                clH2O*(H2O::molarMass()*fluidState.moleFrac(lPhaseIdx, H2OIdx)
-                       +
-                       N2::molarMass()*fluidState.moleFrac(lPhaseIdx, N2Idx));
+            return liquidPhaseDensity_(temperature, 
+                                       pressure,
+                                       fluidState.moleFrac(lPhaseIdx, H2OIdx),
+                                       fluidState.moleFrac(lPhaseIdx, N2Idx));
         }
         else if (phaseIdx == gPhaseIdx) {
-            Scalar fugH2O =
-                fluidState.moleFrac(gPhaseIdx, H2OIdx)  *
-                fluidState.phasePressure(gPhaseIdx);
-            Scalar fugN2 =
-                fluidState.moleFrac(gPhaseIdx, N2Idx)  *
-                fluidState.phasePressure(gPhaseIdx);
-            return
-                H2O::gasDensity(temperature, fugH2O) +
-                N2::gasDensity(temperature, fugN2);
+            return gasPhaseDensity_(temperature, 
+                                    pressure,
+                                    fluidState.moleFrac(gPhaseIdx, H2OIdx),
+                                    fluidState.moleFrac(gPhaseIdx, N2Idx));
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
@@ -259,20 +247,16 @@ public:
             // know that all phases are present
             Scalar xlH2O = (pg - betaN2)/(betaH2O - betaN2);
             Scalar xlN2 = 1 - xlH2O;
-            Scalar rhol = liquidPhaseDensity_(T, pl, xlH2O, xlN2);
 
-            Scalar cgH2O = H2O::gasDensity(T, betaH2O*xlH2O)/H2O::molarMass();
-            Scalar cgN2 = N2::gasDensity(T, betaN2*xlN2)/N2::molarMass();
-
-            Scalar xgH2O = cgH2O/(cgH2O + cgN2);
-            Scalar xgN2 = cgN2/(cgH2O + cgN2);
+            Scalar xgH2O = xlH2O*betaH2O/pg;
+            Scalar xgN2 = xlN2*betaN2/pg;
 
             // set the liquid phase composition
             SettablePhase liquid;
             liquid.moleFrac_[H2OIdx] = xlH2O;
             liquid.moleFrac_[N2Idx] = xlN2;
             liquid.pressure_ = pl;
-            liquid.density_ = rhol;
+            liquid.density_ = liquidPhaseDensity_(T, pl, xlH2O, xlN2);
             liquid.xToX(); // compute mass fractions from mole fractions
             fluidState.assignPhase(lPhaseIdx, liquid);
 
@@ -281,7 +265,7 @@ public:
             gas.moleFrac_[H2OIdx] = xgH2O;
             gas.moleFrac_[N2Idx] = xgN2;
             gas.pressure_ = pg;
-            gas.density_ = cgH2O*H2O::molarMass() + cgN2*N2::molarMass();
+            gas.density_ = gasPhaseDensity_(T, pg, xgH2O, xgN2);
             gas.xToX(); // compute mass fractions from mole fractions
             fluidState.assignPhase(gPhaseIdx, gas);
         }
@@ -291,23 +275,17 @@ public:
             // retrieve the known mole fractions from the fluid state
             Scalar xlH2O = fluidState.moleFrac(lPhaseIdx, H2OIdx);
             Scalar xlN2 = fluidState.moleFrac(lPhaseIdx, N2Idx);
-
-            // calculate the component contentrations in the gas phase
-            Scalar pH2O = betaH2O*xlH2O; // fugacity of water
-            Scalar pN2 = betaN2*xlN2; // fugacity of nitrogen
-            Scalar cgH2O = H2O::gasDensity(T, pH2O)/H2O::molarMass();
-            Scalar cgN2 = N2::gasDensity(T, pN2)/N2::molarMass();
-
-            // convert concentrations to mole fractions
-            Scalar xgH2O = cgH2O/(cgH2O + cgN2) * (pH2O + pN2)/pg;
-            Scalar xgN2 = cgN2/(cgH2O + cgN2) * (pH2O + pN2)/pg;
+            
+            // calculate mole fractions
+            Scalar xgH2O = betaH2O*xlH2O/pg;
+            Scalar xgN2 = betaN2*xlN2/pg;
 
             // set gas phase composition
             SettablePhase gas;
             gas.moleFrac_[H2OIdx] = xgH2O;
             gas.moleFrac_[N2Idx] = xgN2;
             gas.pressure_ = pg;
-            gas.density_ = cgH2O*H2O::molarMass() + cgN2*N2::molarMass();
+            gas.density_ = gasPhaseDensity_(T, pg, xgH2O, xgN2);
             gas.xToX(); // update mass fractions from mole fractions
             fluidState.assignPhase(gPhaseIdx, gas);
         }
@@ -316,6 +294,7 @@ public:
 
             Scalar xgH2O = fluidState.moleFrac(gPhaseIdx, H2OIdx);
             Scalar xgN2 = fluidState.moleFrac(gPhaseIdx, N2Idx);
+
             Scalar pgH2O = pg*xgH2O;
             Scalar pgN2 = pg*xgN2;
 
@@ -496,23 +475,36 @@ public:
 private:
     static Scalar liquidPhaseDensity_(Scalar T, Scalar pl, Scalar xlH2O, Scalar xlN2)
     {
+        if (!complicatedFluidSystem_)
+            // pure water
+            return H2O::liquidDensity(T, pl);
         // See: Ochs 2008
-        // Formula (2.6)
         // \todo: proper citation
         Scalar rholH2O = H2O::liquidDensity(T, pl);
         Scalar clH2O = rholH2O/H2O::molarMass();
-
+        
         // this assumes each nitrogen molecule displaces exactly one
         // water molecule in the liquid
         return
-            clH2O*(xlH2O*H2O::molarMass()
+            clH2O*(H2O::molarMass()*xlH2O
                    +
-                   xlN2*N2::molarMass());
+                   N2::molarMass()*xlN2);
     }
 
     static Scalar gasPhaseDensity_(Scalar T, Scalar pg, Scalar xgH2O, Scalar xgN2)
     {
-        return H2O::gasDensity(T, pg*xgH2O) + N2::gasDensity(T, pg*xgN2);
+        if (!complicatedFluidSystem_) {
+            // ideal gas
+            Scalar meanM = xgH2O*molarMass(H2OIdx) + xgN2*molarMass(N2Idx);
+            return IdealGas::molarDensity(T, pg) * meanM;
+        }
+
+        Scalar fugH2O = xgH2O * pg;
+        Scalar fugN2 = xgN2 * pg;
+        return
+            H2O::gasDensity(T, fugH2O) +
+            N2::gasDensity(T, fugN2);
+        
     };
 };
 
