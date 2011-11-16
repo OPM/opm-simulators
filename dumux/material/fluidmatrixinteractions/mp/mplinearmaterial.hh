@@ -106,6 +106,21 @@ public:
 #endif
 
     /*!
+     * \brief The inverse of the capillary pressure
+     */
+    template <class ContainerT, class FluidState>
+    static void saturations(ContainerT &values,
+                            const Params &params,
+                            const FluidState &state)
+    {
+        // wetting phase does not get anything added
+        values[wPhaseIdx] = TwoPLaw::Sw(params, state.pressure(nPhaseIdx) - state.pressure(wPhaseIdx));
+        // non-wetting phase gets the capillary pressure added
+        values[nPhaseIdx] = 1.0 - values[wPhaseIdx];
+
+    }
+
+    /*!
      * \brief The relative permeability of all phases.
      */
     template <class ContainerT, class FluidState>
