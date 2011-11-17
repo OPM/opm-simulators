@@ -111,6 +111,7 @@ class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-co
     // Dumux specific types
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryTypes) BoundaryTypes;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
@@ -181,7 +182,7 @@ public:
     //! segment. Here, the 'values' parameter stores the mass flux in
     //! [kg/(m^2 * s)] in normal direction of each phase. Negative
     template <class Context>
-    void neumann(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void neumann(RateVector &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         Scalar right = this->bboxMax()[0];
@@ -202,7 +203,7 @@ public:
     //! stores the rate mass generated or annihilated per volume unit
     //! in [kg / (m^3 * s)]. Positive values mean that mass is created.
     template <class Context>
-    void source(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void source(RateVector &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         values[contiWEqIdx] = 0.0;
         values[contiNEqIdx]= 0.0;
