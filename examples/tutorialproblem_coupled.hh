@@ -35,21 +35,25 @@
 #include <dune/grid/yaspgrid.hh>
 
 // Spatially dependent parameters
-#include "tutorialspatialparameters_coupled.hh"
-
 // The components that are used
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/oil.hh>
 #include <dumux/common/cubegridcreator.hh>
 
-namespace Dumux{
-// Forward declaration of the problem class
+// include material laws
+#include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
+
+namespace Dumux {
+
+// forward declaration of the problem class
 template <class TypeTag>
 class TutorialProblemCoupled;
 
 namespace Properties {
 // Create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP, TutorialSpatialParametersCoupled)); /*@\label{tutorial-coupled:create-type-tag}@*/
+NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP)); /*@\label{tutorial-coupled:create-type-tag}@*/
 
 // Set the "Problem" property
 SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
@@ -73,7 +77,24 @@ private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public: typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-coupled:2p-system-end}@*/
 
-SET_TYPE_PROP(TutorialProblemCoupled, FluidSystem, Dumux::TwoPImmiscibleFluidSystem<TypeTag>);
+// Set the material law
+SET_PROP(TutorialProblemCoupled, MaterialLaw)
+{
+private:
+    // material law typedefs
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    // select material law to be used
+    typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
+    // adapter for absolute law
+    typedef EffToAbsLaw<RawMaterialLaw> TwoPMaterialLaw;   /*@\label{tutorial-coupled:eff2abs}@*/
+
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+
+public:
+    typedef TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+};
+
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
 
@@ -93,7 +114,8 @@ SET_INT_PROP(TutorialProblemCoupled, GridCellsZ, 0);
  * \brief  Tutorial problem for a fully coupled twophase box model.
  */
 template <class TypeTag>
-class TutorialProblemCoupled : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\label{tutorial-coupled:def-problem}@*/
+class TutorialProblemCoupled
+    : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\label{tutorial-coupled:def-problem}@*/
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -106,7 +128,9 @@ class TutorialProblemCoupled : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\la
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<dim>::Entity Vertex;
     typedef typename GridView::Intersection Intersection;
+
     typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
+    typedef Dune::FieldMatrix<Scalar, dim, dim> Tensor;
 
     // Dumux specific types
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
@@ -115,6 +139,11 @@ class TutorialProblemCoupled : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\la
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryTypes) BoundaryTypes;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
+    
+    // get material law from property system
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+    // determine type of the parameter objects depening on selected material law
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
     // indices of the conservation equations
     enum { contiWEqIdx = Indices::conti0EqIdx + FluidSystem::wPhaseIdx };
@@ -129,6 +158,19 @@ public:
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
         , eps_(3e-6)
     {
+        //set main diagonal entries of the permeability tensor to a value
+        //setting to one value means: isotropic, homogeneous
+        K_ = 0;
+        for (int i = 0; i < dim; i++)
+            K_[i][i] = 1e-7;
+
+        //set residual saturations
+        materialParams_.setSwr(0.0);                /*@\label{tutorial-coupled:setLawParams}@*/
+        materialParams_.setSnr(0.0);
+
+        //parameters of Brooks & Corey Law
+        materialParams_.setPe(500.0);
+        materialParams_.setLambda(2);
     }
 
     //! Specifies the problem name. This is used as a prefix for files
@@ -155,8 +197,48 @@ public:
     Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 283.15; };
 
-    //! Specifies which kind of boundary condition should be used for
-    //! which equation for a finite volume on the boundary.
+    /*! Intrinsic permeability tensor K \f$[m^2]\f$ depending
+     *  on the position in the domain
+     *
+     *  \param context The execution context
+     *  \param scvIdx The local index of the degree of freedom
+     *
+     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
+    template <class Context>
+    const Tensor &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
+                                        int spaceIdx, int timeIdx) const
+    { return K_; }
+
+    /*! Define the porosity \f$[-]\f$ of the porous medium depending
+     *  on the position in the domain
+     *
+     *  \param context The execution context
+     *  \param scvIdx The local index of the degree of freedom
+     *
+     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
+    template <class Context>
+    Scalar porosity(const Context &context,                    /*@\label{tutorial-coupled:porosity}@*/
+                    int spaceIdx, int timeIdx) const
+    { return 0.2; }
+
+    /*! Return the parameter object for the material law (i.e. Brooks-Corey)
+     *  depending on the position in the domain
+     *
+     *  \param context The execution context
+     *  \param scvIdx The local index of the degree of freedom
+     *
+     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
+     *  is the vector including the global coordinates of the finite volume.
+     */
+    template <class Context>
+    const MaterialLawParams& materialLawParams(const Context &context,            /*@\label{tutorial-coupled:matLawParams}@*/
+                                               int spaceIdx, int timeIdx) const
+    { return materialParams_; }
+
     template <class Context>
     void boundaryTypes(BoundaryTypes &bcTypes, const Context &context, int spaceIdx, int timeIdx) const
     {
@@ -219,6 +301,10 @@ public:
     }
 
 private:
+    Tensor K_;
+    // Object that holds the values/parameters of the selected material law.
+    MaterialLawParams materialParams_;                 /*@\label{tutorial-coupled:matParamsObject}@*/
+
     // small epsilon value
     Scalar eps_;
 };
