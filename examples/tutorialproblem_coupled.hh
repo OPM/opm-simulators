@@ -93,9 +93,9 @@ SET_INT_PROP(TutorialProblemCoupled, GridCellsZ, 0);
  * \brief  Tutorial problem for a fully coupled twophase box model.
  */
 template <class TypeTag>
-class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-coupled:def-problem}@*/
+class TutorialProblemCoupled : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\label{tutorial-coupled:def-problem}@*/
 {
-    typedef TwoPProblem<TypeTag> ParentType;
+    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
