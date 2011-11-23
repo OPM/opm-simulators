@@ -43,6 +43,10 @@ struct cfs_tpfa_res_impl {
     double              *compflux_f;       /* A_{ij} v_{ij} */
     double              *compflux_deriv_f; /* A_{ij} \partial_{p} v_{ij} */
 
+    /* One entry per component per perforation */
+    double              *compflux_p;       /* A_{wi} q_{wi} */
+    double              *compflux_deriv_p; /* A_{wi} \partial_{p} q_{wi} */
+
     double              *flux_work;
 
     /* Scratch array for face pressure calculation */
@@ -152,6 +156,10 @@ impl_allocate(grid_t                 *G       ,
     ddata_sz += np *      G->number_of_faces ; /* compflux_f */
     ddata_sz += np * (2 * G->number_of_faces); /* compflux_deriv_f */
 
+    /* Well perforations */
+    ddata_sz += np *      nwperf ;             /* compflux_p */
+    ddata_sz += np * (2 * nwperf);             /* compflux_deriv_p */
+
     ddata_sz += np * (1 + 2)                 ; /* flux_work */
 
     ddata_sz += 1  *      G->number_of_faces ; /* scratch_f */
@@ -174,15 +182,18 @@ impl_allocate(grid_t                 *G       ,
 
 /* ---------------------------------------------------------------------- */
 static struct CSRMatrix *
-construct_matrix(grid_t *G)
+construct_matrix(grid_t *G, struct WellCompletions *wconn)
 /* ---------------------------------------------------------------------- */
 {
-    int    f, c1, c2, i, nc, nnu;
+    int    f, c1, c2, w, i, nc, nnu;
     size_t nnz;
 
     struct CSRMatrix *A;
 
     nc = nnu = G->number_of_cells;
+    if (wconn != NULL) {
+        nnu += wconn->number_of_wells;
+    }
 
     A = csrmatrix_new_count_nnz(nnu);
 
@@ -200,6 +211,18 @@ construct_matrix(grid_t *G)
             if ((c1 >= 0) && (c2 >= 0)) {
                 A->ia[ c1 + 1 ] += 1;
                 A->ia[ c2 + 1 ] += 1;
+            }
+        }
+
+        if (wconn != NULL) {
+            /* Well <-> cell connections */
+            for (w = i = 0; w < wconn->number_of_wells; w++) {
+                for (; i < wconn->well_connpos[w + 1]; i++) {
+                    c1 = wconn->well_cells[i];
+
+                    A->ia[ 0  + c1 + 1 ] += 1; /* c -> w */
+                    A->ia[ nc + w  + 1 ] += 1; /* w -> c */
+                }
             }
         }
 
@@ -224,6 +247,18 @@ construct_matrix(grid_t *G)
             if ((c1 >= 0) && (c2 >= 0)) {
                 A->ja[ A->ia[ c1 + 1 ] ++ ] = c2;
                 A->ja[ A->ia[ c2 + 1 ] ++ ] = c1;
+            }
+        }
+
+        if (wconn != NULL) {
+            /* Fill well <-> cell connections */
+            for (w = i = 0; w < wconn->number_of_wells; w++) {
+                for (; i < wconn->well_connpos[w + 1]; i++) {
+                    c1 = wconn->well_cells[i];
+
+                    A->ja[ A->ia[ 0  + c1 + 1 ] ++ ] = nc + w;
+                    A->ja[ A->ia[ nc + w  + 1 ] ++ ] = c1    ;
+                }
             }
         }
 
@@ -721,14 +756,14 @@ cfs_tpfa_res_construct(grid_t                 *G      ,
                        int                     nphases)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                    nc, nf, ngconn;
+    size_t                    nc, nf, nwperf, ngconn;
     struct cfs_tpfa_res_data *h;
 
     h = malloc(1 * sizeof *h);
 
     if (h != NULL) {
         h->pimpl = impl_allocate(G, wconn, maxconn(G), nphases);
-        h->J     = construct_matrix(G);
+        h->J     = construct_matrix(G, wconn);
 
         if ((h->pimpl == NULL) || (h->J == NULL)) {
             cfs_tpfa_res_destroy(h);
@@ -739,17 +774,27 @@ cfs_tpfa_res_construct(grid_t                 *G      ,
     if (h != NULL) {
         nc     = G->number_of_cells;
         nf     = G->number_of_faces;
+        nwperf = 0;
         ngconn = G->cell_facepos[nc];
+
+        if (wconn != NULL) {
+            nwperf = wconn->well_connpos[ wconn->number_of_wells ];
+        }
 
         /* Allocate linear system components */
         h->F                       = h->pimpl->ddata + 0;
 
         h->pimpl->compflux_f       = h->F            + h->J->m;
-        h->pimpl->compflux_deriv_f =
+        h->pimpl->compflux_p       =
             h->pimpl->compflux_f                     + (nphases * nf);
 
-        h->pimpl->flux_work        =
+        h->pimpl->compflux_deriv_f =
+            h->pimpl->compflux_p                     + (nphases * nwperf);
+        h->pimpl->compflux_deriv_p =
             h->pimpl->compflux_deriv_f               + (nphases * 2 * nf);
+
+        h->pimpl->flux_work        =
+            h->pimpl->compflux_deriv_p               + (nphases * 2 * nwperf);
 
         h->pimpl->scratch_f        =
             h->pimpl->flux_work                      + (nphases * (1 + 2));
