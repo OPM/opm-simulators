@@ -28,17 +28,17 @@ extern "C" {
 enum well_type    { INJECTOR, PRODUCER };
 enum well_control { BHP     , RATE     };
 
-typedef struct {
+struct WellCompletions {
     int  number_of_wells;
     int *well_connpos;
     int *well_cells;
-} well_t;
+};
 
-typedef struct {
+struct WellControls {
     enum well_type    *type;
     enum well_control *ctrl;
     double            *target;
-} well_control_t;
+};
 
 struct completion_data {
     double *WI;                 /* Productivity index */
@@ -46,6 +46,9 @@ struct completion_data {
     double *A;                  /* RB^{-1} */
     double *phasemob;           /* Phase mobility */
 };
+
+typedef struct WellCompletions well_t;
+typedef struct WellControls    well_control_t;
 
 int
 allocate_cell_wells(int nc, well_t *W, int **cwpos, int **cwells);
