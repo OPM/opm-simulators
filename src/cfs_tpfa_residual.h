@@ -72,6 +72,7 @@ cfs_tpfa_res_assemble(grid_t                      *G,
                       const double                *trans,
                       const double                *gravcap_f,
                       const double                *cpress,
+                      const double                *wpress,
                       const double                *porevol,
                       struct cfs_tpfa_res_data    *h);
 

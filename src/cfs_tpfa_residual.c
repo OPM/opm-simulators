@@ -407,6 +407,58 @@ compute_compflux_and_deriv(grid_t               *G     ,
 }
 
 
+static void
+compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *W     ,
+                                int                        np    ,
+                                const double              *cpress,
+                                const double              *wpress,
+                                struct cfs_tpfa_res_impl  *pimpl )
+{
+    int     c, i, w, np2;
+    double  pw, dp;
+    double *WI, *gpot, *Ap, *pmobp;
+
+    double *pflux, *dpflux;
+
+    assert (W->conn != NULL);
+    assert (W->ctrl != NULL);
+    assert (W->data != NULL);
+
+    WI     = W->data->WI;
+    gpot   = W->data->gpot;
+    Ap     = W->data->A;
+    pmobp  = W->data->phasemob;
+
+    np2    = np * np;
+
+    pflux  = pimpl->compflux_p;
+    dpflux = pimpl->compflux_deriv_p;
+
+    for (w = i = 0; w < W->conn->number_of_wells; w++) {
+        pw = wpress[w];
+
+        for (; i < W->conn->well_connpos[w + 1]; i++,
+                 gpot  += np, Ap += np2, pmobp += np,
+                 pflux += np, dpflux += 2 * np) {
+
+            c  = W->conn->well_cells[i];
+            dp = pw - cpress[c];
+
+            compute_darcyflux_and_deriv(np, WI[i], dp, pmobp, gpot,
+                                        pimpl->flux_work,
+                                        pimpl->flux_work + np);
+
+            /* Component flux = Ap * q*/
+            matvec(np, np, Ap, pimpl->flux_work     , pflux );
+
+            /* Derivative = Ap * (dq/dp) */
+            matmat(np, 2 , Ap, pimpl->flux_work + np, dpflux);
+        }
+    }
+}
+
+
+
 static int
 count_internal_conn(grid_t *G, int c)
 {
@@ -814,6 +866,7 @@ cfs_tpfa_res_assemble(grid_t                      *G,
                       const double                *trans,
                       const double                *gravcap_f,
                       const double                *cpress,
+                      const double                *wpress,
                       const double                *porevol,
                       struct cfs_tpfa_res_data    *h)
 /* ---------------------------------------------------------------------- */
@@ -827,6 +880,11 @@ cfs_tpfa_res_assemble(grid_t                      *G,
 
     compute_compflux_and_deriv(G, cq->nphases, cpress, trans,
                                cq->phasemobf, gravcap_f, cq->Af, h->pimpl);
+
+    if ((forces != NULL) && (forces->W != NULL)) {
+        compute_well_compflux_and_deriv(forces->W, cq->nphases,
+                                        cpress, wpress, h->pimpl);
+    }
 
     np2 = cq->nphases * cq->nphases;
     for (c = 0; c < G->number_of_cells;
