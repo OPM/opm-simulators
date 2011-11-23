@@ -125,7 +125,10 @@ impl_deallocate(struct cfs_tpfa_res_impl *pimpl)
 
 /* ---------------------------------------------------------------------- */
 static struct cfs_tpfa_res_impl *
-impl_allocate(grid_t *G, size_t max_conn, int np)
+impl_allocate(grid_t                 *G       ,
+              struct WellCompletions *wconn   ,
+              size_t                  max_conn,
+              int                     np      )
 /* ---------------------------------------------------------------------- */
 {
     size_t                nnu, ngconn, nwperf;
@@ -136,6 +139,11 @@ impl_allocate(grid_t *G, size_t max_conn, int np)
     nnu    = G->number_of_cells;
     ngconn = G->cell_facepos[ G->number_of_cells ];
     nwperf = 0;
+
+    if (wconn != NULL) {
+        nnu    += wconn->number_of_wells;
+        nwperf  = wconn->well_connpos[ wconn->number_of_wells ];
+    }
 
     /* Linear system */
     ddata_sz  = nnu;            /* b */
@@ -708,7 +716,9 @@ cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h)
 
 /* ---------------------------------------------------------------------- */
 struct cfs_tpfa_res_data *
-cfs_tpfa_res_construct(grid_t *G, int nphases)
+cfs_tpfa_res_construct(grid_t                 *G      ,
+                       struct WellCompletions *wconn  ,
+                       int                     nphases)
 /* ---------------------------------------------------------------------- */
 {
     size_t                    nc, nf, ngconn;
@@ -717,7 +727,7 @@ cfs_tpfa_res_construct(grid_t *G, int nphases)
     h = malloc(1 * sizeof *h);
 
     if (h != NULL) {
-        h->pimpl = impl_allocate(G, maxconn(G), nphases);
+        h->pimpl = impl_allocate(G, wconn, maxconn(G), nphases);
         h->J     = construct_matrix(G);
 
         if ((h->pimpl == NULL) || (h->J == NULL)) {
@@ -753,8 +763,7 @@ cfs_tpfa_res_construct(grid_t *G, int nphases)
 void
 cfs_tpfa_res_assemble(grid_t                      *G,
                       double                       dt,
-                      flowbc_t                    *bc,
-                      struct compr_src            *src,
+                      struct cfs_tpfa_res_forces  *forces,
                       const double                *zc,
                       struct compr_quantities_gen *cq,
                       const double                *trans,
@@ -785,9 +794,9 @@ cfs_tpfa_res_assemble(grid_t                      *G,
         assemble_cell_contrib(G, c, h);
     }
 
-    if (src != NULL) {
-        assert (src->nphases == cq->nphases);
-        assemble_sources(dt, src, h);
+    if ((forces != NULL) && (forces->src != NULL)) {
+        assert (forces->src->nphases == cq->nphases);
+        assemble_sources(dt, forces->src, h);
     }
 
     res_is_neumann = 1;

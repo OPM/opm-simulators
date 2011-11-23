@@ -21,8 +21,6 @@
 #define OPM_CFS_TPFA_HEADER_INCLUDED
 
 #include "grid.h"
-#include "flow_bc.h"
-#include "well.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +30,22 @@ struct cfs_tpfa_res_impl;
 struct CSRMatrix;
 struct compr_quantities_gen;
 struct compr_src;
+struct compr_bc;
+struct WellCompletions;
+struct WellControls;
+struct completion_data;
+
+struct cfs_tpfa_res_wells {
+    struct WellCompletions *conn;
+    struct WellControls    *ctrl;
+    struct completion_data *data;
+};
+
+struct cfs_tpfa_res_forces {
+    struct cfs_tpfa_res_wells *W  ;
+    struct compr_bc           *bc ;
+    struct compr_src          *src;
+};
 
 struct cfs_tpfa_res_data {
     struct CSRMatrix         *J;
@@ -42,7 +56,9 @@ struct cfs_tpfa_res_data {
 
 
 struct cfs_tpfa_res_data *
-cfs_tpfa_res_construct(grid_t *G, int nphases);
+cfs_tpfa_res_construct(grid_t                 *G      ,
+                       struct WellCompletions *wconn  ,
+                       int                     nphases);
 
 void
 cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h);
@@ -50,8 +66,7 @@ cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h);
 void
 cfs_tpfa_res_assemble(grid_t                      *G,
                       double                       dt,
-                      flowbc_t                    *bc,
-                      struct compr_src            *src,
+                      struct cfs_tpfa_res_forces  *forces,
                       const double                *zc,
                       struct compr_quantities_gen *cq,
                       const double                *trans,
