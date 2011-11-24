@@ -745,22 +745,38 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
                       struct cfs_tpfa_res_data    *h     )
 {
     int           w, i, c, np, np2, nc;
+    double        pw, dp;
+    double       *WI, *gpot, *pmobp;
     const double *Ac, *dAc;
 
     nc  = ((int) h->J->m) - W->conn->number_of_wells;
     np  = cq->nphases;
     np2 = np * np;
 
+    WI    = W->data->WI;
+    gpot  = W->data->gpot;
+    pmobp = W->data->phasemob;
+
     for (w = i = 0; w < W->conn->number_of_wells; w++) {
-        for (; i < W->conn->well_connpos[w + 1]; i++) {
+        pw = wpress[ w ];
+
+        for (; i < W->conn->well_connpos[w + 1];
+             i++, gpot += np, pmobp += np) {
 
             c   = W->conn->well_cells[ i ];
             Ac  = cq->Ac  + (c * np2);
             dAc = cq->dAc + (c * np2);
 
+            dp  = pw - cpress[ c ];
+
             init_completion_contrib(i, np, Ac, dAc, h->pimpl);
 
             assemble_completion_to_cell(c, nc + w, np, dt, h);
+
+            /* Prepare for RESV controls */
+            compute_darcyflux_and_deriv(np, WI[i], dp, pmobp, gpot,
+                                        h->pimpl->flux_work,
+                                        h->pimpl->flux_work + np);
 #if 0
             assemble_completion_to_well();
 #endif
