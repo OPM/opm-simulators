@@ -658,6 +658,89 @@ assemble_cell_contrib(grid_t               *G,
 }
 
 
+static void
+init_completion_contrib(int                          i    ,
+                        int                          np   ,
+                        const double                *Ac   ,
+                        const double                *dAc  ,
+                        struct cfs_tpfa_res_impl    *pimpl)
+{
+    memcpy(pimpl->ratio->linsolve_buffer,
+           pimpl->compflux_p + (i * np),
+           np * sizeof *pimpl->ratio->linsolve_buffer);
+
+    memcpy(pimpl->ratio->linsolve_buffer + (1 * np),
+           pimpl->compflux_deriv_p + (i * 2 * np),
+           2 * np * sizeof *pimpl->ratio->linsolve_buffer);
+
+    /* buffer <- Ac \ [A_{wi}q_{wi}, A_{wi} dq_{wi}] */
+    factorise_fluid_matrix(np, Ac, pimpl->ratio);
+    solve_linear_systems  (np, 1 + 2, pimpl->ratio,
+                           pimpl->ratio->linsolve_buffer);
+
+    /* t1 <- Ac \ (A_{wi} q_{wi}) */
+    memcpy(pimpl->ratio->t1,
+           pimpl->ratio->linsolve_buffer,
+           np * sizeof *pimpl->ratio->t1);
+
+    /* t2 <- Ac \ ((dA/dp) * t1) (== -d(Ac^{-1})/dp (A_{wi} q_{wi})) */
+    matvec(np, np, dAc, pimpl->ratio->t1, pimpl->ratio->t2);
+    solve_linear_systems(np, 1, pimpl->ratio, pimpl->ratio->t2);
+}
+
+
+static void
+assemble_completion_to_cell()
+{
+    int    p;
+    size_t jc, jw;
+
+    /* Assemble residual contributions from well completion (as a sum
+     * of phase contributions).
+     *
+     * Note negative sign due to perforation flux convention (positive
+     * flux into reservoir). */
+    for (p = 0; p < np; p++) {
+        h->F[ c ] -= dt * h->pimpl->ratio->t1[ p ];
+    }
+
+    /* Assemble Jacobian contributions from well completion. */
+    jc = csrmatrix_elm_index(c, c   , h->J);
+    jw = csrmatrix_elm_index(c, wdof, h->J);
+}
+
+
+static void
+assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
+                      struct compr_quantities_gen *cq    ,
+                      double                       dt    ,
+                      const double                *cpress,
+                      const double                *wpress,
+                      struct cfs_tpfa_res_data    *h     )
+{
+    int           w, i, c, np, np2;
+    const double *Ac, *dAc;
+
+    np  = cq->nphases;
+    np2 = np * np;
+
+    for (w = i = 0; w < W->conn->number_of_wells; w++) {
+        for (; i < W->conn->well_connpos[w + 1]; i++) {
+
+            c   = W->conn->cell_wells[ i ];
+            Ac  = cq->Ac  + (c * np2);
+            dAc = cq->dAc + (c * np2);
+
+            init_completion_contrib(i, np, Ac, dAc, cq, h->pimpl);
+
+            assemble_completion_to_cell();
+
+            assemble_completion_to_well();
+        }
+    }
+}
+
+
 /* ---------------------------------------------------------------------- */
 static void
 compute_fpress(grid_t       *G,
@@ -881,11 +964,6 @@ cfs_tpfa_res_assemble(grid_t                      *G,
     compute_compflux_and_deriv(G, cq->nphases, cpress, trans,
                                cq->phasemobf, gravcap_f, cq->Af, h->pimpl);
 
-    if ((forces != NULL) && (forces->W != NULL)) {
-        compute_well_compflux_and_deriv(forces->W, cq->nphases,
-                                        cpress, wpress, h->pimpl);
-    }
-
     np2 = cq->nphases * cq->nphases;
     for (c = 0; c < G->number_of_cells;
          c++, zc += cq->nphases) {
@@ -895,6 +973,13 @@ cfs_tpfa_res_assemble(grid_t                      *G,
                              h->pimpl);
 
         assemble_cell_contrib(G, c, h);
+    }
+
+    if ((forces != NULL) && (forces->W != NULL)) {
+        compute_well_compflux_and_deriv(forces->W, cq->nphases,
+                                        cpress, wpress, h->pimpl);
+
+        assemble_well_contrib(forces->W, dt, cpress, wpress, h->pimpl);
     }
 
     if ((forces != NULL) && (forces->src != NULL)) {
