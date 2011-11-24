@@ -659,11 +659,11 @@ assemble_cell_contrib(grid_t               *G,
 
 
 static void
-init_completion_contrib(int                          i    ,
-                        int                          np   ,
-                        const double                *Ac   ,
-                        const double                *dAc  ,
-                        struct cfs_tpfa_res_impl    *pimpl)
+init_completion_contrib(int                       i    ,
+                        int                       np   ,
+                        const double             *Ac   ,
+                        const double             *dAc  ,
+                        struct cfs_tpfa_res_impl *pimpl)
 {
     memcpy(pimpl->ratio->linsolve_buffer,
            pimpl->compflux_p + (i * np),
@@ -690,23 +690,49 @@ init_completion_contrib(int                          i    ,
 
 
 static void
-assemble_completion_to_cell()
+assemble_completion_to_cell(int c, int wdof, int np, double dt,
+                            struct cfs_tpfa_res_data *h)
 {
     int    p;
     size_t jc, jw;
+    double s1, s2, *d1, *d2;
 
-    /* Assemble residual contributions from well completion (as a sum
-     * of phase contributions).
+    /* Accumulate residual contributions and (dA^{-1}/dp) terms as
+     * sums of phase contributions. */
+    for (p = 0, s1 = 0.0, s2 = 0.0; p < np; p++) {
+        s1 += h->pimpl->ratio->t1[ p ];
+        s2 += h->pimpl->ratio->t2[ p ];
+    }
+
+    /* Assemble residual contributions from well completion.
      *
      * Note negative sign due to perforation flux convention (positive
      * flux into reservoir). */
-    for (p = 0; p < np; p++) {
-        h->F[ c ] -= dt * h->pimpl->ratio->t1[ p ];
-    }
+    h->F[ c ] -= dt * s1;
 
     /* Assemble Jacobian contributions from well completion. */
+    assert (wdof > c);
     jc = csrmatrix_elm_index(c, c   , h->J);
     jw = csrmatrix_elm_index(c, wdof, h->J);
+
+    /* Compressibility-like (diagonal) Jacobian term.  Positive sign
+     * since the negative derivative in ->ratio->t2 (see
+     * init_completion_contrib()) is cancelled by completion flux
+     * convention. */
+    h->J->sa[ jc ] += dt * s2;
+
+    /* Linear terms arising from simple differentiation of reservoir
+     * volume flux on completion. */
+    d1 = h->pimpl->ratio->linsolve_buffer + (1 * np);
+    d2 = d1                               + (1 * np);
+    for (p = 0, s1 = 0.0, s2 = 0.0; p < np; p++) {
+        s1 += d1[ p ];
+        s2 += d2[ p ];
+    }
+
+    /* Negative sign due to completion flux sign convention. */
+    h->J->sa[ jc ] -= dt * s1;
+    h->J->sa[ jw ] -= dt * s2;
 }
 
 
@@ -718,24 +744,26 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
                       const double                *wpress,
                       struct cfs_tpfa_res_data    *h     )
 {
-    int           w, i, c, np, np2;
+    int           w, i, c, np, np2, nc;
     const double *Ac, *dAc;
 
+    nc  = ((int) h->J->m) - W->conn->number_of_wells;
     np  = cq->nphases;
     np2 = np * np;
 
     for (w = i = 0; w < W->conn->number_of_wells; w++) {
         for (; i < W->conn->well_connpos[w + 1]; i++) {
 
-            c   = W->conn->cell_wells[ i ];
+            c   = W->conn->well_cells[ i ];
             Ac  = cq->Ac  + (c * np2);
             dAc = cq->dAc + (c * np2);
 
-            init_completion_contrib(i, np, Ac, dAc, cq, h->pimpl);
+            init_completion_contrib(i, np, Ac, dAc, h->pimpl);
 
-            assemble_completion_to_cell();
-
+            assemble_completion_to_cell(c, nc + w, np, dt, h);
+#if 0
             assemble_completion_to_well();
+#endif
         }
     }
 }
@@ -979,7 +1007,7 @@ cfs_tpfa_res_assemble(grid_t                      *G,
         compute_well_compflux_and_deriv(forces->W, cq->nphases,
                                         cpress, wpress, h->pimpl);
 
-        assemble_well_contrib(forces->W, dt, cpress, wpress, h->pimpl);
+        assemble_well_contrib(forces->W, cq, dt, cpress, wpress, h);
     }
 
     if ((forces != NULL) && (forces->src != NULL)) {
