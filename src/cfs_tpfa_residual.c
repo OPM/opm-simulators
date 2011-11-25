@@ -1128,15 +1128,22 @@ cfs_tpfa_res_assemble(grid_t                      *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_res_flux(grid_t       *G,
-                  int           np,
-                  const double *trans,
-                  const double *pmobf,
-                  const double *gravcap_f,
-                  const double *cpress,
-                  double       *fflux)
+cfs_tpfa_res_flux(grid_t                     *G        ,
+                  struct cfs_tpfa_res_forces *forces   ,
+                  int                         np       ,
+                  const double               *trans    ,
+                  const double               *pmobf    ,
+                  const double               *gravcap_f,
+                  const double               *cpress   ,
+                  const double               *wpress   ,
+                  double                     *fflux    ,
+                  double                     *wflux    )
 /* ---------------------------------------------------------------------- */
 {
+    (void) forces;
+    (void) wpress;
+    (void) wflux;
+
     compute_flux(G, np, trans, pmobf, gravcap_f, cpress, fflux);
 }
 
