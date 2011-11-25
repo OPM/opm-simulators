@@ -85,7 +85,6 @@ cfs_tpfa_res_flux(grid_t       *G,
 
 void
 cfs_tpfa_res_fpress(grid_t                   *G,
-                    flowbc_t                 *bc,
                     int                       np,
                     const double             *htrans,
                     const double             *pmobf,

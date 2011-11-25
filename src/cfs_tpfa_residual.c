@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "blas_lapack.h"
-#include "flow_bc.h"
 #include "well.h"
 
 #include "compr_quant_general.h"
@@ -873,7 +872,6 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
 /* ---------------------------------------------------------------------- */
 static void
 compute_fpress(grid_t       *G,
-               flowbc_t     *bc,
                int           np,
                const double *htrans,
                const double *pmobf,
@@ -884,7 +882,7 @@ compute_fpress(grid_t       *G,
                double       *scratch_f)
 /* ---------------------------------------------------------------------- */
 {
-    int    c, i, f, c1, c2;
+    int    c, i, f; /* , c1, c2; */
 
     /* Suppress warning about unused parameters. */
     (void) np;  (void) pmobf;  (void) gravcap_f;  (void) fflux;
@@ -915,7 +913,7 @@ compute_fpress(grid_t       *G,
 
     for (f = 0; f < G->number_of_faces; f++) {
         fpress[f] /= scratch_f[f];
-
+#if 0
         c1 = G->face_cells[2*f + 0];
         c2 = G->face_cells[2*f + 1];
 
@@ -923,6 +921,7 @@ compute_fpress(grid_t       *G,
             (bc != NULL) && (bc->type[f] == PRESSURE)) {
             fpress[f] = bc->bcval[f];
         }
+#endif
     }
 }
 
@@ -1145,7 +1144,6 @@ cfs_tpfa_res_flux(grid_t       *G,
 /* ---------------------------------------------------------------------- */
 void
 cfs_tpfa_res_fpress(grid_t                   *G,
-                    flowbc_t                 *bc,
                     int                       np,
                     const double             *htrans,
                     const double             *pmobf,
@@ -1156,7 +1154,7 @@ cfs_tpfa_res_fpress(grid_t                   *G,
                     double                   *fpress)
 /* ---------------------------------------------------------------------- */
 {
-    compute_fpress(G, bc, np, htrans, pmobf, gravcap_f,
+    compute_fpress(G, np, htrans, pmobf, gravcap_f,
                    cpress, fflux, fpress, h->pimpl->scratch_f);
 }
 
