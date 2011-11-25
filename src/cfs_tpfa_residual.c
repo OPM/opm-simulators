@@ -736,6 +736,88 @@ assemble_completion_to_cell(int c, int wdof, int np, double dt,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static void
+welleq_coeff_bhp(int np, double dp, struct cfs_tpfa_res_data *h,
+                 double *res, double *w2c, double *w2w)
+/* ---------------------------------------------------------------------- */
+{
+    int           p;
+    double        fwi;
+    const double *dpflux_w;
+
+    /* Sum reservoir phase flux derivatives set by
+     * compute_darcyflux_and_deriv(). */
+    dpflux_w = h->pimpl->flux_work + (1 * np);
+    for (p = 0, fwi = 0.0; p < np; p++) {
+        fwi += dpflux_w[ p ];
+    }
+
+    *res = fwi * dp;
+    *w2c = 0.0;
+    *w2w = fwi;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+welleq_coeff_resv(int np, struct cfs_tpfa_res_data *h,
+                  double *res, double *w2c, double *w2w)
+/* ---------------------------------------------------------------------- */
+{
+    int           p;
+    const double *pflux, *dpflux_w, *dpflux_c;
+
+     /* Sum reservoir phase flux and its derivatives set by
+      * compute_darcyflux_and_deriv(). */
+    pflux    = h->pimpl->flux_work;
+    dpflux_w = pflux    + (1 * np);
+    dpflux_c = dpflux_w + (1 * np);
+
+    *res = *w2c = *w2w = 0.0;
+    for (p = 0; p < np; p++) {
+        *res += pflux   [ p ];
+        *w2w += dpflux_w[ p ];
+        *w2c += dpflux_c[ p ];
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+assemble_completion_to_well(int w, int c, int nc, int np,
+                            double pw, double dt,
+                            struct cfs_tpfa_res_wells *W,
+                            struct cfs_tpfa_res_data  *h)
+/* ---------------------------------------------------------------------- */
+{
+    int    wdof;
+    size_t jc, jw;
+    double res, w2c, w2w;
+
+    switch (W->ctrl->ctrl[w]) {
+    case BHP :
+        welleq_coeff_bhp(np, pw - W->ctrl->target[w],
+                         h, &res, &w2c, &w2w);
+        break;
+
+    case RATE:
+        /* Interpret RATE as RESV */
+        welleq_coeff_resv(np, h, &res, &w2c, &w2w);
+        break;
+    }
+
+    /* Assemble completion contributions */
+    wdof = nc + w;
+    jc   = csrmatrix_elm_index(wdof, c   , h->J);
+    jw   = csrmatrix_elm_index(wdof, wdof, h->J);
+
+    h->F    [ wdof ] += dt * res;
+    h->J->sa[ jc   ] += dt * w2c;
+    h->J->sa[ jw   ] += dt * w2w;
+}
+
+
 static void
 assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
                       struct compr_quantities_gen *cq    ,
@@ -777,9 +859,12 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
             compute_darcyflux_and_deriv(np, WI[i], dp, pmobp, gpot,
                                         h->pimpl->flux_work,
                                         h->pimpl->flux_work + np);
-#if 0
-            assemble_completion_to_well();
-#endif
+
+            assemble_completion_to_well(w, c, nc, np, pw, dt, W, h);
+        }
+
+        if (W->ctrl->ctrl[ w ] != BHP) {
+            h->F[ nc + w ] -= dt * W->ctrl->target[ w ];
         }
     }
 }
