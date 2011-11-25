@@ -30,7 +30,6 @@ struct cfs_tpfa_res_impl;
 struct CSRMatrix;
 struct compr_quantities_gen;
 struct compr_src;
-struct compr_bc;
 struct WellCompletions;
 struct WellControls;
 struct completion_data;
@@ -43,7 +42,6 @@ struct cfs_tpfa_res_wells {
 
 struct cfs_tpfa_res_forces {
     struct cfs_tpfa_res_wells *W  ;
-    struct compr_bc           *bc ;
     struct compr_src          *src;
 };
 
@@ -78,7 +76,6 @@ cfs_tpfa_res_assemble(grid_t                      *G,
 
 void
 cfs_tpfa_res_flux(grid_t       *G,
-                  flowbc_t     *bc,
                   int           np,
                   const double *trans,
                   const double *pmobf,
