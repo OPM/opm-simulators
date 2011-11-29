@@ -1,0 +1,19 @@
+This module provides an Finite-Volume implementation for a compressible two-phase system with two components. An IMPES-like method is used for the sequential solution of the problem, where we first implicitly solve for a pressure field, and perform an explicit transport step afterwards. Isothermal conditions and local thermodynamic equilibrium are assumed, diffusion is neglected. Gravity and capillary pressure is regarded, wich is explicitly noted here because both effects increase the coupling of the pressure and transport step: Gravity forces depend on the fluid density (which is dependent on composition and pressure, a.o.t), whereas capillary pressure is dependent on the saturation (that is quantifyable after flash calculations that depend again on pressure and composition are performed).
+
+The pressure equation is given as
+\begin{equation}
+  c_{total}\frac{\partial p}{\partial t} + \sum_{\kappa} \frac{\partial v_{total}}{\partial C^{\kappa}} \nabla \cdot \left( \sum_{\alpha} X^{\kappa}_{\alpha} \varrho_{\alpha} \bf{v}_{\alpha}\right)
+  = \sum_{\kappa} \frac{\partial v_{total}}{\partial C^{\kappa}} q^{\kappa},
+\end{equation}
+where $\bf{v}_{\alpha} = - \lambda_{\alpha} \bf{K} \left(\nabla p_{\alpha} + \rho_{\alpha} \bf{g} \right) $ denotes the phase velocity.
+$ c_{total} $ represents the total compressibility, for constant porosity this yields $ - \frac{\partial V_{total}}{\partial p_{\alpha}}$,
+$p_{\alpha} $ denotes the phase pressure, $ \bf{K} $ the absolute permeability, $ \lambda_{\alpha} $ the phase mobility,
+$ \rho_{\alpha} $ the phase density and $ \bf{g}$ the gravity constant and $ C^{\kappa} $ the total Component concentration.
+See paper SPE 99619 or \cite{Chen2000} for derivation.
+
+The partial derivatives of the actual fluid volume $ v_{total} $ are gained numerically by performing an predicitive transport step and using the changes in mass in a secant method. In the sequential solution procedure, the secondary variables of the last time-step
+are used to gain the next pressure field and for the transport step, which leads to a trunctuation error. This error is dampened in the pressure step, for details see \cite{Fritz2010}.
+
+The transport step is described by
+\[ \frac{\partial C^\kappa}{\partial t} = - \nabla \cdot \sum{{\bf v_\alpha} \varrho_\alpha X_\alpha^\kappa} + q^\kappa \; . \]
+After the mass is transported, flash calculations determine the saturation an composition, and the secondary variables are updated to complete the time-step.
