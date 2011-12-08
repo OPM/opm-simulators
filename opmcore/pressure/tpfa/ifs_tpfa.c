@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ifs_tpfa.h"
-#include "sparse_sys.h"
+#include <opmcore/linalg/sparse_sys.h>
+#include <opmcore/pressure/tpfa/ifs_tpfa.h>
 
 
 struct ifs_tpfa_impl {

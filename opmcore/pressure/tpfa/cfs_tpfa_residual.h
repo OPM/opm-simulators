@@ -20,7 +20,7 @@
 #ifndef OPM_CFS_TPFA_HEADER_INCLUDED
 #define OPM_CFS_TPFA_HEADER_INCLUDED
 
-#include "grid.h"
+#include <opmcore/grid.h>
 
 #ifdef __cplusplus
 extern "C" {

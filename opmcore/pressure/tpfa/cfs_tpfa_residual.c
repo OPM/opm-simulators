@@ -4,15 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "blas_lapack.h"
-#include "well.h"
+#include <opmcore/well.h>
+#include <opmcore/linalg/blas_lapack.h>
+#include <opmcore/linalg/sparse_sys.h>
 
-#include "compr_quant_general.h"
-#include "compr_source.h"
-#include "sparse_sys.h"
-#include "trans_tpfa.h"
+#include <opmcore/pressure/tpfa/compr_quant_general.h>
+#include <opmcore/pressure/tpfa/compr_source.h>
+#include <opmcore/pressure/tpfa/trans_tpfa.h>
 
-#include "cfs_tpfa_residual.h"
+#include <opmcore/pressure/tpfa/cfs_tpfa_residual.h>
 
 #if defined(MAX)
 #undef MAX

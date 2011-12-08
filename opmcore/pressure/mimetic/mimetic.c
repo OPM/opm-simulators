@@ -21,8 +21,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "blas_lapack.h"
-#include "mimetic.h"
+#include <opmcore/linalg/blas_lapack.h>
+#include <opmcore/pressure/mimetic/mimetic.h>
 
 /* ------------------------------------------------------------------ */
 void

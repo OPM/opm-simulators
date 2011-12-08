@@ -38,8 +38,8 @@
 
 #include <suitesparse/umfpack.h>
 
-#include <sparse_sys.h>
-#include "call_umfpack.h"
+#include <opmcore/linalg/sparse_sys.h>
+#include <opmcore/linalg/call_umfpack.h>
 
 struct CSCMatrix {
     UF_long  n;
