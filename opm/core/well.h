@@ -27,6 +27,7 @@ extern "C" {
 
 enum well_type    { INJECTOR, PRODUCER };
 enum well_control { BHP     , RATE     };
+enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
 
 struct WellCompletions {
     int  number_of_wells;
@@ -38,6 +39,7 @@ struct WellControls {
     enum well_type    *type;
     enum well_control *ctrl;
     double            *target;
+    double            *zfrac;   /* Surface volume fraction (3*nwells) */
 };
 
 struct completion_data {
