@@ -43,6 +43,7 @@
 
 #include "somertonparams.hh"
 
+#include <dumux/common/spline.hh>
 #include <algorithm>
 
 namespace Dumux
