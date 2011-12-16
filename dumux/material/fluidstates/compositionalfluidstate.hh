@@ -209,9 +209,13 @@ public:
     void assign(const FluidState &fs)
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            averageMolarMass_[phaseIdx] = 0;
+            sumMoleFractions_[phaseIdx] = 0;
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                 moleFraction_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
                 fugacityCoefficient_[phaseIdx][compIdx] = fs.fugacityCoefficient(phaseIdx, compIdx);
+                averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
+                sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];
             }
             averageMolarMass_[phaseIdx] = fs.averageMolarMass(phaseIdx);
             pressure_[phaseIdx] = fs.pressure(phaseIdx);

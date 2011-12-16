@@ -53,7 +53,7 @@ public:
         // set the composition to 0
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)  {
             for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                moleFractions_[phaseIdx][compIdx] = 0;
+                moleFraction_[phaseIdx][compIdx] = 0;
             
             averageMolarMass_[phaseIdx] = 0;
             sumMoleFractions_[phaseIdx] = 0;
@@ -206,7 +206,7 @@ public:
         sumMoleFractions_[phaseIdx] += delta;
         averageMolarMass_[phaseIdx] += delta*FluidSystem::molarMass(compIdx);
         
-        Valgrind::SetDefined(sumMolarMass_[phaseIdx]);
+        Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
         Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
     }
 
@@ -242,11 +242,14 @@ public:
     void assign(const FluidState& fs)
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            averageMolarMass_[phaseIdx] = 0;
+            sumMoleFractions_[phaseIdx] = 0;
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                 moleFraction_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
                 fugacityCoefficient_[phaseIdx][compIdx] = fs.fugacityCoefficient(phaseIdx, compIdx);
+                averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
+                sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];
             }
-            updateAverageMolarMass(phaseIdx);
 
             pressure_[phaseIdx] = fs.pressure(phaseIdx);
             saturation_[phaseIdx] = fs.saturation(phaseIdx);

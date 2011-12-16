@@ -38,8 +38,10 @@
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 #include <appl/lecture/msm/1p2cvs2p/watercontaminantfluidsystem.hh>
 
-// include the compositional fluid state
+// include all fluid states
 #include <dumux/material/fluidstates/compositionalfluidstate.hh>
+#include <dumux/material/fluidstates/nonequilibriumfluidstate.hh>
+#include <dumux/material/fluidstates/immisciblefluidstate.hh>
 
 #include <dune/common/classname.hh>
 
