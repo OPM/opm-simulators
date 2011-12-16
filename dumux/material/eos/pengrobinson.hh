@@ -40,6 +40,7 @@
 #include <dumux/material/fluidstates/temperatureoverlayfluidstate.hh>
 #include <dumux/material/idealgas.hh>
 #include <dumux/common/math.hh>
+#include <dumux/common/tabulated2dfunction.hh>
 
 #include <iostream>
 
@@ -70,6 +71,29 @@ class PengRobinson
     { }
 
 public:
+    static void  init(Scalar aMin, Scalar aMax, int na,
+                      Scalar bMin, Scalar bMax, int nb)
+    {
+        // resize the tabulation for the critical points
+        criticalTemperature_.resize(aMin, aMax, na, bMin, bMax, nb);
+        criticalPressure_.resize(aMin, aMax, na, bMin, bMax, nb);
+        criticalMolarVolume_.resize(aMin, aMax, na, bMin, bMax, nb);
+
+        Scalar VmCrit, pCrit, TCrit;
+        for (int i = 0; i < na; ++i) {
+            Scalar a = criticalTemperature_.iToX(i);
+            for (int j = 0; j < nb; ++j) {
+                Scalar b = criticalTemperature_.jToY(j);
+
+                findCriticalPoint_(TCrit, pCrit, VmCrit,  a, b);
+
+                criticalTemperature_.setSamplePoint(i, j, TCrit);
+                criticalPressure_.setSamplePoint(i, j, pCrit);
+                criticalMolarVolume_.setSamplePoint(i, j, VmCrit);
+            }
+        }
+    };
+    
     /*!
      * \brief Predicts the vapor pressure for the temperature given in
      *        setTP().
@@ -135,9 +159,12 @@ public:
         Scalar T = fs.temperature(phaseIdx);
         Scalar p = fs.pressure(phaseIdx);
 
+        Scalar a = params.a(phaseIdx); // "attractive factor"
+        Scalar b = params.b(phaseIdx); // "co-volume"
+
         Scalar RT= R*T;
-        Scalar Astar = params.a(phaseIdx)*p/(RT*RT);
-        Scalar Bstar = params.b(phaseIdx)*p/RT;
+        Scalar Astar = a*p/(RT*RT);
+        Scalar Bstar = b*p/RT;
 
         Scalar a1 = 1.0;
         Scalar a2 = - (1 - Bstar);
@@ -165,18 +192,19 @@ public:
             // with the largest distance from the intersection.
             Scalar VmCubic = Z[0]*RT/p;
 
-            // find the extrema (if they are present)
-            Scalar Vmin, Vmax;
-            bool hasExtrema;
-            hasExtrema = findExtrema_(Vmin, Vmax, fs, params, phaseIdx);
-
-            if (!hasExtrema) {
+            if (T > criticalTemperature_(a, b)) {
                 // if the EOS does not exhibit any extrema, the fluid
                 // is critical...
                 Vm = VmCubic;
                 handleCriticalFluid_(Vm, fs, params, phaseIdx, isGasPhase);
             }
             else {
+                // find the extrema (if they are present)
+                Scalar Vmin, Vmax, pmin, pmax;
+                findExtrema_(Vmin, Vmax, 
+                             pmin, pmax,
+                             a, b, T);
+
                 if (isGasPhase)
                     Vm = std::max(Vmax, VmCubic);
                 else
@@ -238,55 +266,41 @@ protected:
     template <class FluidState, class Params>
     static void handleCriticalFluid_(Scalar &Vm,
                                      const FluidState &fs,
-                                     Params &params,
+                                     const Params &params,
                                      int phaseIdx,
                                      bool isGasPhase)
     {
-        static Params tmpParams;
+        Scalar Vcrit = criticalMolarVolume_(params.a(phaseIdx), params.b(phaseIdx));
 
-        Scalar Vcrit;
-        findCriticalMolarVolume_(Vcrit,
-                                 fs,
-                                 tmpParams,
-                                 phaseIdx,
-                                 Vm,
-                                 isGasPhase);
         if (isGasPhase)
             Vm = std::max(Vm, Vcrit);
         else
             Vm = std::min(Vm, Vcrit);
     }
 
-    template <class FluidState, class Params>
-    static void findCriticalMolarVolume_(Scalar &Vcrit,
-                                         const FluidState &fs,
-                                         Params &params,
-                                         int phaseIdx,
-                                         Scalar Vcubic,
-                                         bool isGasPhase)
-    {
-        typedef Dumux::TemperatureOverlayFluidState<Scalar, FluidState> OverlayFluidState;
-        OverlayFluidState tmpFs(fs);
-
-        // use an isotherm where the EOS should exhibit two maxima
-        Scalar Tmin = 150; // [K]
-
+    static void findCriticalPoint_(Scalar &Tcrit,
+                                   Scalar &pcrit,
+                                   Scalar &Vcrit,
+                                   Scalar a,
+                                   Scalar b)
+    {       
         Scalar minVm;
         Scalar maxVm;
-        Scalar T = Tmin;
 
-        tmpFs.setTemperature(T);
-        params.updateEosParams(tmpFs, phaseIdx);
-        for (int i = 0; ; ++i) {
-            if (findExtrema_(minVm, maxVm, tmpFs, params, phaseIdx, /*hintSet=*/false))
+        Scalar minP;
+        Scalar maxP;
+
+        // first, we need to find an isotherm where the EOS exhibits
+        // a maximum and a minimum
+        Scalar Tmin = 250; // [K]
+        for (int i = 0; i < 30; ++i) {
+            bool hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, Tmin);
+            if (hasExtrema)
                 break;
+            Tmin /= 2;
+        };
 
-            T = (T + tmpFs.temperature(phaseIdx)) / 2;
-            if (i >= 3) {
-                DUNE_THROW(NumericalProblem,
-                           "TODO: we need a better way to find a non-critical temperature");
-            };
-        }
+        Scalar T = Tmin;
 
         // Newton's method: Start at minimum temperature and minimize
         // the "gap" between the extrema of the EOS
@@ -295,10 +309,9 @@ protected:
             Scalar f = maxVm - minVm;
 
             // check if we're converged
-            if (f < 1e-8 ||
-                (isGasPhase && maxVm < Vcubic) ||
-                (!isGasPhase && minVm > Vcubic))
-            {
+            if (f < 1e-10) {
+                Tcrit = T;
+                pcrit = (minP + maxP)/2;
                 Vcrit = (maxVm + minVm)/2;
                 return;
             }
@@ -308,17 +321,10 @@ protected:
             // epsilon was added to the temperature. (this is case
             // rarely happens, though)
             const Scalar eps = - 1e-8;
-            T = T + eps;
-            tmpFs.setTemperature(T);
-            params.updateEosParams(tmpFs, phaseIdx);
-            if (!findExtrema_(minVm, maxVm, tmpFs, params, phaseIdx, /*hintSet=*/true))
-                DUNE_THROW(NumericalProblem,
-                           "Error when calculating derivative of extrema "
-                           "to calculate the critical point of phase "
-                           << phaseIdx);
-            T = T - eps;
+            bool hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
+            assert(hasExtrema);
             Scalar fStar = maxVm - minVm;
-
+            
             // derivative of the difference between the maximum's
             // molar volume and the minimum's molar volume regarding
             // temperature
@@ -331,46 +337,38 @@ protected:
 
             // line search (we have to make sure that both extrema
             // still exist after the update)
-            Scalar Tstar = T - delta;
             for (int j = 0; ; ++j) {
-                if (j >= 10) {
+                if (j >= 20) {
                     DUNE_THROW(NumericalProblem,
-                               "Could not determine the critical point of phase "
-                               << phaseIdx);
+                               "Could not determine the critical point for a=" << a << ", b=" << b);
                 }
 
-                tmpFs.setTemperature(Tstar);
-                params.updateEosParams(tmpFs, phaseIdx);
-                if (findExtrema_(minVm, maxVm, tmpFs, params, phaseIdx, /*hintSet=*/(j==0))) {
-                    // if the isotherm at Tstar exhibits two extrema
-                    // the update is finished
-                    T = Tstar;
+                if (findExtrema_(minVm, maxVm, minP, maxP, a, b, T - delta)) {
+                    // if the isotherm for T - delta exhibits two
+                    // extrema the update is finished
+                    T -= delta;
                     break;
                 }
-                else {
+                else
                     delta /= 2;
-                    Tstar = T - delta;
-                }
             };
         }
     };
 
     // find the two molar volumes where the EOS exhibits extrema and
     // which are larger than the covolume of the phase
-    template <class FluidState, class Params>
     static bool findExtrema_(Scalar &Vmin,
                              Scalar &Vmax,
-                             const FluidState &fs,
-                             const Params &params,
-                             int phaseIdx,
-                             bool hintSet = false)
+                             Scalar &pMin,
+                             Scalar &pMax,
+                             Scalar a,
+                             Scalar b,
+                             Scalar T)
     {
-        Scalar a = params.a(phaseIdx);
-        Scalar b = params.b(phaseIdx);
         Scalar u = 2;
         Scalar w = -1;
 
-        Scalar RT = R*fs.temperature(phaseIdx);
+        Scalar RT = R*T;
 
         // calculate coefficients of the 4th order polynominal in
         // monomial basis
@@ -385,7 +383,7 @@ protected:
         // if the values which we got on Vmin and Vmax are usefull, we
         // will reuse them as initial value, else we will start 10%
         // above the covolume
-        Scalar V = hintSet?Vmin:b*1.1;
+        Scalar V = b*1.1;
         Scalar delta = 1.0;
         for (int i = 0; std::abs(delta) > 1e-9; ++i) {
             Scalar f = a5 + V*(a4 + V*(a3 + V*(a2 + V*a1)));
@@ -483,7 +481,20 @@ protected:
                                       Scalar VmLiquid,
                                       Scalar VmGas)
     { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); };
+
+    static Tabulated2DFunction<Scalar> criticalTemperature_;
+    static Tabulated2DFunction<Scalar> criticalPressure_;
+    static Tabulated2DFunction<Scalar> criticalMolarVolume_;
 };
+
+template <class Scalar>
+Tabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalTemperature_;
+
+template <class Scalar>
+Tabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalPressure_;
+
+template <class Scalar>
+Tabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
 
 } // end namepace
 
