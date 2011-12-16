@@ -26,7 +26,7 @@
 #ifndef DUMUX_COMPOSITION_FROM_FUGACITIES_HH
 #define DUMUX_COMPOSITION_FROM_FUGACITIES_HH
 
-#include "../MpNcfluidstates/genericfluidstate.hh"
+#include "../MpNcfluidstates/nonequilibriumfluidstate.hh"
 #include <dumux/common/exceptions.hh>
 
 namespace Dumux {

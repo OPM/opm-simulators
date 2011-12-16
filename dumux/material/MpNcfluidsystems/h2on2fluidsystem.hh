@@ -25,7 +25,7 @@
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH
 
-#include <dumux/material/MpNcfluidstates/genericfluidstate.hh>
+#include <dumux/material/MpNcfluidstates/nonequilibriumfluidstate.hh>
 
 #include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/h2o.hh>
@@ -34,7 +34,7 @@
 #include <dumux/material/idealgas.hh>
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
-#include <dumux/material/MpNcfluidstates/genericfluidstate.hh>
+#include <dumux/material/MpNcfluidstates/nonequilibriumfluidstate.hh>
 
 #include <dumux/common/exceptions.hh>
 
@@ -446,8 +446,8 @@ public:
         }
         else {
             // assume ideal gas
-            Scalar XH2O = fluidState.massFrac(gPhaseIdx, H2OIdx);
-            Scalar XN2 = fluidState.massFrac(gPhaseIdx, N2Idx);          
+            Scalar XH2O = fluidState.massFraction(gPhaseIdx, H2OIdx);
+            Scalar XN2 = fluidState.massFraction(gPhaseIdx, N2Idx);
             Scalar result = 0;
             result += XH2O*H2O::gasInternalEnergy(T, p);
             result += XN2*N2::gasInternalEnergy(T, p);
