@@ -72,7 +72,7 @@ int main()
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     // interstitial fluid -- TRAIL
-    {   typedef Dumux::FluidSystems::WaterContaminant<Scalar> FluidSystem;
+    {   typedef Dumux::FluidSystems::InterstitialFluidTrail<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     return 0;
