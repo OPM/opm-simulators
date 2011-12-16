@@ -44,7 +44,7 @@ class Component
 {
 public:
     static const bool isTabulated = false;
-
+    
     /*!
      * \brief A default routine for initialization, not needed for components and must not be called.
      *
@@ -58,7 +58,7 @@ public:
      * This function throws a warning when called: "No init routine defined - make sure that this is not necessary!"
      */
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
-            Scalar pressMin, Scalar pressMax, unsigned nPress)
+                     Scalar pressMin, Scalar pressMax, unsigned nPress)
     {   Dune::dwarn << "No init routine defined - make sure that this is not necessary!" << std::endl; }
 
     /*!
@@ -179,6 +179,29 @@ public:
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented, "Component::liquidViscosity()"); }
 
+    /*!
+     * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a gas.
+     */
+    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasThermalConductivity()"); }
+
+    /*!
+     * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a liquid.
+     */
+    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidThermalConductivity()"); }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the component [J/kg] as a gas.
+     */
+    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasHeatCapacity()"); }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the component [J/kg] as a liquid.
+     */
+    static Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidHeatCapacity()"); }
 };
 
 } // end namepace

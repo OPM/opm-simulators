@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Copyright (C) 2011 by Andreas Lauser                                    *
+ *   Copyright (C) 2009 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -19,36 +19,30 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Components
+ * \brief A component that only throws exceptions.
  *
- * \brief The a parameter cache which does nothing
+ * Its main purpose is to make things compile and give runtime errors
+ * if it is actually used.
  */
-#ifndef DUMUX_NULL_PARAMETER_CACHE_HH
-#define DUMUX_NULL_PARAMETER_CACHE_HH
+#ifndef DUMUX_NULL_COMPONENT_HH
+#define DUMUX_NULL_COMPONENT_HH
 
-#include "parametercachebase.hh"
+#include "component.hh"
 
 namespace Dumux
 {
 /*!
- * \brief The a parameter cache which does nothing
+ * \ingroup Components
+ *
+ * \brief A component that only throws exceptions.
+ *
+ * Its main purpose is to make things compile and give runtime errors
+ * if it is actually used.
  */
-class NullParameterCache : public ParameterCacheBase<NullParameterCache>
+template <class Scalar, int isLiquidV=-1>
+class NullComponent : public Component<Scalar, NullComponent<Scalar> >
 {
-public:
-    NullParameterCache()
-    {};
-
-    template <class FluidState>
-    void updateAll(const FluidState &fs)
-    {
-    };
-
-    /*!
-     * \brief Update all cached parameters of a specific fluid phase
-     */
-    template <class FluidState>
-    void updatePhase(const FluidState &fs, int phaseIdx)
-    {};
 };
 
 } // end namepace

@@ -191,7 +191,7 @@ public:
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
         // Assume an ideal gas
-        return molarMass()*IdealGas::concentration(temperature, pressure);
+        return molarMass()*IdealGas::molarDensity(temperature, pressure);
     }
 
     /*!
