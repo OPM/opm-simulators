@@ -423,7 +423,6 @@ public:
         }
         else
         {
-            std::cout << "using complex relations" << std::endl;
             Scalar fugH2O = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, H2OIdx)
                                           *fluidState.pressure(gPhaseIdx));
             Scalar fugN2 = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, N2Idx)
