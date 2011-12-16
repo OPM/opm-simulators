@@ -244,11 +244,6 @@ public:
      */
     static void init()
     {
-        if (useComplexRelations)
-            Dune::dwarn << "using complex H2O_N2 FluidSystem: Viscosity depends on composition" << std::endl;
-        else
-            Dune::dwarn << "using fast H2O_N2 FluidSystem: Viscosity does not depend on composition" << std::endl;
-
         init(/*tempMin=*/273.15,
              /*tempMax=*/623.15,
              /*numTemp=*/100,
@@ -271,6 +266,11 @@ public:
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
     {
+        if (useComplexRelations)
+            Dune::dwarn << "using complex H2O_N2 FluidSystem: Viscosity depends on composition" << std::endl;
+        else
+            Dune::dwarn << "using fast H2O_N2 FluidSystem: Viscosity does not depend on composition" << std::endl;
+
         if (H2O::isTabulated) {
             std::cout << "Initializing tables for the H2O fluid properties ("
                       << nTemp*nPress
@@ -296,13 +296,15 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
+
+        Scalar sumMoleFrac = 0;
+        for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            sumMoleFrac += fluidState.moleFraction(phaseIdx, compIdx);
         
         if (phaseIdx == lPhaseIdx) {
             if (!useComplexRelations)
-            {
                 // assume pure water
                 return H2O::liquidDensity(T, p);
-            }
             else
             {
                 // See: Ochs 2008
@@ -313,16 +315,19 @@ public:
                 // this assumes each nitrogen molecule displaces exactly one
                 // water molecule in the liquid
                 return
-                    clH2O*(H2O::molarMass()*fluidState.moleFraction(lPhaseIdx, H2OIdx)
-                           +
-                           N2::molarMass()*fluidState.moleFraction(lPhaseIdx, N2Idx));
+                    clH2O 
+                    * (H2O::molarMass()*fluidState.moleFraction(lPhaseIdx, H2OIdx)
+                       +
+                       N2::molarMass()*fluidState.moleFraction(lPhaseIdx, N2Idx))
+                    / sumMoleFrac;
             }
         }
 
         // for the gas phase assume an ideal gas
         return
             IdealGas::molarDensity(T, p)
-            * fluidState.averageMolarMass(gPhaseIdx);
+            * fluidState.averageMolarMass(gPhaseIdx)
+            / sumMoleFrac;
     };
 
     /*!
