@@ -36,6 +36,7 @@
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
 #include <dumux/material/MpNcfluidstates/nonequilibriumfluidstate.hh>
 
+#include <dumux/common/valgrind.hh>
 #include <dumux/common/exceptions.hh>
 
 #include "nullparametercache.hh"
@@ -294,19 +295,15 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        switch (phaseIdx) {
-        case lPhaseIdx:
+        if (phaseIdx == lPhaseIdx)
             // assume pure water where one water molecule gets
             // replaced by one nitrogen molecule
             return H2O::liquidDensity(T, p);
-        case gPhaseIdx:
-            // assume ideal gas
-            return
-                IdealGas::molarDensity(T, p)
-                * fluidState.averageMolarMass(gPhaseIdx);
-        }
 
-        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
+        // for the gas phase assume an ideal gas
+        return
+            IdealGas::molarDensity(T, p)
+            * fluidState.averageMolarMass(gPhaseIdx);
     };
 
     /*!
@@ -336,10 +333,9 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
         if (phaseIdx == lPhaseIdx) {
-            switch (compIdx) {
-            case H2OIdx: return H2O::vaporPressure(T)/p;
-            case N2Idx: return BinaryCoeff::H2O_N2::henry(T)/p;
-            };
+            if (compIdx == H2OIdx)
+                return H2O::vaporPressure(T)/p;
+            return BinaryCoeff::H2O_N2::henry(T)/p;
         }
         
         // gas phase
@@ -424,6 +420,9 @@ public:
                                              int compJIdx)
 
     {
+        static Scalar undefined(1e10);
+        Valgrind::SetUndefined(undefined);
+
         if (compIIdx > compJIdx)
             std::swap(compIIdx, compJIdx);
 
@@ -442,31 +441,16 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        switch (phaseIdx) {
-        case lPhaseIdx:
-            switch (compIIdx) {
-            case H2OIdx:
-                switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
-                }
-            default:
-                DUNE_THROW(Dune::InvalidStateException,
-                           "Binary diffusion coefficients of trace "
-                           "substances in liquid phase is undefined!\n");
-            }
-        case gPhaseIdx:
-            switch (compIIdx) {
-            case H2OIdx:
-                switch (compJIdx) {
-                case N2Idx: return BinaryCoeff::H2O_N2::gasDiffCoeff(T, p);
-                }
-            }
+        if (phaseIdx == lPhaseIdx) {
+            if (compIIdx == H2OIdx && compJIdx == N2Idx)
+                return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
+            return undefined;
         }
 
-        DUNE_THROW(Dune::InvalidStateException,
-                   "Binary diffusion coefficient of components "
-                   << compIIdx << " and " << compJIdx
-                   << " in phase " << phaseIdx << " is undefined!\n");
+        // gas phase
+        if (compIIdx == H2OIdx && compJIdx == N2Idx)
+            return BinaryCoeff::H2O_N2::gasDiffCoeff(T, p);
+        return undefined;
     };
 
     /*!
@@ -528,13 +512,11 @@ public:
 //        Scalar T = fluidState.temperature(phaseIdx);
 //        Scalar x = fluidState.moleFrac(phaseIdx,compIdx);
 #warning: so far rough estimates from wikipedia
-        switch (phaseIdx) {
-        case lPhaseIdx: // use conductivity of pure water
+        if (phaseIdx == lPhaseIdx)
             return  0.6;   // conductivity of water[W / (m K ) ]
-        case gPhaseIdx:// use conductivity of pure air
-            return 0.025; // conductivity of air [W / (m K ) ]
-        }
-        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
+
+        // gas phase
+        return 0.025; // conductivity of air [W / (m K ) ]
     }
 
     /*!
@@ -556,17 +538,14 @@ public:
 //        Scalar p = fluidState.pressure(phaseIdx);
 //        Scalar T = fluidState.temperature(phaseIdx);
 //        Scalar x = fluidState.moleFrac(phaseIdx,compIdx);
-        switch (phaseIdx) {
-        case lPhaseIdx: // use heat capacity of pure liquid water
+        if (phaseIdx == lPhaseIdx) {
             return  4181.3;  // @(25°C) !!!
-            /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /* Dumux::H2O<Scalar>::liquidHeatCap_p(T,
-                                             p); */
-        case gPhaseIdx:
-            return  1003.5 ; // @ (0°C) !!!
-            /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /*Dumux::H2O<Scalar>::gasHeatCap_p(T,
-                                          p) ;*/
+            /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /* Dumux::H2O<Scalar>::liquidHeatCap_p(T,p); */
         }
-        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
+        
+        // gas phase
+        return  1003.5 ; // @ (0°C) !!!
+        /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /*Dumux::H2O<Scalar>::gasHeatCap_p(T, p) ;*/
     }
 };
 
