@@ -62,15 +62,15 @@ namespace FluidSystems {
  * An adapter class using Dumux::FluidSystem<TypeTag> is also provided
  * at the end of this file.
  */
-template <class Scalar, class WettingPhase, class NonWettingPhase>
+template <class Scalar, class WettingPhase, class NonwettingPhase>
 class TwoPImmiscible
-: public BaseFluidSystem<Scalar, TwoPImmiscible<Scalar, WettingPhase, NonWettingPhase> >
+: public BaseFluidSystem<Scalar, TwoPImmiscible<Scalar, WettingPhase, NonwettingPhase> >
 {
     // do not try to instanciate this class, it has only static members!
     TwoPImmiscible()
     {}
 
-    typedef TwoPImmiscible<Scalar, WettingPhase, NonWettingPhase> ThisType;
+    typedef TwoPImmiscible<Scalar, WettingPhase, NonwettingPhase> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 public:
     /****************************************
@@ -108,7 +108,7 @@ public:
 
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::isLiquid();
-        return NonWettingPhase::isLiquid();
+        return NonwettingPhase::isLiquid();
     }
 
     /*!
@@ -147,7 +147,7 @@ public:
         // let the fluids decide
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::isCompressible();
-        return NonWettingPhase::isCompressible();
+        return NonwettingPhase::isCompressible();
     }
 
     /****************************************
@@ -173,7 +173,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::name();
-        return NonWettingPhase::name();
+        return NonwettingPhase::name();
     }
 
     /*!
@@ -187,7 +187,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::molarMass();
-        return NonWettingPhase::molarMass();
+        return NonwettingPhase::molarMass();
     }
 
     /*!
@@ -199,7 +199,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::criticalTemperature();
-        return NonWettingPhase::criticalTemperature();
+        return NonwettingPhase::criticalTemperature();
     };
 
     /*!
@@ -211,7 +211,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::criticalPressure();
-        return NonWettingPhase::criticalPressure();
+        return NonwettingPhase::criticalPressure();
     };
 
     /*!
@@ -223,7 +223,7 @@ public:
 
         if (compIdx == wCompIdx)
             return WettingPhase::acentricFactor();
-        return NonWettingPhase::acentricFactor();
+        return NonwettingPhase::acentricFactor();
     };
 
     /****************************************
@@ -237,7 +237,7 @@ public:
     {
         // two gaseous phases at once do not make sense physically!
         // (But two liquids are fine)
-        assert(WettingPhase::isLiquid() || NonWettingPhase::isLiquid());
+        assert(WettingPhase::isLiquid() || NonwettingPhase::isLiquid());
     }
 
     /*!
@@ -259,7 +259,7 @@ public:
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::density(temperature, pressure);
-        return NonWettingPhase::density(temperature, pressure);
+        return NonwettingPhase::density(temperature, pressure);
     }
 
     /*!
@@ -277,7 +277,7 @@ public:
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::viscosity(temperature, pressure);
-        return NonWettingPhase::viscosity(temperature, pressure);
+        return NonwettingPhase::viscosity(temperature, pressure);
     }
 
     /*!
@@ -370,7 +370,7 @@ public:
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::enthalpy(temperature, pressure);
-        return NonWettingPhase::enthalpy(temperature, pressure);
+        return NonwettingPhase::enthalpy(temperature, pressure);
     }
 
     /*!
@@ -387,7 +387,7 @@ public:
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::thermalConductivity(temperature, pressure);
-        return NonWettingPhase::thermalConductivity(temperature, pressure);
+        return NonwettingPhase::thermalConductivity(temperature, pressure);
     }
 
     /*!
@@ -408,7 +408,7 @@ public:
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
             return WettingPhase::heatCapacity(temperature, pressure);
-        return NonWettingPhase::heatCapacity(temperature, pressure);
+        return NonwettingPhase::heatCapacity(temperature, pressure);
     }
 };
 
@@ -419,7 +419,7 @@ public:
 namespace Properties {
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(WettingPhase);
-NEW_PROP_TAG(NonWettingPhase);
+NEW_PROP_TAG(NonwettingPhase);
 };
 /*!
  * \brief A non-compositional twophase fluid system.
@@ -432,7 +432,7 @@ template<class TypeTag>
 class TwoPImmiscibleFluidSystem
 : public FluidSystems::TwoPImmiscible<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
                                       typename GET_PROP_TYPE(TypeTag, PTAG(WettingPhase)),
-                                      typename GET_PROP_TYPE(TypeTag, PTAG(NonWettingPhase))>
+                                      typename GET_PROP_TYPE(TypeTag, PTAG(NonwettingPhase))>
 {};
 #endif
 
