@@ -45,9 +45,9 @@ namespace Dumux
  */
 template <class Scalar, bool useComplexRelations = true>
 class H2ON2FluidSystem
-: public BaseFluidSystem<Scalar, H2ON2FluidSystem<Scalar> >
+: public BaseFluidSystem<Scalar, H2ON2FluidSystem<Scalar, useComplexRelations> >
 {
-    typedef H2ON2FluidSystem<Scalar> ThisType;
+    typedef H2ON2FluidSystem<Scalar, useComplexRelations> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
@@ -415,18 +415,19 @@ public:
                 return H2O::vaporPressure(T)/p;
             return BinaryCoeff::H2O_N2::henry(T)/p;
         }
-        
+
         // gas phase
-        return 1.0; // ideal gas
-        /*
         if (!useComplexRelations)
         {
             return 1.0; // ideal gas
         }
         else
         {
-            Scalar fugH2O = std::max(1e-3, fluidState.fugacity(gPhaseIdx, H2OIdx));
-            Scalar fugN2 = std::max(1e-3, fluidState.fugacity(gPhaseIdx, N2Idx));
+            std::cout << "using complex relations" << std::endl;
+            Scalar fugH2O = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, H2OIdx)
+                                          *fluidState.pressure(gPhaseIdx));
+            Scalar fugN2 = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, N2Idx)
+                                         *fluidState.pressure(gPhaseIdx));
             Scalar cH2O = H2O::gasDensity(T, fugH2O) / H2O::molarMass();
             Scalar cN2 = N2::gasDensity(T, fugN2) / N2::molarMass();
 
@@ -437,7 +438,6 @@ public:
             else // (compIdx == N2Idx)
                 return fugN2/(alpha*cN2/(cH2O + cN2));
         }
-        */
     }
 
 
