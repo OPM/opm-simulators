@@ -135,7 +135,7 @@ public:
         /////////////////////////
         bool allIncompressible = true;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::isIncompressible(phaseIdx)) {
+            if (FluidSystem::isCompressible(phaseIdx)) {
                 allIncompressible = false;
                 break;
             }

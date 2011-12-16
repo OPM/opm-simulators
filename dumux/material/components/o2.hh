@@ -124,10 +124,10 @@ public:
     }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be incompressible
+     * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsIncompressible()
-    { return false; }
+    static bool gasIsCompressible()
+    { return true; }
 
     /*!
      * \brief The density in \f$\mathrm{[kg/m^3]}\f$ of pure \f$O_2\f$ at a given pressure and temperature.

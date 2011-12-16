@@ -83,19 +83,19 @@ public:
 
     /*!
      * \brief Returns true if and only if a fluid phase is assumed to
-     *        be incompressible.
+     *        be compressible.
      *
-     * Incompressible means that the partial derivative of the density
-     * to the fluid pressure is equivalent to zero.
+     * Compressible means. that the partial derivative of the density
+     * to the fluid pressure is always larger than zero.
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIncompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         // let the fluid decide
-        return Fluid::isIncompressible();
+        return Fluid::isCompressible();
     }
 
     /*!

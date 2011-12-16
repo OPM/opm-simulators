@@ -50,10 +50,10 @@ public:
     { return true; };
 
     /*!
-     * \brief Returns true iff the fluid is assumed to be incompressible
+     * \brief Returns true iff the fluid is assumed to be compressible
      */
-    static bool isIncompressible()
-    { return Component::liquidIsIncompressible(); }
+    static bool isCompressible()
+    { return Component::liquidIsCompressible(); }
 
 
     /*!

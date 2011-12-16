@@ -50,10 +50,10 @@ public:
     { return "Unit"; }
 
     /*!
-     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsIncompressible()
-    { return true; }
+    static bool liquidIsCompressible()
+    { return false; }
 
     /*!
      * \brief Rough estimate of the density of water \f$\mathrm{[kg/m^3]}\f$.

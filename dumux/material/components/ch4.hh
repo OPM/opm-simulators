@@ -96,10 +96,10 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "vaporPressure for CH4"); }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be incompressible
+     * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsIncompressible()
-    { return false; }
+    static bool gasIsCompressible()
+    { return true; }
 
     /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$CH_4\f$ gas at a given pressure and temperature.

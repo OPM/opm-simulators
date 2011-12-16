@@ -250,16 +250,16 @@ public:
     }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be incompressible
+     * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsIncompressible()
-    { return H2O::gasIsIncompressible(); }
+    static bool gasIsCompressible()
+    { return H2O::gasIsCompressible(); }
 
     /*!
-     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsIncompressible()
-    { return H2O::liquidIsIncompressible(); }
+    static bool liquidIsCompressible()
+    { return H2O::liquidIsCompressible(); }
 
     /*!
      * \brief The pressure of steam in \f$\mathrm{[Pa]}\f$ at a given density and temperature.

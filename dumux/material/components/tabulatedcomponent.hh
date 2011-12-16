@@ -350,16 +350,16 @@ public:
     };
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be incompressible
+     * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsIncompressible()
-    { return RawComponent::gasIsIncompressible(); }
+    static bool gasIsCompressible()
+    { return RawComponent::gasIsCompressible(); }
 
     /*!
-     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsIncompressible()
-    { return RawComponent::liquidIsIncompressible(); }
+    static bool liquidIsCompressible()
+    { return RawComponent::liquidIsCompressible(); }
 
     /*!
      * \brief The density of gas at a given pressure and temperature

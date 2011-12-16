@@ -49,10 +49,10 @@ public:
     { return false; };
 
     /*!
-     * \brief Returns true iff the fluid is assumed to be incompressible
+     * \brief Returns true iff the fluid is assumed to be compressible
      */
-    static bool isIncompressible()
-    { return Component::gasIsIncompressible(); }
+    static bool isCompressible()
+    { return Component::gasIsCompressible(); }
 
     /*!
      * \brief The mass in [kg] of one mole of the component.

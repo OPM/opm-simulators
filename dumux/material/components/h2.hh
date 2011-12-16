@@ -122,10 +122,10 @@ public:
     }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be incompressible
+     * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsIncompressible()
-    { return false; }
+    static bool gasIsCompressible()
+    { return true; }
 
     /*!
      * \brief The pressure of gaseous \f$H_2\f$ in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
