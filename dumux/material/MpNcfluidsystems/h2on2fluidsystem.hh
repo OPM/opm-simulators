@@ -335,15 +335,15 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
-        switch (phaseIdx) {
-        case lPhaseIdx:
+        if (phaseIdx == lPhaseIdx) {
             switch (compIdx) {
             case H2OIdx: return H2O::vaporPressure(T)/p;
             case N2Idx: return BinaryCoeff::H2O_N2::henry(T)/p;
             };
-        case gPhaseIdx:
-            return 1.0; // ideal gas
-        };
+        }
+        
+        // gas phase
+        return 1.0; // ideal gas
     }
 
     /*!
@@ -362,14 +362,13 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
-        switch (phaseIdx) {
-        case lPhaseIdx:
+        if (phaseIdx == lPhaseIdx) {
             // assume pure water for the liquid phase
             return H2O::liquidViscosity(T, p);
-        case gPhaseIdx:
-            // assume pure water for the gas phase
-            return N2::gasViscosity(T, p);
         }
+        
+        // assume pure nitrogen for the gas phase
+        return N2::gasViscosity(T, p);
     };
 
     /*!
