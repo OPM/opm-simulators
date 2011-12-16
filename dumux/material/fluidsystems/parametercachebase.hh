@@ -115,7 +115,7 @@ public:
     template <class FluidState>
     void updateComposition(const FluidState &fs, int phaseIdx)
     {
-        asImp_().updatePhase(fs, phaseIdx);
+        asImp_().updatePhase(fs, phaseIdx, /*except=*/Temperature | Pressure);
     };
 
     /*!
