@@ -449,13 +449,21 @@ public:
         }
 
         // gas phase
+#if 1
+        return 1.0; // ideal gas
+#else
         if (!useComplexRelations)
         {
             return 1.0; // ideal gas
         }
         else
         {
-            Scalar fugH2O = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, H2OIdx)
+            // this code is invalid: isIdealMixture() states that the
+            // fugacity coefficient for the gas phase does not depend
+            // on the composition (-> valgrind complains). If we would
+            // not assume an ideal mixture, the 2p2c model in its
+            // current form could not be used with this fluid system...
+            Scalar fugH2O = std::max(1e-3, fluidState.molFraction(gPhaseIdx, H2OIdx)
                                           *fluidState.pressure(gPhaseIdx));
             Scalar fugN2 = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, N2Idx)
                                          *fluidState.pressure(gPhaseIdx));
@@ -469,6 +477,7 @@ public:
             else // (compIdx == N2Idx)
                 return fugN2/(alpha*cN2/(cH2O + cN2));
         }
+#endif
     }
 
 
