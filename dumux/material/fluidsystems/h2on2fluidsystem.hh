@@ -284,6 +284,12 @@ public:
     /*!
      * \brief Calculate the density [kg/m^3] of a fluid phase
      *
+     * If useComplexRelations == true, we apply
+     * Formula (2.6) from S.O.Ochs:
+     * "Development of a multiphase multicomponent
+     * model for PEMFC - Technical report: IRTG-NUPUS",
+     * University of Stuttgart, 2008
+     *
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
@@ -308,7 +314,6 @@ public:
             else
             {
                 // See: Ochs 2008
-                // \todo: proper citation
                 Scalar rholH2O = H2O::liquidDensity(T, p);
                 Scalar clH2O = rholH2O/H2O::molarMass();
 
