@@ -24,8 +24,8 @@
  *        multi-phase, multi-component fluid system assuming
  *        thermodynamic equilibrium.
  */
-#ifndef DUMUX_EQUILIBRIUM_FLUID_STATE_HH
-#define DUMUX_EQUILIBRIUM_FLUID_STATE_HH
+#ifndef DUMUX_COMPOSITIONAL_FLUID_STATE_HH
+#define DUMUX_COMPOSITIONAL_FLUID_STATE_HH
 
 #include <dumux/common/valgrind.hh>
 
@@ -37,13 +37,13 @@ namespace Dumux
  *        thermodynamic equilibrium.
  */
 template <class Scalar, class FluidSystem>
-class EquilibriumFluidState
+class CompositionalFluidState
 {
 public:
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
 
-    EquilibriumFluidState()
+    CompositionalFluidState()
     {
         // set the composition to 0
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)  {
@@ -59,7 +59,7 @@ public:
     }
 
     template <class FluidState>
-    EquilibriumFluidState(FluidState &fs)
+    CompositionalFluidState(FluidState &fs)
     { assign(fs); }
 
     /*****************************************************
