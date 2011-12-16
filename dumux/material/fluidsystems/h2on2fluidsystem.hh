@@ -43,7 +43,7 @@ namespace Dumux
 /*!
  * \brief A twophase fluid system with water and nitrogen as components.
  */
-template <class Scalar>
+template <class Scalar, bool useComplexRelations = true>
 class H2ON2FluidSystem
 : public BaseFluidSystem<Scalar, H2ON2FluidSystem<Scalar> >
 {
@@ -244,6 +244,11 @@ public:
      */
     static void init()
     {
+        if (useComplexRelations)
+            Dune::dwarn << "using complex H2O_N2 FluidSystem: Viscosity depends on composition" << std::endl;
+        else
+            Dune::dwarn << "using fast H2O_N2 FluidSystem: Viscosity does not depend on composition" << std::endl;
+
         init(/*tempMin=*/273.15,
              /*tempMax=*/623.15,
              /*numTemp=*/100,
@@ -293,8 +298,25 @@ public:
         Scalar p = fluidState.pressure(phaseIdx);
         
         if (phaseIdx == lPhaseIdx) {
-            // assume pure water
-            return H2O::liquidDensity(T, p);
+            if (!useComplexRelations)
+            {
+                // assume pure water
+                return H2O::liquidDensity(T, p);
+            }
+            else
+            {
+                // See: Ochs 2008
+                // \todo: proper citation
+                Scalar rholH2O = H2O::liquidDensity(T, p);
+                Scalar clH2O = rholH2O/H2O::molarMass();
+
+                // this assumes each nitrogen molecule displaces exactly one
+                // water molecule in the liquid
+                return
+                    clH2O*(H2O::molarMass()*fluidState.moleFraction(lPhaseIdx, H2OIdx)
+                           +
+                           N2::molarMass()*fluidState.moleFraction(lPhaseIdx, N2Idx));
+            }
         }
 
         // for the gas phase assume an ideal gas
@@ -323,8 +345,44 @@ public:
             return H2O::liquidViscosity(T, p);
         }
         
-        // assume pure nitrogen for the gas phase
-        return N2::gasViscosity(T, p);
+        if (!useComplexRelations)
+        {
+            // assume pure nitrogen for the gas phase
+            return N2::gasViscosity(T, p);
+        }
+        else
+        {
+            /* Wilke method. See:
+             *
+             * See: R. Reid, et al.: The Properties of Gases and Liquids,
+             * 4th edition, McGraw-Hill, 1987, 407-410
+             * 5th edition, McGraw-Hill, 20001, p. 9.21/22
+             */
+            Scalar muResult = 0;
+            const Scalar mu[numComponents] = {
+                H2O::gasViscosity(T, H2O::vaporPressure(T)),
+                N2::gasViscosity(T, p)
+            };
+            // molar masses
+            const Scalar M[numComponents] = {
+                H2O::molarMass(),
+                N2::molarMass()
+            };
+
+            for (int i = 0; i < numComponents; ++i) {
+                Scalar divisor = 0;
+                for (int j = 0; j < numComponents; ++j) {
+                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) *
+                                            pow(M[j]/M[i], 1/4.0);
+                    phiIJ *= phiIJ;
+                    phiIJ /= sqrt(8*(1 + M[i]/M[j]));
+                    divisor += fluidState.moleFraction(phaseIdx, j)*phiIJ;
+                }
+                muResult += fluidState.moleFraction(phaseIdx, i)*mu[i] / divisor;
+            }
+
+            return muResult;
+        }
     };
 
     /*!
@@ -359,7 +417,24 @@ public:
         }
         
         // gas phase
-        return 1.0; // ideal gas
+        if (!useComplexRelations)
+        {
+            return 1.0; // ideal gas
+        }
+        else
+        {
+            Scalar fugH2O = std::max(1e-3, fluidState.fugacity(gPhaseIdx, H2OIdx));
+            Scalar fugN2 = std::max(1e-3, fluidState.fugacity(gPhaseIdx, N2Idx));
+            Scalar cH2O = H2O::gasDensity(T, fugH2O) / H2O::molarMass();
+            Scalar cN2 = N2::gasDensity(T, fugN2) / N2::molarMass();
+
+            Scalar alpha = (fugH2O + fugN2);
+
+            if (compIdx == H2OIdx)
+                return fugH2O/(alpha*cH2O/(cH2O + cN2));
+            else // (compIdx == N2Idx)
+                return fugN2/(alpha*cN2/(cH2O + cN2));
+        }
     }
 
 
