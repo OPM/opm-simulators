@@ -29,6 +29,8 @@
 
 #include <dumux/common/propertysystem.hh>
 
+#include <dumux/common/basicproperties.hh>
+
 #include <dumux/material/components/ch4.hh>
 #include <dumux/material/components/simpleco2.hh>
 #include <dumux/material/components/h2.hh>
@@ -57,7 +59,7 @@ NEW_PROP_TAG(Components);
 NEW_PROP_TAG(EnableComplicatedFluidSystem);
 NEW_PROP_TAG(Scalar);
 
-SET_PROP_DEFAULT(DefaultComponents)
+SET_PROP(NumericModel, DefaultComponents)
 { private:
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
     typedef Dumux::H2O<Scalar> H2O_IAPWS;
@@ -83,7 +85,7 @@ public:
     }
 };
 
-SET_PROP_DEFAULT(Components)
+SET_PROP(NumericModel, Components)
     : public GET_PROP(TypeTag, PTAG(DefaultComponents))
 {};
 
@@ -98,8 +100,9 @@ SET_PROP_DEFAULT(Components)
  * SET_BOOL_PROP(MyTypeTag, EnableComplicatedFluidSystem, true);
  */
 
-SET_PROP_DEFAULT(EnableComplicatedFluidSystem)
-{    static const bool value = false;};
+SET_PROP(NumericModel, EnableComplicatedFluidSystem)
+{  static const bool value = false; };
+
 }; // namespace Properties
 }; // namespace Dumux
 
