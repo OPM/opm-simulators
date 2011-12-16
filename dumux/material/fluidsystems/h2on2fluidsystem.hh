@@ -612,8 +612,8 @@ public:
                                    p*fluidState.moleFraction(gPhaseIdx, H2OIdx));
             Scalar hN2 =
                 fluidState.massFraction(gPhaseIdx, N2Idx)
-                * H2O::gasEnthalpy(T,
-                                   p*fluidState.moleFraction(gPhaseIdx, N2Idx));
+                * N2::gasEnthalpy(T,
+                                  p*fluidState.moleFraction(gPhaseIdx, N2Idx));
             return hH2O + hN2;
         }
     }
@@ -666,21 +666,36 @@ public:
         // one component don't "see" the molecules of the other
         // component
 
-        // assume an ideal gas for the nitrogen part. See:
-        //
-        // http://en.wikipedia.org/wiki/Heat_capacity
-        Scalar c_vN2molar = Dumux::Constants<Scalar>::R*2.39;
-        Scalar c_pN2molar = Dumux::Constants<Scalar>::R + c_vN2molar;
+        Scalar c_pN2;
+        Scalar c_pH2O; 
+        // let the water and nitrogen components do things their own way
+        if (useComplexRelations) {
+            c_pN2 = N2::gasHeatCapacity(fluidState.temperature(phaseIdx),
+                                        fluidState.pressure(phaseIdx)
+                                        * fluidState.moleFraction(phaseIdx, N2Idx));
         
-        // let the water component do its thing for the steam part
-        Scalar c_pH2O = H2O::gasHeatCapacity(fluidState.temperature(phaseIdx),
-                                             fluidState.pressure(phaseIdx)
-                                             * fluidState.moleFraction(phaseIdx, H2OIdx));
+            c_pH2O = H2O::gasHeatCapacity(fluidState.temperature(phaseIdx),
+                                          fluidState.pressure(phaseIdx)
+                                          * fluidState.moleFraction(phaseIdx, H2OIdx));
+        }
+        else {
+            // assume an ideal gas for both components. See:
+            //
+            // http://en.wikipedia.org/wiki/Heat_capacity
+            Scalar c_vN2molar = Dumux::Constants<Scalar>::R*2.39;
+            Scalar c_pN2molar = Dumux::Constants<Scalar>::R + c_vN2molar;
+
+            Scalar c_vH2Omolar = Dumux::Constants<Scalar>::R*3.37; // <- correct??
+            Scalar c_pH2Omolar = Dumux::Constants<Scalar>::R + c_vH2Omolar;
+
+            c_pN2 = c_pN2molar/molarMass(N2Idx);
+            c_pH2O = c_pH2Omolar/molarMass(H2OIdx);
+        }
 
         // mangle both components together
         return
-            c_pH2O*fluidState.massFraction(gPhaseIdx, H2OIdx) +
-            c_pN2molar*fluidState.moleFraction(gPhaseIdx, N2Idx)/molarMass(N2Idx);
+            c_pH2O*fluidState.massFraction(gPhaseIdx, H2OIdx)
+            + c_pN2*fluidState.massFraction(gPhaseIdx, N2Idx);
     }
 };
 

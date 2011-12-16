@@ -174,9 +174,6 @@ public:
         const Scalar cpVapC = 2.680e-5;
         const Scalar cpVapD = -1.168e-8;
 
-        //Scalar cp =
-        //    cpVapA + T*(cpVapB + T*(cpVapC + T*cpVapD));
-
         // calculate: \int_0^T c_p dT
         return
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
@@ -207,6 +204,31 @@ public:
             gasEnthalpy(temperature, pressure) -
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
             IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas 
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity \f$[J/(kg K)]\f$ of pure
+     *        nitrogen gas.
+     *
+     * This is equivalent to the partial derivative of the specific
+     * enthalpy to the temperature.
+     */
+    static const Scalar gasHeatCapacity(Scalar T,
+                                        Scalar pressure)
+    {
+        // method of Joback
+        const Scalar cpVapA = 31.15;
+        const Scalar cpVapB = -0.01357;
+        const Scalar cpVapC = 2.680e-5;
+        const Scalar cpVapD = -1.168e-8;
+
+        return
+            1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
+
+            cpVapA + T*
+            (cpVapB + T*
+             (cpVapC + T*
+              (cpVapD)));
     }
 
     /*!

@@ -259,7 +259,8 @@ public:
         }
         Scalar pv = vaporPressure(temperature);
         if (pressure > pv) {
-            // the pressure is too high, in this case we use the heat cap at the vapor pressure to regularize
+            // the pressure is too high, in this case we use the heat
+            // cap at the vapor pressure to regularize
             return
                 heatCap_p_Region2_(temperature, pv);
         };
