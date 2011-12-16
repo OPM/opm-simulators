@@ -279,7 +279,7 @@ public:
     }
 
     /*!
-     * \brief Calculate the molar volume [m^3/mol] of a fluid phase
+     * \brief Calculate the density [kg/m^3] of a fluid phase
      *
      * \param fluidState An abitrary fluid state
      * \param paramCache The fluid system's parameter cache
@@ -304,6 +304,31 @@ public:
         return
             IdealGas::molarDensity(T, p)
             * fluidState.averageMolarMass(gPhaseIdx);
+    };
+
+    /*!
+     * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
+     *
+     * \param fluidState An abitrary fluid state
+     * \param paramCache The fluid system's parameter cache
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    template <class FluidState>
+    static Scalar viscosity(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
+                            int phaseIdx)
+    {
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+
+        Scalar T = fluidState.temperature(phaseIdx);
+        Scalar p = fluidState.pressure(phaseIdx);
+        if (phaseIdx == lPhaseIdx) {
+            // assume pure water for the liquid phase
+            return H2O::liquidViscosity(T, p);
+        }
+        
+        // assume pure nitrogen for the gas phase
+        return N2::gasViscosity(T, p);
     };
 
     /*!
@@ -342,30 +367,6 @@ public:
         return 1.0; // ideal gas
     }
 
-    /*!
-     * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
-     *
-     * \param fluidState An abitrary fluid state
-     * \param paramCache The fluid system's parameter cache
-     * \param phaseIdx The index of the fluid phase to consider
-     */
-    template <class FluidState>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
-    {
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
-
-        Scalar T = fluidState.temperature(phaseIdx);
-        Scalar p = fluidState.pressure(phaseIdx);
-        if (phaseIdx == lPhaseIdx) {
-            // assume pure water for the liquid phase
-            return H2O::liquidViscosity(T, p);
-        }
-        
-        // assume pure nitrogen for the gas phase
-        return N2::gasViscosity(T, p);
-    };
 
     /*!
      * \brief Calculate the molecular diffusion coefficient for a
@@ -455,7 +456,7 @@ public:
 
     /*!
      * \brief Given a phase's composition, temperature, pressure and
-     *        density, calculate its specific enthalpy [J/kg].
+     *        density, calculate its specific internal energy [J/kg].
      *
      *  \todo This fluid system neglects the contribution of
      *        gas-molecules in the liquid phase. This contribution is
