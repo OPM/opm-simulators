@@ -134,11 +134,11 @@ public:
      *        enthalpy of solution for this system. ...
      */
     template <class FluidState>
-    static Scalar internalEnergy(const FluidState &fluidState,
+    static Scalar enthalpy(const FluidState &fluidState,
                                  const ParameterCache &paramCache,
                                  int phaseIdx)
     {
-        return Implementation::internalEnergy(fluidState, phaseIdx);
+        return Implementation::enthalpy(fluidState, phaseIdx);
     }
 
     /*!

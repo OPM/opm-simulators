@@ -331,7 +331,7 @@ public:
     /*!
      * \brief Return the specific enthalpy of a fluid phase [J/kg].
      */
-    using Base::internalEnergy;
+    using Base::enthalpy;
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
                                  int phaseIdx)
