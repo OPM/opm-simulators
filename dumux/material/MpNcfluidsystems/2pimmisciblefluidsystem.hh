@@ -282,8 +282,8 @@ public:
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
-            return WettingPhase::density(temperature, pressure);
-        return NonWettingPhase::density(temperature, pressure);
+            return WettingPhase::viscosity(temperature, pressure);
+        return NonWettingPhase::viscosity(temperature, pressure);
     }
 
     /*!
