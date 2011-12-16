@@ -113,6 +113,7 @@ public:
             Scalar temperature = iT * (tempMax_ - tempMin_)/(nTemp_ - 1) + tempMin_;
 
             try { vaporPressure_[iT] = RawComponent::vaporPressure(temperature); }
+            catch (Dune::NotImplemented) { vaporPressure_[iT] = NaN; }
             catch (NumericalProblem e) { vaporPressure_[iT] = NaN; };
 
             Scalar pgMax = maxGasPressure_(iT);
@@ -125,15 +126,19 @@ public:
                 unsigned i = iT + iP*nTemp_;
 
                 try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
+                catch (Dune::NotImplemented) { gasEnthalpy_[i] = NaN; }
                 catch (NumericalProblem) { gasEnthalpy_[i] = NaN; };
 
                 try { gasHeatCapacity_[i] = RawComponent::gasHeatCapacity(temperature, pressure); }
+                catch (Dune::NotImplemented) { gasHeatCapacity_[i] = NaN; }
                 catch (NumericalProblem) { gasHeatCapacity_[i] = NaN; };
 
                 try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
+                catch (Dune::NotImplemented) { gasDensity_[i] = NaN; }
                 catch (NumericalProblem) { gasDensity_[i] = NaN; };
 
                 try { gasViscosity_[i] = RawComponent::gasViscosity(temperature, pressure); }
+                catch (Dune::NotImplemented) { gasViscosity_[i] = NaN; }
                 catch (NumericalProblem) { gasViscosity_[i] = NaN; };
             };
 
@@ -145,15 +150,19 @@ public:
                 unsigned i = iT + iP*nTemp_;
 
                 try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
+                catch (Dune::NotImplemented) { liquidEnthalpy_[i] = NaN; }
                 catch (NumericalProblem) { liquidEnthalpy_[i] = NaN; };
 
                 try { liquidHeatCapacity_[i] = RawComponent::liquidHeatCapacity(temperature, pressure); }
-                catch (NumericalProblem) { gasHeatCapacity_[i] = NaN; };
+                catch (Dune::NotImplemented) { liquidHeatCapacity_[i] = NaN; }
+                catch (NumericalProblem) { liquidHeatCapacity_[i] = NaN; };
 
                 try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
+                catch (Dune::NotImplemented) { liquidDensity_[i] = NaN; }
                 catch (NumericalProblem) { liquidDensity_[i] = NaN; };
 
                 try { liquidViscosity_[i] = RawComponent::liquidViscosity(temperature, pressure); }
+                catch (Dune::NotImplemented) { liquidViscosity_[i] = NaN; }
                 catch (NumericalProblem) { liquidViscosity_[i] = NaN; };
             }
         }
