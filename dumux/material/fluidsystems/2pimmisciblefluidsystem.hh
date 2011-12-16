@@ -39,7 +39,6 @@
 #include <dune/common/exceptions.hh>
 
 #include "basefluidsystem.hh"
-#include <dumux/common/propertysystem.hh>
 
 #include <limits>
 
@@ -415,6 +414,7 @@ public:
 
 } // end namepace FluidSystems
 
+#ifdef DUMUX_PROPERTIES_HH
 // forward defintions of the property tags
 namespace Properties {
 NEW_PROP_TAG(Scalar);
@@ -434,6 +434,7 @@ class TwoPImmiscibleFluidSystem
                                       typename GET_PROP_TYPE(TypeTag, PTAG(WettingPhase)),
                                       typename GET_PROP_TYPE(TypeTag, PTAG(NonWettingPhase))>
 {};
+#endif
 
 } // end namepace
 

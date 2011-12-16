@@ -27,12 +27,13 @@
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH
 
-#include <dumux/material/fluidsystems/defaultcomponents.hh>
-
 #include <dumux/material/idealgas.hh>
 
+#include <dumux/material/components/n2.hh>
+#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/simpleh2o.hh>
+#include <dumux/material/components/tabulatedcomponent.hh>
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
-#include <dumux/common/basicproperties.hh>
 
 #include <dumux/common/valgrind.hh>
 #include <dumux/common/exceptions.hh>
@@ -40,6 +41,11 @@
 #include "basefluidsystem.hh"
 
 #include <assert.h>
+
+#ifdef DUMUX_PROPERTIES_HH
+#include <dumux/common/basicproperties.hh>
+#include <dumux/material/fluidsystems/defaultcomponents.hh>
+#endif
 
 namespace Dumux
 {
@@ -647,6 +653,7 @@ public:
 
 } // end namepace FluidSystems
 
+#ifdef DUMUX_PROPERTIES_HH
 /*!
  * \brief A twophase fluid system with water and nitrogen as components.
  *
@@ -658,6 +665,7 @@ class H2ON2FluidSystem
 : public FluidSystems::H2ON2<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
                              GET_PROP_VALUE(TypeTag, PTAG(EnableComplicatedFluidSystem))>
 {};
+#endif
 
 } // end namepace
 

@@ -33,10 +33,18 @@
 #include <dune/common/exceptions.hh>
 
 #include "basefluidsystem.hh"
-#include <dumux/common/basicproperties.hh>
+#include <dumux/material/components/simpleh2o.hh>
+#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/n2.hh>
+#include <dumux/material/components/tabulatedcomponent.hh>
 #include <limits>
 
 #include <assert.h>
+
+#ifdef DUMUX_PROPERTIES_HH
+#include <dumux/common/basicproperties.hh>
+#include <dumux/material/fluidsystems/defaultcomponents.hh>
+#endif
 
 namespace Dumux {
 namespace FluidSystems {
@@ -386,10 +394,12 @@ public:
 
 } // end namepace
 
+#ifdef DUMUX_PROPERTIES_HH
 namespace Properties
 {
 NEW_PROP_TAG(Fluid);
 };
+
 /*!
  * \brief A pure single-phase fluid system.
  *
@@ -402,6 +412,7 @@ class OnePFluidSystem
 : public FluidSystems::OneP<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
                             typename GET_PROP_TYPE(TypeTag, PTAG(Fluid))>
 {};
+#endif
 } // end namepace
 
 #endif
