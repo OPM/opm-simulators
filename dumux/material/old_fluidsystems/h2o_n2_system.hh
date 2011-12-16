@@ -28,7 +28,7 @@
 #define DUMUX_H2O_N2_SYSTEM_HH
 
 #include <dumux/material/idealgas.hh>
-#include <dumux/material/settablephase.hh>
+#include <dumux/material/old_fluidsystems/settablephase.hh>
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
 
