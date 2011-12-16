@@ -96,6 +96,8 @@ public:
 
         gasEnthalpy_ = new Scalar[nTemp_*nPress_];
         liquidEnthalpy_ = new Scalar[nTemp_*nPress_];
+        gasHeatCapacity_ = new Scalar[nTemp_*nPress_];
+        liquidHeatCapacity_ = new Scalar[nTemp_*nPress_];
         gasDensity_ = new Scalar[nTemp_*nPress_];
         liquidDensity_ = new Scalar[nTemp_*nPress_];
         gasViscosity_ = new Scalar[nTemp_*nPress_];
@@ -125,6 +127,9 @@ public:
                 try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { gasEnthalpy_[i] = NaN; };
 
+                try { gasHeatCapacity_[i] = RawComponent::gasHeatCapacity(temperature, pressure); }
+                catch (NumericalProblem) { gasHeatCapacity_[i] = NaN; };
+
                 try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
                 catch (NumericalProblem) { gasDensity_[i] = NaN; };
 
@@ -141,6 +146,9 @@ public:
 
                 try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
                 catch (NumericalProblem) { liquidEnthalpy_[i] = NaN; };
+
+                try { liquidHeatCapacity_[i] = RawComponent::liquidHeatCapacity(temperature, pressure); }
+                catch (NumericalProblem) { gasHeatCapacity_[i] = NaN; };
 
                 try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
                 catch (NumericalProblem) { liquidDensity_[i] = NaN; };
@@ -283,6 +291,42 @@ public:
         if (std::isnan(result)) {
             printWarning_("liquidEnthalpy", temperature, pressure);
             return RawComponent::liquidEnthalpy(temperature, pressure);
+        }
+        return result;
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the gas \f$\mathrm{[J/(kg K)]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    {
+        Scalar result = interpolateGasTP_(gasHeatCapacity_,
+                                          temperature,
+                                          pressure);
+        if (std::isnan(result)) {
+            printWarning_("gasHeatCapacity", temperature, pressure);
+            return RawComponent::gasHeatCapacity(temperature, pressure);
+        }
+        return result;
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity of the liquid \f$\mathrm{[J/(kg K)]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    {
+        Scalar result = interpolateLiquidTP_(liquidHeatCapacity_,
+                                             temperature,
+                                             pressure);
+        if (std::isnan(result)) {
+            printWarning_("liquidHeatCapacity", temperature, pressure);
+            return RawComponent::liquidHeatCapacity(temperature, pressure);
         }
         return result;
     }
@@ -672,6 +716,9 @@ private:
     static Scalar *gasEnthalpy_;
     static Scalar *liquidEnthalpy_;
 
+    static Scalar *gasHeatCapacity_;
+    static Scalar *liquidHeatCapacity_;
+
     static Scalar *gasDensity_;
     static Scalar *liquidDensity_;
 
@@ -719,6 +766,10 @@ template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasEnthalpy_;
 template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidEnthalpy_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasHeatCapacity_;
+template <class Scalar, class RawComponent, bool verbose>
+Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::liquidHeatCapacity_;
 template <class Scalar, class RawComponent, bool verbose>
 Scalar* TabulatedComponent<Scalar, RawComponent, verbose>::gasDensity_;
 template <class Scalar, class RawComponent, bool verbose>
