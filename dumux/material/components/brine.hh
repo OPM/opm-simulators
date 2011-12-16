@@ -185,6 +185,44 @@ public:
         return (h_ls);
     }
 
+
+    /*!
+     * \brief Specific isobaric heat capacity of liquid water \f$\mathrm{[J/kg]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static const Scalar liquidHeatCapacity(Scalar temperature,
+                                        Scalar pressure)
+    {
+        Scalar eps = temperature*1e-8;
+        return (liquidEnthalpy(temperature + eps, pressure) - liquidEnthalpy(temperature, pressure))/eps;
+    };
+
+    /*!
+     * \brief Specific isobaric heat capacity of water steam \f$\mathrm{[J/kg]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static const Scalar gasHeatCapacity(Scalar temperature,
+                                        Scalar pressure)
+    {
+        return H2O::gasHeatCapacity(temperature, pressure);
+    };
+
     /*!
      * \brief Specific internal energy of steam \f$\mathrm{[J/kg]}\f$.
      *
@@ -194,7 +232,9 @@ public:
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
     {
-        return H2O::gasInternalEnergy(temperature, pressure);
+        return
+            gasEnthalpy(temperature, pressure) - 
+            pressure/gasDensity(temperature, pressure);
     }
 
     /*!
@@ -210,6 +250,7 @@ public:
             liquidEnthalpy(temperature, pressure) -
             pressure/liquidDensity(temperature, pressure);
     }
+
 
     /*!
      * \brief The density of steam at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
