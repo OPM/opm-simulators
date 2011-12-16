@@ -27,6 +27,12 @@
 #ifndef DUMUX_MISCIBLE_MULTIPHASE_COMPOSITION_HH
 #define DUMUX_MISCIBLE_MULTIPHASE_COMPOSITION_HH
 
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
+
+#include <dumux/common/exceptions.hh>
+#include <dumux/common/valgrind.hh>
+
 namespace Dumux {
 /*!
  * \brief Computes the composition of all phases of a N-phase,
@@ -167,7 +173,7 @@ public:
                 int rowIdx = phaseIdx*numComponents + compIdx;
                 fluidState.setMoleFraction(phaseIdx, compIdx, x[rowIdx]);
             }
-            paramCache.updatePhaseComposition(fluidState, phaseIdx);
+            paramCache.updateComposition(fluidState, phaseIdx);
         
             Scalar value = FluidSystem::density(fluidState, paramCache, phaseIdx);
             fluidState.setDensity(phaseIdx, value);

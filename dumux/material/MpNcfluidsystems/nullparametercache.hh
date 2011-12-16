@@ -37,18 +37,6 @@ class NullParameterCache : public ParameterCacheBase<NullParameterCache>
 public:
     NullParameterCache()
     {};
-
-    template <class FluidState>
-    void updateAll(const FluidState &fs)
-    {
-    };
-
-    /*!
-     * \brief Update all cached parameters of a specific fluid phase
-     */
-    template <class FluidState>
-    void updatePhase(const FluidState &fs, int phaseIdx)
-    {};
 };
 
 } // end namepace

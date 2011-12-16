@@ -26,7 +26,11 @@
 #ifndef DUMUX_COMPOSITION_FROM_FUGACITIES_HH
 #define DUMUX_COMPOSITION_FROM_FUGACITIES_HH
 
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
+
 #include <dumux/common/exceptions.hh>
+#include <dumux/common/valgrind.hh>
 
 namespace Dumux {
 
@@ -237,7 +241,7 @@ protected:
             // deviate the mole fraction of the i-th component
             Scalar x_i = fluidState.moleFraction(phaseIdx, i);
             fluidState.setMoleFraction(phaseIdx, i, x_i + eps);
-            paramCache.updatePhaseSingleMoleFraction(fluidState, phaseIdx, i);
+            paramCache.updateSingleMoleFraction(fluidState, phaseIdx, i);
 
             // compute new defect and derivative for all component
             // fugacities
@@ -262,7 +266,7 @@ protected:
 
             // reset composition to original value
             fluidState.setMoleFraction(phaseIdx, i, x_i);
-            paramCache.updatePhaseSingleMoleFraction(fluidState, phaseIdx, i);
+            paramCache.updateSingleMoleFraction(fluidState, phaseIdx, i);
 
             // end forward differences
             ////////
@@ -320,7 +324,7 @@ protected:
                 //sumMoleFrac += std::abs(newx);
             }
 
-            paramCache.updatePhaseComposition(fluidState, phaseIdx);
+            paramCache.updateComposition(fluidState, phaseIdx);
 
             /*
             // if the sum of the mole fractions gets 0, we take the

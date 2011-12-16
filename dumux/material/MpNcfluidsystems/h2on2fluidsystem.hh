@@ -291,11 +291,11 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
-
-        if (phaseIdx == lPhaseIdx)
-            // assume pure water where one water molecule gets
-            // replaced by one nitrogen molecule
+        
+        if (phaseIdx == lPhaseIdx) {
+            // assume pure water
             return H2O::liquidDensity(T, p);
+        }
 
         // for the gas phase assume an ideal gas
         return
@@ -470,8 +470,7 @@ public:
         Valgrind::CheckDefined(p);
         if (phaseIdx == lPhaseIdx) {
             // TODO: correct way to deal with the solutes???
-            return
-                H2O::liquidEnthalpy(T, p) ;
+            return H2O::liquidEnthalpy(T, p);
         }
         else {
             // assume ideal gas
@@ -503,7 +502,7 @@ public:
 //        Scalar p = fluidState.pressure(phaseIdx);
 //        Scalar T = fluidState.temperature(phaseIdx);
 //        Scalar x = fluidState.moleFrac(phaseIdx,compIdx);
-#warning: so far rough estimates from wikipedia
+//#warning: so far rough estimates from wikipedia
         if (phaseIdx == lPhaseIdx)
             return  0.6;   // conductivity of water[W / (m K ) ]
 
@@ -524,7 +523,7 @@ public:
                                int phaseIdx)
     {
 //        http://en.wikipedia.org/wiki/Heat_capacity
-#warning: so far rough estimates from wikipedia
+//#warning: so far rough estimates from wikipedia
 //      TODO heatCapacity is a function of composition.
 //        Scalar p = fluidState.pressure(phaseIdx);
 //        Scalar T = fluidState.temperature(phaseIdx);

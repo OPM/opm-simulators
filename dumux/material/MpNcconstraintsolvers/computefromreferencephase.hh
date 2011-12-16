@@ -32,6 +32,12 @@
 
 #include <dumux/material/MpNcconstraintsolvers/compositionfromfugacities.hh>
 
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
+
+#include <dumux/common/exceptions.hh>
+#include <dumux/common/valgrind.hh>
+
 namespace Dumux {
 
 /*!

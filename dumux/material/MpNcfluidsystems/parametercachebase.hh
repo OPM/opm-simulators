@@ -34,21 +34,37 @@ template <class Implementation>
 class ParameterCacheBase
 {
 public:
+    enum ExceptQuantities {
+        None = 0,
+        Temperature = 1, 
+        Pressure = 2,
+        Composition = 2,       
+    };
+    
     ParameterCacheBase()
     {};
 
     template <class FluidState>
-    void updateAll(const FluidState &fs)
+    void updateAll(const FluidState &fs, int exceptQuantities = None)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             updatePhase(fs, phaseIdx);
     };
 
+
+    template <class FluidState>
+    void updateAllPressures(const FluidState &fs)
+    {
+        for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
+            updatePhase(fs, phaseIdx);
+    };
+
+
     /*!
      * \brief Update all cached parameters of a specific fluid phase
      */
     template <class FluidState>
-    void updatePhase(const FluidState &fs, int phaseIdx)
+    void updatePhase(const FluidState &fs, int phaseIdx, int exceptQuantities = None)
     {};
 
     /*!
@@ -59,8 +75,8 @@ public:
      * changed between two update*() calls. If more changed, call
      * updatePhase()!
      */
-    template <class FluidState> void
-    updatePhaseTemperature(const FluidState &fs, int phaseIdx)
+    template <class FluidState> 
+    void updateTemperature(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);
     };
@@ -74,7 +90,7 @@ public:
      * updatePhase()!
      */
     template <class FluidState>
-    void updatePhasePressure(const FluidState &fs, int phaseIdx)
+    void updateSinglePressure(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);
     };
@@ -88,7 +104,7 @@ public:
      * calls. If more changed, call updatePhase()!
      */
     template <class FluidState>
-    void updatePhaseComposition(const FluidState &fs, int phaseIdx)
+    void updateComposition(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);
     };
@@ -103,11 +119,11 @@ public:
      * updatePhase()!
      */
     template <class FluidState>
-    void updatePhaseSingleMoleFraction(const FluidState &fs,
-                                       int phaseIdx,
-                                       int compIdx)
+    void updateSingleMoleFraction(const FluidState &fs,
+                                  int phaseIdx,
+                                  int compIdx)
     {
-        asImp_().updatePhaseComposition(fs, phaseIdx);
+        asImp_().updateComposition(fs, phaseIdx);
     };
 
 private:
