@@ -33,7 +33,7 @@
 #include <dune/common/exceptions.hh>
 
 #include "basefluidsystem.hh"
-
+#include <dumux/common/basicproperties.hh>
 #include <limits>
 
 #include <assert.h>
@@ -385,6 +385,23 @@ public:
 };
 
 } // end namepace
+
+namespace Properties
+{
+NEW_PROP_TAG(Fluid);
+};
+/*!
+ * \brief A pure single-phase fluid system.
+ *
+ * This is an adapter to use Dumux::TwoPImmiscible<TypeTag>, as is
+ * done with most other classes in Dumux and all template parameters
+ * are usually defined in the property system anyhow.
+ */
+template<class TypeTag>
+class OnePFluidSystem
+: public FluidSystems::OneP<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
+                            typename GET_PROP_TYPE(TypeTag, PTAG(Fluid))>
+{};
 } // end namepace
 
 #endif

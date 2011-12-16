@@ -27,13 +27,12 @@
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH
 
-#include <dumux/material/components/simpleh2o.hh>
-#include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/n2.hh>
-#include <dumux/material/components/tabulatedcomponent.hh>
+#include <dumux/material/fluidsystems/defaultcomponents.hh>
+
 #include <dumux/material/idealgas.hh>
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
+#include <dumux/common/basicproperties.hh>
 
 #include <dumux/common/valgrind.hh>
 #include <dumux/common/exceptions.hh>
@@ -49,6 +48,12 @@ namespace FluidSystems
 
 /*!
  * \brief A twophase fluid system with water and nitrogen as components.
+ *
+ * This FluidSystem can be used without the PropertySystem that is applied in Dumux,
+ * as all Parameters are defined via template parameters. Hence it is in an
+ * additional namespace Dumux::FluidSystem::.
+ * An adapter class using Dumux::FluidSystem<TypeTag> is also provided
+ * at the end of this file.
  */
 template <class Scalar, bool useComplexRelations = true>
 class H2ON2
@@ -77,8 +82,10 @@ public:
 
     //! Index of the liquid phase
     static constexpr int lPhaseIdx = 0;
+    static constexpr int wPhaseIdx = lPhaseIdx;
     //! Index of the gas phase
     static constexpr int gPhaseIdx = 1;
+    static constexpr int nPhaseIdx = gPhaseIdx;
 
     //! The components for pure water
     typedef TabulatedH2O H2O;
@@ -425,11 +432,12 @@ public:
      * \brief Calculate the fugacity coefficient [Pa] of an individual
      *        component in a fluid phase
      *
-     * The fugacity coefficient \f$\phi_\kappa\f$ is connected to the
-     * fugacity \f$f_\kappa\f$ and the component's molarity
-     * \f$x_\kappa\f$ by means of the relation
+     * The fugacity coefficient \f$\phi^\kappa_{\alpha}\f$ is connected to the
+     * fugacity \f$f^\kappa\f$ and the component's molarity
+     * \f$x^{\kappa}_{\alpha}\f$ by means of the relation
      *
-     * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
+     * \f[ f^\kappa_{\alpha} = \phi^\kappa_{\alpha}
+                \cdot x^{\kappa}_{\alpha} p_{\alpha} \f]
      *
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
@@ -449,39 +457,15 @@ public:
         if (phaseIdx == lPhaseIdx) {
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
-            return BinaryCoeff::H2O_N2::henry(T)/p;
+            return Dumux::BinaryCoeff::H2O_N2::henry(T)/p;
         }
 
         // gas phase
-#if 1
         return 1.0; // ideal gas
-#else
-        if (!useComplexRelations)
-        {
-            return 1.0; // ideal gas
-        }
-        else
-        {
-            // this code is invalid: isIdealMixture() states that the
-            // fugacity coefficient for the gas phase does not depend
-            // on the composition (-> valgrind complains). If we would
-            // not assume an ideal mixture, the 2p2c model in its
-            // current form could not be used with this fluid system...
-            Scalar fugH2O = std::max(1e-3, fluidState.molFraction(gPhaseIdx, H2OIdx)
-                                          *fluidState.pressure(gPhaseIdx));
-            Scalar fugN2 = std::max(1e-3, fluidState.moleFraction(gPhaseIdx, N2Idx)
-                                         *fluidState.pressure(gPhaseIdx));
-            Scalar cH2O = H2O::gasDensity(T, fugH2O) / H2O::molarMass();
-            Scalar cN2 = N2::gasDensity(T, fugN2) / N2::molarMass();
-
-            Scalar alpha = (fugH2O + fugN2);
-
-            if (compIdx == H2OIdx)
-                return fugH2O/(alpha*cH2O/(cH2O + cN2));
-            else // (compIdx == N2Idx)
-                return fugN2/(alpha*cN2/(cH2O + cN2));
-        }
-#endif
+        // For ideal gases, the fugacity of the component is equivalent to
+        // the gas partial pressure (i.e. phi = 1), in real gases it
+        // would be the gas pressure times the component's fugacity
+        // coefficient (=> activity).
     }
 
 
@@ -662,6 +646,19 @@ public:
 };
 
 } // end namepace FluidSystems
-} // end namepace Dumux
+
+/*!
+ * \brief A twophase fluid system with water and nitrogen as components.
+ *
+ * This is an adapter to use Dumux::H2ON2FluidSystem<TypeTag>, as is
+ * done with most other classes in Dumux.
+ */
+template<class TypeTag>
+class H2ON2FluidSystem
+: public FluidSystems::H2ON2<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
+                             GET_PROP_VALUE(TypeTag, PTAG(EnableComplicatedFluidSystem))>
+{};
+
+} // end namepace
 
 #endif

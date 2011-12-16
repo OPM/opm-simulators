@@ -39,6 +39,7 @@
 #include <dune/common/exceptions.hh>
 
 #include "basefluidsystem.hh"
+#include <dumux/common/propertysystem.hh>
 
 #include <limits>
 
@@ -59,6 +60,8 @@ namespace FluidSystems {
  * component. With the help of this adapter class, the phase
  * properties can be accessed. This is suitable for pure two-phase
  * systems without compositional effects.
+ * An adapter class using Dumux::FluidSystem<TypeTag> is also provided
+ * at the end of this file.
  */
 template <class Scalar, class WettingPhase, class NonWettingPhase>
 class TwoPImmiscible
@@ -410,7 +413,28 @@ public:
     }
 };
 
-} // end namepace
+} // end namepace FluidSystems
+
+// forward defintions of the property tags
+namespace Properties {
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(WettingPhase);
+NEW_PROP_TAG(NonWettingPhase);
+};
+/*!
+ * \brief A non-compositional twophase fluid system.
+ *
+ * This is an adapter to use Dumux::TwoPImmiscible<TypeTag>, as is
+ * done with most other classes in Dumux and all template parameters
+ * are usually defined in the property system anyhow.
+ */
+template<class TypeTag>
+class TwoPImmiscibleFluidSystem
+: public FluidSystems::TwoPImmiscible<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
+                                      typename GET_PROP_TYPE(TypeTag, PTAG(WettingPhase)),
+                                      typename GET_PROP_TYPE(TypeTag, PTAG(NonWettingPhase))>
+{};
+
 } // end namepace
 
 #endif
