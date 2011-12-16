@@ -35,7 +35,8 @@
 
 #include <dune/common/exceptions.hh>
 
-#include "nullparametercache.hh"
+#include "basefluidsystem.hh"
+#include "../MpNcfluidstates/immisciblefluidstate.hh"
 
 namespace Dumux {
 
@@ -54,17 +55,15 @@ namespace Dumux {
  */
 template <class Scalar, class WettingPhase, class NonWettingPhase>
 class TwoPImmiscibleFluidSystem
+: public BaseFluidSystem<Scalar, TwoPImmiscibleFluidSystem<Scalar, WettingPhase, NonWettingPhase> >
 {
-    typedef TwoPImmiscibleFluidSystem<Scalar, WettingPhase, NonWettingPhase> ThisType;
-
     // do not try to instanciate this class, it has only static members!
     TwoPImmiscibleFluidSystem()
     {}
 
+    typedef TwoPImmiscibleFluidSystem<Scalar, WettingPhase, NonWettingPhase> ThisType;
+    typedef BaseFluidSystem<Scalar, ThisType> Base;
 public:
-    //! The type of parameter cache objects
-    typedef Dumux::NullParameterCache ParameterCache;
-
     /****************************************
      * Fluid phase related static parameters
      ****************************************/
@@ -217,15 +216,13 @@ public:
      * \brief Return the density of a phase [kg/m^3].
      *
      * \param fluidState The fluid state of the two-phase model
-     * \param paramCache The object which caches expensive parameters
-     *                   required by the fluid system.
      * \param phaseIdx Index of the fluid phase
      *
      * \tparam FluidState the fluid state class of the two-phase model
      */
+    using Base::density;
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
                           int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -247,9 +244,9 @@ public:
      *
      * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
      */
+    using Base::fugacityCoefficient;
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
                                       int phaseIdx,
                                       int compIdx)
     {
@@ -275,9 +272,9 @@ public:
      * \tparam FluidState the fluid state class of the two-phase model
      * \return returns the viscosity of the phase [Pa*s]
      */
+    using Base::viscosity;
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -308,9 +305,9 @@ public:
      * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
      * pressure and temperature.
      */
+    using Base::diffusionCoefficient;
     template <class FluidState>
     static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
                                        int phaseIdx,
                                        int compIdx)
     {
@@ -324,9 +321,9 @@ public:
      *        return the binary diffusion coefficient for components
      *        \f$i\f$ and \f$j\f$ in this phase.
      */
+    using Base::binaryDiffusionCoefficient;
     template <class FluidState>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             const ParameterCache &paramCache,
                                              int phaseIdx,
                                              int compIIdx,
                                              int compJIdx)
@@ -347,9 +344,9 @@ public:
      * \tparam FluidState the fluid state class of the two-phase model
      * \return returns the specific enthalpy of the phase [J/kg]
      */
+    using Base::internalEnergy;
     template <class FluidState>
     static Scalar internalEnergy(const FluidState &fluidState,
-                                 const ParameterCache &paramCache,
                                  int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -364,9 +361,9 @@ public:
     /*!
      * \brief Thermal conductivity of a fluid phase [W/(m^2 K/m)].
      */
+    using Base::thermalConductivity;
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
                                       int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -385,9 +382,9 @@ public:
      * \param params    mutable parameters
      * \param phaseIdx  for which phase to give back the heat capacity
      */
+    using Base::heatCapacity;
     template <class FluidState>
     static Scalar heatCapacity(const FluidState &fluidState,
-                               const ParameterCache &paramCache,
                                int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
