@@ -83,7 +83,7 @@ public: typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{
 };
 
 // Set the non-wetting phase
-SET_PROP(TutorialProblemCoupled, NonwettingPhase)
+SET_PROP(TutorialProblemCoupled, NonWettingPhase)
 {
 private: typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
 public: typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
