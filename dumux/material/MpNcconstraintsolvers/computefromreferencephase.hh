@@ -63,8 +63,6 @@ namespace Dumux {
 template <class Scalar, class FluidSystem>
 class ComputeFromReferencePhase
 {
-    typedef typename FluidSystem::MutableParameters MutableParameters;
-
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     typedef Dumux::CompositionFromFugacities<Scalar, FluidSystem> CompositionFromFugacities;
@@ -81,7 +79,7 @@ public:
      * following quantities to be set:
      *
      * - composition (mole+mass fractions) of the *reference* phase
-     * - temperature of the *reference* phase
+     * - temperature of the *all* phases
      * - saturations of *all* phases
      * - pressures of *all* phases
      *
@@ -104,32 +102,45 @@ public:
      *                    enthalpy/internal energy of each phase
      *                    should also be set.
      */
-    static void solve(MutableParameters &mutParams,
+    template <class FluidState, class ParameterCache>
+    static void solve(FluidState &fluidState,
+                      ParameterCache &paramCache,
                       int refPhaseIdx,
                       bool setViscosity,
-                      bool setEnthalpy)
+                      bool setInternalEnergy)
     {
         ComponentVector fugVec;
 
         // compute the density and enthalpy of the
         // reference phase
-        mutParams.updateMeanMolarMass(refPhaseIdx);
-        mutParams.setMolarVolume(refPhaseIdx,
-                                 FluidSystem::computeMolarVolume(mutParams, refPhaseIdx));
+        fluidState.updateAverageMolarMass(refPhaseIdx);
+        paramCache.updatePhase(fluidState, refPhaseIdx);
+        fluidState.setDensity(refPhaseIdx,
+                              FluidSystem::density(fluidState, 
+                                                   paramCache,
+                                                   refPhaseIdx));
 
-        if (setEnthalpy)
-            mutParams.setEnthalpy(refPhaseIdx,
-                                  FluidSystem::computeEnthalpy(mutParams, refPhaseIdx));
+        if (setInternalEnergy)
+            fluidState.setInternalEnergy(refPhaseIdx,
+                                         FluidSystem::internalEnergy(fluidState, 
+                                                                     paramCache,
+                                                                     refPhaseIdx));
 
         if (setViscosity)
-            mutParams.setViscosity(refPhaseIdx,
-                                   FluidSystem::computeViscosity(mutParams, refPhaseIdx));
+            fluidState.setViscosity(refPhaseIdx,
+                                    FluidSystem::viscosity(fluidState,
+                                                           paramCache,
+                                                           refPhaseIdx));
 
         // compute the fugacities of all components in the reference phase
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            mutParams.setFugacityCoeff(refPhaseIdx, compIdx,
-                                       FluidSystem::computeFugacityCoeff(mutParams, refPhaseIdx, compIdx));
-            fugVec[compIdx] = mutParams.fugacity(refPhaseIdx, compIdx);
+            fluidState.setFugacityCoefficient(refPhaseIdx, 
+                                              compIdx,
+                                              FluidSystem::fugacityCoefficient(fluidState,
+                                                                               paramCache,
+                                                                               refPhaseIdx,
+                                                                               compIdx));
+            fugVec[compIdx] = fluidState.fugacity(refPhaseIdx, compIdx);
         }
 
         // compute all quantities for the non-reference phases
@@ -137,18 +148,20 @@ public:
             if (phaseIdx == refPhaseIdx)
                 continue; // reference phase is already calculated
 
-            mutParams.setTemperature(phaseIdx, mutParams.temperature(refPhaseIdx));
-
-            CompositionFromFugacities::guessInitial(mutParams, phaseIdx, fugVec);
-            CompositionFromFugacities::solve(mutParams, phaseIdx, fugVec);
+            CompositionFromFugacities::guessInitial(fluidState, paramCache, phaseIdx, fugVec);
+            CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);
 
             if (setViscosity)
-                mutParams.setViscosity(phaseIdx,
-                                       FluidSystem::computeViscosity(mutParams, phaseIdx));
-
-            if (setEnthalpy)
-                mutParams.setEnthalpy(phaseIdx,
-                                      FluidSystem::computeEnthalpy(mutParams, phaseIdx));
+                fluidState.setViscosity(phaseIdx,
+                                        FluidSystem::viscosity(fluidState, 
+                                                               paramCache, 
+                                                               phaseIdx));
+            
+            if (setInternalEnergy)
+                fluidState.setInternalEnergy(phaseIdx,
+                                             FluidSystem::internalEnergy(fluidState,
+                                                                         paramCache,
+                                                                         phaseIdx));
         }
     };
 };
