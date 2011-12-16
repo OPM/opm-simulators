@@ -68,15 +68,17 @@ public:
         }
         
         // initially, do not allow anything
-        allowSaturation(false);
         allowTemperature(false);
         allowPressure(false);
         allowComposition(false);
         allowDensity(false);
+        
+        // do not allow accessing any phase
+        restrictToPhase(1000);
     }
 
-    void allowSaturation(bool yesno)
-    { allowSaturation_ = yesno; }
+    void allowTemperature(bool yesno)
+    { allowTemperature_ = yesno; }
 
     void allowPressure(bool yesno)
     { allowPressure_ = yesno; }
@@ -87,38 +89,71 @@ public:
     void allowDensity(bool yesno) 
     { allowDensity_ = yesno; }
 
-    Scalar saturation(int phaseIdx) const
-    { assert(allowSaturation_); return ParentType::saturation(phaseIdx); }
+    void restrictToPhase(int phaseIdx) 
+    { restrictPhaseIdx_ = phaseIdx; }
 
     Scalar temperature(int phaseIdx) const
-    { assert(allowTemperature_); return ParentType::temperature(phaseIdx); }
-
-    void allowTemperature(bool yesno)
-    { allowTemperature_ = yesno; }
+    {
+        assert(allowTemperature_);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::temperature(phaseIdx);
+    }
     
     Scalar pressure(int phaseIdx) const
-    { assert(allowPressure_); return ParentType::pressure(phaseIdx); }
+    { 
+        assert(allowPressure_);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::pressure(phaseIdx);
+    }
 
     Scalar moleFraction(int phaseIdx, int compIdx) const
-    { assert(allowComposition_); return ParentType::moleFraction(phaseIdx, compIdx); }
+    { 
+        assert(allowComposition_); 
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::moleFraction(phaseIdx, compIdx);
+    }
 
     Scalar massFraction(int phaseIdx, int compIdx) const
-    { assert(allowComposition_); return ParentType::massFraction(phaseIdx, compIdx); }
+    { 
+        assert(allowComposition_); 
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::massFraction(phaseIdx, compIdx);
+    }
 
     Scalar averageMolarMass(int phaseIdx) const
-    { assert(allowComposition_); return ParentType::averageMolarMass(phaseIdx); }
+    {
+        assert(allowComposition_); 
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::averageMolarMass(phaseIdx);
+    }
 
     Scalar molarity(int phaseIdx, int compIdx) const
-    { assert(allowDensity_ && allowComposition_); return ParentType::molarity(phaseIdx, compIdx); }
+    {
+        assert(allowDensity_ && allowComposition_);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::molarity(phaseIdx, compIdx);
+    }
 
     Scalar molarDensity(int phaseIdx) const
-    { assert(allowDensity_); return ParentType::molarDensity(phaseIdx); }
+    {
+        assert(allowDensity_);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::molarDensity(phaseIdx);
+    }
 
     Scalar molarVolume(int phaseIdx) const
-    { assert(allowDensity_); return ParentType::molarVolume(phaseIdx); }
+    {
+        assert(allowDensity_); 
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::molarVolume(phaseIdx);
+    }
 
     Scalar density(int phaseIdx) const
-    { assert(allowDensity_); return ParentType::density(phaseIdx); }
+    {
+        assert(allowDensity_);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        return ParentType::density(phaseIdx);
+    }
 
 private:
     bool allowSaturation_;
@@ -126,6 +161,7 @@ private:
     bool allowPressure_;
     bool allowComposition_;
     bool allowDensity_;
+    int restrictPhaseIdx_;
 };
 
 template <class Scalar, class FluidSystem>
@@ -133,11 +169,16 @@ void checkFluidSystem()
 {
     std::cout << "Testing fluid system '" << Dune::className<FluidSystem>() << "'\n";
 
-    HairSplittingFluidState<Scalar, FluidSystem> fs;
+    // make sure the fluid system provides the number of phases and
+    // the number of components
+    enum { numPhases = FluidSystem::numPhases };
+    enum { numComponents = FluidSystem::numComponents };
 
+    HairSplittingFluidState<Scalar, FluidSystem> fs;
     fs.allowTemperature(true);
     fs.allowPressure(true);
     fs.allowComposition(true);
+    fs.restrictToPhase(-1);
 
     // check whether the parameter cache adheres to the API
     typedef typename FluidSystem::ParameterCache PC;
@@ -145,25 +186,27 @@ void checkFluidSystem()
     try { paramCache.updateAll(fs); } catch (...) {};
     try { paramCache.updateAll(fs, /*except=*/PC::None); } catch (...) {};
     try { paramCache.updateAll(fs, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
-    try { paramCache.updatePhase(fs, /*phaseIdx=*/0); } catch (...) {};
-    try { paramCache.updatePhase(fs, /*phaseIdx=*/0, /*except=*/PC::None); } catch (...) {};
-    try { paramCache.updatePhase(fs, /*phaseIdx=*/0, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
-    try { paramCache.updateTemperature(fs, /*phaseIdx=*/0); } catch (...) {};
     try { paramCache.updateAllPressures(fs); } catch (...) {};
-    try { paramCache.updateSinglePressure(fs, /*phaseIdx=*/0); } catch (...) {};
-    try { paramCache.updateComposition(fs, /*phaseIdx=*/0); } catch (...) {};
-    try { paramCache.updateSingleMoleFraction(fs, /*phaseIdx=*/0, /*compIdx=*/0); } catch (...) {};
+
+    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        fs.restrictToPhase(phaseIdx);
+        try { paramCache.updatePhase(fs, phaseIdx); } catch (...) {};
+        try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::None); } catch (...) {};
+        try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
+        try { paramCache.updateTemperature(fs, phaseIdx); } catch (...) {};
+        try { paramCache.updateSinglePressure(fs, phaseIdx); } catch (...) {};
+        try { paramCache.updateComposition(fs, phaseIdx); } catch (...) {};
+        try { paramCache.updateSingleMoleFraction(fs, phaseIdx, /*compIdx=*/0); } catch (...) {};
+    }
 
     // some value to make sure the return values of the fluid system
     // are convertible to scalars
     Scalar __attribute__((unused)) val;
 
-    enum { numPhases = FluidSystem::numPhases };
-    enum { numComponents = FluidSystem::numComponents };
-
     // actually check the fluid system API
     FluidSystem::init();
     for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        fs.restrictToPhase(phaseIdx);
         fs.allowPressure(FluidSystem::isCompressible(phaseIdx));
         fs.allowComposition(true);
         fs.allowDensity(false);
@@ -186,11 +229,13 @@ void checkFluidSystem()
         }
     }
 
+    // test for phaseName() and isLiquid()
     for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
         std::string __attribute__((unused)) name = FluidSystem::phaseName(phaseIdx);
         bool __attribute__((unused)) bVal = FluidSystem::isLiquid(phaseIdx);
     }
     
+    // test for componentName()
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
         val = FluidSystem::molarMass(compIdx);
         std::string __attribute__((unused)) name = FluidSystem::componentName(compIdx);
