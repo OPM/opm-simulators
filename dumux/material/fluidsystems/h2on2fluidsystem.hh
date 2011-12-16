@@ -417,6 +417,8 @@ public:
         }
         
         // gas phase
+        return 1.0; // ideal gas
+        /*
         if (!useComplexRelations)
         {
             return 1.0; // ideal gas
@@ -435,6 +437,7 @@ public:
             else // (compIdx == N2Idx)
                 return fugN2/(alpha*cN2/(cH2O + cN2));
         }
+        */
     }
 
 
