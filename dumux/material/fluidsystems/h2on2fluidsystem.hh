@@ -656,7 +656,7 @@ public:
         // mangle both components together
         return
             c_pH2O*fluidState.massFraction(gPhaseIdx, H2OIdx) +
-            c_pN2molar*fluidState.moleFraction(gPhaseIdx, N2Idx)*molarMass(N2Idx);
+            c_pN2molar*fluidState.moleFraction(gPhaseIdx, N2Idx)/molarMass(N2Idx);
     }
 };
 
