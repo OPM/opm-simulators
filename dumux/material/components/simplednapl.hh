@@ -100,29 +100,18 @@ public:
     {
         return 3900; // [Pa] (at 20C)
     };
-    /*!
-     * \brief Specific enthalpy of TCE steam \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static const Scalar gasEnthalpy(Scalar temperature,
-                                    Scalar pressure)
-    {
-        DUNE_THROW(Dune::NotImplemented, "gasEnthalpy for TCE");
-    };
 
     /*!
-     * \brief Specific enthalpy of liquid TCE \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \brief Returns true iff the gas phase is assumed to be incompressible
      */
-    static const Scalar liquidEnthalpy(Scalar temperature,
-                                       Scalar pressure)
-    {
-        DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for TCE");
-    };
+    static bool gasIsIncompressible()
+    { return false; }
+
+    /*!
+     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     */
+    static bool liquidIsIncompressible()
+    { return true; }
 
     /*!
      * \brief The density of steam at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
@@ -147,18 +136,6 @@ public:
     {
         return 1460.0; // [kg/m^3]
     }
-
-    /*!
-     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of steam.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     * \param regularize defines, if the functions is regularized or not, set to true by default
-     */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
-    {
-        DUNE_THROW(Dune::NotImplemented, "gasViscosity for TCE");
-    };
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure TCE.

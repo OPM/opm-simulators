@@ -62,6 +62,18 @@ public:
     {   Dune::dwarn << "No init routine defined - make sure that this is not necessary!" << std::endl; }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be incompressible
+     */
+    static bool gasIsIncompressible()
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasIsIncompressible()"); }
+
+    /*!
+     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     */
+    static bool liquidIsIncompressible()
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidIsIncompressible()"); }
+
+    /*!
      * \brief A human readable name for the component.
      */
     static const char *name()

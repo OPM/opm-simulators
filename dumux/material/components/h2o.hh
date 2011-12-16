@@ -241,8 +241,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar gasHeatCap_p(Scalar temperature,
-                                    Scalar pressure)
+    static const Scalar gasHeatCapacity(Scalar temperature,
+                                        Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
@@ -276,8 +276,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar liquidHeatCap_p(Scalar temperature,
-                                       Scalar pressure)
+    static const Scalar liquidHeatCapacity(Scalar temperature,
+                                           Scalar pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
@@ -439,8 +439,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar liquidHeatCap_v(Scalar temperature,
-                                             Scalar pressure)
+    static const Scalar liquidHeatCapacityConstVolume(Scalar temperature,
+                                                      Scalar pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
@@ -473,7 +473,7 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
     */
-    static Scalar gasHeatCap_v(Scalar temperature, Scalar pressure)
+    static Scalar gasHeatCapacityConstVolume(Scalar temperature, Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
@@ -494,6 +494,18 @@ public:
 
         return heatCap_v_Region2_(temperature, pressure);
     }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be incompressible
+     */
+    static bool gasIsIncompressible()
+    { return false; }
+
+    /*!
+     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     */
+    static bool liquidIsIncompressible()
+    { return false; }
 
     /*!
      * \brief The density of steam in \f$\mathrm{[kg/m^3]}\f$ at a given pressure and temperature.

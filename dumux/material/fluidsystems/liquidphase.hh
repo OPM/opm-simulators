@@ -50,6 +50,13 @@ public:
     { return true; };
 
     /*!
+     * \brief Returns true iff the fluid is assumed to be incompressible
+     */
+    static bool isIncompressible()
+    { return Component::liquidIsIncompressible(); }
+
+
+    /*!
      * \brief The mass in [kg] of one mole of the component.
      */
     static Scalar molarMass()

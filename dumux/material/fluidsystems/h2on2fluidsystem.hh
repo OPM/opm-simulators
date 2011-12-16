@@ -131,6 +131,25 @@ public:
         return true;
     }
 
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be incompressible.
+     *
+     * Incompressible means that the partial derivative of the density
+     * to the fluid pressure is equivalent to zero.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static bool isIncompressible(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        // ideal gases are never incompressible
+        if (phaseIdx == gPhaseIdx)
+            return false;
+        // the water component decides for the liquid phase...
+        return H2O::liquidIsIncompressible();
+    }
+
     /****************************************
      * Component related static parameters
      ****************************************/

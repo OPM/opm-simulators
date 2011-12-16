@@ -125,6 +125,12 @@ public:
     }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be incompressible
+     */
+    static bool gasIsIncompressible()
+    { return false; }
+
+    /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$N_2\f$ gas at a given pressure and temperature.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
@@ -147,25 +153,6 @@ public:
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
     }
-
-    /*!
-     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$N_2\f$ gas at a given pressure and temperature.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidDensity for N2"); }
-
-    /*!
-     * \brief The pressure of liquid nitrogen  in \f$\mathrm{[Pa]}\f$ at a given density and
-     *        temperature.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
-     */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
-    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for N2"); }
 
     /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure nitrogen gas.
@@ -199,15 +186,6 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$N_2\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for N2"); }
-
-    /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure nitrogen gas.
      *
      *        Definition of enthalpy: \f$h= u + pv = u + p / \rho\f$.
@@ -228,15 +206,6 @@ public:
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
             IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas 
     }
-
-    /*!
-     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$N_2\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of N2"); }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$N_2\f$ at a given pressure and temperature.
@@ -274,15 +243,6 @@ public:
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;
     }
-
-    /*!
-     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$N_2\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for N2"); }
 };
 
 } // end namepace

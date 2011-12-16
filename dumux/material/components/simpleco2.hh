@@ -86,15 +86,6 @@ public:
     { return 5.11e5; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure \f$CO_2\f$
-     *        at a given temperature.
-     *
-     * \param T temperature of component in \f$\mathrm{[K]}\f$
-     */
-    static Scalar vaporPressure(Scalar T)
-    { DUNE_THROW(Dune::NotImplemented, "vaporPressure of simple CO2"); }
-
-    /*!
      * \brief Specific enthalpy of gaseous \f$CO_2\f$ \f$\mathrm{[J/kg]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
@@ -137,14 +128,10 @@ public:
     }
 
     /*!
-     * \brief Specific internal energy of liquid \f$CO_2\f$ \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \brief Returns true iff the gas phase is assumed to be incompressible
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature,
-                                             Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of simple CO2"); }
+    static bool gasIsIncompressible()
+    { return false; }
 
     /*!
      * \brief The density of \f$CO_2\f$ at a given pressure and temperature [kg/m^3].
@@ -169,25 +156,6 @@ public:
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
     }
-
-    /*!
-     * \brief The density of pure \f$CO_2\f$ at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidDensity of simple CO2"); }
-
-    /*!
-     * \brief The pressure of liquid \f$CO_2\f$ in \f$\mathrm{[Pa]}\f$ at a given density and
-     *        temperature.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
-     */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
-    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for simple CO2"); }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$CO_2\f$ at a given pressure and temperature.
@@ -223,15 +191,6 @@ public:
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;
     }
-
-    /*!
-     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$CO_2\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity of simple CO2"); }
 };
 
 } // end namepace

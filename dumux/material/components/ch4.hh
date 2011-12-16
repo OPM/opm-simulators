@@ -95,6 +95,11 @@ public:
     static Scalar vaporPressure(Scalar T)
     { DUNE_THROW(Dune::NotImplemented, "vaporPressure for CH4"); }
 
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be incompressible
+     */
+    static bool gasIsIncompressible()
+    { return false; }
 
     /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$CH_4\f$ gas at a given pressure and temperature.
@@ -119,25 +124,6 @@ public:
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
     }
-
-    /*!
-     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$CH_4\f$ gas at a given pressure and temperature.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidDensity for CH4"); }
-
-    /*!
-     * \brief The pressure of liquid methane in \f$\mathrm{[Pa]}\f$ at a given density and
-     *        temperature.
-    *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
-     */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
-    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for CH4"); }
 
     /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure methane gas.
@@ -171,15 +157,6 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$CH_4\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for CH4"); }
-
-    /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure methane gas.
      *
      *        Definition of enthalpy: \f$h= u + pv = u + p / \rho\f$.
@@ -202,15 +179,6 @@ public:
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
             IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas
     }
-
-    /*!
-     * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure liquid \f$CH_4\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of CH4"); }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$CH_4\f$ at a given pressure and temperature.
@@ -248,15 +216,6 @@ public:
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;
     }
-
-    /*!
-     * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of pure \f$CH_4\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for CH4"); }
 };
 
 } // end namepace

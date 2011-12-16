@@ -183,6 +183,18 @@ public:
             pressure/liquidDensity(temperature, pressure); }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be incompressible
+     */
+    static bool gasIsIncompressible()
+    { return false; }
+
+    /*!
+     * \brief Returns true iff the liquid phase is assumed to be incompressible
+     */
+    static bool liquidIsIncompressible()
+    { return true; }
+
+    /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of steam at a given pressure and temperature.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
