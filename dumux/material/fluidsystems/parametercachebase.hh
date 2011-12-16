@@ -50,7 +50,7 @@ public:
     void updateAll(const FluidState &fs, int exceptQuantities = None)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
-            updatePhase(fs, phaseIdx);
+            asImp_().updatePhase(fs, phaseIdx);
     };
 
 
@@ -58,7 +58,14 @@ public:
     void updateAllPressures(const FluidState &fs)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
-            updatePhase(fs, phaseIdx);
+            asImp_().updatePhase(fs, phaseIdx);
+    };
+
+    template <class FluidState>
+    void updateAllTemperatures(const FluidState &fs)
+    {
+        for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
+            asImp_().updatePhase(fs, phaseIdx);
     };
 
 

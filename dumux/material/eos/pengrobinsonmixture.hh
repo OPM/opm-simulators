@@ -89,38 +89,41 @@ public:
       * R. Reid, et al.: The Properties of Gases and Liquids,
       * 4th edition, McGraw-Hill, 1987, pp. 42-44, 143-145
       */
-    template <class Params>
-    static Scalar computeFugacityCoeff(const Params &params,
-                                       int phaseIdx,
-                                       int compIdx)
+    template <class FluidState, class Params>
+    static Scalar computeFugacityCoefficient(const FluidState &fs,
+                                             const Params &params,
+                                             int phaseIdx,
+                                             int compIdx)
     {
         // note that we normalize the component mole fractions, so
         // that their sum is 100%. This increases numerical stability
         // considerably if the fluid state is not physical.
-
         Scalar Vm = params.molarVolume(phaseIdx);
 
         // Calculate b_i / b
         Scalar bi_b = params.bPure(phaseIdx, compIdx) / params.b(phaseIdx);
 
         // Calculate the compressibility factor
-        Scalar RT = R*params.temperature(phaseIdx);
-        Scalar p = params.pressure(phaseIdx); // molar volume in [bar]
+        Scalar RT = R*fs.temperature(phaseIdx);
+        Scalar p = fs.pressure(phaseIdx); // molar volume in [bar]
         Scalar Z = p*Vm/RT; // compressibility factor
 
         // Calculate A^* and B^* (see: Reid, p. 42)
         Scalar Astar = params.a(phaseIdx)*p/(RT*RT);
         Scalar Bstar = params.b(phaseIdx)*p/(RT);
 
-
         // calculate delta_i (see: Reid, p. 145)
+        Scalar sumMoleFractions = 0.0;
+        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) 
+            sumMoleFractions += fs.moleFraction(phaseIdx, compJIdx);
         Scalar deltai = 2*std::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
         Scalar tmp = 0;
-        for (int j = 0; j < numComponents; ++j) {
+        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             tmp +=
-                params.moleFrac(phaseIdx, j) / params.sumMoleFrac(phaseIdx) *
-                std::sqrt(params.aPure(phaseIdx, j))
-                *(1.0 - StaticParameters::interactionCoefficient(compIdx, j));
+                fs.moleFraction(phaseIdx, compJIdx) 
+                / sumMoleFractions 
+                * std::sqrt(params.aPure(phaseIdx, compJIdx))
+                * (1.0 - StaticParameters::interactionCoefficient(compIdx, compJIdx));
         };
         deltai *= tmp;
 

@@ -252,7 +252,7 @@ public:
     static Scalar criticalMolarVolume(int compIdx)
     {
         DUNE_THROW(Dune::NotImplemented,
-                   "H2ON2StaticParams::criticalMolarVolume()");
+                   "H2ON2FluidSystem::criticalMolarVolume()");
     };
 
     /*!
@@ -306,9 +306,9 @@ public:
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
     {
         if (useComplexRelations)
-            Dune::dwarn << "using complex H2O_N2 fluid system: Viscosity depends on composition" << std::endl;
+            std::cout << "Using complex H2O-N2 fluid system\n";
         else
-            Dune::dwarn << "using fast H2O_N2 fluid system: Viscosity does not depend on composition" << std::endl;
+            std::cout << "Using fast H2O-N2 fluid system\n";
 
         if (H2O::isTabulated) {
             std::cout << "Initializing tables for the H2O fluid properties ("

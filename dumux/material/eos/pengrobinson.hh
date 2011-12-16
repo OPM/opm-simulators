@@ -119,19 +119,20 @@ public:
      * \brief Computes molar volumes where the Peng-Robinson EOS is
      *        true.
      */
-    template <class Params>
-    static Scalar computeMolarVolume(const Params &params,
+    template <class FluidState, class Params>
+    static Scalar computeMolarVolume(const FluidState &fs,
+                                     const Params &params,
                                      int phaseIdx,
                                      bool gasPhase)
     {
-        Valgrind::CheckDefined(params.temperature(phaseIdx));
-        Valgrind::CheckDefined(params.pressure(phaseIdx));
+        Valgrind::CheckDefined(fs.temperature(phaseIdx));
+        Valgrind::CheckDefined(fs.pressure(phaseIdx));
 
         Scalar Vm;
         Valgrind::SetUndefined(Vm);
 
-        Scalar T = params.temperature(phaseIdx);
-        Scalar p = params.pressure(phaseIdx);
+        Scalar T = fs.temperature(phaseIdx);
+        Scalar p = fs.pressure(phaseIdx);
 
         Scalar RT= R*T;
         Scalar Astar = params.a(phaseIdx)*p/(RT*RT);
@@ -166,13 +167,13 @@ public:
             // find the extrema (if they are present)
             Scalar Vmin, Vmax;
             bool hasExtrema;
-            hasExtrema = findExtrema_(Vmin, Vmax, params, phaseIdx);
+            hasExtrema = findExtrema_(Vmin, Vmax, fs, params, phaseIdx);
 
             if (!hasExtrema) {
                 // if the EOS does not exhibit any extrema, the fluid
                 // is critical...
                 Vm = VmCubic;
-                handleCriticalFluid_(Vm, params, phaseIdx, gasPhase);
+                handleCriticalFluid_(Vm, fs, params, phaseIdx, gasPhase);
             }
             else {
                 if (gasPhase)
@@ -197,7 +198,7 @@ public:
      * \param params Parameters
      */
     template <class Params>
-    static Scalar computeFugacityCoeff(const Params &params)
+    static Scalar computeFugacityCoeffient(const Params &params)
     {
         Scalar T = params.temperature();
         Scalar p = params.pressure();
@@ -233,14 +234,16 @@ public:
     { return params.pressure()*computeFugacityCoeff(params); }
 
 protected:
-    template <class Params>
+    template <class FluidState, class Params>
     static void handleCriticalFluid_(Scalar &Vm,
+                                     const FluidState &fs,
                                      const Params &params,
                                      int phaseIdx,
                                      bool gasPhase)
     {
         Scalar Vcrit;
         findCriticalMolarVolume_(Vcrit,
+                                 fs,
                                  params,
                                  phaseIdx,
                                  Vm,
@@ -251,13 +254,15 @@ protected:
             Vm = std::min(Vm, Vcrit);
     }
 
-    template <class Params>
+    template <class FluidState, class Params>
     static void findCriticalMolarVolume_(Scalar &Vcrit,
+                                         const FluidState &fs,
                                          const Params &params,
                                          int phaseIdx,
                                          Scalar Vcubic,
                                          bool gasPhase)
     {
+        FluidState tmpFs(fs);
         Params tmpParams(params);
 
         // use an isotherm where the EOS should exhibit two maxima
@@ -266,14 +271,14 @@ protected:
         Scalar minVm;
         Scalar maxVm;
         Scalar T = Tmin;
-        for (int i = 0; ; ++i) {
-            tmpParams.setTemperature(phaseIdx, T);
-            tmpParams.updateEosParams(phaseIdx);
 
-            if (findExtrema_(minVm, maxVm, tmpParams, phaseIdx, /*hintSet=*/false))
+        tmpFs.setTemperature(T);
+        tmpParams.updateEosParams(tmpFs, phaseIdx);
+        for (int i = 0; ; ++i) {
+            if (findExtrema_(minVm, maxVm, tmpFs, tmpParams, phaseIdx, /*hintSet=*/false))
                 break;
 
-            T = (T + params.temperature(phaseIdx)) / 2;
+            T = (T + tmpFs.temperature(phaseIdx)) / 2;
             if (i >= 3) {
                 DUNE_THROW(NumericalProblem,
                            "TODO: better way to identify a non-critical temperature");
@@ -301,9 +306,9 @@ protected:
             // rarely happens, though)
             const Scalar eps = - 1e-8;
             T = T + eps;
-            tmpParams.updateEosParams(phaseIdx);
-            tmpParams.setTemperature(phaseIdx, T);
-            if (!findExtrema_(minVm, maxVm, tmpParams, phaseIdx, /*hintSet=*/true))
+            tmpFs.setTemperature(T);
+            tmpParams.updateEosParams(tmpFs, phaseIdx);
+            if (!findExtrema_(minVm, maxVm, tmpFs, tmpParams, phaseIdx, /*hintSet=*/true))
                 DUNE_THROW(NumericalProblem,
                            "Error when calculating derivative of extrema "
                            "to calculate the critical point of phase "
@@ -331,9 +336,9 @@ protected:
                                << phaseIdx);
                 }
 
-                tmpParams.setTemperature(phaseIdx, Tstar);
-                tmpParams.updateEosParams(phaseIdx);
-                if (findExtrema_(minVm, maxVm, tmpParams, phaseIdx, /*hintSet=*/(j==0))) {
+                tmpFs.setTemperature(Tstar);
+                tmpParams.updateEosParams(tmpFs, phaseIdx);
+                if (findExtrema_(minVm, maxVm, tmpFs, tmpParams, phaseIdx, /*hintSet=*/(j==0))) {
                     // if the isotherm at Tstar exhibits two extrema
                     // the update is finished
                     T = Tstar;
@@ -349,9 +354,10 @@ protected:
 
     // find the two molar volumes where the EOS exhibits extrema and
     // which are larger than the covolume of the phase
-    template <class Params>
+    template <class FluidState, class Params>
     static bool findExtrema_(Scalar &Vmin,
                              Scalar &Vmax,
+                             const FluidState &fs,
                              const Params &params,
                              int phaseIdx,
                              bool hintSet = false)
@@ -361,7 +367,7 @@ protected:
         Scalar u = 2;
         Scalar w = -1;
 
-        Scalar RT = R*params.temperature(phaseIdx);
+        Scalar RT = R*fs.temperature(phaseIdx);
 
         // calculate coefficients of the 4th order polynominal in
         // monomial basis

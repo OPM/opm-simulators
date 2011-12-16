@@ -30,6 +30,7 @@
 #define DUMUX_COMPOSITIONAL_FLUID_STATE_HH
 
 #include <dumux/common/valgrind.hh>
+#include <algorithm>
 
 namespace Dumux
 {
