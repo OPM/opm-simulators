@@ -39,6 +39,9 @@
 #include <appl/lecture/msm/1p2cvs2p/watercontaminantfluidsystem.hh>
 
 // include all fluid states
+#include <dumux/material/fluidstates/pressureoverlayfluidstate.hh>
+#include <dumux/material/fluidstates/saturationoverlayfluidstate.hh>
+#include <dumux/material/fluidstates/temperatureoverlayfluidstate.hh>
 #include <dumux/material/fluidstates/compositionalfluidstate.hh>
 #include <dumux/material/fluidstates/nonequilibriumfluidstate.hh>
 #include <dumux/material/fluidstates/immisciblefluidstate.hh>
@@ -47,26 +50,26 @@
 
 // this is a fluid state which makes sure that only the quantities
 // allowed are accessed
-template <class Scalar, class FluidSystem>
+template <class Scalar, 
+          class FluidSystem,
+          class BaseFluidState = Dumux::CompositionalFluidState<Scalar, FluidSystem>>
 class HairSplittingFluidState 
-    : protected Dumux::CompositionalFluidState<Scalar, FluidSystem>
+    : protected BaseFluidState
 {
-    typedef Dumux::CompositionalFluidState<Scalar, FluidSystem> ParentType;
-
 public:
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-
+    
     HairSplittingFluidState()
     {
         // set some fake values
-        ParentType::setTemperature(293.15);
+        BaseFluidState::setTemperature(293.15);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            ParentType::setSaturation(phaseIdx, 1.0 / numPhases);
-            ParentType::setDensity(phaseIdx, 1.0);
+            BaseFluidState::setSaturation(phaseIdx, 1.0 / numPhases);
+            BaseFluidState::setDensity(phaseIdx, 1.0);
 
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                ParentType::setMoleFraction(phaseIdx, compIdx, 1.0 / numComponents);
+                BaseFluidState::setMoleFraction(phaseIdx, compIdx, 1.0 / numComponents);
                 
             }
         }
@@ -100,63 +103,99 @@ public:
     {
         assert(allowTemperature_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::temperature(phaseIdx);
+        return BaseFluidState::temperature(phaseIdx);
     }
     
     Scalar pressure(int phaseIdx) const
     { 
         assert(allowPressure_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::pressure(phaseIdx);
+        return BaseFluidState::pressure(phaseIdx);
     }
 
     Scalar moleFraction(int phaseIdx, int compIdx) const
     { 
         assert(allowComposition_); 
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::moleFraction(phaseIdx, compIdx);
+        return BaseFluidState::moleFraction(phaseIdx, compIdx);
     }
 
     Scalar massFraction(int phaseIdx, int compIdx) const
     { 
         assert(allowComposition_); 
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::massFraction(phaseIdx, compIdx);
+        return BaseFluidState::massFraction(phaseIdx, compIdx);
     }
 
     Scalar averageMolarMass(int phaseIdx) const
     {
         assert(allowComposition_); 
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::averageMolarMass(phaseIdx);
+        return BaseFluidState::averageMolarMass(phaseIdx);
     }
 
     Scalar molarity(int phaseIdx, int compIdx) const
     {
         assert(allowDensity_ && allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::molarity(phaseIdx, compIdx);
+        return BaseFluidState::molarity(phaseIdx, compIdx);
     }
 
     Scalar molarDensity(int phaseIdx) const
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::molarDensity(phaseIdx);
+        return BaseFluidState::molarDensity(phaseIdx);
     }
 
     Scalar molarVolume(int phaseIdx) const
     {
         assert(allowDensity_); 
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::molarVolume(phaseIdx);
+        return BaseFluidState::molarVolume(phaseIdx);
     }
 
     Scalar density(int phaseIdx) const
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return ParentType::density(phaseIdx);
+        return BaseFluidState::density(phaseIdx);
+    }
+
+    Scalar saturation(int phaseIdx) const
+    { 
+        assert(false);
+        return BaseFluidState::saturation(phaseIdx);
+    }
+
+    Scalar fugacity(int phaseIdx, int compIdx) const
+    {
+        assert(false);
+        return BaseFluidState::fugacity(phaseIdx, compIdx);
+    }
+
+    Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
+    {
+        assert(false);
+        return BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
+    }
+
+    Scalar enthalpy(int phaseIdx) const
+    {
+        assert(false);
+        return BaseFluidState::enthalpy(phaseIdx);
+    }
+
+    Scalar internalEnergy(int phaseIdx) const
+    {
+        assert(false);
+        return BaseFluidState::internalEnergy(phaseIdx);
+    }
+
+    Scalar viscosity(int phaseIdx) const
+    { 
+        assert(false);
+        return BaseFluidState::viscosity(phaseIdx);
     }
 
 private:
@@ -167,6 +206,38 @@ private:
     bool allowDensity_;
     int restrictPhaseIdx_;
 };
+
+template <class Scalar, class BaseFluidState>
+void checkFluidState(const BaseFluidState &fs)
+{
+    // fluid states must be copy-able
+    BaseFluidState tmpFs(fs);
+    tmpFs = fs;
+
+    // a fluid state must provide a checkDefined() method
+    fs.checkDefined();
+    
+    // make sure the fluid state provides all mandatory methods
+    while (false) {
+        Scalar __attribute__((unused)) val;
+
+        val = fs.temperature(/*phaseIdx=*/0);
+        val = fs.pressure(/*phaseIdx=*/0);
+        val = fs.moleFraction(/*phaseIdx=*/0, /*compIdx=*/0);
+        val = fs.massFraction(/*phaseIdx=*/0, /*compIdx=*/0);
+        val = fs.averageMolarMass(/*phaseIdx=*/0);
+        val = fs.molarity(/*phaseIdx=*/0, /*compIdx=*/0);
+        val = fs.molarDensity(/*phaseIdx=*/0);
+        val = fs.molarVolume(/*phaseIdx=*/0);
+        val = fs.density(/*phaseIdx=*/0);
+        val = fs.saturation(/*phaseIdx=*/0);
+        val = fs.fugacity(/*phaseIdx=*/0, /*compIdx=*/0);
+        val = fs.fugacityCoefficient(/*phaseIdx=*/0, /*compIdx=*/0);
+        val = fs.enthalpy(/*phaseIdx=*/0);
+        val = fs.internalEnergy(/*phaseIdx=*/0);
+        val = fs.viscosity(/*phaseIdx=*/0);
+    };
+}
 
 template <class Scalar, class FluidSystem>
 void checkFluidSystem()

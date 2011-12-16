@@ -40,6 +40,14 @@
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 #include <appl/lecture/msm/1p2cvs2p/watercontaminantfluidsystem.hh>
 
+// include all fluid states
+#include <dumux/material/fluidstates/pressureoverlayfluidstate.hh>
+#include <dumux/material/fluidstates/saturationoverlayfluidstate.hh>
+#include <dumux/material/fluidstates/temperatureoverlayfluidstate.hh>
+#include <dumux/material/fluidstates/compositionalfluidstate.hh>
+#include <dumux/material/fluidstates/nonequilibriumfluidstate.hh>
+#include <dumux/material/fluidstates/immisciblefluidstate.hh>
+
 int main()
 {
     typedef double Scalar;
@@ -48,6 +56,38 @@ int main()
 
     typedef Dumux::LiquidPhase<Scalar, H2O> Liquid;
     typedef Dumux::GasPhase<Scalar, N2> Gas;
+    
+    // check all fluid states
+    {
+        typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
+        
+        // CompositionalFluidState
+        {   Dumux::CompositionalFluidState<Scalar, FluidSystem> fs;
+            checkFluidState<Scalar>(fs); }
+
+        // NonEquilibriumFluidState
+        {   Dumux::NonEquilibriumFluidState<Scalar, FluidSystem> fs;
+            checkFluidState<Scalar>(fs); }
+
+        // ImmiscibleFluidState
+        {   Dumux::ImmiscibleFluidState<Scalar, FluidSystem> fs;
+            checkFluidState<Scalar>(fs); }
+
+        typedef Dumux::CompositionalFluidState<Scalar, FluidSystem> BaseFluidState;
+        BaseFluidState baseFs;
+
+        // TemperatureOverlayFluidState
+        {   Dumux::TemperatureOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
+            checkFluidState<Scalar>(fs); }
+
+        // PressureOverlayFluidState
+        {   Dumux::PressureOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
+            checkFluidState<Scalar>(fs); }
+
+        // SaturationOverlayFluidState
+        {   Dumux::SaturationOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
+            checkFluidState<Scalar>(fs); }
+    }
 
     // H2O -- N2
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;

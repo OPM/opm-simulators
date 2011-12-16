@@ -37,6 +37,7 @@
 #ifndef DUMUX_PENG_ROBINSON_HH
 #define DUMUX_PENG_ROBINSON_HH
 
+#include <dumux/material/fluidstates/temperatureoverlayfluidstate.hh>
 #include <dumux/material/idealgas.hh>
 #include <dumux/common/math.hh>
 
@@ -121,9 +122,9 @@ public:
      */
     template <class FluidState, class Params>
     static Scalar computeMolarVolume(const FluidState &fs,
-                                     const Params &params,
+                                     Params &params,
                                      int phaseIdx,
-                                     bool gasPhase)
+                                     bool isGasPhase)
     {
         Valgrind::CheckDefined(fs.temperature(phaseIdx));
         Valgrind::CheckDefined(fs.pressure(phaseIdx));
@@ -153,7 +154,7 @@ public:
             // the EOS has three intersections with the pressure,
             // i.e. the molar volume of gas is the largest one and the
             // molar volume of liquid is the smallest one
-            if (gasPhase)
+            if (isGasPhase)
                 Vm = Z[2]*RT/p;
             else
                 Vm = Z[0]*RT/p;
@@ -173,10 +174,10 @@ public:
                 // if the EOS does not exhibit any extrema, the fluid
                 // is critical...
                 Vm = VmCubic;
-                handleCriticalFluid_(Vm, fs, params, phaseIdx, gasPhase);
+                handleCriticalFluid_(Vm, fs, params, phaseIdx, isGasPhase);
             }
             else {
-                if (gasPhase)
+                if (isGasPhase)
                     Vm = std::max(Vmax, VmCubic);
                 else
                     Vm = std::min(Vmin, VmCubic);
@@ -237,18 +238,20 @@ protected:
     template <class FluidState, class Params>
     static void handleCriticalFluid_(Scalar &Vm,
                                      const FluidState &fs,
-                                     const Params &params,
+                                     Params &params,
                                      int phaseIdx,
-                                     bool gasPhase)
+                                     bool isGasPhase)
     {
+        static Params tmpParams;
+
         Scalar Vcrit;
         findCriticalMolarVolume_(Vcrit,
                                  fs,
-                                 params,
+                                 tmpParams,
                                  phaseIdx,
                                  Vm,
-                                 gasPhase);
-        if (gasPhase)
+                                 isGasPhase);
+        if (isGasPhase)
             Vm = std::max(Vm, Vcrit);
         else
             Vm = std::min(Vm, Vcrit);
@@ -257,13 +260,13 @@ protected:
     template <class FluidState, class Params>
     static void findCriticalMolarVolume_(Scalar &Vcrit,
                                          const FluidState &fs,
-                                         const Params &params,
+                                         Params &params,
                                          int phaseIdx,
                                          Scalar Vcubic,
-                                         bool gasPhase)
+                                         bool isGasPhase)
     {
-        FluidState tmpFs(fs);
-        Params tmpParams(params);
+        typedef Dumux::TemperatureOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        OverlayFluidState tmpFs(fs);
 
         // use an isotherm where the EOS should exhibit two maxima
         Scalar Tmin = 150; // [K]
@@ -273,15 +276,15 @@ protected:
         Scalar T = Tmin;
 
         tmpFs.setTemperature(T);
-        tmpParams.updateEosParams(tmpFs, phaseIdx);
+        params.updateEosParams(tmpFs, phaseIdx);
         for (int i = 0; ; ++i) {
-            if (findExtrema_(minVm, maxVm, tmpFs, tmpParams, phaseIdx, /*hintSet=*/false))
+            if (findExtrema_(minVm, maxVm, tmpFs, params, phaseIdx, /*hintSet=*/false))
                 break;
 
             T = (T + tmpFs.temperature(phaseIdx)) / 2;
             if (i >= 3) {
                 DUNE_THROW(NumericalProblem,
-                           "TODO: better way to identify a non-critical temperature");
+                           "TODO: we need a better way to find a non-critical temperature");
             };
         }
 
@@ -293,8 +296,8 @@ protected:
 
             // check if we're converged
             if (f < 1e-8 ||
-                (gasPhase && maxVm < Vcubic) ||
-                (!gasPhase && minVm > Vcubic))
+                (isGasPhase && maxVm < Vcubic) ||
+                (!isGasPhase && minVm > Vcubic))
             {
                 Vcrit = (maxVm + minVm)/2;
                 return;
@@ -307,8 +310,8 @@ protected:
             const Scalar eps = - 1e-8;
             T = T + eps;
             tmpFs.setTemperature(T);
-            tmpParams.updateEosParams(tmpFs, phaseIdx);
-            if (!findExtrema_(minVm, maxVm, tmpFs, tmpParams, phaseIdx, /*hintSet=*/true))
+            params.updateEosParams(tmpFs, phaseIdx);
+            if (!findExtrema_(minVm, maxVm, tmpFs, params, phaseIdx, /*hintSet=*/true))
                 DUNE_THROW(NumericalProblem,
                            "Error when calculating derivative of extrema "
                            "to calculate the critical point of phase "
@@ -337,8 +340,8 @@ protected:
                 }
 
                 tmpFs.setTemperature(Tstar);
-                tmpParams.updateEosParams(tmpFs, phaseIdx);
-                if (findExtrema_(minVm, maxVm, tmpFs, tmpParams, phaseIdx, /*hintSet=*/(j==0))) {
+                params.updateEosParams(tmpFs, phaseIdx);
+                if (findExtrema_(minVm, maxVm, tmpFs, params, phaseIdx, /*hintSet=*/(j==0))) {
                     // if the isotherm at Tstar exhibits two extrema
                     // the update is finished
                     T = Tstar;

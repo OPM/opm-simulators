@@ -276,7 +276,7 @@ public:
             //for (int j = 0; j < numComponents; ++j) {
             //    Valgrind::CheckDefined(fugacityCoefficient_[i][j]);
             //}
-            Valgrind:CheckDefined(pressure_[i]);
+            Valgrind::CheckDefined(pressure_[i]);
             Valgrind::CheckDefined(saturation_[i]);
             Valgrind::CheckDefined(density_[i]);
             //Valgrind::CheckDefined(internalEnergy_[i]);
