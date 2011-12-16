@@ -30,7 +30,6 @@
 #ifndef DUMUX_COMPUTE_FROM_REFERENCE_PHASE_HH
 #define DUMUX_COMPUTE_FROM_REFERENCE_PHASE_HH
 
-#include "../MpNcfluidstates/genericfluidstate.hh"
 #include <dumux/material/MpNcconstraintsolvers/compositionfromfugacities.hh>
 
 namespace Dumux {
@@ -107,24 +106,23 @@ public:
                       ParameterCache &paramCache,
                       int refPhaseIdx,
                       bool setViscosity,
-                      bool setInternalEnergy)
+                      bool setEnthalpy)
     {
         ComponentVector fugVec;
 
         // compute the density and enthalpy of the
         // reference phase
-        fluidState.updateAverageMolarMass(refPhaseIdx);
         paramCache.updatePhase(fluidState, refPhaseIdx);
         fluidState.setDensity(refPhaseIdx,
                               FluidSystem::density(fluidState, 
                                                    paramCache,
                                                    refPhaseIdx));
 
-        if (setInternalEnergy)
-            fluidState.setInternalEnergy(refPhaseIdx,
-                                         FluidSystem::internalEnergy(fluidState, 
-                                                                     paramCache,
-                                                                     refPhaseIdx));
+        if (setEnthalpy)
+            fluidState.setEnthalpy(refPhaseIdx,
+                                   FluidSystem::enthalpy(fluidState, 
+                                                         paramCache,
+                                                         refPhaseIdx));
 
         if (setViscosity)
             fluidState.setViscosity(refPhaseIdx,
@@ -157,11 +155,11 @@ public:
                                                                paramCache, 
                                                                phaseIdx));
             
-            if (setInternalEnergy)
-                fluidState.setInternalEnergy(phaseIdx,
-                                             FluidSystem::internalEnergy(fluidState,
-                                                                         paramCache,
-                                                                         phaseIdx));
+            if (setEnthalpy)
+                fluidState.setEnthalpy(phaseIdx,
+                                       FluidSystem::enthalpy(fluidState,
+                                                             paramCache,
+                                                             phaseIdx));
         }
     };
 };

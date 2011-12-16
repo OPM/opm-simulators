@@ -329,18 +329,11 @@ public:
     };
 
     /*!
-     * \brief Return the specific internal of a fluid phase [J/kg].
-     *
-     * \param phaseIdx index of the phase
-     * \param temperature phase temperature in [K]
-     * \param pressure phase pressure in [Pa]
-     * \param fluidState The fluid state of the two-phase model
-     * \tparam FluidState the fluid state class of the two-phase model
-     * \return returns the specific enthalpy of the phase [J/kg]
+     * \brief Return the specific enthalpy of a fluid phase [J/kg].
      */
     using Base::internalEnergy;
     template <class FluidState>
-    static Scalar internalEnergy(const FluidState &fluidState,
+    static Scalar enthalpy(const FluidState &fluidState,
                                  int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -348,8 +341,8 @@ public:
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
         if (phaseIdx == wPhaseIdx)
-            return WettingPhase::internalEnergy(temperature, pressure);
-        return NonWettingPhase::internalEnergy(temperature, pressure);
+            return WettingPhase::enthalpy(temperature, pressure);
+        return NonWettingPhase::enthalpy(temperature, pressure);
     }
 
     /*!

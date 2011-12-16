@@ -303,22 +303,22 @@ public:
  
     /*!
      * \brief Given a phase's composition, temperature, pressure and
-     *        density, calculate its specific internal energy [J/kg].
+     *        density, calculate its specific enthalpy [J/kg].
      *
      * \param fluidState An abitrary fluid state
      * \param paramCache The fluid system's parameter cache
      * \param phaseIdx The index of the fluid phase to consider
      */
     template <class FluidState>
-    static Scalar internalEnergy(const FluidState &fluidState,
-                                 const ParameterCache &paramCache,
-                                 int phaseIdx)
+    static Scalar enthalpy(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
-        return Fluid::internalEnergy(temperature, pressure);
+        return Fluid::enthalpy(temperature, pressure);
     }
 
     /*!

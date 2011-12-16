@@ -75,22 +75,6 @@ public:
     { return (phaseIdx == compIdx)?1.0:0.0; }
 
     /*!
-     * \brief The sum of all component mole fractions in a phase []
-     *
-     * We define this to be the same as the sum of all mass fractions.
-     */
-    Scalar sumMoleFractions(int phaseIdx) const
-    { return 1.0; }
-
-    /*!
-     * \brief The sum of all component mass fractions in a phase []
-     *
-     * We define this to be the same as the sum of all mole fractions.
-     */
-    Scalar sumMassFractions(int phaseIdx) const
-    { return 1.0; }
-
-    /*!
      * \brief The average molar mass of a fluid phase [kg/mol]
      */
     Scalar averageMolarMass(int phaseIdx) const
@@ -175,20 +159,19 @@ public:
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
     Scalar enthalpy(int phaseIdx) const
-    { return internalEnergy_[phaseIdx] + pressure(phaseIdx)/(density(phaseIdx)); }
+    { return enthalpy_[phaseIdx]; }
 
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    { return internalEnergy_[phaseIdx]; }
+    { return enthalpy_[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
      */
     Scalar viscosity(int phaseIdx) const
     { return viscosity_[phaseIdx]; }
-
 
     /*****************************************************
      * Access to fluid properties which only make sense
@@ -231,7 +214,7 @@ public:
             pressure_[phaseIdx] = fs.pressure(phaseIdx);
             saturation_[phaseIdx] = fs.saturation(phaseIdx);
             density_[phaseIdx] = fs.density(phaseIdx);
-            internalEnergy_[phaseIdx] = fs.internalEnergy(phaseIdx);
+            enthalpy_[phaseIdx] = fs.enthalpy(phaseIdx);
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
         }
         temperature_ = fs.temperature(0);
@@ -262,10 +245,10 @@ public:
     { density_[phaseIdx] = value; }
 
     /*!
-     * \brief Set the specific internal energy of a phase [J/m^3]
+     * \brief Set the specific enthalpy of a phase [J/m^3]
      */
-    void setInternalEnergy(int phaseIdx, Scalar value)
-    { internalEnergy_[phaseIdx] = value; }
+    void setEnthalpy(int phaseIdx, Scalar value)
+    { enthalpy_[phaseIdx] = value; }
 
     /*!
      * \brief Set the dynamic viscosity of a phase [Pa s]
@@ -288,7 +271,7 @@ public:
             //for (int j = 0; j < numComponents; ++j) {
             //    Valgrind::CheckDefined(fugacityCoefficient_[i][j]);
             //}
-            Valgrind::CheckDefined(pressure_[i]);
+            Valgrind:CheckDefined(pressure_[i]);
             Valgrind::CheckDefined(saturation_[i]);
             Valgrind::CheckDefined(density_[i]);
             //Valgrind::CheckDefined(internalEnergy_[i]);
@@ -303,7 +286,7 @@ protected:
     Scalar pressure_[numPhases];
     Scalar saturation_[numPhases];
     Scalar density_[numPhases];
-    Scalar internalEnergy_[numPhases];
+    Scalar enthalpy_[numPhases];
     Scalar viscosity_[numPhases];
     Scalar temperature_;
 };

@@ -167,8 +167,6 @@ public:
                 int rowIdx = phaseIdx*numComponents + compIdx;
                 fluidState.setMoleFraction(phaseIdx, compIdx, x[rowIdx]);
             }
-            
-            fluidState.updateAverageMolarMass(phaseIdx);
             paramCache.updatePhaseComposition(fluidState, phaseIdx);
         
             Scalar value = FluidSystem::density(fluidState, paramCache, phaseIdx);
@@ -180,8 +178,8 @@ public:
             }
             
             if (setInternalEnergy) {
-                value = FluidSystem::internalEnergy(fluidState, paramCache, phaseIdx);
-                fluidState.setInternalEnergy(phaseIdx, value);
+                value = FluidSystem::enthalpy(fluidState, paramCache, phaseIdx);
+                fluidState.setEnthalpy(phaseIdx, value);
             }
         }
     };

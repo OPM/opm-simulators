@@ -26,7 +26,6 @@
 #ifndef DUMUX_COMPOSITION_FROM_FUGACITIES_HH
 #define DUMUX_COMPOSITION_FROM_FUGACITIES_HH
 
-#include "../MpNcfluidstates/nonequilibriumfluidstate.hh"
 #include <dumux/common/exceptions.hh>
 
 namespace Dumux {
@@ -105,7 +104,6 @@ public:
         // right hand side
         Dune::FieldVector<Scalar, numComponents> b;
 
-        fluidState.updateAverageMolarMass(phaseIdx);
         paramCache.updatePhase(fluidState, phaseIdx);
 
         // maximum number of iterations
@@ -195,7 +193,6 @@ protected:
             fluidState.setMoleFraction(phaseIdx, i, fugacities[i]/gamma);
         };
 
-        fluidState.updateAverageMolarMass(phaseIdx);
         paramCache.updatePhase(fluidState, phaseIdx);
 
         Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
@@ -240,7 +237,6 @@ protected:
             // deviate the mole fraction of the i-th component
             Scalar x_i = fluidState.moleFraction(phaseIdx, i);
             fluidState.setMoleFraction(phaseIdx, i, x_i + eps);
-            fluidState.updateAverageMolarMass(phaseIdx);
             paramCache.updatePhaseSingleMoleFraction(fluidState, phaseIdx, i);
 
             // compute new defect and derivative for all component
@@ -266,7 +262,6 @@ protected:
 
             // reset composition to original value
             fluidState.setMoleFraction(phaseIdx, i, x_i);
-            fluidState.updateAverageMolarMass(phaseIdx);
             paramCache.updatePhaseSingleMoleFraction(fluidState, phaseIdx, i);
 
             // end forward differences
@@ -325,7 +320,6 @@ protected:
                 //sumMoleFrac += std::abs(newx);
             }
 
-            fluidState.updateAverageMolarMass(phaseIdx);
             paramCache.updatePhaseComposition(fluidState, phaseIdx);
 
             /*

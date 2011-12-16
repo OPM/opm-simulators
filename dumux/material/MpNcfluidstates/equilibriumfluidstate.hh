@@ -44,7 +44,19 @@ public:
     enum { numComponents = FluidSystem::numComponents };
 
     EquilibriumFluidState()
-    { Valgrind::SetUndefined(*this); }
+    {
+        // set the composition to 0
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)  {
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                moleFraction_[phaseIdx][compIdx] = 0;
+            
+            averageMolarMass_[phaseIdx] = 0;
+            sumMoleFractions_[phaseIdx] = 0;
+        }
+        
+        // make everything undefined so that valgrind will complain
+        Valgrind::SetUndefined(*this);
+    }
 
     template <class FluidState>
     EquilibriumFluidState(FluidState &fs)
@@ -72,28 +84,11 @@ public:
     Scalar massFraction(int phaseIdx, int compIdx) const
     {
         return
-            sumMassFractions(phaseIdx)*
-            molarity(phaseIdx, compIdx)*
-            FluidSystem::molarMass(compIdx)
-            /
-            density(phaseIdx);
+            sumMoleFractions_[phaseIdx]
+            * moleFraction_[phaseIdx][compIdx]
+            * FluidSystem::molarMass(compIdx)
+            / averageMolarMass_[phaseIdx];
     }
-
-    /*!
-     * \brief The sum of all component mole fractions in a phase []
-     *
-     * We define this to be the same as the sum of all mass fractions.
-     */
-    Scalar sumMoleFractions(int phaseIdx) const
-    { return sumMoleFractions_[phaseIdx]; }
-
-    /*!
-     * \brief The sum of all component mass fractions in a phase []
-     *
-     * We define this to be the same as the sum of all mole fractions.
-     */
-    Scalar sumMassFractions(int phaseIdx) const
-    { return sumMoleFractions_[phaseIdx]; }
 
     /*!
      * \brief The average molar mass of a fluid phase [kg/mol]
@@ -159,13 +154,13 @@ public:
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
     Scalar enthalpy(int phaseIdx) const
-    { return internalEnergy_[phaseIdx] + pressure(phaseIdx)/(density(phaseIdx)); }
+    { return enthalpy_[phaseIdx]; }
 
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    { return internalEnergy_[phaseIdx]; }
+    { return enthalpy_[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
@@ -184,16 +179,6 @@ public:
      */
     Scalar temperature() const
     { return temperature_; }
-
-    /*!
-     * \brief The capillary pressure [Pa] between a phase and a
-     *        reference phase.
-     *
-     * In order to make the term "capillary pressure" meaningful in a
-     * physical sense, mechanic equilibrium needs to be assumed.
-     */
-    Scalar capillaryPressure(int refPhaseIdx, int phaseIdx) const
-    { return pressure_[phaseIdx] - pressure_[refPhaseIdx]; }
 
     /*!
      * \brief The fugacity of a component
@@ -230,7 +215,7 @@ public:
             pressure_[phaseIdx] = fs.pressure(phaseIdx);
             saturation_[phaseIdx] = fs.saturation(phaseIdx);
             density_[phaseIdx] = fs.density(phaseIdx);
-            internalEnergy_[phaseIdx] = fs.internalEnergy(phaseIdx);
+            enthalpy_[phaseIdx] = fs.enthalpy(phaseIdx);
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
         }
         temperature_ = fs.temperature(0);
@@ -258,7 +243,19 @@ public:
      * \brief Set the mole fraction of a component in a phase []
      */
     void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
-    { moleFraction_[phaseIdx][compIdx] = value; }
+    { 
+        Valgrind::CheckDefined(value);
+
+        Scalar delta = value - moleFraction_[phaseIdx][compIdx];
+
+        moleFraction_[phaseIdx][compIdx] = value;
+
+        sumMoleFractions_[phaseIdx] += delta;
+        averageMolarMass_[phaseIdx] += delta*FluidSystem::molarMass(compIdx);
+        
+        Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
+        Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
+    };
 
     /*!
      * \brief Set the fugacity of a component in a phase []
@@ -275,32 +272,14 @@ public:
     /*!
      * \brief Set the specific enthalpy of a phase [J/m^3]
      */
-    void setInternalEnergy(int phaseIdx, Scalar value)
-    { internalEnergy_[phaseIdx] = value; }
+    void setEnthalpy(int phaseIdx, Scalar value)
+    { enthalpy_[phaseIdx] = value; }
 
     /*!
      * \brief Set the dynamic viscosity of a phase [Pa s]
      */
     void setViscosity(int phaseIdx, Scalar value)
     { viscosity_[phaseIdx] = value; }
-
-    /*!
-     * \brief Calculatate the mean molar mass of a phase given that
-     *        all mole fractions have been set
-     */
-    void updateAverageMolarMass(int phaseIdx)
-    {
-        averageMolarMass_[phaseIdx] = 0;
-        sumMoleFractions_[phaseIdx] = 0;
-
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];
-            averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
-        }
-        sumMoleFractions_[phaseIdx] = std::max(1e-15, sumMoleFractions_[phaseIdx]);
-        Valgrind::CheckDefined(averageMolarMass_[phaseIdx]);
-        Valgrind::CheckDefined(sumMoleFractions_[phaseIdx]);
-    }
 
     /*!
      * \brief Make sure that all attributes are defined.
@@ -339,7 +318,7 @@ protected:
     Scalar pressure_[numPhases];
     Scalar saturation_[numPhases];
     Scalar density_[numPhases];
-    Scalar internalEnergy_[numPhases];
+    Scalar enthalpy_[numPhases];
     Scalar viscosity_[numPhases];
     Scalar temperature_;
 };

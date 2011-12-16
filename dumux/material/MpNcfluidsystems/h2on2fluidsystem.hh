@@ -25,8 +25,6 @@
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH
 
-#include <dumux/material/MpNcfluidstates/nonequilibriumfluidstate.hh>
-
 #include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/n2.hh>
@@ -34,7 +32,6 @@
 #include <dumux/material/idealgas.hh>
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
-#include <dumux/material/MpNcfluidstates/nonequilibriumfluidstate.hh>
 
 #include <dumux/common/valgrind.hh>
 #include <dumux/common/exceptions.hh>
@@ -456,7 +453,7 @@ public:
 
     /*!
      * \brief Given a phase's composition, temperature, pressure and
-     *        density, calculate its specific internal energy [J/kg].
+     *        density, calculate its specific enthalpy [J/kg].
      *
      *  \todo This fluid system neglects the contribution of
      *        gas-molecules in the liquid phase. This contribution is
@@ -468,9 +465,9 @@ public:
      * \param phaseIdx The index of the fluid phase to consider
      */
     template <class FluidState>
-    static Scalar internalEnergy(const FluidState &fluidState,
-                                 const ParameterCache &paramCache,
-                                 int phaseIdx)
+    static Scalar enthalpy(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -479,15 +476,15 @@ public:
         if (phaseIdx == lPhaseIdx) {
             // TODO: correct way to deal with the solutes???
             return
-                H2O::liquidInternalEnergy(T, p) ;
+                H2O::liquidEnthalpy(T, p) ;
         }
         else {
             // assume ideal gas
             Scalar XH2O = fluidState.massFraction(gPhaseIdx, H2OIdx);
             Scalar XN2 = fluidState.massFraction(gPhaseIdx, N2Idx);
             Scalar result = 0;
-            result += XH2O*H2O::gasInternalEnergy(T, p);
-            result += XN2*N2::gasInternalEnergy(T, p);
+            result += XH2O*H2O::gasEnthalpy(T, p);
+            result += XN2*N2::gasEnthalpy(T, p);
             return result;
         }
     }
