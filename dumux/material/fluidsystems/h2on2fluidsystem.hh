@@ -368,11 +368,18 @@ public:
             }
         }
 
-        // for the gas phase assume an ideal gas
-        return
-            IdealGas::molarDensity(T, p)
-            * fluidState.averageMolarMass(gPhaseIdx)
-            / std::max(1e-5, sumMoleFrac);
+        if (!useComplexRelations)
+            // for the gas phase assume an ideal gas
+            return
+                IdealGas::molarDensity(T, p)
+                * fluidState.averageMolarMass(gPhaseIdx)
+                / std::max(1e-5, sumMoleFrac);
+
+        // assume ideal mixture: steam and nitrogen don't "see" each
+        // other
+        Scalar rho_gH2O = H2O::gasDensity(T, p*fluidState.moleFraction(gPhaseIdx, H2OIdx));
+        Scalar rho_gN2 = N2::gasDensity(T, p*fluidState.moleFraction(gPhaseIdx, N2Idx));
+        return rho_gH2O + rho_gN2;
     };
 
     /*!
@@ -439,12 +446,24 @@ public:
      * \brief Calculate the fugacity coefficient [Pa] of an individual
      *        component in a fluid phase
      *
-     * The fugacity coefficient \f$\phi^\kappa_{\alpha}\f$ is connected to the
-     * fugacity \f$f^\kappa\f$ and the component's molarity
-     * \f$x^{\kappa}_{\alpha}\f$ by means of the relation
+     * The fugacity coefficient \f$\phi^\kappa_\alpha\f$ of
+     * component \f$\kappa\f$ in phase \f$\alpha\f$ is connected to
+     * the fugacity \f$f^\kappa_\alpha\f$ and the component's mole
+     * fraction \f$x^\kappa_\alpha\f$ by means of the relation
      *
-     * \f[ f^\kappa_{\alpha} = \phi^\kappa_{\alpha}
-                \cdot x^{\kappa}_{\alpha} p_{\alpha} \f]
+     * \f[
+     f^\kappa_\alpha = \phi^\kappa_\alpha\;x^\kappa_\alpha\;p_\alpha 
+     \f]
+     * where \f$p_\alpha\f$ is the pressure of the fluid phase. 
+     *
+     * The quantity "fugacity" itself is just an other way to express
+     * the chemical potential \f$\zeta^\kappa_\alpha\f$ of the
+     * component. It is defined via
+     *
+     * \f[
+     f^\kappa_\alpha := \exp\left\{\frac{\zeta^\kappa_\alpha}{k_B T_\alpha} \right\}
+     \f]
+     * where \f$k_B = 1.380\cdot10^{-23}\;J/K\f$ is the Boltzmann constant.
      *
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
@@ -467,12 +486,9 @@ public:
             return Dumux::BinaryCoeff::H2O_N2::henry(T)/p;
         }
 
-        // gas phase
-        return 1.0; // ideal gas
-        // For ideal gases, the fugacity of the component is equivalent to
-        // the gas partial pressure (i.e. phi = 1), in real gases it
-        // would be the gas pressure times the component's fugacity
-        // coefficient (=> activity).
+        // for the gas phase, assume an ideal gas when it comes to
+        // fugacity (-> fugacity == partial pressure)
+        return 1.0; 
     }
 
 
@@ -586,13 +602,19 @@ public:
             return H2O::liquidEnthalpy(T, p);
         }
         else {
-            // assume ideal gas
-            Scalar XH2O = fluidState.massFraction(gPhaseIdx, H2OIdx);
-            Scalar XN2 = fluidState.massFraction(gPhaseIdx, N2Idx);
-            Scalar result = 0;
-            result += XH2O*H2O::gasEnthalpy(T, p);
-            result += XN2*N2::gasEnthalpy(T, p);
-            return result;
+            // assume ideal mixture: Molecules of one component don't
+            // "see" the molecules of the other component, which means
+            // that the total specific enthalpy is the sum of the
+            // "partial specific enthalpies" of the components.
+            Scalar hH2O = 
+                fluidState.massFraction(gPhaseIdx, H2OIdx)
+                * H2O::gasEnthalpy(T,
+                                   p*fluidState.moleFraction(gPhaseIdx, H2OIdx));
+            Scalar hN2 =
+                fluidState.massFraction(gPhaseIdx, N2Idx)
+                * H2O::gasEnthalpy(T,
+                                   p*fluidState.moleFraction(gPhaseIdx, N2Idx));
+            return hH2O + hN2;
         }
     }
 
@@ -640,7 +662,9 @@ public:
                                     fluidState.pressure(phaseIdx));
         }
 
-        // gas phase
+        // for the gas phase, assume ideal mixture, i.e. molecules of
+        // one component don't "see" the molecules of the other
+        // component
 
         // assume an ideal gas for the nitrogen part. See:
         //
