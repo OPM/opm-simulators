@@ -24,6 +24,8 @@
 #ifndef DUMUX_FULLERMETHOD_HH
 #define DUMUX_FULLERMETHOD_HH
 
+#include <dumux/common/math.hh>
+
 namespace Dumux
 {
 namespace BinaryCoeff

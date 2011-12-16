@@ -32,6 +32,10 @@
 
 #include "basefluidsystem.hh"
 
+#include <limits>
+
+#include <assert.h>
+
 namespace Dumux {
 namespace FluidSystems {
 

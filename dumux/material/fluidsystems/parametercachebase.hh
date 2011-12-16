@@ -38,7 +38,7 @@ public:
         None = 0,
         Temperature = 1, 
         Pressure = 2,
-        Composition = 2,       
+        Composition = 4,    
     };
     
     ParameterCacheBase()

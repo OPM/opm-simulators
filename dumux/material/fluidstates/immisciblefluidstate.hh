@@ -26,7 +26,10 @@
  */
 #ifndef DUMUX_IMMISCIBLE_FLUID_STATE_HH
 #define DUMUX_IMMISCIBLE_FLUID_STATE_HH
+
 #include <dumux/common/valgrind.hh>
+
+#include <limits>
 
 namespace Dumux
 {

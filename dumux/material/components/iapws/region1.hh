@@ -266,6 +266,35 @@ public:
         return result;
     }
 
+    /*!
+     * \brief The second partial derivative of the Gibbs free energy to the
+     *        normalized temperature for IAPWS region 1 (i.e. liquid) (dimensionless).
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static Scalar ddgamma_ddtau(Scalar temperature, Scalar pressure)
+    {
+        Scalar tau_ = tau(temperature);   /* reduced temperature */
+        Scalar pi_ = pi(pressure);    /* reduced pressure */
+
+        Scalar result = 0.0;
+        for (int i = 0; i < 34; i++) {
+            result +=
+                n(i) *
+                std::pow(7.1 - pi_, I(i)) *
+                J(i) * 
+                (J(i) - 1) *
+                std::pow(tau_ - 1.222,  J(i) - 2);
+        }
+
+        return result;
+    }
+
 private:
     static Scalar n(int i)
     {
