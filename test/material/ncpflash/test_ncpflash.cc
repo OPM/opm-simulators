@@ -154,7 +154,7 @@ void completeReferenceFluidState(FluidState &fs,
 int main()
 {
     typedef double Scalar;
-    typedef Dumux::FluidSystems::H2ON2<Scalar> FluidSystem;
+    typedef Dumux::FluidSystems::H2ON2<Scalar, false> FluidSystem;
     typedef Dumux::CompositionalFluidState<Scalar, FluidSystem> CompositionalFluidState;
 
     enum { numPhases = FluidSystem::numPhases };
@@ -200,6 +200,7 @@ int main()
     ////////////////
     // only liquid
     ////////////////
+    std::cout << "testing single-phase liquid\n";
 
     // set liquid saturation
     fsRef.setSaturation(lPhaseIdx, 1.0);
@@ -220,7 +221,7 @@ int main()
     ////////////////
     // only gas
     ////////////////
-
+    std::cout << "testing single-phase gas\n";
     // set gas saturation
     fsRef.setSaturation(gPhaseIdx, 1.0);
     
@@ -238,8 +239,9 @@ int main()
     checkNcpFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams);
 
     ////////////////
-    // both pgases gas
+    // both phases
     ////////////////
+    std::cout << "testing two-phase\n";
 
     // set saturations
     fsRef.setSaturation(lPhaseIdx, 0.5);

@@ -371,7 +371,7 @@ public:
         return
             IdealGas::molarDensity(T, p)
             * fluidState.averageMolarMass(gPhaseIdx)
-            / sumMoleFrac;
+            / std::max(1e-5, sumMoleFrac);
     };
 
     /*!
