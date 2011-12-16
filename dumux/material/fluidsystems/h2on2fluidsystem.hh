@@ -93,14 +93,6 @@ public:
     static constexpr int gPhaseIdx = 1;
     static constexpr int nPhaseIdx = gPhaseIdx;
 
-    //! The components for pure water
-    typedef TabulatedH2O H2O;
-    //typedef SimpleH2O H2O;
-    //typedef IapwsH2O H2O;
-
-    //! The components for pure nitrogen
-    typedef SimpleN2 N2;
-
     /*!
      * \brief Return the human readable name of a fluid phase
      *
@@ -179,6 +171,14 @@ public:
 
     static constexpr int H2OIdx = 0;
     static constexpr int N2Idx = 1;
+
+    //! The components for pure water
+    typedef TabulatedH2O H2O;
+    //typedef SimpleH2O H2O;
+    //typedef IapwsH2O H2O;
+
+    //! The components for pure nitrogen
+    typedef SimpleN2 N2;
 
     /*!
      * \brief Return the human readable name of a component
@@ -635,20 +635,28 @@ public:
     static Scalar heatCapacity(const FluidState &fluidState,
                                int phaseIdx)
     {
-//        http://en.wikipedia.org/wiki/Heat_capacity
-//#warning: so far rough estimates from wikipedia
-//      TODO heatCapacity is a function of composition.
-//        Scalar p = fluidState.pressure(phaseIdx);
-//        Scalar T = fluidState.temperature(phaseIdx);
-//        Scalar x = fluidState.moleFrac(phaseIdx,compIdx);
         if (phaseIdx == lPhaseIdx) {
-            return  4181.3;  // @(25°C) !!!
-            /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /* Dumux::H2O<Scalar>::liquidHeatCap_p(T,p); */
+            H2O::liquidHeatCapacity(fluidState.temperature(phaseIdx),
+                                    fluidState.pressure(phaseIdx));
         }
-        
+
         // gas phase
-        return  1003.5 ; // @ (0°C) !!!
-        /* [J/(kg K)]*/ /* not working because ddgamma_ddtau is not defined*/ /*Dumux::H2O<Scalar>::gasHeatCap_p(T, p) ;*/
+
+        // assume an ideal gas for the nitrogen part. See:
+        //
+        // http://en.wikipedia.org/wiki/Heat_capacity
+        Scalar c_vN2molar = Dumux::Constants<Scalar>::R*2.39;
+        Scalar c_pN2molar = Dumux::Constants<Scalar>::R + c_vN2molar;
+        
+        // let the water component do its thing for the steam part
+        Scalar c_pH2O = H2O::gasHeatCapacity(fluidState.temperature(phaseIdx),
+                                             fluidState.pressure(phaseIdx)
+                                             * fluidState.moleFraction(phaseIdx, H2OIdx));
+
+        // mangle both components together
+        return
+            c_pH2O*fluidState.massFraction(gPhaseIdx, H2OIdx) +
+            c_pN2molar*fluidState.moleFraction(gPhaseIdx, N2Idx)*molarMass(N2Idx);
     }
 };
 
