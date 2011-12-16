@@ -40,14 +40,17 @@
 
 namespace Dumux
 {
+namespace FluidSystems
+{
+
 /*!
  * \brief A twophase fluid system with water and nitrogen as components.
  */
 template <class Scalar, bool useComplexRelations = true>
-class H2ON2FluidSystem
-: public BaseFluidSystem<Scalar, H2ON2FluidSystem<Scalar, useComplexRelations> >
+class H2ON2
+: public BaseFluidSystem<Scalar, H2ON2<Scalar, useComplexRelations> >
 {
-    typedef H2ON2FluidSystem<Scalar, useComplexRelations> ThisType;
+    typedef H2ON2<Scalar, useComplexRelations> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
@@ -286,9 +289,9 @@ public:
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
     {
         if (useComplexRelations)
-            Dune::dwarn << "using complex H2O_N2 FluidSystem: Viscosity depends on composition" << std::endl;
+            Dune::dwarn << "using complex H2O_N2 fluid system: Viscosity depends on composition" << std::endl;
         else
-            Dune::dwarn << "using fast H2O_N2 FluidSystem: Viscosity does not depend on composition" << std::endl;
+            Dune::dwarn << "using fast H2O_N2 fluid system: Viscosity does not depend on composition" << std::endl;
 
         if (H2O::isTabulated) {
             std::cout << "Initializing tables for the H2O fluid properties ("
@@ -645,6 +648,7 @@ public:
     }
 };
 
-} // end namepace
+} // end namepace FluidSystems
+} // end namepace Dumux
 
 #endif

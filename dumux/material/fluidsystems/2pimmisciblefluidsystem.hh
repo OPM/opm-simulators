@@ -39,6 +39,7 @@
 #include "basefluidsystem.hh"
 
 namespace Dumux {
+namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -54,14 +55,14 @@ namespace Dumux {
  * systems without compositional effects.
  */
 template <class Scalar, class WettingPhase, class NonWettingPhase>
-class TwoPImmiscibleFluidSystem
-: public BaseFluidSystem<Scalar, TwoPImmiscibleFluidSystem<Scalar, WettingPhase, NonWettingPhase> >
+class TwoPImmiscible
+: public BaseFluidSystem<Scalar, TwoPImmiscible<Scalar, WettingPhase, NonWettingPhase> >
 {
     // do not try to instanciate this class, it has only static members!
-    TwoPImmiscibleFluidSystem()
+    TwoPImmiscible()
     {}
 
-    typedef TwoPImmiscibleFluidSystem<Scalar, WettingPhase, NonWettingPhase> ThisType;
+    typedef TwoPImmiscible<Scalar, WettingPhase, NonWettingPhase> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 public:
     /****************************************
@@ -403,6 +404,7 @@ public:
     }
 };
 
+} // end namepace
 } // end namepace
 
 #endif

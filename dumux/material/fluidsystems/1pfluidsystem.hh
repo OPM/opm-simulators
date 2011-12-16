@@ -33,6 +33,8 @@
 #include "basefluidsystem.hh"
 
 namespace Dumux {
+namespace FluidSystems {
+
 /*!
  * \ingroup Fluidsystems
  *
@@ -43,10 +45,10 @@ namespace Dumux {
  * Dumux::GasPhase<Component> may be used.
  */
 template <class Scalar, class Fluid>
-class OnePFluidSystem
-: public BaseFluidSystem<Scalar, OnePFluidSystem<Scalar, Fluid> >
+class OneP
+    : public BaseFluidSystem<Scalar, OneP<Scalar, Fluid> >
 {
-    typedef OnePFluidSystem<Scalar, Fluid> ThisType;
+    typedef OneP<Scalar, Fluid> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
@@ -376,6 +378,7 @@ public:
     
 };
 
+} // end namepace
 } // end namepace
 
 #endif

@@ -152,7 +152,7 @@ void completeReferenceFluidState(FluidState &fs,
 int main()
 {
     typedef double Scalar;
-    typedef Dumux::H2ON2FluidSystem<Scalar> FluidSystem;
+    typedef Dumux::FluidSystems::H2ON2<Scalar> FluidSystem;
     typedef Dumux::CompositionalFluidState<Scalar, FluidSystem> CompositionalFluidState;
 
     enum { numPhases = FluidSystem::numPhases };
