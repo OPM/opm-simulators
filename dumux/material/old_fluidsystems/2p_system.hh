@@ -26,8 +26,8 @@
 #ifndef DUMUX_2P_SYSTEM_HH
 #define DUMUX_2P_SYSTEM_HH
 
-#include "liquidphase.hh"
-#include "gasphase.hh"
+#include <dumux/material/fluidsystems/liquidphase.hh>
+#include <dumux/material/fluidsystems/gasphase.hh>
 
 #include <dune/common/exceptions.hh>
 #include "defaultcomponents.hh"

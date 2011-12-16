@@ -30,7 +30,7 @@
 #ifndef DUMUX_COMPUTE_FROM_REFERENCE_PHASE_HH
 #define DUMUX_COMPUTE_FROM_REFERENCE_PHASE_HH
 
-#include <dumux/material/MpNcconstraintsolvers/compositionfromfugacities.hh>
+#include <dumux/material/constraintsolvers/compositionfromfugacities.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>

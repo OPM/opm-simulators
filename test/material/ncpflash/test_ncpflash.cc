@@ -29,13 +29,13 @@
  */
 #include "config.h"
 
-#include <dumux/material/MpNcconstraintsolvers/misciblemultiphasecomposition.hh>
-#include <dumux/material/MpNcconstraintsolvers/computefromreferencephase.hh>
-#include <dumux/material/MpNcconstraintsolvers/ncpflash.hh>
+#include <dumux/material/constraintsolvers/misciblemultiphasecomposition.hh>
+#include <dumux/material/constraintsolvers/computefromreferencephase.hh>
+#include <dumux/material/constraintsolvers/ncpflash.hh>
 
-#include <dumux/material/MpNcfluidstates/compositionalfluidstate.hh>
+#include <dumux/material/fluidstates/compositionalfluidstate.hh>
 
-#include <dumux/material/MpNcfluidsystems/h2on2fluidsystem.hh>
+#include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 
 #include <dumux/material/fluidmatrixinteractions/Mp/Mplinearmaterial.hh>
 #include <dumux/material/fluidmatrixinteractions/Mp/2padapter.hh>

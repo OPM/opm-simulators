@@ -32,11 +32,11 @@
 
 #include <dumux/material/fluidsystems/liquidphase.hh>
 #include <dumux/material/fluidsystems/gasphase.hh>
+#include <dumux/material/fluidstates/immisciblefluidstate.hh>
 
 #include <dune/common/exceptions.hh>
 
 #include "basefluidsystem.hh"
-#include "../MpNcfluidstates/immisciblefluidstate.hh"
 
 namespace Dumux {
 
