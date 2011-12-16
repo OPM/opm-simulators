@@ -95,7 +95,7 @@ public:
 };
 
 // Set the non-wetting phase
-SET_PROP(TutorialProblemDecoupled, NonWettingPhase)
+SET_PROP(TutorialProblemDecoupled, NonwettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
