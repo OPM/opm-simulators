@@ -35,12 +35,12 @@ namespace Dumux
  *        multi-phase fluid system assuming immiscibility and
  *        thermodynamic equilibrium.
  */
-template <class Scalar, class StaticParameters>
+template <class Scalar, class FluidSystem>
 class ImmiscibleFluidState
 {
 public:
-    enum { numComponents = StaticParameters::numComponents };
-    enum { numPhases = StaticParameters::numPhases };
+    static constexpr int numComponents = FluidSystem::numComponents;
+    static constexpr int numPhases = FluidSystem::numPhases;
     static_assert(numPhases == numComponents,
                   "The number of phases must be equal to the number of "
                   "components if immiscibility is assumed!");
@@ -94,7 +94,7 @@ public:
      * \brief The average molar mass of a fluid phase [kg/mol]
      */
     Scalar averageMolarMass(int phaseIdx) const
-    { return StaticParameters::molarMass(/*compIdx=*/phaseIdx); }
+    { return FluidSystem::molarMass(/*compIdx=*/phaseIdx); }
 
     /*!
      * \brief The concentration of a component in a phase [mol/m^3]
