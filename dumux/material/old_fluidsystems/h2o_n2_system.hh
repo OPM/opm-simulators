@@ -34,7 +34,7 @@
 
 #include <dumux/material/binarycoefficients/h2o_n2.hh>
 
-#include "defaultcomponents.hh"
+#include <dumux/material/fluidsystems/defaultcomponents.hh>
 
 #include <dumux/common/propertysystem.hh>
 
