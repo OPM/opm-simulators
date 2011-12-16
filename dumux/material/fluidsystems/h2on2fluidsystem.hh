@@ -253,6 +253,7 @@ public:
     {
         DUNE_THROW(Dune::NotImplemented,
                    "H2ON2FluidSystem::criticalMolarVolume()");
+        return 0;
     };
 
     /*!

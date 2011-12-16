@@ -101,6 +101,7 @@ public:
         case gPhaseIdx: return "g";
         };
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+        return "";
     }
 
     /*!
@@ -115,6 +116,7 @@ public:
         case N2Idx: return N2::name();
         };
         DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+        return "";
     }
 
     /*!
@@ -129,6 +131,7 @@ public:
         case N2Idx: return N2::molarMass();
         };
         DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+        return 0;
     }
 
     /*!
