@@ -610,11 +610,6 @@ protected:
         else {
             assert(false);
         }
-
-        // make the fluid state consistent with the fluid system.
-        completeFluidState_<MaterialLaw>(fs,
-                                         paramCache,
-                                         matParams);
     };
 
     // set a quantity in the fluid state
