@@ -87,7 +87,7 @@ public:
             sumMoleFractions_[phaseIdx]
             * moleFraction_[phaseIdx][compIdx]
             * FluidSystem::molarMass(compIdx)
-            / averageMolarMass_[phaseIdx];
+            / std::max(1e-10, averageMolarMass_[phaseIdx]);
     }
 
     /*!
