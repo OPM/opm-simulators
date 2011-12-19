@@ -729,9 +729,8 @@ assemble_completion_to_cell(int c, int wdof, int np, double dt,
         s2 += d2[ p ];
     }
 
-    /* Negative sign due to completion flux sign convention. */
-    h->J->sa[ jc ] -= dt * s1;
-    h->J->sa[ jw ] -= dt * s2;
+    h->J->sa[ jc ] += dt * s1;
+    h->J->sa[ jw ] += dt * s2;
 }
 
 
