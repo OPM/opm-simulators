@@ -52,7 +52,7 @@
 // allowed are accessed
 template <class Scalar, 
           class FluidSystem,
-          class BaseFluidState = Dumux::CompositionalFluidState<Scalar, FluidSystem>>
+          class BaseFluidState = Dumux::CompositionalFluidState<Scalar, FluidSystem> >
 class HairSplittingFluidState 
     : protected BaseFluidState
 {
