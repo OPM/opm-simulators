@@ -817,7 +817,7 @@ assemble_completion_to_well(int w, int c, int nc, int np,
 }
 
 
-static void
+static int
 assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
                       struct compr_quantities_gen *cq    ,
                       double                       dt    ,
@@ -826,6 +826,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
                       struct cfs_tpfa_res_data    *h     )
 {
     int           w, i, c, np, np2, nc;
+    int           is_neumann;
     double        pw, dp;
     double       *WI, *gpot, *pmobp;
     const double *Ac, *dAc;
@@ -837,6 +838,8 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
     WI    = W->data->WI;
     gpot  = W->data->gpot;
     pmobp = W->data->phasemob;
+
+    is_neumann = 1;
 
     for (w = i = 0; w < W->conn->number_of_wells; w++) {
         pw = wpress[ w ];
@@ -865,7 +868,12 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
         if (W->ctrl->ctrl[ w ] != BHP) {
             h->F[ nc + w ] -= dt * W->ctrl->target[ w ];
         }
+        else {
+            is_neumann = 0;
+        }
     }
+
+    return is_neumann;
 }
 
 
@@ -1085,7 +1093,7 @@ cfs_tpfa_res_assemble(grid_t                      *G,
                       struct cfs_tpfa_res_data    *h)
 /* ---------------------------------------------------------------------- */
 {
-    int res_is_neumann, c, np2;
+    int res_is_neumann, well_is_neumann, c, np2;
 
     csrmatrix_zero(         h->J);
     vector_zero   (h->J->m, h->F);
@@ -1094,6 +1102,9 @@ cfs_tpfa_res_assemble(grid_t                      *G,
 
     compute_compflux_and_deriv(G, cq->nphases, cpress, trans,
                                cq->phasemobf, gravcap_f, cq->Af, h->pimpl);
+
+    res_is_neumann  = 1;
+    well_is_neumann = 1;
 
     np2 = cq->nphases * cq->nphases;
     for (c = 0; c < G->number_of_cells;
@@ -1110,7 +1121,8 @@ cfs_tpfa_res_assemble(grid_t                      *G,
         compute_well_compflux_and_deriv(forces->W, cq->nphases,
                                         cpress, wpress, h->pimpl);
 
-        assemble_well_contrib(forces->W, cq, dt, cpress, wpress, h);
+        well_is_neumann = assemble_well_contrib(forces->W, cq, dt,
+                                                cpress, wpress, h);
     }
 
     if ((forces != NULL) && (forces->src != NULL)) {
@@ -1118,9 +1130,7 @@ cfs_tpfa_res_assemble(grid_t                      *G,
         assemble_sources(dt, forces->src, h);
     }
 
-    res_is_neumann = 1;
-
-    if (res_is_neumann && h->pimpl->is_incomp) {
+    if (res_is_neumann && well_is_neumann && h->pimpl->is_incomp) {
         h->J->sa[0] *= 2;
     }
 }
