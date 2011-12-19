@@ -420,24 +420,22 @@ public:
                 H2O::gasViscosity(T, H2O::vaporPressure(T)),
                 N2::gasViscosity(T, p)
             };
-            // molar masses
-            const Scalar M[numComponents] = {
-                H2O::molarMass(),
-                N2::molarMass()
-            };
 
+            Scalar sumx = 0.0;
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                sumx += fluidState.moleFraction(phaseIdx, compIdx);
+            sumx = std::max(1e-10, sumx);
+            
             for (int i = 0; i < numComponents; ++i) {
                 Scalar divisor = 0;
                 for (int j = 0; j < numComponents; ++j) {
-                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) *
-                                            pow(M[j]/M[i], 1/4.0);
+                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) * pow(molarMass(j)/molarMass(i), 1/4.0);
                     phiIJ *= phiIJ;
-                    phiIJ /= sqrt(8*(1 + M[i]/M[j]));
-                    divisor += fluidState.moleFraction(phaseIdx, j)*phiIJ;
+                    phiIJ /= sqrt(8*(1 + molarMass(i)/molarMass(j)));
+                    divisor += fluidState.moleFraction(phaseIdx, j)/sumx * phiIJ;
                 }
-                muResult += fluidState.moleFraction(phaseIdx, i)*mu[i] / divisor;
+                muResult += fluidState.moleFraction(phaseIdx, i)/sumx * mu[i] / divisor;
             }
-
             return muResult;
         }
     };
