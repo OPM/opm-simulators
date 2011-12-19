@@ -88,7 +88,7 @@ public:
     /*!
      * \brief The concentration of a component in a phase [mol/m^3]
      *
-     * This is often called "molar concentration" or just
+     * This quantity is often called "molar concentration" or just
      * "concentration", but there are many other (though less common)
      * measures for concentration.
      *
@@ -115,7 +115,7 @@ public:
     };
 
     /*!
-     * \brief The fugacity coefficient of a component in a phase [Pa]
+     * \brief The fugacity coefficient of a component in a phase [-]
      *
      * Since we assume immiscibility, the fugacity coefficients for
      * the components which are not miscible with the phase is

@@ -101,14 +101,19 @@ public:
 
     /*!
      * \brief The average molar mass of a fluid phase [kg/mol]
+     *
+     * The average mass is the mean molar mass of a molecule of the
+     * fluid at current composition. It is defined as the sum of the
+     * component's molar masses weighted by the current mole fraction:
+     * \[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \]
      */
     Scalar averageMolarMass(int phaseIdx) const
     { return fs_->averageMolarMass(phaseIdx); }
 
     /*!
-     * \brief The concentration of a component in a phase [mol/m^3]
+     * \brief The molar concentration of a component in a phase [mol/m^3]
      *
-     * This is usually just called "molar concentration" or just
+     * This quantity is usually called "molar concentration" or just
      * "concentration", but there are many other (though less common)
      * measures for concentration.
      *
@@ -124,7 +129,7 @@ public:
     { return fs_->fugacity(phaseIdx, compIdx); }
 
     /*!
-     * \brief The fugacity coefficient of a component in a phase [Pa]
+     * \brief The fugacity coefficient of a component in a phase []
      */
     Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
     { return fs_->fugacityCoefficient(phaseIdx, compIdx); }

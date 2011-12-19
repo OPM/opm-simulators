@@ -94,15 +94,21 @@ public:
 
     /*!
      * \brief The mean molar mass of a fluid phase [kg/mol]
+     *
+     * The average mass is the mean molar mass of a molecule of the
+     * fluid at current composition. It is defined as the sum of the
+     * component's molar masses weighted by the current mole fraction:
+     * \[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \]
      */
     Scalar averageMolarMass(int phaseIdx) const
     { return averageMolarMass_[phaseIdx]; }
 
     /*!
-     * \brief The molar concentration of a component in a phase [mol/m^3]
+     * \brief The concentration of a component in a phase [mol/m^3]
      *
-     * This is often just called "concentration", but there are many
-     * other (though less common) measures for concentration.
+     * This quantity is often called "molar concentration" or just
+     * "concentration", but there are many other (though less common)
+     * measures for concentration.
      *
      * http://en.wikipedia.org/wiki/Concentration
      */
