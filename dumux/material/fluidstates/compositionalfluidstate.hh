@@ -95,18 +95,19 @@ public:
 
     /*!
      * \brief The average molar mass of a fluid phase [kg/mol]
+     *
+     * Todo: Docu needed: what kind of average??
      */
     Scalar averageMolarMass(int phaseIdx) const
     { return averageMolarMass_[phaseIdx]; }
 
     /*!
-     * \brief The concentration of a component in a phase [mol/m^3]
+     * \brief The molar concentration of a component in a phase [mol/m^3]
      *
-     * This is usually just called "molar concentration" or just
-     * "concentration", but there are many other (though less common)
-     * measures for concentration.
-     *
-     * http://en.wikipedia.org/wiki/Concentration
+     * Due to the ambiguity of the term "concentration", see
+     * e.g. Römpp Chemie Online Lexikon, http://www.roempp.com/prod/
+     * the method returning the molar concentration of a component
+     * in a phase is called "molarity".
      */
     Scalar molarity(int phaseIdx, int compIdx) const
     { return molarDensity(phaseIdx)*moleFraction(phaseIdx, compIdx); }
@@ -118,7 +119,7 @@ public:
     { return fugacityCoefficient(phaseIdx, compIdx)*moleFraction(phaseIdx, compIdx)*pressure(phaseIdx); }
 
     /*!
-     * \brief The fugacity coefficient of a component in a phase [Pa]
+     * \brief The fugacity coefficient of a component in a phase [-]
      */
     Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
     { return fugacityCoefficient_[phaseIdx][compIdx]; }
