@@ -35,16 +35,14 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/mpihelper.hh>
 
-#include <iostream>
-#include <boost/format.hpp> /*@\label{tutorial-decoupled:include-end}@*/
-
+#include <iostream> /*@\label{tutorial-decoupled:include-end}@*/
 
 ////////////////////////////////////////////
 // function to check the input parameters
 ////////////////////////////////////////////
 void usage(const char *progname)
 {
-    std::cout << boost::format("usage: %s [--restart restartTime] tEnd\n")%progname;
+    std::cout << "usage: "<<progname<<" [--restart restartTime] tEnd\n";
     exit(1);
 }
 
