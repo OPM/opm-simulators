@@ -53,7 +53,7 @@ int main()
 
     Scalar tempMin = 274.15;
     Scalar tempMax = 622.15;
-    int nTemp = (int) (tempMax - tempMin)*3/4;
+    int nTemp = (int) (tempMax - tempMin)*3/8;
 
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);

@@ -38,7 +38,6 @@
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
-#include <appl/lecture/msm/1p2cvs2p/watercontaminantfluidsystem.hh>
 
 // include all fluid states
 #include <dumux/material/fluidstates/pressureoverlayfluidstate.hh>
@@ -111,10 +110,6 @@ int main()
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     {   typedef Dumux::FluidSystems::OneP<Scalar, Gas> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem>(); }
-
-    // water -- contaminant
-    {   typedef Dumux::FluidSystems::WaterContaminant<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     // interstitial fluid -- TRAIL
