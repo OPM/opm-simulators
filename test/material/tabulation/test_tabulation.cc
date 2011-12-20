@@ -53,11 +53,11 @@ int main()
 
     Scalar tempMin = 274.15;
     Scalar tempMax = 622.15;
-    int nTemp = (int) (tempMax - tempMin)*3/2;
+    int nTemp = (int) (tempMax - tempMin)*3/4;
 
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);
-    int nPress = 200;
+    int nPress = 100;
 
     std::cout << "Creating tabulation with " << nTemp*nPress << " entries per quantity\n";
     TabulatedH2O::init(tempMin, tempMax, nTemp,
