@@ -287,7 +287,7 @@ public:
         init(/*tempMin=*/273.15,
              /*tempMax=*/623.15,
              /*numTemp=*/100,
-             /*pMin=*/-10,
+             /*pMin=*/0.0,
              /*pMax=*/20e6,
              /*numP=*/200);
     }
