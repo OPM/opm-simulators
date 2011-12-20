@@ -987,6 +987,38 @@ compute_flux(grid_t       *G,
 }
 
 
+static void
+compute_wflux(int                        np    ,
+              struct cfs_tpfa_res_wells *W     ,
+              const double              *pmobc ,
+              const double              *cpress,
+              const double              *wpress,
+              double                    *wflux )
+{
+    int           w, c, i, p;
+    double        pw, dp, t;
+    const double *pmob;
+
+    for (w = i = 0; w < W->conn->number_of_wells; w++) {
+        pw = wpress[w];
+
+        for (; i < W->conn->well_connpos[w + 1]; i++) {
+            c  = W->conn->well_cells[ i ];
+            dp = pw - cpress[c];
+
+            if (dp > 0) { pmob = W->data->phasemob + (i * np); } /* w->c */
+            else        { pmob = pmobc             + (c * np); } /* c->w */
+
+            for (p = 0, t = 0.0; p < np; p++) {
+                t += pmob[ p ];
+            }
+
+            wflux[ i ] = W->data->WI[i] * t * dp;
+        }
+    }
+}
+
+
 static size_t
 maxconn(grid_t *G)
 {
@@ -1141,6 +1173,7 @@ cfs_tpfa_res_flux(grid_t                     *G        ,
                   struct cfs_tpfa_res_forces *forces   ,
                   int                         np       ,
                   const double               *trans    ,
+                  const double               *pmobc    ,
                   const double               *pmobf    ,
                   const double               *gravcap_f,
                   const double               *cpress   ,
@@ -1149,11 +1182,13 @@ cfs_tpfa_res_flux(grid_t                     *G        ,
                   double                     *wflux    )
 /* ---------------------------------------------------------------------- */
 {
-    (void) forces;
-    (void) wpress;
-    (void) wflux;
-
     compute_flux(G, np, trans, pmobf, gravcap_f, cpress, fflux);
+
+    if ((forces != NULL) && (forces->W != NULL) &&
+        (wpress != NULL) && (wflux     != NULL)) {
+
+        compute_wflux(np, forces->W, pmobc, cpress, wpress, wflux);
+    }
 }
 
 
