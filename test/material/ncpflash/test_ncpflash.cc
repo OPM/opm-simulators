@@ -177,8 +177,8 @@ int main()
     Scalar Tmax = T + 1.0;
     int nT = 3;
     
-    Scalar pmin = 0.75 * 1e5;
-    Scalar pmax = 1.25 * 2e5;
+    Scalar pmin = 0.0;
+    Scalar pmax = 1.25 * 2e6;
     int np = 100;
 
     FluidSystem::init(Tmin, Tmax, nT, pmin, pmax, np);
