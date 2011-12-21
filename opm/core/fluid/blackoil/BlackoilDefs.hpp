@@ -21,8 +21,7 @@
 #define OPM_BLACKOILDEFS_HEADER_INCLUDED
 
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <tr1/array>
 #include <boost/static_assert.hpp>
 
 namespace Opm
@@ -38,11 +37,15 @@ namespace Opm
         enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
 
         typedef double Scalar;
-        typedef Dune::FieldVector<Scalar, numComponents> CompVec;
-        typedef Dune::FieldVector<Scalar, numPhases> PhaseVec;
+//         typedef Dune::FieldVector<Scalar, numComponents> CompVec;
+//         typedef Dune::FieldVector<Scalar, numPhases> PhaseVec;
+        typedef std::tr1::array<Scalar, numComponents> CompVec;
+        typedef std::tr1::array<Scalar, numPhases> PhaseVec;
         BOOST_STATIC_ASSERT(int(numComponents) == int(numPhases));
-        typedef Dune::FieldMatrix<Scalar, numComponents, numPhases> PhaseToCompMatrix;
-        typedef Dune::FieldMatrix<Scalar, numPhases, numPhases> PhaseJacobian;
+//         typedef Dune::FieldMatrix<Scalar, numComponents, numPhases> PhaseToCompMatrix;
+//         typedef Dune::FieldMatrix<Scalar, numPhases, numPhases> PhaseJacobian;
+        typedef std::tr1::array<PhaseVec, numComponents> PhaseToCompMatrix;
+        typedef std::tr1::array<PhaseVec, numPhases> PhaseJacobian;
     };
 
 } // namespace Opm
