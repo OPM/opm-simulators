@@ -656,8 +656,8 @@ public:
                                int phaseIdx)
     {
         if (phaseIdx == lPhaseIdx) {
-            H2O::liquidHeatCapacity(fluidState.temperature(phaseIdx),
-                                    fluidState.pressure(phaseIdx));
+            return H2O::liquidHeatCapacity(fluidState.temperature(phaseIdx),
+                                           fluidState.pressure(phaseIdx));
         }
 
         // for the gas phase, assume ideal mixture, i.e. molecules of
