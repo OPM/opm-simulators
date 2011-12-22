@@ -22,6 +22,7 @@
 
 
 #include <tr1/array>
+#include <iostream>
 #include <boost/static_assert.hpp>
 
 namespace Opm
@@ -36,16 +37,63 @@ namespace Opm
         enum ComponentIndex { Water = 0, Oil = 1, Gas = 2 };
         enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
 
+        // We need types with operator= and constructor taking scalars
+        // for the small vectors and matrices, to save us from having to
+        // rewrite a large amount of code.
+        template <typename T, int N>
+        class SmallVec
+        {
+        public:
+            SmallVec()
+            {}
+            SmallVec(const T& elem)
+            { data_.assign(elem); } // In C++11, assign -> fill
+            SmallVec& operator=(const T& elem)
+            { data_.assign(elem); return *this; }
+            const T& operator[](int i) const
+            { return data_[i]; }
+            T& operator[](int i)
+            { return data_[i]; }
+            template <typename U>
+            void assign(const U& elem)
+            {
+                for (int i = 0; i < N; ++i) {
+                    data_[i] = elem;
+                }
+            }
+        private:
+            std::tr1::array<T, N> data_;
+        };
+        template <typename T, int Rows, int Cols>
+        class SmallMat
+        {
+        public:
+            SmallMat()
+            {}
+            SmallMat(const T& elem)
+            { data_.assign(elem); } // In C++11, assign -> fill
+            SmallMat& operator=(const T& elem)
+            { data_.assign(elem); return *this; }
+            typedef SmallVec<T, Cols> RowType;
+            const RowType& operator[](int i) const
+            { return data_[i]; }
+            RowType& operator[](int i)
+            { return data_[i]; }
+        private:
+            SmallVec<RowType, Rows> data_;
+        };
+
         typedef double Scalar;
-//         typedef Dune::FieldVector<Scalar, numComponents> CompVec;
-//         typedef Dune::FieldVector<Scalar, numPhases> PhaseVec;
-        typedef std::tr1::array<Scalar, numComponents> CompVec;
-        typedef std::tr1::array<Scalar, numPhases> PhaseVec;
+        typedef SmallVec<Scalar, numComponents> CompVec;
+        typedef SmallVec<Scalar, numPhases> PhaseVec;
         BOOST_STATIC_ASSERT(int(numComponents) == int(numPhases));
-//         typedef Dune::FieldMatrix<Scalar, numComponents, numPhases> PhaseToCompMatrix;
-//         typedef Dune::FieldMatrix<Scalar, numPhases, numPhases> PhaseJacobian;
-        typedef std::tr1::array<PhaseVec, numComponents> PhaseToCompMatrix;
-        typedef std::tr1::array<PhaseVec, numPhases> PhaseJacobian;
+        typedef SmallMat<Scalar, numComponents, numPhases> PhaseToCompMatrix;
+        typedef SmallMat<Scalar, numPhases, numPhases> PhaseJacobian;
+        // Attempting to guard against alignment issues.
+        BOOST_STATIC_ASSERT(sizeof(CompVec) == numComponents*sizeof(Scalar));
+        BOOST_STATIC_ASSERT(sizeof(PhaseVec) == numPhases*sizeof(Scalar));
+        BOOST_STATIC_ASSERT(sizeof(PhaseToCompMatrix) == numComponents*numPhases*sizeof(Scalar));
+        BOOST_STATIC_ASSERT(sizeof(PhaseJacobian) == numPhases*numPhases*sizeof(Scalar));
     };
 
 } // namespace Opm
