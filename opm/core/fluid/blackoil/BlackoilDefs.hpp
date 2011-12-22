@@ -47,9 +47,9 @@ namespace Opm
             SmallVec()
             {}
             SmallVec(const T& elem)
-            { data_.assign(elem); } // In C++11, assign -> fill
+ 	    { assign(elem); }
             SmallVec& operator=(const T& elem)
-            { data_.assign(elem); return *this; }
+            { assign(elem); return *this; }
             const T& operator[](int i) const
             { return data_[i]; }
             T& operator[](int i)
@@ -62,7 +62,7 @@ namespace Opm
                 }
             }
         private:
-            std::tr1::array<T, N> data_;
+  	    T data_[N];
         };
         template <typename T, int Rows, int Cols>
         class SmallMat
@@ -71,7 +71,7 @@ namespace Opm
             SmallMat()
             {}
             SmallMat(const T& elem)
-            { data_.assign(elem); } // In C++11, assign -> fill
+            { data_.assign(elem); }
             SmallMat& operator=(const T& elem)
             { data_.assign(elem); return *this; }
             typedef SmallVec<T, Cols> RowType;
