@@ -41,7 +41,7 @@ namespace Dumux {
  *        N-component fluid system assuming that all N phases are
  *        present
  *
- * It constraint solver assumes the following quantities to be set:
+ * The constraint solver assumes the following quantities to be set:
  *
  * - temperatures of *all* phases
  * - saturations of *all* phases
@@ -53,7 +53,7 @@ namespace Dumux {
  *
  * - temperature of *all* phases
  * - density, molar density, molar volume of *all* phases
- * - composition in mole and mass fractions and molaries of *all* phases
+ * - composition in mole and mass fractions and molarities of *all* phases
  * - mean molar masses of *all* phases
  * - fugacity coefficients of *all* components in *all* phases
  * - if the setViscosity parameter is true, also dynamic viscosities of *all* phases
@@ -89,7 +89,7 @@ public:
      *
      * - temperature of *all* phases
      * - density, molar density, molar volume of *all* phases
-     * - composition in mole and mass fractions and molaries of *all* phases
+     * - composition in mole and mass fractions and molarities of *all* phases
      * - mean molar masses of *all* phases
      * - fugacity coefficients of *all* components in *all* phases
      * - if the setViscosity parameter is true, also dynamic viscosities of *all* phases
@@ -103,7 +103,7 @@ public:
     {
 #ifndef NDEBUG
         // currently this solver can only handle fluid systems which
-        // assume ideal mixutures of all fluids. TODO: relax this
+        // assume ideal mixtures of all fluids. TODO: relax this
         // (requires solving a non-linear system of equations, i.e. using
         // newton method.)
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {

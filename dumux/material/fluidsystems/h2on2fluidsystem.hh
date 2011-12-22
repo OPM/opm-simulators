@@ -221,7 +221,7 @@ public:
     {
         static const Scalar Tcrit[] = {
             H2O::criticalTemperature(), // H2O
-            N2::criticalTemperature(), // H2O
+            N2::criticalTemperature() // N2
         };
 
         assert(0 <= compIdx && compIdx < numComponents);
@@ -347,6 +347,7 @@ public:
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoleFrac += fluidState.moleFraction(phaseIdx, compIdx);
         
+        // liquid phase
         if (phaseIdx == lPhaseIdx) {
             if (!useComplexRelations)
                 // assume pure water
@@ -368,6 +369,7 @@ public:
             }
         }
 
+        // gas phase
         if (!useComplexRelations)
             // for the gas phase assume an ideal gas
             return
@@ -397,11 +399,14 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
+
+        // liquid phase
         if (phaseIdx == lPhaseIdx) {
             // assume pure water for the liquid phase
             return H2O::liquidViscosity(T, p);
         }
         
+        // gas phase
         if (!useComplexRelations)
         {
             // assume pure nitrogen for the gas phase
@@ -478,6 +483,8 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
+
+        // liquid phase
         if (phaseIdx == lPhaseIdx) {
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
@@ -528,7 +535,7 @@ public:
      *        return the binary diffusion coefficient for components
      *        \f$i\f$ and \f$j\f$ in this phase.
      *
-     * \param fluidState An abitrary fluid state
+     * \param fluidState An arbitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      * \param compIIdx The index of the first component to consider
      * \param compJIdx The index of the second component to consider
@@ -562,6 +569,7 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
+        // liquid phase
         if (phaseIdx == lPhaseIdx) {
             if (compIIdx == H2OIdx && compJIdx == N2Idx)
                 return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
@@ -595,10 +603,13 @@ public:
         Scalar p = fluidState.pressure(phaseIdx);
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
+
+        // liquid phase
         if (phaseIdx == lPhaseIdx) {
             // TODO: correct way to deal with the solutes???
             return H2O::liquidEnthalpy(T, p);
         }
+        // gas phase
         else {
             // assume ideal mixture: Molecules of one component don't
             // "see" the molecules of the other component, which means
