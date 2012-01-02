@@ -116,7 +116,7 @@ SET_PROP(TutorialProblemDecoupled, PressureModel) /*@\label{tutorial-decoupled:P
 
 // model-specific settings
 SET_INT_PROP(TutorialProblemDecoupled, VelocityFormulation,
-        GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices))::velocityW); /*@\label{tutorial-decoupled:velocityFormulation}@*/
+        GET_PROP_TYPE(TypeTag, PTAG(Indices))::velocityW); /*@\label{tutorial-decoupled:velocityFormulation}@*/
 
 
 SET_TYPE_PROP(TutorialProblemDecoupled, DiffusivePart,
@@ -137,7 +137,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
     typedef IMPESProblem2P<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
+    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Indices)) Indices;
 
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidSystem)) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidState)) FluidState;
