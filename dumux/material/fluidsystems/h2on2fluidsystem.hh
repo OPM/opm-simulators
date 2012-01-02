@@ -381,7 +381,7 @@ public:
         // other
         Scalar rho_gH2O = H2O::gasDensity(T, p*fluidState.moleFraction(gPhaseIdx, H2OIdx));
         Scalar rho_gN2 = N2::gasDensity(T, p*fluidState.moleFraction(gPhaseIdx, N2Idx));
-        return rho_gH2O + rho_gN2;
+        return (rho_gH2O + rho_gN2) / std::max(1e-5, sumMoleFrac);
     };
 
     /*!
