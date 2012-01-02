@@ -177,7 +177,7 @@ public:
         assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::criticalTemperature();
-    };
+    }
 
     /*!
      * \brief Critical pressure of a component [Pa].
@@ -189,7 +189,7 @@ public:
         assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::criticalPressure();
-    };
+    }
 
     /*!
      * \brief The acentric factor of a component [].
@@ -201,7 +201,7 @@ public:
         assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::acentricFactor();
-    };
+    }
 
     /****************************************
      * thermodynamic relations
@@ -307,7 +307,7 @@ public:
                                        int compIdx)
     {
         DUNE_THROW(Dune::InvalidStateException, "Not applicable: Diffusion coefficients");
-    };
+    }
     
     /*!
      * \brief Given a phase's composition, temperature and pressure,
@@ -328,7 +328,7 @@ public:
 
     {
         DUNE_THROW(Dune::InvalidStateException, "Not applicable: Binary diffusion coefficients");
-    };
+    }
  
     /*!
      * \brief Given a phase's composition, temperature, pressure and
@@ -398,7 +398,7 @@ public:
 namespace Properties
 {
 NEW_PROP_TAG(Fluid);
-};
+}
 
 /*!
  * \brief A pure single-phase fluid system.

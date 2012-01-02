@@ -223,7 +223,7 @@ public:
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
         }
         temperature_ = fs.temperature(0);
-    };
+    }
 
     /*!
      * \brief Set the temperature [K] of a fluid phase

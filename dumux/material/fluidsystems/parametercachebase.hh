@@ -40,18 +40,18 @@ public:
         None = 0,
         Temperature = 1, 
         Pressure = 2,
-        Composition = 4,    
+        Composition = 4
     };
     
     ParameterCacheBase()
-    {};
+    {}
 
     template <class FluidState>
     void updateAll(const FluidState &fs, int exceptQuantities = None)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             asImp_().updatePhase(fs, phaseIdx);
-    };
+    }
 
 
     template <class FluidState>
@@ -59,14 +59,14 @@ public:
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             asImp_().updatePhase(fs, phaseIdx);
-    };
+    }
 
     template <class FluidState>
     void updateAllTemperatures(const FluidState &fs)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             asImp_().updatePhase(fs, phaseIdx);
-    };
+    }
 
 
     /*!
@@ -74,7 +74,7 @@ public:
      */
     template <class FluidState>
     void updatePhase(const FluidState &fs, int phaseIdx, int exceptQuantities = None)
-    {};
+    {}
 
     /*!
      * \brief Update all cached parameters of a specific fluid phase
@@ -88,7 +88,7 @@ public:
     void updateTemperature(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);
-    };
+    }
 
     /*!
      * \brief Update all cached parameters of a specific fluid phase
@@ -102,7 +102,7 @@ public:
     void updateSinglePressure(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);
-    };
+    }
 
     /*!
      * \brief Update all cached parameters of a specific fluid phase
@@ -116,7 +116,7 @@ public:
     void updateComposition(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx, /*except=*/Temperature | Pressure);
-    };
+    }
 
     /*!
      * \brief Update all cached parameters of a specific fluid phase
@@ -133,7 +133,7 @@ public:
                                   int compIdx)
     {
         asImp_().updateComposition(fs, phaseIdx);
-    };
+    }
 
 private:
     Implementation &asImp_()

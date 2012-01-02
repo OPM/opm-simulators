@@ -105,7 +105,7 @@ SET_PROP(NumericModel, Components)
 SET_PROP(NumericModel, EnableComplicatedFluidSystem)
 {  static const bool value = false; };
 
-}; // namespace Properties
-}; // namespace Dumux
+} // namespace Properties
+} // namespace Dumux
 
 #endif
