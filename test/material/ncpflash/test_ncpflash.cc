@@ -80,7 +80,7 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
                           << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
                           << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
                           << " error=" << error << "\n";
-        };
+        }
     }
 }
 
@@ -115,7 +115,7 @@ void checkNcpFlash(const FluidState &fsRef,
 
     // compare the "flashed" fluid state with the reference one
     checkSame<Scalar>(fsRef, fsFlash);
-};
+}
 
 
 template <class Scalar, class FluidSystem, class MaterialLaw, class FluidState>

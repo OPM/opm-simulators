@@ -169,7 +169,7 @@ public:
                                                              paramCache,
                                                              phaseIdx));
         }
-    };
+    }
 };
 
 } // end namespace Dumux

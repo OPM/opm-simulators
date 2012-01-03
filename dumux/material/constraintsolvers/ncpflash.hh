@@ -126,7 +126,7 @@ public:
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, phi);
             }
         }
-    };
+    }
 
     /*!
      * \brief Calculates the chemical equilibrium from the component
@@ -232,7 +232,7 @@ public:
                    "Flash calculation failed."
                    " {c_alpha^kappa} = {" << globalMolarities << "}, T = " 
                    << fluidState.temperature(/*phaseIdx=*/0));
-    };
+    }
 
 
 protected:
@@ -526,7 +526,7 @@ protected:
             int compIdx = (pvIdx - numPhases)%numComponents;
             return fs.moleFraction(phaseIdx, compIdx);
         }
-    };
+    }
 
     // set a quantity in the fluid state
     template <class MaterialLaw, class FluidState>
@@ -612,7 +612,7 @@ protected:
         else {
             assert(false);
         }
-    };
+    }
 
     // set a quantity in the fluid state
     template <class FluidState>
@@ -637,7 +637,7 @@ protected:
             int compIdx = (pvIdx - numPhases)%numComponents;
             fs.setMoleFraction(phaseIdx, compIdx, value);
         }
-    };
+    }
 
     template <class FluidState>
     static Scalar quantityWeight_(const FluidState &fs, int pvIdx)
@@ -651,7 +651,7 @@ protected:
         // mole fractions
         else // if (pvIdx < numPhases + numPhases*numComponents) 
             return 1.0;
-    };
+    }
 };
 
 } // end namespace Dumux

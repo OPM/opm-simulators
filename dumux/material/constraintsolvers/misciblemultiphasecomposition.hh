@@ -190,7 +190,7 @@ public:
                 fluidState.setEnthalpy(phaseIdx, value);
             }
         }
-    };
+    }
 };
 
 } // end namespace Dumux

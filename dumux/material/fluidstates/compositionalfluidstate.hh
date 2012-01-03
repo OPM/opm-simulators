@@ -231,7 +231,7 @@ public:
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
         }
         temperature_ = fs.temperature(0);
-    };
+    }
 
     /*!
      * \brief Set the temperature [K] of a fluid phase
@@ -282,7 +282,7 @@ public:
         
         Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
         Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
-    };
+    }
 
     /*!
      * \brief Set the fugacity of a component in a phase []

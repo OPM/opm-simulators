@@ -78,6 +78,6 @@ public:
     }
 
 };
-}; // namespace Dumux
+} // namespace Dumux
 
 #endif

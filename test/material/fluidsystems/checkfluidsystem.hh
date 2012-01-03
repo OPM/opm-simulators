@@ -316,6 +316,6 @@ void checkFluidSystem()
     }
 
     std::cout << "----------------------------------\n";
-};
+}
 
 #endif

@@ -70,7 +70,7 @@ public:
                                    i,
                                    1.0/numComponents);
         }
-    };
+    }
 
     /*!
      * \brief Calculates the chemical equilibrium from the component
@@ -97,7 +97,7 @@ public:
         Dune::FieldVector<Scalar, numComponents> xInit;
         for (int i = 0; i < numComponents; ++i) {
             xInit[i] = fluidState.moleFraction(phaseIdx, i);
-        };
+        }
 
         /////////////////////////
         // Newton method
@@ -176,7 +176,7 @@ public:
                    << xInit
                    << "}, {fug_t} = {" << targetFug << "}, p = " << fluidState.pressure(phaseIdx)
                    << ", T = " << fluidState.temperature(phaseIdx));
-    };
+    }
 
 
 protected:
@@ -204,7 +204,7 @@ protected:
         Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
         fluidState.setDensity(phaseIdx, rho);
         return;
-    };
+    }
 
     template <class FluidState>
     static void linearize_(Dune::FieldMatrix<Scalar, numComponents, numComponents> &J,
@@ -294,7 +294,7 @@ protected:
 
             sumx += std::abs(fluidState.moleFraction(phaseIdx, i));
             sumDelta += std::abs(x[i]);
-        };
+        }
 
 #if 1
         // chop update to at most 20% change in composition

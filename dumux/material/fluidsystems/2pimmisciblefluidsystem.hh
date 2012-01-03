@@ -224,7 +224,7 @@ public:
         if (compIdx == wCompIdx)
             return WettingPhase::acentricFactor();
         return NonwettingPhase::acentricFactor();
-    };
+    }
 
     /****************************************
      * thermodynamic relations
@@ -336,7 +336,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException,
                    "Diffusion coefficients of components are meaningless if"
                    " immiscibility is assumed");
-    };
+    }
 
     /*!
      * \brief Given a phase's composition, temperature and pressure,
@@ -354,7 +354,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException,
                    "Binary diffusion coefficients of components are meaningless if"
                    " immiscibility is assumed");
-    };
+    }
 
     /*!
      * \brief Return the specific enthalpy of a fluid phase [J/kg].
@@ -420,7 +420,7 @@ namespace Properties {
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(WettingPhase);
 NEW_PROP_TAG(NonwettingPhase);
-};
+}
 /*!
  * \brief A non-compositional twophase fluid system.
  *

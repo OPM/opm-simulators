@@ -87,6 +87,6 @@ private:
     Scalar pe_;
     Scalar lambda_;
 };
-}; // namespace Dumux
+} // namespace Dumux
 
 #endif

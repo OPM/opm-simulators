@@ -115,7 +115,7 @@ public:
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             values[phaseIdx] = std::max(std::min(state.saturation(phaseIdx),1.0),0.0);
-    };
+    }
 };
 }
 

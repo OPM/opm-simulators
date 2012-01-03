@@ -77,7 +77,7 @@ public:
     {
         values[wPhaseIdx] = TwoPLaw::krw(params, state.saturation(wPhaseIdx));
         values[nPhaseIdx] = TwoPLaw::krn(params, state.saturation(wPhaseIdx));
-    };
+    }
 };
 }
 

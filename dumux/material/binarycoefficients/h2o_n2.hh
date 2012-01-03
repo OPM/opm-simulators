@@ -59,7 +59,7 @@ public:
         const Scalar H = -29.4396;
 
         return henryIAPWS(E, F, G, H, temperature);
-    };
+    }
 
     /*!
      * \brief Binary diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular water and nitrogen.
@@ -80,7 +80,7 @@ public:
         const Scalar M[2] = { H2O::molarMass()*Scalar(1e3), N2::molarMass()*Scalar(1e3) };
 
         return fullerMethod(M, SigmaNu, temperature, pressure);
-    };
+    }
 
     /*!
      * \brief Diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular nitrogen in liquid water.
@@ -107,7 +107,7 @@ public:
         const Scalar Dexp = 2.01e-9; // [m^2/s]
 
         return Dexp * temperature/Texp;
-    };
+    }
 };
 
 }

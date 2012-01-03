@@ -81,7 +81,7 @@ inline Scalar henryIAPWS(Scalar E,
     // multiply it with the vapor pressure of water in order to get
     // derivative of the partial pressure.
     return exp(exponent)*H2O::vaporPressure(temperature);
-};
-};
+}
+}
 
 #endif // DUMUX_HENRY_IAPWS_HH

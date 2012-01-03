@@ -156,7 +156,7 @@ public:
      * \brief The pressure of a fluid phase [Pa]
      */
     Scalar pressure(int phaseIdx) const
-    { return pressure_[phaseIdx]; };
+    { return pressure_[phaseIdx]; }
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
@@ -173,7 +173,7 @@ public:
      * \brief The dynamic viscosity of a fluid phase [Pa s]
      */
     Scalar viscosity(int phaseIdx) const
-    { return viscosity_[phaseIdx]; };
+    { return viscosity_[phaseIdx]; }
 
     /*****************************************************
      * Setter methods. Note that these are not part of the
@@ -277,7 +277,7 @@ public:
             viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
             temperature_[phaseIdx] = fs.temperature(phaseIdx);
         }
-    };
+    }
 
     /*!
      * \brief Make sure that all attributes are defined.

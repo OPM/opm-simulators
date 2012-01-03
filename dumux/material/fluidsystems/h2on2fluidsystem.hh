@@ -226,7 +226,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return Tcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief Critical pressure of a component [Pa].
@@ -242,7 +242,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return pcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief Molar volume of a component at the critical point [m^3/mol].
@@ -254,7 +254,7 @@ public:
         DUNE_THROW(Dune::NotImplemented,
                    "H2ON2FluidSystem::criticalMolarVolume()");
         return 0;
-    };
+    }
 
     /*!
      * \brief The acentric factor of a component [].
@@ -270,7 +270,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return accFac[compIdx];
-    };
+    }
 
     /****************************************
      * thermodynamic relations
@@ -382,7 +382,7 @@ public:
         Scalar rho_gH2O = H2O::gasDensity(T, p*fluidState.moleFraction(gPhaseIdx, H2OIdx));
         Scalar rho_gN2 = N2::gasDensity(T, p*fluidState.moleFraction(gPhaseIdx, N2Idx));
         return (rho_gH2O + rho_gN2) / std::max(1e-5, sumMoleFrac);
-    };
+    }
 
     /*!
      * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
@@ -443,7 +443,7 @@ public:
             }
             return muResult;
         }
-    };
+    }
 
     /*!
      * \brief Calculate the fugacity coefficient [Pa] of an individual
@@ -528,7 +528,7 @@ public:
     {
         // TODO!
         DUNE_THROW(Dune::NotImplemented, "Diffusion coefficients");
-    };
+    }
 
     /*!
      * \brief Given a phase's composition, temperature and pressure,
@@ -580,7 +580,7 @@ public:
         if (compIIdx == H2OIdx && compJIdx == N2Idx)
             return BinaryCoeff::H2O_N2::gasDiffCoeff(T, p);
         return undefined;
-    };
+    }
 
     /*!
      * \brief Given a phase's composition, temperature, pressure and

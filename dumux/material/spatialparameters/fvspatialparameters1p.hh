@@ -43,7 +43,7 @@ namespace Properties
 {
 NEW_PROP_TAG( SpatialParameters);
 }
-;
+
 
 /*!
  * \ingroup SpatialParameters

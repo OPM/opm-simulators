@@ -120,6 +120,6 @@ public:
     { return 0.90; }
 
 };
-}; // namespace Dumux
+} // namespace Dumux
 
 #endif
