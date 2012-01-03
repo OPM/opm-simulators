@@ -80,7 +80,7 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
     enum
     {
         dim = Grid::dimension,
-        dimWorld = Grid::dimensionworld,
+        dimWorld = Grid::dimensionworld
     };
     typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
 
