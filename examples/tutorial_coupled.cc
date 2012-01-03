@@ -36,7 +36,7 @@ void usage(const char *progname)
 {
     std::cout << "usage: " << progname << " [--restart restartTime] tEnd dt\n";
     exit(1);
-};
+}
 
 int main(int argc, char** argv)
 {
