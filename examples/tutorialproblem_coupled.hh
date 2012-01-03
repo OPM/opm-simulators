@@ -130,6 +130,7 @@ public:
     TutorialProblemCoupled(TimeManager &timeManager,
                            const GridView &gridView)
         : ParentType(timeManager, gridView)
+        , eps_(3e-6)
     {
     }
 
@@ -234,7 +235,7 @@ public:
 
 private:
     // small epsilon value
-    static constexpr Scalar eps_ = 3e-6;
+    Scalar eps_;
 };
 }
 
