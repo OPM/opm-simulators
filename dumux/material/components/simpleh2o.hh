@@ -50,7 +50,7 @@ class SimpleH2O : public Component<Scalar, SimpleH2O<Scalar> >
     typedef Component<Scalar, SimpleH2O<Scalar> > ParentType;
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
-    static constexpr double R = 461.526;  // specific gas constant of water
+    static const Scalar R;  // specific gas constant of water
 
 public:
     /*!
@@ -266,6 +266,9 @@ public:
         return 1e-03;
     };
 };
+
+template <class Scalar>
+const Scalar SimpleH2O<Scalar>::R = Dumux::Constants<Scalar>::R / 18e-3;
 
 } // end namepace
 
