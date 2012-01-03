@@ -8,9 +8,7 @@ MAINDOCS = dumux-handbook.dvi dumux-handbook.pdf dumux-handbook.ps
 EXTRA_DIST = dumux-handbook.pdf 
 #Makefile.dist.in Makefile.dist.am
 
-if CONVERT
 DOCS = $(HTDOCS) $(MAINDOCS) $(WMLDOCS)
-endif
 
 # setting like in dune-web
 BASEDIR=../..
@@ -23,20 +21,18 @@ CLEANFILES = *.aux *.bbl *.blg *.log *.out *.toc *.dvi *.ps
 CLEANFILES += *.4ct *.4tc *.css *.idv *.idx *.lg *.tid *.tmp *.tms *.xref
 CLEANFILES += dumux-handbook*.png 
 CLEANFILES += $(DOCS)
-if CONVERT
 CLEANFILES += $(EPS_FILES)
 
 %.eps: $(srcdir)/%.jpg
-	convert $< $@
+	$CONVERT $< $@
 dumux-handbook.tex: $(EPS_FILES)
-endif
 
 dumux-handbook.pdf: $(TEXSOURCE)
-	latex dumux-handbook.tex
-	bibtex dumux-handbook
-	latex dumux-handbook.tex
-	latex dumux-handbook.tex
-	dvipdf dumux-handbook
+	@LATEX@ dumux-handbook.tex
+	@BIBTEX@ dumux-handbook
+	@LATEX@ dumux-handbook.tex
+	@LATEX@ dumux-handbook.tex
+	@DVIPDF@ dumux-handbook
 
 #dist-hook:
 #	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
