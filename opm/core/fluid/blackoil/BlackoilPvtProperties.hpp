@@ -95,6 +95,10 @@ namespace Opm
                   double* output_dRdp) const;
 
     private:
+        // Disabling copying (just to avoid surprises, since we use shared_ptr).
+        BlackoilPvtProperties(const BlackoilPvtProperties&);
+        BlackoilPvtProperties& operator=(const BlackoilPvtProperties&);
+
         int num_phases_;
         int phase_used_[MaxNumPhases];
         int phase_pos_[MaxNumPhases];
