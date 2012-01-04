@@ -204,6 +204,8 @@ public:
     void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
     { 
         Valgrind::CheckDefined(value);
+        Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
+        Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
 
         if (std::isfinite(averageMolarMass_[phaseIdx])) {
             Scalar delta = value - moleFraction_[phaseIdx][compIdx];
@@ -224,9 +226,6 @@ public:
                 averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compJIdx]*FluidSystem::molarMass(compJIdx);
             }
         }
-        
-        Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
-        Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
     }
 
     /*!
