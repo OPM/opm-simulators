@@ -1,16 +1,5 @@
-//===========================================================================
-//                                                                           
-// File: MiscibilityProps.cpp                                                 
-//                                                                           
-// Created: Wed Feb 10 09:05:05 2010                                         
-//                                                                           
-// Author: Bjørn Spjelkavik <bsp@sintef.no>
-//                                                                           
-// Revision: $Id$
-//                                                                           
-//===========================================================================
 /*
-  Copyright 2010 SINTEF ICT, Applied Mathematics.
+  Copyright 2010, 2011, 2012 SINTEF ICT, Applied Mathematics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -28,25 +17,31 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "MiscibilityProps.hpp"
+#include <opm/core/fluid/blackoil/SinglePvtInterface.hpp>
 
-using namespace std;
 
 namespace Opm
 {
 
+    SinglePvtInterface::SinglePvtInterface()
+        : num_phases_(MaxNumPhases)
+    {
+        for (int i = 0; i < MaxNumPhases; ++i) {
+            phase_pos_[i] = i;
+        }
+    }
 
-    //------------------------------------------------------------------------
-    // Member functions
-    //-------------------------------------------------------------------------
-
-    /// Constructor
-    MiscibilityProps::MiscibilityProps()
+    SinglePvtInterface::~SinglePvtInterface()
     {
     }
 
-    MiscibilityProps::~MiscibilityProps()
+    void SinglePvtInterface::setPhaseConfiguration(const int num_phases, const int* phase_pos)
     {
+        num_phases_ = num_phases;
+        for (int i = 0; i < MaxNumPhases; ++i) {
+            phase_pos_[i] = phase_pos[i];
+        }
     }
+
 
 } // namespace Opm
