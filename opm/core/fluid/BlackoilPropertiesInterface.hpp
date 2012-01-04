@@ -35,6 +35,7 @@ namespace Opm
     class BlackoilPropertiesInterface
     {
     public:
+        virtual ~BlackoilPropertiesInterface() {}
 
         // ---- Rock interface ----
 
