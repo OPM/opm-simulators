@@ -259,6 +259,7 @@ public:
         Valgrind::CheckDefined(value);
         Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
         Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
+        Valgrind::SetDefined(moleFraction_[phaseIdx][compIdx]);
 
         if (std::isfinite(averageMolarMass_[phaseIdx])) {
             Scalar delta = value - moleFraction_[phaseIdx][compIdx];
