@@ -61,7 +61,7 @@ namespace Opm
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
         void capPress(const int n,
                       const double* s,
-                      double* pv,
+                      double* pc,
                       double* dpcds) const;
 
     private:

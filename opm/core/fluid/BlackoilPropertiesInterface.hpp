@@ -129,7 +129,7 @@ namespace Opm
         virtual void capPress(const int n,
                               const double* s,
                               const int* cells,
-                              double* pv,
+                              double* pc,
                               double* dpcds) const = 0;
     };
 
