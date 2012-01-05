@@ -23,8 +23,8 @@
 
 #include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
 #include <opm/core/fluid/RockFromDeck.hpp>
-#include <opm/core/fluid/BlackoilFluid.hpp>
-#include <opm/core/fluid/blackoil/FluidStateBlackoil.hpp>
+#include <opm/core/fluid/blackoil/BlackoilPvtProperties.hpp>
+#include <opm/core/fluid/SaturationPropsFromDeck.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
 namespace Opm
@@ -134,13 +134,13 @@ namespace Opm
         virtual void capPress(const int n,
                               const double* s,
                               const int* cells,
-                              double* pv,
+                              double* pc,
                               double* dpcds) const;
 
     private:
         RockFromDeck rock_;
-        BlackoilFluid fluid_;
-        mutable AllFluidStates state_;
+        BlackoilPvtProperties pvt_;
+        SaturationPropsFromDeck satprops_;
     };
 
 

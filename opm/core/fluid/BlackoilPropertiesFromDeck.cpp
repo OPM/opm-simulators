@@ -24,7 +24,8 @@ namespace Opm
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Dune::EclipseGridParser& deck)
     {
-        fluid_.init(deck);
+        pvt_.init(deck);
+        satprops_.init(deck);
     }
 
     BlackoilPropertiesFromDeck::~BlackoilPropertiesFromDeck()
@@ -64,7 +65,7 @@ namespace Opm
     /// \return   P, the number of phases (also the number of components).
     int BlackoilPropertiesFromDeck::numPhases() const
     {
-        return 3;
+        return pvt_.numPhases();
     }
 
     /// \param[in]  n      Number of data points.
@@ -77,27 +78,14 @@ namespace Opm
     void BlackoilPropertiesFromDeck::viscosity(const int n,
                                                const double* p,
                                                const double* z,
-                                               const int* cells,
+                                               const int* /*cells*/,
                                                double* mu,
                                                double* dmudp) const
     {
-        state_.phase_pressure.resize(n);
-        state_.surface_volume_density.resize(n);
-        int num_phases = numPhases();
-        assert(num_phases == BlackoilFluid::numPhases);
-#pragma omp parallel for
-        for (int i = 0; i < n; ++i) {
-            state_.phase_pressure[i] = p[i];
-            for (int phase = 0; phase < num_phases; ++phase) {
-                state_.surface_volume_density[i][phase] = z[num_phases*i + phase];
-            }
-        }
         if (dmudp) {
-            THROW("Sorry, derivatives of viscosity not yet done.");
+            THROW("BlackoilPropertiesFromDeck::viscosity()  --  derivatives of viscosity not yet implemented.");
         } else {
-            fluid_.computePvtNoDerivs(state_); // Unnecessarily computes B and R
-            const double* beg_mu = &(state_.viscosity[0][0]);
-            std::copy(beg_mu, beg_mu + n*num_phases, mu);
+            pvt_.mu(n, p, z, mu);
         }
     }
 
@@ -118,25 +106,7 @@ namespace Opm
                                             double* A,
                                             double* dAdp) const
     {
-        state_.phase_pressure.resize(n);
-        state_.surface_volume_density.resize(n);
-        int num_phases = numPhases();
-        assert(num_phases == BlackoilFluid::numPhases);
-#pragma omp parallel for
-        for (int i = 0; i < n; ++i) {
-            state_.phase_pressure[i] = p[i];
-            for (int phase = 0; phase < num_phases; ++phase) {
-                state_.surface_volume_density[i][phase] = z[num_phases*i + phase];
-            }
-        }
-        if (dAdp) {
-            THROW("Sorry, derivatives of A matrix not yet done.");
-        } else {
-            fluid_.computeBAndR(state_);
-            fluid_.computeStateMatrix(state_);
-            const double* beg_A = &(state_.state_matrix[0][0][0]);
-            std::copy(beg_A, beg_A + n*num_phases*num_phases, A);
-        }
+        THROW("BlackoilPropertiesFromDeck::matrix() not yet implemented.");
     }
 
 
@@ -150,13 +120,15 @@ namespace Opm
                                              const double* A,
                                              double* rho) const
     {
-        int num_phases = numPhases();
-        assert(num_phases == BlackoilFluid::numPhases);
+        int np = numPhases();
+        const double* sdens = pvt_.surfaceDensities();
 #pragma omp parallel for
         for (int i = 0; i < n; ++i) {
-            BlackoilFluid::PhaseVec dens = fluid_.phaseDensities(A + n*num_phases*num_phases);
-            for (int phase = 0; phase < num_phases; ++phase) {
-                rho[num_phases*i + phase] = dens[phase];
+            for (int phase = 0; phase < np; ++phase) {
+                rho[np*i + phase] = 0.0;
+                for (int comp = 0; comp < np; ++comp) {
+                    rho[np*i + phase] += A[n*np*np + np*phase + comp]*sdens[comp];
+                }
             }
         }
     }
@@ -172,10 +144,11 @@ namespace Opm
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void BlackoilPropertiesFromDeck::relperm(const int n,
                                              const double* s,
-                                             const int* cells,
+                                             const int* /*cells*/,
                                              double* kr,
                                              double* dkrds) const
     {
+        satprops_.relperm(n, s, kr, dkrds);
     }
 
 
@@ -190,10 +163,11 @@ namespace Opm
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void BlackoilPropertiesFromDeck::capPress(const int n,
                                               const double* s,
-                                              const int* cells,
-                                              double* pv,
+                                              const int* /*cells*/,
+                                              double* pc,
                                               double* dpcds) const
     {
+        satprops_.relperm(n, s, pc, dpcds);
     }
 
 
