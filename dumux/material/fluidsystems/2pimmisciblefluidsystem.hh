@@ -430,9 +430,9 @@ NEW_PROP_TAG(NonwettingPhase);
  */
 template<class TypeTag>
 class TwoPImmiscibleFluidSystem
-: public FluidSystems::TwoPImmiscible<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
-                                      typename GET_PROP_TYPE(TypeTag, PTAG(WettingPhase)),
-                                      typename GET_PROP_TYPE(TypeTag, PTAG(NonwettingPhase))>
+: public FluidSystems::TwoPImmiscible<typename GET_PROP_TYPE(TypeTag, Scalar),
+                                      typename GET_PROP_TYPE(TypeTag, WettingPhase),
+                                      typename GET_PROP_TYPE(TypeTag, NonwettingPhase)>
 {};
 #endif
 

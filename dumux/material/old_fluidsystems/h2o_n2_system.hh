@@ -56,12 +56,12 @@ template <class TypeTag>
 class H2O_N2_System
 {
     typedef H2O_N2_System<TypeTag> ThisType;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
     typedef Dumux::IdealGas<Scalar> IdealGas;
     typedef Dumux::SettablePhase<Scalar, ThisType> SettablePhase;
 
-    typedef typename GET_PROP(TypeTag, PTAG(Components)) Components;
+    typedef typename GET_PROP(TypeTag, Components) Components;
 
 public:
     typedef typename Components::H2O H2O;
@@ -79,7 +79,7 @@ public:
     static const int H2OIdx = 0;
     static const int N2Idx = 1;
 
-    static const bool complicatedFluidSystem_ = GET_PROP_VALUE(TypeTag, PTAG(EnableComplicatedFluidSystem));
+    static const bool complicatedFluidSystem_ = GET_PROP_VALUE(TypeTag, EnableComplicatedFluidSystem);
 
     static void init()
     {

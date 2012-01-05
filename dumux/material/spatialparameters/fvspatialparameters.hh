@@ -45,9 +45,9 @@ namespace Dumux
 template<class TypeTag>
 class FVSpatialParameters: public FVSpatialParametersOneP<TypeTag>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(SpatialParameters)) Implementation;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, SpatialParameters) Implementation;
 
     enum
     {
@@ -56,7 +56,7 @@ class FVSpatialParameters: public FVSpatialParametersOneP<TypeTag>
 
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLaw))::Params MaterialLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)::Params MaterialLawParams;
 
 public:
     FVSpatialParameters(const GridView &gv)

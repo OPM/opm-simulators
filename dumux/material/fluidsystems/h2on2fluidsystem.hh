@@ -719,8 +719,8 @@ public:
  */
 template<class TypeTag>
 class H2ON2FluidSystem
-: public FluidSystems::H2ON2<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
-                             GET_PROP_VALUE(TypeTag, PTAG(EnableComplicatedFluidSystem))>
+: public FluidSystems::H2ON2<typename GET_PROP_TYPE(TypeTag, Scalar),
+                             GET_PROP_VALUE(TypeTag, EnableComplicatedFluidSystem)>
 {};
 #endif
 

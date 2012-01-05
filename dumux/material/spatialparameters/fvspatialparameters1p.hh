@@ -56,9 +56,9 @@ NEW_PROP_TAG( SpatialParameters);
 template<class TypeTag>
 class FVSpatialParametersOneP
 {
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(SpatialParameters)) Implementation;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, SpatialParameters) Implementation;
 
     enum
     {

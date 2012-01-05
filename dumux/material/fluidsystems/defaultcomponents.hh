@@ -63,7 +63,7 @@ NEW_PROP_TAG(Scalar);
 
 SET_PROP(NumericModel, DefaultComponents)
 { private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Dumux::H2O<Scalar> H2O_IAPWS;
 
 public:
@@ -88,7 +88,7 @@ public:
 };
 
 SET_PROP(NumericModel, Components)
-    : public GET_PROP(TypeTag, PTAG(DefaultComponents))
+    : public GET_PROP(TypeTag, DefaultComponents)
 {};
 
 //! Enables detailed description of fluidsystems

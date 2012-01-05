@@ -409,8 +409,8 @@ NEW_PROP_TAG(Fluid);
  */
 template<class TypeTag>
 class OnePFluidSystem
-: public FluidSystems::OneP<typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)),
-                            typename GET_PROP_TYPE(TypeTag, PTAG(Fluid))>
+: public FluidSystems::OneP<typename GET_PROP_TYPE(TypeTag, Scalar),
+                            typename GET_PROP_TYPE(TypeTag, Fluid)>
 {};
 #endif
 } // end namepace
