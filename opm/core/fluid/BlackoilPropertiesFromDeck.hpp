@@ -145,6 +145,10 @@ namespace Opm
         RockFromDeck rock_;
         BlackoilPvtProperties pvt_;
         SaturationPropsFromDeck satprops_;
+        mutable std::vector<double> B_;
+        mutable std::vector<double> dB_;
+        mutable std::vector<double> R_;
+        mutable std::vector<double> dR_;
     };
 
 
