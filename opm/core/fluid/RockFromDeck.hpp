@@ -41,10 +41,10 @@ namespace Opm
         void init(const Dune::EclipseGridParser& deck,
                   const std::vector<int>& global_cell);
 
-        /// \return   D, the number of spatial dimensions.
+        /// \return   D, the number of spatial dimensions. Always 3 for deck input.
         int numDimensions() const
         {
-            return dim_;
+            return 3;
         }
 
         /// \return   N, the number of cells.
@@ -68,9 +68,15 @@ namespace Opm
         }
 
     private:
-        int dim_;
+        void assignPorosity(const Dune::EclipseGridParser& parser,
+                            const std::vector<int>& global_cell);
+        void assignPermeability(const Dune::EclipseGridParser& parser,
+                                const std::vector<int>& global_cell,
+                                const double perm_threshold);
+
         std::vector<double> porosity_;
         std::vector<double> permeability_;
+        std::vector<unsigned char> permfield_valid_;
     };
 
 
