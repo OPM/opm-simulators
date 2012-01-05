@@ -39,6 +39,7 @@
 
 #include <dumux/material/fluidstates/temperatureoverlayfluidstate.hh>
 #include <dumux/material/idealgas.hh>
+#include <dumux/common/exceptions.hh>
 #include <dumux/common/math.hh>
 #include <dumux/common/tabulated2dfunction.hh>
 

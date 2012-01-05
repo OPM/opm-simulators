@@ -33,6 +33,8 @@
 #ifndef DUMUX_PENG_ROBINSON_PARAMS_HH
 #define DUMUX_PENG_ROBINSON_PARAMS_HH
 
+#include <dumux/common/valgrind.hh>
+
 namespace Dumux
 {
 /*!

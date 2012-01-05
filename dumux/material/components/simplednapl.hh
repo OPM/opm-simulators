@@ -28,7 +28,7 @@
 #ifndef DUMUX_SIMPLE_DNAPL_HH
 #define DUMUX_SIMPLE_DNAPL_HH
 
-
+#include <dumux/material/idealgas.hh>
 #include "component.hh"
 
 
