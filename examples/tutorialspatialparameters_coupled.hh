@@ -55,7 +55,7 @@ SET_PROP(TutorialSpatialParametersCoupled, MaterialLaw)
 {
 private:
     // material law typedefs
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     // select material law to be used
     typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
 public:
@@ -74,9 +74,9 @@ template<class TypeTag>
 class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@\label{tutorial-coupled:tutorialSpatialParameters}@*/
 {
     // Get informations for current implementation via property system
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     enum
     {
         dim = Grid::dimension,
@@ -85,12 +85,12 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
     typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
 
     // Get object types for function arguments
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
+    typedef typename GET_PROP_TYPE(TypeTag, FVElementGeometry) FVElementGeometry;
     typedef typename Grid::Traits::template Codim<0>::Entity Element;
 
 public:
     // get material law from property system
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLaw)) MaterialLaw;
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     // determine appropriate parameters depening on selected materialLaw
     typedef typename MaterialLaw::Params MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 

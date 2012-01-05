@@ -89,7 +89,7 @@ SET_PROP(TutorialProblemDecoupled, Grid) /*@\label{tutorial-decoupled:grid-begin
 SET_PROP(TutorialProblemDecoupled, WettingPhase) /*@\label{tutorial-decoupled:2p-system-start}@*/
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public:
     typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{tutorial-decoupled:wettingPhase}@*/
 };
@@ -98,7 +98,7 @@ public:
 SET_PROP(TutorialProblemDecoupled, NonwettingPhase)
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public:
     typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-decoupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-decoupled:2p-system-end}@*/
@@ -116,7 +116,7 @@ SET_PROP(TutorialProblemDecoupled, PressureModel) /*@\label{tutorial-decoupled:P
 
 // model-specific settings
 SET_INT_PROP(TutorialProblemDecoupled, VelocityFormulation,
-        GET_PROP_TYPE(TypeTag, PTAG(Indices))::velocityW); /*@\label{tutorial-decoupled:velocityFormulation}@*/
+        GET_PROP_TYPE(TypeTag, Indices)::velocityW); /*@\label{tutorial-decoupled:velocityFormulation}@*/
 
 
 SET_TYPE_PROP(TutorialProblemDecoupled, DiffusivePart,
@@ -135,15 +135,15 @@ template<class TypeTag>
 class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutorial-decoupled:def-problem}@*/
 {
     typedef IMPESProblem2P<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Indices)) Indices;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
 
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidSystem)) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FluidState)) FluidState;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidState) FluidState;
 
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(BoundaryTypes)) BoundaryTypes;
-    typedef typename GET_PROP(TypeTag, PTAG(SolutionTypes)) SolutionTypes;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryTypes) BoundaryTypes;
+    typedef typename GET_PROP(TypeTag, SolutionTypes) SolutionTypes;
     typedef typename SolutionTypes::PrimaryVariables PrimaryVariables;
 
     enum
@@ -161,7 +161,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
         satEqIdx = Indices::satEqIdx
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
     typedef typename GridView::Traits::template Codim<0>::Entity Element;
     typedef typename GridView::Intersection Intersection;

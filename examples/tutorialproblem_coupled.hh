@@ -80,14 +80,14 @@ SET_PROP(TutorialProblemCoupled, Grid) /*@\label{tutorial-coupled:set-grid}@*/
 // Set the wetting phase
 SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:2p-system-start}@*/
 {
-private: typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public: typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{tutorial-coupled:wettingPhase}@*/
 };
 
 // Set the non-wetting phase
 SET_PROP(TutorialProblemCoupled, NonwettingPhase)
 {
-private: typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public: typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-coupled:2p-system-end}@*/
 
@@ -107,8 +107,8 @@ template <class TypeTag>
 class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-coupled:def-problem}@*/
 {
     typedef TwoPProblem<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
     // Grid dimension
     enum { dim = GridView::dimension };
@@ -120,11 +120,11 @@ class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-co
     typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
 
     // Dumux specific types
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(TwoPIndices)) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(PrimaryVariables)) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(BoundaryTypes)) BoundaryTypes;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(FVElementGeometry)) FVElementGeometry;
+    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
+    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryTypes) BoundaryTypes;
+    typedef typename GET_PROP_TYPE(TypeTag, FVElementGeometry) FVElementGeometry;
 
 public:
     TutorialProblemCoupled(TimeManager &timeManager,

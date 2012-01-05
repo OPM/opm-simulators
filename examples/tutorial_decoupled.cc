@@ -53,10 +53,10 @@ int main(int argc, char** argv)
 {
     try {
         typedef TTAG(TutorialProblemDecoupled) TypeTag; /*@\label{tutorial-decoupled:set-type-tag}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;    /*@\label{tutorial-decoupled:retrieve-types-begin}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem;
-        typedef GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
+        typedef GET_PROP_TYPE(TypeTag, Scalar) Scalar;    /*@\label{tutorial-decoupled:retrieve-types-begin}@*/
+        typedef GET_PROP_TYPE(TypeTag, Grid) Grid;
+        typedef GET_PROP_TYPE(TypeTag, Problem) Problem;
+        typedef GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
         typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition; /*@\label{tutorial-decoupled:retrieve-types-end}@*/
 
         // initialize MPI, finalize is done automatically on exit
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
         dt = tEnd;  /*@\label{tutorial-decoupled:parse-args-end}@*/
 
         // create the grid
-        Grid *gridPtr = GET_PROP(TypeTag, PTAG(Grid))::create(); /*@\label{tutorial-decoupled:create-grid}@*/
+        Grid *gridPtr = GET_PROP(TypeTag, Grid)::create(); /*@\label{tutorial-decoupled:create-grid}@*/
 
         // create time manager responsible for global simulation control
         TimeManager timeManager;

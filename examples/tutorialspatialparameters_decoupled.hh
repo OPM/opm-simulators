@@ -53,7 +53,7 @@ SET_PROP(TutorialSpatialParametersDecoupled, MaterialLaw)
 {
 private:
     // material law typedefs
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;
 public:
     typedef EffToAbsLaw<RawMaterialLaw> type;
@@ -66,9 +66,9 @@ template<class TypeTag>
 class TutorialSpatialParametersDecoupled: public FVSpatialParameters<TypeTag>
 {
     typedef FVSpatialParameters<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(GridView)) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename Grid::ctype CoordScalar;
 
     enum
@@ -80,7 +80,7 @@ class TutorialSpatialParametersDecoupled: public FVSpatialParameters<TypeTag>
     typedef Dune::FieldMatrix<Scalar,dim,dim> FieldMatrix;
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, PTAG(MaterialLaw)) MaterialLaw;
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
     //! Intrinsic permeability tensor K \f$[m^2]\f$ depending

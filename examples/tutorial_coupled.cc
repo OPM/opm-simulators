@@ -42,9 +42,9 @@ int main(int argc, char** argv)
 {
     try {
         typedef TTAG(TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Grid)) Grid; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
-        typedef GET_PROP_TYPE(TypeTag, PTAG(TimeManager)) TimeManager;
-        typedef GET_PROP_TYPE(TypeTag, PTAG(Problem)) Problem; /*@\label{tutorial-coupled:retrieve-types-end}@*/
+        typedef GET_PROP_TYPE(TypeTag, Grid) Grid; /*@\label{tutorial-coupled:retrieve-types-begin}@*/
+        typedef GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+        typedef GET_PROP_TYPE(TypeTag, Problem) Problem; /*@\label{tutorial-coupled:retrieve-types-end}@*/
 
         // Initialize MPI
         Dune::MPIHelper::instance(argc, argv); /*@\label{tutorial-coupled:init-mpi}@*/
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
         std::istringstream(argv[argPos++]) >> dt; /*@\label{tutorial-coupled:parse-args-end}@*/
 
         // create the grid
-        Grid *gridPtr = GET_PROP(TypeTag, PTAG(Grid))::create(); /*@\label{tutorial-coupled:create-grid}@*/
+        Grid *gridPtr = GET_PROP(TypeTag, Grid)::create(); /*@\label{tutorial-coupled:create-grid}@*/
 
         // create time manager responsible for global simulation control
         TimeManager timeManager;
