@@ -63,7 +63,7 @@ namespace Opm
         const int* phasePosition() const;
 
         /// Densities of stock components at surface conditions.
-        /// \return  Array of size MaxNumPhases
+        /// \return  Array of size numPhases().
 	const double* surfaceDensities() const;
 
         /// Viscosity as a function of p and z.
