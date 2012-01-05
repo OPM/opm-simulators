@@ -33,6 +33,13 @@ namespace Opm
 
     };
 
+    struct PhaseUsage : public BlackoilPhases
+    {
+        int num_phases;
+        int phase_used[MaxNumPhases];
+        int phase_pos[MaxNumPhases];
+    };
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILPHASES_HEADER_INCLUDED
