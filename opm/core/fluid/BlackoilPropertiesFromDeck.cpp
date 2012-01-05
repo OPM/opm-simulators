@@ -36,19 +36,19 @@ namespace Opm
     /// \return   D, the number of spatial dimensions.
     int BlackoilPropertiesFromDeck::numDimensions() const
     {
-        return 3;
+        return rock_.numDimensions();
     }
 
     /// \return   N, the number of cells.
     int BlackoilPropertiesFromDeck::numCells() const
     {
-        return -1;
+        return rock_.numCells();
     }
 
     /// \return   Array of N porosity values.
     const double* BlackoilPropertiesFromDeck::porosity() const
     {
-        return 0;
+        return rock_.porosity();
     }
 
     /// \return   Array of ND^2 permeability values.
@@ -56,7 +56,7 @@ namespace Opm
     ///           which is symmetric (so ordering does not matter).
     const double* BlackoilPropertiesFromDeck::permeability() const
     {
-        return 0;
+        return rock_.permeability();
     }
 
 
