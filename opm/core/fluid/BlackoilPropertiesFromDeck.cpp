@@ -22,8 +22,10 @@
 namespace Opm
 {
 
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Dune::EclipseGridParser& deck)
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Dune::EclipseGridParser& deck,
+                                                           const std::vector<int>& global_cell)
     {
+        rock_.init(deck, global_cell);
         pvt_.init(deck);
         satprops_.init(deck);
     }
