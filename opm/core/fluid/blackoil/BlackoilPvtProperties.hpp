@@ -43,6 +43,10 @@ namespace Opm
     class BlackoilPvtProperties : public BlackoilPhases
     {
     public:
+        /// Default constructor.
+        BlackoilPvtProperties();
+
+        /// Initialize from deck.
 	void init(const Dune::EclipseGridParser& deck);
 
         /// Number of active phases.
@@ -99,9 +103,7 @@ namespace Opm
         BlackoilPvtProperties(const BlackoilPvtProperties&);
         BlackoilPvtProperties& operator=(const BlackoilPvtProperties&);
 
-        int num_phases_;
-        int phase_used_[MaxNumPhases];
-        int phase_pos_[MaxNumPhases];
+        PhaseUsage phase_usage_;
 
 	int region_number_;
 
