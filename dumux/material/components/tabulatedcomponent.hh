@@ -546,7 +546,8 @@ private:
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
-#ifndef NDEBUG
+
+#if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
             DUNE_THROW(NumericalProblem, "Temperature out of range: "
                        << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
@@ -585,7 +586,7 @@ private:
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
-#ifndef NDEBUG
+#if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
             DUNE_THROW(NumericalProblem, "Temperature out of range: "
                        << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
@@ -692,26 +693,26 @@ private:
     // returns the minimum tabulized liquid pressure at a given
     // temperature index
     static Scalar minLiquidPressure_(int tempIdx)
-    { return pressMin_; }
-    // { return std::max<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.1); }
+    // { return pressMin_; }
+    { return std::max<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.1); }
 
     // returns the maximum tabulized liquid pressure at a given
     // temperature index
     static Scalar maxLiquidPressure_(int tempIdx)
-    { return pressMax_; }
-//    { return std::max<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.1); }
+    // { return pressMax_; }
+    { return std::max<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.1); }
 
     // returns the minumum tabulized gas pressure at a given
     // temperature index
     static Scalar minGasPressure_(int tempIdx)
-    { return pressMin_; }
-//    { return std::min<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.1 ); }
+    // { return pressMin_; }
+    { return std::min<Scalar>(pressMin_, vaporPressure_[tempIdx] / 1.1 ); }
 
     // returns the maximum tabulized gas pressure at a given
     // temperature index
     static Scalar maxGasPressure_(int tempIdx)
-    { return pressMax_; }
-//    { return std::min<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.1); }
+    // { return pressMax_; }
+    { return std::min<Scalar>(pressMax_, vaporPressure_[tempIdx] * 1.1); }
 
 
     // returns the minimum tabulized liquid density at a given
