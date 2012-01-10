@@ -72,19 +72,17 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief   A regularized Brooks-Corey capillary pressure-saturation
-     *          curve.
+     * \brief A regularized Brooks-Corey capillary pressure-saturation
+     *        curve.
      *
      * regularized part:
      *    - low saturation:  extend the \f$p_c(S_w)\f$ curve with the slope at the regularization point (i.e. no kink).
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line (yes, there is a kink :-( ).
      *
-     *  For not-regularized part:
+     * For the non-regularized part:
      *
-         \copydetails BrooksCorey::pC()
+     * \copydetails BrooksCorey::pC()
      */
-
-
     static Scalar pC(const Params &params, Scalar Swe)
     {
         const Scalar Sthres = params.thresholdSw();
@@ -100,7 +98,7 @@ public:
             Scalar pC_SweLow = BrooksCorey::pC(params, Sthres);
             return pC_SweLow + m*(Swe - Sthres);
         }
-        else if (Swe > 1) {
+        else if (Swe > 1.0) {
             Scalar m = BrooksCorey::dpC_dSw(params, 1.0);
             Scalar pC_SweHigh = BrooksCorey::pC(params, 1.0);
             return pC_SweHigh + m*(Swe - 1.0);
@@ -120,10 +118,9 @@ public:
      *
      *  The according quantities are obtained by exploiting theorem of intersecting lines.
      *
-     *  For not-regularized part:
+     * For the non-regularized part:
      *
-         \copydetails BrooksCorey::Sw()
-     *
+     * \copydetails BrooksCorey::Sw()
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
@@ -146,7 +143,7 @@ public:
             Scalar pC_SweLow = BrooksCorey::pC(params, Sthres);
             return Sthres + (pC - pC_SweLow)/m;
         }
-        else if (Swe > 1) {
+        else if (Swe > 1.0) {
             Scalar m = BrooksCorey::dpC_dSw(params, 1.0);
             Scalar pC_SweHigh = BrooksCorey::pC(params, 1.0);
             return 1.0 + (pC - pC_SweHigh)/m;;
@@ -164,11 +161,10 @@ public:
      *    - low saturation:  use the slope of the regularization point (i.e. no kink).
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
      *
-     *        For not-regularized part:
+     * For the non-regularized part:
      *
-       \copydetails BrooksCorey::dpC_dSw()
-     *
-    */
+     * \copydetails BrooksCorey::dpC_dSw()
+     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
         const Scalar Sthres = params.thresholdSw();
@@ -197,8 +193,9 @@ public:
      *    - low saturation:  use the slope of the regularization point (i.e. no kink).
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
      *
-     *        For not-regularized part:
-        \copydetails BrooksCorey::dSw_dpC()
+     * For the non-regularized part:
+     *
+     * \copydetails BrooksCorey::dSw_dpC()
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -249,18 +246,10 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
-        if (Swe <= 0)
-            return 0;
-        else if (Swe >= 1)
+        if (Swe <= 0.0)
+            return 0.0;
+        else if (Swe >= 1.0)
             return 1.0;
-        else if (Swe >= 1 - 0.05) {
-            Scalar m1 = BrooksCorey::dkrw_dSw(params, 1.0 - 0.05);
-            Scalar y1 = BrooksCorey::krw(params, 1.0 - 0.05);
-            Dumux::Spline<Scalar> sp(1 - 0.05, 1.0,
-                                     y1, 1.0,
-                                     m1, 0);
-            return sp.eval(Swe);
-        }
 
         return BrooksCorey::krw(params, Swe);
     };
@@ -281,19 +270,11 @@ public:
      */
     static Scalar krn(const Params &params, Scalar Swe)
     {
-        if (Swe >= 1)
-            return 0;
-        // check if we need to regularize the relative permeability
-        else if (Swe <= 0)
+        if (Swe >= 1.0)
+            return 0.0;
+        else if (Swe <= 0.0)
             return 1.0;
-        else if (Swe < 0.05) {
-            Scalar m1 = BrooksCorey::dkrn_dSw(params, 0.05);
-            Scalar y1 = BrooksCorey::krn(params, 0.05);
-            Dumux::Spline<Scalar> sp(0.0, 0.05,
-                                     1.0, y1,
-                                     0, m1);
-            return sp.eval(Swe);
-        }
+
         return BrooksCorey::krn(params, Swe);
     }
 };
