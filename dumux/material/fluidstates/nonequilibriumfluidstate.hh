@@ -31,9 +31,6 @@
 
 #include <dumux/common/valgrind.hh>
 
-#include <dumux/material/idealgas.hh>
-
-
 #include <cmath>
 #include <algorithm>
 
@@ -170,35 +167,7 @@ public:
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    {
-
-        int wPhaseIdx = FluidSystem::lPhaseIdx;
-        int nPhaseIdx = FluidSystem::gPhaseIdx;
-        int sPhaseIdx = FluidSystem::sPhaseIdx;
-
-//        typedef Dumux::IdealGas<Scalar> IdealGas;
-//        Scalar result =enthalpy_[phaseIdx] - pressure(phaseIdx)/density(phaseIdx);
-//        Scalar p = pressure(phaseIdx) ;
-//        Scalar rho = density(phaseIdx);
-//        if (phaseIdx == wPhaseIdx){
-            return enthalpy_[phaseIdx]
-                             - pressure(phaseIdx)/density(phaseIdx);
-//#warning changed in nonequilibriumfluidstate
-//        return enthalpy_[phaseIdx]-
-//                1/averageMolarMass_[phaseIdx]* // conversion from [J/(mol K)] to [J/(kg K)]
-//                IdealGas::R*temperature(phaseIdx); // = pressue * spec. volume for an ideal gas
-//        }
-//        else if (phaseIdx == nPhaseIdx){
-//            #warning NIST DATA STUPID INTERPOLATION
-//            Scalar T = temperature(phaseIdx);
-//            Scalar T2 = 300.;
-//            Scalar T1 = 285.;
-//            Scalar u2 = 222170. ;
-//            Scalar u1 = 211010. ;
-//            Scalar u = u1 + (u2-u1) / (T2-T1) * (T-T1);
-//            return u ;
-//        }
-    }
+    { return enthalpy_[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
@@ -246,14 +215,6 @@ public:
             
             sumMoleFractions_[phaseIdx] += delta;
             averageMolarMass_[phaseIdx] += delta*FluidSystem::molarMass(compIdx);
-//            std::cout<<"In Nonequilibriumfluidstate: sumMoleFractions_["
-//                    <<phaseIdx
-//                    <<"]= "
-//                     << sumMoleFractions_[phaseIdx]
-//                     <<", averageMolarMass_["
-//                     <<phaseIdx
-//                     <<"]= "
-//                     << averageMolarMass_[phaseIdx]<< "\n";
         }
         else { 
             moleFraction_[phaseIdx][compIdx] = value;
@@ -339,7 +300,7 @@ public:
             Valgrind::CheckDefined(saturation_[i]);
             Valgrind::CheckDefined(density_[i]);
             Valgrind::CheckDefined(temperature_[i]);
-            Valgrind::CheckDefined(enthalpy_[i]);
+            //Valgrind::CheckDefined(internalEnergy_[i]);
             Valgrind::CheckDefined(viscosity_[i]);
         }
 #endif // HAVE_VALGRIND
