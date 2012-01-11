@@ -546,8 +546,7 @@ private:
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
-
-#if !defined NDEBUG
+#if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
             DUNE_THROW(NumericalProblem, "Temperature out of range: "
                        << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
@@ -586,7 +585,7 @@ private:
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
-#if !defined NDEBUG
+#if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
             DUNE_THROW(NumericalProblem, "Temperature out of range: "
                        << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
