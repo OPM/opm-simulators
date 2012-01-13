@@ -35,6 +35,7 @@ namespace Dumux {
 // forward declation of property tags
 namespace Properties {
 NEW_PROP_TAG(SpatialParameters);
+NEW_PROP_TAG(MaterialLaw);
 NEW_PROP_TAG(MaterialLawParams);
 }
 
