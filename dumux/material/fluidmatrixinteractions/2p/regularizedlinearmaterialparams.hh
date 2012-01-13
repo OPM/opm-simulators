@@ -44,8 +44,6 @@ class RegularizedLinearMaterialParams : public LinearMaterialParams<ScalarT>
 {
 public:
     typedef ScalarT Scalar;
-    typedef LinearMaterialParams<Scalar> Parent;
-    typedef RegularizedLinearMaterialParams<Scalar> Self;
 
     RegularizedLinearMaterialParams()
     {}

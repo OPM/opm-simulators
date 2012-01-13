@@ -47,7 +47,6 @@ class RegularizedVanGenuchtenParams : public VanGenuchtenParams<ScalarT>
 public:
     typedef ScalarT Scalar;
     typedef VanGenuchtenParams<Scalar> Parent;
-    typedef RegularizedVanGenuchtenParams<Scalar> Self;
 
     RegularizedVanGenuchtenParams()
     {}

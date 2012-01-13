@@ -48,7 +48,6 @@ namespace Dumux
 template <class Scalar>
 class O2 : public Component<Scalar, O2<Scalar> >
 {
-    typedef Component<Scalar, O2<Scalar> >  ParentType;
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
 public:

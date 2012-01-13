@@ -42,7 +42,6 @@ namespace Dumux
 template <class Scalar>
 class Oil : public Component<Scalar, Oil<Scalar> >
 {
-    typedef Component<Scalar, Oil<Scalar> > ParentType;
 
 public:
     /*!

@@ -72,7 +72,6 @@ class H2ON2
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
     typedef Dumux::H2O<Scalar> IapwsH2O;
-    typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
 
     typedef Dumux::TabulatedComponent<Scalar, IapwsH2O > TabulatedH2O;
 

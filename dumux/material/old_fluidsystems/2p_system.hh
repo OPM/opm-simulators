@@ -57,7 +57,6 @@ NEW_PROP_TAG(NonwettingPhase);
 template <class TypeTag>
 class FluidSystem2P
 {
-    typedef FluidSystem2P<TypeTag> ThisType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;

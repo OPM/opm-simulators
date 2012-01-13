@@ -42,7 +42,6 @@ namespace Dumux
 template <class Scalar>
 class Unit : public Component<Scalar, Unit<Scalar> >
 {
-    typedef Component<Scalar, Unit<Scalar> > ParentType;
 
 public:
     /*!

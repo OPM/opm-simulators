@@ -50,7 +50,6 @@ NEW_PROP_TAG(MaterialLawParams);
 template<class TypeTag>
 class BoxSpatialParameters: public BoxSpatialParametersOneP<TypeTag>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, SpatialParameters) Implementation;
 

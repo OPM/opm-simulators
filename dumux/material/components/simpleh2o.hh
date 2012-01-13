@@ -47,7 +47,6 @@ namespace Dumux
 template <class Scalar>
 class SimpleH2O : public Component<Scalar, SimpleH2O<Scalar> >
 {
-    typedef Component<Scalar, SimpleH2O<Scalar> > ParentType;
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
     static const Scalar R;  // specific gas constant of water

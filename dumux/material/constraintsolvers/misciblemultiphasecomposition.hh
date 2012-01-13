@@ -69,7 +69,6 @@ class MiscibleMultiPhaseComposition
                   "This solver requires that the number fluid phases is equal "
                   "to the number of components");
 
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
 
 public:
     /*!

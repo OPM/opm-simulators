@@ -56,7 +56,6 @@ class PengRobinsonParamsMixture : public PengRobinsonParams<Scalar>
     typedef Dumux::PengRobinsonParams<Scalar> PureParams;
 
     // The Peng-Robinson EOS for this mixture
-    typedef Dumux::PengRobinson<Scalar> PengRobinson;
 
     // number of components of which the fluid is composed
     enum { numComponents = StaticParams::numComponents };
@@ -65,7 +64,6 @@ class PengRobinsonParamsMixture : public PengRobinsonParams<Scalar>
     static constexpr Scalar R = Dumux::Constants<Scalar>::R;
 
 public:
-    typedef StaticParams StaticParameters;
 
     /*!
      * \brief Update Peng-Robinson parameters for the pure components.

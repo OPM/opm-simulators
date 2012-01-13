@@ -61,7 +61,6 @@ namespace Dumux
 template <class Scalar>
 class H2O : public Component<Scalar, H2O<Scalar> >
 {
-    typedef Component<Scalar, H2O<Scalar> > ParentType;
 
     typedef IAPWS::Common<Scalar> Common;
     typedef IAPWS::Region1<Scalar> Region1;

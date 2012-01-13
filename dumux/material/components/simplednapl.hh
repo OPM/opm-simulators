@@ -43,7 +43,6 @@ namespace Dumux
 template <class Scalar>
 class SimpleDNAPL : public Component<Scalar, SimpleDNAPL<Scalar> >
 {
-    typedef Component<Scalar, SimpleDNAPL<Scalar> > ParentType;
 
 public:
     /*!
