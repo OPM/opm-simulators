@@ -116,7 +116,7 @@ public:
                 // use spline between threshold Swe and 1.0
                 Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
                 Spline<Scalar> sp(SwThHigh, 1.0, // x0, x1
-                                  yTh, 0, // m0, m1
+                                  yTh, 0, // y0, y1
                                   mTh, m1); // m0, m1
                 return sp.eval(Swe);
             }
