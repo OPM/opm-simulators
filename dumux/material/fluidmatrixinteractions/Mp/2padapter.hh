@@ -49,7 +49,6 @@ class TwoPAdapter
 
 public:
     typedef typename TwoPLaw::Params Params;
-    typedef typename Params::Scalar Scalar;
     enum { numPhases = 2 };
 
     /*!
