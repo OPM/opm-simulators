@@ -124,11 +124,6 @@ class TutorialProblemCoupled
     // Grid dimension
     enum { dim = GridView::dimension };
 
-    // Types from DUNE-Grid
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::template Codim<dim>::Entity Vertex;
-    typedef typename GridView::Intersection Intersection;
-
     typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
     typedef Dune::FieldMatrix<Scalar, dim, dim> Tensor;
 
