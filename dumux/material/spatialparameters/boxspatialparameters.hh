@@ -105,6 +105,7 @@ public:
     /*!
      * \brief Calculate the heat flux \f$[W/m^2]\f$ through the
      *        rock matrix based on the temperature gradient \f$[K / m]\f$
+     *        at the integration point of a (boundary or SCV) face
      *
      * This is only required for non-isothermal models that use outflow
      * boundary conditions.
@@ -112,13 +113,13 @@ public:
      * \param heatFlux The resulting heat flux vector
      * \param fluxDat The flux variables
      * \param vDat The volume variables
-     * \param face The boundary or SCV face
+     * \param face The boundary or sub-control-volume face
      * \param element The current finite element
      * \param fvElemGeom The finite volume geometry of the current element
      * \tparam FaceType The type of the face (boundary face / SCV face)
      */
     template <class FaceType>
-    void matrixHeatFlux(Vector &heatFlux,
+    void boundaryMatrixHeatFlux(Vector &heatFlux,
             const FluxVariables &fluxDat,
             const ElementVolumeVariables &vDat,
             const FaceType &face,
