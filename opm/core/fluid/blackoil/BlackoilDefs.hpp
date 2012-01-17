@@ -54,6 +54,18 @@ namespace Opm
             { return data_[i]; }
             T& operator[](int i)
             { return data_[i]; }
+  	    void operator += (const SmallVec& sm)
+	    {
+                for (int i = 0; i < N; ++i) {
+                    data_[i] += sm.data_[i];
+                }
+	    }
+  	    void operator *= (const T& scalar)
+	    {
+                for (int i = 0; i < N; ++i) {
+                    data_[i] *= scalar;
+                }
+	    }
             template <typename U>
             void assign(const U& elem)
             {

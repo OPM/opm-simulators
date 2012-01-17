@@ -39,7 +39,7 @@ namespace Opm
 
 
 
-    // ---- ReadFromDeck methods ----
+    // ---- RockFromDeck methods ----
 
 
     /// Default constructor.
