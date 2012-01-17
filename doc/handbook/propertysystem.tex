@@ -198,14 +198,14 @@ Example:\nolinebreak
 template <TypeTag>
 class MyClass {
   // retrieve the ::value attribute of the 'NumEq' property
-  enum { numEq = GET_PROP(TypeTag, PTAG(NumEq))::value }; 
+  enum { numEq = GET_PROP(TypeTag, NumEq)::value }; 
   // retrieve the ::value attribute of the 'NumPhases' property using the convenience macro
-  enum { numPhases = GET_PROP_VALUE(TypeTag, PTAG(NumPhases)) }; 
+  enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) }; 
 
   // retrieve the ::type attribute of the 'Scalar' property
-  typedef typename GET_PROP(TypeTag, PTAG(Scalar))::type Scalar; 
+  typedef typename GET_PROP(TypeTag, Scalar)::type Scalar; 
   // retrieve the ::type attribute of the 'Vector' property using the convenience macro
-  typedef typename GET_PROP_TYPE(TypeTag, PTAG(Vector)) Vector;
+  typedef typename GET_PROP_TYPE(TypeTag, Vector) Vector;
 };
 \end{lstlisting}
 
@@ -222,7 +222,7 @@ Example:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 SET_PROP(MyModelTypeTag, Vector)
 {
-private: typedef typename GET_PROP_TYPE(TypeTag, PTAG(Scalar)) Scalar;
+private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public: typedef std::vector<Scalar> type;
 };
 \end{lstlisting}
@@ -312,7 +312,7 @@ the following:
 Using the \Dumux property system, these assumptions are formulated
 using
 \begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
-SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, PTAG(GasUsage)) * 30);
+SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, GasUsage) * 30);
 SET_INT_PROP(CompactCar, NumSeats, 5);
 SET_INT_PROP(CompactCar, GasUsage, 4);
 
@@ -331,7 +331,7 @@ SET_BOOL_PROP(Sedan, AutomaticTransmission, true);
 SET_INT_PROP(Pickup, TopSpeed, 120);
 SET_INT_PROP(Pickup, Payload, 5);
 
-SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), PTAG(TopSpeed)));
+SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), TopSpeed));
 \end{lstlisting}
 
 \noindent
@@ -349,22 +349,25 @@ be generated. For example
 \begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 int main()
 {
-    std::cout << "top speed of sedan: " << GET_PROP_VALUE(TTAG(Sedan), PTAG(TopSpeed)) << "\n";
-    std::cout << "top speed of truck: " << GET_PROP_VALUE(TTAG(Truck), PTAG(TopSpeed)) << "\n";
+    std::cout << "top speed of sedan: " << GET_PROP_VALUE(TTAG(Sedan), TopSpeed) << "\n";
+    std::cout << "top speed of truck: " << GET_PROP_VALUE(TTAG(Truck), TopSpeed) << "\n";
 
-    std::cout << PROP_DIAGNOSTIC(TTAG(Sedan), PTAG(TopSpeed));
-    std::cout << PROP_DIAGNOSTIC(TTAG(HummerH1), PTAG(CanonCaliber));
+    std::cout << PROP_DIAGNOSTIC(TTAG(Sedan), TopSpeed);
+    std::cout << PROP_DIAGNOSTIC(TTAG(HummerH1), CanonCaliber);
+
+    Dumux::Properties::print<TTAG(Sedan)>();
 }
 \end{lstlisting}
 will yield the following output:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 top speed of sedan: 210
 top speed of truck: 100
-Property 'TopSpeed' for type tag 'Sedan'
-  inherited from 'CompactCar'
-    defined at test_propertysystem.cc:90
-Property 'CanonCaliber' for type tag 'HummerH1'
-  explicitly unset at test_propertysystem.cc:113
+Properties for Sedan:
+  bool   AutomaticTransmission = 'true' defined at test_propertysystem.cc:68
+  int    GasUsage = '7' defined at test_propertysystem.cc:67
+  Inherited from CompactCar:
+    int    NumSeats = '5' defined at test_propertysystem.cc:55
+    int    TopSpeed = '::Dumux::Properties::GetProperty<TypeTag, ::Dumux::Properties::PTag::GasUsage>::p::value * 30' defined at test_propertysystem.cc:54
 \end{lstlisting}
 
 
