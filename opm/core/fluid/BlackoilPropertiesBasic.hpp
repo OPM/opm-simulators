@@ -35,6 +35,13 @@ namespace Opm
     {
     public:
         /// Construct from parameters.
+	/// The following parameters are accepted (defaults):
+	///    num_phases         (2)         Must be 1 or 2.
+	///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
+	///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
+	///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
+	///    porosity           (1.0)       Porosity
+	///    permeability       (100.0)     Permeability in mD
         BlackoilPropertiesBasic(const Dune::parameter::ParameterGroup& param,
 				const int dim,
 				const int num_cells);
