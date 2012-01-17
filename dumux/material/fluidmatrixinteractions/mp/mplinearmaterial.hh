@@ -73,37 +73,9 @@ public:
             Scalar S = state.saturation(phaseIdx);
             values[phaseIdx] =
                 S*params.pcMaxSat(phaseIdx) +
-                (1 - S)*params.pcMinSat(phaseIdx);
+                (1.0 - S)*params.pcMinSat(phaseIdx);
         }
     }
-
-#if 0
-#warning TODO
-    /*!
-     * \brief The saturation-capillary pressure curve.
-     *
-     * This is the inverse of the capillary pressure-saturation curve:
-     * \f[
-     S_w = 1 - \frac{p_C - p_{C,entry}}{p_{C,max} - p_{C,entry}}
-     \f]
-     *
-     * \param pC Capillary pressure \f$\p_C\f$
-     * \return The effective saturaion of the wetting phase \f$\overline{S}_w\f$
-     */
-    template <class SatContainerT, class FluidState>
-    static void saturations(SatContainerT &saturations,
-                            const Params &params,
-                            const FluidState &state)
-    {
-        for (int i = 0; i < numPhases; ++i) {
-            saturations[i] =
-                (pc[i] - params.pcMaxSat(i))
-                /
-                (params.pcMinSat(i) - params.pcMaxSat(i));
-        }
-    }
-
-#endif
 
     /*!
      * \brief The inverse of the capillary pressure
@@ -113,11 +85,7 @@ public:
                             const Params &params,
                             const FluidState &state)
     {
-        // wetting phase does not get anything added
-        values[wPhaseIdx] = TwoPLaw::Sw(params, state.pressure(nPhaseIdx) - state.pressure(wPhaseIdx));
-        // non-wetting phase gets the capillary pressure added
-        values[nPhaseIdx] = 1.0 - values[wPhaseIdx];
-
+        DUNE_THROW(Dune::NotImplemented, "MpLinearMaterial::saturations()");
     }
 
     /*!
