@@ -36,6 +36,10 @@ namespace Opm
         rock_.init(dim, num_cells, poro, perm);
 	pvt_.init(param);
         satprops_.init(param);
+	if (pvt_.numPhases() != satprops_.numPhases()) {
+	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
+		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+	}
     }
 
     BlackoilPropertiesBasic::~BlackoilPropertiesBasic()
