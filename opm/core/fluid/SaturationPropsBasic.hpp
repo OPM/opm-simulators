@@ -30,6 +30,9 @@ namespace Opm
     /// by which we mean constant, linear or quadratic relative
     /// permeability functions for a maximum of two phases,
     /// and zero capillary pressure.
+    ///
+    /// TODO: This class can easily be extended to three phases,
+    /// by adding three-phase relperm behaviour.
     class SaturationPropsBasic
     {
     public:
@@ -41,6 +44,9 @@ namespace Opm
 	///    num_phases   (2)          Must be 1 or 2.
 	///    relperm_func ("Linear")   Must be "Constant", "Linear" or "Quadratic".
         void init(const Dune::parameter::ParameterGroup& param);
+
+        /// \return   P, the number of phases.
+        int numPhases() const;
 
         /// Relative permeability.
         /// \param[in]  n      Number of data points.

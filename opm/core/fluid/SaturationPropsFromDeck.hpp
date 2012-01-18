@@ -36,6 +36,9 @@ namespace Opm
         /// Initialize from deck.
         void init(const Dune::EclipseGridParser& deck);
 
+        /// \return   P, the number of phases.
+        int numPhases() const;
+
         /// Relative permeability.
         /// \param[in]  n      Number of data points.
         /// \param[in]  s      Array of nP saturation values.

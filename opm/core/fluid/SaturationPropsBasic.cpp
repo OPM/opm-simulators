@@ -128,6 +128,15 @@ namespace Opm
 
 
 
+    /// \return   P, the number of phases.
+    int SaturationPropsBasic::numPhases() const
+    {
+	return num_phases_;
+    }
+
+
+
+
     /// Relative permeability.
     /// \param[in]  n      Number of data points.
     /// \param[in]  s      Array of nP saturation values.
