@@ -29,10 +29,10 @@ namespace Opm
     {
         enum PermeabilityKind { ScalarPerm, DiagonalPerm, TensorPerm, None, Invalid };
 
-        PermeabilityKind classifyPermeability(const Dune::EclipseGridParser& parser);
+        PermeabilityKind classifyPermeability(const EclipseGridParser& parser);
         void setScalarPermIfNeeded(std::tr1::array<int,9>& kmap,
                                    int i, int j, int k);
-        PermeabilityKind fillTensor(const Dune::EclipseGridParser&                 parser,
+        PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::tr1::array<int,9>&                     kmap);
     } // anonymous namespace
@@ -52,7 +52,7 @@ namespace Opm
     /// \param  deck         Deck input parser
     /// \param  global_cell  mapping from cell indices (typically from a processed grid)
     ///                      to logical cartesian indices consistent with the deck.
-    void RockFromDeck::init(const Dune::EclipseGridParser& deck,
+    void RockFromDeck::init(const EclipseGridParser& deck,
                             const std::vector<int>& global_cell)
     {
         assignPorosity(deck, global_cell);
@@ -62,7 +62,7 @@ namespace Opm
     }
 
 
-    void RockFromDeck::assignPorosity(const Dune::EclipseGridParser& parser,
+    void RockFromDeck::assignPorosity(const EclipseGridParser& parser,
                                       const std::vector<int>& global_cell)
     {
         porosity_.assign(global_cell.size(), 1.0);
@@ -78,12 +78,12 @@ namespace Opm
 
 
 
-    void RockFromDeck::assignPermeability(const Dune::EclipseGridParser& parser,
+    void RockFromDeck::assignPermeability(const EclipseGridParser& parser,
                                           const std::vector<int>& global_cell,
                                           double perm_threshold)
     {
         const int dim = 3;
-        Dune::EclipseGridInspector insp(parser);
+        EclipseGridInspector insp(parser);
         std::tr1::array<int, 3> dims = insp.gridSize();
         int num_global_cells = dims[0]*dims[1]*dims[2];
         ASSERT (num_global_cells > 0);
@@ -154,7 +154,7 @@ namespace Opm
         ///        TensorPerm     at least one cross-component given.
         ///        None           no components given.
         ///        Invalid        invalid set of components given.
-        PermeabilityKind classifyPermeability(const Dune::EclipseGridParser& parser)
+        PermeabilityKind classifyPermeability(const EclipseGridParser& parser)
         {
             const bool xx = parser.hasField("PERMX" );
             const bool xy = parser.hasField("PERMXY");
@@ -262,7 +262,7 @@ namespace Opm
         ///
         /// @param [out] tensor
         /// @param [out] kmap
-        PermeabilityKind fillTensor(const Dune::EclipseGridParser&                 parser,
+        PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::tr1::array<int,9>&                     kmap)
         {

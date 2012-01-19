@@ -34,7 +34,7 @@ namespace Opm
         SaturationPropsFromDeck();
 
         /// Initialize from deck.
-        void init(const Dune::EclipseGridParser& deck);
+        void init(const EclipseGridParser& deck);
 
         /// \return   P, the number of phases.
         int numPhases() const;
@@ -75,12 +75,12 @@ namespace Opm
 
     private:
         PhaseUsage phase_usage_;
-        Dune::utils::UniformTableLinear<double> krw_;
-        Dune::utils::UniformTableLinear<double> krow_;
-        Dune::utils::UniformTableLinear<double> pcow_;
-        Dune::utils::UniformTableLinear<double> krg_;
-        Dune::utils::UniformTableLinear<double> krog_;
-        Dune::utils::UniformTableLinear<double> pcog_;
+        utils::UniformTableLinear<double> krw_;
+        utils::UniformTableLinear<double> krow_;
+        utils::UniformTableLinear<double> pcow_;
+        utils::UniformTableLinear<double> krg_;
+        utils::UniformTableLinear<double> krog_;
+        utils::UniformTableLinear<double> pcog_;
         double krocw_; // = krow_(s_wc)
     };
 

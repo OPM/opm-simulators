@@ -31,7 +31,7 @@ namespace Opm
 
     /// Looks at presence of WATER, OIL and GAS keywords in deck
     /// to determine active phases.
-    inline PhaseUsage phaseUsageFromDeck(const Dune::EclipseGridParser& deck)
+    inline PhaseUsage phaseUsageFromDeck(const EclipseGridParser& deck)
     {
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);

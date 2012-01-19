@@ -27,13 +27,13 @@
 namespace Opm
 {
 
-    IncompPropertiesBasic::IncompPropertiesBasic(const Dune::parameter::ParameterGroup& param,
+    IncompPropertiesBasic::IncompPropertiesBasic(const parameter::ParameterGroup& param,
 						 const int dim,
 						 const int num_cells)
     {
 	double poro = param.getDefault("porosity", 1.0);
-	using namespace Dune::unit;
-	using namespace Dune::prefix;
+	using namespace Opm::unit;
+	using namespace Opm::prefix;
 	double perm = param.getDefault("permeability", 100)*milli*darcy;
         rock_.init(dim, num_cells, poro, perm);
 	pvt_.init(param);

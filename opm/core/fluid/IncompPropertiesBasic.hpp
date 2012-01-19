@@ -49,7 +49,7 @@ namespace Opm
 	///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
 	///    porosity           (1.0)       Porosity
 	///    permeability       (100.0)     Permeability in mD
-        IncompPropertiesBasic(const Dune::parameter::ParameterGroup& param,
+        IncompPropertiesBasic(const parameter::ParameterGroup& param,
 			      const int dim,
 			      const int num_cells);
 

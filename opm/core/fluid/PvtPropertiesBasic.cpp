@@ -32,7 +32,7 @@ namespace Opm
     }
 
 
-    void PvtPropertiesBasic::init(const Dune::parameter::ParameterGroup& param)
+    void PvtPropertiesBasic::init(const parameter::ParameterGroup& param)
     {
 	int num_phases = param.getDefault("num_phases", 2);
 	if (num_phases > 3 || num_phases < 1) {
@@ -45,8 +45,8 @@ namespace Opm
 	formation_volume_factor_.resize(num_phases, 1.0);
 
 	// Setting mu and rho from parameters
-	using namespace Dune::prefix;
-	using namespace Dune::unit;
+	using namespace Opm::prefix;
+	using namespace Opm::unit;
 	const double kgpm3 = kilogram/cubic(meter);
 	const double cP = centi*Poise;
 	std::string rname[3] = { "rho1", "rho2", "rho3" };

@@ -38,7 +38,7 @@ namespace Opm
         /// \param  deck         Deck input parser
         /// \param  global_cell  mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        void init(const Dune::EclipseGridParser& deck,
+        void init(const EclipseGridParser& deck,
                   const std::vector<int>& global_cell);
 
         /// \return   D, the number of spatial dimensions. Always 3 for deck input.
@@ -68,9 +68,9 @@ namespace Opm
         }
 
     private:
-        void assignPorosity(const Dune::EclipseGridParser& parser,
+        void assignPorosity(const EclipseGridParser& parser,
                             const std::vector<int>& global_cell);
-        void assignPermeability(const Dune::EclipseGridParser& parser,
+        void assignPermeability(const EclipseGridParser& parser,
                                 const std::vector<int>& global_cell,
                                 const double perm_threshold);
 

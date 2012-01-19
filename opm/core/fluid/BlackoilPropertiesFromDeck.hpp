@@ -39,7 +39,7 @@ namespace Opm
         /// \param  deck         eclipse input parser
         /// \param  global_cell  mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        BlackoilPropertiesFromDeck(const Dune::EclipseGridParser& deck,
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                    const std::vector<int>& global_cell);
 
         /// Destructor.

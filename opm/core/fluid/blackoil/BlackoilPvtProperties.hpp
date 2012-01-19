@@ -47,7 +47,7 @@ namespace Opm
         BlackoilPvtProperties();
 
         /// Initialize from deck.
-	void init(const Dune::EclipseGridParser& deck);
+	void init(const EclipseGridParser& deck);
 
         /// Number of active phases.
         int numPhases() const;
