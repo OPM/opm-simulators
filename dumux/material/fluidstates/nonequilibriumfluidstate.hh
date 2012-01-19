@@ -86,10 +86,10 @@ public:
     Scalar massFraction(int phaseIdx, int compIdx) const
     {
         return
-            sumMoleFractions_[phaseIdx]
+            std::abs(sumMoleFractions_[phaseIdx])
             * moleFraction_[phaseIdx][compIdx]
             * FluidSystem::molarMass(compIdx)
-            / std::max(1e-10, averageMolarMass_[phaseIdx]);
+            / std::max(1e-40, std::abs(averageMolarMass_[phaseIdx]));
     }
 
     /*!
