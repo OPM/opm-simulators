@@ -313,9 +313,9 @@ public:
      *        a component in a fluid phase [mol^2 * s / (kg*m^3)]
      *
      * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
-     * gradient of the chemical potential and follows the law
+     * mathbf{grad}ient of the chemical potential and follows the law
      *
-     * \f[ J = - D \grad mu_\kappa \f]
+     * \f[ J = - D \mathbf{grad} mu_\kappa \f]
      *
      * where \f$\mu_\kappa\f$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
