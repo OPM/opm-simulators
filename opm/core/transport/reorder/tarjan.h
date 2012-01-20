@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-    void tarjan (int size, int *ia, int *ja, int *rowP, int *P, 
+    void tarjan (int size, int *ia, int *ja, int *rowP, int *P,
                  int *ncomp, int *work);
 
 #ifdef __cplusplus

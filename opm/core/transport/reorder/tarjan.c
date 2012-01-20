@@ -2,13 +2,17 @@
 
 #include <string.h>
 #include <assert.h>
+
+#ifdef MATLAB_MEX_FILE
+#include "tarjan.h"
+#else
 #include <opm/core/transport/reorder/tarjan.h>
+#endif
 
 
 
 
-
-static int min(int a, int b){ return a<b? a : b;}
+static int min(int a, int b){ return a < b? a : b;}
 
 /* Improved (or obfuscated) version uses less memory
  *
@@ -36,7 +40,7 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
     int   *link   = (int *)  time + size;
     int   *status = (int*)   link + size; /* dual usage... */
 
-  
+    (void) cbottom;
 
     memset(work, 0, 3*size    *  sizeof *work);
     memset(P,    0,   size    *  sizeof *P   );
@@ -50,27 +54,27 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
 
     *ncomp = 0;
     *Q++ = pos;
-              
+
     seed = 0;
     while (seed < size)
-    { 
+    {
         if (status[seed] == DONE)
         {
             ++seed;
             continue;
         }
-     
+
         *stack-- = seed;     /* push seed */
 
         t = 0;
-   
+
         while ( stack != bottom )
         {
             c = *(stack+1);        /* peek c */
- 
+
             assert(status[c] != DONE);
             assert(status[c] >= -2);
-        
+
             if (status[c] == REMAINING)
             {
                 status[c] = ia[c+1]-ia[c]; /* number of descendants of c */
@@ -81,11 +85,11 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
 
 
             /* if all descendants are processed */
-            if (status[c] == 0) 
+            if (status[c] == 0)
             {
 
                 /* if c is root of strong component */
-                if (link[c] == time[c]) 
+                if (link[c] == time[c])
                 {
                     do
                     {
@@ -94,16 +98,16 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
                         v         = *++cstack; /* pop strong component stack */
                         status[v] = DONE;
                         P[pos++]  = v;          /* store vertex in P */
-                    } 
+                    }
                     while ( v != c );
-              
-                    *Q++ = pos;       /* store end point of component */ 
+
+                    *Q++ = pos;       /* store end point of component */
                     ++*ncomp;
                 }
 
                 ++stack;  /* pop c */
 
-                if (stack != bottom) 
+                if (stack != bottom)
                 {
                     link[*(stack+1)] = min(link[*(stack+1)], link[c]);
                 }
@@ -112,24 +116,24 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
 
 
             /* if there are more descendants to consider */
-            else 
+            else
             {
                 assert(status[c] > 0);
 
                 child = ja[ia[c] + status[c]-1];
                 --status[c];           /* Decrement descendant count of c*/
 
-                if (status[child] == REMAINING) 
+                if (status[child] == REMAINING)
                 {
                     *stack-- = child; /* push child */
-            
-                } 
-                else if (status[child] >= 0) 
+
+                }
+                else if (status[child] >= 0)
                 {
                     link[c] = min(link[c], time[child]);
 
-                } 
-                else 
+                }
+                else
                 {
                     assert(status[child] = DONE);
                 }
@@ -138,42 +142,6 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
         assert (cstack == cbottom);
     }
 }
-
-
-#ifdef TEST_TARJAN
-#include <stdio.h>
-#include <stdlib.h>
-/* gcc -DTEST_TARJAN  tarjan.c */
-int main()
-{
-    int size = 5;
-    int ia[] = {0, 1, 2, 4, 5, 5};
-    int ja[] = {1, 2, 0, 3, 4};
-
-    int *work = malloc(3*size*sizeof *work);
-
-    int number_of_components;
-    int *permutation   = malloc(size * sizeof *permutation);
-    int *ptr           = malloc(size * sizeof *ptr);
-    int i,j;
-    tarjan (size, ia, ja, permutation, ptr, &number_of_components, work);
-
-    fprintf(stderr, "Number of components: %d\n", number_of_components);
-    for (i=0; i<number_of_components; ++i)
-    {
-        for (j=ptr[i]; j<ptr[i+1]; ++j)
-        {
-            fprintf(stderr, "%d %d\n", i, permutation[j]);
-        }
-    }
-   
-    free(work);
-    free(permutation);
-    free(ptr);
-   
-    return 0;
-}
-#endif
 
 /* Local Variables:    */
 /* c-basic-offset:4    */

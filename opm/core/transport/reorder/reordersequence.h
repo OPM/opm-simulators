@@ -3,7 +3,7 @@
 #define REORDERSEQUENCE_H_INCLUDED
 
 struct UnstructuredGrid;
-void compute_sequence(struct UnstructuredGrid *grid, const double *flux, 
+void compute_sequence(struct UnstructuredGrid *grid, const double *flux,
                       int *sequence, int *components, int *ncomponents);
 
 #endif
