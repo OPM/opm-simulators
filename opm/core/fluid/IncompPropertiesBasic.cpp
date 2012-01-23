@@ -34,7 +34,7 @@ namespace Opm
 	double poro = param.getDefault("porosity", 1.0);
 	using namespace Opm::unit;
 	using namespace Opm::prefix;
-	double perm = param.getDefault("permeability", 100)*milli*darcy;
+	double perm = param.getDefault("permeability", 100.0)*milli*darcy;
         rock_.init(dim, num_cells, poro, perm);
 	pvt_.init(param);
         satprops_.init(param);
