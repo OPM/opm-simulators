@@ -33,10 +33,10 @@
 #include <dune/grid/sgrid.hh>
 
 // dumux 2p-decoupled environment
+#include <dumux/decoupled/2p/diffusion/fv/fvpressureproperties2p.hh>
+#include <dumux/decoupled/2p/transport/fv/fvtransportproperties2p.hh>
+#include <dumux/decoupled/2p/impes/impesproblem2p.hh>
 #include <dumux/decoupled/2p/impes/impesproblem2p.hh> /*@\label{tutorial-decoupled:parent-problem}@*/
-#include <dumux/decoupled/2p/diffusion/fv/fvvelocity2p.hh>
-#include <dumux/decoupled/2p/transport/fv/fvsaturation2p.hh>
-#include <dumux/decoupled/2p/transport/fv/capillarydiffusion.hh>
 
 // assign parameters dependent on space (e.g. spatial parameters)
 #include "tutorialspatialparameters_decoupled.hh" /*@\label{tutorial-decoupled:spatialparameters}@*/
@@ -57,7 +57,7 @@ class TutorialProblemDecoupled;
 namespace Properties
 {
 // create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(DecoupledTwoP, TutorialSpatialParametersDecoupled)); /*@\label{tutorial-decoupled:create-type-tag}@*/
+NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(FVPressureTwoP, FVTransportTwoP, IMPESTwoP, TutorialSpatialParametersDecoupled)); /*@\label{tutorial-decoupled:create-type-tag}@*/
 
 // Set the problem property
 SET_PROP(TutorialProblemDecoupled, Problem) /*@\label{tutorial-decoupled:set-problem}@*/
@@ -103,25 +103,6 @@ public:
     typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-decoupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-decoupled:2p-system-end}@*/
 
-// Set the model properties
-SET_PROP(TutorialProblemDecoupled, TransportModel) /*@\label{tutorial-decoupled:TransportModel}@*/
-{
-    typedef Dumux::FVSaturation2P<TTAG(TutorialProblemDecoupled)> type;
-};
-
-SET_PROP(TutorialProblemDecoupled, PressureModel) /*@\label{tutorial-decoupled:PressureModel}@*/
-{
-    typedef Dumux::FVVelocity2P<TTAG(TutorialProblemDecoupled)> type;
-};
-
-// model-specific settings
-SET_INT_PROP(TutorialProblemDecoupled, VelocityFormulation,
-        GET_PROP_TYPE(TypeTag, Indices)::velocityW); /*@\label{tutorial-decoupled:velocityFormulation}@*/
-
-
-SET_TYPE_PROP(TutorialProblemDecoupled, DiffusivePart,
-        Dumux::CapillaryDiffusion<TypeTag>); /*@\label{tutorial-decoupled:DiffusivePart}@*/
-
 SET_SCALAR_PROP(TutorialProblemDecoupled, CFLFactor, 0.5); /*@\label{tutorial-decoupled:cfl}@*/
 
 // Disable gravity
@@ -166,7 +147,6 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
     typedef typename GridView::Traits::template Codim<0>::Entity Element;
     typedef typename GridView::Intersection Intersection;
     typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<Scalar, dim> LocalPosition;
 
 public:
     TutorialProblemDecoupled(TimeManager &timeManager, const GridView &gridView)
