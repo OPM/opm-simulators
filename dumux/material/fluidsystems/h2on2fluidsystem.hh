@@ -53,6 +53,8 @@ namespace FluidSystems
 {
 
 /*!
+ * \ingroup Fluidsystems
+ *
  * \brief A twophase fluid system with water and nitrogen as components.
  *
  * This FluidSystem can be used without the PropertySystem that is applied in Dumux,
