@@ -103,6 +103,8 @@ public:
         liquidDensity_ = new Scalar[nTemp_*nPress_];
         gasViscosity_ = new Scalar[nTemp_*nPress_];
         liquidViscosity_ = new Scalar[nTemp_*nPress_];
+        gasThermalConductivity_ = new Scalar[nTemp_*nPress_];
+        liquidThermalConductivity_ = new Scalar[nTemp_*nPress_];
         gasPressure_ = new Scalar[nTemp_*nDensity_];
         liquidPressure_ = new Scalar[nTemp_*nDensity_];
 
@@ -141,6 +143,10 @@ public:
                 try { gasViscosity_[i] = RawComponent::gasViscosity(temperature, pressure); }
                 catch (Dune::NotImplemented) { gasViscosity_[i] = NaN; }
                 catch (NumericalProblem) { gasViscosity_[i] = NaN; };
+
+                try { gasThermalConductivity_[i] = RawComponent::gasThermalConductivity(temperature, pressure); }
+                catch (Dune::NotImplemented) { gasThermalConductivity_[i] = NaN; }
+                catch (NumericalProblem) { gasThermalConductivity_[i] = NaN; };
             };
 
             Scalar plMin = minLiquidPressure_(iT);
@@ -165,6 +171,10 @@ public:
                 try { liquidViscosity_[i] = RawComponent::liquidViscosity(temperature, pressure); }
                 catch (Dune::NotImplemented) { liquidViscosity_[i] = NaN; }
                 catch (NumericalProblem) { liquidViscosity_[i] = NaN; };
+
+                try { liquidThermalConductivity_[i] = RawComponent::liquidThermalConductivity(temperature, pressure); }
+                catch (Dune::NotImplemented) { liquidThermalConductivity_[i] = NaN; }
+                catch (NumericalProblem) { liquidThermalConductivity_[i] = NaN; };
             }
         }
 
@@ -491,6 +501,43 @@ public:
         return result;
     };
 
+    /*!
+     * \brief The thermal conductivity of gaseous water \f$\mathrm{[W / (m K)]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    {
+        Scalar result = interpolateGasTP_(gasThermalConductivity_,
+                                          temperature,
+                                          pressure);
+        if (std::isnan(result)) {
+            printWarning_("gasThermalConductivity", temperature, pressure);
+            return RawComponent::gasThermalConductivity(temperature, pressure);
+        }
+        return result;
+    };
+
+    /*!
+     * \brief The thermal conductivity of liquid water \f$\mathrm{[W / (m K)]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    {
+        Scalar result = interpolateLiquidTP_(liquidThermalConductivity_,
+                                             temperature,
+                                             pressure);
+        if (std::isnan(result)) {
+            printWarning_("liquidThermalConductivity", temperature, pressure);
+            return RawComponent::liquidThermalConductivity(temperature, pressure);
+        }
+        return result;
+    };
+
+
 private:
     // prints a warning if the result is not in range or the table has
     // not been initialized
@@ -781,6 +828,9 @@ private:
     static Scalar *gasViscosity_;
     static Scalar *liquidViscosity_;
 
+    static Scalar *gasThermalConductivity_;
+    static Scalar *liquidThermalConductivity_;
+
     // 2D fields with the temperature and density as degrees of
     // freedom
     static Scalar *gasPressure_;
@@ -834,6 +884,10 @@ template <class Scalar, class RawComponent, bool useVaporPressure>
 Scalar* TabulatedComponent<Scalar, RawComponent, useVaporPressure>::gasViscosity_;
 template <class Scalar, class RawComponent, bool useVaporPressure>
 Scalar* TabulatedComponent<Scalar, RawComponent, useVaporPressure>::liquidViscosity_;
+template <class Scalar, class RawComponent, bool useVaporPressure>
+Scalar* TabulatedComponent<Scalar, RawComponent, useVaporPressure>::gasThermalConductivity_;
+template <class Scalar, class RawComponent, bool useVaporPressure>
+Scalar* TabulatedComponent<Scalar, RawComponent, useVaporPressure>::liquidThermalConductivity_;
 template <class Scalar, class RawComponent, bool useVaporPressure>
 Scalar* TabulatedComponent<Scalar, RawComponent, useVaporPressure>::gasPressure_;
 template <class Scalar, class RawComponent, bool useVaporPressure>

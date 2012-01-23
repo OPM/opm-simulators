@@ -176,7 +176,7 @@ public:
     //! The components for pure water
     typedef TabulatedH2O H2O;
     //typedef SimpleH2O H2O;
-    //typedef IapwsH2O H2O;
+//    typedef IapwsH2O H2O;
 
     //! The components for pure nitrogen
     typedef SimpleN2 N2;
@@ -629,11 +629,9 @@ public:
     }
 
     /*!
-     * \brief Thermal conductivity of a fluid phase [W/(m^2 K/m)].
+     * \brief Thermal conductivity of a fluid phase [W/(m K)].
      *
      * Use the conductivity of air and water as a first approximation.
-     * Source:
-     * http://en.wikipedia.org/wiki/List_of_thermal_conductivities
      *
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
@@ -641,18 +639,45 @@ public:
     using Base::thermalConductivity;
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
-                                      int phaseIdx)
+                                      const int phaseIdx)
     {
-//        TODO thermal conductivity is a function of:
-//        Scalar p = fluidState.pressure(phaseIdx);
-//        Scalar T = fluidState.temperature(phaseIdx);
-//        Scalar x = fluidState.moleFrac(phaseIdx,compIdx);
-//#warning: so far rough estimates from wikipedia
-        if (phaseIdx == lPhaseIdx)
-            return  0.6;   // conductivity of water[W / (m K ) ]
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        // gas phase
-        return 0.025; // conductivity of air [W / (m K ) ]
+        if (phaseIdx == lPhaseIdx){// liquid phase
+            if(useComplexRelations){
+                const Scalar & temperature  = fluidState.temperature(phaseIdx) ;
+                const Scalar & pressure      = fluidState.pressure(phaseIdx);
+                return H2O::liquidThermalConductivity(temperature, pressure);
+            }
+            else
+                return  0.578078;   // conductivity of water[W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+        }
+        else{// gas phase
+
+            //        Isobaric Properties for Nitrogen in: NIST Standard Reference Database Number 69, Eds. P.J. Linstrom
+            //        and W.G. Mallard
+            //        evaluated at p=.1 MPa, T=8°C, does not change dramatically with p,T
+            const Scalar & lambdaPureNitrogen = 0.024572;
+            if (useComplexRelations){
+                const Scalar & xNitrogen        = fluidState.moleFraction(phaseIdx, N2Idx);
+                const Scalar & xWater           = fluidState.moleFraction(phaseIdx, H2OIdx);
+                const Scalar & lambdaNitrogen   = xNitrogen * lambdaPureNitrogen;
+
+
+                // Assuming Raoult's, Daltons law and ideal gas
+                // in order to obtain the partial density of water in the air phase
+                const Scalar & temperature      = fluidState.temperature(phaseIdx) ;
+                const Scalar & pressure         = fluidState.pressure(phaseIdx);
+                const Scalar & averageMolarMass = fluidState.averageMolarMass(gPhaseIdx);
+                const Scalar & partialPressure  = pressure * xWater;
+
+                const Scalar & lambdaWater      = xWater * H2O::gasThermalConductivity(temperature,
+                                                                                       partialPressure);
+                return lambdaNitrogen + lambdaWater;
+            }
+            else
+                return lambdaPureNitrogen; // conductivity of Nitrogen [W / (m K ) ]
+        }
     }
 
     /*!

@@ -151,6 +151,91 @@ public:
 
         return 1e-6*muBar;
     }
+
+    /*!
+    * \brief Thermal conductivity \f$\mathrm{[[W/(m^2 K/m)]}\f$ water (IAPWS) .
+    *
+    * Implementation taken from:
+    * freesteam - IAPWS-IF97 steam tables library
+    * Copyright (C) 2004-2009  John Pye
+    *
+    * Appendix B: Recommended Interpolating equation for Industrial Use
+    * see http://www.iapws.org/relguide/thcond.pdf
+    *
+    * \param T absolute temperature in K
+    * \param rho density of water in kg/m^3
+    */
+    static Scalar thermalConductivityIAPWS(const Scalar T, const Scalar rho)
+    {
+        static constexpr Scalar thcond_tstar   = 647.26 ;
+        static constexpr Scalar thcond_rhostar = 317.7 ;
+        /*static constexpr Scalar thcond_kstar   = 1.0 ;*/
+
+        static constexpr Scalar thcond_b0      = -0.397070 ;
+        static constexpr Scalar thcond_b1      = 0.400302 ;
+        static constexpr Scalar thcond_b2      = 1.060000 ;
+        static constexpr Scalar thcond_B1      = -0.171587 ;
+        static constexpr Scalar thcond_B2      = 2.392190 ;
+
+        static constexpr Scalar thcond_c1      = 0.642857 ;
+        static constexpr Scalar thcond_c2      = -4.11717 ;
+        static constexpr Scalar thcond_c3      = -6.17937 ;
+        static constexpr Scalar thcond_c4      = 0.00308976 ;
+        static constexpr Scalar thcond_c5      = 0.0822994 ;
+        static constexpr Scalar thcond_c6      = 10.0932 ;
+
+        static constexpr Scalar thcond_d1      = 0.0701309 ;
+        static constexpr Scalar thcond_d2      = 0.0118520 ;
+        static constexpr Scalar thcond_d3      = 0.00169937 ;
+        static constexpr Scalar thcond_d4      = -1.0200 ;
+        static constexpr int    thcond_a_count = 4;
+        static constexpr Scalar thcond_a[thcond_a_count] = {
+            0.0102811
+            ,0.0299621
+            ,0.0156146
+            ,-0.00422464
+        };
+
+        Scalar Tbar = T / thcond_tstar;
+        Scalar rhobar = rho / thcond_rhostar;
+
+        /* fast implementation... minimised calls to 'pow' routine... */
+        Scalar Troot = sqrt(Tbar);
+        Scalar Tpow = Troot;
+        Scalar lam = 0;
+
+        for(int k = 0; k < thcond_a_count; ++k) {
+            lam += thcond_a[k] * Tpow;
+            Tpow *= Tbar;
+        }
+
+        lam += thcond_b0 + thcond_b1
+                * rhobar + thcond_b2
+                * exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
+
+        Scalar DTbar = abs(Tbar - 1) + thcond_c4;
+        Scalar DTbarpow = pow(DTbar, 3./5);
+        Scalar Q = 2. + thcond_c5 / DTbarpow;
+
+        Scalar S;
+        if(Tbar >= 1){
+            S = 1. / DTbar;
+        }else{
+            S = thcond_c6 / DTbarpow;
+        }
+
+        Scalar rhobar18 = pow(rhobar, 1.8);
+        Scalar rhobarQ = pow(rhobar, Q);
+
+        lam +=
+            (thcond_d1 / pow(Tbar,10) + thcond_d2) * rhobar18 *
+                exp(thcond_c1 * (1 - rhobar * rhobar18))
+            + thcond_d3 * S * rhobarQ *
+                exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
+            + thcond_d4 *
+                exp(thcond_c2 * pow(Troot,3) + thcond_c3 / pow(rhobar,5));
+        return /*thcond_kstar * */ lam;
+    }
 };
 
 template <class Scalar>

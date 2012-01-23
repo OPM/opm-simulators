@@ -181,6 +181,14 @@ public:
                (cpVapB/2 + T*
                 (cpVapC/3 + T*
                  (cpVapD/4))));
+
+//#warning NIST DATA STUPID INTERPOLATION
+//        Scalar T2 = 300.;
+//        Scalar T1 = 285.;
+//        Scalar h2 = 311200.;
+//        Scalar h1 = 295580.;
+//        Scalar h = h1+ (h2-h1) / (T2-T1) * (T-T1);
+//        return h ;
     }
 
     /*!

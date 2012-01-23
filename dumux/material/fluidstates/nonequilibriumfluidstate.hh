@@ -167,7 +167,10 @@ public:
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    { return enthalpy_[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
+    {
+        return enthalpy_[phaseIdx]
+                         - pressure(phaseIdx)/density(phaseIdx);
+    }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
@@ -300,7 +303,7 @@ public:
             Valgrind::CheckDefined(saturation_[i]);
             Valgrind::CheckDefined(density_[i]);
             Valgrind::CheckDefined(temperature_[i]);
-            //Valgrind::CheckDefined(internalEnergy_[i]);
+            Valgrind::CheckDefined(enthalpy_[i]);
             Valgrind::CheckDefined(viscosity_[i]);
         }
 #endif // HAVE_VALGRIND

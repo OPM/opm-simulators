@@ -144,7 +144,7 @@ public:
     }
 
     /*!
-     * \brief Thermal conductivity of a fluid phase [W/(m^2 K/m)].
+     * \brief Thermal conductivity of a fluid phase [W/(m K)].
      *
      * Use the conductivity of air and water as a first approximation.
      * Source:

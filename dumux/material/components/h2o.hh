@@ -773,6 +773,58 @@ public:
         return Common::viscosity(temperature, rho);
     };
 
+    /*!
+     * \brief Thermal conductivity \f$\mathrm{[[W/(m K)]}\f$ of water (IAPWS) .
+     *
+     * Implementation taken from:
+     * freesteam - IAPWS-IF97 steam tables library
+     * Copyright (C) 2004-2009  John Pye
+     *
+     * Appendix B: Recommended Interpolating equation for Industrial Use
+     * see http://www.iapws.org/relguide/thcond.pdf
+     *
+     * \param temperature absolute temperature in K
+     * \param pressure of the phase in Pa
+     */
+    static Scalar liquidThermalConductivity( Scalar temperature,  Scalar pressure)
+    {
+        // Thermal conductivity of water is empirically fit.
+        // Evaluating that fitting-function outside the area of validity does not make sense.
+        assert( (pressure <= 400e6 and ((273.15<=temperature) and (temperature<=398.15)) )
+                    or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
+                    or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
+                    or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
+
+        Scalar rho = liquidDensity(temperature, pressure);
+        return Common::thermalConductivityIAPWS(temperature, rho);
+    }
+
+    /*!
+     * \brief Thermal conductivity \f$\mathrm{[[W/(m K)]}\f$ of water (IAPWS) .
+     *
+     * Implementation taken from:
+     * freesteam - IAPWS-IF97 steam tables library
+     * Copyright (C) 2004-2009  John Pye
+     *
+     * Appendix B: Recommended Interpolating equation for Industrial Use
+     * see http://www.iapws.org/relguide/thcond.pdf
+     *
+     * \param temperature absolute temperature in K
+     * \param pressure of the phase in Pa
+     */
+    static Scalar gasThermalConductivity(const Scalar temperature, const Scalar pressure)
+    {
+        // Thermal conductivity of water is empirically fit.
+        // Evaluating that fitting-function outside the area of validity does not make sense.
+        assert( (pressure <= 400e6 and ((273.15<=temperature) and (temperature<=398.15)) )
+                    or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
+                    or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
+                    or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
+
+        Scalar rho = gasDensity(temperature, pressure);
+        return Common::thermalConductivityIAPWS(temperature, rho);
+    }
+
 private:
     // the unregularized specific enthalpy for liquid water
     static Scalar enthalpyRegion1_(Scalar temperature, Scalar pressure)
