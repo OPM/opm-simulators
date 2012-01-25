@@ -41,7 +41,7 @@
 #include "iapws/region4.hh"
 
 #include <cmath>
-
+#include <assert.h>
 
 namespace Dumux
 {

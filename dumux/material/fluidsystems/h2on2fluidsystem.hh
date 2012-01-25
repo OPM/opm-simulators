@@ -645,8 +645,8 @@ public:
 
         if (phaseIdx == lPhaseIdx){// liquid phase
             if(useComplexRelations){
-                const Scalar & temperature  = fluidState.temperature(phaseIdx) ;
-                const Scalar & pressure      = fluidState.pressure(phaseIdx);
+                Scalar temperature  = fluidState.temperature(phaseIdx) ;
+                Scalar pressure = fluidState.pressure(phaseIdx);
                 return H2O::liquidThermalConductivity(temperature, pressure);
             }
             else
@@ -654,29 +654,29 @@ public:
         }
         else{// gas phase
 
-            //        Isobaric Properties for Nitrogen in: NIST Standard Reference Database Number 69, Eds. P.J. Linstrom
-            //        and W.G. Mallard
-            //        evaluated at p=.1 MPa, T=8°C, does not change dramatically with p,T
-            const Scalar & lambdaPureNitrogen = 0.024572;
+            // Isobaric Properties for Nitrogen in: NIST Standard
+            // Reference Database Number 69, Eds. P.J. Linstrom and
+            // W.G. Mallard evaluated at p=.1 MPa, T=8°C, does not
+            // change dramatically with p,T
+            Scalar lambdaPureN2 = 0.024572;
             if (useComplexRelations){
-                const Scalar & xNitrogen        = fluidState.moleFraction(phaseIdx, N2Idx);
-                const Scalar & xWater           = fluidState.moleFraction(phaseIdx, H2OIdx);
-                const Scalar & lambdaNitrogen   = xNitrogen * lambdaPureNitrogen;
-
+                Scalar xN2 = fluidState.moleFraction(phaseIdx, N2Idx);
+                Scalar xH2O = fluidState.moleFraction(phaseIdx, H2OIdx);
+                Scalar lambdaN2 = xN2 * lambdaPureN2;
 
                 // Assuming Raoult's, Daltons law and ideal gas
                 // in order to obtain the partial density of water in the air phase
-                const Scalar & temperature      = fluidState.temperature(phaseIdx) ;
-                const Scalar & pressure         = fluidState.pressure(phaseIdx);
-                const Scalar & averageMolarMass = fluidState.averageMolarMass(gPhaseIdx);
-                const Scalar & partialPressure  = pressure * xWater;
+                Scalar temperature = fluidState.temperature(phaseIdx) ;
+                Scalar pressure = fluidState.pressure(phaseIdx);
+                Scalar partialPressure  = pressure * xH2O;
 
-                const Scalar & lambdaWater      = xWater * H2O::gasThermalConductivity(temperature,
-                                                                                       partialPressure);
-                return lambdaNitrogen + lambdaWater;
+                Scalar lambdaH2O = 
+                    xH2O
+                    * H2O::gasThermalConductivity(temperature, partialPressure);
+                return lambdaN2 + lambdaH2O;
             }
             else
-                return lambdaPureNitrogen; // conductivity of Nitrogen [W / (m K ) ]
+                return lambdaPureN2; // conductivity of Nitrogen [W / (m K ) ]
         }
     }
 
