@@ -55,7 +55,7 @@ public:
         Scalar r = (0.8942+1.47*exp(-0.04394*(temperature-273.15)))*1.E-10;
 
         return 1./r;
-    };
+    }
 
     /*!
      * \brief Binary diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular water and air
@@ -80,7 +80,7 @@ public:
         Dgaw=Daw*(pg0/pressure)*pow((temperature/T0),Theta);
 
         return Dgaw;
-    };
+    }
 
     /*!
      * Lacking better data on water-air diffusion in liquids, we use at the
@@ -108,7 +108,7 @@ public:
         const Scalar Texp = 273.15 + 25; // [K]
         const Scalar Dexp = 2.01e-9; // [m^2/s]
         return Dexp * temperature/Texp;
-    };
+    }
 };
 
 }

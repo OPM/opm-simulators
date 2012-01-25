@@ -584,7 +584,7 @@ public:
                    "Binary diffusion coefficient of components "
                    << compIIdx << " and " << compJIdx
                    << " in phase " << phaseIdx << " is undefined!\n");
-    };
+    }
 
     /*!
      * \brief Given a phase's composition, temperature and pressure,
@@ -641,7 +641,8 @@ public:
 namespace Properties {
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(Components);
-};
+}
+
 /*!
  * \brief A twophase fluid system with water and air as components.
  *
