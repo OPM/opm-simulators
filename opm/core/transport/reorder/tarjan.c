@@ -1,4 +1,24 @@
-/* Copyright 2011 (c) Jostein R. Natvig <Jostein.R.Natvig at sintef.no> */
+/*
+Copyright (C) 2012 (c) Jostein R. Natvig <jostein natvig at gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 #include <string.h>
 #include <assert.h>
@@ -14,49 +34,70 @@
 
 static int min(int a, int b){ return a < b? a : b;}
 
-/* Improved (or obfuscated) version uses less memory
- *
- * Use end of P and Q as stack:
- *   push operation is *s--=elm,
- *   pop  operation is elm=*++s,
- *   peek operation is *(s+1)
+/*
+  Compute the strong components of directed graph G(edges, vertices),
+  return components in reverse topological sorted sequence.
+  Complexity O(|vertices|+|edges|). See "http://en.wikipedia.org/wiki/
+  Tarjan's_strongly_connected_components_algorithm".
+
+  nv    - number of vertices
+
+  ia,ja - adjacency matrix for directed graph in compressed sparse row
+          format: vertex i has directed edges to vertices ja[ia[i]],
+          ..., ja[ia[i+1]-1].
+
+  vert  - permutation of vertices into topologically sorted sequence of
+          strong components (i.e., loops).
+
+  comp  - pointers to start of each strongly connected component in
+          vert, the i'th component has vertices vert[comp[i]], ...,
+          vert[comp[i+1]-1].
+
+  ncomp - number of strong components.
+
+  work  - block of memory of size 3*nv*sizeof(int).
  */
+
+/*--------------------------------------------------------------------*/
 void
-tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
-        int *work)
+tarjan (int nv, const int *ia, const int *ja, int *vert, int *comp,
+        int *ncomp, int *work)
 /*--------------------------------------------------------------------*/
 {
+    /* Hint: end of VERT and COMP are used as stacks. */
+
     enum {DONE=-2, REMAINING=-1};
-    int c,v,seed,child;
-    int i;
+    int  c, v, seed, child;
+    int  i;
 
-    int *stack    = Q + size,   *bottom  = stack;
-    int *cstack   = P + size-1, *cbottom = cstack;
+    int *stack  = comp + nv;
+    int *bottom = stack;
+    int *cstack = vert + nv-1;
+    int *cbottom = cstack;
+    int  t      = 0;
+    int  pos    = 0;
 
-    int t         = 0;
-    int pos       = 0;
-
-    int   *time   = work;
-    int   *link   = (int *)  time + size;
-    int   *status = (int*)   link + size; /* dual usage... */
+    int *time   = work;
+    int *link   = (int *) time + nv;
+    int *status = (int *) link + nv; /* dual usage... */
 
     (void) cbottom;
 
-    memset(work, 0, 3*size    *  sizeof *work);
-    memset(P,    0,   size    *  sizeof *P   );
-    memset(Q,    0,  (size+1) *  sizeof *Q   );
+    memset(work, 0, 3*nv    *  sizeof *work);
+    memset(vert, 0,   nv    *  sizeof *vert   );
+    memset(comp, 0,  (nv+1) *  sizeof *comp   );
 
-    /* Init status all nodes */
-    for (i=0; i<size; ++i)
+    /* Init status all vertices */
+    for (i=0; i<nv; ++i)
     {
         status[i] = REMAINING;
     }
 
-    *ncomp = 0;
-    *Q++ = pos;
+    *ncomp  = 0;
+    *comp++ = pos;
 
     seed = 0;
-    while (seed < size)
+    while (seed < nv)
     {
         if (status[seed] == DONE)
         {
@@ -64,22 +105,27 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
             continue;
         }
 
-        *stack-- = seed;     /* push seed */
+        /* push seed */
+        *stack-- = seed;
 
         t = 0;
 
         while ( stack != bottom )
         {
-            c = *(stack+1);        /* peek c */
+            /* peek c */
+            c = *(stack+1);
 
             assert(status[c] != DONE);
             assert(status[c] >= -2);
 
             if (status[c] == REMAINING)
             {
-                status[c] = ia[c+1]-ia[c]; /* number of descendants of c */
+                /* number of descendants of c */
+                status[c] = ia[c+1]-ia[c];
                 time[c]   = link[c] = t++;
-                *cstack-- = c;             /* push c on strongcomp stack */
+
+                /* push c on strongcomp stack */
+                *cstack-- = c;
             }
 
 
@@ -95,17 +141,22 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
                     {
                         assert (cstack != cbottom);
 
-                        v         = *++cstack; /* pop strong component stack */
+                        /* pop strong component stack */
+                        v         = *++cstack;
                         status[v] = DONE;
-                        P[pos++]  = v;          /* store vertex in P */
+
+                        /* store vertex in VERT */
+                        vert[pos++]  = v;
                     }
                     while ( v != c );
 
-                    *Q++ = pos;       /* store end point of component */
+                    /* store end point of component */
+                    *comp++ = pos;
                     ++*ncomp;
                 }
 
-                ++stack;  /* pop c */
+                /* pop c */
+                ++stack;
 
                 if (stack != bottom)
                 {
@@ -121,11 +172,13 @@ tarjan (int size, int *ia, int *ja, int *P, int *Q, int *ncomp,
                 assert(status[c] > 0);
 
                 child = ja[ia[c] + status[c]-1];
-                --status[c];           /* Decrement descendant count of c*/
+                /* decrement descendant count of c*/
+                --status[c];
 
                 if (status[child] == REMAINING)
                 {
-                    *stack-- = child; /* push child */
+                    /* push child */
+                    *stack-- = child;
 
                 }
                 else if (status[child] >= 0)
