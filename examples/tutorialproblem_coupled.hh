@@ -190,7 +190,7 @@ public:
     //! 10 degrees Celsius.
     template <class Context>
     Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
-    { return 283.15; };
+    { return 283.15; }
 
     /*! Intrinsic permeability tensor K \f$[m^2]\f$ depending
      *  on the position in the domain
