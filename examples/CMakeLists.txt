@@ -1,5 +1,3 @@
-add_definitions(-DYASPGRID -DGRIDDIM=2 -DENABLE_UG)
-
 # add build targets
 ADD_EXECUTABLE("tutorial_decoupled" tutorial_decoupled.cc)
 TARGET_LINK_LIBRARIES("tutorial_decoupled" ${DumuxLinkLibraries})
