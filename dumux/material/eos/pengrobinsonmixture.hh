@@ -154,7 +154,7 @@ public:
         }
 
         return fugCoeff;
-    };
+    }
 
 };
 } // end namepace Dumux

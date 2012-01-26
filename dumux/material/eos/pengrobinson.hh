@@ -247,7 +247,7 @@ public:
             std::pow(tmp, expo);
 
         return fugCoeff;
-    };
+    }
 
     /*!
      * \brief Returns the fugacity coefficient for a given pressure
@@ -463,7 +463,7 @@ protected:
         Scalar f2 = (tau*(-0.64771 + std::sqrt(tau)*(2.41539 - tau*4.26979)) + 3.25259*std::pow(tau, 5))/Tr;
 
         return Component::criticalPressure()*std::exp(f0 + omega * (f1 + omega*f2));
-    };
+    }
 
     /*!
      * \brief Returns the difference between the liquid and the gas phase
@@ -481,7 +481,7 @@ protected:
                                       Scalar p,
                                       Scalar VmLiquid,
                                       Scalar VmGas)
-    { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); };
+    { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); }
 
     static Tabulated2DFunction<Scalar> criticalTemperature_;
     static Tabulated2DFunction<Scalar> criticalPressure_;
