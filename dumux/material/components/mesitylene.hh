@@ -152,6 +152,12 @@ public:
     }
 
     /*!
+     * \brief Returns true iff the liquid phase is assumed to be compressible
+     */
+    static bool liquidIsCompressible()
+    { return false; }
+
+    /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of mesitylene vapor
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
