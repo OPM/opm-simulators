@@ -92,7 +92,7 @@ namespace Opm
         ///                    array must be valid before calling.
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dkr_i}{ds^j},
-        ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
+        ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
         virtual void relperm(const int n,
                              const double* s,
                              const int* cells,
@@ -108,7 +108,7 @@ namespace Opm
         ///                    array must be valid before calling.
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dpc_i}{ds^j},
-        ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
+        ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
         virtual void capPress(const int n,
                               const double* s,
                               const int* cells,
