@@ -256,7 +256,7 @@ namespace Opm
 					   double* pc,
 					   double* dpcds) const
     {
-        satprops_.relperm(n, s, pc, dpcds);
+        satprops_.capPress(n, s, pc, dpcds);
     }
 
 
