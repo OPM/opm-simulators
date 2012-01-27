@@ -36,6 +36,8 @@
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
+#include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
+#include <dumux/material/fluidsystems/h2oairmesitylenefluidsystem.hh>
 #include <dumux/material/fluidsystems/spe5fluidsystem.hh>
 
 // include all fluid states
