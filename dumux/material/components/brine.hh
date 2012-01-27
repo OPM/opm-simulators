@@ -262,6 +262,12 @@ public:
     { return H2O::gasDensity(temperature, pressure); }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return H2O::gasIsIdeal(); }
+
+    /*!
      * \brief The density of pure brine at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$

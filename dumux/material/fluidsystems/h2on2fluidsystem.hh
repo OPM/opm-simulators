@@ -65,18 +65,15 @@ namespace FluidSystems
  */
 template <class Scalar, bool useComplexRelations = true>
 class H2ON2
-: public BaseFluidSystem<Scalar, H2ON2<Scalar, useComplexRelations> >
+    : public BaseFluidSystem<Scalar, H2ON2<Scalar, useComplexRelations> >
 {
     typedef H2ON2<Scalar, useComplexRelations> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
     typedef Dumux::IdealGas<Scalar> IdealGas;
-
     typedef Dumux::H2O<Scalar> IapwsH2O;
-
     typedef Dumux::TabulatedComponent<Scalar, IapwsH2O > TabulatedH2O;
-
     typedef Dumux::N2<Scalar> SimpleN2;
 
 public:
@@ -156,11 +153,27 @@ public:
     static bool isCompressible(int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        // ideal gases are always compressible
+        // gases are always compressible
         if (phaseIdx == gPhaseIdx)
             return true;
         // the water component decides for the liquid phase...
         return H2O::liquidIsCompressible();
+    }
+
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal gas.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static bool isIdealGas(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+
+        if (phaseIdx == gPhaseIdx)
+            // let the components decide
+            return H2O::gasIsIdeal() && N2::gasIsIdeal();
+        return false; // not a gas
     }
 
     /****************************************
@@ -176,7 +189,7 @@ public:
     //! The components for pure water
     typedef TabulatedH2O H2O;
     //typedef SimpleH2O H2O;
-//    typedef IapwsH2O H2O;
+    //typedef IapwsH2O H2O;
 
     //! The components for pure nitrogen
     typedef SimpleN2 N2;

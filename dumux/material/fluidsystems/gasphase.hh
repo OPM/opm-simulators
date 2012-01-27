@@ -57,6 +57,12 @@ public:
     { return Component::gasIsCompressible(); }
 
     /*!
+     * \brief Returns true iff the fluid is assumed to be an ideal gas
+     */
+    static bool isIdealGas()
+    { return Component::gasIsIdeal(); }
+
+    /*!
      * \brief The mass in [kg] of one mole of the component.
      */
     static Scalar molarMass()

@@ -148,6 +148,12 @@ public:
     }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
+
+    /*!
      * \brief The pressure of gaseous \f$CO_2\f$ at a given density and temperature \f$\mathrm{[Pa]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$

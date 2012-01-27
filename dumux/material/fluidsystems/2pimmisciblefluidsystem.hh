@@ -150,6 +150,22 @@ public:
         return NonwettingPhase::isCompressible();
     }
 
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal gas.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static bool isIdealGas(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+
+        // let the fluids decide
+        if (phaseIdx == wPhaseIdx)
+            return WettingPhase::isIdealGas();
+        return NonwettingPhase::isIdealGas();
+    }
+
     /****************************************
      * Component related static parameters
      ****************************************/

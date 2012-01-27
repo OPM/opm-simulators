@@ -136,6 +136,20 @@ public:
         return true;
     }
 
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal gas.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static bool isIdealGas(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+
+        // let the fluid decide
+        return Fluid::isIdealGas();
+    }
+
     /****************************************
      * Component related static parameters
      ****************************************/

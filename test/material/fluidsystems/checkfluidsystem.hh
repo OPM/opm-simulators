@@ -294,9 +294,10 @@ void checkFluidSystem()
         try { val = FluidSystem::heatCapacity(fs, paramCache, phaseIdx); } catch (...) {};
         try { val = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx); } catch (...) {};
                 
-        fs.allowComposition(!FluidSystem::isIdealMixture(phaseIdx));
         for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+            fs.allowComposition(!FluidSystem::isIdealMixture(phaseIdx));
             try { val = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
+            fs.allowComposition(true);
             try { val = FluidSystem::diffusionCoefficient(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
             for (int comp2Idx = 0; comp2Idx < numComponents; ++ comp2Idx) {
                 try { val = FluidSystem::binaryDiffusionCoefficient(fs, paramCache, phaseIdx, compIdx, comp2Idx); } catch (...) {};
@@ -304,10 +305,11 @@ void checkFluidSystem()
         }
     }
 
-    // test for phaseName() and isLiquid()
+    // test for phaseName(), isLiquid() and isIdealGas()
     for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
         std::string __attribute__((unused)) name = FluidSystem::phaseName(phaseIdx);
         bool __attribute__((unused)) bVal = FluidSystem::isLiquid(phaseIdx);
+        bVal = FluidSystem::isIdealGas(phaseIdx);
     }
     
     // test for componentName()

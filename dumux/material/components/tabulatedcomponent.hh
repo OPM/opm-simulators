@@ -428,6 +428,13 @@ public:
     { return RawComponent::liquidIsCompressible(); }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return RawComponent::gasIsIdeal(); }
+
+
+    /*!
      * \brief The density of gas at a given pressure and temperature
      *        \f$\mathrm{[kg/m^3]}\f$.
      *

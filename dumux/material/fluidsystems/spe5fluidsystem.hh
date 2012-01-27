@@ -138,6 +138,18 @@ public:
         return phaseIdx == wPhaseIdx;
     }
 
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal gas.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static bool isIdealGas(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        return false; // gas is not ideal here!
+    }
+
     /****************************************
      * Component related parameters
      ****************************************/

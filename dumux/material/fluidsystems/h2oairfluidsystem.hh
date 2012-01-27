@@ -70,7 +70,7 @@ namespace FluidSystems
             SET_PROP(TestDecTwoPTwoCProblem, FluidSystem)
             {
                 typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-                typedef Dumux::FluidSystems::H2OAir<Scalar, Dumux::SimpleH2O<Scalar>> type;
+                typedef Dumux::FluidSystems::H2OAir<Scalar, Dumux::SimpleH2O<Scalar> > type;
             };
 
  *   Also remember to initialize tabulated components (FluidSystem::init()), while this
@@ -172,6 +172,21 @@ public:
         return H2O::liquidIsCompressible();
     }
 
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal gas.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static bool isIdealGas(int phaseIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+
+        // let the fluids decide
+        if (phaseIdx == gPhaseIdx)
+            return H2O::gasIsIdeal() && Air::gasIsIdeal();
+        return false; // not a gas
+    }
 
     /****************************************
      * Component related static parameters
@@ -350,7 +365,16 @@ public:
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
         Scalar T = fluidState.temperature(phaseIdx);
-        Scalar p = fluidState.pressure(phaseIdx);
+        Scalar p;
+        if (isCompressible(phaseIdx))
+            p = fluidState.pressure(phaseIdx);
+        else {
+            // random value which will hopefully cause things to blow
+            // up if it is used in a calculation!
+            p = - 1e100;
+            Valgrind::SetUndefined(p);
+        }
+        
 
         Scalar sumMoleFrac = 0;
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
@@ -516,6 +540,15 @@ public:
         return 1.0;
     }
 
+    using Base::diffusionCoefficient;
+    template <class FluidState>
+    static Scalar diffusionCoefficient(const FluidState &fluidState,
+                                       int phaseIdx,
+                                       int compIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAir::diffusionCoefficient()");
+    }
+
     /*!
      * \brief Given a phase's composition, temperature and pressure,
      *        return the binary diffusion coefficient for components
@@ -631,6 +664,36 @@ public:
             return result;
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+    }
+
+    /*!
+     * \brief Thermal conductivity of a fluid phase [W/(m K)].
+     *
+     * Use the conductivity of air and water as a first approximation.
+     * Source:
+     * http://en.wikipedia.org/wiki/List_of_thermal_conductivities
+     */
+    using Base::thermalConductivity;
+    template <class FluidState>
+    static Scalar thermalConductivity(const FluidState &fluidState,
+                                      int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAir::thermalConductivity()");
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity of a fluid phase.
+     *        \f$\mathrm{[J/kg]}\f$.
+     *
+     * \param params    mutable parameters
+     * \param phaseIdx  for which phase to give back the heat capacity
+     */
+    using Base::heatCapacity;
+    template <class FluidState>
+    static Scalar heatCapacity(const FluidState &fluidState,
+                               int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAir::heatCapacity()");
     }
 };
 

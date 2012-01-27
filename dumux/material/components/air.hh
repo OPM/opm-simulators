@@ -59,8 +59,7 @@ public:
      * Taken from constrelair.hh.
      */
     static Scalar molarMass()
-    { return 0.02896; // [kg/mole]
-; }
+    { return 0.02896; /* [kg/mol] */ }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of \f$AIR\f$.
@@ -72,7 +71,7 @@ public:
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of \f$AIR\f$.
      */
     static Scalar criticalPressure()
-    { return 37.86e5; /* [N/m^2] */ }
+    { return 37.86e5; /* [Pa] */ }
     
     /*!
      * \brief The density of \f$AIR\f$ at a given pressure and temperature [kg/m^3].
@@ -85,17 +84,18 @@ public:
         // Assume an ideal gas
         return IdealGas::density(molarMass(), temperature, pressure);
     }
-    //TODO: Holle, Doku!!!
-    static Scalar molarGasDensity(Scalar temperature, Scalar pressure)
-    {
 
-    if(temperature<250.) temperature=250.;        /* ACHTUNG Regularisierung */
-        if(temperature>500.) temperature=500.;        /* ACHTUNG Regularisierung */
-        if(pressure<1e-4) pressure=1e-4;              /* ACHTUNG Regularisierung */
-        if(pressure>1.E8) pressure=1.E8;            /* ACHTUNG Regularisierung */
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be compressible
+     */
+    static bool gasIsCompressible()
+    { return true; }
 
-        return (pressure/(8.314*temperature));
-    }
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
 
     /*!
      * \brief The pressure of gaseous \f$AIR\f$ at a given density and temperature \f$\mathrm{[Pa]}\f$.
@@ -108,7 +108,6 @@ public:
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
     }
-
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$AIR\f$ at a given pressure and temperature.
      *
@@ -188,13 +187,10 @@ public:
     /*!
      * \brief Specific internal energy of \f$AIR\f$ \f$\mathrm{[J/kg]}\f$.
      *
-     *        Definition of enthalpy: \f$h= u + pv = u + p / \rho\f$.
-     *
-     *        Rearranging for internal energy yields: \f$u = h - pv\f$.
-     *
-     *        Exploiting the \emph{Ideal Gas} assumption (\f$pv = R_{\textnormal{specific}} T\f$)gives: \f$u = h - R / M T \f$.
-     *
-     *        The \emph{universal} gas constant can only be used in the case of molar formulations.
+     * Definition of enthalpy: \f$h= u + pv = u + p / \rho\f$.
+     * Rearranging for internal energy yields: \f$u = h - pv\f$.
+     * Exploiting the \emph{Ideal Gas} assumption
+     * (\f$pv = R_{\textnormal{specific}} T\f$)gives: \f$u = h - R / M T \f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
@@ -203,9 +199,10 @@ public:
                                           Scalar pressure)
     {
         return
-            gasEnthalpy(temperature, pressure) -
-            1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
-            IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas
+            gasEnthalpy(temperature, pressure) 
+            -
+            IdealGas::R * temperature // = pressure * molar volume for an ideal gas
+            / molarMass(); // conversion from [J/(mol K)] to [J/(kg K)]
     }
 
 };

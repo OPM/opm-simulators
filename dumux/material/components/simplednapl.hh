@@ -128,6 +128,12 @@ public:
     };
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
+
+    /*!
      * \brief The density of pure TCE at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$

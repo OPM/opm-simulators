@@ -126,12 +126,6 @@ public:
     }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be compressible
-     */
-    static bool gasIsCompressible()
-    { return true; }
-
-    /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of \f$N_2\f$ gas at a given pressure and temperature.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
@@ -142,6 +136,18 @@ public:
         // Assume an ideal gas
         return IdealGas::density(molarMass(), temperature, pressure);
     }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be compressible
+     */
+    static bool gasIsCompressible()
+    { return true; }
+    
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
 
     /*!
      * \brief The pressure of gaseous \f$N_2\f$ in \f$\mathrm{[Pa]}\f$ at a given density and temperature.

@@ -38,6 +38,7 @@
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
+#include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
 
 // include all fluid states
 #include <dumux/material/fluidstates/pressureoverlayfluidstate.hh>
@@ -93,6 +94,27 @@ int main()
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/true> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
+    // H2O -- Air
+    {   typedef Dumux::SimpleH2O<Scalar> H2O;
+        const bool enableComplexRelations=false;
+        typedef Dumux::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
+    {   typedef Dumux::SimpleH2O<Scalar> H2O;
+        const bool enableComplexRelations=true;
+        typedef Dumux::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
+    {   typedef Dumux::H2O<Scalar> H2O;
+        const bool enableComplexRelations=false;
+        typedef Dumux::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
+    {   typedef Dumux::H2O<Scalar> H2O;
+        const bool enableComplexRelations=true;
+        typedef Dumux::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     // 2p-immiscible

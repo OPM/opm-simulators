@@ -70,6 +70,12 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "Component::gasIsCompressible()"); }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasIsCompressible()"); }
+
+    /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
     static bool liquidIsCompressible()
