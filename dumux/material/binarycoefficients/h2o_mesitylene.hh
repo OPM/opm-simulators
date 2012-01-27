@@ -58,7 +58,7 @@ public:
         Scalar dumuxH = sanderH / 101.325; // has now [(mol/m^3)/Pa]
         dumuxH *= 18.02e-6; // multiplied by molar volume of reference phase = water
         return 1.0/dumuxH; // [Pa]
-    };
+    }
 
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for molecular water and mesitylene.
@@ -99,7 +99,7 @@ public:
                            /(1e-5*pressure*std::pow(sigma_wm, 2.0)*Omega); // [cm^2/s]
 
         return D_wm*1e-4;   //  [m^2/s]
-    };
+    }
 
     /*!
      * \brief Diffusion coefficent [m^2/s] for mesitylene in liquid water.
@@ -110,7 +110,7 @@ public:
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
     {
         return 1.e-9;  // This is just an order of magnitude. Please improve it!
-    };
+    }
 };
 
 }

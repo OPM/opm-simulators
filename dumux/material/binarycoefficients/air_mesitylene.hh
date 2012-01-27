@@ -49,7 +49,7 @@ public:
     static Scalar henry(Scalar temperature)
     { DUNE_THROW(Dune::NotImplemented,
                  "Henry coefficient of air in mesitylene");
-    };
+    }
 
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for air and mesitylene.
@@ -91,7 +91,7 @@ public:
                            /(1e-5*pressure*std::pow(sigma_am, 2.0) * Omega); // [cm^2/s]
 
         return 1e-4*D_am; // [m^2/s]
-    };
+    }
 
     /*!
      * \brief Diffusion coefficent [m^2/s] for molecular mesitylene in liquid water.
@@ -102,7 +102,7 @@ public:
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented,
                  "Binary liquid diffusion coefficients of air and mesitylene");
-    };
+    }
 };
 
 }
