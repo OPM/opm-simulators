@@ -57,7 +57,6 @@ class H2OAirMesitylene
     typedef H2OAirMesitylene<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
-
 public:
     typedef Dumux::H2O<Scalar> H2O;
     typedef Dumux::Mesitylene<Scalar> NAPL;
@@ -383,20 +382,25 @@ public:
         if (phaseIdx == wPhaseIdx) {
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
-            if (compIdx == airIdx)
+            else if (compIdx == airIdx)
                 return Dumux::BinaryCoeff::H2O_Air::henry(T)/p;
-            if (compIdx == NAPLIdx)
+            else if (compIdx == NAPLIdx)
                 return Dumux::BinaryCoeff::H2O_Mesitylene::henry(T)/p;
         }
 
-        // for the NAPL phase, we assume currently that nothing is dissolved
+        // for the NAPL phase, we assume currently that nothing is
+        // dissolved. this means that the affinity of the NAPL
+        // component to the NAPL phase is much higher than for the
+        // other components, i.e. the fugacity cofficient is much
+        // smaller.
         if (phaseIdx == nPhaseIdx) {
+            Scalar phiNapl = NAPL::vaporPressure(T)/p;
             if (compIdx == NAPLIdx)
-                return 1;
-            if (compIdx == airIdx)
-                return 0;
-            if (compIdx == H2OIdx)
-                return 0;
+                return phiNapl;
+            else if (compIdx == airIdx)
+                return 1e6*phiNapl;
+            else if (compIdx == H2OIdx)
+                return 1e6*phiNapl;
         }
 
         // for the gas phase, assume an ideal gas when it comes to
