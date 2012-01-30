@@ -189,7 +189,7 @@ public:
      *
      * Definition of enthalpy: \f$h= u + pv = u + p / \rho\f$.
      * Rearranging for internal energy yields: \f$u = h - pv\f$.
-     * Exploiting the \emph{Ideal Gas} assumption
+     * Exploiting the Ideal Gas assumption
      * (\f$pv = R_{\textnormal{specific}} T\f$)gives: \f$u = h - R / M T \f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$

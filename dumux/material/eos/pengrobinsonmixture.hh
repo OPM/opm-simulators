@@ -76,7 +76,7 @@ public:
      * \brief Returns the fugacity coefficient of an individual
      *        component in the phase.
      *
-     * The fugacity coefficient \f$\phi_i\f$ of a component $i$ is
+     * The fugacity coefficient \f$\phi_i\f$ of a component \f$i\f$ is
      * defined as
      * \f[
      f_i = \phi_i x_i \;,
