@@ -81,8 +81,9 @@ public:
     };
 
     /*!
-     * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of pure mesitylene
-     *        at a given temperature according to Antoine after Betz 1997 ->  Gmehling et al 1980
+     * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of
+     *        pure mesitylene at a given temperature according to
+     *        Antoine after Betz 1997, see Gmehling et al 1980
      *
      * \param T temperature of component in \f$\mathrm{[K]}\f$
      */
