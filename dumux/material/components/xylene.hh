@@ -38,7 +38,6 @@ namespace Dumux
 template <class Scalar>
 class Xylene : public Component<Scalar, Xylene<Scalar> >
 {
-    typedef Component<Scalar, Xylene<Scalar> > ParentType;
 
 public:
     /*!

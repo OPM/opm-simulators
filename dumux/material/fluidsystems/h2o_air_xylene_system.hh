@@ -55,10 +55,8 @@ NEW_PROP_TAG(Scalar);
 template <class TypeTag>
 class H2O_Air_Xylene_System
 {
-    typedef H2O_Air_Xylene_System<TypeTag> ThisType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
-    typedef Dumux::IdealGas<Scalar> IdealGas;
 
 public:
     typedef Dumux::H2O<Scalar> H2O;

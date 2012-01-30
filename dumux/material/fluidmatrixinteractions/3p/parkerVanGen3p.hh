@@ -48,9 +48,6 @@ namespace Dumux
 template <class ScalarT, class ParamsT = ParkerVanGen3PParams<ScalarT> > 
 class ParkerVanGen3P
 {
-    static const int wPhaseIdx = 0;
-    static const int nPhaseIdx = 1;
-    static const int gPhaseIdx = 2;
 
 public:
     typedef ParamsT Params;

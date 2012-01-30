@@ -57,8 +57,6 @@ class H2OAirMesitylene
     typedef H2OAirMesitylene<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
-    typedef Dumux::IdealGas<Scalar> IdealGas;
-    typedef Dumux::Constants<Scalar> Constants;
 
 public:
     typedef Dumux::H2O<Scalar> H2O;
