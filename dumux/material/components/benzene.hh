@@ -1,7 +1,8 @@
-// $Id: simplednapl.hh 4952 2011-01-04 15:49:28Z lauser $
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
  *   Copyright (C) 2009 by Andreas Lauser
- *   Institute of Hydraulic Engineering                                      *
+ *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
  *                                                                           *
@@ -21,8 +22,7 @@
 /*!
  * \file
  * \ingroup Components
- * \brief A much simpler (and thus potentially less buggy) version of
- *        pure water.
+ * \brief A simple benzene component (LNAPL).
  */
 #ifndef DUMUX_BENZENE_HH
 #define DUMUX_BENZENE_HH
@@ -35,7 +35,8 @@ namespace Dumux
 {
 /*!
  * \ingroup Components
- * \brief A much simple component for an exemplary dense NAPL (benzene).
+ *
+ * \brief A simple benzene component (LNAPL).
  *
  * \tparam Scalar The type used for scalar values
  */
