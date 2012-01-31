@@ -1,7 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2011 by Holger Class                                      *
+ *   Copyright (C) 2011-2012 by Holger Class                                 *
  *   Copyright (C) 2009-2010 by Andreas Lauser                               *
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
@@ -32,6 +32,8 @@
 #include <dumux/material/idealgas.hh>
 #include <dumux/material/components/air.hh>
 #include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/tabulatedcomponent.hh>
+#include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/mesitylene.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 
@@ -57,10 +59,14 @@ class H2OAirMesitylene
     typedef H2OAirMesitylene<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
+    typedef Dumux::H2O<Scalar> IapwsH2O;
+    typedef Dumux::TabulatedComponent<Scalar, IapwsH2O> TabulatedH2O;
+    typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
+
 public:
-    typedef Dumux::H2O<Scalar> H2O;
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
+    typedef TabulatedH2O H2O;
 
     static const int numPhases = 3;
     static const int numComponents = 3;
@@ -73,8 +79,46 @@ public:
     static const int NAPLIdx = 1;
     static const int airIdx = 2;
 
+    /*!
+     * \brief Initialize the fluid system's static parameters generically
+     *
+     * If a tabulated H2O component is used, we do our best to create
+     * tables that always work.
+     */
     static void init()
-    { }
+    { 
+        init(/*tempMin=*/273.15,
+             /*tempMax=*/623.15,
+             /*numTemp=*/100,
+             /*pMin=*/0.0,
+             /*pMax=*/20e6,
+             /*numP=*/200);
+    }
+
+    /*!
+     * \brief Initialize the fluid system's static parameters using
+     *        problem specific temperature and pressure ranges
+     *
+     * \param tempMin The minimum temperature used for tabulation of water [K]
+     * \param tempMax The maximum temperature used for tabulation of water [K]
+     * \param nTemp The number of ticks on the temperature axis of the  table of water
+     * \param pressMin The minimum pressure used for tabulation of water [Pa]
+     * \param pressMax The maximum pressure used for tabulation of water [Pa]
+     * \param nPress The number of ticks on the pressure axis of the  table of water
+     */
+    static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
+                     Scalar pressMin, Scalar pressMax, unsigned nPress)
+    {
+        if (H2O::isTabulated) {
+            std::cout << "Initializing tables for the H2O fluid properties ("
+                      << nTemp*nPress
+                      << " entries).\n";
+
+            TabulatedH2O::init(tempMin, tempMax, nTemp,
+                               pressMin, pressMax, nPress);
+        }
+    }
+
 
     /*!
      * \brief Return whether a phase is liquid
