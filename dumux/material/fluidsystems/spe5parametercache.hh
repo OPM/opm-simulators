@@ -107,19 +107,9 @@ public:
                                   int compIdx)
     {
         if (phaseIdx == oPhaseIdx)
-            oilPhaseParams_.updateSingleMoleFraction(fs,
-                                                     compIdx,
-                                                     fs.moleFraction(phaseIdx, compIdx)
-                                                     - moleFrac_[phaseIdx][compIdx]);
+            oilPhaseParams_.updateSingleMoleFraction(fs, compIdx);
         else if (phaseIdx == gPhaseIdx)
-            gasPhaseParams_.updateSingleMoleFraction(fs,
-                                                     compIdx,
-                                                     fs.moleFraction(phaseIdx, compIdx)
-                                                     - moleFrac_[phaseIdx][compIdx]);
-
-        // update the mole fraction which the parameters are
-        // calculated for
-        moleFrac_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
+            gasPhaseParams_.updateSingleMoleFraction(fs, compIdx);
         
         // update the phase's molar volume
         updateMolarVolume_(fs, phaseIdx);
@@ -226,20 +216,16 @@ public:
         {
             updatePure_(fs, phaseIdx);
             updateMix_(fs, phaseIdx);
-
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                moleFrac_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
             VmUpToDate_[phaseIdx] = false;
         }
         else if (!(exceptQuantities & ParentType::Composition))
         {
             updateMix_(fs, phaseIdx);
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                moleFrac_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
             VmUpToDate_[phaseIdx] = false;
         }
-        else if (!(exceptQuantities & ParentType::Pressure))
+        else if (!(exceptQuantities & ParentType::Pressure)) {
             VmUpToDate_[phaseIdx] = false;
+        }
     }
 
 protected:
@@ -340,7 +326,6 @@ protected:
 
     bool VmUpToDate_[numPhases];
     Scalar Vm_[numPhases];
-    Scalar moleFrac_[numPhases][numComponents];
 
     OilPhaseParams oilPhaseParams_;
     GasPhaseParams gasPhaseParams_;

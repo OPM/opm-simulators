@@ -323,6 +323,7 @@ public:
                           int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
+
         return fluidState.averageMolarMass(phaseIdx)/paramCache.molarVolume(phaseIdx);
     }
 
@@ -462,15 +463,13 @@ private:
         case H2OIdx: return H2O::vaporPressure(temperature);
             
             // the values of the Henry constant for the solutes have
-            // been computed using the Peng-Robinson equation of state
-            // (-> slope of the component's fugacity function at
-            // almost 100% water content)
+            // are faked so far...
         case C1Idx: return 5.57601e+09;
-        case C3Idx: return 1.89465e+10;
-        case C6Idx: return 5.58969e+12;
-        case C10Idx: return 4.31947e+17;
-        case C15Idx: return 4.27283e+28;
-        case C20Idx: return 3.39438e+36;
+        case C3Idx: return 1e10;
+        case C6Idx: return 1e10;
+        case C10Idx: return 1e10;
+        case C15Idx: return 1e10;
+        case C20Idx: return 1e10;
         default: DUNE_THROW(Dune::InvalidStateException, "Unknown component index " << compIdx);
         }
     };

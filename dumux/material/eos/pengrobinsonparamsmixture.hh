@@ -93,6 +93,9 @@ public:
      */
     void updatePure(Scalar temperature, Scalar pressure)
     {
+        Valgrind::CheckDefined(temperature);
+        Valgrind::CheckDefined(pressure);
+
         // Calculate the Peng-Robinson parameters of the pure
         // components
         //
@@ -189,8 +192,7 @@ public:
      */
     template <class FluidState>
     void updateSingleMoleFraction(const FluidState &fs, 
-                                  int compIdx, 
-                                  Scalar delta)
+                                  int compIdx)
     {
         updateMix(fs);
     }

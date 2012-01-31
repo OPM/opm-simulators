@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     fluidState.setPressure(oPhaseIdx, 4000 * 6894.7573); // 4000 PSI
 
     // oil saturation
-    fluidState.setPressure(oPhaseIdx, 1.0);
+    fluidState.setSaturation(oPhaseIdx, 1.0);
 
     // composition: SPE-5 reservoir oil
     fluidState.setMoleFraction(oPhaseIdx, H2OIdx, 0.0);
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     ////////////
     ComponentVector molarities;
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-        molarities[compIdx] = fluidState.molarity(oPhaseIdx, compIdx);
+        molarities[compIdx] = fluidState.saturation(oPhaseIdx)*fluidState.molarity(oPhaseIdx, compIdx);
 
     ////////////
     // Gradually increase the volume for and calculate the gas
@@ -118,14 +118,15 @@ int main(int argc, char** argv)
     ////////////
 
     FluidState flashFluidState;
+    flashFluidState.assign(fluidState);
     Flash::guessInitial(flashFluidState, paramCache, molarities);
     Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, molarities);
 
-    std::cout << "p[Pa] rho_o[kg/m^3] rho_g[kg/m^3]\n";
+    std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3]\n";
     int n = 1000;
     for (int i = 0; i < n; ++i) {
-        Scalar minAlpha = 1.0;
-        Scalar maxAlpha = 3.0;
+        Scalar minAlpha = 0.98;
+        Scalar maxAlpha = 5.0;
         
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
@@ -147,7 +148,9 @@ int main(int argc, char** argv)
         Scalar rhoGSurface = FluidSystem::density(surfaceFluidState, paramCache, gPhaseIdx);
         Scalar rhoOSurface = FluidSystem::density(surfaceFluidState, paramCache, gPhaseIdx);
 */      
-        std::cout << flashFluidState.pressure(oPhaseIdx) << " "
+        std::cout << alpha << " "
+                  << flashFluidState.pressure(oPhaseIdx) << " "
+                  << flashFluidState.saturation(gPhaseIdx) << " "
                   << flashFluidState.density(oPhaseIdx) << " "
                   << flashFluidState.density(gPhaseIdx) << " "
                   << "\n";

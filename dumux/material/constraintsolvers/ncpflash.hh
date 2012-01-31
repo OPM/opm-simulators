@@ -184,10 +184,12 @@ public:
             catch (Dune::FMatrixError e)
             { 
                 /*
+                printFluidState_(fluidState);
                 std::cout << "error: " << e << "\n";
                 std::cout << "b: " << b << "\n";
+                std::cout << "J: " << J << "\n";
                 */
-                
+
                 throw Dumux::NumericalProblem(e.what());
             }
             Valgrind::CheckDefined(deltaX);

@@ -49,7 +49,6 @@ namespace Dumux
 {
 
 /*!
- *
  * \brief Implements the Peng-Robinson equation of state for liquids
  *        and gases.
  *
@@ -202,18 +201,22 @@ public:
             else {
                 // find the extrema (if they are present)
                 Scalar Vmin, Vmax, pmin, pmax;
-                findExtrema_(Vmin, Vmax, 
-                             pmin, pmax,
-                             a, b, T);
-
-                if (isGasPhase)
-                    Vm = std::max(Vmax, VmCubic);
+                if (findExtrema_(Vmin, Vmax, 
+                                 pmin, pmax,
+                                 a, b, T))
+                {
+                    if (isGasPhase)
+                        Vm = std::max(Vmax, VmCubic);
+                    else
+                        Vm = std::min(Vmin, VmCubic);
+                }
                 else
-                    Vm = std::min(Vmin, VmCubic);
+                    Vm = VmCubic;
             }
         }
-
+        
         Valgrind::CheckDefined(Vm);
+        assert(std::isfinite(Vm) && Vm > 0);
         return Vm;
     }
 
@@ -418,7 +421,7 @@ protected:
         // invert resulting cubic polynomial analytically
         Scalar allV[4];
         allV[0] = V;
-        int numSol = 1 + Dumux::invertCubicPolynomial(&allV[1], b1, b2, b3, b4);
+        int numSol = 1 + Dumux::invertCubicPolynomial(allV + 1, b1, b2, b3, b4);
 
         // sort all roots of the derivative
         std::sort(allV + 0, allV + numSol);
