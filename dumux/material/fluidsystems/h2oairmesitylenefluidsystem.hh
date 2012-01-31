@@ -31,7 +31,7 @@
 
 #include <dumux/material/idealgas.hh>
 #include <dumux/material/components/air.hh>
-#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/mesitylene.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 
@@ -58,7 +58,7 @@ class H2OAirMesitylene
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
-    typedef Dumux::H2O<Scalar> H2O;
+    typedef Dumux::SimpleH2O<Scalar> H2O;
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
 
@@ -88,7 +88,7 @@ public:
     }
 
     static bool isIdealGas(int phaseIdx)
-    { return !isLiquid(phaseIdx); }
+    { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
     
     /*!
      * \brief Returns true if and only if a fluid phase is assumed to
@@ -125,7 +125,7 @@ public:
     static bool isCompressible(int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        // ideal gases are always compressible
+        // gases are always compressible
         if (phaseIdx == gPhaseIdx)
             return true;
         else if (phaseIdx == wPhaseIdx)
@@ -203,23 +203,21 @@ public:
             Scalar pressure = NAPL::liquidIsCompressible()?fluidState.pressure(phaseIdx):1e100;
             return NAPL::liquidDensity(fluidState.temperature(phaseIdx), pressure);
         }
-        else if (phaseIdx == gPhaseIdx) {
-            Scalar fugH2O =
-                fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
-                fluidState.pressure(gPhaseIdx);
-            Scalar fugAir =
-                fluidState.moleFraction(gPhaseIdx, airIdx)  *
-                fluidState.pressure(gPhaseIdx);
-            Scalar fugNAPL =
-                fluidState.moleFraction(gPhaseIdx, NAPLIdx)  *
-                fluidState.pressure(gPhaseIdx);
-            return
-                H2O::gasDensity(fluidState.temperature(phaseIdx), fugH2O) +
-                Air::gasDensity(fluidState.temperature(phaseIdx), fugAir) +
-                NAPL::gasDensity(fluidState.temperature(phaseIdx), fugNAPL);
 
-        }
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+        assert (phaseIdx == gPhaseIdx);
+        Scalar pH2O =
+            fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
+            fluidState.pressure(gPhaseIdx);
+        Scalar pAir =
+            fluidState.moleFraction(gPhaseIdx, airIdx)  *
+            fluidState.pressure(gPhaseIdx);
+        Scalar pNAPL =
+            fluidState.moleFraction(gPhaseIdx, NAPLIdx)  *
+            fluidState.pressure(gPhaseIdx);
+        return
+            H2O::gasDensity(fluidState.temperature(phaseIdx), pH2O) +
+            Air::gasDensity(fluidState.temperature(phaseIdx), pAir) +
+            NAPL::gasDensity(fluidState.temperature(phaseIdx), pNAPL);
     }
 
     /*!
@@ -239,55 +237,55 @@ public:
             // assume pure NAPL viscosity
             return NAPL::liquidViscosity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
         }
-        else if (phaseIdx == gPhaseIdx) {
-            /* Wilke method. See:
-             *
-             * See: R. Reid, et al.: The Properties of Gases and Liquids,
-             * 4th edition, McGraw-Hill, 1987, 407-410
-             * 5th edition, McGraw-Hill, 20001, p. 9.21/22
-             *
-             * in this case, we use a simplified version in order to avoid
-             * computationally costly evaluation of sqrt and pow functions and
-             * divisions
-             * -- compare e.g. with Promo Class p. 32/33
-             */
-            Scalar muResult;
-            const Scalar mu[numComponents] = {
-                H2O::gasViscosity(fluidState.temperature(phaseIdx), H2O::vaporPressure(fluidState.temperature(phaseIdx))),
-                Air::simpleGasViscosity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx)),
-                NAPL::gasViscosity(fluidState.temperature(phaseIdx), NAPL::vaporPressure(fluidState.temperature(phaseIdx)))
-            };
-            // molar masses
-            const Scalar M[numComponents] = {
-                H2O::molarMass(),
-                Air::molarMass(),
-                NAPL::molarMass()
-            };
 
-            Scalar muAW = mu[airIdx]*fluidState.moleFraction(gPhaseIdx, airIdx)
-                + mu[H2OIdx]*fluidState.moleFraction(gPhaseIdx, H2OIdx)
-                / (fluidState.moleFraction(gPhaseIdx, airIdx)
-                   + fluidState.moleFraction(gPhaseIdx, H2OIdx));
-            Scalar xAW = fluidState.moleFraction(gPhaseIdx, airIdx)
-                + fluidState.moleFraction(gPhaseIdx, H2OIdx);
+        assert (phaseIdx == gPhaseIdx);
 
-            Scalar MAW = (fluidState.moleFraction(gPhaseIdx, airIdx)*Air::molarMass()
-                          + fluidState.moleFraction(gPhaseIdx, H2OIdx)*H2O::molarMass())
-                / xAW;
+        /* Wilke method. See:
+         *
+         * See: R. Reid, et al.: The Properties of Gases and Liquids,
+         * 4th edition, McGraw-Hill, 1987, 407-410
+         * 5th edition, McGraw-Hill, 20001, p. 9.21/22
+         *
+         * in this case, we use a simplified version in order to avoid
+         * computationally costly evaluation of sqrt and pow functions and
+         * divisions
+         * -- compare e.g. with Promo Class p. 32/33
+         */
+        Scalar muResult;
+        const Scalar mu[numComponents] = {
+            H2O::gasViscosity(fluidState.temperature(phaseIdx), H2O::vaporPressure(fluidState.temperature(phaseIdx))),
+            Air::simpleGasViscosity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx)),
+            NAPL::gasViscosity(fluidState.temperature(phaseIdx), NAPL::vaporPressure(fluidState.temperature(phaseIdx)))
+        };
+        // molar masses
+        const Scalar M[numComponents] = {
+            H2O::molarMass(),
+            Air::molarMass(),
+            NAPL::molarMass()
+        };
 
-            Scalar phiCAW = 0.3; // simplification for this particular system
-            /* actually like this
-             * Scalar phiCAW = std::pow(1.+std::sqrt(mu[NAPLIdx]/muAW)*std::pow(MAW/M[NAPLIdx],0.25),2)
-             *                 / std::sqrt(8.*(1.+M[NAPLIdx]/MAW));
-             */
-            Scalar phiAWC = phiCAW * muAW*M[NAPLIdx]/(mu[NAPLIdx]*MAW);
+        Scalar muAW = mu[airIdx]*fluidState.moleFraction(gPhaseIdx, airIdx)
+            + mu[H2OIdx]*fluidState.moleFraction(gPhaseIdx, H2OIdx)
+            / (fluidState.moleFraction(gPhaseIdx, airIdx)
+               + fluidState.moleFraction(gPhaseIdx, H2OIdx));
+        Scalar xAW = fluidState.moleFraction(gPhaseIdx, airIdx)
+            + fluidState.moleFraction(gPhaseIdx, H2OIdx);
 
-            muResult = (xAW*muAW)/(xAW+fluidState.moleFraction(gPhaseIdx, NAPLIdx)*phiAWC)
-                + (fluidState.moleFraction(gPhaseIdx, NAPLIdx) * mu[NAPLIdx])
-                / (fluidState.moleFraction(gPhaseIdx, NAPLIdx) + xAW*phiCAW);
-            return muResult;
-        }
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+        Scalar MAW = (fluidState.moleFraction(gPhaseIdx, airIdx)*Air::molarMass()
+                      + fluidState.moleFraction(gPhaseIdx, H2OIdx)*H2O::molarMass())
+            / xAW;
+
+        Scalar phiCAW = 0.3; // simplification for this particular system
+        /* actually like this
+         * Scalar phiCAW = std::pow(1.+std::sqrt(mu[NAPLIdx]/muAW)*std::pow(MAW/M[NAPLIdx],0.25),2)
+         *                 / std::sqrt(8.*(1.+M[NAPLIdx]/MAW));
+         */
+        Scalar phiAWC = phiCAW * muAW*M[NAPLIdx]/(mu[NAPLIdx]*MAW);
+
+        muResult = (xAW*muAW)/(xAW+fluidState.moleFraction(gPhaseIdx, NAPLIdx)*phiAWC)
+            + (fluidState.moleFraction(gPhaseIdx, NAPLIdx) * mu[NAPLIdx])
+            / (fluidState.moleFraction(gPhaseIdx, NAPLIdx) + xAW*phiCAW);
+        return muResult;
     }
 
 

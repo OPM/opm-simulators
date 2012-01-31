@@ -107,8 +107,8 @@ public:
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     {
-        const Scalar DTemp = temperature - 273.0; // K -> degC
-        return 0.5*DTemp*(spHeatCapLiquidPhase_(temperature) + spHeatCapLiquidPhase_(temperature));
+        Scalar DTemp = temperature-273.0; // K -> degC
+        return 0.5*DTemp*(spHeatCapLiquidPhase_(0.2113*DTemp) + spHeatCapLiquidPhase_(0.7887*DTemp));
     }
 
     /*!
@@ -144,7 +144,20 @@ public:
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
         return molarLiquidDensity_(temperature)*molarMass(); // [kg/m^3]
+
     }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be compressible
+     */
+    static bool gasIsCompressible()
+    { return true; }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
@@ -161,8 +174,8 @@ public:
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
     {
-        temp = std::min(temperature, 500.0); // regularization
-        temp = std::max(temperature, 250.0);
+        temperature = std::min(temperature, 500.0); // regularization
+        temperature = std::max(temperature, 250.0);
 
         // reduced temperature
         Scalar Tr = temperature/criticalTemperature();
@@ -186,13 +199,13 @@ public:
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
-        temp = std::min(temperature, 500.0); // regularization
-        temp = std::max(temperature, 250.0);
+        temperature = std::min(temperature, 500.0); // regularization
+        temperature = std::max(temperature, 250.0);
 
         const Scalar A = -6.749;
         const Scalar B = 2010.0;
 
-        return std::exp(A + B/temp)*1e-3; // [Pa s]
+        return std::exp(A + B/temperature)*1e-3; // [Pa s]
     }
 
 protected:
@@ -242,31 +255,30 @@ protected:
      */
     static Scalar spHeatCapLiquidPhase_(Scalar temperature)
     {
-        // according Reid et al. : Missenard group contrib. method (s. example 5-8)
-        // Mesitylen: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was to much!)
-        // linear interpolation between table values [J/(mol K)]
-
+        /* according Reid et al. : Missenard group contrib. method (s. example 5-8) */
+        /* Mesitylen: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was to much!) */
+        /* linear interpolation between table values [J/(mol K)]*/
         Scalar H, CH3, C6H5;
-        if(temperature < 298.0) {
-            // extrapolation for Temperature<273
-            H = 13.4 + 1.2*(temperature - 273.0)/25.0;
-            CH3 = 40.0 + 1.6*(temperature - 273.0)/25.0;
-            C6H5 = 113.0 + 4.2*(temperature - 273.0)/25.0;
+        if(temperature<298.) {
+            // extrapolation for Temperature<273 */
+            H = 13.4+1.2*(temperature-273.0)/25.;
+            CH3 = 40.0+1.6*(temperature-273.0)/25.;
+            C6H5 = 113.0+4.2*(temperature-273.0)/25.;
         }
-        else if(temperature < 323.0){
-            H = 14.6 + 0.9*(temperature - 298.0)/25.0;
-            CH3 = 41.6 + 1.9*(temperature - 298.0)/25.0;
-            C6H5 = 117.2 + 6.2*(temperature - 298.0)/25.0;
+        else if((temperature>=298.0)&&(temperature<323.)){
+            H = 14.6+0.9*(temperature-298.0)/25.;
+            CH3 = 41.6+1.9*(temperature-298.0)/25.;
+            C6H5 = 117.2+6.2*(temperature-298.0)/25.;
         }
-        else if(temperature < 348.0){
-            H = 15.5 + 1.2*(temperature - 323.0)/25.0;
-            CH3 = 43.5 + 2.3*(temperature - 323.0)/25.0;
-            C6H5 = 123.4 + 6.3*(temperature - 323.0)/25.0;
+        else if((temperature>=323.0)&&(temperature<348.)){
+            H = 15.5+1.2*(temperature-323.0)/25.;
+            CH3 = 43.5+2.3*(temperature-323.0)/25.;
+            C6H5 = 123.4+6.3*(temperature-323.0)/25.;
         }
-        else {                                  // extrapolation for Temperature>373
-            H = 16.7 + 2.1*(temperature - 348.0)/25.0; // leads probably to underestimates
-            CH3 = 45.8 + 2.5*(temperature - 348.0)/25.0;
-            C6H5 = 129.7 + 6.3*(temperature - 348.0)/25.0;
+        else if(temperature>=348.0){                        /* take care: extrapolation for Temperature>373 */
+            H = 16.7+2.1*(temperature-348.0)/25.;          /* leads probably to underestimates    */
+            CH3 = 45.8+2.5*(temperature-348.0)/25.;
+            C6H5 = 129.7+6.3*(temperature-348.0)/25.;
         }
 
         return (C6H5 + 3*CH3 - 2*H)/molarMass();
