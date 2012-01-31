@@ -275,7 +275,10 @@ protected:
             CH3 = 43.5+2.3*(temperature-323.0)/25.;
             C6H5 = 123.4+6.3*(temperature-323.0)/25.;
         }
-        else if(temperature>=348.0){                        /* take care: extrapolation for Temperature>373 */
+        else {
+            assert(temperature>=348.0);
+        
+            /* take care: extrapolation for Temperature>373 */
             H = 16.7+2.1*(temperature-348.0)/25.;          /* leads probably to underestimates    */
             CH3 = 45.8+2.5*(temperature-348.0)/25.;
             C6H5 = 129.7+6.3*(temperature-348.0)/25.;
