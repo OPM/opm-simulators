@@ -31,7 +31,7 @@
 
 #include <dumux/material/idealgas.hh>
 #include <dumux/material/components/air.hh>
-#include <dumux/material/components/simpleh2o.hh>
+#include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/mesitylene.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 
@@ -58,7 +58,7 @@ class H2OAirMesitylene
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
-    typedef Dumux::SimpleH2O<Scalar> H2O;
+    typedef Dumux::H2O<Scalar> H2O;
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
 
