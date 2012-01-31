@@ -240,6 +240,24 @@ public:
     }
 
     /*!
+     * \brief Returns true iff the gas phase is assumed to be compressible
+     */
+    static bool gasIsCompressible()
+    { return true; }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
+
+    /*!
+     * \brief Returns true iff the liquid phase is assumed to be compressible
+     */
+    static bool liquidIsCompressible()
+    { return false; }
+
+    /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of xylene vapor
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$

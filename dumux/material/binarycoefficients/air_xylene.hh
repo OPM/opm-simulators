@@ -49,7 +49,7 @@ public:
     static Scalar henry(Scalar temperature)
     { DUNE_THROW(Dune::NotImplemented,
                  "Henry coefficient of air in xylene");
-    };
+    }
 
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for air and xylene.
@@ -91,7 +91,7 @@ public:
                            /(1e-5*pressure*std::pow(sigma_ax, 2.0)*Omega); // [cm^2/s]
 
         return D_ax*1e-4;   //  [m^2/s]
-    };
+    }
 
     /*!
      * \brief Diffusion coefficent [m^2/s] for molecular xylene in liquid water.
@@ -102,7 +102,7 @@ public:
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
     { DUNE_THROW(Dune::NotImplemented,
                  "Binary liquid diffusion coefficients of air and xylene");
-    };
+    }
 };
 
 }

@@ -40,6 +40,7 @@
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairmesitylenefluidsystem.hh>
+#include <dumux/material/fluidsystems/h2oairxylenefluidsystem.hh>
 
 // include all fluid states
 #include <dumux/material/fluidstates/pressureoverlayfluidstate.hh>
@@ -120,6 +121,10 @@ int main()
 
     // H2O -- Air -- Mesitylene
     {   typedef Dumux::FluidSystems::H2OAirMesitylene<Scalar> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
+    // H2O -- Air -- Xylene
+    {   typedef Dumux::FluidSystems::H2OAirXylene<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     // 2p-immiscible
