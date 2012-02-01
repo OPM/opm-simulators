@@ -72,7 +72,6 @@ class H2ON2LiquidPhase
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
-    typedef Dumux::IdealGas<Scalar> IdealGas;
     typedef Dumux::H2O<Scalar> IapwsH2O;
     typedef Dumux::TabulatedComponent<Scalar, IapwsH2O > TabulatedH2O;
     typedef Dumux::N2<Scalar> SimpleN2;

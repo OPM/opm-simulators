@@ -61,7 +61,6 @@ class H2OAirMesitylene
 
     typedef Dumux::H2O<Scalar> IapwsH2O;
     typedef Dumux::TabulatedComponent<Scalar, IapwsH2O, /*alongVaporPressure=*/false> TabulatedH2O;
-    typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
 
 public:
     typedef Dumux::Mesitylene<Scalar> NAPL;
