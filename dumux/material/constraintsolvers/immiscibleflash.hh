@@ -363,8 +363,18 @@ protected:
         for (int phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
             sumSat += fluidState.saturation(phaseIdx);
 
-        // make sure that the last saturation does not get out of range [0, 1]
-        sumSat = std::min(1.0, std::max(0.0, sumSat));
+        if (sumSat > 1.0) {
+            // make sure that the last saturation does not become
+            // negative
+            for (int phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
+            {
+                Scalar S = fluidState.saturation(phaseIdx);
+                fluidState.setSaturation(phaseIdx, S/sumSat);
+            }
+            sumSat = 1;
+        }
+
+        // set the last saturation
         fluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);
     
         // update the pressures using the material law (saturations
@@ -485,8 +495,8 @@ protected:
             int phaseIdx = pvIdx - 1;
 
             // make sure that the first M-1 saturations does not get
-            // out of the [0, 1] intervall
-            value = std::min(1.0, std::max(0.0, value));
+            // negative
+            value = std::max(0.0, value);
             fs.setSaturation(phaseIdx, value);
         }
     }
