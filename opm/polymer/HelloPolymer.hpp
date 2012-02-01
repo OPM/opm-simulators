@@ -43,11 +43,15 @@ namespace Opm {
     namespace Polymer {
         class Hello {
         public:
-            Hello()                        : designee_("world") {}
-            Hello(const std::string& dsgn) : designee_(dsgn)    {}
+            Hello(const ::std::string& dsgn = ::std::string("world"))
+                : designee_(dsgn)
+            {}
 
             template <class Ostream>
-            friend Ostream& operator<< (Ostream& os, const Hello& h);
+            friend
+            Ostream&
+            operator<< (Ostream& os, const Hello& h);
+
         private:
             ::std::string designee_;
         };
