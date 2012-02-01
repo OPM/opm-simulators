@@ -52,7 +52,6 @@ class Spe5ParameterCache
     typedef Dumux::PengRobinson<Scalar> PengRobinson;
 
     enum { numPhases = FluidSystem::numPhases };
-    enum { numComponents = FluidSystem::numComponents };
 
     enum { wPhaseIdx = FluidSystem::wPhaseIdx };
     enum { oPhaseIdx = FluidSystem::oPhaseIdx };

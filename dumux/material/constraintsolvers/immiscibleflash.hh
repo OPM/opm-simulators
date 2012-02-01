@@ -49,7 +49,7 @@ namespace Dumux {
  * This sums up to 2*N unknowns. On the equations side of things, we
  * have:
  *
- * - N total masses
+ * - N total component molarities
  * - 1 The sum of all saturations is 1
  * - N-1 Relations from capillary pressure
  *
@@ -94,29 +94,14 @@ public:
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoles += globalMolarities[compIdx];
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            // composition
-            for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-                fluidState.setMoleFraction(phaseIdx,
-                                           compIdx,
-                                           globalMolarities[compIdx]/sumMoles);
-            
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {          
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 2e5);
 
             // saturation. assume all fluids to be equally distributed
             fluidState.setSaturation(phaseIdx, 1.0/numPhases);
         }
-        
-        // set the fugacity coefficients of all components in all phases
-        paramCache.updateAll(fluidState);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
-                Scalar phi = FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx);
-                fluidState.setFugacityCoefficient(phaseIdx, compIdx, phi);
-            }
-        }
-    };
+    }
 
     /*!
      * \brief Calculates the chemical equilibrium from the component
@@ -211,7 +196,7 @@ public:
                 }
                 std::cout << "\n";
             };
-
+            std::cout << "residual: " << b << "\n";
             std::cout << "deltaX: " << deltaX << "\n";
             std::cout << "---------------\n";
             */
@@ -235,7 +220,7 @@ public:
                    "Flash calculation failed."
                    " {c_alpha^kappa} = {" << globalMolarities << "}, T = " 
                    << fluidState.temperature(/*phaseIdx=*/0));
-    };
+    }
 
 
 protected:
@@ -298,7 +283,7 @@ protected:
 
             // deviate the mole fraction of the i-th component
             Scalar x_i = getQuantity_(fluidState, pvIdx);
-            const Scalar eps = 1e-8/quantityWeight_(fluidState, pvIdx);
+            const Scalar eps = 1e-10/quantityWeight_(fluidState, pvIdx);
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
             
@@ -306,7 +291,6 @@ protected:
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
             tmp -= b;
             tmp /= eps;
-
             // store derivative in jacobian matrix
             for (int eqIdx = 0; eqIdx < numEq; ++eqIdx)
                 J[eqIdx][pvIdx] = tmp[eqIdx];
@@ -378,8 +362,11 @@ protected:
         Scalar sumSat = 0.0;
         for (int phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
             sumSat += fluidState.saturation(phaseIdx);
+
+        // make sure that the last saturation does not get out of range [0, 1]
+        sumSat = std::min(1.0, std::max(0.0, sumSat));
         fluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);
-        
+    
         // update the pressures using the material law (saturations
         // and first pressure are already set because it is implicitly
         // solved for.)
@@ -391,7 +378,7 @@ protected:
                                    + (pC[phaseIdx] - pC[0]));
 
         // update the parameter cache
-        paramCache.updateAll(fluidState, /*except=*/ParameterCache::Temperature);
+        paramCache.updateAll(fluidState, /*except=*/ParameterCache::Temperature|ParameterCache::Composition);
 
         // update all densities
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -417,12 +404,13 @@ protected:
             int phaseIdx = 0;
             return fs.pressure(phaseIdx);
         }
-        // first M - 1 saturations
-        else { // if (pvIdx < numPhases)
+        // saturations
+        else { 
+            assert(pvIdx < numPhases);
             int phaseIdx = pvIdx - 1;
             return fs.saturation(phaseIdx);
         }
-    };
+    }
 
     // set a quantity in the fluid state
     template <class MaterialLaw, class FluidState>
@@ -434,7 +422,8 @@ protected:
     {
         assert(0 <= pvIdx && pvIdx < numEq);
 
-        if (pvIdx < 1) { // <- first pressure
+        if (pvIdx < 1) {
+            // -> first pressure
             Scalar delta = value - fs.pressure(0);
 
             // set all pressures. here we assume that the capillary
@@ -449,12 +438,15 @@ protected:
                 fs.setDensity(phaseIdx, rho);
             }
         }
-        else if (pvIdx < numPhases) { // <- first M - 1 saturations
+        else {
+            assert(pvIdx < numPhases);
+
+            // -> first M-1 saturations
             Scalar delta = value - fs.saturation(/*phaseIdx=*/pvIdx - 1);
             fs.setSaturation(/*phaseIdx=*/pvIdx - 1, value);
 
             // set last saturation (-> minus the change of the
-            // satuation of the other phase)
+            // saturation of the other phases)
             fs.setSaturation(/*phaseIdx=*/numPhases - 1, 
                              fs.saturation(numPhases - 1) - delta);
 
@@ -474,10 +466,7 @@ protected:
                 fs.setDensity(phaseIdx, rho);
             }
         }
-        else {
-            assert(false);
-        }
-    };
+    }
 
     // set a quantity in the fluid state
     template <class FluidState>
@@ -490,12 +479,17 @@ protected:
             int phaseIdx = 0;
             fs.setPressure(phaseIdx, value);
         }
-        // first M - 1 saturations
-        else if (pvIdx < numPhases) {
+        // saturations
+        else {
+            assert(pvIdx < numPhases);
             int phaseIdx = pvIdx - 1;
+
+            // make sure that the first M-1 saturations does not get
+            // out of the [0, 1] intervall
+            value = std::min(1.0, std::max(0.0, value));
             fs.setSaturation(phaseIdx, value);
         }
-    };
+    }
 
     template <class FluidState>
     static Scalar quantityWeight_(const FluidState &fs, int pvIdx)
@@ -504,9 +498,11 @@ protected:
         if (pvIdx < 1)
             return 1.0/1e5;
         // first M - 1 saturations
-        else // if (pvIdx < numPhases)
+        else {
+            assert(pvIdx < numPhases);
             return 1.0;
-    };
+        }
+    }
 };
 
 } // end namespace Dumux
