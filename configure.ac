@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.65])
+AC_PREREQ([2.59])
 AC_INIT([OPM Polymer Module], [0.1], [atgeirr@sintef.no],dnl
         [opmpolymer], [https://public.ict.sintef.no/opm/hg/opm-polymer])
 
