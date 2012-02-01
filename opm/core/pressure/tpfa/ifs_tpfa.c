@@ -30,7 +30,7 @@ impl_deallocate(struct ifs_tpfa_impl *pimpl)
 
 /* ---------------------------------------------------------------------- */
 static struct ifs_tpfa_impl *
-impl_allocate(grid_t *G)
+impl_allocate(struct UnstructuredGrid *G)
 /* ---------------------------------------------------------------------- */
 {
     struct ifs_tpfa_impl *new;
@@ -57,7 +57,7 @@ impl_allocate(grid_t *G)
 
 /* ---------------------------------------------------------------------- */
 static struct CSRMatrix *
-ifs_tpfa_construct_matrix(grid_t *G)
+ifs_tpfa_construct_matrix(struct UnstructuredGrid *G)
 /* ---------------------------------------------------------------------- */
 {
     int    f, c1, c2;
@@ -122,7 +122,7 @@ ifs_tpfa_construct_matrix(grid_t *G)
 /* fgrav = accumarray(cf(j), grav(j).*sgn(j), [nf, 1]) */
 /* ---------------------------------------------------------------------- */
 static void
-compute_grav_term(grid_t *G, const double *gpress,
+compute_grav_term(struct UnstructuredGrid *G, const double *gpress,
                   double *fgrav)
 /* ---------------------------------------------------------------------- */
 {
@@ -155,7 +155,7 @@ compute_grav_term(grid_t *G, const double *gpress,
 
 /* ---------------------------------------------------------------------- */
 struct ifs_tpfa_data *
-ifs_tpfa_construct(grid_t *G)
+ifs_tpfa_construct(struct UnstructuredGrid *G)
 /* ---------------------------------------------------------------------- */
 {
     struct ifs_tpfa_data *new;
@@ -185,7 +185,7 @@ ifs_tpfa_construct(grid_t *G)
 
 /* ---------------------------------------------------------------------- */
 void
-ifs_tpfa_assemble(grid_t               *G,
+ifs_tpfa_assemble(struct UnstructuredGrid               *G,
                   const double         *trans,
                   const double         *src,
                   const double         *gpress,
@@ -232,7 +232,7 @@ ifs_tpfa_assemble(grid_t               *G,
 
 /* ---------------------------------------------------------------------- */
 void
-ifs_tpfa_press_flux(grid_t               *G,
+ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
                     const double         *trans,
                     struct ifs_tpfa_data *h,
                     double               *cpress,

@@ -54,7 +54,7 @@ struct cfs_tpfa_res_data {
 
 
 struct cfs_tpfa_res_data *
-cfs_tpfa_res_construct(grid_t                 *G      ,
+cfs_tpfa_res_construct(struct UnstructuredGrid                 *G      ,
                        struct WellCompletions *wconn  ,
                        int                     nphases);
 
@@ -62,7 +62,7 @@ void
 cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h);
 
 void
-cfs_tpfa_res_assemble(grid_t                      *G,
+cfs_tpfa_res_assemble(struct UnstructuredGrid                      *G,
                       double                       dt,
                       struct cfs_tpfa_res_forces  *forces,
                       const double                *zc,
@@ -75,7 +75,7 @@ cfs_tpfa_res_assemble(grid_t                      *G,
                       struct cfs_tpfa_res_data    *h);
 
 void
-cfs_tpfa_res_flux(grid_t                     *G        ,
+cfs_tpfa_res_flux(struct UnstructuredGrid                     *G        ,
                   struct cfs_tpfa_res_forces *forces   ,
                   int                         np       ,
                   const double               *trans    ,
@@ -88,7 +88,7 @@ cfs_tpfa_res_flux(grid_t                     *G        ,
                   double                     *wflux    );
 
 void
-cfs_tpfa_res_fpress(grid_t                   *G,
+cfs_tpfa_res_fpress(struct UnstructuredGrid                   *G,
                     int                       np,
                     const double             *htrans,
                     const double             *pmobf,
@@ -100,19 +100,19 @@ cfs_tpfa_res_fpress(grid_t                   *G,
 
 #if 0
 void
-cfs_tpfa_retrieve_masstrans(grid_t               *G,
+cfs_tpfa_retrieve_masstrans(struct UnstructuredGrid               *G,
                             int                   np,
                             struct cfs_tpfa_data *h,
                             double               *masstrans_f);
 
 void
-cfs_tpfa_retrieve_gravtrans(grid_t               *G,
+cfs_tpfa_retrieve_gravtrans(struct UnstructuredGrid               *G,
                             int                   np,
                             struct cfs_tpfa_data *h,
                             double               *gravtrans_f);
 
 double
-cfs_tpfa_impes_maxtime(grid_t                  *G,
+cfs_tpfa_impes_maxtime(struct UnstructuredGrid                  *G,
                        struct compr_quantities *cq,
                        const double            *trans,
                        const double            *porevol,
@@ -122,7 +122,7 @@ cfs_tpfa_impes_maxtime(grid_t                  *G,
                        const double            *gravity);
 
 void
-cfs_tpfa_expl_mass_transport(grid_t                 *G,
+cfs_tpfa_expl_mass_transport(struct UnstructuredGrid                 *G,
                              well_t                 *W,
                              struct completion_data *wdata,
                              int                     np,

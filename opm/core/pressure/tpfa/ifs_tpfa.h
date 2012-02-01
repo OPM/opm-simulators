@@ -39,17 +39,17 @@ struct ifs_tpfa_data {
 
 
 struct ifs_tpfa_data *
-ifs_tpfa_construct(grid_t *G);
+ifs_tpfa_construct(struct UnstructuredGrid *G);
 
 void
-ifs_tpfa_assemble(grid_t               *G,
+ifs_tpfa_assemble(struct UnstructuredGrid               *G,
                   const double         *trans,
                   const double         *src,
                   const double         *gpress,
                   struct ifs_tpfa_data *h);
 
 void
-ifs_tpfa_press_flux(grid_t               *G,
+ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
                     const double         *trans,
                     struct ifs_tpfa_data *h,
                     double               *cpress,
