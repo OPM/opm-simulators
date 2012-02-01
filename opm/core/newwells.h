@@ -1,0 +1,65 @@
+/*
+  Copyright 2012 SINTEF ICT, Applied Mathematics.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef OPM_NEWWELLS_H_INCLUDED
+#define OPM_NEWWELLS_H_INCLUDED
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+enum well_type         { INJECTOR, PRODUCER };
+enum control_type      { BHP     , RATE     };
+enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
+
+
+/* Control for single well */
+struct WellControls {
+    int                  num;
+    enum control_type   *type;
+    double              *target;
+    int                  current;
+};
+
+struct Wells {
+    int                  number_of_wells;
+    enum well_type      *type;
+    double              *depth_ref;
+    double              *zfrac;        /* Surface volume fraction
+                                        * (3*number_of_wells) */
+
+    int                 *well_connpos;
+    int                 *well_cells;
+    double              *WI;           /* Well index */
+
+    struct WellControls *ctrls;        /* One struct for each well */
+};
+
+struct CompletionData {
+    double *gpot;               /* Gravity potential */
+    double *A;                  /* RB^{-1} */
+    double *phasemob;           /* Phase mobility */
+};
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* OPM_NEWWELLS_H_INCLUDED */
