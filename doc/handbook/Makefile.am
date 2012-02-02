@@ -28,11 +28,11 @@ CLEANFILES += $(EPS_FILES)
 dumux-handbook.tex: $(EPS_FILES)
 
 dumux-handbook.pdf: $(TEXSOURCE)
-	@LATEX@ dumux-handbook.tex
-	@BIBTEX@ dumux-handbook
-	@LATEX@ dumux-handbook.tex
-	@LATEX@ dumux-handbook.tex
-	@DVIPDF@ dumux-handbook
+	@LATEX@ dumux-handbook.tex <&-
+	@BIBTEX@ dumux-handbook <&-
+	@LATEX@ dumux-handbook.tex <&-
+	@LATEX@ dumux-handbook.tex <&-
+	@DVIPDF@ dumux-handbook <&-
 
 #dist-hook:
 #	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
