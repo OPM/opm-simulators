@@ -1,5 +1,5 @@
 # build target for the simple twophase lens problem
-ADD_EXECUTABLE("test_immiscibleflash" test_ncpflash.cc)
+ADD_EXECUTABLE("test_immiscibleflash" test_immiscibleflash.cc)
 TARGET_LINK_LIBRARIES("test_immiscibleflash" ${DumuxLinkLibraries})
 
 # add required libraries and includes to the build flags 
