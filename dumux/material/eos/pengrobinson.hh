@@ -153,7 +153,7 @@ public:
         Valgrind::CheckDefined(fs.temperature(phaseIdx));
         Valgrind::CheckDefined(fs.pressure(phaseIdx));
 
-        Scalar Vm;
+        Scalar Vm = 0;
         Valgrind::SetUndefined(Vm);
 
         Scalar T = fs.temperature(phaseIdx);
@@ -291,8 +291,8 @@ protected:
         Scalar minVm;
         Scalar maxVm;
 
-        Scalar minP;
-        Scalar maxP;
+        Scalar minP(0);
+        Scalar maxP(1e100);
 
         // first, we need to find an isotherm where the EOS exhibits
         // a maximum and a minimum
@@ -325,7 +325,7 @@ protected:
             // epsilon was added to the temperature. (this is case
             // rarely happens, though)
             const Scalar eps = - 1e-8;
-            bool hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
+            bool __attribute__((unused)) hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
             assert(hasExtrema);
             Scalar fStar = maxVm - minVm;
             
