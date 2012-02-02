@@ -1,6 +1,8 @@
 AM_CPPFLAGS =					\
 -I$(top_srcdir)
 
+LDADD = $(top_builddir)/libopmpolymer.la
+
 noinst_PROGRAMS =				\
 hello						\
 polymer_reorder

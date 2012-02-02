@@ -37,7 +37,7 @@
 
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
 
-#include <opm/core/transport/reorder/twophasetransport.hpp>
+#include <opm/polymer/polymertransport.hpp>
 
 #include <boost/filesystem/convenience.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -223,13 +223,13 @@ main(int argc, char** argv)
 	// Also, for anything but noflow boundaries,
 	// boundary flows must be accumulated into
 	// source term following the same convention.
-	twophasetransport(&porevol[0],
-			  &reorder_src[0],
-			  stepsize,
-			  const_cast<UnstructuredGrid*>(grid->c_grid()),
-			  props.get(),
-			  &state.faceflux()[0],
-			  &reorder_sat[0]);
+	polymertransport(&porevol[0],
+			 &reorder_src[0],
+			 stepsize,
+			 const_cast<UnstructuredGrid*>(grid->c_grid()),
+			 props.get(),
+			 &state.faceflux()[0],
+			 &reorder_sat[0]);
 	Opm::toBothSat(reorder_sat, state.saturation());
 
 	current_time += stepsize;
