@@ -236,7 +236,7 @@ public:
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
-        return (molarLiquidDensity(temperature, pressure)*molarMass()); // [kg/m^3]
+        return molarLiquidDensity(temperature, pressure)*molarMass(); // [kg/m^3]
     }
 
     /*!
