@@ -9,4 +9,6 @@ hello_SOURCES =					\
 SayHello.cpp
 
 polymer_reorder_SOURCES =			\
-polymer_reorder.cpp
+polymer_reorder.cpp				\
+Utilities.hpp					\
+Utilities.cpp
