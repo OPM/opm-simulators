@@ -44,11 +44,11 @@ namespace Dumux
  */
 template <class Scalar, class FluidSystem>
 class Spe5ParameterCache
-    : public Dumux::ParameterCacheBase<Spe5ParameterCache<Scalar, FluidSystem> > 
+    : public Dumux::ParameterCacheBase<Spe5ParameterCache<Scalar, FluidSystem> >
 {
     typedef Spe5ParameterCache<Scalar, FluidSystem> ThisType;
     typedef Dumux::ParameterCacheBase<ThisType> ParentType;
-  
+
     typedef Dumux::PengRobinson<Scalar> PengRobinson;
 
     enum { numPhases = FluidSystem::numPhases };
@@ -78,10 +78,10 @@ public:
      *        calculate some quantities for the phase.
      */
     template <class FluidState>
-    void updatePhase(const FluidState &fs, 
-                     int phaseIdx, 
+    void updatePhase(const FluidState &fs,
+                     int phaseIdx,
                      int except = ParentType::None)
-    { 
+    {
         updateEosParams(fs, phaseIdx, except);
 
         // if we don't need to recalculate the molar volume, we exit
@@ -92,7 +92,7 @@ public:
         // update the phase's molar volume
         updateMolarVolume_(fs, phaseIdx);
     }
-    
+
     /*!
      * \brief Update all cached parameters of a specific fluid phase
      *        which depend on the mole fraction of a single component
@@ -111,7 +111,7 @@ public:
             oilPhaseParams_.updateSingleMoleFraction(fs, compIdx);
         else if (phaseIdx == gPhaseIdx)
             gasPhaseParams_.updateSingleMoleFraction(fs, compIdx);
-        
+
         // update the phase's molar volume
         updateMolarVolume_(fs, phaseIdx);
     }
@@ -120,13 +120,13 @@ public:
      * \brief The Peng-Robinson attractive parameter for a phase.
      */
     Scalar a(int phaseIdx) const
-    { 
+    {
         switch (phaseIdx)
         {
         case oPhaseIdx: return oilPhaseParams_.a();
         case gPhaseIdx: return gasPhaseParams_.a();
-        default: 
-            DUNE_THROW(Dune::InvalidStateException, 
+        default:
+            DUNE_THROW(Dune::InvalidStateException,
                        "The a() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -136,13 +136,13 @@ public:
      * \brief The Peng-Robinson covolume for a phase.
      */
     Scalar b(int phaseIdx) const
-    { 
+    {
         switch (phaseIdx)
         {
         case oPhaseIdx: return oilPhaseParams_.b();
         case gPhaseIdx: return gasPhaseParams_.b();
-        default: 
-            DUNE_THROW(Dune::InvalidStateException, 
+        default:
+            DUNE_THROW(Dune::InvalidStateException,
                        "The b() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -154,13 +154,13 @@ public:
      *        phase.
      */
     Scalar aPure(int phaseIdx, int compIdx) const
-    { 
+    {
         switch (phaseIdx)
         {
         case oPhaseIdx: return oilPhaseParams_.pureParams(compIdx).a();
         case gPhaseIdx: return gasPhaseParams_.pureParams(compIdx).a();
-        default: 
-            DUNE_THROW(Dune::InvalidStateException, 
+        default:
+            DUNE_THROW(Dune::InvalidStateException,
                        "The a() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -171,13 +171,13 @@ public:
      *        the same temperature and pressure of the phase.
      */
     Scalar bPure(int phaseIdx, int compIdx) const
-    { 
+    {
         switch (phaseIdx)
         {
         case oPhaseIdx: return oilPhaseParams_.pureParams(compIdx).b();
         case gPhaseIdx: return gasPhaseParams_.pureParams(compIdx).b();
-        default: 
-            DUNE_THROW(Dune::InvalidStateException, 
+        default:
+            DUNE_THROW(Dune::InvalidStateException,
                        "The b() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -188,8 +188,8 @@ public:
      */
     Scalar molarVolume(int phaseIdx) const
     { assert(VmUpToDate_[phaseIdx]); return Vm_[phaseIdx]; }
-        
-    
+
+
     /*!
      * \brief Returns the Peng-Robinson mixture parameters for the oil
      *        phase.
@@ -203,16 +203,16 @@ public:
      */
     const GasPhaseParams &gasPhaseParams() const
     { return gasPhaseParams_; }
-   
+
     /*!
      * \brief Update all parameters required by the equation of state to
      *        calculate some quantities for the phase.
      */
     template <class FluidState>
-    void updateEosParams(const FluidState &fs, 
+    void updateEosParams(const FluidState &fs,
                          int phaseIdx,
                          int exceptQuantities = ParentType::None)
-    { 
+    {
         if (!(exceptQuantities & ParentType::Temperature))
         {
             updatePure_(fs, phaseIdx);
@@ -231,7 +231,7 @@ public:
 
 protected:
     /*!
-     * \brief Update all parameters of a phase which only depend on 
+     * \brief Update all parameters of a phase which only depend on
      *        temperature and/or pressure.
      *
      * This usually means the parameters for the pure components.
@@ -263,11 +263,11 @@ protected:
         Valgrind::CheckDefined(fs.averageMolarMass(phaseIdx));
         switch (phaseIdx)
         {
-        case oPhaseIdx: 
+        case oPhaseIdx:
             oilPhaseParams_.updateMix(fs);
             break;
         case gPhaseIdx:
-            gasPhaseParams_.updateMix(fs); 
+            gasPhaseParams_.updateMix(fs);
             break;
         case wPhaseIdx:
             break;
@@ -275,11 +275,11 @@ protected:
     }
 
     template <class FluidState>
-    void updateMolarVolume_(const FluidState &fs, 
+    void updateMolarVolume_(const FluidState &fs,
                             int phaseIdx)
     {
         VmUpToDate_[phaseIdx] = true;
-        
+
         // calculate molar volume of the phase (we will need this for the
         // fugacity coefficients and the density anyway)
         switch (phaseIdx) {
@@ -289,7 +289,7 @@ protected:
             // molar volume appears in basically every quantity the fluid
             // system can get queried, so it is okay to calculate it
             // here...
-            Vm_[gPhaseIdx] = 
+            Vm_[gPhaseIdx] =
                 PengRobinson::computeMolarVolume(fs,
                                                  *this,
                                                  phaseIdx,
@@ -301,7 +301,7 @@ protected:
             // molar volume appears in basically every quantity the fluid
             // system can get queried, so it is okay to calculate it
             // here...
-            Vm_[oPhaseIdx] = 
+            Vm_[oPhaseIdx] =
                 PengRobinson::computeMolarVolume(fs,
                                                  *this,
                                                  phaseIdx,
@@ -316,7 +316,7 @@ protected:
             // Water compressibility is specified as 3.3e-6 per psi
             // overpressure, where 1 psi = 6894.7573 Pa
             Scalar overPressure = fs.pressure(wPhaseIdx) - 1.013e5; // [Pa]
-            Scalar waterDensity = 
+            Scalar waterDensity =
                 stockTankWaterDensity * (1 + 3.3e-6*overPressure/6894.7573);
 
             // convert water density [kg/m^3] to molar volume [m^3/mol]

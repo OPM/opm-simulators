@@ -110,14 +110,14 @@ public:
                 fluidState.setMoleFraction(phaseIdx,
                                            compIdx,
                                            globalMolarities[compIdx]/sumMoles);
-            
+
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 2e5);
 
             // saturation. assume all fluids to be equally distributed
             fluidState.setSaturation(phaseIdx, 1.0/numPhases);
         }
-        
+
         // set the fugacity coefficients of all components in all phases
         paramCache.updateAll(fluidState);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -156,7 +156,7 @@ public:
         Valgrind::SetUndefined(J);
         Valgrind::SetUndefined(deltaX);
         Valgrind::SetUndefined(b);
-               
+
         // make the fluid state consistent with the fluid system.
         completeFluidState_<MaterialLaw>(fluidState,
                                          paramCache,
@@ -176,13 +176,13 @@ public:
             linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
-          
+
             // Solve J*x = b
             deltaX = 0;
 
             try { J.solve(deltaX, b); }
             catch (Dune::FMatrixError e)
-            { 
+            {
                 /*
                 printFluidState_(fluidState);
                 std::cout << "error: " << e << "\n";
@@ -201,7 +201,7 @@ public:
                 for (int j = 0; j < numEq; ++j) {
                     std::ostringstream os;
                     os << J[i][j];
-                        
+
                     std::string s(os.str());
                     do {
                         s += " ";
@@ -217,7 +217,7 @@ public:
 
             // update the fluid quantities.
             Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
-            
+
             if (relError < 1e-9)
                 return;
         }
@@ -232,7 +232,7 @@ public:
 
         DUNE_THROW(NumericalProblem,
                    "Flash calculation failed."
-                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = " 
+                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
                    << fluidState.temperature(/*phaseIdx=*/0));
     }
 
@@ -245,7 +245,7 @@ protected:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.saturation(phaseIdx) << " ";
         std::cout << "\n";
-        
+
         std::cout << "pressures: ";
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.pressure(phaseIdx) << " ";
@@ -293,7 +293,7 @@ protected:
     {
         FluidState origFluidState(fluidState);
         ParameterCache origParamCache(paramCache);
-        
+
         Vector tmp;
 
         // reset jacobian
@@ -316,7 +316,7 @@ protected:
             const Scalar eps = 1e-8/quantityWeight_(fluidState, pvIdx);
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
-            
+
             // compute derivative of the defect
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
             tmp -= b;
@@ -346,32 +346,32 @@ protected:
         // fugacity of any component must be equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-                b[eqIdx] = 
-                    fluidState.fugacity(/*phaseIdx=*/0, compIdx) - 
+                b[eqIdx] =
+                    fluidState.fugacity(/*phaseIdx=*/0, compIdx) -
                     fluidState.fugacity(phaseIdx, compIdx);
                 ++eqIdx;
             }
         }
-        
+
         assert(eqIdx == numComponents*(numPhases - 1));
-        
+
         // the fact saturations must sum up to 1 is included explicitly!
-        
+
         // capillary pressures are explicitly included!
-        
+
         // global molarities are given
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             b[eqIdx] = 0.0;
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                b[eqIdx] += 
+                b[eqIdx] +=
                     fluidState.saturation(phaseIdx)
                     * fluidState.molarity(phaseIdx, compIdx);
             }
-            
+
             b[eqIdx] -= globalMolarities[compIdx];
             ++eqIdx;
         }
-        
+
         // model assumptions (-> non-linear complementarity functions)
         // must be adhered
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -403,9 +403,9 @@ protected:
         for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             Scalar tmp = getQuantity_(fluidState, pvIdx);
             Scalar delta = deltaX[pvIdx];
-                
+
             relError = std::max(relError, std::abs(delta)*quantityWeight_(fluidState, pvIdx));
-          
+
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 20% change in saturation per
                 // iteration
@@ -421,7 +421,7 @@ protected:
                 // iteration
                 delta = std::min(0.15*fluidState.pressure(0), std::max(-0.15*fluidState.pressure(0), delta));
             };
-            
+
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
         }
 
@@ -451,9 +451,9 @@ protected:
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar value = fluidState.saturation(phaseIdx)/(0.95*sumSat);
                 fluidState.setSaturation(phaseIdx, value);
-            };                
+            };
         };
-        
+
         completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
 
         return relError;
@@ -470,14 +470,14 @@ protected:
         for (int phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
             sumSat += fluidState.saturation(phaseIdx);
         fluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);
-        
+
         // update the pressures using the material law (saturations
         // and first pressure are already set because it is implicitly
         // solved for.)
         ComponentVector pC;
         MaterialLaw::capillaryPressures(pC, matParams, fluidState);
         for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
-            fluidState.setPressure(phaseIdx, 
+            fluidState.setPressure(phaseIdx,
                                    fluidState.pressure(0)
                                    + (pC[phaseIdx] - pC[0]));
 
@@ -488,7 +488,7 @@ protected:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
             fluidState.setDensity(phaseIdx, rho);
-            
+
             for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
                 Scalar phi = FluidSystem::fugacityCoefficient( fluidState, paramCache, phaseIdx, compIdx);
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, phi);
@@ -522,7 +522,7 @@ protected:
             return fs.saturation(phaseIdx);
         }
         // mole fractions
-        else // if (pvIdx < numPhases + numPhases*numComponents) 
+        else // if (pvIdx < numPhases + numPhases*numComponents)
         {
             int phaseIdx = (pvIdx - numPhases)/numComponents;
             int compIdx = (pvIdx - numPhases)%numComponents;
@@ -553,7 +553,7 @@ protected:
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
                 fs.setDensity(phaseIdx, rho);
-                
+
                 for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                     Scalar phi = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx);
                     fs.setFugacityCoefficient(phaseIdx, compIdx, phi);
@@ -566,7 +566,7 @@ protected:
 
             // set last saturation (-> minus the change of the
             // satuation of the other phase)
-            fs.setSaturation(/*phaseIdx=*/numPhases - 1, 
+            fs.setSaturation(/*phaseIdx=*/numPhases - 1,
                              fs.saturation(numPhases - 1) - delta);
 
             // update all fluid pressures using the capillary pressure
@@ -574,7 +574,7 @@ protected:
             ComponentVector pC;
             MaterialLaw::capillaryPressures(pC, matParams, fs);
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx, 
+                fs.setPressure(phaseIdx,
                                fs.pressure(0)
                                + (pC[phaseIdx] - pC[0]));
             paramCache.updateAllPressures(fs);
@@ -583,7 +583,7 @@ protected:
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
                 fs.setDensity(phaseIdx, rho);
-                
+
                 for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                     Scalar phi = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx);
                     fs.setFugacityCoefficient(phaseIdx, compIdx, phi);
@@ -621,7 +621,7 @@ protected:
     static void setQuantityRaw_(FluidState &fs, int pvIdx, Scalar value)
     {
         assert(pvIdx < numEq);
-        
+
         // first pressure
         if (pvIdx < 1) {
             int phaseIdx = 0;
@@ -633,7 +633,7 @@ protected:
             fs.setSaturation(phaseIdx, value);
         }
         // mole fractions
-        else // if (pvIdx < numPhases + numPhases*numComponents) 
+        else // if (pvIdx < numPhases + numPhases*numComponents)
         {
             int phaseIdx = (pvIdx - numPhases)/numComponents;
             int compIdx = (pvIdx - numPhases)%numComponents;
@@ -651,7 +651,7 @@ protected:
         else if (pvIdx < numPhases)
             return 1.0;
         // mole fractions
-        else // if (pvIdx < numPhases + numPhases*numComponents) 
+        else // if (pvIdx < numPhases + numPhases*numComponents)
             return 1.0;
     }
 };

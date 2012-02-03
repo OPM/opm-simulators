@@ -46,7 +46,7 @@ namespace Dumux {
  * - temperatures of *all* phases
  * - saturations of *all* phases
  * - pressures of *all* phases
- * 
+ *
  * It also assumes that the mole/mass fractions of all phases sum up
  * to 1. After calling the solve() method the following quantities
  * are calculated in addition:
@@ -64,7 +64,7 @@ class MiscibleMultiPhaseComposition
 {
     static constexpr int numPhases = FluidSystem::numPhases;
     static constexpr int numComponents = FluidSystem::numComponents;
-    
+
     static_assert(numComponents == numPhases,
                   "This solver requires that the number fluid phases is equal "
                   "to the number of components");
@@ -81,7 +81,7 @@ public:
      * - temperatures of *all* phases
      * - saturations of *all* phases
      * - pressures of *all* phases
-     * 
+     *
      * It also assumes that the mole/mass fractions of all phases sum up
      * to 1. After calling the solve() method the following quantities
      * are calculated in addition:
@@ -122,14 +122,14 @@ public:
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, fugCoeff);
             }
         }
-            
+
 
         // create the linear system of equations which defines the
         // mole fractions
         Dune::FieldMatrix<Scalar, numComponents*numPhases, numComponents*numPhases> M(0.0);
         Dune::FieldVector<Scalar, numComponents*numPhases> x(0.0);
         Dune::FieldVector<Scalar, numComponents*numPhases> b(0.0);
-        
+
         // assemble the equations expressing the assumption that the
         // sum of all mole fractions in each phase must be 1
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -142,11 +142,11 @@ public:
                 M[rowIdx][colIdx] = 1.0;
             }
         }
-        
+
         // assemble the equations expressing the fact that the
         // fugacities of each component is equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            Scalar entryCol1 = 
+            Scalar entryCol1 =
                 fluidState.fugacityCoefficient(/*phaseIdx=*/0, compIdx)
                 * fluidState.pressure(/*phaseIdx=*/0);
             int col1Idx = compIdx;
@@ -155,7 +155,7 @@ public:
                 int rowIdx = (phaseIdx - 1)*numComponents + compIdx;
                 int col2Idx = phaseIdx*numComponents + compIdx;
 
-                Scalar entryCol2 = 
+                Scalar entryCol2 =
                     fluidState.fugacityCoefficient(phaseIdx, compIdx)
                     * fluidState.pressure(phaseIdx);
 
@@ -163,7 +163,7 @@ public:
                 M[rowIdx][col2Idx] = -entryCol2;
             }
         }
-        
+
         // solve for all mole fractions
         M.solve(x, b);
 
@@ -175,7 +175,7 @@ public:
                 fluidState.setMoleFraction(phaseIdx, compIdx, x[rowIdx]);
             }
             paramCache.updateComposition(fluidState, phaseIdx);
-        
+
             Scalar value = FluidSystem::density(fluidState, paramCache, phaseIdx);
             fluidState.setDensity(phaseIdx, value);
 
@@ -183,7 +183,7 @@ public:
                 value = FluidSystem::viscosity(fluidState, paramCache, phaseIdx);
                 fluidState.setViscosity(phaseIdx, value);
             }
-            
+
             if (setInternalEnergy) {
                 value = FluidSystem::enthalpy(fluidState, paramCache, phaseIdx);
                 fluidState.setEnthalpy(phaseIdx, value);

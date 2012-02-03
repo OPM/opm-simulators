@@ -49,16 +49,16 @@ public:
     enum { numComponents = FluidSystem::numComponents };
 
     NonEquilibriumFluidState()
-    { 
+    {
         // set the composition to 0
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)  {
             for (int compIdx = 0; compIdx < numComponents; ++compIdx)
                 moleFraction_[phaseIdx][compIdx] = 0;
-            
+
             averageMolarMass_[phaseIdx] = 0;
             sumMoleFractions_[phaseIdx] = 0;
         }
-        
+
         // make everything undefined so that valgrind will complain
         Valgrind::SetUndefined(*this);
     }
@@ -205,7 +205,7 @@ public:
      * \brief Set the mole fraction of a component in a phase []
      */
     void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
-    { 
+    {
         Valgrind::CheckDefined(value);
         Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
         Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
@@ -213,15 +213,15 @@ public:
 
         if (std::isfinite(averageMolarMass_[phaseIdx])) {
             Scalar delta = value - moleFraction_[phaseIdx][compIdx];
-            
+
             moleFraction_[phaseIdx][compIdx] = value;
-            
+
             sumMoleFractions_[phaseIdx] += delta;
             averageMolarMass_[phaseIdx] += delta*FluidSystem::molarMass(compIdx);
         }
-        else { 
+        else {
             moleFraction_[phaseIdx][compIdx] = value;
-            
+
             // re-calculate the mean molar mass
             sumMoleFractions_[phaseIdx] = 0.0;
             averageMolarMass_[phaseIdx] = 0.0;

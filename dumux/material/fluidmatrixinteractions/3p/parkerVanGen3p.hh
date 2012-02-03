@@ -45,7 +45,7 @@ namespace Dumux
  *
  * \sa VanGenuchten, VanGenuchtenThreephase
  */
-template <class ScalarT, class ParamsT = ParkerVanGen3PParams<ScalarT> > 
+template <class ScalarT, class ParamsT = ParkerVanGen3PParams<ScalarT> >
 class ParkerVanGen3P
 {
 
@@ -65,9 +65,9 @@ public:
     static Scalar pCGW(const Params &params, Scalar Sw)
     {
     /*
-         Sw = wetting phase saturation, or,    
-              sum of wetting phase saturations 
-         alpha : VanGenuchten-alpha 
+         Sw = wetting phase saturation, or,
+              sum of wetting phase saturations
+         alpha : VanGenuchten-alpha
     this function is just copied from MUFTE/pml/constrel3p3cni.c
     that is why variable names do not yet fulfill Dumux rules, TODO Change */
 
@@ -109,9 +109,9 @@ public:
     static Scalar pCNW(const Params &params, Scalar Sw)
     {
     /*
-         Sw = wetting phase saturation, or,    
-              sum of wetting phase saturations 
-         alpha : VanGenuchten-alpha 
+         Sw = wetting phase saturation, or,
+              sum of wetting phase saturations
+         alpha : VanGenuchten-alpha
     this function is just copied from MUFTE/pml/constrel3p3cni.c
     that is why variable names do not yet fulfill Dumux rules, TODO Change */
 
@@ -153,8 +153,8 @@ public:
     static Scalar pCGN(const Params &params, Scalar St)
     {
     /*
-         St = sum of wetting (liquid) phase saturations 
-         alpha : VanGenuchten-alpha 
+         St = sum of wetting (liquid) phase saturations
+         alpha : VanGenuchten-alpha
     this function is just copied from MUFTE/pml/constrel3p3cni.c
     that is why variable names do not yet fulfill Dumux rules, TODO Change */
 
@@ -253,7 +253,7 @@ public:
      */
     static Scalar krw(const Params &params,  Scalar saturation, Scalar Sn, Scalar Sg)
     {
-       
+
         //transformation to effective saturation
         Scalar Se = (saturation - params.Swr()) / (1-params.Swr());
 
@@ -365,7 +365,7 @@ public:
     };
 
    /*
-    * \brief the basis for calculating adsorbed NAPL in storage term 
+    * \brief the basis for calculating adsorbed NAPL in storage term
     * \param bulk density of porous medium, adsorption coefficient
     */
    static Scalar bulkDensTimesAdsorpCoeff (const Params &params)

@@ -114,14 +114,14 @@ public:
 
         // calculate delta_i (see: Reid, p. 145)
         Scalar sumMoleFractions = 0.0;
-        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) 
+        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx)
             sumMoleFractions += fs.moleFraction(phaseIdx, compJIdx);
         Scalar deltai = 2*std::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
         Scalar tmp = 0;
         for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             tmp +=
-                fs.moleFraction(phaseIdx, compJIdx) 
-                / sumMoleFractions 
+                fs.moleFraction(phaseIdx, compJIdx)
+                / sumMoleFractions
                 * std::sqrt(params.aPure(phaseIdx, compJIdx))
                 * (1.0 - StaticParameters::interactionCoefficient(compIdx, compJIdx));
         };

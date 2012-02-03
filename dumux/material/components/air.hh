@@ -6,8 +6,8 @@
  *   Technical University of Berlin                                          *
  *   email:lstadler@wahyd.tu-berlin.de                                       *
  *                                                                           *
- *   Copyright (C) 2011 by Benjamin Faigle                                   *   
- *   Copyright (C) 2011 by Holger Class                                      *   
+ *   Copyright (C) 2011 by Benjamin Faigle                                   *
+ *   Copyright (C) 2011 by Holger Class                                      *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -79,7 +79,7 @@ public:
      */
     static Scalar criticalPressure()
     { return 37.86e5; /* [Pa] */ }
-    
+
     /*!
      * \brief The density of \f$AIR\f$ at a given pressure and temperature [kg/m^3].
      *
@@ -206,7 +206,7 @@ public:
                                           Scalar pressure)
     {
         return
-            gasEnthalpy(temperature, pressure) 
+            gasEnthalpy(temperature, pressure)
             -
             IdealGas::R * temperature // = pressure * molar volume for an ideal gas
             / molarMass(); // conversion from [J/(mol K)] to [J/(kg K)]

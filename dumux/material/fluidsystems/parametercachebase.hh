@@ -38,11 +38,11 @@ class ParameterCacheBase
 public:
     enum ExceptQuantities {
         None = 0,
-        Temperature = 1, 
+        Temperature = 1,
         Pressure = 2,
         Composition = 4
     };
-    
+
     ParameterCacheBase()
     {}
 
@@ -84,7 +84,7 @@ public:
      * changed between two update*() calls. If more changed, call
      * updatePhase()!
      */
-    template <class FluidState> 
+    template <class FluidState>
     void updateTemperature(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);

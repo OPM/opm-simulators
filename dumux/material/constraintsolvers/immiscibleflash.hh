@@ -67,7 +67,7 @@ class ImmiscibleFlash
 {
     static constexpr int numPhases = FluidSystem::numPhases;
     static constexpr int numComponents = FluidSystem::numComponents;
-    static_assert(numPhases == numComponents, 
+    static_assert(numPhases == numComponents,
                   "Immiscibility assumes that the number of phases"
                   " is equal to the number of components");
 
@@ -94,7 +94,7 @@ public:
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoles += globalMolarities[compIdx];
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {          
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 2e5);
 
@@ -127,14 +127,14 @@ public:
                 break;
             }
         };
-        
+
         if (allIncompressible) {
             paramCache.updateAll(fluidState);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
                 fluidState.setDensity(phaseIdx, rho);
-                
-                Scalar saturation = 
+
+                Scalar saturation =
                     globalMolarities[/*compIdx=*/phaseIdx]
                     / fluidState.molarDensity(phaseIdx);
                 fluidState.setSaturation(phaseIdx, saturation);
@@ -144,7 +144,7 @@ public:
         /////////////////////////
         // Newton method
         /////////////////////////
-        
+
         // Jacobian matrix
         Matrix J;
         // solution, i.e. phase composition
@@ -154,7 +154,7 @@ public:
 
         Valgrind::SetUndefined(J);
         Valgrind::SetUndefined(deltaX);
-        Valgrind::SetUndefined(b);             
+        Valgrind::SetUndefined(b);
 
         completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
 
@@ -164,18 +164,18 @@ public:
             linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
-          
+
             // Solve J*x = b
             deltaX = 0;
 
             try { J.solve(deltaX, b); }
             catch (Dune::FMatrixError e)
-            { 
+            {
                 /*
                 std::cout << "error: " << e << "\n";
                 std::cout << "b: " << b << "\n";
                 */
-                
+
                 throw Dumux::NumericalProblem(e.what());
             }
             Valgrind::CheckDefined(deltaX);
@@ -187,7 +187,7 @@ public:
                 for (int j = 0; j < numEq; ++j) {
                     std::ostringstream os;
                     os << J[i][j];
-                        
+
                     std::string s(os.str());
                     do {
                         s += " ";
@@ -203,7 +203,7 @@ public:
 
             // update the fluid quantities.
             Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
-            
+
             if (relError < 1e-9)
                 return;
         }
@@ -218,7 +218,7 @@ public:
 
         DUNE_THROW(NumericalProblem,
                    "Flash calculation failed."
-                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = " 
+                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
                    << fluidState.temperature(/*phaseIdx=*/0));
     }
 
@@ -231,7 +231,7 @@ protected:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.saturation(phaseIdx) << " ";
         std::cout << "\n";
-        
+
         std::cout << "pressures: ";
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.pressure(phaseIdx) << " ";
@@ -263,7 +263,7 @@ protected:
     {
         FluidState origFluidState(fluidState);
         ParameterCache origParamCache(paramCache);
-        
+
         Vector tmp;
 
         // reset jacobian
@@ -286,7 +286,7 @@ protected:
             const Scalar eps = 1e-10/quantityWeight_(fluidState, pvIdx);
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
-            
+
             // compute derivative of the defect
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
             tmp -= b;
@@ -312,10 +312,10 @@ protected:
     {
         // global molarities are given
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            b[phaseIdx] = 
+            b[phaseIdx] =
                 fluidState.saturation(phaseIdx)
                 * fluidState.molarity(phaseIdx, /*compIdx=*/phaseIdx);
-            
+
             b[phaseIdx] -= globalMolarities[/*compIdx=*/phaseIdx];
         }
     }
@@ -330,9 +330,9 @@ protected:
         for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             Scalar tmp = getQuantity_(fluidState, pvIdx);
             Scalar delta = deltaX[pvIdx];
-                
+
             relError = std::max(relError, std::abs(delta)*quantityWeight_(fluidState, pvIdx));
-          
+
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 20% change in saturation per
                 // iteration
@@ -343,10 +343,10 @@ protected:
                 // iteration
                 delta = std::min(0.30*fluidState.pressure(0), std::max(-0.30*fluidState.pressure(0), delta));
             };
-            
+
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
         }
-       
+
         completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
 
         return relError;
@@ -376,14 +376,14 @@ protected:
 
         // set the last saturation
         fluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);
-    
+
         // update the pressures using the material law (saturations
         // and first pressure are already set because it is implicitly
         // solved for.)
         ComponentVector pC;
         MaterialLaw::capillaryPressures(pC, matParams, fluidState);
         for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
-            fluidState.setPressure(phaseIdx, 
+            fluidState.setPressure(phaseIdx,
                                    fluidState.pressure(0)
                                    + (pC[phaseIdx] - pC[0]));
 
@@ -415,7 +415,7 @@ protected:
             return fs.pressure(phaseIdx);
         }
         // saturations
-        else { 
+        else {
             assert(pvIdx < numPhases);
             int phaseIdx = pvIdx - 1;
             return fs.saturation(phaseIdx);
@@ -457,7 +457,7 @@ protected:
 
             // set last saturation (-> minus the change of the
             // saturation of the other phases)
-            fs.setSaturation(/*phaseIdx=*/numPhases - 1, 
+            fs.setSaturation(/*phaseIdx=*/numPhases - 1,
                              fs.saturation(numPhases - 1) - delta);
 
             // update all fluid pressures using the capillary pressure
@@ -465,7 +465,7 @@ protected:
             ComponentVector pC;
             MaterialLaw::capillaryPressures(pC, matParams, fs);
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx, 
+                fs.setPressure(phaseIdx,
                                fs.pressure(0)
                                + (pC[phaseIdx] - pC[0]));
             paramCache.updateAllPressures(fs);
@@ -483,7 +483,7 @@ protected:
     static void setQuantityRaw_(FluidState &fs, int pvIdx, Scalar value)
     {
         assert(pvIdx < numEq);
-        
+
         // first pressure
         if (pvIdx < 1) {
             int phaseIdx = 0;

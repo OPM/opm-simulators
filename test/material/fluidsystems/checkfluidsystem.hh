@@ -23,7 +23,7 @@
  * \file
  *
  * \brief This file provides the actual code for the fluid systems
- *        test. 
+ *        test.
  *
  * It is not directly in test_fluidsystems.cc so that external modules
  * like dumux-devel can use it easily
@@ -53,16 +53,16 @@
 
 // this is a fluid state which makes sure that only the quantities
 // allowed are accessed
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class BaseFluidState = Dumux::CompositionalFluidState<Scalar, FluidSystem> >
-class HairSplittingFluidState 
+class HairSplittingFluidState
     : protected BaseFluidState
 {
 public:
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    
+
     HairSplittingFluidState()
     {
         // set some fake values
@@ -73,16 +73,16 @@ public:
 
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                 BaseFluidState::setMoleFraction(phaseIdx, compIdx, 1.0 / numComponents);
-                
+
             }
         }
-        
+
         // initially, do not allow anything
         allowTemperature(false);
         allowPressure(false);
         allowComposition(false);
         allowDensity(false);
-        
+
         // do not allow accessing any phase
         restrictToPhase(1000);
     }
@@ -95,11 +95,11 @@ public:
 
     void allowComposition(bool yesno)
     { allowComposition_ = yesno; }
-    
-    void allowDensity(bool yesno) 
+
+    void allowDensity(bool yesno)
     { allowDensity_ = yesno; }
 
-    void restrictToPhase(int phaseIdx) 
+    void restrictToPhase(int phaseIdx)
     { restrictPhaseIdx_ = phaseIdx; }
 
     Scalar temperature(int phaseIdx) const
@@ -108,31 +108,31 @@ public:
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
         return BaseFluidState::temperature(phaseIdx);
     }
-    
+
     Scalar pressure(int phaseIdx) const
-    { 
+    {
         assert(allowPressure_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
         return BaseFluidState::pressure(phaseIdx);
     }
 
     Scalar moleFraction(int phaseIdx, int compIdx) const
-    { 
-        assert(allowComposition_); 
+    {
+        assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
         return BaseFluidState::moleFraction(phaseIdx, compIdx);
     }
 
     Scalar massFraction(int phaseIdx, int compIdx) const
-    { 
-        assert(allowComposition_); 
+    {
+        assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
         return BaseFluidState::massFraction(phaseIdx, compIdx);
     }
 
     Scalar averageMolarMass(int phaseIdx) const
     {
-        assert(allowComposition_); 
+        assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
         return BaseFluidState::averageMolarMass(phaseIdx);
     }
@@ -153,7 +153,7 @@ public:
 
     Scalar molarVolume(int phaseIdx) const
     {
-        assert(allowDensity_); 
+        assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
         return BaseFluidState::molarVolume(phaseIdx);
     }
@@ -166,7 +166,7 @@ public:
     }
 
     Scalar saturation(int phaseIdx) const
-    { 
+    {
         assert(false);
         return BaseFluidState::saturation(phaseIdx);
     }
@@ -196,7 +196,7 @@ public:
     }
 
     Scalar viscosity(int phaseIdx) const
-    { 
+    {
         assert(false);
         return BaseFluidState::viscosity(phaseIdx);
     }
@@ -219,7 +219,7 @@ void checkFluidState(const BaseFluidState &fs)
 
     // a fluid state must provide a checkDefined() method
     fs.checkDefined();
-    
+
     // make sure the fluid state provides all mandatory methods
     while (false) {
         Scalar DUMUX_UNUSED val;
@@ -296,7 +296,7 @@ void checkFluidSystem()
         try { val = FluidSystem::enthalpy(fs, paramCache, phaseIdx); } catch (...) {};
         try { val = FluidSystem::heatCapacity(fs, paramCache, phaseIdx); } catch (...) {};
         try { val = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx); } catch (...) {};
-                
+
         for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
             fs.allowComposition(!FluidSystem::isIdealMixture(phaseIdx));
             try { val = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
@@ -314,7 +314,7 @@ void checkFluidSystem()
         bool DUMUX_UNUSED bVal = FluidSystem::isLiquid(phaseIdx);
         bVal = FluidSystem::isIdealGas(phaseIdx);
     }
-    
+
     // test for componentName()
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
         val = FluidSystem::molarMass(compIdx);

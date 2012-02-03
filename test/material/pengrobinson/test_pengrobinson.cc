@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     ////////////
     // Initialize the fluid system and create the capillary pressure
     // parameters
-    ////////////   
+    ////////////
     FluidSystem::init();
 
     // set the parameters for the capillary pressure law
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 
     ////////////
     // Create a fluid state
-    ////////////   
+    ////////////
     FluidState fluidState;
     ParameterCache paramCache;
 
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < n; ++i) {
         Scalar minAlpha = 0.98;
         Scalar maxAlpha = 5.0;
-        
+
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
 
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
         // "flash" the modified reservoir oil
         Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, curMolarities);
 
-/*        
+/*
         // bring the gas and the oil to the surface
         surfaceFluidState.setPressure(gPhaseIdx, 1.013e5);
         surfaceFluidState.setPressure(oPhaseIdx, 1.013e5);
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
         paramCache.updatePhase(surfaceFluidState, oPhaseIdx);
         Scalar rhoGSurface = FluidSystem::density(surfaceFluidState, paramCache, gPhaseIdx);
         Scalar rhoOSurface = FluidSystem::density(surfaceFluidState, paramCache, gPhaseIdx);
-*/      
+*/
         std::cout << alpha << " "
                   << flashFluidState.pressure(oPhaseIdx) << " "
                   << flashFluidState.saturation(gPhaseIdx) << " "
@@ -155,6 +155,6 @@ int main(int argc, char** argv)
                   << flashFluidState.density(gPhaseIdx) << " "
                   << "\n";
     }
-    
+
     return 0;
 }

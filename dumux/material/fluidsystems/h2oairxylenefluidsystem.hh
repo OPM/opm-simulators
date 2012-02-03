@@ -89,7 +89,7 @@ public:
 
     static bool isIdealGas(int phaseIdx)
     { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
-    
+
     /*!
      * \brief Returns true if and only if a fluid phase is assumed to
      *        be an ideal mixture.

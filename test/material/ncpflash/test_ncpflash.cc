@@ -67,7 +67,7 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
         // check the saturations
         error = fsRef.saturation(phaseIdx) - fsFlash.saturation(phaseIdx);
         if (std::abs(error) > 1e-6)
-            std::cout << "saturation error phase " << phaseIdx << ": " 
+            std::cout << "saturation error phase " << phaseIdx << ": "
                       << fsFlash.saturation(phaseIdx) << " flash vs "
                       << fsRef.saturation(phaseIdx) << " reference"
                       << " error=" << error << "\n";
@@ -76,7 +76,7 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
         for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
             error = fsRef.moleFraction(phaseIdx, compIdx) - fsFlash.moleFraction(phaseIdx, compIdx);
             if (std::abs(error) > 1e-6)
-                std::cout << "composition error phase " << phaseIdx << ", component " << compIdx << ": " 
+                std::cout << "composition error phase " << phaseIdx << ", component " << compIdx << ": "
                           << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
                           << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
                           << " error=" << error << "\n";
@@ -85,7 +85,7 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
 }
 
 template <class Scalar, class FluidSystem, class MaterialLaw, class FluidState>
-void checkNcpFlash(const FluidState &fsRef, 
+void checkNcpFlash(const FluidState &fsRef,
                    typename MaterialLaw::Params &matParams)
 {
     enum { numPhases = FluidSystem::numPhases };
@@ -119,7 +119,7 @@ void checkNcpFlash(const FluidState &fsRef,
 
 
 template <class Scalar, class FluidSystem, class MaterialLaw, class FluidState>
-void completeReferenceFluidState(FluidState &fs, 
+void completeReferenceFluidState(FluidState &fs,
                                  typename MaterialLaw::Params &matParams,
                                  int refPhaseIdx)
 {
@@ -127,7 +127,7 @@ void completeReferenceFluidState(FluidState &fs,
 
     typedef Dumux::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    
+
     int otherPhaseIdx = 1 - refPhaseIdx;
 
     // calculate the other saturation
@@ -136,15 +136,15 @@ void completeReferenceFluidState(FluidState &fs,
     // calulate the capillary pressure
     PhaseVector pC;
     MaterialLaw::capillaryPressures(pC, matParams, fs);
-    fs.setPressure(otherPhaseIdx, 
+    fs.setPressure(otherPhaseIdx,
                    fs.pressure(refPhaseIdx)
                    + (pC[otherPhaseIdx] - pC[refPhaseIdx]));
-    
+
     // make the fluid state consistent with local thermodynamic
     // equilibrium
     typename FluidSystem::ParameterCache paramCache;
     ComputeFromReferencePhase::solve(fs,
-                                     paramCache, 
+                                     paramCache,
                                      refPhaseIdx,
                                      /*setViscosity=*/false,
                                      /*setEnthalpy=*/false);
@@ -171,12 +171,12 @@ int main()
     typedef MaterialLaw::Params MaterialLawParams;
 
     Scalar T = 273.15 + 25;
-    
+
     // initialize the tables of the fluid system
     Scalar Tmin = T - 1.0;
     Scalar Tmax = T + 1.0;
     int nT = 3;
-    
+
     Scalar pmin = 0.0;
     Scalar pmax = 1.25 * 2e6;
     int np = 100;
@@ -191,12 +191,12 @@ int main()
     matParams.setLambda(2.0);
 
     CompositionalFluidState fsRef;
-    
+
     // create an fluid state which is consistent
 
     // set the fluid temperatures
     fsRef.setTemperature(T);
-    
+
     ////////////////
     // only liquid
     ////////////////
@@ -204,14 +204,14 @@ int main()
 
     // set liquid saturation
     fsRef.setSaturation(lPhaseIdx, 1.0);
-    
+
     // set pressure of the liquid phase
     fsRef.setPressure(lPhaseIdx, 2e5);
-    
+
     // set the liquid composition to pure water
     fsRef.setMoleFraction(lPhaseIdx, N2Idx, 0.0);
     fsRef.setMoleFraction(lPhaseIdx, H2OIdx, 1.0);
-    
+
     // "complete" the fluid state
     completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, lPhaseIdx);
 
@@ -224,14 +224,14 @@ int main()
     std::cout << "testing single-phase gas\n";
     // set gas saturation
     fsRef.setSaturation(gPhaseIdx, 1.0);
-    
+
     // set pressure of the gas phase
     fsRef.setPressure(gPhaseIdx, 1e6);
-    
+
     // set the gas composition to 99.9% nitrogen and 0.1% water
     fsRef.setMoleFraction(gPhaseIdx, N2Idx, 0.999);
     fsRef.setMoleFraction(gPhaseIdx, H2OIdx, 0.001);
-    
+
     // "complete" the fluid state
     completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, gPhaseIdx);
 
@@ -246,11 +246,11 @@ int main()
     // set saturations
     fsRef.setSaturation(lPhaseIdx, 0.5);
     fsRef.setSaturation(gPhaseIdx, 0.5);
-    
+
     // set pressures
     fsRef.setPressure(lPhaseIdx, 1e6);
     fsRef.setPressure(gPhaseIdx, 1e6);
-       
+
     FluidSystem::ParameterCache paramCache;
     typedef Dumux::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
@@ -273,7 +273,7 @@ int main()
     // set gas saturation
     fsRef.setSaturation(gPhaseIdx, 0.5);
     fsRef.setSaturation(lPhaseIdx, 0.5);
-    
+
     // set pressure of the liquid phase
     fsRef.setPressure(lPhaseIdx, 1e6);
 
@@ -281,10 +281,10 @@ int main()
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
     PhaseVector pC;
     MaterialLaw::capillaryPressures(pC, matParams2, fsRef);
-    fsRef.setPressure(gPhaseIdx, 
+    fsRef.setPressure(gPhaseIdx,
                       fsRef.pressure(lPhaseIdx)
                       + (pC[gPhaseIdx] - pC[lPhaseIdx]));
-    
+
     typedef Dumux::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
                                          /*setViscosity=*/false,

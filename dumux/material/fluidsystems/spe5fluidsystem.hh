@@ -81,10 +81,10 @@ public:
     static const int wPhaseIdx = 1;
     //! Index of the oil phase
     static const int oPhaseIdx = 2;
-    
+
     //! The component for pure water to be used
     typedef Dumux::H2O<Scalar> H2O;
-   
+
     /*!
      * \brief Return the human readable name of a fluid phase
      */
@@ -158,7 +158,7 @@ public:
 
     //! Number of components in the fluid system
     static const int numComponents = 7;
-    
+
     static const int H2OIdx = 0;
     static const int C1Idx = 1;
     static const int C3Idx = 2;
@@ -185,7 +185,7 @@ public:
         assert(0 <= compIdx && compIdx < numComponents);
         return name[compIdx];
     }
-    
+
     /*!
      * \brief Return the molar mass of a component in [kg/mol].
      */
@@ -338,11 +338,11 @@ public:
                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        
+
         if (phaseIdx == gPhaseIdx) {
             // given by SPE-5 in table on page 64. we use a constant
             // viscosity, though...
-            return 0.0170e-2 * 0.1; 
+            return 0.0170e-2 * 0.1;
         }
         else if (phaseIdx == wPhaseIdx)
             // given by SPE-5: 0.7 centi-Poise  = 0.0007 Pa s
@@ -351,7 +351,7 @@ public:
             assert(phaseIdx == oPhaseIdx);
             // given by SPE-5 in table on page 64. we use a constant
             // viscosity, though...
-            return 0.208e-2 * 0.1; 
+            return 0.208e-2 * 0.1;
         }
     }
 
@@ -369,7 +369,7 @@ public:
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fs,
                                       const ParameterCache &paramCache,
-                                      int phaseIdx, 
+                                      int phaseIdx,
                                       int compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
@@ -378,16 +378,16 @@ public:
         if (phaseIdx == oPhaseIdx || phaseIdx == gPhaseIdx)
             return PengRobinsonMixture::computeFugacityCoefficient(fs,
                                                                    paramCache,
-                                                                   phaseIdx, 
+                                                                   phaseIdx,
                                                                    compIdx);
         else {
             assert(phaseIdx == wPhaseIdx);
-            return 
+            return
                 henryCoeffWater_(compIdx, fs.temperature(wPhaseIdx))
                 / fs.pressure(wPhaseIdx);
         }
     }
-    
+
 
     /*!
      * \brief Calculate the binary molecular diffusion coefficient for
@@ -396,7 +396,7 @@ public:
      * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
      * gradient of the chemical potential and follows the law
      *
-     * \f[ J = - D \grad mu_\kappa \f] 
+     * \f[ J = - D \grad mu_\kappa \f]
      *
      * where \f$\mu_\kappa\\f$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
@@ -456,14 +456,14 @@ public:
     { DUNE_THROW(Dune::NotImplemented, "Heat capacities"); }
 
 
-private:   
+private:
     static Scalar henryCoeffWater_(int compIdx, Scalar temperature)
     {
         // use henry's law for the solutes and the vapor pressure for
         // the solvent.
         switch (compIdx) {
         case H2OIdx: return H2O::vaporPressure(temperature);
-            
+
             // the values of the Henry constant for the solutes have
             // are faked so far...
         case C1Idx: return 5.57601e+09;

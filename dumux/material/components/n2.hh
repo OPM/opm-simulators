@@ -142,7 +142,7 @@ public:
      */
     static bool gasIsCompressible()
     { return true; }
-    
+
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
@@ -216,7 +216,7 @@ public:
         return
             gasEnthalpy(temperature, pressure) -
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
-            IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas 
+            IdealGas::R*temperature; // = pressure * spec. volume for an ideal gas
     }
 
     /*!

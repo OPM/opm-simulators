@@ -322,7 +322,7 @@ public:
     {
         DUNE_THROW(Dune::InvalidStateException, "Not applicable: Diffusion coefficients");
     }
-    
+
     /*!
      * \brief Given a phase's composition, temperature and pressure,
      *        return the binary diffusion coefficient for components
@@ -343,7 +343,7 @@ public:
     {
         DUNE_THROW(Dune::InvalidStateException, "Not applicable: Binary diffusion coefficients");
     }
- 
+
     /*!
      * \brief Given a phase's composition, temperature, pressure and
      *        density, calculate its specific enthalpy [J/kg].
@@ -403,7 +403,7 @@ public:
         Scalar pressure = fluidState.pressure(phaseIdx);
         return Fluid::heatCapacity(temperature, pressure);
     }
-    
+
 };
 
 } // end namepace

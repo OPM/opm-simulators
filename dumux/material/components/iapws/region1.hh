@@ -289,7 +289,7 @@ public:
             result +=
                 n(i) *
                 std::pow(7.1 - pi_, I(i)) *
-                J(i) * 
+                J(i) *
                 (J(i) - 1) *
                 std::pow(tau_ - 1.222,  J(i) - 2);
         }

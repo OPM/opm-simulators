@@ -122,13 +122,13 @@ public:
         // reference phase
         paramCache.updatePhase(fluidState, refPhaseIdx);
         fluidState.setDensity(refPhaseIdx,
-                              FluidSystem::density(fluidState, 
+                              FluidSystem::density(fluidState,
                                                    paramCache,
                                                    refPhaseIdx));
 
         if (setEnthalpy)
             fluidState.setEnthalpy(refPhaseIdx,
-                                   FluidSystem::enthalpy(fluidState, 
+                                   FluidSystem::enthalpy(fluidState,
                                                          paramCache,
                                                          refPhaseIdx));
 
@@ -140,7 +140,7 @@ public:
 
         // compute the fugacities of all components in the reference phase
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            fluidState.setFugacityCoefficient(refPhaseIdx, 
+            fluidState.setFugacityCoefficient(refPhaseIdx,
                                               compIdx,
                                               FluidSystem::fugacityCoefficient(fluidState,
                                                                                paramCache,
@@ -159,10 +159,10 @@ public:
 
             if (setViscosity)
                 fluidState.setViscosity(phaseIdx,
-                                        FluidSystem::viscosity(fluidState, 
-                                                               paramCache, 
+                                        FluidSystem::viscosity(fluidState,
+                                                               paramCache,
                                                                phaseIdx));
-            
+
             if (setEnthalpy)
                 fluidState.setEnthalpy(phaseIdx,
                                        FluidSystem::enthalpy(fluidState,

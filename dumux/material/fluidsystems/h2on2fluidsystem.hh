@@ -360,7 +360,7 @@ public:
         Scalar sumMoleFrac = 0;
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoleFrac += fluidState.moleFraction(phaseIdx, compIdx);
-        
+
         // liquid phase
         if (phaseIdx == lPhaseIdx) {
             if (!useComplexRelations)
@@ -375,7 +375,7 @@ public:
                 // this assumes each nitrogen molecule displaces exactly one
                 // water molecule in the liquid
                 return
-                    clH2O 
+                    clH2O
                     * (H2O::molarMass()*fluidState.moleFraction(lPhaseIdx, H2OIdx)
                        +
                        N2::molarMass()*fluidState.moleFraction(lPhaseIdx, N2Idx))
@@ -419,7 +419,7 @@ public:
             // assume pure water for the liquid phase
             return H2O::liquidViscosity(T, p);
         }
-        
+
         // gas phase
         if (!useComplexRelations)
         {
@@ -444,7 +444,7 @@ public:
             for (int compIdx = 0; compIdx < numComponents; ++compIdx)
                 sumx += fluidState.moleFraction(phaseIdx, compIdx);
             sumx = std::max(1e-10, sumx);
-            
+
             for (int i = 0; i < numComponents; ++i) {
                 Scalar divisor = 0;
                 for (int j = 0; j < numComponents; ++j) {
@@ -469,9 +469,9 @@ public:
      * fraction \f$x^\kappa_\alpha\f$ by means of the relation
      *
      * \f[
-     f^\kappa_\alpha = \phi^\kappa_\alpha\;x^\kappa_\alpha\;p_\alpha 
+     f^\kappa_\alpha = \phi^\kappa_\alpha\;x^\kappa_\alpha\;p_\alpha
      \f]
-     * where \f$p_\alpha\f$ is the pressure of the fluid phase. 
+     * where \f$p_\alpha\f$ is the pressure of the fluid phase.
      *
      * The quantity "fugacity" itself is just an other way to express
      * the chemical potential \f$\zeta^\kappa_\alpha\f$ of the
@@ -507,7 +507,7 @@ public:
 
         // for the gas phase, assume an ideal gas when it comes to
         // fugacity (-> fugacity == partial pressure)
-        return 1.0; 
+        return 1.0;
     }
 
 
@@ -629,7 +629,7 @@ public:
             // "see" the molecules of the other component, which means
             // that the total specific enthalpy is the sum of the
             // "partial specific enthalpies" of the components.
-            Scalar hH2O = 
+            Scalar hH2O =
                 fluidState.massFraction(gPhaseIdx, H2OIdx)
                 * H2O::gasEnthalpy(T,
                                    p*fluidState.moleFraction(gPhaseIdx, H2OIdx));
@@ -683,7 +683,7 @@ public:
                 Scalar pressure = fluidState.pressure(phaseIdx);
                 Scalar partialPressure  = pressure * xH2O;
 
-                Scalar lambdaH2O = 
+                Scalar lambdaH2O =
                     xH2O
                     * H2O::gasThermalConductivity(temperature, partialPressure);
                 return lambdaN2 + lambdaH2O;
@@ -715,13 +715,13 @@ public:
         // component
 
         Scalar c_pN2;
-        Scalar c_pH2O; 
+        Scalar c_pH2O;
         // let the water and nitrogen components do things their own way
         if (useComplexRelations) {
             c_pN2 = N2::gasHeatCapacity(fluidState.temperature(phaseIdx),
                                         fluidState.pressure(phaseIdx)
                                         * fluidState.moleFraction(phaseIdx, N2Idx));
-        
+
             c_pH2O = H2O::gasHeatCapacity(fluidState.temperature(phaseIdx),
                                           fluidState.pressure(phaseIdx)
                                           * fluidState.moleFraction(phaseIdx, H2OIdx));

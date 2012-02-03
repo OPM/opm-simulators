@@ -182,7 +182,7 @@ public:
 
         Scalar Fp0 = 1.0;
         Scalar xi = 0.00474;
-        Scalar eta_xi = 
+        Scalar eta_xi =
             Fp0*(0.807*std::pow(Tr,0.618)
                  - 0.357*std::exp(-0.449*Tr)
                  + 0.34*std::exp(-4.058*Tr)
@@ -277,7 +277,7 @@ protected:
         }
         else {
             assert(temperature>=348.0);
-        
+
             /* take care: extrapolation for Temperature>373 */
             H = 16.7+2.1*(temperature-348.0)/25.;          /* leads probably to underestimates    */
             CH3 = 45.8+2.5*(temperature-348.0)/25.;

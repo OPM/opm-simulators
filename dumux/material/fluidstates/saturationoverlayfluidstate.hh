@@ -46,7 +46,7 @@ class SaturationOverlayFluidState
 public:
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
-    
+
     /*!
      * \brief Constructor
      *
@@ -54,7 +54,7 @@ public:
      * argument, so it initially behaves exactly like the underlying
      * fluid state.
      */
-    SaturationOverlayFluidState(const FluidState &fs) 
+    SaturationOverlayFluidState(const FluidState &fs)
         : fs_(&fs)
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)

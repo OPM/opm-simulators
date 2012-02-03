@@ -93,7 +93,7 @@ public:
             }
         }
     };
-    
+
     /*!
      * \brief Predicts the vapor pressure for the temperature given in
      *        setTP().
@@ -201,7 +201,7 @@ public:
             else {
                 // find the extrema (if they are present)
                 Scalar Vmin, Vmax, pmin, pmax;
-                if (findExtrema_(Vmin, Vmax, 
+                if (findExtrema_(Vmin, Vmax,
                                  pmin, pmax,
                                  a, b, T))
                 {
@@ -214,7 +214,7 @@ public:
                     Vm = VmCubic;
             }
         }
-        
+
         Valgrind::CheckDefined(Vm);
         assert(std::isfinite(Vm) && Vm > 0);
         return Vm;
@@ -287,7 +287,7 @@ protected:
                                    Scalar &Vcrit,
                                    Scalar a,
                                    Scalar b)
-    {       
+    {
         Scalar minVm;
         Scalar maxVm;
 
@@ -328,7 +328,7 @@ protected:
             bool DUMUX_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
             assert(hasExtrema);
             Scalar fStar = maxVm - minVm;
-            
+
             // derivative of the difference between the maximum's
             // molar volume and the minimum's molar volume regarding
             // temperature

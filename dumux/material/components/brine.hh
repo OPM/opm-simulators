@@ -233,7 +233,7 @@ public:
                                           Scalar pressure)
     {
         return
-            gasEnthalpy(temperature, pressure) - 
+            gasEnthalpy(temperature, pressure) -
             pressure/gasDensity(temperature, pressure);
     }
 

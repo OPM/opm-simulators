@@ -58,11 +58,11 @@ int main()
 
     typedef Dumux::LiquidPhase<Scalar, H2O> Liquid;
     typedef Dumux::GasPhase<Scalar, N2> Gas;
-    
+
     // check all fluid states
     {
         typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
-        
+
         // CompositionalFluidState
         {   Dumux::CompositionalFluidState<Scalar, FluidSystem> fs;
             checkFluidState<Scalar>(fs); }

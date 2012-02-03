@@ -208,7 +208,7 @@ public:
      */
     Scalar KdNAPL() const
     { return KdNAPL_; }
-    
+
     /*!
      * \brief Set the adsorption coefficient
      */
@@ -224,7 +224,7 @@ private:
     Scalar Snr_;
     Scalar Sgr_;
     Scalar Swrx_;     /* (Sw+Sn)_r */
-    
+
     Scalar KdNAPL_;
     Scalar rhoBulk_;
 

@@ -78,7 +78,7 @@ public:
         const Scalar pg0=1.e5;     /* reference pressure */
         const Scalar T0=273.15;    /* reference temperature */
         Scalar Dgaw;
-  
+
         Dgaw=Daw*(pg0/pressure)*pow((temperature/T0),Theta);
 
         return Dgaw;

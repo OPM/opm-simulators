@@ -376,7 +376,7 @@ public:
             p = - 1e100;
             Valgrind::SetUndefined(p);
         }
-        
+
 
         Scalar sumMoleFrac = 0;
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
@@ -385,7 +385,7 @@ public:
         if (phaseIdx == lPhaseIdx)
         {
             //return 1000.;
-			if (!useComplexRelations)
+            if (!useComplexRelations)
                 // assume pure water
                 return H2O::liquidDensity(T, p);
             else
@@ -404,7 +404,7 @@ public:
         }
         else if (phaseIdx == gPhaseIdx)
         {
-			//return 1.189;
+            //return 1.189;
             if (!useComplexRelations)
                 // for the gas phase assume an ideal gas
                 return
@@ -446,7 +446,7 @@ public:
 
         if (phaseIdx == lPhaseIdx)
         {
-			return 0.0013;
+            return 0.0013;
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
             // couldn't find a way to solve the mixture problem
@@ -454,7 +454,7 @@ public:
         }
         else if (phaseIdx == gPhaseIdx)
         {
-			return 1.8e-5;
+            return 1.8e-5;
             if(!useComplexRelations){
                 return Air::gasViscosity(T, p);
             }

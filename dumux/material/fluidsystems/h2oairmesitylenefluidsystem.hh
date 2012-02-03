@@ -86,7 +86,7 @@ public:
      * tables that always work.
      */
     static void init()
-    { 
+    {
         init(/*tempMin=*/273.15,
              /*tempMax=*/623.15,
              /*numTemp=*/100,
@@ -133,7 +133,7 @@ public:
 
     static bool isIdealGas(int phaseIdx)
     { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
-    
+
     /*!
      * \brief Returns true if and only if a fluid phase is assumed to
      *        be an ideal mixture.
