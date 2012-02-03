@@ -66,7 +66,9 @@ class H2OAirMesitylene
 public:
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
-    typedef TabulatedH2O H2O;
+//    typedef TabulatedH2O H2O;
+    typedef IapwsH2O H2O;
+
 
     static const int numPhases = 3;
     static const int numComponents = 3;
