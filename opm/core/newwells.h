@@ -24,7 +24,6 @@
 extern "C" {
 #endif
 
-
 enum well_type         { INJECTOR, PRODUCER };
 enum control_type      { BHP     , RATE     };
 enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
@@ -33,6 +32,7 @@ enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
 /* Control for single well */
 struct WellControls {
     int                  num;
+    int                  cpty;
     enum control_type   *type;
     double              *target;
     int                  current;
@@ -40,6 +40,9 @@ struct WellControls {
 
 struct Wells {
     int                  number_of_wells;
+    int                  well_cpty;
+    int                  perf_cpty;
+
     enum well_type      *type;
     double              *depth_ref;
     double              *zfrac;        /* Surface volume fraction
@@ -49,7 +52,7 @@ struct Wells {
     int                 *well_cells;
     double              *WI;           /* Well index */
 
-    struct WellControls *ctrls;        /* One struct for each well */
+    struct WellControls **ctrls;       /* One struct for each well */
 };
 
 struct CompletionData {
@@ -57,6 +60,29 @@ struct CompletionData {
     double *A;                  /* RB^{-1} */
     double *phasemob;           /* Phase mobility */
 };
+
+struct Wells *
+wells_create(int nwells, int nperf);
+
+int
+wells_add(enum well_type type     ,
+          double         depth_ref,
+          int            nperf    ,
+          const double  *zfrac    , /* Injection fraction or NULL */
+          const int     *cells    ,
+          const double  *WI       , /* Well index per perf (or NULL) */
+          struct Wells  *W        );
+
+void
+wells_destroy(struct Wells *W);
+
+int
+well_controls_append(enum control_type    type  ,
+                     double               target,
+                     struct WellControls *ctrl  );
+
+void
+well_controls_clear(struct WellControls *ctrl);
 
 #ifdef __cplusplus
 }
