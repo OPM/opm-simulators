@@ -76,6 +76,15 @@ public: typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{
 SET_TYPE_PROP(TutorialProblemCoupled, FluidSystem, Dumux::TwoPImmiscibleFluidSystem<TypeTag>);
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
+
+// define the properties required by the cube grid creator
+SET_SCALAR_PROP(TutorialProblemCoupled, GridSizeX, 300.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, GridSizeY, 60.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, GridSizeZ, 0.0);
+
+SET_INT_PROP(TutorialProblemCoupled, GridCellsX, 100);
+SET_INT_PROP(TutorialProblemCoupled, GridCellsY, 1);
+SET_INT_PROP(TutorialProblemCoupled, GridCellsZ, 0);
 }
 
 /*!
@@ -107,9 +116,8 @@ class TutorialProblemCoupled : public TwoPProblem<TypeTag> /*@\label{tutorial-co
     typedef typename GET_PROP_TYPE(TypeTag, FVElementGeometry) FVElementGeometry;
 
 public:
-    TutorialProblemCoupled(TimeManager &timeManager,
-                           const GridView &gridView)
-        : ParentType(timeManager, gridView)
+    TutorialProblemCoupled(TimeManager &timeManager)
+        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
         , eps_(3e-6)
     {
     }

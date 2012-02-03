@@ -1,7 +1,7 @@
-tEnd = 500000 # duration of the simulation [s]
-dtInitial = 10 # initial time step size [s]
+TEnd = 500e3 # duration of the simulation [s]
+DtInitial = 10 # initial time step size [s]
 [Grid]
-upperRightX = 300 # x-coordinate of the upper-right corner of the grid [m]
-upperRightY = 60 # y-coordinate of the upper-right corner of the grid [m]
-numberOfCellsX = 100 # x-resolution of the grid
-numberOfCellsY = 1 # y-resolution of the grid
+SizeX = 300 # x-coordinate of the upper-right corner of the grid [m]
+SizeY = 60 # y-coordinate of the upper-right corner of the grid [m]
+CellsX = 100 # x-resolution of the grid
+CellsY = 1 # y-resolution of the grid

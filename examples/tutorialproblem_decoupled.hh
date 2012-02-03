@@ -98,6 +98,15 @@ SET_SCALAR_PROP(TutorialProblemDecoupled, CFLFactor, 0.95); /*@\label{tutorial-d
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutorial-decoupled:gravity}@*/
+
+// define the properties required by the cube grid creator
+SET_SCALAR_PROP(TutorialProblemDecoupled, GridSizeX, 300.0);
+SET_SCALAR_PROP(TutorialProblemDecoupled, GridSizeY, 60.0);
+SET_SCALAR_PROP(TutorialProblemDecoupled, GridSizeZ, 0.0);
+
+SET_INT_PROP(TutorialProblemDecoupled, GridCellsX, 100);
+SET_INT_PROP(TutorialProblemDecoupled, GridCellsY, 1);
+SET_INT_PROP(TutorialProblemDecoupled, GridCellsZ, 0);
 } /*@\label{tutorial-decoupled:propertysystem-end}@*/
 
 /*! \ingroup DecoupledProblems
@@ -140,8 +149,8 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
     typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
 
 public:
-    TutorialProblemDecoupled(TimeManager &timeManager, const GridView &gridView)
-        : ParentType(timeManager, gridView), eps_(1e-6)/*@\label{tutorial-decoupled:constructor-problem}@*/
+    TutorialProblemDecoupled(TimeManager &timeManager)
+        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()), eps_(1e-6)/*@\label{tutorial-decoupled:constructor-problem}@*/
     {
         //write only every 10th time step to output file
         this->setOutputInterval(1);/*@\label{tutorial-decoupled:outputinterval}@*/
