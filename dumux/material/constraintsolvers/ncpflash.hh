@@ -39,6 +39,42 @@ namespace Dumux {
 /*!
  * \brief Determines the phase compositions, pressures and saturations
  *        given the total mass of all components.
+ *
+ * In a M-phase, N-component context, we have the following
+ * unknowns:
+ *
+ * - M pressures
+ * - M saturations
+ * - M*N mole fractions
+ *
+ * This sums up to M*(N + 2). On the equations side of things,
+ * we have:
+ *
+ * - (M - 1)*N equation stemming from the fact that the
+ *   fugacity of any component is the same in all phases
+ * - 1 equation from the closure condition of all saturations
+ *   (they sum up to 1)
+ * - M - 1 constraints from the capillary pressures
+ *   (-> p_\beta = p_\alpha + p_c\alpha,\beta)
+ * - N constraints from the fact that the total mass of each
+ *   component is given (-> sum_\alpha rhoMolar_\alpha *
+ *   x_\alpha^\kappa = const)
+ * - M model constraints. Here we use the NCP constraints
+ *   (-> 0 = min{S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa})
+ *
+ * this also sums up to M*(N + 2).
+ *
+ * We use the following catches: Capillary pressures are taken
+ * into accout expicitly, so that only the pressure of the first
+ * phase is solved implicitly, also the closure condition for the
+ * saturations is taken into account explicitly, which means, that
+ * we don't need to implicitly solve for the last
+ * saturation. These two measures reduce the number of unknowns to
+ * M*(N + 1), namely:
+ *
+ * - 1 pressure
+ * - M - 1 saturations
+ * - M*N mole fractions
  */
 template <class Scalar, class FluidSystem>
 class NcpFlash
@@ -48,41 +84,6 @@ class NcpFlash
 
     typedef typename FluidSystem::ParameterCache ParameterCache;
 
-    // In a M-phase, N-component context, we have the following
-    // unknowns:
-    //
-    // - M pressures
-    // - M saturations
-    // - M*N mole fractions
-    //
-    // This sums up to M*(N + 2). On the equations side of things,
-    // we have:
-    //
-    // - (M - 1)*N equation stemming from the fact that the
-    //   fugacity of any component is the same in all phases
-    // - 1 equation from the closure condition of all saturations
-    //   (they sum up to 1)
-    // - M - 1 constraints from the capillary pressures
-    //   (-> p_\beta = p_\alpha + p_c\alpha,\beta)
-    // - N constraints from the fact that the total mass of each
-    //   component is given (-> sum_\alpha rhoMolar_\alpha *
-    //   x_\alpha^\kappa = const)
-    // - M model constraints. Here we use the NCP constraints
-    //   (-> 0 = min{S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa})
-    //
-    // this also sums up to M*(N + 2).
-    //
-    // We use the following catches: Capillary pressures are taken
-    // into accout expicitly, so that only the pressure of the first
-    // phase is solved implicitly, also the closure condition for the
-    // saturations is taken into account explicitly, which means, that
-    // we don't need to implicitly solve for the last
-    // saturation. These two measures reduce the number of unknowns to
-    // M*(N + 1), namely:
-    //
-    // - 1 pressure
-    // - M - 1 saturations
-    // - M*N mole fractions
     static constexpr int numEq = numPhases*(numComponents + 1);
 
     typedef Dune::FieldMatrix<Scalar, numEq, numEq> Matrix;
@@ -110,9 +111,9 @@ public:
                 fluidState.setMoleFraction(phaseIdx,
                                            compIdx,
                                            globalMolarities[compIdx]/sumMoles);
-
+            
             // pressure. use atmospheric pressure as initial guess
-            fluidState.setPressure(phaseIdx, 2e5);
+            fluidState.setPressure(phaseIdx, 1.0135e5);
 
             // saturation. assume all fluids to be equally distributed
             fluidState.setSaturation(phaseIdx, 1.0/numPhases);

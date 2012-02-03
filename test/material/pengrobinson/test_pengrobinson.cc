@@ -32,6 +32,95 @@
 #include <dumux/material/fluidsystems/spe5fluidsystem.hh>
 #include <dumux/material/fluidmatrixinteractions/Mp/Mplinearmaterial.hh>
 
+template <class Scalar, class FluidSystem, class FluidState>
+Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const FluidState &reservoirFluidState, bool guessInitial)
+{
+    enum {
+        numPhases = FluidSystem::numPhases,
+        wPhaseIdx = FluidSystem::wPhaseIdx,
+        gPhaseIdx = FluidSystem::gPhaseIdx,
+        oPhaseIdx = FluidSystem::oPhaseIdx,
+
+        numComponents = FluidSystem::numComponents
+    };
+
+    typedef Dumux::NcpFlash<Scalar, FluidSystem> Flash;
+    typedef Dumux::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
+    typedef typename MaterialLaw::Params MaterialLawParams;
+    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
+
+    const Scalar refPressure = 1.0135e5; // [Pa]
+
+    // set the parameters for the capillary pressure law
+    MaterialLawParams matParams;
+    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        matParams.setPcMinSat(phaseIdx, 0.0);
+        matParams.setPcMaxSat(phaseIdx, 0.0);
+    }
+
+    // retieve the global volumetric component molarities
+    surfaceFluidState.setTemperature(273.15 + 20);
+
+    ComponentVector molarities;
+    for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+        molarities[compIdx] = reservoirFluidState.molarity(oPhaseIdx, compIdx);
+
+    if (guessInitial) {
+        // we start at a fluid state with reservoir oil.
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+                surfaceFluidState.setMoleFraction(phaseIdx, 
+                                                  compIdx,
+                                                  reservoirFluidState.moleFraction(phaseIdx, compIdx));
+            }
+            surfaceFluidState.setDensity(phaseIdx, reservoirFluidState.density(phaseIdx));
+            surfaceFluidState.setPressure(phaseIdx, reservoirFluidState.pressure(phaseIdx));
+            surfaceFluidState.setSaturation(phaseIdx, 0.0);
+        }
+        surfaceFluidState.setSaturation(oPhaseIdx, 1.0);
+    }
+
+    typename FluidSystem::ParameterCache paramCache;
+    paramCache.updateAll(surfaceFluidState);
+
+    // increase volume until we are at surface pressure. use the
+    // newton method for this
+    ComponentVector tmpMolarities;
+    for (int i = 0;; ++i) {
+        if (i >= 20)
+            DUNE_THROW(Dumux::NumericalProblem,
+                       "Newton method did not converge after 20 iterations");
+
+        // calculate the deviation from the standard pressure
+        tmpMolarities = molarities;
+        tmpMolarities /= alpha;
+        Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
+        Scalar f = surfaceFluidState.pressure(gPhaseIdx) - refPressure;
+
+        // calculate the derivative of the deviation from the standard
+        // pressure
+        Scalar eps = alpha*1e-10;
+        tmpMolarities = molarities;
+        tmpMolarities /= alpha + eps;
+        Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
+        Scalar fStar = surfaceFluidState.pressure(gPhaseIdx) - refPressure;
+        Scalar fPrime = (fStar - f)/eps;
+        
+        // newton update
+        Scalar delta = f/fPrime;
+        alpha -= delta;
+        if (std::abs(delta) < std::abs(alpha)*1e-9) {
+            break;
+        }
+    }
+        
+    // calculate the final result
+    tmpMolarities = molarities;
+    tmpMolarities /= alpha;
+    Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
+    return alpha;
+}
+
 int main(int argc, char** argv)
 {
     typedef double Scalar;
@@ -117,16 +206,21 @@ int main(int argc, char** argv)
     // volume factor.
     ////////////
 
-    FluidState flashFluidState;
+    FluidState flashFluidState, surfaceFluidState;
     flashFluidState.assign(fluidState);
     Flash::guessInitial(flashFluidState, paramCache, molarities);
     Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, molarities);
 
-    std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3]\n";
+    Scalar surfaceAlpha = 50;
+    bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, surfaceAlpha, flashFluidState, /*guessInitial=*/true);
+    Scalar rho_gRef = surfaceFluidState.density(gPhaseIdx);
+    Scalar rho_oRef = surfaceFluidState.density(oPhaseIdx);
+
+    std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
     int n = 1000;
     for (int i = 0; i < n; ++i) {
         Scalar minAlpha = 0.98;
-        Scalar maxAlpha = 5.0;
+        Scalar maxAlpha = 2.0;
 
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
@@ -138,23 +232,25 @@ int main(int argc, char** argv)
         // "flash" the modified reservoir oil
         Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, curMolarities);
 
-/*
-        // bring the gas and the oil to the surface
-        surfaceFluidState.setPressure(gPhaseIdx, 1.013e5);
-        surfaceFluidState.setPressure(oPhaseIdx, 1.013e5);
-        surfaceFluidState.setTemperature(273.15 + 20);
-        paramCache.updatePhase(surfaceFluidState, gPhaseIdx);
-        paramCache.updatePhase(surfaceFluidState, oPhaseIdx);
-        Scalar rhoGSurface = FluidSystem::density(surfaceFluidState, paramCache, gPhaseIdx);
-        Scalar rhoOSurface = FluidSystem::density(surfaceFluidState, paramCache, gPhaseIdx);
-*/
+        Scalar alphaSurface = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, 
+                                                                     surfaceAlpha, 
+                                                                     flashFluidState,
+                                                                     /*guessInitial=*/false);
         std::cout << alpha << " "
                   << flashFluidState.pressure(oPhaseIdx) << " "
                   << flashFluidState.saturation(gPhaseIdx) << " "
                   << flashFluidState.density(oPhaseIdx) << " "
                   << flashFluidState.density(gPhaseIdx) << " "
+                  << flashFluidState.averageMolarMass(oPhaseIdx) << " "
+                  << flashFluidState.averageMolarMass(gPhaseIdx) << " "
+                  << surfaceFluidState.saturation(gPhaseIdx)*alphaSurface << " "
+                  << flashFluidState.density(gPhaseIdx)/rho_gRef << " "
+                  << flashFluidState.density(oPhaseIdx)/rho_oRef << " "
                   << "\n";
     }
+
+    std::cout << "reference density oil [kg/m^3]: " << rho_oRef << "\n";
+    std::cout << "reference density gas [kg/m^3]: " << rho_gRef << "\n";
 
     return 0;
 }
