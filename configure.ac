@@ -36,7 +36,11 @@ AX_BOOST_DATE_TIME
 AX_BOOST_FILESYSTEM
 AX_BOOST_UNIT_TEST_FRAMEWORK
 
-AC_SEARCH_LIBS([process_grdecl], [opmcore], [opmcore_lib=yes], [opmcore_lib=no], [$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS])
+AC_SEARCH_LIBS([process_grdecl], [opmcore],
+               [opmcore_lib=yes],
+               [opmcore_lib=no],
+               [$BOOST_LDFLAGS $BOOST_SYSTEM_LIB
+                $LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS])
 
 
 # Checks for header files.
@@ -48,7 +52,6 @@ AC_CHECK_HEADERS([opm/core/grid.h], [],
 AC_CHECK_HEADERS([suitesparse/umfpack.h],
                  [umfpack_header=yes],
                  [umfpack_header=no])
-
 
 
 # Checks for typedefs, structures, and compiler characteristics.
