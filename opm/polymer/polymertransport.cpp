@@ -20,8 +20,10 @@ void polymertransport(
     double                   dt,
     struct UnstructuredGrid *grid,
     const Opm::IncompPropertiesInterface* props,
+    const PolymerData* polydata,
     const double            *darcyflux,
-    double                  *saturation)
+    double                  *saturation,
+    double                  *concentration)
 {
     int    i;
 
@@ -29,8 +31,9 @@ void polymertransport(
     int    *sequence;
     int    *components;
 
-    struct PolymerSolverData *data = init_solverdata(grid, props, darcyflux,
-                                              porevolume, source, dt, saturation);
+    PolymerSolverData *data = init_solverdata(grid, props, polydata, darcyflux,
+					      porevolume, source, dt, saturation,
+					      concentration);
 
 
     struct NonlinearSolverCtrl ctrl;

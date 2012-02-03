@@ -38,6 +38,7 @@
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
 
 #include <opm/polymer/polymertransport.hpp>
+#include <opm/polymer/polymermodel.hpp>
 
 #include <boost/filesystem/convenience.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -67,7 +68,8 @@ public:
         : press_ (g->number_of_cells, 0.0),
           fpress_(g->number_of_faces, 0.0),
           flux_  (g->number_of_faces, 0.0),
-          sat_   (num_phases * g->number_of_cells, 0.0)
+          sat_   (num_phases * g->number_of_cells, 0.0),
+	  concentration_(g->number_of_cells, 0.0)
     {
 	for (int cell = 0; cell < g->number_of_cells; ++cell) {
 	    sat_[num_phases*cell + num_phases - 1] = 1.0;
@@ -80,17 +82,20 @@ public:
     ::std::vector<double>& facepressure() { return fpress_; }
     ::std::vector<double>& faceflux    () { return flux_  ; }
     ::std::vector<double>& saturation  () { return sat_   ; }
+    ::std::vector<double>& concentration() { return concentration_; }
 
     const ::std::vector<double>& pressure    () const { return press_ ; }
     const ::std::vector<double>& facepressure() const { return fpress_; }
     const ::std::vector<double>& faceflux    () const { return flux_  ; }
     const ::std::vector<double>& saturation  () const { return sat_   ; }
+    const ::std::vector<double>& concentration() const { return concentration_; }
 
 private:
     ::std::vector<double> press_ ;
     ::std::vector<double> fpress_;
     ::std::vector<double> flux_  ;
     ::std::vector<double> sat_   ;
+    ::std::vector<double> concentration_   ;
 };
 
 
@@ -142,7 +147,9 @@ main(int argc, char** argv)
     bool use_deck = param.has("deck_filename");
     boost::scoped_ptr<Opm::Grid> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
+    PolymerData polydata;
     if (use_deck) {
+	THROW("We do not yet read polymer keywords from deck.");
 	std::string deck_filename = param.get<std::string>("deck_filename");
 	Opm::EclipseGridParser deck(deck_filename);
 	// Grid init
@@ -159,6 +166,14 @@ main(int argc, char** argv)
 	grid.reset(new Opm::Grid(nx, ny, nz));
 	// Rock and fluid init.
 	props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+	polydata.c_max_limit = param.getDefault("c_max_limit", 1.0);
+	polydata.omega = param.getDefault("omega", 1.0);
+	polydata.c_vals.resize(2);
+	polydata.c_vals[0] = 0.0;
+	polydata.c_vals[0] = polydata.c_max_limit;
+	polydata.visc_mult_vals.resize(2);
+	polydata.visc_mult_vals[0] = 1.0;
+	polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
     }
 
     // Extra rock init.
@@ -228,8 +243,10 @@ main(int argc, char** argv)
 			 stepsize,
 			 const_cast<UnstructuredGrid*>(grid->c_grid()),
 			 props.get(),
+			 &polydata,
 			 &state.faceflux()[0],
-			 &reorder_sat[0]);
+			 &reorder_sat[0],
+			 &state.concentration()[0]);
 	Opm::toBothSat(reorder_sat, state.saturation());
 
 	current_time += stepsize;

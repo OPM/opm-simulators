@@ -10,6 +10,7 @@ namespace Opm
 }
 
 struct UnstructuredGrid;
+struct PolymerData;
 
 void polymertransport(
     const double *porevolume,
@@ -17,8 +18,10 @@ void polymertransport(
     double dt,
     struct UnstructuredGrid *grid,
     const Opm::IncompPropertiesInterface* props,
+    const PolymerData* polydata,
     const double *darcyflux,
-    double *saturation);
+    double *saturation,
+    double *concentration);
 
 
 #endif /* POLYMERTRANSPORT_HPP_INCLUDED */
