@@ -1,6 +1,19 @@
 
 
 \chapter{Newton in a Nutshell}
+Coming back to the example of chapter \ref{flow} the following mass conservation equation is to be solved: 
+\begin{align}
+\underbrace{
+  \phi \frac{\partial \varrho_\alpha S_\alpha}{\partial t}
+ -
+ \text{div} \left\{
+ \varrho_\alpha \frac{k_{r\alpha}}{\mu_\alpha} \mbox{\bf K} \left(\text{grad}\, p_\alpha - \varrho_{\alpha} \mbox{\bf g} \right)
+ \right\} - q_\alpha} _
+{\textbf{f}(\textbf{u}^r)}
+= 0 \; .
+\end{align}
+
+Because of the nonlinear dependencies (even in this comparativly simple equation) in there, this is a really difficult task. However, for finding roots of of difficult equations there is a really handy method out there: \textsc{Newton}'s method. 
 
 When using a fully coupled numerical model, one timestep essentially consists of the application of the \textsc{Newton} algorithm to solve the nonlinear system.
 
@@ -20,7 +33,7 @@ One step of the \textsc{Newton} method can be formalized as follows:
 \begin{itemize}
 \item $\phantom{a}^r$: last iteration, $\phantom{a}^{r+1}$: current iteration,
 \item $\phantom{a}^\prime$: derivative
-\item $\textbf{u}$: vector of unknowns
+\item $\textbf{u}$: vector of unknowns, the actual primary variables
 \item $\textbf{f}(\textbf{u}^r)$: function of vector of unknowns
 \end{itemize}
 
@@ -43,6 +56,6 @@ Comparing (\ref{GenSysEq}) with (\ref{NewtonAsUsed}) leads to:
 \item $\textbf{x} = (\textbf{u}^{r+1} - \textbf{u}^{r})$ this is what the linear solver finds as an solution. 
 \end{itemize}
 
-This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more \textsc{Newton-}iteration (not confuse with timestep!).
+This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more \textsc{Newton-}iteration (do not confuse with timestep!).
 
 In the rest of Dumux (everywhere besides in the solver), not the change of the solution is looked for, but the actual solution is used. Therefore the outcome of the linear solver needs to be reformulated as done in \verb+updateMethod.update(*this, u, *uOld, model);+. In this function the ``change in solution'' is changed to ``solution''. Afterwards the quantity \verb+*u+ stands for the solution.
