@@ -36,8 +36,8 @@ initialize \\
 \> \> \textbf{for each} element \\
 
 \> \> \> calculate element's local residual \\
-\> \> \> calculate element's local \textsc{Jacobian} \\
-\> \> \> add local resdidual to global residual vector \\
+\> \> \> calculate element's \textsc{Jacobian} of local residual \\
+\> \> \> add local residual to global residual vector \\
 \> \> \> add local \textsc{Jacobian} to global \textsc{Jacobian} matrix \\
 
 \> \> \textbf{end for} \\
@@ -88,7 +88,7 @@ finalize\\
 \textcircled{\ref{init}} main\\
 \textcircled{\ref{prep}} time step\\
 \textcircled{\ref{elem}} \textsc{Newton} step\\
-\textcircled{\ref{calc}} Element\\
+\textcircled{\ref{calc}} Element-wise assembly\\
 
 \section{Structure --  by implementation}
  \label{implementation}
@@ -106,9 +106,9 @@ Being a function is indicated by round brackets \verb+()+ but only the function 
 {\small
 \setlength{\voffset}{4.2cm}
 %%README!!! it is important NOT to leave any blank lines, as multiple boxes are supposed to be in one line
-%% Unfortulately, blank lines need to be inserted manually if one box is lapping over the page border
+%% Unfortunately, blank lines need to be inserted manually if one box is lapping over the page border
 %% by means of \newline, a new line plus some extra space can be inserted, which has unfortunately to be done after each line 
-%% \newline is defined at the beginnign of this file
+%% \newline is defined at the beginning of this file
 %% sometimes \texttt{} is used (in stead of \verb), as it is not possible to have ANY environment within \verb.
 %% If multiple lines are supposed to be under one arrow, I used an align environment and switched back to \textnormal for each line
 %% a blank template for one step-stone is at the end of the file
@@ -161,7 +161,7 @@ Being a function is indicated by round brackets \verb+()+ but only the function 
 \nextline
     {\scriptsize$\overrightarrow{
       \begin{array}{l}
-	\textnormal{define \# allowed \textsc{Newton} fails'} \\
+	\textnormal{define number of allowed \textsc{Newton} fails} \\
 	\textnormal{(each halving dt)}
       \end{array}
     }$}
@@ -200,24 +200,16 @@ Being a function is indicated by round brackets \verb+()+ but only the function 
       \textnormal{catching errors}
       \end{array}$\end{scriptsize}\\
       \textbf{called by}: boxmodel.hh\\
-      \textbf{implemented in}: newtonmethod.hh\\  
+      \textbf{implemented in}: newtonmethod.hh : $\texttt{execute\_()}$\\  
     \hline
   \end{tabular}
 \nextline
-    {
-\scriptsize
-$\overrightarrow{ \begin{array}{l}
-                                  \texttt{execute\_()}\\
-				  \textnormal{in newtonmethod.hh}
-                                 \end{array}
-    }$
-    $\overrightarrow{ \begin{array}{l}
+ $\overrightarrow{ \begin{array}{l}
 				  \textbf{\textcircled{\ref{prep}}} \rightarrow \textbf{\textcircled{\ref{elem}}}\\
                                   \texttt{while(ctl.newtonProceed())}\\
-				  \textnormal{init: uCurrentIter, uLastIter} \leftarrow \textnormal{model.uCur()} 
+				  \textnormal{uLastIter = uCurrentIter(model.uCur())} 
                                  \end{array}
     }$
-}
     \begin{tabular}{|l|}
       \hline      
 	\textbf{\textcircled{\ref{elem}}}\verb+jacobianAsm.assemble()+ \\
@@ -233,8 +225,8 @@ $\overrightarrow{ \begin{array}{l}
     \begin{tabular}{|l|}
       \hline      
 	\textbf{\textcircled{\ref{elem}}}\verb+resetSystem_()+ \\
-    \begin{scriptsize}always set r.h.s. (i.e. residual) to 0\end{scriptsize}\\
-    \begin{scriptsize}partially set \textsc{Jacobian} to zero in case of partial reassembly\end{scriptsize}\\
+    \begin{scriptsize} set r.h.s. (i.e. residual) and\end{scriptsize}\\
+    \begin{scriptsize} set \textsc{Jacobian} to zero \end{scriptsize}\\
       \textbf{called by}: boxassembler.hh\\
       \textbf{implemented in}: boxassembler.hh\\  
 	\hline
@@ -254,10 +246,7 @@ $\overrightarrow{ \begin{array}{l}
      \end{tabular}
 \nextline
     {\scriptsize$\overrightarrow{
-    \begin{array}{l}
-    \textnormal{(if color == red or !partialassembling )}
-    \end{array}
-    }$}
+        }$}
      \begin{tabular}{|l|}
       \hline
      \textbf{\textcircled{\ref{calc}}}\verb+model_().localJacobian().assemble()+ \\
@@ -265,16 +254,16 @@ $\overrightarrow{ \begin{array}{l}
      \begin{scriptsize}reset local \textsc{Jacobian} to 0\end{scriptsize}\\
      \begin{scriptsize}update types of boundaries on this element\end{scriptsize}\\
       \textbf{called by}: boxassembler.hh\\
-      \textbf{implemented in}:  boxjacobian.hh\\  
+      \textbf{implemented in}:  boxlocaljacobian.hh\\  
 	\hline
   \end{tabular}
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
       \hline
-      \textbf{\textcircled{\ref{calc}}}\verb+prevVolVars_.update()+ \\
+      \textbf{\textcircled{\ref{calc}}}\verb+prevVolVars_.update()+, \textbf{\textcircled{\ref{calc}}}\verb+curVolVars_.update()+ \\
     \begin{scriptsize}call model specific update of quantities defined for the volume:\end{scriptsize}\\
-    \begin{scriptsize}variables for the \emph{previous timestep!!}\end{scriptsize}\\
+    \begin{scriptsize}variables for the \emph{current and previous timestep...!!}\end{scriptsize}\\
       \textbf{called by}: boxlocaljacobian.hh\\
       \textbf{implemented in}: boxelementvolumevariables.hh\\  
 	\hline
@@ -294,10 +283,10 @@ $\overrightarrow{ \begin{array}{l}
     }$
       \begin{tabular}{||l||}
 \hline\hline
-      \textbf{\textcircled{\ref{calc}}}\verb+fluidState_.update()+ \\
+      \textbf{\textcircled{\ref{calc}}}\verb+completeFluidState()_.update()+ \\
       \begin{scriptsize}calculate all required fluid properties from the primary variables\end{scriptsize}\\
       \textbf{called by}: 2pvolumevariables.hh\\
-      \textbf{implemented in}: 2pfluidstate.hh\\  
+      \textbf{implemented in}: 2pvolumevariables.hh\\  
 \hline\hline
       \end{tabular}
 \nextline
@@ -306,28 +295,16 @@ $\overrightarrow{ \begin{array}{l}
       \begin{tabular}{||l||}
 \uwave{\mbox{\phantom{\textbf{\textcircled{\ref{calc}}}+ e.g: density\_ = Fluidsystem::phaseDensity()+ bissl}}}
 \\ 
-      \textbf{\textcircled{\ref{calc}}}\verb+ e.g: density_ = Fluidsystem::phaseDensity()+ \\
-      \begin{scriptsize}The fluid system deals does the real work: \end{scriptsize}\\
+      \textbf{\textcircled{\ref{calc}}}\verb+ e.g: rho = Fluidsystem::density()+ \\
+      \verb+ fluidState.setDensity(phaseIdx,rho)+ \\
+      \begin{scriptsize}The fluid system does the real work: \end{scriptsize}\\
       \begin{scriptsize}calculates densities, diffusivities ... \end{scriptsize}\\
-      \textbf{called by}: 2pfluidstate.hh\\
-      \textbf{implemented in}: 2p\_system.hh\\  
+      \begin{scriptsize}The fluidstate save and provides them. \end{scriptsize}\\
+      \textbf{called by}: 2pvolumevariables.hh\\
+      \textbf{implemented in}: 2pvolumevariables.hh\\  
 \uwave{\mbox{\phantom{\textbf{\textcircled{\ref{calc}}}+ e.g: density\_ = Fluidsystem::phaseDensity()+ bissl}}}
 \\ 
       \end{tabular}
-    $\overrightarrow{
-    }$
-    \begin{tabular}{|l|}
-\uwave{\mbox{\phantom{\begin{scriptsize}call model specific update of quantities defined for the volume:\end{scriptsize}+ bissl}}}
-\\ 
-      \textbf{\textcircled{\ref{calc}}}\verb+curVolVars_.update()+ \\
-    \begin{scriptsize}call model specific update of quantities defined for the volume:\end{scriptsize}\\
-    \begin{scriptsize}variables for the \emph{current time step!!}\end{scriptsize}\\
-      \textbf{called by}: boxlocaljacobian.hh\\
-      \textbf{implemented in}: boxelementvolumevariables.hh\\  
-\uwave{\mbox{\phantom{\begin{scriptsize}call model specific update of quantities defined for the volume:\end{scriptsize}+ bissl}}}
-\\
-  \end{tabular}
-\nextline
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
@@ -350,29 +327,33 @@ $\overrightarrow{ \begin{array}{l}
       \textbf{implemented in}: boxlocalresidual.hh\\  
      \hline
   \end{tabular}
+\nextline
 {\scriptsize$\overrightarrow{
-   \textnormal{calculating the fluxes takes two more steps} 
+   \begin{array}{l}
+    \textnormal{calculating the fluxes}\\
+    \textnormal{takes two more steps}   \\
+   \end{array}
 }$}
      \begin{tabular}{||l||}
         \hline\hline
         \textbf{\textcircled{\ref{calc}}}\verb+FluxVariables vars()+ \\
-        \begin{scriptsize}this a call to a constructor:  \end{scriptsize}\\
+        \begin{scriptsize}this is a call to a constructor:  \end{scriptsize}\\
 	\begin{scriptsize}calculate the gradients and average the K\end{scriptsize}\\
 	\textbf{called by}: 2plocalresidual.hh\\
         \textbf{implemented in}: 2pfluxvariables.hh\\  
 	\hline\hline
      \end{tabular}
-\nextline
     $\overrightarrow{
     }$
      \begin{tabular}{||l||}
       \hline\hline
       	\textbf{\textcircled{\ref{calc}}}\verb+computeAdvectiveFlux()+ (other models: also diffusive)\\
-    	\scriptsize{-all velocities are calculated}\\
+    	\scriptsize{for 2p-model: calculation of phase velocities}\\
 	\textbf{called by}: 2plocalresidual.hh\\
       	\textbf{implemented in}: 2plocalresidual.hh\\  
      \hline\hline
   \end{tabular}
+\nextline
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
@@ -384,7 +365,6 @@ $\overrightarrow{ \begin{array}{l}
       \textbf{implemented in}: boxlocalresidual.hh\\  
      \hline
   \end{tabular}
-\nextline
     $\overrightarrow{
     }$
     \begin{tabular}{|l|}
@@ -414,7 +394,7 @@ $\overrightarrow{ \begin{array}{l}
     \begin{minipage}{0.50\textwidth}
   \begin{scriptsize}\textnormal{approximation of partial derivatives: numerical differentiation}\end{scriptsize}\\
   \begin{scriptsize}\textnormal{add $\pm \epsilon$ solution, divide difference of residual by $2\epsilon$}\end{scriptsize}\\
-  \begin{scriptsize}\textnormal{all partial derivatives for the element are local \textsc{Jacobian} matrix}\end{scriptsize}\\
+  \begin{scriptsize}\textnormal{all partial derivatives for the element from the local \textsc{Jacobian} matrix}\end{scriptsize}\\
 $\left \lbrace
      \begin{tabular}{l}%these question marks are for the \verb, not meant as ``unclear''
      	\verb?priVars[pvIdx]+=eps?\\
@@ -435,32 +415,28 @@ $\left \lbrace
   \right .
  $\\
     \end{minipage}
-  \hspace{.25\textwidth}
+\hspace{.25\textwidth}
   {\scriptsize$\overrightarrow{}$ }
-  $\left|
-     \begin{array}{l}
-    \textnormal{residual of the current solution is now}\\
-    \textnormal{``numerically differentiated'', for the element i.e.}\\
-    \textnormal{the local \textsc{Jacobian} matrix is calculated}
-  \end{array}
-  \right |$\\
-\nextline
-    {\scriptsize$\overrightarrow{}$ }
    \begin{tabular}{|l|} 
       \hline 
       \textbf{\textcircled{\ref{calc}}}\verb+assembleElement_()+ \\ 
-      \begin{scriptsize}The contribution of a single element is done.\end{scriptsize}\\
-      \begin{scriptsize}Now, it needs to be added to the global quantities:\end{scriptsize}\\
-      \begin{scriptsize}Add to global residual and global \textsc{Jacobian}.\end{scriptsize}\\
-      \textbf{called by}: continuing in the function. \\ 
+      \verb+model_().localJacobian().assemble()+ \\ 
+      \begin{scriptsize}Residual of the current solution is now\end{scriptsize}\\
+      \begin{scriptsize}``numerically differentiated'', for the element i.e.\end{scriptsize}\\
+      \begin{scriptsize}the local \textsc{Jacobian} matrix is calculated. \end{scriptsize}\\
+      \textbf{called by}: boxassembler.hh \\ 
       \textbf{implemented in}: boxassembler.hh\\ 
 	\hline 
   \end{tabular}
-    {\scriptsize$\overrightarrow{ 
-    \begin{array}{l} 
-    \textnormal{partial assembling:}\\
-    \textnormal{if  !vertexColor==Green}
-    \end{array} }$ }
+  {\scriptsize$\overrightarrow{}$ }
+  $\left|
+     \begin{array}{l}
+    \textnormal{The contribution of a single element is done.}\\
+    \textnormal{Now, it needs to be added to the global quantities:}\\
+    \textnormal{Add to global residual and global \textsc{Jacobian}.}
+  \end{array}
+  \right |$
+    {\scriptsize$\overrightarrow{}$ }
    \begin{tabular}{|l|} 
       \hline 
       \textbf{\textcircled{\ref{calc}}}\verb?resdidual_[globI]+=? \\ 
@@ -504,10 +480,10 @@ $\left \lbrace
     $}
    \begin{tabular}{|l|} 
       \hline 
-      \textbf{\textcircled{\ref{elem}}}\verb?execute_() , while newtonProceed()  ?\\ 
+      \textbf{\textcircled{\ref{elem}}}\verb?while newtonProceed()  ?\\ 
       \begin{scriptsize}Print information.\end{scriptsize}\\
       \begin{scriptsize}start/ stop timer.\end{scriptsize}\\
-      \textbf{called by}: continuing in the function. \\ 
+      \textbf{called by}: continuing in the function, $\texttt{execute\_()}$ \\ 
       \textbf{implemented in}: newtonmethod.hh\\ 
 	\hline 
   \end{tabular}
@@ -520,11 +496,12 @@ $\left \lbrace
     $}
    \begin{tabular}{|l|} 
       \hline 
-      \textbf{\textcircled{\ref{elem}}}\verb?execute_() , newtonSolveLinear()  ?\\ 
+      \textbf{\textcircled{\ref{elem}}}\verb?newtonSolveLinear()  ?\\ 
       \begin{scriptsize}Ask the linear solver to solve the system.\end{scriptsize}\\
       \begin{scriptsize}i.e. : give \textsc{Jacobian}(matrix), delta(x), r.h.s.(residual) to linear solver\end{scriptsize}\\
+      \begin{scriptsize}$\nabla r(x^k) \cdot \Delta x^k = r(x^k)$\end{scriptsize}\\
       \begin{scriptsize}tricky: each \textsc{Newton}step solves a linear system of equations. \end{scriptsize}\\
-      \textbf{called by}: continuing in the function. \\ 
+      \textbf{called by}: continuing in the function, $\texttt{execute\_()}$. \\ 
       \textbf{implemented in}: newtonmethod.hh\\ 
 	\hline 
   \end{tabular}
@@ -546,7 +523,7 @@ $\left \lbrace
       \textbf{\textcircled{\ref{elem}}}\verb+solveLinear_()+\\ 
 						       \verb+typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR Solver;+\\
       \begin{scriptsize}Selecting Solver (BiCGStab) and preconditioner (SSOR)\end{scriptsize}\\
-      \begin{scriptsize}Instantiate linear solver (set max \# iterations, verbosity)\end{scriptsize}\\
+      \begin{scriptsize}Instantiate linear solver (set max number of iterations, verbosity)\end{scriptsize}\\
       \textbf{called by}: newtoncontroller.hh\\ 
       \textbf{implemented in}: newtoncontroller.hh\\ 
 	\hline 
@@ -594,8 +571,8 @@ $\left \lbrace
       \textbf{\textcircled{\ref{elem}}}\verb+ctl.newtonUpdate()+\\ 
       \begin{scriptsize}We solved for  the change in solution, but need the solution:\end{scriptsize}\\
       \begin{scriptsize}Calculate current (this iteration) solution\end{scriptsize}\\
-      \begin{scriptsize}\quad from last (iteration) solution and current (iteration) change in  solution.\end{scriptsize}\\ 
-     \begin{scriptsize}If partial assembly: Mark vertices with big changes for reassembly. \end{scriptsize}\\
+      \begin{scriptsize}\quad from last (iteration) solution and current (iteration) change in  solution:\end{scriptsize}\\
+      \begin{scriptsize} $x^{k+1} = x^k - \Delta x^k$ where $\Delta x^k = (\nabla r(x^k))^{-1} \cdot r(x^k)$\end{scriptsize}\\ 
       \textbf{called by}: newtonmethod.hh\\ 
       \textbf{implemented in}: newtoncontroller.hh\\ 
 	\hline 
@@ -614,7 +591,7 @@ $\left \lbrace
   \end{tabular}
     {\scriptsize$\overrightarrow
 				  {\begin{array}{l}
-				  \textnormal{check in whether to do another \textsc{Newton} iteration:}\\
+				  \textnormal{check whether to do another \textsc{Newton} iteration:}\\
 				  \textnormal{that is: check if the error is below tolerance or}\\
                                   \textnormal{maximum number of iterations was reached.}\\
                                 \end{array}}
@@ -632,12 +609,12 @@ $\left \lbrace
       \begin{scriptsize}Tell the controller we are done\end{scriptsize}\\      
       \textbf{called by}: newtonmethod.hh\\
       \textbf{implemented in}: newtoncontroller.hh\\  
-	\hline 
+      \hline 
     \end{tabular}
     {\scriptsize$\overrightarrow{ }$}
     \begin{tabular}{|l|}
       \hline
-      \textbf{\textcircled{\ref{prep}}}\verb+ctl.updateSuccessfull()+ \\
+      \textbf{\textcircled{\ref{prep}}}\verb+ctl.updateSuccessful()+ \\
       \begin{scriptsize}Can be filled by the \fbox{\fbox{model}}.\end{scriptsize}\\      
       \textbf{called by}: boxmodel.hh\\
       \textbf{implemented in}: newtoncontroller.hh\\  
@@ -662,7 +639,7 @@ $\left \lbrace
     \begin{tabular}{|l|}
       \hline
       \textbf{\textcircled{\ref{prep}}}\verb+suggestTimestepSize()+ \\
-      \begin{scriptsize}Determine new time step size from \# \textsc{Newton} steps. \end{scriptsize}\\      
+      \begin{scriptsize}Determine new time step size from number of \textsc{Newton} steps. \end{scriptsize}\\      
       \textbf{called by}: timemanager.hh, boxproblem.hh\\
       \textbf{implemented in}: newtoncontroller.hh\\  
 	\hline 
@@ -670,7 +647,7 @@ $\left \lbrace
     {\scriptsize$\overrightarrow
 				  {\begin{array}{l}
 				  \textnormal{write output}\\
-				  \textnormal{uCur $\rightarrow$ uPrev}\\
+				  \textnormal{uPrev $\leftarrow$ uCur}\\
 				  \textnormal{time += dt, timestepIdx++}\\
 				  \textnormal{deal with restart and episodes }\\
                                 \end{array}}
