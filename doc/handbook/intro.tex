@@ -56,22 +56,17 @@ it matches the grid's cell. For a more thorough description of DUNE's
 grid definition, see~\cite{BASTIAN2008}.
 
 In addition to the grid interface, DUNE also provides quite a few
-additional modules, of which the \texttt{dune-pdelab},
-\texttt{dune-localfunctions} and \texttt{dune-istl} modules are the
-most relevant in the context of this handbook.  \texttt{dune-pdelab}
-provides a toolbox for discretization and includes, among other things, matrix assemblers
-for translating local stiffness matrices into a global linear system
-of equations, while \texttt{dune-localfunctions}
-provides a set of generic finite element shape
-functions. \texttt{dune-istl} is the \textbf{I}terative
-\textbf{S}olver \textbf{T}emplate \textbf{L}ibrary and provides
-generic, highly optimized linear algebra routines for solving the
-generated systems.
+additional modules, of which the \texttt{dune-localfunctions} and
+\texttt{dune-istl} modules are the most relevant in the context of
+this handbook. \texttt{dune-localfunctions} provides a set of generic
+finite element shape functions, while \texttt{dune-istl} is the
+\textbf{I}terative \textbf{S}olver \textbf{T}emplate \textbf{L}ibrary
+and provides generic, highly optimized linear algebra routines for
+solving the generated systems.
 
 \Dumux comes in form of an additional module \texttt{dumux}. 
-It depends on the DUNE core modules 
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions}, as well as on 
-the discretization module \texttt{dune-pdelab}. 
+It depends on the \Dune core modules 
+\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, and on \texttt{dune-localfunctions}. 
 The main intention of \Dumux is to provide a framework for an easy and efficient 
 implementation of new physical models for porous media flow problems, 
 ranging from problem formulation and the selection of 
@@ -79,3 +74,7 @@ spatial and temporal discretization schemes as well as nonlinear solvers,
 to general concepts for model coupling.  
 Moreover, \Dumux includes ready to use numerical models and a few example applications.  
 
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "dumux-handbook"
+%%% End: 

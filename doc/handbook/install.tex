@@ -20,8 +20,8 @@ If it is used as directory's path of a shell command it is typed as \texttt{\Dun
 For the real {\Dune} root directory on your file system any valid directory name can be chosen.
 
 Source code files for each \Dune module are contained in their own subdirectory within {\Dune}-Root.
-We name this directory of a certain module ``module root directory" or \texttt{module-root-directory} if it is a directory path,
-e.g. for the module \texttt{dumux} these names are  ``dumux root directory" respective \texttt{dumux-root-directory}.
+We name this directory of a certain module ``module root directory'' or \texttt{module-root-directory} if it is a directory path,
+e.g. for the module \texttt{dumux} these names are  ``dumux root directory'' respective \texttt{dumux-root-directory}.
 The real directory names for the modules can be chosen arbitrarily. In this manual they are the same as the
 module name or the module name extended by a version number suffix.
 The name of each \Dune module is defined in the file \texttt{dune.module}, which is in the root
@@ -40,9 +40,13 @@ and the C++ compiler \texttt{g++} and \texttt{make} are contained in \texttt{bui
 At the time of writing this manual, it is expected that \texttt{g++} of version $\geqslant$ 4.5.0, \texttt{automake} of version $\geqslant$ 1.11,
 \texttt{autoconf} of version $\geqslant$ 2.65, \texttt{autogen} of version $\geqslant$ 5.9.7,  \texttt{libtool} of version $\geqslant$ 2.2.6
 and GNU \texttt{make} version $\geqslant$ 3.81 should do their job for building \Dumux.
-\Dumux makes use of the \texttt{boost} library in the version $\geqslant$ 1.33.1, but optional external modules may require a more recent version. 
-It is thus necessary to install an appropriate developer package of \texttt{boost}
-which is sometimes also named \texttt{libboost}. The matching Ubuntu Linux package is \texttt{libboost-dev}.
+
+%\Dumux makes use of the \texttt{boost} library in the version
+%$\geqslant$ 1.33.1, but optional external modules may require a more
+%recent version.  It is thus necessary to install an appropriate
+%developer package of \texttt{boost} which is sometimes also named
+%\texttt{libboost}. The matching Ubuntu Linux package is
+%\texttt{libboost-dev}.
 
 The building of included documentation like this handbook requires \LaTeX\  and auxiliary tools
 like \texttt{dvipdf} and \texttt{bibtex}. One usually chooses a \LaTeX\  distribution like \texttt{texlive} for this purpose.
@@ -60,9 +64,10 @@ The subversion (svn) software repositories can be accessed with help of a subver
 contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}. 
 
 \section{Obtaining source code for \Dune and \Dumux}
-As stated above, the \Dumux release 2.0.2 and trunk (developer tree) is based on the \Dune release 2.1.0, 
-comprising the core modules \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, \texttt{dune-localfunctions} 
-and the external dune module \texttt{dune-pdelab}. Thus, for a proper \Dumux installation these modules are required.
+As stated above, the \Dumux release 2.1.0 and trunk (developer tree) are based on the \Dune release 2.1.1, 
+comprising the core modules \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl} and \texttt{dune-localfunctions}.
+% and the external dune module \texttt{dune-pdelab}.
+For working with \Dumux, these modules are required.
 
 Two possibilities exist to get the source code of \Dune and \Dumux.
 Firstly, \Dune and \Dumux can be downloaded as tar-files from the respective {\Dune} and {\Dumux} website. They have to be extracted as described in the next paragraph.
@@ -97,14 +102,6 @@ Furthermore, if you wish to install the optional \Dune Grid-Howto which provides
 $ tar xzvf path_to_tarball_of/dune-grid-howto-2.1.0.tar.gz
 \end{lstlisting}
 
-However, the required \Dune-module \texttt{dune-pdelab} is not available as tar-file.
-It can be installed from a software repository via svn.
-If \texttt{svn} is available in the command line, it can be done as follows: 
-
-\begin{lstlisting}[style=Bash]
-$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.1snapshot dune-pdelab
-\end{lstlisting}
-
 \paragraph{Obtaining \Dune and \Dumux from software repositories} 
 
 Direct access to a software revision control system for downloading code can be of advantage for the user later on. 
@@ -127,10 +124,9 @@ The \Dune modules of the stable 2.1.0 release are checked out as described on th
 $ mkdir DUMUX
 $ cd DUMUX
 $ svn co https://svn.dune-project.org/svn/dune-common/tags/2.1.1 dune-common
-$ svn co https://svn.dune-project.org/svn/dune-grid/tags/2.1.0 dune-grid
-$ svn co https://svn.dune-project.org/svn/dune-istl/tags/2.1.0 dune-istl
-$ svn co https://svn.dune-project.org/svn/dune-localfunctions/tags/2.1.0 dune-localfunctions
-$ svn co https://svn.dune-project.org/svn/dune-pdelab/branches/2.1snapshot dune-pdelab
+$ svn co https://svn.dune-project.org/svn/dune-grid/tags/2.1.1 dune-grid
+$ svn co https://svn.dune-project.org/svn/dune-istl/tags/2.1.1 dune-istl
+$ svn co https://svn.dune-project.org/svn/dune-localfunctions/tags/2.1.1 dune-localfunctions
 \end{lstlisting}
 
 % The newest (unstable) developments are also provided in these repositories, usually in a folder called ``trunk''. Please check the \Dune website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the current \Dumux release is based on the stable 2.1.0 release and it will not compile without further adaptations using the the newest versions of \Dune.
@@ -351,3 +347,7 @@ The libraries are then compiled within that directory and are not installed in a
 A \Dune build may need to know their location. Thus, one may have to refer to them as options for \texttt{dunecontrol}, 
 for example via the options file \texttt{my-debug.opts}.
 
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "dumux-handbook"
+%%% End: 
