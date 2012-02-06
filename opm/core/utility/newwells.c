@@ -373,7 +373,7 @@ wells_add(enum well_type type     ,
         W->depth_ref[nw] = depth_ref;
 
         if (zfrac != NULL) {
-            memcpy(W->zfrac + 3*nw, zfrac, 3 * sizeof W->zfrac);
+            memcpy(W->zfrac + 3*nw, zfrac, 3 * sizeof *W->zfrac);
         }
 
         W->well_connpos[nw + 1]  = off + nperf;
