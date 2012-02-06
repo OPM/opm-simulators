@@ -150,7 +150,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
 
 public:
     TutorialProblemDecoupled(TimeManager &timeManager, const GridView &gridView)
-        : ParentType(timeManager, gridView) /*@\label{tutorial-decoupled:constructor-problem}@*/
+        : ParentType(timeManager, gridView), eps_(1e-6)/*@\label{tutorial-decoupled:constructor-problem}@*/
     {    }
 
     //! The problem name.
@@ -302,7 +302,7 @@ public:
     }
 
 private:
-    static constexpr Scalar eps_ = 1e-6;
+    const Scalar eps_;
 };
 } //end namespace
 
