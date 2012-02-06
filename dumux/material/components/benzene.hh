@@ -27,7 +27,7 @@
 #ifndef DUMUX_BENZENE_HH
 #define DUMUX_BENZENE_HH
 
-
+#include <dumux/material/idealgas.hh>
 #include "component.hh"
 
 

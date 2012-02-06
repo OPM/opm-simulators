@@ -41,9 +41,10 @@
 #ifndef DUMUX_PENG_ROBINSON_PARAMS_MIXTURE_HH
 #define DUMUX_PENG_ROBINSON_PARAMS_MIXTURE_HH
 
-#include "pengrobinsonparams.hh"
-
+#include <algorithm>
 #include <dumux/material/constants.hh>
+
+#include "pengrobinsonparams.hh"
 
 namespace Dumux
 {

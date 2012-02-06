@@ -53,8 +53,8 @@ class PengRobinsonMixture
     static constexpr Scalar R = Dumux::Constants<Scalar>::R;
 
     // the u and w parameters as given by the Peng-Robinson EOS
-    static constexpr Scalar u = 2.0;
-    static constexpr Scalar w = -1.0;
+    static const Scalar u;
+    static const Scalar w;
 
 public:
     /*!
@@ -157,6 +157,12 @@ public:
     }
 
 };
+
+template<class Scalar, class StaticParameters>
+const Scalar PengRobinsonMixture<Scalar, StaticParameters>::u = 2.0;
+template<class Scalar, class StaticParameters>
+const Scalar PengRobinsonMixture<Scalar, StaticParameters>::w = -1.0;
+
 } // end namepace Dumux
 
 #endif

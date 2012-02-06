@@ -30,6 +30,8 @@
 #ifndef PARKERVANGEN_PARAMS_3P_HH
 #define PARKERVANGEN_PARAMS_3P_HH
 
+#include <dune/common/fvector.hh>
+
 namespace Dumux
 {
 /*!

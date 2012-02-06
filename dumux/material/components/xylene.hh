@@ -23,7 +23,8 @@
 #ifndef DUMUX_XYLENE_HH
 #define DUMUX_XYLENE_HH
 
-
+#include <cmath>
+#include <dumux/material/idealgas.hh>
 #include <dumux/material/components/component.hh>
 
 

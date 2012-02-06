@@ -23,6 +23,7 @@
 #ifndef DUMUX_MESITYLENE_HH
 #define DUMUX_MESITYLENE_HH
 
+#include <dumux/material/idealgas.hh>
 #include <dumux/material/components/component.hh>
 #include <dumux/material/constants.hh>
 
