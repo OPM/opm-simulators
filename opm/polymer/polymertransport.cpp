@@ -16,6 +16,7 @@
 
 void polymertransport(
     const double            *porevolume,
+    const double            *porosity,
     const double            *source,
     double                   dt,
     struct UnstructuredGrid *grid,
@@ -23,7 +24,8 @@ void polymertransport(
     const PolymerData* polydata,
     const double            *darcyflux,
     double                  *saturation,
-    double                  *concentration)
+    double                  *concentration,
+    double                  *cmax)
 {
     int    i;
 
@@ -32,8 +34,8 @@ void polymertransport(
     int    *components;
 
     PolymerSolverData *data = init_solverdata(grid, props, polydata, darcyflux,
-					      porevolume, source, dt, saturation,
-					      concentration);
+					      porevolume, porosity, source, dt, saturation,
+					      concentration, cmax);
 
 
     struct NonlinearSolverCtrl ctrl;

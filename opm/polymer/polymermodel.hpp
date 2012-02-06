@@ -18,11 +18,19 @@ struct PolymerData
     double omega;
     double viscMult(double c) const
     {
-	return Opm::linearInterpolation(c_vals, visc_mult_vals, c);
+	return Opm::linearInterpolation(c_vals_visc, visc_mult_vals, c);
+    }
+    double rhor;
+    double dps;
+    double adsorbtion(double c) const
+    {
+	return Opm::linearInterpolation(c_vals_ads, ads_vals, c);
     }
 
-    std::vector<double> c_vals;
+    std::vector<double> c_vals_visc;
     std::vector<double> visc_mult_vals;
+    std::vector<double> c_vals_ads;
+    std::vector<double> ads_vals;
 };
 
 
@@ -32,11 +40,14 @@ struct PolymerSolverData  {
     const PolymerData* polydata;
     const double            *darcyflux;   /* one flux per face  in cdata::grid*/
     const double            *porevolume;  /* one volume per cell */
+    const double            *porosity;
     const double            *source;      /* one source per cell */
     double                   dt;
     double                  *saturation;      /* one per cell */
     double                  *concentration;   /* one per cell */
+    double                  *cmax;
     double                  *fractionalflow;  /* one per cell */
+    double                  *mc;
 };
 
 struct NonlinearSolverCtrl;
@@ -54,10 +65,12 @@ init_solverdata(struct UnstructuredGrid *grid,
 		const PolymerData* polydata,
 		const double *darcyflux,
                 const double *porevolume,
+		const double *porosity,
 		const double *source,
                 const double dt,
 		double *saturation,
-		double *concentration);
+		double *concentration,
+		double *cmax);
 
 
 #endif /* POLYMER_H_INCLUDED */

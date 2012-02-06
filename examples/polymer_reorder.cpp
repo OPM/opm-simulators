@@ -63,14 +63,16 @@
 
 
 
-class ReservoirState {
+class ReservoirState
+{
 public:
     ReservoirState(const UnstructuredGrid* g, const int num_phases = 2)
         : press_ (g->number_of_cells, 0.0),
           fpress_(g->number_of_faces, 0.0),
           flux_  (g->number_of_faces, 0.0),
           sat_   (num_phases * g->number_of_cells, 0.0),
-	  concentration_(g->number_of_cells, 0.0)
+	  concentration_(g->number_of_cells, 0.0),
+	  cmax_(g->number_of_cells, 0.0)
     {
 	for (int cell = 0; cell < g->number_of_cells; ++cell) {
 	    sat_[num_phases*cell + num_phases - 1] = 1.0;
@@ -79,24 +81,27 @@ public:
 
     int numPhases() const { return sat_.size()/press_.size(); }
 
-    ::std::vector<double>& pressure    () { return press_ ; }
-    ::std::vector<double>& facepressure() { return fpress_; }
-    ::std::vector<double>& faceflux    () { return flux_  ; }
-    ::std::vector<double>& saturation  () { return sat_   ; }
-    ::std::vector<double>& concentration() { return concentration_; }
+    std::vector<double>& pressure    () { return press_ ; }
+    std::vector<double>& facepressure() { return fpress_; }
+    std::vector<double>& faceflux    () { return flux_  ; }
+    std::vector<double>& saturation  () { return sat_   ; }
+    std::vector<double>& concentration() { return concentration_; }
+    std::vector<double>& cmax() { return cmax_; }
 
-    const ::std::vector<double>& pressure    () const { return press_ ; }
-    const ::std::vector<double>& facepressure() const { return fpress_; }
-    const ::std::vector<double>& faceflux    () const { return flux_  ; }
-    const ::std::vector<double>& saturation  () const { return sat_   ; }
-    const ::std::vector<double>& concentration() const { return concentration_; }
+    const std::vector<double>& pressure    () const { return press_ ; }
+    const std::vector<double>& facepressure() const { return fpress_; }
+    const std::vector<double>& faceflux    () const { return flux_  ; }
+    const std::vector<double>& saturation  () const { return sat_   ; }
+    const std::vector<double>& concentration() const { return concentration_; }
+    const std::vector<double>& cmax() const { return cmax_; }
 
 private:
-    ::std::vector<double> press_ ;
-    ::std::vector<double> fpress_;
-    ::std::vector<double> flux_  ;
-    ::std::vector<double> sat_   ;
-    ::std::vector<double> concentration_   ;
+    std::vector<double> press_ ;
+    std::vector<double> fpress_;
+    std::vector<double> flux_  ;
+    std::vector<double> sat_   ;
+    std::vector<double> concentration_;
+    std::vector<double> cmax_;
 };
 
 
@@ -169,12 +174,18 @@ main(int argc, char** argv)
 	props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
 	polydata.c_max_limit = param.getDefault("c_max_limit", 1.0);
 	polydata.omega = param.getDefault("omega", 1.0);
-	polydata.c_vals.resize(2);
-	polydata.c_vals[0] = 0.0;
-	polydata.c_vals[0] = polydata.c_max_limit;
+	polydata.rhor = param.getDefault("rock_density", 1000.0);
+	polydata.dps = param.getDefault("dead_pore_space", 0.15);
+	polydata.c_vals_visc.resize(2);
+	polydata.c_vals_visc[0] = 0.0;
+	polydata.c_vals_visc[0] = polydata.c_max_limit;
 	polydata.visc_mult_vals.resize(2);
 	polydata.visc_mult_vals[0] = 1.0;
 	polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+	polydata.c_vals_ads = polydata.c_vals_visc;
+	polydata.ads_vals.resize(2);
+	polydata.ads_vals[0] = 1.0;
+	polydata.ads_vals[1] = param.getDefault("c_max_ads", 30.0);
     }
 
     // Extra rock init.
@@ -252,6 +263,7 @@ main(int argc, char** argv)
 	// source term following the same convention.
 	transport_timer.start();
 	polymertransport(&porevol[0],
+			 props->porosity(),
 			 &reorder_src[0],
 			 stepsize,
 			 const_cast<UnstructuredGrid*>(grid->c_grid()),
@@ -259,7 +271,8 @@ main(int argc, char** argv)
 			 &polydata,
 			 &state.faceflux()[0],
 			 &reorder_sat[0],
-			 &state.concentration()[0]);
+			 &state.concentration()[0],
+			 &state.cmax()[0]);
 	Opm::toBothSat(reorder_sat, state.saturation());
 	transport_timer.stop();
 	double tt = transport_timer.secsSinceStart();

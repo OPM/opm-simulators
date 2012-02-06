@@ -14,6 +14,7 @@ struct PolymerData;
 
 void polymertransport(
     const double *porevolume,
+    const double *porosity,
     const double *source,
     double dt,
     struct UnstructuredGrid *grid,
@@ -21,7 +22,8 @@ void polymertransport(
     const PolymerData* polydata,
     const double *darcyflux,
     double *saturation,
-    double *concentration);
+    double *concentration,
+    double *cmax);
 
 
 #endif /* POLYMERTRANSPORT_HPP_INCLUDED */
