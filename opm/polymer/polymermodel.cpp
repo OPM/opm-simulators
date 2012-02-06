@@ -140,7 +140,7 @@ residual_c(double c, void *data)
     prm_s.c = c;
     double s = find_zero(residual_s, &prm_s, prm_c->ctrl);
     prm_c->s = s;
-    return  0.0;
+    return  c - 0.0;
 }
 
 static struct ParametersSRes
@@ -160,7 +160,6 @@ get_parameters_s(struct PolymerSolverData *d, int cell)
     p.cell    = cell;
     p.props   = d->props;
 
-    d->saturation[cell] = 0;
     for (i=g->cell_facepos[cell]; i<g->cell_facepos[cell+1]; ++i) {
         f = g->cell_faces[i];
 
