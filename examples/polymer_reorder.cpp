@@ -127,7 +127,7 @@ void outputState(const UnstructuredGrid* grid,
 int
 main(int argc, char** argv)
 {
-    std::cout << "\n================    Test program for incompressible two-phase flow     ===============\n\n";
+    std::cout << "\n================    Test program for incompressible two-phase flow with polymer    ===============\n\n";
     Opm::parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
@@ -270,7 +270,7 @@ main(int argc, char** argv)
     }
     total_timer.stop();
 
-    std::cout << "\n\n================    Starting main simulation loop     ===============\n\n"
+    std::cout << "\n\n================    End of simulation     ===============\n"
 	      << "Total time taken: " << total_timer.secsSinceStart()
 	      << "\n  Pressure time:  " << ptime
 	      << "\n  Transport time: " << ttime << std::endl;
