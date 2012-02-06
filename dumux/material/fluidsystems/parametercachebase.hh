@@ -99,7 +99,7 @@ public:
      * updatePhase()!
      */
     template <class FluidState>
-    void updateSinglePressure(const FluidState &fs, int phaseIdx)
+    void updatePressure(const FluidState &fs, int phaseIdx)
     {
         asImp_().updatePhase(fs, phaseIdx);
     }

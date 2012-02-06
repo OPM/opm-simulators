@@ -272,7 +272,7 @@ void checkFluidSystem()
         try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::None); } catch (...) {};
         try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
         try { paramCache.updateTemperature(fs, phaseIdx); } catch (...) {};
-        try { paramCache.updateSinglePressure(fs, phaseIdx); } catch (...) {};
+        try { paramCache.updatePressure(fs, phaseIdx); } catch (...) {};
         try { paramCache.updateComposition(fs, phaseIdx); } catch (...) {};
         try { paramCache.updateSingleMoleFraction(fs, phaseIdx, /*compIdx=*/0); } catch (...) {};
     }
