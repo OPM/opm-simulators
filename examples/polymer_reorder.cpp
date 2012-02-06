@@ -185,7 +185,7 @@ main(int argc, char** argv)
 	polydata.c_vals_ads = polydata.c_vals_visc;
 	polydata.ads_vals.resize(2);
 	polydata.ads_vals[0] = 1.0;
-	polydata.ads_vals[1] = param.getDefault("c_max_ads", 30.0);
+	polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
     }
 
     // Extra rock init.
