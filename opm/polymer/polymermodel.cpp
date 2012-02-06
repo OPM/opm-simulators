@@ -15,7 +15,7 @@
 /* Parameters used in solution of single-cell boundary-value problem */
 
 
-struct Parameters
+struct ParametersSRes
 {
     double c;
     double s0;
@@ -32,8 +32,18 @@ struct Parameters
     const PolymerData* polydata;
 };
 
+struct ParametersCRes
+{
+    PolymerSolverData* psdata;
+    int cell;
+    NonlinearSolverCtrl* ctrl;
+    double s;
+};
 
-static struct Parameters get_parameters(struct PolymerSolverData *d, int cell);
+
+static struct ParametersSRes get_parameters_s(struct PolymerSolverData *d, int cell);
+static struct ParametersCRes get_parameters_c(struct PolymerSolverData *d, int cell,
+					      NonlinearSolverCtrl* ctrl);
 static double residual_s(double s, void *data);
 static double residual_c(double c, void *data);
 static double fluxfun_props(double s,
@@ -97,12 +107,10 @@ init_solverdata(struct UnstructuredGrid *grid,
 void polymer_solvecell(void *data, struct NonlinearSolverCtrl *ctrl, int cell)
 {
     struct PolymerSolverData   *d   = (struct PolymerSolverData*) data;
-    struct Parameters   prm = get_parameters(d, cell);
+    struct ParametersCRes   prm = get_parameters_c(d, cell, ctrl);
 
-    d->saturation[cell] = find_zero(residual_s, &prm, ctrl);
-    // double ff1 = fluxfun_props(d->saturation[cell], cell, d->props);
-    // double ff2 = fluxfun(d->saturation[cell], -999);
-    // printf("New = %f   old = %f\n", ff1, ff2);
+    d->concentration[cell] = find_zero(residual_c, &prm, ctrl);
+    d->saturation[cell] = prm.s;
     d->fractionalflow[cell] = fluxfun_props(d->saturation[cell], d->concentration[cell], cell, d->props, d->polydata);
 }
 
@@ -118,7 +126,7 @@ void polymer_solvecell(void *data, struct NonlinearSolverCtrl *ctrl, int cell)
 static double
 residual_s(double s, void *data)
 {
-    struct Parameters *p = (struct Parameters*) data;
+    struct ParametersSRes *p = (struct ParametersSRes*) data;
     double c = p->c;
     return s - p->s0 +  p->dtpv*(p->outflux*fluxfun_props(s, c, p->cell, p->props, p->polydata) + p->influx);
 }
@@ -126,19 +134,21 @@ residual_s(double s, void *data)
 static double
 residual_c(double c, void *data)
 {
-    (void) c;
-    (void) data;
-    // struct Parameters *p = (struct Parameters*) data;
-    //    return s - p->s0 +  p->dtpv*(p->outflux*fluxfun_props(s, p->cell, p->props) + p->influx);
-    return 0.0;
+    struct ParametersCRes *prm_c = (struct ParametersCRes*) data;
+    int cell = prm_c->cell;
+    struct ParametersSRes prm_s = get_parameters_s(prm_c->psdata, cell);
+    prm_s.c = c;
+    double s = find_zero(residual_s, &prm_s, prm_c->ctrl);
+    prm_c->s = s;
+    return  0.0;
 }
 
-static struct Parameters
-get_parameters(struct PolymerSolverData *d, int cell)
+static struct ParametersSRes
+get_parameters_s(struct PolymerSolverData *d, int cell)
 {
     int i;
     struct UnstructuredGrid *g  = d->grid;
-    struct Parameters        p;
+    struct ParametersSRes        p;
     double flux;
     int f, other;
 
@@ -176,6 +186,19 @@ get_parameters(struct PolymerSolverData *d, int cell)
     p.polydata = d->polydata;
     return p;
 }
+
+
+static struct ParametersCRes
+get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctrl)
+{
+    ParametersCRes prm;
+    prm.psdata = d;
+    prm.cell = cell;
+    prm.ctrl = ctrl;
+    prm.s = -1e100;
+    return prm;
+}
+
 
 static double fluxfun_props(double s, double c, int cell,
 			    const Opm::IncompPropertiesInterface* props,
