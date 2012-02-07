@@ -18,7 +18,8 @@ void polymertransport(
     const double            *porevolume,
     const double            *porosity,
     const double            *source,
-    double                   dt,
+    const double             dt,
+    const double             inflow_c,
     struct UnstructuredGrid *grid,
     const Opm::IncompPropertiesInterface* props,
     const PolymerData* polydata,
@@ -34,7 +35,8 @@ void polymertransport(
     int    *components;
 
     PolymerSolverData *data = init_solverdata(grid, props, polydata, darcyflux,
-					      porevolume, porosity, source, dt, saturation,
+					      porevolume, porosity, source, dt,
+					      inflow_c, saturation,
 					      concentration, cmax);
 
 

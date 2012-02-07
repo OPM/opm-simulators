@@ -11,6 +11,10 @@
 #include <cstdio>
 #include <cmath>
 
+// #define EXTRA_DEBUG_OUTPUT
+#ifdef EXTRA_DEBUG_OUTPUT
+#include <iostream>
+#endif
 
 /* Parameters used in solution of single-cell boundary-value problem */
 
@@ -79,6 +83,7 @@ init_solverdata(struct UnstructuredGrid *grid,
                 const double *porosity,
 		const double *source,
                 const double dt,
+		const double inflow_c,
 		double *saturation,
 		double *concentration,
 		double *cmax)
@@ -96,6 +101,7 @@ init_solverdata(struct UnstructuredGrid *grid,
         d->porosity   = porosity;
         d->source     = source;
         d->dt         = dt;
+	d->inflow_c   = inflow_c;
 
         d->saturation     = saturation;
 	d->concentration  = concentration;
@@ -166,9 +172,13 @@ residual_c(double c, void *data)
     double cmax0 = p->cmax0;
     double ads0 = p->polydata->adsorbtion(std::max(c0, cmax0));
     double ads = p->polydata->adsorbtion(std::max(c, cmax0));
-    return  (s - dps)*c - (s0 - dps)*c0
+    double res = (s - dps)*c - (s0 - dps)*c0
 	+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 	+ p->dtpv*(p->outflux*ff*mc + p->influx_polymer);
+#ifdef EXTRA_DEBUG_OUTPUT
+    std::cout << "res(c) = " << res << std::endl;
+#endif
+    return res;
 }
 
 static struct ParametersSRes
@@ -187,6 +197,7 @@ get_parameters_s(struct PolymerSolverData *d, int cell)
     p.dtpv    = d->dt/d->porevolume[cell];
     p.cell    = cell;
     p.props   = d->props;
+    p.polydata = d->polydata;
 
     for (i=g->cell_facepos[cell]; i<g->cell_facepos[cell+1]; ++i) {
         f = g->cell_faces[i];
@@ -210,7 +221,6 @@ get_parameters_s(struct PolymerSolverData *d, int cell)
             }
         }
     }
-    p.polydata = d->polydata;
     return p;
 }
 
@@ -228,8 +238,16 @@ get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctr
     p.cmax0   = d->cmax[cell];
     p.s0      = d->saturation[cell];
     p.dtpv    = d->dt/d->porevolume[cell];
-    p.influx  = d->source[cell] >  0 ? -d->source[cell] : 0.0;
-    p.influx_polymer  = d->source[cell] >  0 ? -d->source[cell] : 0.0; // TODO. Wrong if nonzero, mult by mc.
+    double src = d->source[cell];
+    p.influx  = src > 0 ? -src : 0.0;
+    p.influx_polymer  = src >  0 ? -src*compute_mc(d->inflow_c, d->props, d->polydata) : 0.0;
+    p.outflux = d->source[cell] <= 0 ? -d->source[cell] : 0.0;
+    p.porosity = d->porosity[cell];
+    p.psdata = d;
+    p.cell = cell;
+    p.ctrl = ctrl;
+    p.s = -1e100;
+    p.polydata = d->polydata;
     for (i=g->cell_facepos[cell]; i<g->cell_facepos[cell+1]; ++i) {
         f = g->cell_faces[i];
 
@@ -253,13 +271,10 @@ get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctr
             }
         }
     }
-    p.outflux = d->source[cell] <= 0 ? -d->source[cell] : 0.0;
-    p.porosity = d->porosity[cell];
-    p.psdata = d;
-    p.cell = cell;
-    p.ctrl = ctrl;
-    p.s = -1e100;
-    p.polydata = d->polydata;
+#ifdef EXTRA_DEBUG_OUTPUT
+    std::cout << "in: " << p.influx << "    in(polymer): " << p.influx_polymer
+	      << "    out: " << p.outflux << std::endl;
+#endif
     return p;
 }
 

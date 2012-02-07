@@ -107,6 +107,13 @@ private:
 
 
 
+double polymerInflowAtTime(double time)
+{
+    return time >= 4.0*Opm::unit::day ? 1.0 : 0.0;
+}
+
+
+
 
 template <class State>
 void outputState(const UnstructuredGrid* grid,
@@ -252,6 +259,7 @@ main(int argc, char** argv)
 	std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
 	ptime += pt;
 
+	double inflow_c = polymerInflowAtTime(current_time);
 	Opm::toWaterSat(state.saturation(), reorder_sat);
 	// We must treat reorder_src here,
 	// if we are to handle anything but simple water
@@ -266,6 +274,7 @@ main(int argc, char** argv)
 			 props->porosity(),
 			 &reorder_src[0],
 			 stepsize,
+			 inflow_c,
 			 const_cast<UnstructuredGrid*>(grid->c_grid()),
 			 props.get(),
 			 &polydata,

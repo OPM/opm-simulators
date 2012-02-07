@@ -43,6 +43,7 @@ struct PolymerSolverData  {
     const double            *porosity;
     const double            *source;      /* one source per cell */
     double                   dt;
+    double                   inflow_c;
     double                  *saturation;      /* one per cell */
     double                  *concentration;   /* one per cell */
     double                  *cmax;
@@ -68,6 +69,7 @@ init_solverdata(struct UnstructuredGrid *grid,
 		const double *porosity,
 		const double *source,
                 const double dt,
+		const double inflow_c,
 		double *saturation,
 		double *concentration,
 		double *cmax);
