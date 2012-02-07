@@ -307,9 +307,53 @@ public:
      */
     static void init()
     {
-#warning "TODO: find the envelopes of 'a' and 'b'"
-        PengRobinson::init(/*aMin=*/1, /*aMax=*/100, /*na=*/100,
-                           /*bMin=*/1e-6, /*bMax=*/1e-3, /*nb=*/100);
+        Dumux::PengRobinsonParamsMixture<Scalar, ThisType, gPhaseIdx, /*useSpe5=*/true> prParams;
+
+        // find envelopes of the 'a' and 'b' parameters for the range
+        // 273.15K <= T <= 373.15K and 10e3 Pa <= p <= 100e6 Pa. For
+        // this we take advantage of the fact that 'a' and 'b' for
+        // mixtures is just a convex combination of the attractive and
+        // repulsive parameters of the pure components
+        Scalar minT = 273.15, maxT = 373.15;
+        Scalar minP = 1e4, maxP = 100e6;
+
+        Scalar minA = 1e100, maxA = -1e100;
+        Scalar minB = 1e100, maxB = -1e100;
+
+        prParams.updatePure(minT, minP);
+        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            minA = std::min(prParams.pureParams(compIdx).a(), minA);
+            maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
+            minB = std::min(prParams.pureParams(compIdx).b(), minB);
+            maxB = std::max(prParams.pureParams(compIdx).b(), maxB);
+        };
+
+        prParams.updatePure(maxT, minP);
+        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            minA = std::min(prParams.pureParams(compIdx).a(), minA);
+            maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
+            minB = std::min(prParams.pureParams(compIdx).b(), minB);
+            maxB = std::max(prParams.pureParams(compIdx).b(), maxB);
+        };
+
+        prParams.updatePure(minT, maxP);
+        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            minA = std::min(prParams.pureParams(compIdx).a(), minA);
+            maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
+            minB = std::min(prParams.pureParams(compIdx).b(), minB);
+            maxB = std::max(prParams.pureParams(compIdx).b(), maxB);
+        };
+
+        prParams.updatePure(maxT, maxP);
+        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            minA = std::min(prParams.pureParams(compIdx).a(), minA);
+            maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
+            minB = std::min(prParams.pureParams(compIdx).b(), minB);
+            maxB = std::max(prParams.pureParams(compIdx).b(), maxB);
+        };
+
+        PengRobinson::init(/*aMin=*/minA, /*aMax=*/maxA, /*na=*/100,
+                           /*bMin=*/minB, /*bMax=*/maxB, /*nb=*/200);
     }
 
     /*!
