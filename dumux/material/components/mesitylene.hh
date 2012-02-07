@@ -96,7 +96,7 @@ public:
 
         const Scalar T = temperature - 273.15;
 
-        return 100 * 1.334 * std::pow<Scalar>(10.0, (A - (B / (T + C))));
+        return 100 * 1.334 * std::pow(Scalar(10.0), Scalar(A - (B / (T + C))));
     }
 
 
