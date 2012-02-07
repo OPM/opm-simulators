@@ -1,61 +1,63 @@
 \chapter{The \Dumux Fluid Framework}
 \label{sec:fluidframework}
 
-This chapter discusses to the \Dumux fluid framework. \Dumux users who
+This chapter discusses the \Dumux fluid framework. \Dumux users who
 do not want to write new models and who do not need new fluid
 configurations may skip this chapter.
 
-In the chapter, a high level overview over the the principle ideas of
-the concepts is given, then a few implementation details follow.
+In the chapter, a high level overview over the the principle concepts
+is provided first, then some implementation details follow.
 
 \section{Overview of the Fluid Framework}
 
-The \Dumux fluid framework currently featurs the following concepts
+The \Dumux fluid framework currently features the following concepts
 (listed roughly in their order of importance):
 
 \begin{description}
 \item[Fluid state:] Fluid states are responsible for representing the
-  complete thermodynamic configuration of a system. A fluid state
-  always provides access methods to {\bf all} thermodynamic
-  quantities, but the concept of a does not mandate what assumptions
-  are made to store these thermodynamic quantities. What fluid states
-  do {\bf not} do is to make sure that the thermodynamic state which
-  they represent is physically possible.
+  complete thermodynamic configuration of a system at a given spatial
+  an temporal position. A fluid state always provides access methods
+  to {\bf all} thermodynamic quantities, but the concept of a does not
+  mandate what assumptions are made to store these thermodynamic
+  quantities. What fluid states also do {\bf not} do is to make sure
+  that the thermodynamic state which they represent is physically
+  possible.
 \item[Fluid system:] Fluid systems express the thermodynamic {\bf
     relations}\footnote{Strictly speaking, these relations are
     functions, mathematically.} between quantities. Since functions do
-  not exhibit any internal state, all fluid systems are state-less
-  classes, i.e. all member functions are \texttt{static}. The
-  thermodynamic state is captured by a fluid state!
-\item[Parameter cache:] Since fluid systems sometimes require
-  computationally expensive parameters for multiple relations, these
+  not exhibit any internal state, fluid systems are stateless classes,
+  i.e. all member functions are \texttt{static}. This is a conscious
+  decision since the thermodynamic state of the system is expressed by
+  a fluid state!
+\item[Parameter cache:] Fluid systems sometimes require
+  computationally expensive parameters for multiple relations. Such
   parameters can be cached using a so-called parameter
-  cache. Parameter cache objects are specfic for each fluid system but
-  they must provide a common interface to specify which quantities
-  changed since the last invocation.
+  cache. Parameter cache objects are specific for each fluid system
+  but they must provide a common interface to update the internal
+  parameters depending on the quantities which changed since the last
+  update.
 \item[Constraint solver:] Constraint solvers are auxiliary tools to
   make sure that a fluid state adheres to some thermodynamic
   constraints. All constraint solvers specify a well defined set of
   input variables make sure that the resulting fluid state is
-  consistent with a set of well-defined thermodynamic equations. See
-  section \ref{sec:constraint_solvers} for a detailed description of
-  the constraint solvers which are currently available in \Dumux.
+  consistent with a given set of thermodynamic equations. See section
+  \ref{sec:constraint_solvers} for a detailed description of the
+  constraint solvers which are currently available in \Dumux.
 \item[Equation of state:] Equations of state (EOS) are auxiliary
   classes which provide relations between a fluid phase's temperature,
   pressure and density. Since these classes are only used internally
-  in the fluid systems, the classes for a EOS are ad-hoc and there is
-  currently no common interface for them.
+  in fluid systems, their programming intereface is currently ad-hoc.
 \item[Component:] Components are fluid systems which provide the
   thermodynamic relations for the liquid and gas phase of a single
   chemical species or a fixed mixture of species. Their main purpose
   is to provide a convenient way to access these quantities from
-  full-fledged fluid systems, but they are not supposed to be used by
-  models directly.
+  full-fledged fluid systems. Components are not supposed to be used
+  by models directly.
 \item[Binary coefficient:] Binary coefficients express the relations
   of a mixture of two components. Typical binary coefficients are
   \textsc{Henry} coefficients or binary molecular diffusion
   coefficients. So far, the programming interface for accessing binary
-  coefficients has not been standardized.
+  coefficients has not been standardized in \Dumux.
 \end{description}
 
 \section{Fluid States}
@@ -99,7 +101,7 @@ Also, {\bf all} fluid states {\bf must} provide the following methods:
   $\overline M_\alpha$ is the mean molar mass of a molecule of phase
   $\alpha$.
 \item[averageMolarMass():] Returns $\overline M_\alpha$, the
-  mean molar mass of a molecule of phase $\alpha$. For a mixure of $N
+  mean molar mass of a molecule of phase $\alpha$. For a mixture of $N
   > 0$ components, $\overline M_\alpha$ is defined as
   \[
   \overline M_\alpha = \sum_{\kappa=1}^{N} x^\kappa_\alpha M^\kappa
@@ -124,11 +126,11 @@ Also, {\bf all} fluid states {\bf must} provide the following methods:
   \[
   f_\alpha^\kappa := \Phi^\kappa_\alpha x^\kappa_\alpha p_\alpha \;,
   \]
-  where $\Phi^\kappa_\alpha$ is the {\em fugacity coefficient}. The
-  physical meaning of fugacity becomes clear from the equation
+  where $\Phi^\kappa_\alpha$ is the {\em fugacity
+    coefficient}~\cite{reid1987}.  The physical meaning of
+  fugacity becomes clear from the equation
   \[
   f_\alpha^\kappa = p_\alpha \exp\left\{\frac{\zeta^\kappa_\alpha}{R T_\alpha} \right\} \;,
-  % TODO: cite
   \]
   where $\zeta^\kappa_\alpha$ represents the $\kappa$'s chemical
   potential in phase $\alpha$, $R$ stands for the
@@ -161,8 +163,8 @@ Currently, the following fluid states are available in \Dumux:
   fugacity coefficients, as well as all phase temperatures, pressures,
   saturations and enthalpies.
 \item[CompositionalFluidState:] The
-  \texttt{NonEquilibriumFluidState} with the difference
-  \texttt{CompositionalFluidState} is similar to the difference that
+  \texttt{Non\-Equilibrium\-Fluid\-State} with the difference
+  \texttt{Compositional\-Fluid\-State} is similar to the difference that
   is assumes thermodynamic equilibrium. In the context of multi-phase
   flow in porous media, this means that only a single temperature
   needs to be stored.
@@ -208,7 +210,7 @@ state, though.  Parameter cache objects must at least provide the
 following update methods
 \begin{description}
 \item[updateAll(fluidState, except):] Update all cached quantities in
-  all phases. The \texttt{except} argument contains a bitfield of the
+  all phases. The \texttt{except} argument contains a bit field of the
   quantities which have not changed since the last call to a
   \texttt{update()} method.
   \item[updateAllPresures(fluidState):]
@@ -219,7 +221,7 @@ following update methods
     all phases.
   \item[updatePhase(fluidState, phaseIdx, except):] Update all cached
     quantities for a given phase. The quantities specified by the
-    \texttt{except} bitfield have not been modified since the last
+    \texttt{except} bit field have not been modified since the last
     call to an \texttt{update()} method.
   \item[updateTemperature(fluidState, phaseIdx):] Update all cached
     quantities which depend on the temperature of a given phase.
@@ -254,7 +256,7 @@ methods:
 \item[numPhases:] The number of considered fluid phases.
 \item[numComponents:] The number of considered chemical (pseudo-) species.
 \item[init():] Initialize the fluid system. This is usually
-  used tabulated to tabulate some quantites
+  used tabulated to tabulate some quantities
 \item[phaseName():] Given the index of a fluid phase, return a
   human-readable string as its name.
 \item[componentName():] Given the index of a component,
@@ -349,21 +351,21 @@ Currently, the following fluid states are available in \Dumux:
 \item[Dumux::FluidSystems::TwoPImmiscible:] A two-phase fluid
   system featuring which assumes immiscibility of the fluid
   phases. The fluid phases are thus specified by means of their
-  constituting components. This fluid system is intented to be used
+  constituting components. This fluid system is intended to be used
   with models that assume immiscibility.
 \item[Dumux::FluidSystems::H2ON2:] A two-phase fluid system
-  featuring the gas and liquid phases and destilled water ($H_2O$) and
+  featuring the gas and liquid phases and distilled water ($H_2O$) and
   pure molecular Nitrogen ($N_2$) as components.
 \item[Dumux::FluidSystems::H2OAir:] A two-phase fluid system
-  featuring the gas and liquid phases and destilled water ($H_2O$) and
+  featuring the gas and liquid phases and distilled water ($H_2O$) and
   air (Pseudo component composed of $79\%\;N_2$, $20\%\;O_2$ and
   $1\%\;Ar$) as components.
 \item[Dumux::FluidSystems::H2OAirMesitylene:] A three-phase fluid
-  system featuring the gas, NAPL and water phases and destilled water
+  system featuring the gas, NAPL and water phases and distilled water
   ($H_2O$) and air and Mesitylene ($C_6H_3(CH_3)_3$) as components. This fluid
   system assumes all phases to be ideal mixtures.
 \item[Dumux::FluidSystems::H2OAirXylene:] A three-phase fluid
-  system featuring the gas, NAPL and water phases and destilled water
+  system featuring the gas, NAPL and water phases and distilled water
   ($H_2O$) and air and Xylene ($C_8H_{10}$) as components. This fluid
   system assumes all phases to be ideal mixtures.
 \item[Dumux::FluidSystems::Spe5:] A three-phase fluid system
@@ -375,7 +377,7 @@ Currently, the following fluid states are available in \Dumux:
   phases a \textsc{Peng}-\textsc{Robinson} equation of state with
   slightly modified parameters is used. This fluid system is highly
   non-linear, and the gas and oil phases can also not be considered as
-  ideal mixtures. % TODO: citation
+  ideal mixtures\cite{SPE5}.
 \end{description}
 
 \section{Constraint Solvers}
@@ -397,7 +399,7 @@ sharing this code between models makes a lot of sense. Currently,
   \]
   where ${f^\kappa}$, $T_\alpha$ and $p_\alpha$ are fixed values.
 \item[ComputeFromReferencePhase:] This solver brings all
-  fluid phases into thermodynmic equilibrium with a reference phase
+  fluid phases into thermodynamic equilibrium with a reference phase
   $\beta$, assuming that all phase temperatures and saturations have
   already been set. The constraints used by this solver are thus
   \begin{eqnarray*}
@@ -440,9 +442,10 @@ sharing this code between models makes a lot of sense. Currently,
     \[
     c^\kappa_{tot} = sum_{\alpha=1}^M \rho_{mol,\alpha} x_\alpha^\kappa = const
     \]
-  \item And finally $M$ model constraints. This solver uses NCP constraints: % as suggested in \cite{TODO}
+  \item And finally $M$ model constraints. This solver uses NCP
+    constraints as proposed in~\cite{LHHW2011}:
     \[
-     0 = \mathrm{min}\{\saturation_\alpha, 1 - \sum_{\kappa=1}^N x_\alpha^\kappa}
+     0 = \mathrm{min}\{\saturation_\alpha, 1 - \sum_{\kappa=1}^N x_\alpha^\kappa\}
    \]
 \end{itemize}
 
