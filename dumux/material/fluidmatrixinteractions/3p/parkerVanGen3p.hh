@@ -21,7 +21,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file VanGenuchten.hh Implementation of van Genuchten's capillary
+ * \file parkerVanGen3pparams.hh Implementation of van Genuchten's capillary
  *                       pressure <-> saturation relation
  */
 #ifndef PARKERVANGEN_3P_HH
