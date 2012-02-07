@@ -60,31 +60,33 @@ The \Dumux fluid framework currently featurs the following concepts
 
 \section{Fluid States}
 
-{\bf All} fluid states {\bf must} export the following constants:
+Fluid state objects express the complete thermodynamic state of a
+system at a given spatial and temporal position. {\bf All} fluid
+states {\bf must} export the following constants:
 \begin{description}
-\item[\texttt{numPhases}:] The number of fluid phases considered.
-\item[\texttt{numComponents}:] The number of considered chemical
+\item[numPhases:] The number of fluid phases considered.
+\item[numComponents:] The number of considered chemical
   species or pseudo-species.
 \end{description}
 
 Also, {\bf all} fluid states {\bf must} provide the following methods:
 \begin{description}
-\item[\texttt{temperature()}:] The absolute temperature $T_\alpha$ of
+\item[temperature():] The absolute temperature $T_\alpha$ of
   a fluid phase $\alpha$.
-\item[\texttt{pressure()}:] The absolute pressure $p_\alpha$ of a
+\item[pressure():] The absolute pressure $p_\alpha$ of a
   fluid phase $\alpha$.
-\item[\texttt{saturation()}:] The saturation $S_\alpha$ of a fluid 
+\item[saturation():] The saturation $S_\alpha$ of a fluid 
   phase $\alpha$. The saturation is defined as the pore space occupied by the
   fluid divided by the total pore space:
   \[
   \saturation_\alpha := \frac{\porosity \mathcal{V}_\alpha}{\porosity \mathcal{V}}
   \]
-\item[\texttt{moleFraction()}:] Returns the molar fraction
+\item[moleFraction():] Returns the molar fraction
   $x^\kappa_\alpha$ of a component $\kappa$ in a fluid phase
   $\alpha$. The molar fraction $x^\kappa_\alpha$ is defined as the number
   of molecules of a component in a mixture divided by the total number
   of molecules in the fluid.
-\item[\texttt{moleFraction()}:] Returns the mass fraction
+\item[moleFraction():] Returns the mass fraction
   $X^\kappa_\alpha$ of a component $\kappa$ in a fluid phase
   $\alpha$. The mass fraction $X^\kappa_\alpha$ is defined as the
   weight of a component in a mixture divided by the total mass of the
@@ -96,27 +98,27 @@ Also, {\bf all} fluid states {\bf must} provide the following methods:
   where $M^\kappa$ is the molar mass of component $\kappa$ and
   $\overline M_\alpha$ is the mean molar mass of a molecule of phase
   $\alpha$.
-\item[\texttt{averageMolarMass()}:] Returns $\overline M_\alpha$, the
+\item[averageMolarMass():] Returns $\overline M_\alpha$, the
   mean molar mass of a molecule of phase $\alpha$. For a mixure of $N
   > 0$ components, $\overline M_\alpha$ is defined as
   \[
   \overline M_\alpha = \sum_{\kappa=1}^{N} x^\kappa_\alpha M^\kappa
   \]
-\item[\texttt{density()}:] Returns the density $\rho_\alpha$ of a
+\item[density():] Returns the density $\rho_\alpha$ of a
   fluid phase $\alpha$.
-\item[\texttt{molarDensity()}:] Returns the molar density
+\item[molarDensity():] Returns the molar density
   $\rho_{mol,\alpha}$ of a fluid phase $\alpha$. The molar density can
   be defined using the mass density $\rho_\alpha$ and the mean molar mass $\overline M_\alpha$ by
   \[
   \rho_{mol,\alpha} = \frac{\rho_\alpha}{\overline M_\alpha} \;.
   \]
-\item[\texttt{molarVolume()}:] Returns the molar volume
+\item[molarVolume():] Returns the molar volume
   $V_{mol,\alpha}$ of a fluid phase $\alpha$. This quantity is just
   the inverse of the molar density.
-\item[\texttt{molarity()}:] Returns the molar concentration
+\item[molarity():] Returns the molar concentration
   $c^\kappa_\alpha$ of component $\kappa$ in fluid
   phase $\alpha$.
-\item[\texttt{fugacity()}:] Returns the fugacity $f^\kappa_\alpha$ of
+\item[fugacity():] Returns the fugacity $f^\kappa_\alpha$ of
   component $\kappa$ in fluid phase $\alpha$. The fugacity is defined
   as
   \[
@@ -138,48 +140,48 @@ Also, {\bf all} fluid states {\bf must} provide the following methods:
   \[
   f^\kappa = f^\kappa_\alpha = f^\kappa_\beta \forall \alpha, \beta
   \]
-\item[\texttt{fugacityCoefficient()}:] Returns the fugacity coefficient $\Phi^\kappa_\alpha$ of
+\item[fugacityCoefficient():] Returns the fugacity coefficient $\Phi^\kappa_\alpha$ of
   component $\kappa$ in fluid phase $\alpha$.
-\item[\texttt{enthalpy()}:] Returns specific enthalpy $h_\alpha$ of a
+\item[enthalpy():] Returns specific enthalpy $h_\alpha$ of a
   fluid phase $\alpha$. 
-\item[\texttt{internalEnergy()}:] Returns specific internal energy $u_\alpha$ of a
+\item[internalEnergy():] Returns specific internal energy $u_\alpha$ of a
   fluid phase $\alpha$. The specific internal energy is defined by the relation
   \[
   u_\alpha = h_\alpha - \frac{p_\alpha}{\rho_\alpha}
   \]
-\item[\texttt{viscosity()}:] Returns the dynamic viscosity
+\item[viscosity():] Returns the dynamic viscosity
   $\mu_\alpha$ of fluid phase $\alpha$.
 \end{description}
   
 Currently, the following fluid states are available in \Dumux:
 \begin{description}
-\item[\texttt{NonEquilibriumFluidState}:] This is the most general
+\item[NonEquilibriumFluidState:] This is the most general
   fluid state supplied. It does not assume thermodynamic equilibrium
   and this stores all phase compositions (using mole fractions) and
   fugacity coefficients, as well as all phase temperatures, pressures,
   saturations and enthalpies.
-\item[\texttt{CompositionalFluidState}:] The
+\item[CompositionalFluidState:] The
   \texttt{NonEquilibriumFluidState} with the difference
   \texttt{CompositionalFluidState} is similar to the difference that
   is assumes thermodynamic equilibrium. In the context of multi-phase
   flow in porous media, this means that only a single temperature
   needs to be stored.
-\item[\texttt{ImmisicibleFluidState}:] This fluid state assumes that
+\item[ImmisicibleFluidState:] This fluid state assumes that
   the fluid phases are immiscible, which implies that the phase
   compositions and the fugacity coefficients do not need to be stored
   explicitly.
-\item[\texttt{PressureOverlayFluidState}:] This is a so-called {\em
+\item[PressureOverlayFluidState:] This is a so-called {\em
     overlay} fluid state. It allows to set the pressure of all fluid
   phases but forwards everything else to an other fluid state.
-\item[\texttt{SaturationOverlayFluidState}:] This fluid state is like
+\item[SaturationOverlayFluidState:] This fluid state is like
   the \texttt{PressureOverlayFluidState}, except that the phase
   saturations are settable instead of the phase pressures.
-\item[\texttt{TempeatureOverlayFluidState}:] This fluid state is like
+\item[TempeatureOverlayFluidState:] This fluid state is like
   the \texttt{PressureOverlayFluidState}, except that the temperature
   is settable instead of the phase pressures. Note that this overlay
   state assumes thermal equilibrium regardless of underlying fluid
   state.
-\item[\texttt{CompositionOverlayFluidState}:] This fluid state is like
+\item[CompositionOverlayFluidState:] This fluid state is like
   the \texttt{PressureOverlayFluidState}, except that the phase
   composition is settable (in terms of mole fractions) instead of the
   phase pressures.
@@ -187,13 +189,23 @@ Currently, the following fluid states are available in \Dumux:
 
 \section{Fluid Systems}
 
+Fluid systems express the thermodynamic relations between the
+quantities of a fluid state.
+
 \subsection{Parameter Caches}
 
-All fluid systems must export a type for their \texttt{Parameter}
-cache objects. For fluid systems which do not require to cache
-parameters, \Dumux provides a \texttt{NullParameterCache} class.
+All fluid systems must export a type for their \texttt{ParameterCache}
+objects which caches parameters which are expensive to compute and are
+required in multiple thermodynamic relations. For fluid systems which
+do not require to cache parameters, \Dumux provides a
+\texttt{NullParameterCache} class.
 
-Parameter caches must at least provide the following methods
+The parameters stored by parameter cache objects are specific to the
+fluid system and no assumptions on what they provide can be made
+outside of their fluid system. Parameter cache objects provide a
+well-defined set of methods to make them coherent with a given fluid
+state, though.  Parameter cache objects must at least provide the
+following update methods
 \begin{description}
 \item[updateAll(fluidState, except):] Update all cached quantities in
   all phases. The \texttt{except} argument contains a bitfield of the
@@ -222,62 +234,64 @@ Parameter caches must at least provide the following methods
 Note, that the parameter cache interface only guarantees that if a
 more specialized \texttt{update()} method is called, it is not slower
 than the next more-general method (e.g. calling
-\texttt{updateSingleMoleFraction()} can be as expensive as
-\texttt{updateAll()}). It is thus advisable to rather use a broader
-\texttt{update()} method than more than one calls to specialized
-\texttt{update()} methods.
+\texttt{updateSingleMoleFraction()} may be as expensive as
+\texttt{updateAll()}). It is thus advisable to rather use a more
+general \texttt{update()} method once than multiple calls to
+specialized \texttt{update()} methods.
 
 To make usage of parameter caches easier for the case where all cached
 quantities ought to be re-calculated if the respective phase was
-changed, it is possible to just define the \texttt{updatePhase()} and
-derive a parameter cache from \texttt{Dumux::ParameterCacheBase}.
+changed, it is possible to just define the \texttt{updatePhase()}
+method and derive a parameter cache from
+\texttt{Dumux::ParameterCacheBase}.
 
 \subsection{Exported Constants and Capabilities}
 
 Besides providing the type of their \texttt{ParameterCache} objects,
-fluid systems need to export the following constants:
+fluid systems need to export the following constants and auxiliary
+methods:
 \begin{description}
-\item[\texttt{numPhases}:] The number of considered fluid phases.
-\item[\texttt{numComponents}:] The number of considered chemical (pseudo-) species.
-\item[\texttt{phaseName()}:] Given the index of a fluid phase, return a
+\item[numPhases:] The number of considered fluid phases.
+\item[numComponents:] The number of considered chemical (pseudo-) species.
+\item[init():] Initialize the fluid system. This is usually
+  used tabulated to tabulate some quantites
+\item[phaseName():] Given the index of a fluid phase, return a
   human-readable string as its name.
-\item[\texttt{componentName()}:] Given the index of a component,
+\item[componentName():] Given the index of a component,
   return a human-readable string as its name.
-\item[\texttt{isLiquid()}:] Return whether the phase is a liquid, given the index of a phase.
-\item[\texttt{isIdealMixture()}:] Return whether the phase is an ideal
+\item[isLiquid():] Return whether the phase is a liquid, given the index of a phase.
+\item[isIdealMixture():] Return whether the phase is an ideal
   mixture, given the index of a phase. In the context of the \Dumux
   fluid framework a phase $\alpha$ is an ideal mixture if, and only if
   all its fugacity coefficients $\Phi^\kappa_\alpha$ do not depend on
   the phase composition. (Although they might very well depend on
   temperature and pressure.)
-\item[\texttt{isIdealGas()}:] Return whether a phase $\alpha$ is an ideal
+\item[isIdealGas():] Return whether a phase $\alpha$ is an ideal
   gas, i.e. it adheres to the relation
   \[
   p_\alpha V_{mol,\alpha} = R T_\alpha \;,
   \]
   with $R$ being the ideal gas constant.
-\item[\texttt{isCompressible()}:] Return whether a phase $\alpha$ is
+\item[isCompressible():] Return whether a phase $\alpha$ is
   compressible, i.e. its density depends on pressure $p_\alpha$.
-\item[\texttt{molarMass()}:] Given a component index, return the molar
+\item[molarMass():] Given a component index, return the molar
   mass of the corresponding component.
 \end{description}
 
 \subsection{Thermodynamic Relations}
 
 Fluid systems have been explicitly designed to provide as few
-thermodynamic relations as possible. A full-fledged fluid system thus
-only needs to provide the following methods:
+thermodynamic relations as necessary. A full-fledged fluid system thus
+only needs to provide the following thermodynamic relations:
 \begin{description}
-\item[\texttt{init()}:] Initialize the fluid system. This is usually
-  used tabulated to tabulate some quantites
-\item[\texttt{density()}:] Given a fluid state, an up-to-date parameter
-  cache and a phase index, return the density of the phase.
-\item[\texttt{fugacityCoefficient}:] Given a fluid state, an up-to-date
+\item[density():] Given a fluid state, an up-to-date parameter
+  cache and a phase index, return the mass density $\rho_\alpha$ of the phase.
+\item[fugacityCoefficient:] Given a fluid state, an up-to-date
   parameter cache as well as a phase and a component index, return the
-  fugacity coefficient of a the component for the phase.
-\item[\texttt{viscosity()}:] Given a fluid state, an up-to-date parameter
-  cache and a phase index, return the dynamic viscosity of the phase.
-\item[\texttt{diffusionCoefficient}:] Given a fluid state, an
+  fugacity coefficient $\Phi^\kappa_\alpha$ of a the component for the phase.
+\item[viscosity():] Given a fluid state, an up-to-date parameter
+  cache and a phase index, return the dynamic viscosity $\mu_\alpha$ of the phase.
+\item[diffusionCoefficient():] Given a fluid state, an
   up-to-date parameter cache and a phase index, return the dynamic
   viscosity of the phase, calculate the molecular diffusion
   coefficient for a component in a fluid phase
@@ -285,29 +299,35 @@ only needs to provide the following methods:
   Molecular diffusion of a component $\kappa$ in phase $\alpha$ is
   caused by a gradient of the chemical potential and follows the law
   \[ 
-  J^\kappa_\alpha = - D\ \mathbf{grad} \zeta^\kappa_\alpha\;,
+  J^\kappa_\alpha = - D^\kappa_\alpha\ \mathbf{grad} \zeta^\kappa_\alpha\;,
   \] 
   where $\zeta^\kappa_\alpha$ is the component's chemical potential,
-  $D$ is the diffusion coefficient and $J^\kappa_\alpha$ is the
+  $D^\kappa_\alpha$ is the diffusion coefficient and $J^\kappa_\alpha$ is the
   diffusive flux. $\zeta^\kappa_\alpha$ is connected to the
   component's fugacity $f^\kappa_\alpha$ by the relation
   \[ 
   \zeta^\kappa_\alpha = 
   R T_\alpha \mathrm{ln} \frac{f^\kappa_\alpha}{p_\alpha} \;.
   \]
-\item[\texttt{binaryDiffusionCoefficient}:] Given a fluid state, an
+\item[binaryDiffusionCoefficient():] Given a fluid state, an
   up-to-date parameter cache, a phase index and two
   component indices return the binary diffusion coefficient for
   components for the binary mixture. This method is less general than
   \texttt{diffusionCoefficient} method, but usually only binary
   diffusion coefficients can be found in the literature.
-\item[\texttt{enthalpy}:] Given a fluid state, an up-to-date parameter
+\item[enthalpy():] Given a fluid state, an up-to-date parameter
   cache and a phase index, this method represents the specific
   enthalpy $h_\alpha$ of the phase.
-\item[\texttt{thermalConductivity}:] Given a fluid state, an
-  up-to-date parameter cache and a phase index, this method represents
-  the thermal conductivity of the fluid phase.
-\item[\texttt{heatCapacity}:] Given a fluid state, an up-to-date
+\item[thermalConductivity:] Given a fluid state, an
+  up-to-date parameter cache and a phase index, this method expresses
+  the thermal conductivity $\lambda_\alpha$ of the fluid phase. The
+  thermal conductivity is defined by means of the relation
+  \[
+  \dot Q = \lambda_\alpha \mathbf{grad} T_\alpha \;,
+  \]
+  where $\dot Q$ is the heat flux caused by a temperature gradient
+  $\mathbf{grad} T_\alpha$.
+\item[heatCapacity():] Given a fluid state, an up-to-date
   parameter cache and a phase index, this method represents the
   isobaric heat capacity $c_{p,\alpha}$ of the fluid phase. The
   isobaric heat capacity is defined as the partial derivative of the
@@ -315,6 +335,7 @@ only needs to provide the following methods:
   \[
   c_{p,\alpha} = \frac{\partial h_\alpha}{\partial p_\alpha}
   \]
+  % TODO: remove the heatCapacity() method??
 \end{description}
 
 Fluid systems may chose not to implement some of these methods and
@@ -325,27 +346,27 @@ depend on those methods.
 \subsection{Available Fluid Systems}
 Currently, the following fluid states are available in \Dumux:
 \begin{description}
-\item[\texttt{Dumux::FluidSystems::TwoPImmiscible}:] A two-phase fluid
+\item[Dumux::FluidSystems::TwoPImmiscible:] A two-phase fluid
   system featuring which assumes immiscibility of the fluid
   phases. The fluid phases are thus specified by means of their
   constituting components. This fluid system is intented to be used
   with models that assume immiscibility.
-\item[\texttt{Dumux::FluidSystems::H2ON2}:] A two-phase fluid system
+\item[Dumux::FluidSystems::H2ON2:] A two-phase fluid system
   featuring the gas and liquid phases and destilled water ($H_2O$) and
   pure molecular Nitrogen ($N_2$) as components.
-\item[\texttt{Dumux::FluidSystems::H2OAir}:] A two-phase fluid system
+\item[Dumux::FluidSystems::H2OAir:] A two-phase fluid system
   featuring the gas and liquid phases and destilled water ($H_2O$) and
   air (Pseudo component composed of $79\%\;N_2$, $20\%\;O_2$ and
   $1\%\;Ar$) as components.
-\item[\texttt{Dumux::FluidSystems::H2OAirMesitylene}:] A three-phase fluid
+\item[Dumux::FluidSystems::H2OAirMesitylene:] A three-phase fluid
   system featuring the gas, NAPL and water phases and destilled water
   ($H_2O$) and air and Mesitylene ($C_6H_3(CH_3)_3$) as components. This fluid
   system assumes all phases to be ideal mixtures.
-\item[\texttt{Dumux::FluidSystems::H2OAirXylene}:] A three-phase fluid
+\item[Dumux::FluidSystems::H2OAirXylene:] A three-phase fluid
   system featuring the gas, NAPL and water phases and destilled water
   ($H_2O$) and air and Xylene ($C_8H_{10}$) as components. This fluid
   system assumes all phases to be ideal mixtures.
-\item[\texttt{Dumux::FluidSystems::Spe5}:] A three-phase fluid system
+\item[Dumux::FluidSystems::Spe5:] A three-phase fluid system
   featuring the gas, oil and water as phases and the seven components
   distilled water ($H_2O$), Methane ($C_1$), Propane ($C_3$), Pentane
   ($C_5$), Heptane ($C_7$), Decane ($C_{10}$), Pentadecane
@@ -359,6 +380,81 @@ Currently, the following fluid states are available in \Dumux:
 
 \section{Constraint Solvers}
 \label{sec:constraint_solvers}
+
+Constraint solvers connect the thermodynamic relations of expressed by
+fluid systems with the thermodynamic quantities stored by fluid
+states. Using them is not mandatory for models, but given the fact
+that some thermodynamic constraints can be quite complex to solve,
+sharing this code between models makes a lot of sense. Currently,
+\Dumux provides the following constraint solvers:
+\begin{description}
+\item[CompositionFromFugacities:] This constraint takes all
+  component fugacities, the temperature and pressure of a phase as
+  input and calculates the composition of the fluid. This means that
+  the thermodynamic constraints used by this solver are
+  \[
+  f^\kappa = \Phi^\kappa_\alpha(\{x^\beta_\alpha \}, T_\alpha, p_\alpha)  p_\alpha x^\kappa_\alpha\;,
+  \]
+  where ${f^\kappa}$, $T_\alpha$ and $p_\alpha$ are fixed values.
+\item[ComputeFromReferencePhase:] This solver brings all
+  fluid phases into thermodynmic equilibrium with a reference phase
+  $\beta$, assuming that all phase temperatures and saturations have
+  already been set. The constraints used by this solver are thus
+  \begin{eqnarray*}
+  f^\kappa_\beta = f^\kappa_\alpha = \Phi^\kappa_\alpha(\{x^\beta_\alpha \}, T_\alpha, p_\alpha)  p_\alpha x^\kappa_\alpha\;, \\
+  p_\alpha = p_\beta + p_{c\beta\alpha} \;,
+  \end{eqnarray*}
+  where $p_{c\beta\alpha}$ is the capillary pressure between the
+  fluid phases $\beta$ and $\alpha$.
+\item[NcpFlash:] This is a so-called flash solver. A flash
+  solver takes the total mass of all components per volume unit as
+  input and calculates all phase temperatures, pressures, saturations
+  and pressures. This flash solver works for an arbitrary number of
+  phases $M > 0$ and components $N \geq M - 1$. In this case,
+  the unknowns are the following:
+  \begin{itemize}
+  \item $M$ pressures $p_\alpha$
+  \item $M$ saturations $\saturation_\alpha$
+  \item $M\cdot N$ mole fractions $x^\kappa_\alpha$
+  \end{itemize}
+  This sums up to $M\cdot(N + 2)$. The equations side of things, can
+  offer the following:
+  \begin{itemize}
+  \item $(M - 1)\cdot N$ equations stemming from the fact that the
+    fugacity of any component is the same in all phases, i.e.
+    \[
+    f^\kappa_\alpha = f^\kappa_\beta
+    \]
+    holds for all phases $\alpha, \beta$ and all components $\kappa$.
+  \item $1$ equation originating from the closure condition of the saturations:
+    \[
+    \sum_{\alpha=1}^M \saturation_\alpha = 1
+    \]
+  \item $M - 1$ constraints are defined by the capillary pressures:
+    \[ 
+    p_\beta = p_\alpha + p_{c\beta\alpha} \;,
+    \]
+    for all phases $\alpha$, $\beta$
+  \item $N$ constraints come  the fact that the total mass of each
+    component is given:
+    \[
+    c^\kappa_{tot} = sum_{\alpha=1}^M \rho_{mol,\alpha} x_\alpha^\kappa = const
+    \]
+  \item And finally $M$ model constraints. This solver uses NCP constraints: % as suggested in \cite{TODO}
+    \[
+     0 = \mathrm{min}\{\saturation_\alpha, 1 - \sum_{\kappa=1}^N x_\alpha^\kappa}
+   \]
+\end{itemize}
+
+The number of equation also sums up to $M\cdot(N + 2)$. And the system
+of equations is closed.
+\item[ImmiscibleFlash:] This is a flash solver assuming
+  immiscibility of the phases. It is similar to the \texttt{NcpFlash}
+  solver but a lot simpler.
+\item[MiscibleMultiphaseComposition:] This solver calculates
+  the composition of all phases provided that each of them is
+  present. Currently, this solver does not support non-ideal mixtures.
+\end{description}
 
 %%% Local Variables: 
 %%% mode: latex
