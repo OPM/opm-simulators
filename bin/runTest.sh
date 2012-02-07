@@ -46,7 +46,7 @@ fi
 echo "######################"
 echo "# Running test"
 echo "######################"
-if ! "$TEST_BINARY" $TEST_ARGS; then
+if "$TEST_BINARY" $TEST_ARGS; then
     echo "Executing the binary failed!"
     exit 1
 fi
