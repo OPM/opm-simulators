@@ -204,9 +204,10 @@ namespace Opm
 
 
 
+    typedef std::map<std::string, const std::vector<double>*> DataMap;
+
     void writeVtkDataGeneralGrid(const UnstructuredGrid* grid,
-				 const std::vector<double>& pressure,
-				 const std::vector<double>& saturation,
+				 const DataMap& data,
 				 std::ostream& os);
 
 
