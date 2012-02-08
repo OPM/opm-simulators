@@ -123,6 +123,7 @@ void outputState(const UnstructuredGrid* grid,
 		 const int step,
 		 const std::string& output_dir)
 {
+    // Write data in VTK format.
     std::ostringstream vtkfilename;
     vtkfilename << output_dir << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
     std::ofstream vtkfile(vtkfilename.str().c_str());
@@ -134,6 +135,18 @@ void outputState(const UnstructuredGrid* grid,
     dm["pressure"] = &state.pressure();
     dm["concentration"] = &state.concentration();
     Opm::writeVtkDataGeneralGrid(grid, dm, vtkfile);
+
+    // Write data (not grid) in Matlab format
+    for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+	std::ostringstream fname;
+	fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+	std::ofstream file(fname.str().c_str());
+	if (!file) {
+	    THROW("Failed to open " << fname.str());
+	}
+	const std::vector<double>& d = *(it->second);
+	std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
+    }
 }
 
 
