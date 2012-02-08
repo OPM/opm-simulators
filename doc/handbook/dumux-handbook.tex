@@ -43,16 +43,19 @@
 \usepackage{rotating}
 \usepackage{subfig}
 
+\ifpdf
+\usepackage{auto-pst-pdf}
+\fi
+\usepackage{pstricks}
+
 \usepackage[normalem]{ulem}
 \usepackage{tabularx}
 \usepackage{graphics}
-\usepackage{pstricks}
 \newcommand{\snakeline}{%
 % {\uwave{\makebox[\linewidth]{\mbox{}}}}
 \uwave{\mbox{}}
 }
 \usepackage{layout}
-
 
 %\usepackage{ngerman}
 \usepackage[english]{babel}
