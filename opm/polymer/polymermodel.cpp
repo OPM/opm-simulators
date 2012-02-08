@@ -176,7 +176,7 @@ residual_c(double c, void *data)
 	+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 	+ p->dtpv*(p->outflux*ff*mc + p->influx_polymer);
 #ifdef EXTRA_DEBUG_OUTPUT
-    std::cout << "res(c) = " << res << std::endl;
+    std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
 #endif
     return res;
 }
@@ -241,7 +241,7 @@ get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctr
     double src = d->source[cell];
     p.influx  = src > 0 ? -src : 0.0;
     p.influx_polymer  = src >  0 ? -src*compute_mc(d->inflow_c, d->props, d->polydata) : 0.0;
-    p.outflux = d->source[cell] <= 0 ? -d->source[cell] : 0.0;
+    p.outflux = src <= 0 ? -src : 0.0;
     p.porosity = d->porosity[cell];
     p.psdata = d;
     p.cell = cell;
@@ -272,8 +272,12 @@ get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctr
         }
     }
 #ifdef EXTRA_DEBUG_OUTPUT
-    std::cout << "in: " << p.influx << "    in(polymer): " << p.influx_polymer
-	      << "    out: " << p.outflux << std::endl;
+    std::cout << "Cell: " << cell
+	      << "    in: " << p.influx
+	      << "    in(polymer): " << p.influx_polymer
+	      << "    out: " << p.outflux << '\n'
+	      << "           c0: " << p.c0
+	      << "    s0: " << p.s0 << std::endl;
 #endif
     return p;
 }
