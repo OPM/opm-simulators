@@ -55,12 +55,12 @@ namespace Dumux {
  * - 1 equation from the closure condition of all saturations
  *   (they sum up to 1)
  * - M - 1 constraints from the capillary pressures
- *   (-> p_\beta = p_\alpha + p_c\alpha,\beta)
+ *   \f$(-> p_\beta = p_\alpha + p_c\alpha,\beta)\f$
  * - N constraints from the fact that the total mass of each
- *   component is given (-> sum_\alpha rhoMolar_\alpha *
- *   x_\alpha^\kappa = const)
+ *   component is given \f$(-> sum_\alpha rhoMolar_\alpha *
+ *   x_\alpha^\kappa = const)\f$
  * - M model constraints. Here we use the NCP constraints
- *   (-> 0 = min{S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa})
+ *   (-> 0 = min \f$ {S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa}\f$)
  *
  * this also sums up to M*(N + 2).
  *
