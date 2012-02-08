@@ -109,7 +109,9 @@ private:
 
 double polymerInflowAtTime(double time)
 {
-    return time >= 4.0*Opm::unit::day ? 1.0 : 0.0;
+    return time >= 4.0*Opm::unit::day ? 5.0 : 0.0;
+    // return time >= 0.0*Opm::unit::day ? 0.2 : 0.0;
+    // return 0.0;
 }
 
 
@@ -127,7 +129,11 @@ void outputState(const UnstructuredGrid* grid,
     if (!vtkfile) {
 	THROW("Failed to open " << vtkfilename.str());
     }
-    Opm::writeVtkDataGeneralGrid(grid, state.pressure(), state.saturation(), vtkfile);
+    Opm::DataMap dm;
+    dm["saturation"] = &state.saturation();
+    dm["pressure"] = &state.pressure();
+    dm["concentration"] = &state.concentration();
+    Opm::writeVtkDataGeneralGrid(grid, dm, vtkfile);
 }
 
 
@@ -179,20 +185,27 @@ main(int argc, char** argv)
 	grid.reset(new Opm::Grid(nx, ny, nz));
 	// Rock and fluid init.
 	props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-	polydata.c_max_limit = param.getDefault("c_max_limit", 1.0);
+	// Setting polydata defaults to mimic a simple example case.
+	polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
 	polydata.omega = param.getDefault("omega", 1.0);
 	polydata.rhor = param.getDefault("rock_density", 1000.0);
 	polydata.dps = param.getDefault("dead_pore_space", 0.15);
 	polydata.c_vals_visc.resize(2);
 	polydata.c_vals_visc[0] = 0.0;
-	polydata.c_vals_visc[0] = polydata.c_max_limit;
+	polydata.c_vals_visc[0] = 7.0;
 	polydata.visc_mult_vals.resize(2);
 	polydata.visc_mult_vals[0] = 1.0;
-	polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-	polydata.c_vals_ads = polydata.c_vals_visc;
-	polydata.ads_vals.resize(2);
-	polydata.ads_vals[0] = 1.0;
-	polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+	// polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+	polydata.visc_mult_vals[1] = 20.0;
+	polydata.c_vals_ads.resize(3);
+	polydata.c_vals_ads[0] = 0.0;
+	polydata.c_vals_ads[1] = 2.0;
+	polydata.c_vals_ads[2] = 8.0;
+	polydata.ads_vals.resize(3);
+	polydata.ads_vals[0] = 0.0;
+	// polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+	polydata.ads_vals[1] = 0.0015;
+	polydata.ads_vals[2] = 0.0025;
     }
 
     // Extra rock init.
