@@ -43,15 +43,13 @@ struct ParametersCRes
     double porosity;
     PolymerSolverData* psdata;
     int cell;
-    NonlinearSolverCtrl* ctrl;
     double s;
     const PolymerData* polydata;
 };
 
 
 static struct ParametersSRes get_parameters_s(struct PolymerSolverData *d, int cell);
-static struct ParametersCRes get_parameters_c(struct PolymerSolverData *d, int cell,
-					      NonlinearSolverCtrl* ctrl);
+static struct ParametersCRes get_parameters_c(struct PolymerSolverData *d, int cell);
 static double residual_s(double s, void *data);
 static double residual_c(double c, void *data);
 static double fluxfun_props(double s,
@@ -124,12 +122,21 @@ init_solverdata(struct UnstructuredGrid *grid,
 }
 
 /* Solver for single-cell bvp calls root-finder in nlsolvers.c */
-void polymer_solvecell(void *data, struct NonlinearSolverCtrl *ctrl, int cell)
+void polymer_solvecell(void *data, int cell)
 {
     struct PolymerSolverData   *d   = (struct PolymerSolverData*) data;
-    struct ParametersCRes   prm = get_parameters_c(d, cell, ctrl);
 
-    d->concentration[cell] = find_zero(residual_c, &prm, ctrl);
+    struct NonlinearSolverCtrl ctrl;
+    ctrl.maxiterations = 20;
+    ctrl.nltolerance   = 1e-9;
+    ctrl.method        = NonlinearSolverCtrl::REGULAFALSI;
+    ctrl.initialguess  = 0.3*d->polydata->c_max_limit;
+    ctrl.min_bracket   = 0.0;
+    ctrl.max_bracket   = d->polydata->c_max_limit;
+
+    struct ParametersCRes   prm = get_parameters_c(d, cell);
+
+    d->concentration[cell] = find_zero(residual_c, &prm, &ctrl);
     d->cmax[cell] = std::max(d->cmax[cell], d->concentration[cell]);
     d->saturation[cell] = prm.s;
     d->fractionalflow[cell] = fluxfun_props(d->saturation[cell], d->concentration[cell], cell, d->props, d->polydata);
@@ -160,7 +167,14 @@ residual_c(double c, void *data)
     int cell = p->cell;
     struct ParametersSRes prm_s = get_parameters_s(p->psdata, cell);
     prm_s.c = c;
-    double s = find_zero(residual_s, &prm_s, p->ctrl);
+    struct NonlinearSolverCtrl ctrl;
+    ctrl.maxiterations = 20;
+    ctrl.nltolerance   = 1e-9;
+    ctrl.method        = NonlinearSolverCtrl::REGULAFALSI;
+    ctrl.initialguess  = 0.5;
+    ctrl.min_bracket   = 0.0;
+    ctrl.max_bracket   = 1.0;
+    double s = find_zero(residual_s, &prm_s, &ctrl);
     p->s = s;
     double ff = fluxfun_props(s, c, p->cell, prm_s.props, p->polydata);
     double mc = compute_mc(c, prm_s.props, p->polydata);
@@ -226,7 +240,7 @@ get_parameters_s(struct PolymerSolverData *d, int cell)
 
 
 static struct ParametersCRes
-get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctrl)
+get_parameters_c(struct PolymerSolverData *d, int cell)
 {
     int i;
     struct UnstructuredGrid *g  = d->grid;
@@ -245,7 +259,6 @@ get_parameters_c(struct PolymerSolverData *d, int cell, NonlinearSolverCtrl* ctr
     p.porosity = d->porosity[cell];
     p.psdata = d;
     p.cell = cell;
-    p.ctrl = ctrl;
     p.s = -1e100;
     p.polydata = d->polydata;
     for (i=g->cell_facepos[cell]; i<g->cell_facepos[cell+1]; ++i) {

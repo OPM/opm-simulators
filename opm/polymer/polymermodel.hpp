@@ -51,11 +51,9 @@ struct PolymerSolverData  {
     double                  *mc;
 };
 
-struct NonlinearSolverCtrl;
-
 
 void
-polymer_solvecell(void *data, struct NonlinearSolverCtrl *ctrl, int cell);
+polymer_solvecell(void *data, int cell);
 
 void
 destroy_solverdata(struct PolymerSolverData *d);
