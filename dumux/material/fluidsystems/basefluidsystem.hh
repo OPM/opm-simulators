@@ -162,9 +162,11 @@ public:
      * \brief Specific isobaric heat capacity of a fluid phase.
      *        \f$\mathrm{[J/kg]}\f$.
      *
-     * \param params    mutable parameters
+     * \param paramCache   mutable parameters
      * \param phaseIdx  for which phase to give back the heat capacity
-     */
+     * \param fluidState represents all relevant thermodynamic quantities of a
+     *  fluid system
+     * */
     template <class FluidState>
     static Scalar heatCapacity(const FluidState &fluidState,
                                const ParameterCache &paramCache,
