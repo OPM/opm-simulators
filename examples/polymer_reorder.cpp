@@ -66,7 +66,7 @@
 class ReservoirState
 {
 public:
-    ReservoirState(const UnstructuredGrid* g, const int num_phases = 2)
+    ReservoirState(const UnstructuredGrid* g, const int num_phases = 2, const double init_sat = 0.0)
         : press_ (g->number_of_cells, 0.0),
           fpress_(g->number_of_faces, 0.0),
           flux_  (g->number_of_faces, 0.0),
@@ -75,7 +75,8 @@ public:
 	  cmax_(g->number_of_cells, 0.0)
     {
 	for (int cell = 0; cell < g->number_of_cells; ++cell) {
-	    sat_[num_phases*cell + num_phases - 1] = 1.0;
+	    sat_[num_phases*cell] = init_sat;
+	    sat_[num_phases*cell + num_phases - 1] = 1.0 - init_sat;
 	}
     }
 
@@ -109,9 +110,11 @@ private:
 
 double polymerInflowAtTime(double time)
 {
-    return time >= 4.0*Opm::unit::day ? 5.0 : 0.0;
-    // return time >= 0.0*Opm::unit::day ? 0.2 : 0.0;
-    // return 0.0;
+    if (time >= 300.0*Opm::unit::day && time < 800.0*Opm::unit::day) {
+	return 5.0;
+    } else {
+	return 0.0;
+    }
 }
 
 
@@ -234,7 +237,8 @@ main(int argc, char** argv)
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
-    ReservoirState state(grid->c_grid(), props->numPhases());
+    double init_sat = param.getDefault("init_sat", 0.0);
+    ReservoirState state(grid->c_grid(), props->numPhases(), init_sat);
     // We need a separate reorder_sat, because the reorder
     // code expects a scalar sw, not both sw and so.
     std::vector<double> reorder_sat(grid->c_grid()->number_of_cells);
