@@ -4,7 +4,9 @@ $(BOOST_CPPFLAGS)
 
 LDFLAGS = $(BOOST_LDFLAGS)
 
-LDADD = $(top_builddir)/libopmpolymer.la
+LDADD = $(top_builddir)/libopmpolymer.la	\
+$(BOOST_FILESYSTEM_LIB)				\
+$(BOOST_SYSTEM_LIB)	
 
 noinst_PROGRAMS =				\
 hello						\
@@ -17,9 +19,3 @@ polymer_reorder_SOURCES =			\
 polymer_reorder.cpp				\
 Utilities.hpp					\
 Utilities.cpp
-
-polymer_reorder_LDADD =				\
-$(BOOST_FILESYSTEM_LIB)				\
-$(BOOST_SYSTEM_LIB)				\
-$(LDADD)
-
