@@ -21,19 +21,7 @@
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/nlsolvers.h>
-
-struct Opm::Parameters
-{
-    double s0;
-    double influx;  /* sum_j min(v_ij, 0)*f(s_j) */
-    double outflux; /* sum_j max(v_ij, 0)        */
-    double dtpv;    /* dt/pv(i)                  */
-    int cell;
-    const Opm::IncompPropertiesInterface* props;
-};
-
-static double residual(double s, void *data);
-static double fluxfun_props(double s, int cell, const Opm::IncompPropertiesInterface* props);
+#include <opm/core/utility/RootFinders.hpp>
 
 namespace Opm
 {
@@ -55,96 +43,92 @@ namespace Opm
 	  saturation_(saturation),
 	  fractionalflow_(grid->number_of_cells, 0.0)
     {
+	if (props->numPhases() != 2) {
+	    THROW("Property object must have 2 phases");
+	}
+	visc_ = props->viscosity();
     }
+
+
+    // Residual function r(s) for a single-cell implicit Euler transport
+    //
+    //     r(s) = s - s0 + dt/pv*( influx + outflux*f(s) )
+    //
+    // where influx is water influx, outflux is total outflux.
+    // Influxes are negative, outfluxes positive.
+    struct TransportModelTwophase::Residual
+    {
+	int cell;
+	double s0;
+	double influx;  // sum_j min(v_ij, 0)*f(s_j)
+	double outflux; // sum_j max(v_ij, 0)
+	double dtpv;    // dt/pv(i)
+	const TransportModelTwophase& tm;
+	explicit Residual(const TransportModelTwophase& tmodel, int cell_index)
+	    : tm(tmodel)
+	{
+	    cell    = cell_index;
+	    s0      = tm.saturation_[cell];
+	    influx  = tm.source_[cell] >  0 ? -tm.source_[cell] : 0.0;
+	    outflux = tm.source_[cell] <= 0 ? -tm.source_[cell] : 0.0;
+	    dtpv    = tm.dt_/tm.porevolume_[cell];
+
+	    for (int i = tm.grid_->cell_facepos[cell]; i < tm.grid_->cell_facepos[cell+1]; ++i) {
+		int f = tm.grid_->cell_faces[i];
+		double flux;
+		int other;
+		// Compute cell flux
+		if (cell == tm.grid_->face_cells[2*f]) {
+		    flux  = tm.darcyflux_[f];
+		    other = tm.grid_->face_cells[2*f+1];
+		} else {
+		    flux  =-tm.darcyflux_[f];
+		    other = tm.grid_->face_cells[2*f];
+		}
+		// Add flux to influx or outflux, if interiour.
+		if (other != -1) {
+		    if (flux < 0.0) {
+			influx  += flux*tm.fractionalflow_[other];
+		    } else {
+			outflux += flux;
+		    }
+		}
+	    }
+	}
+	double operator()(double s) const
+	{
+	    return s - s0 +  dtpv*(outflux*tm.fracFlow(s, cell) + influx);
+	}
+    };
 
 
     void TransportModelTwophase::solveSingleCell(int cell)
     {
-	NonlinearSolverCtrl ctrl;
-	ctrl.maxiterations = 20;
-	ctrl.nltolerance   = 1e-9;
-	ctrl.method        = NonlinearSolverCtrl::REGULAFALSI;
-	ctrl.initialguess  = 0.5;
-	ctrl.min_bracket   = 0.0;
-	ctrl.max_bracket   = 1.0;
-
-	Parameters prm = getParameters(cell);
-	saturation_[cell] = find_zero(residual, &prm, &ctrl);
-	// double ff1 = fluxfun_props(d->saturation[cell], cell, d->props);
-	// double ff2 = fluxfun(d->saturation[cell], -999);
-	// printf("New = %f   old = %f\n", ff1, ff2);
-	fractionalflow_[cell] = fluxfun_props(saturation_[cell], cell, props_);
+	Residual res(*this, cell);
+	const double a = 0.0;
+	const double b = 1.0;
+	const int maxit = 20;
+	const double tol = 1e-9;
+	int iters_used;
+	saturation_[cell] = modifiedRegulaFalsi(res, a, b, maxit, tol, iters_used);
+	fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
     }
 
-
-    Opm::Parameters TransportModelTwophase::getParameters(int cell)
+    double TransportModelTwophase::fracFlow(double s, int cell) const
     {
-	int i;
-	Opm::Parameters p;
-	double flux;
-	int f, other;
-
-	p.s0      = saturation_[cell];
-	p.influx  = source_[cell] >  0 ? -source_[cell] : 0.0;
-	p.outflux = source_[cell] <= 0 ? -source_[cell] : 0.0;
-	p.dtpv    = dt_/porevolume_[cell];
-	p.cell    = cell;
-	p.props   = props_;
-
-	for (i=grid_->cell_facepos[cell]; i<grid_->cell_facepos[cell+1]; ++i) {
-	    f = grid_->cell_faces[i];
-
-	    /* Compute cell flux*/
-	    if (cell == grid_->face_cells[2*f]) {
-		flux  = darcyflux_[f];
-		other = grid_->face_cells[2*f+1];
-	    }
-	    else {
-		flux  =-darcyflux_[f];
-		other = grid_->face_cells[2*f];
-	    }
-
-	    if (other != -1) {
-		if (flux < 0.0) {
-		    p.influx  += flux*fractionalflow_[other];
-		}
-		else {
-		    p.outflux += flux;
-		}
-	    }
-	}
-	return p;
+	double sat[2] = { s, 1.0 - s };
+	double mob[2];
+	props_->relperm(1, sat, &cell, mob, 0);
+	mob[0] /= visc_[0];
+	mob[1] /= visc_[1];
+	return mob[0]/(mob[0] + mob[1]);
     }
+
+
 
 
 } // namespace Opm
 
-/* ====================== Internals =================================*/
-
-
-/* Residual function r(s) for a single-cell bvp */
-/*
- *     r(s) = s - s0 + dt/pv*(influx - outflux*f(s) )
- */
-/* influx is water influx, outflux is total outflux */
-static double
-residual(double s, void *data)
-{
-    Opm::Parameters *p = (Opm::Parameters*) data;
-    return s - p->s0 +  p->dtpv*(p->outflux*fluxfun_props(s, p->cell, p->props) + p->influx);
-}
-
-
-static double fluxfun_props(double s, int cell, const Opm::IncompPropertiesInterface* props)
-{
-    const double* visc = props->viscosity();
-    double sat[2] = { s, 1.0 - s };
-    double mob[2];
-    props->relperm(1, sat, &cell, mob, 0);
-    mob[0] /= visc[0];
-    mob[1] /= visc[1];
-    return mob[0]/(mob[0] + mob[1]);
-}
 
 
 /* Local Variables:    */

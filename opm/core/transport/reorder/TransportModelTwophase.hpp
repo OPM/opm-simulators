@@ -25,13 +25,10 @@
 
 class UnstructuredGrid;
 
-
 namespace Opm
 {
 
     class IncompPropertiesInterface;
-    class Parameters;
-
 
     class TransportModelTwophase : public TransportModelInterface
     {
@@ -49,14 +46,16 @@ namespace Opm
     private:
 	const UnstructuredGrid* grid_;
 	const IncompPropertiesInterface* props_;
-	const double* darcyflux_;   /* one flux per face  in cdata::grid*/
-	const double* porevolume_;  /* one volume per cell */
-	const double* source_;      /* one source per cell */
+	const double* darcyflux_;   // one flux per grid face
+	const double* porevolume_;  // one volume per cell
+	const double* source_;      // one source per cell
 	double dt_;
-	double* saturation_;        /* one per cell */
-	std::vector<double> fractionalflow_;  /* one per cell */
+	double* saturation_;        // one per cell
+	std::vector<double> fractionalflow_;  // one per cell
+	const double* visc_;
 
-	Parameters getParameters(int cell);
+	struct Residual;
+	double fracFlow(double s, int cell) const;
     };
 
 } // namespace Opm
