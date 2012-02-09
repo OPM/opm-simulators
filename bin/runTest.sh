@@ -60,7 +60,7 @@ if ! test -r "$TEST_RESULT"; then
     exit 1
 fi
 
-if ! diff --suppress-common-lines -y "$REFERENCE_RESULT" "$TEST_RESULT"; then
+if ! python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$TEST_RESULT"; then
     echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
     echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
     echo "make it the reference result if necessary."
