@@ -39,23 +39,12 @@ void polymertransport(
 					      inflow_c, saturation,
 					      concentration, cmax);
 
-
-    struct NonlinearSolverCtrl ctrl;
-
-
     /* Compute sequence of single-cell problems */
     sequence   = (int*) malloc(  grid->number_of_cells    * sizeof *sequence);
     components = (int*) malloc(( grid->number_of_cells+1) * sizeof *components);
 
     compute_sequence(grid, darcyflux, sequence, components, &ncomponents);
     assert(ncomponents == grid->number_of_cells);
-
-
-
-    ctrl.maxiterations = 20;
-    ctrl.nltolerance   = 1e-9;
-    ctrl.method        = NonlinearSolverCtrl::REGULAFALSI;
-    ctrl.initialguess  = 0.5;
 
     /* Assume all strong components are single-cell domains. */
     for(i=0; i<grid->number_of_cells; ++i)
@@ -68,7 +57,7 @@ void polymertransport(
             break;
         }
 #endif
-        polymer_solvecell(data, &ctrl, sequence[i]);
+        polymer_solvecell(data, sequence[i]);
         /*print("iterations:%d residual:%20.16f\n",
          *  ctrl.iterations, ctrl.residual);*/
     }

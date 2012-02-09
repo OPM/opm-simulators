@@ -26,6 +26,7 @@
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
 #include <opm/core/utility/cart_grid.h>
+#include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -60,13 +61,64 @@
 
 
 
+class AdHocProps : public Opm::IncompPropertiesBasic
+{
+public:
+    AdHocProps(const Opm::parameter::ParameterGroup& param, int dim, int num_cells)
+	: Opm::IncompPropertiesBasic(param, dim, num_cells)
+    {
+	ASSERT(numPhases() == 2);
+	sw_.resize(3);
+	sw_[0] = 0.2;
+	sw_[1] = 0.7;
+	sw_[2] = 1.0;
+	krw_.resize(3);
+	krw_[0] = 0.0;
+	krw_[1] = 0.7;
+	krw_[2] = 1.0;
+	so_.resize(2);
+	so_[0] = 0.3;
+	so_[1] = 0.8;
+	kro_.resize(2);
+	kro_[0] = 0.0;
+	kro_[1] = 1.0;
+    }
 
+    virtual void relperm(const int n,
+			 const double* s,
+			 const int* /*cells*/,
+			 double* kr,
+			 double* dkrds) const
+    {
+	ASSERT(dkrds == 0);
+	for (int i = 0; i < n; ++i) {
+	    kr[2*i] = krw(s[2*i]);
+	    kr[2*i+1] = kro(s[2*i+1]);
+	}
+    }
+
+
+private:
+    double krw(double s) const
+    {
+	return Opm::linearInterpolation(sw_, krw_, s);
+    }
+
+    double kro(double s) const
+    {
+	return Opm::linearInterpolation(so_, kro_, s);
+    }
+    std::vector<double> sw_;
+    std::vector<double> krw_;
+    std::vector<double> so_;
+    std::vector<double> kro_;
+};
 
 
 class ReservoirState
 {
 public:
-    ReservoirState(const UnstructuredGrid* g, const int num_phases = 2)
+    ReservoirState(const UnstructuredGrid* g, const int num_phases = 2, const double init_sat = 0.0)
         : press_ (g->number_of_cells, 0.0),
           fpress_(g->number_of_faces, 0.0),
           flux_  (g->number_of_faces, 0.0),
@@ -75,7 +127,8 @@ public:
 	  cmax_(g->number_of_cells, 0.0)
     {
 	for (int cell = 0; cell < g->number_of_cells; ++cell) {
-	    sat_[num_phases*cell + num_phases - 1] = 1.0;
+	    sat_[num_phases*cell] = init_sat;
+	    sat_[num_phases*cell + num_phases - 1] = 1.0 - init_sat;
 	}
     }
 
@@ -109,7 +162,11 @@ private:
 
 double polymerInflowAtTime(double time)
 {
-    return time >= 4.0*Opm::unit::day ? 1.0 : 0.0;
+    if (time >= 300.0*Opm::unit::day && time < 800.0*Opm::unit::day) {
+    	return 5.0;
+    } else {
+    	return 0.0;
+    }
 }
 
 
@@ -121,13 +178,30 @@ void outputState(const UnstructuredGrid* grid,
 		 const int step,
 		 const std::string& output_dir)
 {
+    // Write data in VTK format.
     std::ostringstream vtkfilename;
     vtkfilename << output_dir << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
     std::ofstream vtkfile(vtkfilename.str().c_str());
     if (!vtkfile) {
 	THROW("Failed to open " << vtkfilename.str());
     }
-    Opm::writeVtkDataGeneralGrid(grid, state.pressure(), state.saturation(), vtkfile);
+    Opm::DataMap dm;
+    dm["saturation"] = &state.saturation();
+    dm["pressure"] = &state.pressure();
+    dm["concentration"] = &state.concentration();
+    Opm::writeVtkDataGeneralGrid(grid, dm, vtkfile);
+
+    // Write data (not grid) in Matlab format
+    for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+	std::ostringstream fname;
+	fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+	std::ofstream file(fname.str().c_str());
+	if (!file) {
+	    THROW("Failed to open " << fname.str());
+	}
+	const std::vector<double>& d = *(it->second);
+	std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
+    }
 }
 
 
@@ -176,23 +250,34 @@ main(int argc, char** argv)
 	const int nx = param.getDefault("nx", 100);
 	const int ny = param.getDefault("ny", 100);
 	const int nz = param.getDefault("nz", 1);
-	grid.reset(new Opm::Grid(nx, ny, nz));
+	const int dx = param.getDefault("dx", 1.0);
+	const int dy = param.getDefault("dy", 1.0);
+	const int dz = param.getDefault("dz", 1.0);
+	grid.reset(new Opm::Grid(nx, ny, nz, dx, dy, dz));
 	// Rock and fluid init.
-	props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-	polydata.c_max_limit = param.getDefault("c_max_limit", 1.0);
+	// props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+	// Setting polydata defaults to mimic a simple example case.
+	polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
 	polydata.omega = param.getDefault("omega", 1.0);
 	polydata.rhor = param.getDefault("rock_density", 1000.0);
 	polydata.dps = param.getDefault("dead_pore_space", 0.15);
 	polydata.c_vals_visc.resize(2);
 	polydata.c_vals_visc[0] = 0.0;
-	polydata.c_vals_visc[0] = polydata.c_max_limit;
+	polydata.c_vals_visc[1] = 7.0;
 	polydata.visc_mult_vals.resize(2);
 	polydata.visc_mult_vals[0] = 1.0;
-	polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-	polydata.c_vals_ads = polydata.c_vals_visc;
-	polydata.ads_vals.resize(2);
-	polydata.ads_vals[0] = 1.0;
-	polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+	// polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+	polydata.visc_mult_vals[1] = 20.0;
+	polydata.c_vals_ads.resize(3);
+	polydata.c_vals_ads[0] = 0.0;
+	polydata.c_vals_ads[1] = 2.0;
+	polydata.c_vals_ads[2] = 8.0;
+	polydata.ads_vals.resize(3);
+	polydata.ads_vals[0] = 0.0;
+	// polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+	polydata.ads_vals[1] = 0.0015;
+	polydata.ads_vals[2] = 0.0025;
     }
 
     // Extra rock init.
@@ -205,11 +290,15 @@ main(int argc, char** argv)
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
-    ReservoirState state(grid->c_grid(), props->numPhases());
+    double init_sat = param.getDefault("init_sat", 0.0);
+    ReservoirState state(grid->c_grid(), props->numPhases(), init_sat);
     // We need a separate reorder_sat, because the reorder
     // code expects a scalar sw, not both sw and so.
     std::vector<double> reorder_sat(grid->c_grid()->number_of_cells);
     double flow_per_sec = 0.1*tot_porevol/Opm::unit::day;
+    if (param.has("injection_rate_per_day")) {
+	flow_per_sec = param.get<double>("injection_rate_per_day")/Opm::unit::day;
+    }
     std::vector<double> src   (grid->c_grid()->number_of_cells, 0.0);
     src[0]                         =  flow_per_sec;
     src[grid->c_grid()->number_of_cells - 1] = -flow_per_sec;

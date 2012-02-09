@@ -106,6 +106,12 @@ namespace Opm
 	    ug_ = create_cart_grid_3d(nx, ny, nz);
 	}
 
+	Grid(int nx, int ny, int nz,
+	     double dx, double dy, double dz)
+	{
+	    ug_ = create_hexa_grid_3d(nx, ny, nz, dx, dy, dz);
+	}
+
 	~Grid()
 	{
 	    free_grid(ug_);
@@ -204,9 +210,10 @@ namespace Opm
 
 
 
+    typedef std::map<std::string, const std::vector<double>*> DataMap;
+
     void writeVtkDataGeneralGrid(const UnstructuredGrid* grid,
-				 const std::vector<double>& pressure,
-				 const std::vector<double>& saturation,
+				 const DataMap& data,
 				 std::ostream& os);
 
 

@@ -211,8 +211,7 @@ namespace Opm
 
 
     void writeVtkDataGeneralGrid(const UnstructuredGrid* grid,
-				 const std::vector<double>& pressure,
-				 const std::vector<double>& saturation,
+				 const DataMap& data,
 				 std::ostream& os)
     {
 	if (grid->dimensions != 3) {
@@ -350,37 +349,32 @@ namespace Opm
 	}
 	{
 	    pm.clear();
-	    pm["Scalars"] = "saturation";
+	    if (data.find("saturation") != data.end()) {
+		pm["Scalars"] = "saturation";
+	    } else if (data.find("pressure") != data.end()) {
+		pm["Scalars"] = "pressure";
+	    }
 	    Tag celldatatag("CellData", pm, os);
 	    pm.clear();
 	    pm["type"] = "Int32";
 	    pm["NumberOfComponents"] = "1";
 	    pm["format"] = "ascii";
 	    pm["type"] = "Float64";
-	    {
-		pm["Name"] = "pressure";
+	    for (DataMap::const_iterator dit = data.begin(); dit != data.end(); ++dit) {
+		pm["Name"] = dit->first;
+		const std::vector<double>& field = *(dit->second);
+		// We always print only the first data item for every
+		// cell, using 'stride'.
+		// This is a hack to get water saturation nicely.
+		// \TODO: Extend to properly printing vector data.
+		const int stride = field.size()/grid->number_of_cells;
 		Tag ptag("DataArray", pm, os);
 		const int num_per_line = 5;
 		for (int c = 0; c < num_cells; ++c) {
 		    if (c % num_per_line == 0) {
 			Tag::indent(os);
 		    }
-		    os << pressure[c] << ' ';
-		    if (c % num_per_line == num_per_line - 1
-			|| c == num_cells - 1) {
-			os << '\n';
-		    }
-		}	    
-	    }
-	    {
-		pm["Name"] = "saturation";
-		Tag ptag("DataArray", pm, os);
-		const int num_per_line = 5;
-		for (int c = 0; c < num_cells; ++c) {
-		    if (c % num_per_line == 0) {
-			Tag::indent(os);
-		    }
-		    os << saturation[2*c] << ' ';
+		    os << field[stride*c] << ' ';
 		    if (c % num_per_line == num_per_line - 1
 			|| c == num_cells - 1) {
 			os << '\n';
