@@ -1,14 +1,16 @@
 \section[Fully-coupled model]{Solving a problem using a Fully-Coupled Model}\label{tutorial-coupled}
 
-The process of solving a problem using \Dumux can be roughly divided into four parts:
+The process of setting up a problem using \Dumux can be roughly divided into four parts:
 \begin{enumerate}
+ \item A suitable model has to be chosen.
  \item The geometry of the problem and correspondingly a grid have to be defined.
  \item Material properties and constitutive relationships have to be selected.
- \item Boundary conditions as well as initial conditions have to be defined.
- \item A suitable model has to be chosen.
+ \item Boundary conditions and as initial conditions have to be specified.
 \end{enumerate}
 
-The problem being solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. A rectangular domain with no flow boundaries on the top and on the bottom, which is initially saturated with oil, is considered. Water infiltrates from the left side into the domain. Gravity effects are neglected.
+The problem being solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. 
+A rectangular domain with no flow boundaries on the top and on the bottom, which is initially saturated with oil, is considered. 
+Water infiltrates from the left side into the domain and replaces the oil. Gravity effects are neglected here.
 
 \begin{figure}[ht]
 \psfrag{x}{x}
@@ -27,8 +29,7 @@ The problem being solved in this tutorial is illustrated in Figure \ref{tutorial
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-coupled:problemfigure}
 \end{figure}
 
-The equations solved here are the mass balances of oil and
-water:
+The solved equations are the mass balances of water and oil:
 \begin{align}
   \label{massbalancewater}
   \frac {\partial (\phi \, S_{w}\, \varrho_{w})}{\partial t}
@@ -50,9 +51,9 @@ water:
 
 \subsection{The main file}
 
-Listing \ref{tutorial-coupled:mainfile} shows the main file
+Listing \ref{tutorial-coupled:mainfile} shows the main application file
 \texttt{tutorial/tutorial\_coupled.cc} for the coupled two-phase
-model. This file needs to be executed in order to solve the problem described
+model. This file has to be compiled and executed in order to solve the problem described
 above.
 
 \begin{lst}[File tutorial/tutorial\_coupled.cc]\label{tutorial-coupled:mainfile} \mbox{}
@@ -61,12 +62,12 @@ above.
 \end{lst}
 
 From line \ref{tutorial-coupled:include-begin} to line
-\ref{tutorial-coupled:include-end} the \Dune and \Dumux files which
-contain the needed functions and classes are included.
+\ref{tutorial-coupled:include-end} the \Dune and \Dumux files, which
+contain some required functions and classes, and the problem file are included. 
 
 At line \ref{tutorial-coupled:set-type-tag} the type tag of the
-problem which is going to be simulated is set. All other data types
-can be retrieved by the \Dumux property system and only depend on this
+problem, which is going to be simulated, is set. All other data types
+can be retrieved via the \Dumux property system and only depend on this
 single type tag. Retrieving them is done between line
 \ref{tutorial-coupled:retrieve-types-begin} and
 \ref{tutorial-coupled:retrieve-types-end}. For an introduction to the
@@ -75,12 +76,12 @@ property system, see section \ref{sec:propertysystem}.
 The first thing which should be done at run time is to initialize the
 message passing interface using \Dune's \texttt{MPIHelper} class. Line
 \ref{tutorial-coupled:init-mpi} is essential if the simulation is
-intended to be run on more than one processor at the same time. Next,
-the command line arguments are parsed starting at line
+intended to be run on more than one processor at the same time using MPI. Next,
+the command-line arguments are parsed starting at line
 \ref{tutorial-coupled:parse-args-begin} down to line
 \ref{tutorial-coupled:parse-args-end}. In this example, it is checked if and
 from which time on a previous run of the simulation should be restarted. Furthermore, we
-parse the time when the simulation ends and the initial time step size.
+parse the time when the simulation ends and the initial time-step size.
 
 After this, a grid is created in line
 \ref{tutorial-coupled:create-grid} and the problem is instantiated for
@@ -106,48 +107,52 @@ numberstyle=\tiny, numbersep=5pt, firstline=27]{../../tutorial/tutorialproblem_c
 
 First, a new type tag is created for the problem in line
 \ref{tutorial-coupled:create-type-tag}.  In this case, the new type
-tag inherits all properties defined for the \texttt{BoxTwoP} type tag,
+tag inherits all properties from the \texttt{BoxTwoP} type tag,
 which means that for this problem the two-phase box model is chosen as
-discretization scheme. Further, it inherits from the spatial parameters type tag which is defined in the problem dependent saptial parameters file (line \ref{tutorial-coupled:define-spatialparameters-typetag}). On line \ref{tutorial-coupled:set-problem}, a
+discretization scheme. Further, it inherits from the spatial parameters type tag,
+ which is defined in the problem-dependent spatial parameters file (line \ref{tutorial-coupled:define-spatialparameters-typetag}). 
+On line \ref{tutorial-coupled:set-problem}, a
 problem class is attached to the new type tag, while the grid which
 is going to be used is defined in line \ref{tutorial-coupled:set-grid} --
 in this case that is  \texttt{SGrid}.  Since there's no uniform
 mechanism to allocate grids in \Dune, the \texttt{Grid} property also contains
-a static \texttt{create()} method which provides just that. Therein, the three variables of 
-Type \texttt{Dune::FieldVector} define the lower left corner of the domain 
+a static \texttt{create()} method which provides just that. The  \texttt{SGrid} uses three variables of 
+Type \texttt{Dune::FieldVector} to define the lower left corner of the domain 
 (\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number 
-of cells in $x$ and $y$ direction (\texttt{N}). Next,
-the appropriate fluid system, which specifies both information about
+of cells in $x$ and $y$ direction (\texttt{N}). 
+
+Next, the appropriate fluid system, which specifies both, information about
 the fluid mixture as well as about the pure substances, has to be chosen. 
-The two-phase model defaults to the \texttt{FluidSystem2P} which assumes 
+The two-phase model uses by default the \texttt{FluidSystem2P}, which assumes 
 immiscibility of the phases, but requires the wetting and non-wetting phases
 to be explicitly set. In this case, liquid water which uses the relations from 
 IAPWS'97~\cite{IAPWS1997} is chosen as the wetting phase on line
-\ref{tutorial-coupled:wettingPhase} and a liquid model oil is chosen as the 
+\ref{tutorial-coupled:wettingPhase} and liquid oil is chosen as the 
 non-wetting phase on line \ref{tutorial-coupled:nonwettingPhase}. 
-
-The final property, which is set in line
+The last property, which is set in line
 \ref{tutorial-coupled:gravity}, is optional and tells the model not to
 use gravity.
 
-Parameters which are specific to a set-up -- like boundary and initial
-conditions, source terms or temperature within the domain -- but are
+Parameters which are specific to a set-up, such as boundary and initial
+conditions, source terms or temperature within the domain, and which are
 required to solve the differential equations of the models are
 specified via a \textit{problem} class. If the two-phase box model is
-used, this class must be derived from \texttt{TwoPBoxProblem} as done
+used, this class should be derived from \texttt{TwoPBoxProblem} as done
 in line \ref{tutorial-coupled:def-problem}.
 
 The problem class always has at least five methods:
 \begin{itemize}
-\item A method \texttt{boundaryTypes()} specifying the kind of
-  boundary conditions to be used for a boundary segment
+\item A method \texttt{boundaryTypes()} specifying the type of
+  boundary conditions at each vertex.
 \item A method \texttt{dirichlet()} specifying the actual values for
-  the Dirichlet conditions on a boundary segment
+  the Dirichlet conditions at each Dirichlet vertex.
 \item A method \texttt{neumann()} specifying the actual values for
-  the Neumann conditions on a boundary segment
-\item A method for source or sink terms called \texttt{source()}
+  the Neumann conditions, which are usually evaluated at the 
+  integration points of the Neumann boundary faces.
+\item A method for source or sink terms called \texttt{source()}, usually evaluated at
+  the center of a sub-control volume.
 \item A method called \texttt{initial()} for specifying the initial
-  condition.
+  conditions at each vertex.
 \end{itemize}
 
 For the definition of the the boundary condition types and of the values of the Dirichlet boundaries,
@@ -157,12 +162,12 @@ two parameters are required:
   the values in this vector mean is dependent on the method: For
   \texttt{dirichlet()} it contains the actual values of the primary
   variables, for \texttt{boundaryTypes()} it contains the boundary 
-  condition type. It has as many entries as the model has primary variables / equations.
-  For the typical case in which all equations have the same boundary
-  condition at a certain position, there are two methods that set the appropriate conditions
-  for all primary variables / equations: Either \texttt{setAllDirichlet()} or \texttt{setAllNeumann()}
+  condition types. It has as many entries as the model has primary variables / equations.
+  For the typical case, in which all equations have the same boundary
+  condition type at a certain position, there are two methods that set the appropriate conditions
+  for all primary variables / equations: Either \texttt{setAllDirichlet()} or \texttt{setAllNeumann()}.
  \item [vertex:] The boundary condition and the Dirichlet values are specified at the vertex, which represents a
-  subcontrol volume. This avoids to specify two different boundary condition types at one subcontrol volume. 
+  sub-control volume. This avoids the specification of two different boundary condition types for one equation at one sub-control volume. 
   Be aware that the second parameter is a Dune grid entity with the codimension dim. 
 \end{description}
 
@@ -180,8 +185,7 @@ Methods which make statements about boundary segments of the grid (i.e.
   is located.
 \item[fvElemGeometry:] The finite-volume geometry induced on the
   finite element by the box scheme.
-\item[isIt:] The \texttt{Intersection} of the boundary
-  segment as given by the grid.
+\item[isIt:] The \texttt{Intersection} of the boundary segment as given by the grid.
 \item[scvIdx:] The index of the sub-control volume in
   \texttt{fvElementGeometry} adjacent to the boundary segment.
 \item[boundaryFaceIdx:] The index of the boundary face in
@@ -207,15 +211,15 @@ can be found in the base class \texttt{Dumux::BoxProblem<TypeTag>}.
 \subsection{Defining fluid properties}\label{tutorial-coupled:description-fluid-class}
 
 The \Dumux distribution includes some common substances which can be used
-out of the box. The properties of the pure substances (such as the component 
-nitrogen, water, or pseudo-component air) are stored in header files in 
+out of the box. The properties of the pure substances (such as the components 
+nitrogen, water, or the pseudo-component air) are stored in header files in 
 the folder \verb+dumux/material/components+. Each of these files 
 defines a class with the same name as the component but starting with a capital
 letter, e.g. \texttt{Water}, and are derived from \texttt{Component}.
 
 Most often, when two or more components are considered, fluid interactions 
 such as solubility effects come into play and properties of mixtures such as 
-density are of interest. These interactions are defined in
+density or enthalpy are of interest. These interactions are defined in
 a specific \verb+fluidsystem+ in the folder \verb+dumux/material/fluidsystems+.
 It features methods returning fluid properties like density, enthalpy, viscosity,
 etc. by accessing the pure components as well as binary coefficients such as
@@ -234,9 +238,9 @@ well as the \textit{heat conductivity} can be defined in space using a
 so-called \texttt{spatial parameters} class.  However, because the soil
 also has an effect on the material laws of the fluids (e.g. \textit{capillarity}),
 their selection and the definition of their attributes (e.g. \textit{residual 
-saturations}) are also accomplished in the spatial parameters.
+saturations} or \textit{van Genuchten parameters}) are also accomplished in the spatial parameters.
 
-The base class \texttt{Dumux::BoxSpatialParameters<TypeTag>} holds a general 
+The base class \texttt{Dumux::BoxSpatialParameters<TypeTag>} contains a general 
 averaging procedure for vertex-centered box-methods.
 
 Listing \ref{tutorial-coupled:spatialparametersfile} shows the file
@@ -247,13 +251,16 @@ Listing \ref{tutorial-coupled:spatialparametersfile} shows the file
 numberstyle=\tiny, numbersep=5pt, firstline=27]{../../tutorial/tutorialspatialparameters_coupled.hh}
 \end{lst}
 
-First, a spatial parameters type tag has to be defined (line \ref{tutorial-coupled:define-spatialparameters-typetag}), from which the problem type tag inherits the properties, which can be classified as spatial parameter properties (problem file line \ref{tutorial-coupled:create-type-tag}). These are e.g. the spatial parameters class itself (line \ref{tutorial-coupled:set-spatialparameters}) or a certain material law  (line \ref{tutorial-coupled:rawlaw} \label{tutorial-coupled:materialLaw}). 
+First, the spatial parameters type tag has to be created (line \ref{tutorial-coupled:define-spatialparameters-typetag}), 
+from which the problem type tag inherits its properties and which can be classified as spatial parameter properties 
+(problem file line \ref{tutorial-coupled:create-type-tag}). These are e.g. the spatial parameters class itself (line \ref{tutorial-coupled:set-spatialparameters}) 
+or a certain material law  (line \ref{tutorial-coupled:rawlaw} \label{tutorial-coupled:materialLaw}). 
 \Dumux provides several material laws in the folder 
 \verb+dumux/material/fluidmatrixinteractions+.
 The selected one -- here it is a relation according to a regularized version of Brooks \& Corey --  is included
 in line \ref{tutorial-coupled:rawLawInclude}. After the selection,
-an adapter in line \ref{tutorial-coupled:eff2abs} translates between the law
-for effective values (the Brooks \& Corey model) and the saturations generated as simulations results, i.e. residual saturations are considered. 
+an adapter in line \ref{tutorial-coupled:eff2abs} translates between effective saturations, which are employed in the Brooks \& Corey parameterization 
+and which deduce the residual saturations, and the simulated saturations. 
 As the applied raw law knows best which kind of parameters are necessary,
 it provides a parameter class \texttt{RegularizedBrooksCoreyParams} that is
 accessible via the member \texttt{Params} and defined in line 
@@ -261,29 +268,28 @@ accessible via the member \texttt{Params} and defined in line
 is now instantiated correctly as a private object
 in line \ref{tutorial-coupled:matParamsObject}.
 
-In line \ref{tutorial-coupled:permeability} the function returning the
-intrinsic permeability can be found. As can be seen, the function has
-to be called with three different arguments. 
-(\texttt{Element}) is again the current element, which also holds information
+In line \ref{tutorial-coupled:permeability} a method returning the
+intrinsic permeability can be found. As can be seen, the method has
+to be called with three arguments:
+(\texttt{Element}) is again the considered element, which also holds information
 about its geometry and position, the second argument
 (\texttt{fvElemGeom}) holds information about the finite-volume geometry induced
-by the box-method, and the third defines the index of the current sub-control 
+by the box-method, and the third defines the local index of the current sub-control 
 volume. The intrinsic permeability is a tensor and is thus returned in form of
 a $\texttt{dim} \times \texttt{dim}$-matrix where \texttt{dim} is the dimension 
 of the problem. 
 
-The function \texttt{porosity()} defined in line
+The method \texttt{porosity()} defined in line
 \ref{tutorial-coupled:porosity} is called with the same arguments as
 the permeability function described before and returns the porosity
 dependent on the position in the domain.
 
 Next, the method \texttt{materialLawParams()} defines in line 
 \ref{tutorial-coupled:matLawParams} which \verb+materialLawParams+ object 
- should be applied at this specific position. Although in this case only one objects is returned, 
-in general the problem may be heterogeneous, demanding for different objects at different positions in space. 
+ should be applied at this specific position. Although in this case only one object is returned, 
+in general the problem may be heterogeneous, returning different objects at different positions in space. 
 While the selection of the type of this object was already explained (line \ref{tutorial-coupled:rawLawInclude}),
- some specific parameter 
-values of the applied material law are still needed. This is 
+some specific parameter values of the applied material law, such as the Brooks \& Corey parameters, are still needed. This is 
 done in the constructor body (line \ref{tutorial-coupled:setLawParams}).
 Depending on the type of the \texttt{materialLaw} object, the adequate \texttt{set}-methods
 are provided by the object to access all necessary parameters 
@@ -298,13 +304,13 @@ can change soil parameters, boundary conditions and fluid properties
 in \Dumux. 
 
 \subsubsection{Exercise 1}
-\renewcommand{\labelenumi}{\alph{enumi})} For Exercise 1 you only have
-to make some small changes in the tutorial files.  
+\renewcommand{\labelenumi}{\alph{enumi})} For Exercise 1 you have
+to make only some small changes in the tutorial files.  
 
 \begin{enumerate}
 
 \item \textbf{Run the Model} \\
-To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 5e5 10}. The first number behind the simulation name defines the timespan of the simulation run in seconds, the second number defines the initial time step size. Note that the time step size is automatically optimized during the simulation. For the visualization with paraview please refer to \ref{quick-start-guide}.\\
+To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled 5e5 10}. The first number behind the simulation name defines the time span of the simulation run in seconds, the second number defines the initial time-step size. Note that the time-step size is automatically optimized during the simulation. For the visualization with paraview please refer to \ref{quick-start-guide}.\\
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
@@ -318,7 +324,7 @@ To get an impression what the results should look like you can first run the ori
   left boundary should be closed for water and oil fluxes. 
 
   Compile the main file by typing \texttt{make tutorial\_coupled} and
-  run the model.
+  run the model as explained above.
 
 
 \item \textbf{Changing Fluids} \\
@@ -332,7 +338,7 @@ If you want to take a closer look on how the fluid classes are defined and which
 
 \item \textbf{Use the \Dumux fluid system} \\
 \Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
+Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
@@ -363,7 +369,7 @@ of the linear law and the respective \texttt{set}-functions can be found
 \end{figure}
 domain. You can use the fluids of exercise 1c).\\
 Hint: The current position of the element can be obtained via \texttt{element.geometry().center();}.\\
-When does the front cross the material border? In paraview, the option \textit{View} $\rightarrow$ \textit{Animation View} is nice to get a rough feeling of the timestep sizes.
+When does the front cross the material border? In paraview, the option \textit{View} $\rightarrow$ \textit{Animation View} is nice to get a rough feeling of the time-step sizes.
 \end{enumerate}
 
 \subsubsection{Exercise 2}
@@ -439,7 +445,7 @@ compile the program.
 
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 
-systems in the directory \verb+/dumux/material/fluidsystems+.) \\
+systems in the directory \verb+/dumux/material/fluidsystems+). \\
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 

@@ -1,10 +1,10 @@
 \chapter[Tutorial]{Tutorial}\label{chp:tutorial}
 
-In \Dumux two sorts of models are implemented: Fully-coupled models and decoupled models. In the fully-coupled models a flow system is described by a system of strongly coupled equations, which can be mass balance equations, balance equations of components, energy balance equations, etc. In contrast, a decoupled model consists of a pressure equation which is iteratively coupled to a saturation equation, concentration equations, energy balance equations, etc.
+In \Dumux two sorts of models are implemented: Fully-coupled models and decoupled models. In the fully-coupled models a flow system is described by a system of strongly coupled equations, which can be for example mass balance equations for phases, mass balance equations for components or energy balance equations. In contrast, a decoupled model consists of a pressure equation, which is iteratively coupled to a saturation equation, concentration equations, energy balance equations, etc.
 
-Examples for different kinds of both coupled and decoupled models are isothermal two-phase models, isothermal two-phase two-component models, non-isothermal two-phase models, non-isothermal two-phase two-component models, etc.
+Examples for different kinds of both, coupled and decoupled models, are isothermal two-phase models, isothermal two-phase two-component models, non-isothermal two-phase models and non-isothermal two-phase two-component models.
 
-In section \ref{box} a short introduction about the box method is given. The box method is used for the spatial discretization of the system of equations. The other two sections of the tutorial demonstrate how to solve problems using, first, a coupled model (section \ref{tutorial-coupled}) and, second, using a decoupled model (section \ref{tutorial-decoupled}). Being the easiest case, an isothermal two-phase system (two fluid phases, one solid phase) will be considered.
+In section \ref{box} a short introduction to the box method is given. The box method is used in the fully-coupled models for the spatial discretization of the system of equations. The decoupled models employ usually a cell-centered finite volume scheme. The following two sections of the tutorial demonstrate how to solve problems using, first, a fully-coupled model (section \ref{tutorial-coupled}) and, second, using a decoupled model (section \ref{tutorial-decoupled}). Being the easiest case, an isothermal two-phase system (two fluid phases, one solid phase) will be considered.
 \input{tutorial-coupled}
 \input{tutorial-decoupled}
 %\input{tutorial-newmodel}
