@@ -29,19 +29,15 @@ AC_PROG_F77
 AC_F77_WRAPPERS
 
 # Checks for libraries.
+AC_SEARCH_LIBS([sqrt], [m])
+AC_CHECK_FUNCS([sqrt])
+
 AX_LAPACK
 AX_BOOST_BASE([1.37])
 AX_BOOST_SYSTEM
 AX_BOOST_DATE_TIME
 AX_BOOST_FILESYSTEM
 AX_BOOST_UNIT_TEST_FRAMEWORK
-
-AC_SEARCH_LIBS([process_grdecl], [opmcore],
-               [opmcore_lib=yes],
-               [opmcore_lib=no],
-               [$BOOST_LDFLAGS $BOOST_SYSTEM_LIB
-                $LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS])
-
 
 # Checks for header files.
 AC_CHECK_HEADERS([opm/core/grid.h], [],
@@ -57,20 +53,19 @@ AC_CHECK_HEADERS([suitesparse/umfpack.h],
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
+
+AC_F77_FUNC(dgetrf)
+AC_SEARCH_LIBS($dgemm, [blas])
+AC_SEARCH_LIBS($dgetrf, [lapack])
+
+AC_SEARCH_LIBS([amd_free],             [amd])
+AC_SEARCH_LIBS([camd_free],            [camd])
+AC_SEARCH_LIBS([colamd_set_defaults],  [colamd])
+AC_SEARCH_LIBS([ccolamd_set_defaults], [ccolamd])
+AC_SEARCH_LIBS([cholmod_l_start],      [cholmod])
+
 AC_SEARCH_LIBS([umfpack_dl_solve], [umfpack],
                [umfpack_lib=yes], [umfpack_lib=no])
-
-AC_SEARCH_LIBS([preprocess], [opmcore], [],
-[AC_MSG_ERROR(
-  [cannot proceed without CPGPreprocess library.
-   *** Update LDFLAGS and try again. ***])],
-[$BOOST_SYSTEM_LIB $LAPACK_LIBS $BLAS_LIBS])
-
-AC_SEARCH_LIBS([csrmatrix_elm_index], [opmcore], [],
-[AC_MSG_ERROR(
-  [cannot proceed without opmpressure library.
-   *** Update LDFLAGS and try again. ***])],
-[$BOOST_SYSTEM_LIB $LAPACK_LIBS $BLAS_LIBS])
 
 AM_CONDITIONAL([UMFPACK],
   [test "x$umfpack_header" != "xno" -a "x$umfpack_lib" != "xno"])
@@ -80,6 +75,12 @@ m4_ifdef([AM_COND_IF],
  [AC_MSG_NOTICE([Found no working installation of UMFPACK.
                  UMFPACK support is disabled.])])
 ])
+
+AC_SEARCH_LIBS([process_grdecl], [opmcore],
+               [opmcore_lib=yes],
+               [opmcore_lib=no],
+               [$BOOST_LDFLAGS $BOOST_SYSTEM_LIB
+                $LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS])
 
 AC_CONFIG_FILES([
   Makefile
