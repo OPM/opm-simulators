@@ -34,10 +34,10 @@
 #include "checkfluidsystem.hh"
 
 // include all fluid systems in dumux-stable
-#include <test/boxmodels/1p2c/interstitialfluidtrailfluidsystem.hh>
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
+#include <dumux/material/fluidsystems/h2on2liquidphasefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairmesitylenefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairxylenefluidsystem.hh>
@@ -98,6 +98,13 @@ int main()
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/true> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
+    // H2O -- N2 -- liquid phase
+    {   typedef Dumux::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/false> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
+    {   typedef Dumux::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/true> FluidSystem;
+         checkFluidSystem<Scalar, FluidSystem>(); }
+
     // H2O -- Air
     {   typedef Dumux::SimpleH2O<Scalar> H2O;
         const bool enableComplexRelations=false;
@@ -142,10 +149,6 @@ int main()
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     {   typedef Dumux::FluidSystems::OneP<Scalar, Gas> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem>(); }
-
-    // interstitial fluid -- TRAIL
-    {   typedef Dumux::FluidSystems::InterstitialFluidTrail<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     return 0;

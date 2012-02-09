@@ -32,10 +32,10 @@
 #define DUMUX_CHECK_FLUIDSYSTEM_HH
 
 // include all fluid systems in dumux-stable
-#include <test/boxmodels/1p2c/interstitialfluidtrailfluidsystem.hh>
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
+#include <dumux/material/fluidsystems/h2on2liquidphasefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairmesitylenefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairxylenefluidsystem.hh>
