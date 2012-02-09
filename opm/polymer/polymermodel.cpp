@@ -172,7 +172,7 @@ residual_c(double c, void *data)
     ctrl.nltolerance   = 1e-9;
     ctrl.method        = NonlinearSolverCtrl::REGULAFALSI;
     ctrl.initialguess  = 0.5;
-    ctrl.min_bracket   = 0.0;
+    ctrl.min_bracket   = 0.2;   // TODO: Make this a proper s_min value.
     ctrl.max_bracket   = 1.0;
     double s = find_zero(residual_s, &prm_s, &ctrl);
     p->s = s;
