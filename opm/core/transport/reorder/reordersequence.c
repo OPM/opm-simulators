@@ -99,7 +99,7 @@ compute_reorder_sequence(int nc, int nf, int *cellfaces, int *faceptr, int *face
     free(work);
 }
 
-void compute_sequence(struct UnstructuredGrid *grid, const double *flux,
+void compute_sequence(const struct UnstructuredGrid *grid, const double *flux,
                       int *sequence,
                       int *components, int *ncomponents)
 {
