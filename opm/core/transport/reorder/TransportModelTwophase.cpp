@@ -92,7 +92,7 @@ namespace Opm
 		    flux  =-tm.darcyflux_[f];
 		    other = tm.grid_.face_cells[2*f];
 		}
-		// Add flux to influx or outflux, if interiour.
+		// Add flux to influx or outflux, if interior.
 		if (other != -1) {
 		    if (flux < 0.0) {
 			influx  += flux*tm.fractionalflow_[other];
