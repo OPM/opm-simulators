@@ -27,28 +27,35 @@ namespace Opm
 {
 
 
-    TransportModelTwophase::TransportModelTwophase(const UnstructuredGrid* grid,
-						   const Opm::IncompPropertiesInterface* props,
-						   const double* darcyflux,
+    TransportModelTwophase::TransportModelTwophase(const UnstructuredGrid& grid,
 						   const double* porevolume,
-						   const double* source,
-						   const double dt,
-						   double* saturation)
+						   const Opm::IncompPropertiesInterface& props)
 	: grid_(grid),
-	  props_(props),
-	  darcyflux_(darcyflux),
 	  porevolume_(porevolume),
-	  source_(source),
-	  dt_(dt),
-	  saturation_(saturation),
-	  fractionalflow_(grid->number_of_cells, 0.0)
+	  props_(props),
+	  darcyflux_(0),
+	  source_(0),
+	  dt_(0.0),
+	  saturation_(0),
+	  fractionalflow_(grid.number_of_cells, -1.0)
     {
-	if (props->numPhases() != 2) {
+	if (props.numPhases() != 2) {
 	    THROW("Property object must have 2 phases");
 	}
-	visc_ = props->viscosity();
+	visc_ = props.viscosity();
     }
 
+    void TransportModelTwophase::solve(const double* darcyflux,
+				       const double* source,
+				       const double dt,
+				       double* saturation)
+    {
+	darcyflux_ = darcyflux;
+	source_ = source;
+	dt_ = dt;
+	saturation_ = saturation;
+	reorderAndTransport(grid_, darcyflux);
+    }
 
     // Residual function r(s) for a single-cell implicit Euler transport
     //
@@ -73,17 +80,17 @@ namespace Opm
 	    outflux = tm.source_[cell] <= 0 ? -tm.source_[cell] : 0.0;
 	    dtpv    = tm.dt_/tm.porevolume_[cell];
 
-	    for (int i = tm.grid_->cell_facepos[cell]; i < tm.grid_->cell_facepos[cell+1]; ++i) {
-		int f = tm.grid_->cell_faces[i];
+	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
+		int f = tm.grid_.cell_faces[i];
 		double flux;
 		int other;
 		// Compute cell flux
-		if (cell == tm.grid_->face_cells[2*f]) {
+		if (cell == tm.grid_.face_cells[2*f]) {
 		    flux  = tm.darcyflux_[f];
-		    other = tm.grid_->face_cells[2*f+1];
+		    other = tm.grid_.face_cells[2*f+1];
 		} else {
 		    flux  =-tm.darcyflux_[f];
-		    other = tm.grid_->face_cells[2*f];
+		    other = tm.grid_.face_cells[2*f];
 		}
 		// Add flux to influx or outflux, if interiour.
 		if (other != -1) {
@@ -118,7 +125,7 @@ namespace Opm
     {
 	double sat[2] = { s, 1.0 - s };
 	double mob[2];
-	props_->relperm(1, sat, &cell, mob, 0);
+	props_.relperm(1, sat, &cell, mob, 0);
 	mob[0] /= visc_[0];
 	mob[1] /= visc_[1];
 	return mob[0]/(mob[0] + mob[1]);

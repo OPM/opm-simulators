@@ -33,21 +33,23 @@ namespace Opm
     class TransportModelTwophase : public TransportModelInterface
     {
     public:
-	TransportModelTwophase(const UnstructuredGrid* grid,
-			       const Opm::IncompPropertiesInterface* props,
-			       const double* darcyflux,
+	TransportModelTwophase(const UnstructuredGrid& grid,
 			       const double* porevolume,
-			       const double* source,
-			       const double dt,
-			       double* saturation);
+			       const Opm::IncompPropertiesInterface& props);
+
+	void solve(const double* darcyflux,
+		   const double* source,
+		   const double dt,
+		   double* saturation);
 
 	virtual void solveSingleCell(int cell);
 
     private:
-	const UnstructuredGrid* grid_;
-	const IncompPropertiesInterface* props_;
-	const double* darcyflux_;   // one flux per grid face
+	const UnstructuredGrid& grid_;
 	const double* porevolume_;  // one volume per cell
+	const IncompPropertiesInterface& props_;
+
+	const double* darcyflux_;   // one flux per grid face
 	const double* source_;      // one source per cell
 	double dt_;
 	double* saturation_;        // one per cell
