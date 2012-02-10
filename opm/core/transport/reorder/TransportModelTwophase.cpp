@@ -76,8 +76,10 @@ namespace Opm
 	{
 	    cell    = cell_index;
 	    s0      = tm.saturation_[cell];
-	    influx  = tm.source_[cell] >  0 ? -tm.source_[cell] : 0.0;
-	    outflux = tm.source_[cell] <= 0 ? -tm.source_[cell] : 0.0;
+            double dflux       = -tm.source_[cell];
+            bool src_is_inflow = dflux < 0.0;
+	    influx  =  src_is_inflow ? dflux : 0.0;
+	    outflux = !src_is_inflow ? dflux : 0.0;
 	    dtpv    = tm.dt_/tm.porevolume_[cell];
 
 	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
