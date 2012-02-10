@@ -18,7 +18,6 @@
 */
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
-#include <opm/core/transport/reorder/twophasetransport.hpp>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/grid.h>
 
