@@ -337,8 +337,8 @@ If you want to take a closer look on how the fluid classes are defined and which
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system} \\
-\Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}, hence using the initialization function of the applied fluidsystem. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
+\Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}, see also chapter \ref{sec:fluidframework}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
+Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this rather complicated fluidsystem uses tabularized fluid data, which need to be initialized (i.e. the tables need to be filled with values) in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. As water flow replacing a gas is much faster, test your simulation only until 2e3 seconds and start with a time step of 1 second.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
@@ -441,7 +441,13 @@ compile the program.
  \item What happens if you increase the resolution of the grid?
 \end{itemize}
 
-\subsubsection{Exercise 3}
+\subsubsection{Exercise 3: Parameter file input.}
+As you have experienced, compilation takes quite some time. Therefore, \Dumux 2.1 privides a simple method to read in parameters (such as simulation end time or modelling parameters) via \texttt{Paramter Input Files}. The tests in the Test-folder \texttt{/test/} already use this system.\\
+If you look at the Application in \texttt{/test/boxmodels/2p/}, you see that the main file looks rather empty: The parameter file \texttt{test\_2p.input} is read by a standard start procedure, which is called in the main function. This should be adapted for your problem at hand. The program run has to be called with the parameter file as argument.
+In the code, parameters can be read via the macro \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar, MyWonderfulGroup.MyWonderfulParameter);}. In \texttt{test\_2p}, \texttt{MyWonderfulGroup} is the group \texttt{SpatialParameters} - any type of groups is applicable, if the group definition in the parameter file is enclosed in square brackets. The parameters are then listed thereafter. Try and use as much parameters as possible via the input file, such as lens dimension, grid resolution, soil properties etc.
+
+
+\subsubsection{Exercise 4: Create a new Fluid System.}
 
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 

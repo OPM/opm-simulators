@@ -130,12 +130,8 @@ for the problem of interest are specified in line
 \ref{tutorial-decoupled:set-spatialparameters}. 
 
 Now we arrive at some model parameters of the applied two-phase decoupled 
-model. Line \ref{tutorial-decoupled:velocityFormulation} defines that the 
-wetting phase velocity rather than e.g. a total velocity is used for the 
-transport system. As we regard capillary pressure, a capillary diffusive 
-term is regarded, selected in line \ref{tutorial-decoupled:DiffusivePart}.
-Line \ref{tutorial-decoupled:cfl} assigns the CFL-factor to be used in the
-simulation run. The final property in line \ref{tutorial-decoupled:gravity} 
+model. Line \ref{tutorial-decoupled:cfl} assigns the CFL-factor to be used in the
+simulation run, which determines the time step size. The last property in line \ref{tutorial-decoupled:gravity} 
 is optional and tells the model not to use gravity.
 
 After all necessary information is written into the property system and 
@@ -158,14 +154,11 @@ output should be written out -- the default ``1'' resembles output after each
 step.
 
 The following methods all have in common that they may be dependent on space.
-Hence, they all feature a common argument list:
-\begin{itemize}
- \item \texttt{globalPos}: A vector holding the global Coordinates.
- \item \texttt{element} or \texttt{intersection}: Input for an iterator, that is 
-    depending on whether the parameter of the method is defined in an element, such as 
-    initial values, or on an intersection, such as a boundary condition.
-\end{itemize}
-In the following, there are the methods for general parameters, source- or
+Hence, they all have either an \texttt{element} or an \texttt{intersection} as their
+function argument: Both are \Dune entities, depending on whether the parameter of the method is defined in an element, such as 
+    initial values, or on an intersection, such as a boundary condition. As it may be sufficient to return values only based on a position, \Dumux models can also access functions in the problem with the form \mbox{\texttt{...AtPos(GlobalPosition\& globalPos)}}, without an \Dune entity, as one can see in line \ref{tutorial-decoupled:bctype}.
+
+There are the methods for general parameters, source- or
 sinkterms, boundary conditions (lines \ref{tutorial-decoupled:bctype} to
 \ref{tutorial-decoupled:neumann}) and initial values for the transported
 quantity in line \label{tutorial-decoupled:init}. For more information
@@ -184,12 +177,7 @@ As this file only slightly differs from the coupled version, consult
 chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
 However, as a standard Finite-Volume--scheme is used, in contrast to the box-method
 in the coupled case, the argument list here is the same as for the problem 
-functions:
-\begin{itemize}
- \item \texttt{globalPos}: A vector holding the global Coordinates.
- \item \texttt{element}: Input for an element iterator, providing access
-	to the current element of interest.
-\end{itemize}
+functions: Either an \texttt{element}, or only the global position if the function is called \texttt{...AtPos(...)}.
 
 \subsection{Exercise}
 \label{tutorial-deoucpled:exercises}
@@ -220,8 +208,9 @@ If you want to take a closer look at how the fluid classes are defined and which
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
-As you have experienced in the coupled tutorial (chapter \ref{tutorial-decoupled}), \Dumux usually organises fluid mixtures via a \texttt{fluidsystem}. This is also possible for the decoupled models: Uncomment, as we want to reuse it later on, the lines \ref{tutorial-decoupled:2p-system-start} to \ref{tutorial-decoupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7}, the same shortcut works to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2o\_n2\_system.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2O\_N2\_System<TypeTag>}. However, the complicated fluidsystem uses tabularized fluid data, which need to be initialized in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, PTAG(FluidSystem))::init();}, hence using the initialization function of the applied fluidsystem. As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simultation duration to 2e4 seconds.\\
+\Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}, see also chapter \ref{sec:fluidframework}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
+Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this rather complicated fluidsystem uses tabularized fluid data, which need to be initialized (i.e. the tables need to be filled with values) in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}.\\ 
+As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simultation duration to 2e4 seconds.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
@@ -311,8 +300,15 @@ compile the program.
  \item Further increase the CFL-factor to 2 and investigate the saturation.
 \end{itemize}
 
+\subsubsection{Exercise 3: Parameter file input.}
+As you have experienced, compilation takes quite some time. Therefore, \Dumux 2.1 privides a simple method to read in parameters (such as simulation end time or modelling parameters) via \texttt{Paramter Input Files}. The tests in the Test-folder \texttt{/test/} already use this system.\\
+If you look at the Application in \texttt{/test/boxmodels/2p/}, you see that the main file looks rather empty: The parameter file \texttt{test\_2p.input} is read by a standard start procedure, which is called in the main function. This should be adapted for your problem at hand. The program run has to be called with the parameter file as argument. As this is a basic \Dumux feature, the procedure is the equivalent in the decoupled as in the box models.
+In the code, parameters can be read via the macro \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar, MyWonderfulGroup.MyWonderfulParameter);}. In \texttt{test\_2p}, \texttt{MyWonderfulGroup} is the group \texttt{SpatialParameters} - any type of groups is applicable, if the group definition in the parameter file is enclosed in square brackets. The parameters are then listed thereafter. Try and use as much parameters as possible via the input file, such as lens dimension, grid resolution, soil properties etc. In addition, certain parameters that are specific to the model, such as the \texttt{CFL}-factor, can be assigned in the parameter file without any further action.
 
-\subsubsection{Exercise 3}
+\subsubsection{Exercise 4}
+If both the coupled and the decoupled tutorial are completed, one should have noticed that the function arguments in the problem function differ slighty, as the numerical models differ. However, both are functions that depend on space, so both models can also work with functions based ond \mbox{\texttt{...AtPos(GlobalPosition \& globalPos)}}, no matter if we model coupled or decoupled. Try to formulate a spatial parameters file that works with both problems, the coupled and the decoupled. Therein, only use functions at the position.
+
+\subsubsection{Exercise 5}
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 
 systems in the directory \verb+/dumux/material/fluidsystems+.)
