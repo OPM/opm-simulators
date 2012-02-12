@@ -22,7 +22,7 @@ void polymertransport(
     const double             inflow_c,
     struct UnstructuredGrid *grid,
     const Opm::IncompPropertiesInterface* props,
-    const PolymerData* polydata,
+    const Opm::PolymerData* polydata,
     const double            *darcyflux,
     double                  *saturation,
     double                  *concentration,

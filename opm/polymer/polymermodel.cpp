@@ -28,7 +28,7 @@ struct ParametersSRes
     double outflux; /* sum_j max(v_ij, 0)        */
     int cell;
     const Opm::IncompPropertiesInterface* props;
-    const PolymerData* polydata;
+    const Opm::PolymerData* polydata;
 };
 
 struct ParametersCRes
@@ -44,7 +44,7 @@ struct ParametersCRes
     PolymerSolverData* psdata;
     int cell;
     double s;
-    const PolymerData* polydata;
+    const Opm::PolymerData* polydata;
 };
 
 
@@ -56,10 +56,10 @@ static double fluxfun_props(double s,
 			    double c,
 			    int cell,
 			    const Opm::IncompPropertiesInterface* props, 
-			    const PolymerData* polydata);
+			    const Opm::PolymerData* polydata);
 static double compute_mc(double c,
 			 const Opm::IncompPropertiesInterface* props, 
-			 const PolymerData* polydata);
+			 const Opm::PolymerData* polydata);
 
 void
 destroy_solverdata(struct PolymerSolverData *d)
@@ -75,7 +75,7 @@ destroy_solverdata(struct PolymerSolverData *d)
 struct PolymerSolverData *
 init_solverdata(struct UnstructuredGrid *grid,
 		const Opm::IncompPropertiesInterface* props,
-		const PolymerData* polydata,
+		const Opm::PolymerData* polydata,
 		const double *darcyflux,
                 const double *porevolume,
                 const double *porosity,
@@ -298,7 +298,7 @@ get_parameters_c(struct PolymerSolverData *d, int cell)
 
 static double fluxfun_props(double s, double c, int cell,
 			    const Opm::IncompPropertiesInterface* props,
-			    const PolymerData* pd)
+			    const Opm::PolymerData* pd)
 {
     const double* visc = props->viscosity();
     double c_max_limit = pd->c_max_limit;
@@ -322,7 +322,7 @@ static double fluxfun_props(double s, double c, int cell,
 
 static double compute_mc(double c,
 			 const Opm::IncompPropertiesInterface* props,
-			 const PolymerData* pd)
+			 const Opm::PolymerData* pd)
 {
     const double* visc = props->viscosity();
     double c_max_limit = pd->c_max_limit;

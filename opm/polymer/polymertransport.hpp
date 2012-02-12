@@ -7,10 +7,10 @@
 namespace Opm
 {
     class IncompPropertiesInterface;
+    struct PolymerData;
 }
 
 struct UnstructuredGrid;
-struct PolymerData;
 
 void polymertransport(
     const double *porevolume,
@@ -20,7 +20,7 @@ void polymertransport(
     const double inflow_c,
     struct UnstructuredGrid *grid,
     const Opm::IncompPropertiesInterface* props,
-    const PolymerData* polydata,
+    const Opm::PolymerData* polydata,
     const double *darcyflux,
     double *saturation,
     double *concentration,

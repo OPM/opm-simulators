@@ -5,6 +5,7 @@
 #define POLYMER_HPP_INCLUDED
 
 #include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/polymer/TransportModelPolymer.hpp> // For PolymerData.
 
 struct UnstructuredGrid;
 namespace Opm
@@ -12,32 +13,11 @@ namespace Opm
     class IncompPropertiesInterface;
 }
 
-struct PolymerData
-{
-    double c_max_limit;
-    double omega;
-    double viscMult(double c) const
-    {
-	return Opm::linearInterpolation(c_vals_visc, visc_mult_vals, c);
-    }
-    double rhor;
-    double dps;
-    double adsorbtion(double c) const
-    {
-	return Opm::linearInterpolation(c_vals_ads, ads_vals, c);
-    }
-
-    std::vector<double> c_vals_visc;
-    std::vector<double> visc_mult_vals;
-    std::vector<double> c_vals_ads;
-    std::vector<double> ads_vals;
-};
-
 
 struct PolymerSolverData  {
     struct UnstructuredGrid *grid;
     const Opm::IncompPropertiesInterface* props;
-    const PolymerData* polydata;
+    const Opm::PolymerData* polydata;
     const double            *darcyflux;   /* one flux per face  in cdata::grid*/
     const double            *porevolume;  /* one volume per cell */
     const double            *porosity;
@@ -61,7 +41,7 @@ destroy_solverdata(struct PolymerSolverData *d);
 struct PolymerSolverData *
 init_solverdata(struct UnstructuredGrid *grid,
 		const Opm::IncompPropertiesInterface* props,
-		const PolymerData* polydata,
+		const Opm::PolymerData* polydata,
 		const double *darcyflux,
                 const double *porevolume,
 		const double *porosity,
