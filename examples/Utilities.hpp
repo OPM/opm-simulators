@@ -35,8 +35,6 @@
 
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
 
-#include <opm/core/transport/reorder/twophasetransport.hpp>
-
 #include <boost/filesystem/convenience.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
