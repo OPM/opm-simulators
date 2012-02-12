@@ -41,6 +41,7 @@
 
 #include <opm/polymer/polymertransport.hpp>
 #include <opm/polymer/polymermodel.hpp>
+#include <opm/polymer/TransportModelPolymer.hpp>
 
 #include <boost/filesystem/convenience.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -234,7 +235,7 @@ main(int argc, char** argv)
     bool use_deck = param.has("deck_filename");
     boost::scoped_ptr<Opm::Grid> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
-    PolymerData polydata;
+    Opm::PolymerData polydata;
     if (use_deck) {
 	THROW("We do not yet read polymer keywords from deck.");
 	std::string deck_filename = param.get<std::string>("deck_filename");
@@ -279,6 +280,7 @@ main(int argc, char** argv)
 	polydata.ads_vals[1] = 0.0015;
 	polydata.ads_vals[2] = 0.0025;
     }
+    bool new_code = param.getDefault("new_code", false);
 
     // Extra rock init.
     std::vector<double> porevol;
@@ -287,6 +289,7 @@ main(int argc, char** argv)
 
     // Solvers init.
     Opm::PressureSolver psolver(grid->c_grid(), *props);
+    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata);
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
@@ -359,18 +362,23 @@ main(int argc, char** argv)
 	// boundary flows must be accumulated into
 	// source term following the same convention.
 	transport_timer.start();
-	polymertransport(&porevol[0],
-			 props->porosity(),
-			 &reorder_src[0],
-			 stepsize,
-			 inflow_c,
-			 const_cast<UnstructuredGrid*>(grid->c_grid()),
-			 props.get(),
-			 &polydata,
-			 &state.faceflux()[0],
-			 &reorder_sat[0],
-			 &state.concentration()[0],
-			 &state.cmax()[0]);
+	if (new_code) {
+	    tmodel.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
+			 &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
+	} else {
+	    polymertransport(&porevol[0],
+			     props->porosity(),
+			     &reorder_src[0],
+			     stepsize,
+			     inflow_c,
+			     const_cast<UnstructuredGrid*>(grid->c_grid()),
+			     props.get(),
+			     &polydata,
+			     &state.faceflux()[0],
+			     &reorder_sat[0],
+			     &state.concentration()[0],
+			     &state.cmax()[0]);
+	}
 	transport_timer.stop();
 	double tt = transport_timer.secsSinceStart();
 	std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
