@@ -371,11 +371,11 @@ main(int argc, char** argv)
 			 &reorder_sat[0],
 			 &state.concentration()[0],
 			 &state.cmax()[0]);
-	Opm::toBothSat(reorder_sat, state.saturation());
 	transport_timer.stop();
 	double tt = transport_timer.secsSinceStart();
 	std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
 	ttime += tt;
+	Opm::toBothSat(reorder_sat, state.saturation());
 
 	current_time += stepsize;
     }
