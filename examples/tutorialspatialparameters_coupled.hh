@@ -35,9 +35,7 @@
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
-namespace Dumux
-{
-
+namespace Dumux {
 //forward declaration
 template<class TypeTag>
 class TutorialSpatialParametersCoupled;
@@ -93,9 +91,8 @@ public:
     // determine appropriate parameters depening on selected materialLaw
     typedef typename MaterialLaw::Params MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
-
-    //! Intrinsic permeability tensor K \f$[m^2]\f$ depending
-    /*! on the position in the domain
+    /*! Intrinsic permeability tensor K \f$[m^2]\f$ depending
+     *  on the position in the domain
      *
      *  \param element The finite volume element
      *  \param fvElemGeom The finite-volume geometry in the box scheme
@@ -107,12 +104,10 @@ public:
     const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
                                                     const FVElementGeometry &fvElemGeom,
                                                     int scvIdx) const
-    {
-        return K_;
-    }
+    { return K_; }
 
-    //! Define the porosity \f$[-]\f$ of the porous medium depending
-    /*! on the position in the domain
+    /*! Define the porosity \f$[-]\f$ of the porous medium depending
+     * on the position in the domain
      *
      *  \param element The finite volume element
      *  \param fvElemGeom The finite-volume geometry in the box scheme
@@ -121,12 +116,10 @@ public:
      *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
      *  is the vector including the global coordinates of the finite volume.
      */
-    double porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
+    Scalar porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
                     const FVElementGeometry &fvElemGeom,
                     int scvIdx) const
-    {
-        return 0.2;
-    }
+    { return 0.2; }
 
     /*! Return the parameter object for the material law (i.e. Brooks-Corey)
      *  depending on the position in the domain
