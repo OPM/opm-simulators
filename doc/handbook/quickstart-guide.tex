@@ -5,8 +5,8 @@ The previous chapter showed how to install and compile \Dumux. This chapter shal
 \begin{enumerate}
  \item Go to the directory \texttt{/test}. There, various test application folders can be found. Let us consider as example \texttt{boxmodels/test{\_}2p}:
  \item Enter the folder \texttt{boxmodels/2p}. If everything was compiled correctly, there should be an executable \texttt{test{\_}2p}. Otherwise, type \texttt{make test{\_}2p} in order to compile the application. To run the simulation, type\\ 
-\texttt{./test{\_}2p 1e4 1e2}\\
-into the console. The parameters that are used here are the end time of the simulation and the initial timestep size. The parameters that are required when calling the application are specified in the application file (here: test{\_}2p.cc).
+\texttt{./test{\_}2p -parameterFile ./test\_2p.input}\\
+into the console. The parameter \texttt{-parameterFile} specifies that all important parameters (like first timestep size, end of simulation and location of the grid file) can be found in a text file in the same directory  with the name \texttt{test\_2p.input}. 
  \item The simulation starts and produces some .vtu output files and also a .pvd file. The .pvd file can be used to examine time series and summarizes the .vtu-files. It is possible to stop a running application by pressing $<ctrl><c>$.
  \item You can display the results using the visualization tool ParaView (or alternatively VisIt). Just type \texttt{paraview} in the console and open the .pvd file. On the left hand side, you can choose the desired parameter to be displayed.
 \end{enumerate}
