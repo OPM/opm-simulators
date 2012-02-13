@@ -25,10 +25,10 @@
  * Implements a linear saturation-capillary pressure relation for
  * M-phase fluid systems.
  */
-#ifndef MP_LINEAR_MATERIAL_HH
-#define MP_LINEAR_MATERIAL_HH
+#ifndef DUMUX_MP_LINEAR_MATERIAL_HH
+#define DUMUX_MP_LINEAR_MATERIAL_HH
 
-#include "Mplinearmaterialparams.hh"
+#include "mplinearmaterialparams.hh"
 
 #include <algorithm>
 

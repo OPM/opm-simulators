@@ -39,8 +39,8 @@
 
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 
-#include <dumux/material/fluidmatrixinteractions/Mp/Mplinearmaterial.hh>
-#include <dumux/material/fluidmatrixinteractions/Mp/2padapter.hh>
+#include <dumux/material/fluidmatrixinteractions/mp/mplinearmaterial.hh>
+#include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedlinearmaterial.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
