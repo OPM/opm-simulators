@@ -70,13 +70,32 @@ types can be retrieved via the \Dumux property system and only depend
 on this single type tag. For a more thourough introduction to the
 \Dumux property system, see chapter~\ref{sec:propertysystem}.
 
-After this \Dumux' default startup routine is called on line
-\ref{tutorial-coupled:call-start}. To provide an error message, the
-usage message which is displayed to the user if the simulation is
-called incorrectly, is printed via the custom function which is defined
-on line~\ref{tutorial-coupled:usage-function}. 
+After this \Dumux' default startup routine \texttt{Dumux::start()} is
+called on line \ref{tutorial-coupled:call-start}. This function deals
+with parsing the command line arguments, reading the parameter file,
+setting up the infrastructure necessary for \Dune, loads the grid, and
+starts the simulation. When it comes to parameters, all parameters can
+be either specified by command line arguments of the form
+(\texttt{-ParameterName ParameterValue}), in the file specified by the
+\texttt{-parameterFile} argument, or if the latter is not specified,
+in the file \texttt{tutorial\_coupled.input}. If a parameter gets
+specified on the command line as well as in the parameter file, the
+values provided in the command line have
+precedence. Listing~\ref{tutorial-coupled:parameter-file} shows the
+default parameter file for the tutorial problem.
 
-In this function the usage message is customized to the problem at hand. This means that at least the necessary parameters are listed here.  For more information about the input file please refer to section \ref{sec:inputFiles}.
+\begin{lst}[File tutorial/tutorial\_coupled.input]\label{tutorial-coupled:parameter-file} \mbox{}
+\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny]{../../tutorial/tutorial_coupled.input}
+\end{lst}
+
+To provide an error message, the usage message which is displayed to
+the user if the simulation is called incorrectly, is printed via the
+custom function which is defined on
+line~\ref{tutorial-coupled:usage-function}. In this function the usage
+message is customized to the problem at hand. This means that at least
+the necessary parameters are listed here.  For more information about
+the input file please refer to section \ref{sec:inputFiles}.
+
 
 \subsection{The Problem Class}
 
@@ -314,19 +333,6 @@ might be different than those given in this example. The name of the
 access / set functions as well as the rest of the implementation of
 the material description can be found in
 \verb+dumux/material/fluidmatrixinteractions/2p+.
-
-\subsection{Definition of Run-Time Parameters}\label{tutorial-coupled:runtime-parameters}
-
-Some parameters need to be specified at runtime. These can either be
-specified directly via command line optioms or they can be collected in
-a parameter file. The parameter file which \Dumux uses by default has
-the name of the program with ``.input'' appended. The parameter file
-for the coupled tutorial is thus named \verb+tutorial_coupled.input+
-and has the content shown in listing~\ref{tutorial-coupled:parameter-file}.
-
-\begin{lst}[File tutorial/tutorial\_coupled.input]\label{tutorial-coupled:parameter-file} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny]{../../tutorial/tutorial_coupled.input}
-\end{lst}
 
 \subsection{Exercises}
 \label{tutorial-coupled:exercises}
