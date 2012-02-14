@@ -5,7 +5,7 @@ The process of setting up a problem using \Dumux can be roughly divided into fou
  \item A suitable model has to be chosen.
  \item The geometry of the problem and correspondingly a grid have to be defined.
  \item Material properties and constitutive relationships have to be selected.
- \item Boundary conditions and as initial conditions have to be specified.
+ \item Boundary conditions and initial conditions have to be specified.
 \end{enumerate}
 
 The problem being solved in this tutorial is illustrated in Figure \ref{tutorial-coupled:problemfigure}. 
@@ -58,7 +58,7 @@ above.
 
 \begin{lst}[File tutorial/tutorial\_coupled.cc]\label{tutorial-coupled:mainfile} \mbox{}
   \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-  numberstyle=\tiny, numbersep=5pt, firstline=28]{../../tutorial/tutorial_coupled.cc}
+  numberstyle=\tiny, numbersep=5pt, firstline=29]{../../tutorial/tutorial_coupled.cc}
 \end{lst}
 
 From line \ref{tutorial-coupled:include-begin} to line
@@ -71,10 +71,12 @@ on this single type tag. For a more thourough introduction to the
 \Dumux property system, see chapter~\ref{sec:propertysystem}.
 
 After this \Dumux' default startup routine is called on line
-\ref{tutorial-coupled:call-start}. To provide a error message, the
+\ref{tutorial-coupled:call-start}. To provide an error message, the
 usage message which is displayed to the user if the simulation is
 called incorrectly, is printed via the custom function which is defined
-on line~\ref{tutorial-coupled:usage-function}.
+on line~\ref{tutorial-coupled:usage-function}. 
+
+In this function the usage message is customized to the problem at hand. This means that at least the necessary parameters are listed here.  For more information about the input file please refer to section \ref{sec:inputFiles}.
 
 \subsection{The Problem Class}
 
@@ -101,8 +103,8 @@ line \ref{tutorial-coupled:set-grid} -- in this case that is
 \texttt{Dune::YaspGrid}.  Since there's no uniform mechanism to
 allocate grids in \Dune, \Dumux features the concept of grid creators.
 In this case the generic \texttt{CubeGridCreator} which creates a
-structztured hexahedron grid of a specified size and resolution. For
-this grid creator physical domain of the grid is specified via the
+structured hexahedron grid of a specified size and resolution. For
+this grid creator the  physical domain of the grid is specified via the
 run-time parameters \texttt{Grid.upperRightX},
 \texttt{Grid.upperRightY}, \texttt{Grid.numberOfCellsX} and
 \texttt{Grid.numberOfCellsY}. These parameters can be specified via
@@ -316,11 +318,11 @@ the material description can be found in
 \subsection{Definition of Run-Time Parameters}\label{tutorial-coupled:runtime-parameters}
 
 Some parameters need to be specified at runtime. These can either be
-specified directly via command line optioms or the can be collected in
+specified directly via command line optioms or they can be collected in
 a parameter file. The parameter file which \Dumux uses by default has
 the name of the program with ``.input'' appended. The parameter file
 for the coupled tutorial is thus named \verb+tutorial_coupled.input+
-and defaults to the content shown in listing~\ref{tutorial-coupled:parameter-file}.
+and has the content shown in listing~\ref{tutorial-coupled:parameter-file}.
 
 \begin{lst}[File tutorial/tutorial\_coupled.input]\label{tutorial-coupled:parameter-file} \mbox{}
 \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny]{../../tutorial/tutorial_coupled.input}
@@ -338,7 +340,7 @@ to make only some small changes in the tutorial files.
 
 \begin{enumerate}
 
-\item \textbf{Runing the Program} \\
+\item \textbf{Running the Program} \\
   To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled}. Note, that the time-step size is automatically adapted during the simulation. For the visualization of the results using paraview please refer to section \ref{quick-start-guide}.\\
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
@@ -475,7 +477,7 @@ compile the program.
  \item What happens if you increase the resolution of the grid?
 \end{itemize}
 
-\subsubsection{Exercise 3: Parameter File Input.}
+\subsubsection{Exercise 3: Parameter File Input}
 
 As you have experienced, compilation takes quite some time. Therefore,
 \Dumux provides a simple method to read in parameters at run-time
@@ -488,9 +490,9 @@ simulation a list of parameters is printed if the command line option
 \texttt{-printParams 1} is passed to the simulation. Add some (for
 example \texttt{Newton.MaxSteps} and \texttt{EnableGravity}) to the
 parameter file \texttt{tutorial\_coupled.input} and observe what
-happens if they are modified.
+happens if they are modified. For more information about the input file please refer to section \ref{sec:inputFiles}.
 
-\subsubsection{Exercise 4: Create a New Component.}
+\subsubsection{Exercise 4: Create a New Component}
 
 Create a new file for the benzene component called \texttt{benzene.hh}
 and implement a new component. (You may get a hint by looking at
