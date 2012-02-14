@@ -446,7 +446,6 @@ public:
 
         if (phaseIdx == lPhaseIdx)
         {
-            return 0.0013;
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
             // couldn't find a way to solve the mixture problem
@@ -454,7 +453,6 @@ public:
         }
         else if (phaseIdx == gPhaseIdx)
         {
-            return 1.8e-5;
             if(!useComplexRelations){
                 return Air::gasViscosity(T, p);
             }
