@@ -40,7 +40,7 @@
 // The components that are used
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/oil.hh>
-#include <dumux/common/structuredcubegridcreator.hh>
+#include <dumux/common/cubegridcreator.hh>
 
 namespace Dumux{
 // Forward declaration of the problem class
