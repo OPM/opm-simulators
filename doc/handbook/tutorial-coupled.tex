@@ -351,9 +351,9 @@ to make only some small changes in the tutorial files.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
-  edge lengths of $\text{x} = 400 m$ and $\text{y} = 500 m$ and with
-  discretization lengths of $\Delta \text{x} = 20$ m and $\Delta
-  \text{y} = 20$ m.
+  edge lengths of $\text{x} = \unit[400]{m}$ and $\text{y} = \unit[500]{m}$ and with
+  discretization lengths of $\Delta \text{x} = \unit[20]{m}$ and $\Delta
+  \text{y} = \unit[20]{m}$.
   
   Change the boundary conditions in the file
   \texttt{tutorialproblem\_coupled.hh} so that water enters from the
@@ -362,6 +362,9 @@ to make only some small changes in the tutorial files.
 
   Compile the main file by typing \texttt{make tutorial\_coupled} and
   run the model as explained above.
+
+  \item \textbf{Changing  the shape of the discrete elements} \\
+  Change the types of elements used for discretizing the domain. In line \ref{tutorial-coupled:set-gridcreator} of the problem file  the type of gridcreator is chosen. By choosing a different grid creator you can discretize the domain with different elements. Hint: You can find gridcreators in \texttt{dumux/common/}. The shape of the employed elements can be visualized in paraview by choosing \texttt{Surface with Edges}. 
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that, you have to select different components via the property system in the problem file:
