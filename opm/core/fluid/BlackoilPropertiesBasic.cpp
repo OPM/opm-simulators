@@ -216,7 +216,7 @@ namespace Opm
             for (int phase = 0; phase < np; ++phase) {
                 rho[np*i + phase] = 0.0;
                 for (int comp = 0; comp < np; ++comp) {
-                    rho[np*i + phase] += A[n*np*np + np*phase + comp]*sdens[comp];
+                    rho[np*i + phase] += A[i*np*np + np*phase + comp]*sdens[comp];
                 }
             }
         }
