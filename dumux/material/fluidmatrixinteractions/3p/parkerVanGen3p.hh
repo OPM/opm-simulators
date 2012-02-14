@@ -249,7 +249,10 @@ public:
      * (see p61. in "Comparison of the Three-Phase Oil Relative Permeability Models"
      * MOJDEH  DELSHAD and GARY A. POPE, Transport in Porous Media 4 (1989), 59-83.)
      *
-     * \param The mobile saturation of all phases. (Sw used)
+     * \param Sn saturation of the NAPL phase.
+     * \param Sg saturation of the gas phase.
+     * \param saturation saturation of the water phase.
+     * \param params Array of parameters.
      */
     static Scalar krw(const Params &params,  Scalar saturation, Scalar Sn, Scalar Sg)
     {
@@ -277,7 +280,10 @@ public:
      * Journal of Contaminant Hydrology 66 (2003), 261-285
      *
      *
-     * \param The mobile saturation of all phases. (Sw and Sn used)
+     * \param Sw saturation of the water phase.
+     * \param Sg saturation of the gas phase.
+     * \param saturation saturation of the NAPL phase.
+     * \param params Array of parameters.
      */
     static Scalar krn(const Params &params, Scalar Sw, Scalar saturation, Scalar Sg)
     {
@@ -318,7 +324,10 @@ public:
      * (see p61. in "Comparison of the Three-Phase Oil Relative Permeability Models"
      * MOJDEH  DELSHAD and GARY A. POPE, Transport in Porous Media 4 (1989), 59-83.)
      *
-     * \param The mobile saturation of all phases. (Sg used)
+     * \param Sw saturation of the water phase.
+     * \param Sn saturation of the NAPL phase.
+     * \param saturation saturation of the gas phase.
+     * \param params Array of parameters.
      */
     static Scalar krg(const Params &params, Scalar Sw, Scalar Sn, Scalar saturation)
     {
@@ -344,8 +353,11 @@ public:
 
     /*!
      * \brief The relative permeability for a phase.
-     *
-     * \param Phase indicator, The saturation of all phases.
+     * \param Sw saturation of the water phase.
+     * \param Sg saturation of the gas phase.
+     * \param Sn saturation of the NAPL phase.
+     * \param params Array of parameters.
+     * \param phase indicator, The saturation of all phases.
      */
     static Scalar kr(const Params &params, const int phase, const Scalar Sw, const Scalar Sn, const Scalar Sg)
     {

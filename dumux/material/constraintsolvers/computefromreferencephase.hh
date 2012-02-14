@@ -101,7 +101,8 @@ public:
      * - if the setViscosity parameter is true, also dynamic viscosities of *all* phases
      * - if the setEnthalpy parameter is true, also specific enthalpies and internal energies of *all* phases
      *
-     * \param mutParams The mutable parameters object which ought to be set
+     * \param fluidState Thermodynamic state of the fluids
+     * \param paramCache  Container for cache parameters
      * \param refPhaseIdx The phase index of the reference phase
      * \param setViscosity Specify whether the dynamic viscosity of
      *                     each phase should also be set.

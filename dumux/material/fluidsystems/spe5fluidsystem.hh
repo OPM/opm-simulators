@@ -361,6 +361,7 @@ public:
      *
      *
      * \param fluidState An abitrary fluid state
+     * \param paramCache Container for cache parameters
      * \param phaseIdx The index of the fluid phase to consider
      */
     template <class FluidState>
@@ -465,6 +466,7 @@ public:
      *        \f$i\f$ and \f$j\f$ in this phase.
      *
      * \param fluidState An abitrary fluid state
+     * \param paramCache Container for cache parameters
      * \param phaseIdx The index of the fluid phase to consider
      * \param compIIdx The index of the first component to consider
      * \param compJIdx The index of the second component to consider

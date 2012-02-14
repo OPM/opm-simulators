@@ -85,7 +85,7 @@ public:
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of pure xylene
      *        at a given temperature according to Antoine after Betz 1997 ->  Gmehling et al 1980
      *
-     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
 
     static Scalar vaporPressure(Scalar temperature)
@@ -159,7 +159,7 @@ public:
     /*!
      * \brief latent heat of vaporization for xylene \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar heatVap(Scalar temp, Scalar pressure)
@@ -210,7 +210,7 @@ public:
      * \brief The molar density of pure xylene at a given pressure and temperature
      * \f$\mathrm{[mol/m^3]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar molarLiquidDensity(Scalar temp, Scalar pressure)
@@ -261,7 +261,7 @@ public:
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of xylene vapor
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      * \param regularize defines, if the functions is regularized or not, set to true by default
      */
@@ -286,7 +286,7 @@ public:
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure xylene.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temp, Scalar pressure)

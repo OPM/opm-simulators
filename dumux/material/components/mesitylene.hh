@@ -86,7 +86,7 @@ public:
      *        pure mesitylene at a given temperature according to
      *        Antoine after Betz 1997, see Gmehling et al 1980
      *
-     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar temperature)
     {
@@ -103,7 +103,7 @@ public:
     /*!
      * \brief Specific enthalpy of liquid mesitylene \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temp temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
@@ -252,7 +252,7 @@ protected:
     /*!
      * \brief Specific heat cap of liquid mesitylene \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temp temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar spHeatCapLiquidPhase_(Scalar temperature)
     {
