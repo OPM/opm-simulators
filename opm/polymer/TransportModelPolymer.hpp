@@ -82,7 +82,8 @@ namespace Opm
 		   double* concentration,
 		   double* cmax);
 
-	virtual void solveSingleCell(int cell);
+	virtual void solveSingleCell(const int cell);
+	virtual void solveMultiCell(const int num_cells, const int* cells);
 
     private:
 	const UnstructuredGrid& grid_;

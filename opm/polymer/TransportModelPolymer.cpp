@@ -204,7 +204,7 @@ namespace Opm
 
 
 
-    void TransportModelPolymer::solveSingleCell(int cell)
+    void TransportModelPolymer::solveSingleCell(const int cell)
     {
 	ResidualC res(*this, cell);
 	const double a = 0.0;
@@ -217,6 +217,14 @@ namespace Opm
 	saturation_[cell] = res.lastSaturation();
 	fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
 	mc_[cell] = computeMc(concentration_[cell]);
+    }
+
+
+
+    void TransportModelPolymer::solveMultiCell(const int num_cells, const int* /*cells*/)
+    {
+	THROW("TransportModelPolymer::solveMultiCell() not yet implemented, "
+	      "got a component of size " << num_cells);
     }
 
 
