@@ -23,6 +23,9 @@
 #include <opm/core/transport/reorder/nlsolvers.h>
 #include <opm/core/utility/RootFinders.hpp>
 
+#include <fstream>
+#include <iterator>
+
 namespace Opm
 {
 
@@ -111,16 +114,62 @@ namespace Opm
     };
 
 
-    void TransportModelTwophase::solveSingleCell(int cell)
+    void TransportModelTwophase::solveSingleCell(const int cell)
     {
 	Residual res(*this, cell);
+	const double tol = 1e-9;
+	// const double r0 = res(saturation_[cell]);
+	// if (std::fabs(r0) < tol) {
+	//     return;
+	// }
 	const double a = 0.0;
 	const double b = 1.0;
 	const int maxit = 20;
-	const double tol = 1e-9;
 	int iters_used;
+	// saturation_[cell] = modifiedRegulaFalsi(res, a, b, saturation_[cell], maxit, tol, iters_used);
 	saturation_[cell] = modifiedRegulaFalsi(res, a, b, maxit, tol, iters_used);
 	fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
+    }
+
+    void TransportModelTwophase::solveMultiCell(const int num_cells, const int* cells)
+    {
+	// std::ofstream os("dump");
+	// std::copy(cells, cells + num_cells, std::ostream_iterator<double>(os, "\n"));
+	double max_s_change = 0.0;
+	const double tol = 1e-9;
+	const int max_iters = 300;
+	int num_iters = 0;
+	// Must store s0 before we start.
+	std::vector<double> s0(num_cells);
+	// Must set initial fractional flows before we start.
+	for (int i = 0; i < num_cells; ++i) {
+	    const int cell = cells[i];
+	    fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
+	    s0[i] = saturation_[cell];
+	}
+	do {
+	    int max_change_cell = -1;
+	    max_s_change = 0.0;
+	    for (int i = 0; i < num_cells; ++i) {
+		const int cell = cells[i];
+		const double old_s = saturation_[cell];
+		saturation_[cell] = s0[i];
+		solveSingleCell(cell);
+		// std::cout << "delta s = " << saturation_[cell] - old_s << std::endl;
+		if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
+		    max_change_cell = cell;
+		}
+		max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
+	    }
+	    // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change
+	    // 	      << "    in cell " << max_change_cell << std::endl;
+	} while (max_s_change > tol && ++num_iters < max_iters);
+	if (max_s_change > tol) {
+	    THROW("In solveMultiCell(), we did not converge after "
+	    	  << num_iters << " iterations. Delta s = " << max_s_change);
+	}
+	std::cout << "Solved " << num_cells << " cell multicell problem in "
+		  << num_iters << " iterations." << std::endl;
     }
 
     double TransportModelTwophase::fracFlow(double s, int cell) const

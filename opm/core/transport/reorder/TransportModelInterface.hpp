@@ -26,17 +26,18 @@ namespace Opm
 {
 
     /// Interface for reordering transport models.
-    /// A transport model must provide the solveSingleCell()
-    /// method, and is expected to implement a solve() method
-    /// that will have an interface geared to the model's needs.
-    /// (The solve() method is therefore not virtual in this class).
-    /// The reorderAndTransport() method is provided as an
-    /// aid to implementing solve() in subclasses.
+    /// A transport model must provide the solveSingleCell() and
+    /// solveMultiCell methods, and is expected to implement a solve()
+    /// method that will have an interface geared to the model's
+    /// needs. (The solve() method is therefore not virtual in this
+    /// class.) The reorderAndTransport() method is provided as an aid
+    /// to implementing solve() in subclasses.
     class TransportModelInterface
     {
     public:
 	virtual ~TransportModelInterface() {}
-	virtual void solveSingleCell(int cell) = 0;
+	virtual void solveSingleCell(const int cell) = 0;
+	virtual void solveMultiCell(const int num_cells, const int* cells) = 0;
     protected:
 	void reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux);
     };

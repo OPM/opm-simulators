@@ -27,22 +27,27 @@
 
 void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux)
 {
-    // Compute sequence of single-cell problems
+    // Compute reordered sequence of single-cell problems
     std::vector<int> sequence(grid.number_of_cells);
     std::vector<int> components(grid.number_of_cells + 1);
     int ncomponents;
     compute_sequence(&grid, darcyflux, &sequence[0], &components[0], &ncomponents);
 
-    // Assume all strong components are single-cell domains.
-    assert(ncomponents == grid.number_of_cells);
-    for (int i = 0; i < grid.number_of_cells; ++i) {
+    // Invoke appropriate solve method for each interdependent component.
+    for (int comp = 0; comp < ncomponents; ++comp) {
 #ifdef MATLAB_MEX_FILE
+	// \TODO replace this with general signal handling code, check if it costs performance.
         if (interrupt_signal) {
             mexPrintf("Reorder loop interrupted by user: %d of %d "
                       "cells finished.\n", i, grid.number_of_cells);
             break;
         }
 #endif
-        solveSingleCell(sequence[i]);
+	const int comp_size = components[comp + 1] - components[comp];
+	if (comp_size == 1) {
+	    solveSingleCell(sequence[components[comp]]);
+	} else {
+	    solveMultiCell(comp_size, &sequence[components[comp]]);
+	}
     }
 }
