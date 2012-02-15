@@ -12,6 +12,20 @@
 #include <opm/core/transport/reorder/tarjan.h>
 #endif
 
+#include <algorithm>
+#include <cmath>
+
+struct SortByAbsFlux
+{
+    SortByAbsFlux(const double* flux)
+        : flux_(flux)
+    {}
+    bool operator() (int f1, int f2)
+    {
+	return std::fabs(flux_[f1]) < std::fabs(flux_[f2]);
+    }
+    const double* flux_;
+};
 
 /* Construct adjacency matrix of upwind graph wrt flux.  Column
    indices are not sorted. */
@@ -64,11 +78,15 @@ make_upwind_graph(int nc, int *cellfaces, int *faceptr, int *face2cell,
 
             if ( theflux < 0)
             {
-                ja[p++] = work[f];
+                // ja[p++] = f;
+		ja[p++] = work[f];
             }
         }
-
         ia[i+1] = p;
+	// std::sort(ja + ia[i], ja + ia[i+1], SortByAbsFlux(flux));
+	// for (j = ia[i]; j < ia[i+1]; ++j) {
+	//     ja[j] = work[ja[j]];
+	// }
     }
 }
 
@@ -84,9 +102,9 @@ compute_reorder_sequence(int nc, int nf, int *cellfaces, int *faceptr, int *face
         sz = 3*nc;
     }
 
-    work = malloc( sz    * sizeof *work);
-    ia   = malloc((nc+1) * sizeof *ia);
-    ja   = malloc( nf    * sizeof *ja); /* A bit too much... */
+    work = (int*) malloc( sz    * sizeof *work);
+    ia   = (int*) malloc((nc+1) * sizeof *ia);
+    ja   = (int*) malloc( nf    * sizeof *ja); /* A bit too much... */
 
 
     make_upwind_graph(nc, cellfaces, faceptr, face2cell,
