@@ -88,8 +88,32 @@ public:
         fullySaturatedLambda_[phaseIdx] = value;
     }
 
+    /*!
+     * \brief Return the heat conductivity of the porous medium at
+     *        vacuum [W/m^2 / (K/m)].
+     */
+    Scalar vacuumLambda() const
+    {
+        return vacuumLambda_;
+    }
+
+    /*!
+     * \brief Set the "fully saturated" heat conductivity of the
+     *        porous medium [W/m^2 / (K/m)].
+     *
+     * In this context "fully saturated" means that the whole pore
+     * space of the porous medium is filled by a given fluid phase.
+     */
+    void setVacuumLambda(Scalar value)
+    {
+        assert(value > 0);
+
+        vacuumLambda_ = value;
+    }
+
 private:
     Scalar fullySaturatedLambda_[numPhases];
+    Scalar vacuumLambda_;
 };
 
 } // namespace Dumux

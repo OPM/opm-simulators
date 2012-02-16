@@ -67,11 +67,13 @@ namespace Dumux
  * Mehrphasenprozesse in NAPL kontaminierten poroesen Medien, PhD
  * thesis, Technical University of Braunschweig, 2000
  */
-template <int wPhaseIdx,
+template <class FluidSystem,
           class ScalarT,
-          class ParamsT = SomertonParams</*numPhases=*/2, ScalarT> >
+          class ParamsT = SomertonParams<FluidSystem::numPhases, ScalarT> >
 class Somerton
 {
+    enum { numPhases = FluidSystem::numPhases };
+
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
@@ -83,30 +85,36 @@ public:
      * The Somerton law is given by:
      * \f[
      \lambda_{pm} =
-     \lambda_{vac} +
-     \sqrt{S_w}(\lambda_{ful,w} - \lambda_{ful,n}) +
-     \sqrt{S_n}(\lambda_{ful,n} - \lambda_{ful,w})
+     \lambda_{ful,g} +
+     \sqrt{S_w}(\lambda_{ful,w} - \lambda_{vac}) +
+     \sqrt{S_n}(\lambda_{ful,n} - \lambda_{vac})
      \f]
      *
-     * where \f$\lambda_{vac}\f$ is the heat condctivity of the porous
-     * medium at vacuum, \f$\lambda_{ful,\alpha}\f$ is the heat
+     * where \f$\lambda_{vac}\f$ is the heat conductivity of the
+     * porous medium at vacuum, \f$\lambda_{ful,\alpha}\f$ is the heat
      * conductivty of the porous medium if it is fully saturated by
-     * phase \f$\alpha\f$ and \f$S_\alpha\f$ is the saturation of phase \f$\alpha\f$.
+     * phase \f$\alpha\f$ and \f$S_\alpha\f$ is the saturation of
+     * phase \f$\alpha\f$.
      */
     template <class FluidState>
     static Scalar heatConductivity(const Params &params,
                                    const FluidState &fluidState)
     {
-        // the Somerton law as implemented here only
-        // applies to twophase flow...
-        assert(FluidState::numPhases == 2);
+        Scalar lambda = 0;
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (FluidSystem::isLiquid(phaseIdx)) {
+                lambda +=
+                    regularizedSqrt_(fluidState.saturation(phaseIdx))
+                    * params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda();
+            }
+            else { // gas phase
+                lambda += params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda();
+            }
+        };
 
-        int nPhaseIdx = 1 - wPhaseIdx;
-        return
-            params.fullySaturatedLambda(nPhaseIdx)
-            +
-            regularizedSqrt_(fluidState.saturation(wPhaseIdx))
-            * (params.fullySaturatedLambda(wPhaseIdx) - params.fullySaturatedLambda(wPhaseIdx));
+        lambda += params.vacuumLambda();
+
+        return lambda;
     }
 
 protected:
