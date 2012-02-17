@@ -217,6 +217,19 @@ public:
     void setKdNAPL(Scalar input)
     { KdNAPL_ = input; }
 
+    void checkDefined() const
+    {
+        Valgrind::CheckDefined(vgAlpha_);
+        Valgrind::CheckDefined(vgM_);
+        Valgrind::CheckDefined(vgN_);
+        Valgrind::CheckDefined(Swr_);
+        Valgrind::CheckDefined(Snr_);
+        Valgrind::CheckDefined(Sgr_);
+        Valgrind::CheckDefined(Swrx_);
+        Valgrind::CheckDefined(KdNAPL_);
+        Valgrind::CheckDefined(rhoBulk_);
+        Valgrind::CheckDefined(krRegardsSnr_);
+    }
 
 private:
     Scalar vgAlpha_;

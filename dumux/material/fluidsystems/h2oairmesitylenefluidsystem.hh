@@ -60,16 +60,15 @@ class H2OAirMesitylene
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     typedef Dumux::H2O<Scalar> IapwsH2O;
-    typedef Dumux::TabulatedComponent<Scalar, IapwsH2O> TabulatedH2O;
+    typedef Dumux::TabulatedComponent<Scalar, IapwsH2O, /*alongVaporPressure=*/false> TabulatedH2O;
     typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
 
 public:
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
-//    typedef TabulatedH2O H2O;
-    typedef IapwsH2O H2O;
-
-
+    typedef TabulatedH2O H2O;
+    //typedef IapwsH2O H2O;
+    
     static const int numPhases = 3;
     static const int numComponents = 3;
 
@@ -80,6 +79,10 @@ public:
     static const int H2OIdx = 0;
     static const int NAPLIdx = 1;
     static const int airIdx = 2;
+
+    static const int wCompIdx = H2OIdx;
+    static const int cCompIdx = NAPLIdx;
+    static const int aCompIdx = airIdx;
 
     /*!
      * \brief Initialize the fluid system's static parameters generically
