@@ -197,6 +197,17 @@ namespace Opm
 
 
 
+    /// Obtain the range of allowable saturation values.
+    /// \param[in]  n      Number of data points.
+    /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
+    /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
+    void SaturationPropsBasic::satRange(const int n,
+					double* smin,
+					double* smax) const
+    {
+	std::fill(smin, smin + num_phases_*n, 0.0);
+	std::fill(smax, smax + num_phases_*n, 1.0);
+    }
 
 
 

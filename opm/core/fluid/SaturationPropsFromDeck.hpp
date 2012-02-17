@@ -67,6 +67,13 @@ namespace Opm
                       double* pc,
                       double* dpcds) const;
 
+	/// Obtain the range of allowable saturation values.
+        /// \param[in]  n      Number of data points.
+        /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
+        /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
+	void satRange(const int n,
+		      double* smin,
+		      double* smax) const;
     private:
         void evalKr(const double* s, double* kr) const;
         void evalKrDeriv(const double* s, double* kr, double* dkrds) const;
@@ -82,6 +89,8 @@ namespace Opm
         utils::UniformTableLinear<double> krog_;
         utils::UniformTableLinear<double> pcog_;
         double krocw_; // = krow_(s_wc)
+	double smin_[PhaseUsage::MaxNumPhases];
+	double smax_[PhaseUsage::MaxNumPhases];
     };
 
 

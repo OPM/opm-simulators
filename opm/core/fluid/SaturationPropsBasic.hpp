@@ -76,6 +76,13 @@ namespace Opm
                       double* pc,
                       double* dpcds) const;
 
+	/// Obtain the range of allowable saturation values.
+        /// \param[in]  n      Number of data points.
+        /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
+        /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
+	void satRange(const int n,
+		      double* smin,
+		      double* smax) const;
     private:
 	enum RelPermFunc { Constant, Linear, Quadratic };
 	int num_phases_;
