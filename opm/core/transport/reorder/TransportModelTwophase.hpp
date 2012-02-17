@@ -57,6 +57,10 @@ namespace Opm
 	std::vector<double> fractionalflow_;  // one per cell
 	const double* visc_;
 
+	// Storing the upwind graph for experiments.
+	// std::vector<int> ia_;
+	// std::vector<int> ja_;
+
 	struct Residual;
 	double fracFlow(double s, int cell) const;
     };
