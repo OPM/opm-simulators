@@ -117,6 +117,31 @@ compute_reorder_sequence(int nc, int nf, int *cellfaces, int *faceptr, int *face
     free(work);
 }
 
+
+static void
+compute_reorder_sequence_graph(int nc, int nf, int *cellfaces, int *faceptr, int *face2cell,
+			       const double *flux, int *sequence, int *components, int *ncomponents,
+			       int *ia, int *ja)
+{
+    int *work;
+    int sz = nf;
+    if (nf < 3*nc)
+    {
+        sz = 3*nc;
+    }
+
+    work = (int*) malloc( sz    * sizeof *work);
+
+
+    make_upwind_graph(nc, cellfaces, faceptr, face2cell,
+                      flux, ia, ja, work);
+
+    tarjan (nc, ia, ja, sequence, components, ncomponents, work);
+
+    free(work);
+}
+
+
 void compute_sequence(const struct UnstructuredGrid *grid, const double *flux,
                       int *sequence,
                       int *components, int *ncomponents)
@@ -131,6 +156,24 @@ void compute_sequence(const struct UnstructuredGrid *grid, const double *flux,
                              sequence,
                              components,
                              ncomponents);
+}
+
+void compute_sequence_graph(const struct UnstructuredGrid *grid, const double *flux,
+			    int *sequence,
+			    int *components, int *ncomponents,
+			    int *ia, int *ja)
+{
+
+    compute_reorder_sequence_graph(grid->number_of_cells,
+				   grid->number_of_faces,
+				   grid->cell_faces,
+				   grid->cell_facepos,
+				   grid->face_cells,
+				   flux,
+				   sequence,
+				   components,
+				   ncomponents,
+				   ia, ja);
 }
 
 
