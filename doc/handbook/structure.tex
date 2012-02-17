@@ -36,11 +36,14 @@ The directory \texttt{dumux} contains the \Dumux source files. It consists of th
 \item \texttt{boxmodels}:
 the general fully implicit box method is contained in the subdirectory 
 \texttt{common}, while each of the other subdirectories contains 
-a derived specific numerical model. The subdirectory \texttt{common} also contains the file \texttt{boxfvelementgeometry.hh} employed by the box method to extract the dual mesh geometry information out of the primal one. The files \texttt{pdelabboxassembler.hh} and \texttt{pdelabboxlocaloperator.hh} allow the use of the DUNE module \texttt{dune-pdelab}. 
+a derived specific numerical model. The subdirectory \texttt{common} also contains the file \texttt{boxfvelementgeometry.hh} employed by the box method to extract the dual mesh geometry information out of the primal one. 
+% The files \texttt{pdelabboxassembler.hh} and \texttt{pdelabboxlocaloperator.hh} allow the use of the DUNE module \texttt{dune-pdelab}. 
 
 \item \texttt{common}:
 general stuff like the property system and the time management for the 
-fully coupled as well as the decoupled models, the interface for the Pardiso direct solver library \cite{Pardiso}, and the \texttt{start.hh} file that includes the common routine for starting a model called in the main function. 
+fully coupled as well as the decoupled models, 
+% the interface for the Pardiso direct solver library \cite{Pardiso}, 
+and the \texttt{start.hh} file that includes the common routine for starting a model called in the main function. 
 
 \item \texttt{decoupled}:
  numerical models to solve the pressure equation as part of the fractional flow formulation. The specific models are contained 
@@ -100,13 +103,13 @@ while the necessary binary coefficients like the Henry coefficient or binary dif
 
 
 The directory \texttt{test} contains a test for each numerical model and for 
-the property system. The tests for the property system and the pardiso solver can be found in \texttt{common}. 
+the property system. The tests for the property system can be found in \texttt{common}. 
 The subfolder \texttt{boxmodels} contains tests for the fully 
 coupled models (\texttt{1p},  \texttt{1p2c},  \texttt{2p},  \texttt{2p2c},  
-\texttt{2p2cni},  \texttt{2pni},  and \texttt{richards}), while the subdirectory \texttt{decoupled} corresponds to the decoupled models. 
+\texttt{2p2cni},  \texttt{2pni}, \texttt{3p3c},  \texttt{3p3cni},  \texttt{mpnc} and \texttt{richards}), while the subdirectory \texttt{decoupled} corresponds to the decoupled models. 
 Each subdirectory contains one or more program files \texttt{test\_*.cc}, where \texttt{*} usually is the 
 name of the folder. Moreover, the problem definitions can be found 
-in the \texttt{*problem.hh} files and the definition of the spatially dependend parameters in \texttt{*spatialparameters.hh}. Simply executing the tests should either run the 
+in the \texttt{*problem.hh} files and the definition of the spatially dependent parameters in \texttt{*spatialparameters.hh}. Simply executing the tests should either run the 
 full test or give a list of required command line arguments. After test execution, 
 VTK output files should have been generated. 
 For more detailed descriptions of the tests, the problem definitions and their corresponding 
