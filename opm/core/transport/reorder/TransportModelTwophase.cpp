@@ -32,10 +32,14 @@ namespace Opm
 
     TransportModelTwophase::TransportModelTwophase(const UnstructuredGrid& grid,
 						   const double* porevolume,
-						   const Opm::IncompPropertiesInterface& props)
+						   const Opm::IncompPropertiesInterface& props,
+						   const double tol,
+						   const int maxit)
 	: grid_(grid),
 	  porevolume_(porevolume),
 	  props_(props),
+	  tol_(tol),
+	  maxit_(maxit),
 	  darcyflux_(0),
 	  source_(0),
 	  dt_(0.0),
@@ -48,6 +52,14 @@ namespace Opm
 	    THROW("Property object must have 2 phases");
 	}
 	visc_ = props.viscosity();
+	int num_cells = props.numCells();
+	smin_.resize(props.numPhases()*num_cells);
+	smax_.resize(props.numPhases()*num_cells);
+	std::vector<int> cells(num_cells);
+	for (int i = 0; i < num_cells; ++i) {
+	    cells[i] = i;
+	}
+	props.satRange(props.numCells(), &cells[0], &smin_[0], &smax_[0]);
     }
 
     void TransportModelTwophase::solve(const double* darcyflux,
@@ -128,17 +140,12 @@ namespace Opm
     void TransportModelTwophase::solveSingleCell(const int cell)
     {
 	Residual res(*this, cell);
-	const double tol = 1e-9;
 	// const double r0 = res(saturation_[cell]);
-	// if (std::fabs(r0) < tol) {
+	// if (std::fabs(r0) < tol_) {
 	//     return;
 	// }
-	const double a = 0.0;
-	const double b = 1.0;
-	const int maxit = 20;
 	int iters_used;
-	// saturation_[cell] = modifiedRegulaFalsi(res, a, b, saturation_[cell], maxit, tol, iters_used);
-	saturation_[cell] = modifiedRegulaFalsi(res, a, b, maxit, tol, iters_used);
+	saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
 	fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
     }
 

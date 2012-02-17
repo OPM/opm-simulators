@@ -35,7 +35,9 @@ namespace Opm
     public:
 	TransportModelTwophase(const UnstructuredGrid& grid,
 			       const double* porevolume,
-			       const Opm::IncompPropertiesInterface& props);
+			       const Opm::IncompPropertiesInterface& props,
+			       const double tol,
+			       const int maxit);
 
 	void solve(const double* darcyflux,
 		   const double* source,
@@ -49,13 +51,17 @@ namespace Opm
 	const UnstructuredGrid& grid_;
 	const double* porevolume_;  // one volume per cell
 	const IncompPropertiesInterface& props_;
+	const double* visc_;
+	std::vector<double> smin_;
+	std::vector<double> smax_;
+	double tol_;
+	double maxit_;
 
 	const double* darcyflux_;   // one flux per grid face
 	const double* source_;      // one source per cell
 	double dt_;
 	double* saturation_;        // one per cell
 	std::vector<double> fractionalflow_;  // one per cell
-	const double* visc_;
 
 	// Storing the upwind graph for experiments.
 	// std::vector<int> ia_;
