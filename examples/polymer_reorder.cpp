@@ -176,15 +176,28 @@ private:
 
 
 
-
-static double polymerInflowAtTime(double time)
+class PolymerInflow
 {
-    if (time >= 300.0*Opm::unit::day && time < 800.0*Opm::unit::day) {
-    	return 5.0;
-    } else {
-    	return 0.0;
+public:
+    PolymerInflow(const double starttime,
+		  const double endtime,
+		  const double amount)
+	: stime_(starttime), etime_(endtime), amount_(amount)
+    {
     }
-}
+    double operator()(double time)
+    {
+	if (time >= stime_ && time < etime_) {
+	    return amount_;
+	} else {
+	    return 0.0;
+	}
+    }
+private:
+    double stime_;
+    double etime_;
+    double amount_;
+};
 
 
 
@@ -253,7 +266,8 @@ main(int argc, char** argv)
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
     Opm::PolymerData polydata;
     if (use_deck) {
-	THROW("We do not yet read polymer keywords from deck.");
+	std::cout << "**** Warning: We do not yet read polymer keywords from deck. "
+	    "Polymer behaviour is hardcoded." << std::endl;
 	std::string deck_filename = param.get<std::string>("deck_filename");
 	Opm::EclipseGridParser deck(deck_filename);
 	// Grid init
@@ -274,30 +288,37 @@ main(int argc, char** argv)
 	// Rock and fluid init.
 	// props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
 	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-	// Setting polydata defaults to mimic a simple example case.
-	polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
-	polydata.omega = param.getDefault("omega", 1.0);
-	polydata.rhor = param.getDefault("rock_density", 1000.0);
-	polydata.dps = param.getDefault("dead_pore_space", 0.15);
-	polydata.c_vals_visc.resize(2);
-	polydata.c_vals_visc[0] = 0.0;
-	polydata.c_vals_visc[1] = 7.0;
-	polydata.visc_mult_vals.resize(2);
-	polydata.visc_mult_vals[0] = 1.0;
-	// polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-	polydata.visc_mult_vals[1] = 20.0;
-	polydata.c_vals_ads.resize(3);
-	polydata.c_vals_ads[0] = 0.0;
-	polydata.c_vals_ads[1] = 2.0;
-	polydata.c_vals_ads[2] = 8.0;
-	polydata.ads_vals.resize(3);
-	polydata.ads_vals[0] = 0.0;
-	// polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
-	polydata.ads_vals[1] = 0.0015;
-	polydata.ads_vals[2] = 0.0025;
     }
+
+    // Setting polydata defaults to mimic a simple example case.
+    polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
+    polydata.omega = param.getDefault("omega", 1.0);
+    polydata.rhor = param.getDefault("rock_density", 1000.0);
+    polydata.dps = param.getDefault("dead_pore_space", 0.15);
+    polydata.c_vals_visc.resize(2);
+    polydata.c_vals_visc[0] = 0.0;
+    polydata.c_vals_visc[1] = 7.0;
+    polydata.visc_mult_vals.resize(2);
+    polydata.visc_mult_vals[0] = 1.0;
+    // polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+    polydata.visc_mult_vals[1] = 20.0;
+    polydata.c_vals_ads.resize(3);
+    polydata.c_vals_ads[0] = 0.0;
+    polydata.c_vals_ads[1] = 2.0;
+    polydata.c_vals_ads[2] = 8.0;
+    polydata.ads_vals.resize(3);
+    polydata.ads_vals[0] = 0.0;
+    // polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+    polydata.ads_vals[1] = 0.0015;
+    polydata.ads_vals[2] = 0.0025;
+
+
+    double poly_start = param.getDefault("poly_start_days", 300.0)*Opm::unit::day;
+    double poly_end = param.getDefault("poly_end_days", 800.0)*Opm::unit::day;
+    double poly_amount = param.getDefault("poly_amount", 5.0);
+    PolymerInflow poly_inflow(poly_start, poly_end, poly_amount);
+
     bool new_code = param.getDefault("new_code", false);
-    int method = param.getDefault("method", 1);
 
     // Extra rock init.
     std::vector<double> porevol;
@@ -307,7 +328,11 @@ main(int argc, char** argv)
     // Solvers init.
     Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), 0);
 
-    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata, method);
+    const int method = param.getDefault("method", 1);
+    const double nltol = param.getDefault("nl_tolerance", 1e-9);
+    const int maxit = param.getDefault("nl_maxiter", 30);
+    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata,
+				      method, nltol, maxit);
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
@@ -370,7 +395,12 @@ main(int argc, char** argv)
 	std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
 	ptime += pt;
 
-	double inflow_c = polymerInflowAtTime(current_time);
+	const double inflowc0 = poly_inflow(current_time + 1e-5*stepsize);
+	const double inflowc1 = poly_inflow(current_time + (1.0 - 1e-5)*stepsize);
+	if (inflowc0 != inflowc1) {
+	    std::cout << "**** Warning: polymer inflow rate changes during timestep. Using rate near start of step.";
+	}
+	const double inflow_c = inflowc0;
 	Opm::toWaterSat(state.saturation(), reorder_sat);
 	// We must treat reorder_src here,
 	// if we are to handle anything but simple water
