@@ -47,13 +47,15 @@ namespace Opm
 	tpfa_htrans_compute(gg, permeability, &htrans_[0]);
 	if (gravity) {
 	    gpress_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
-	    gpress_omegaweighted_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
 
 	    mim_ip_compute_gpress(gg->number_of_cells, gg->dimensions, gravity,
 				  gg->cell_facepos, gg->cell_faces,
 				  gg->face_centroids, gg->cell_centroids,
 				  &gpress_[0]);
 	}
+	// gpress_omegaweighted_ is sent to assembler always, and it dislikes
+	// getting a zero pointer.
+	gpress_omegaweighted_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
 	h_ = ifs_tpfa_construct(gg);
     }
 
