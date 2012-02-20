@@ -22,8 +22,7 @@
 
 #include "Utilities.hpp"
 
-#include <opm/core/pressure/tpfa/ifs_tpfa.h>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/core/pressure/IncompTpfa.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
@@ -34,7 +33,6 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/fluid/SimpleFluid2p.hpp>
 #include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 
@@ -307,12 +305,13 @@ main(int argc, char** argv)
     double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
 
     // Solvers init.
-    Opm::PressureSolver psolver(grid->c_grid(), *props);
+    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), 0);
 
     Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata, method);
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
+    std::vector<double> omega; // Empty dummy unless/until we include gravity here.
     double init_sat = param.getDefault("init_sat", 0.0);
     ReservoirState state(grid->c_grid(), props->numPhases(), init_sat);
     // We need a separate reorder_sat, because the reorder
@@ -365,7 +364,7 @@ main(int argc, char** argv)
 
 	compute_totmob(*props, state.saturation(), totmob);
 	pressure_timer.start();
-	psolver.solve(grid->c_grid(), totmob, src, state);
+	psolver.solve(totmob, omega, src, state.pressure(), state.faceflux());
 	pressure_timer.stop();
 	double pt = pressure_timer.secsSinceStart();
 	std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;

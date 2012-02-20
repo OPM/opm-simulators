@@ -59,63 +59,6 @@ namespace Opm
 {
 
 
-
-    class PressureSolver
-    {
-    public:
-	PressureSolver(const UnstructuredGrid* g,
-		       const IncompPropertiesInterface& props)
-	    : htrans_(g->cell_facepos[ g->number_of_cells ]),
-	      trans_ (g->number_of_faces),
-	      gpress_(g->cell_facepos[ g->number_of_cells ])
-	{
-	    UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(g);
-	    tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
-
-	    h_ = ifs_tpfa_construct(gg);
-	}
-
-	~PressureSolver()
-	{
-	    ifs_tpfa_destroy(h_);
-	}
-
-	template <class State>
-	void
-	solve(const UnstructuredGrid*      g     ,
-	      const ::std::vector<double>& totmob,
-	      const ::std::vector<double>& src   ,
-	      State&                       state )
-	{
-	    UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(g);
-	    tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
-
-	    // No gravity
-	    std::fill(gpress_.begin(), gpress_.end(), double(0.0));
-
-	    ifs_tpfa_assemble(gg, &trans_[0], &src[0], &gpress_[0], h_);
-
-	    using ImplicitTransportLinAlgSupport::CSRMatrixUmfpackSolver;
-
-	    CSRMatrixUmfpackSolver linsolve;
-	    linsolve.solve(h_->A, h_->b, h_->x);
-
-	    ifs_tpfa_press_flux(gg, &trans_[0], h_,
-				&state.pressure()[0],
-				&state.faceflux()[0]);
-	}
-
-    private:
-	::std::vector<double> htrans_;
-	::std::vector<double> trans_ ;
-	::std::vector<double> gpress_;
-
-	struct ifs_tpfa_data* h_;
-    };
-
-
-
-
     void
     compute_porevolume(const UnstructuredGrid* g,
 		       const Opm::IncompPropertiesInterface& props,
