@@ -52,10 +52,8 @@ namespace Dumux
  *
  * \tparam Scalar  The type used for scalar values
  * \tparam Scalar  The component which ought to be tabulated
- * \tparam verbose If set to true, a warning will be printed each time
- *                 a request can not be fulfilled from the tabulated
- *                 arrays. This is quite useful for debugging
- *                 purposes.
+ * \tparam useVaporPressure If true, tabulate all quantities along the 
+ *                          vapor pressure curve, if false use the pressure range [p_min, p_max]
  */
 template <class Scalar, class RawComponent, bool useVaporPressure=true>
 class TabulatedComponent
