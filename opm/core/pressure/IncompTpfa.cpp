@@ -22,7 +22,7 @@
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
-
+#include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
 {
@@ -41,13 +41,14 @@ namespace Opm
 			   const double* gravity)
 	: grid_(g),
 	  htrans_(g.cell_facepos[ g.number_of_cells ]),
-	  trans_ (g.number_of_faces),
-	  gpress_(g.cell_facepos[ g.number_of_cells ], 0.0),
-	  gpress_omegaweighted_(g.cell_facepos[ g.number_of_cells ], 0.0)
+	  trans_ (g.number_of_faces)
     {
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
 	tpfa_htrans_compute(gg, permeability, &htrans_[0]);
 	if (gravity) {
+	    gpress_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
+	    gpress_omegaweighted_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
+
 	    mim_ip_compute_gpress(gg->number_of_cells, gg->dimensions, gravity,
 				  gg->cell_facepos, gg->cell_faces,
 				  gg->face_centroids, gg->cell_centroids,
@@ -70,9 +71,10 @@ namespace Opm
     /// Assemble and solve pressure system.
     /// \param[in]  totmob     Must contain N total mobility values (one per cell).
     ///                        totmob = \sum_{p} kr_p/mu_p.
-    /// \param[in]  omega      Must contain N mobility-weighted density values (one per cell).
+    /// \param[in]  omega      Must be empty if constructor gravity argument was null.
+    ///                        Otherwise must contain N mobility-weighted density values (one per cell).
     ///                        omega = \frac{\sum_{p} mob_p rho_p}{\sum_p rho_p}.
-    /// \param[in]  src        Must contain N souce rates (one per cell).
+    /// \param[in]  src        Must contain N source rates (one per cell).
     ///                        Positive values represent total inflow rates,
     ///                        negative values represent total outflow rates.
     /// \param[out] pressure   Will contain N cell-pressure values.
@@ -87,9 +89,16 @@ namespace Opm
 	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
 
 	if (!omega.empty()) {
+	    if (gpress_.empty()) {
+		THROW("Nozero omega argument given, but gravity was null in constructor.");
+	    }
 	    mim_ip_density_update(gg->number_of_cells, gg->cell_facepos,
 				  &omega[0],
 				  &gpress_[0], &gpress_omegaweighted_[0]);
+	} else {
+	    if (!gpress_.empty()) {
+		THROW("Empty omega argument given, but gravity was non-null in constructor.");
+	    }
 	}
 
 	ifs_tpfa_assemble(gg, &trans_[0], &src[0], &gpress_omegaweighted_[0], h_);
