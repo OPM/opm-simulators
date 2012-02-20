@@ -25,12 +25,13 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
-#include <opm/core/utility/cart_grid.h>
+#include <opm/core/grid.h>
+#include <opm/core/GridManager.hpp>
+#include <opm/core/utility/writeVtkData.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/utility/cpgpreprocess/cgridinterface.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/core/fluid/SimpleFluid2p.hpp>
@@ -207,7 +208,7 @@ void outputState(const UnstructuredGrid* grid,
     dm["saturation"] = &state.saturation();
     dm["pressure"] = &state.pressure();
     dm["concentration"] = &state.concentration();
-    Opm::writeVtkDataGeneralGrid(grid, dm, vtkfile);
+    Opm::writeVtkData(grid, dm, vtkfile);
 
     // Write data (not grid) in Matlab format
     for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
@@ -250,7 +251,7 @@ main(int argc, char** argv)
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    boost::scoped_ptr<Opm::Grid> grid;
+    boost::scoped_ptr<Opm::GridManager> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
     Opm::PolymerData polydata;
     if (use_deck) {
@@ -258,7 +259,7 @@ main(int argc, char** argv)
 	std::string deck_filename = param.get<std::string>("deck_filename");
 	Opm::EclipseGridParser deck(deck_filename);
 	// Grid init
-	grid.reset(new Opm::Grid(deck));
+	grid.reset(new Opm::GridManager(deck));
 	// Rock and fluid init
 	const int* gc = grid->c_grid()->global_cell;
 	std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
@@ -271,7 +272,7 @@ main(int argc, char** argv)
 	const int dx = param.getDefault("dx", 1.0);
 	const int dy = param.getDefault("dy", 1.0);
 	const int dz = param.getDefault("dz", 1.0);
-	grid.reset(new Opm::Grid(nx, ny, nz, dx, dy, dz));
+	grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
 	// Rock and fluid init.
 	// props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
 	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));

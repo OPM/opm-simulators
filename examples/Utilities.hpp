@@ -59,76 +59,6 @@ namespace Opm
 {
 
 
-    /// Concrete grid class constructing a
-    /// corner point grid from a deck,
-    /// or a cartesian grid.
-    class Grid
-    {
-    public:
-	Grid(const Opm::EclipseGridParser& deck)
-	{
-	    // Extract data from deck.
-	    const std::vector<double>& zcorn = deck.getFloatingPointValue("ZCORN");
-	    const std::vector<double>& coord = deck.getFloatingPointValue("COORD");
-	    const std::vector<int>& actnum = deck.getIntegerValue("ACTNUM");
-	    std::vector<int> dims;
-	    if (deck.hasField("DIMENS")) {
-		dims = deck.getIntegerValue("DIMENS");
-	    } else if (deck.hasField("SPECGRID")) {
-		dims = deck.getSPECGRID().dimensions;
-	    } else {
-		THROW("Deck must have either DIMENS or SPECGRID.");
-	    }
-
-	    // Collect in input struct for preprocessing.
-	    struct grdecl grdecl;
-	    grdecl.zcorn = &zcorn[0];
-	    grdecl.coord = &coord[0];
-	    grdecl.actnum = &actnum[0];
-	    grdecl.dims[0] = dims[0];
-	    grdecl.dims[1] = dims[1];
-	    grdecl.dims[2] = dims[2];
-
-	    // Process and compute.
-	    ug_ = preprocess(&grdecl, 0.0);
-	    compute_geometry(ug_);
-	}
-
-	Grid(int nx, int ny)
-	{
-	    ug_ = create_cart_grid_2d(nx, ny);
-	}
-
-	Grid(int nx, int ny, int nz)
-	{
-	    ug_ = create_cart_grid_3d(nx, ny, nz);
-	}
-
-	Grid(int nx, int ny, int nz,
-	     double dx, double dy, double dz)
-	{
-	    ug_ = create_hexa_grid_3d(nx, ny, nz, dx, dy, dz);
-	}
-
-	~Grid()
-	{
-	    free_grid(ug_);
-	}
-
-	virtual const UnstructuredGrid* c_grid() const
-	{
-	    return ug_;
-	}
-
-    private:
-	// Disable copying and assignment.
-	Grid(const Grid& other);
-	Grid& operator=(const Grid& other);
-	struct UnstructuredGrid* ug_;
-    };
-
-
-
 
     class PressureSolver
     {
@@ -196,25 +126,6 @@ namespace Opm
     compute_totmob(const Opm::IncompPropertiesInterface& props,
 		   const std::vector<double>& s,
 		   std::vector<double>& totmob);
-
-
-
-
-    void writeVtkDataAllCartesian(const std::tr1::array<int, 3>& dims,
-				  const std::tr1::array<double, 3>& cell_size,
-				  const std::vector<double>& pressure,
-				  const std::vector<double>& saturation,
-				  std::ostream& vtk_file);
-
-
-
-    typedef std::map<std::string, const std::vector<double>*> DataMap;
-
-    void writeVtkDataGeneralGrid(const UnstructuredGrid* grid,
-				 const DataMap& data,
-				 std::ostream& os);
-
-
 
 
     void toWaterSat(const std::vector<double>& sboth, std::vector<double>& sw);
