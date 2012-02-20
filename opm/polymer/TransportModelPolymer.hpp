@@ -75,12 +75,15 @@ namespace Opm
     class TransportModelPolymer : public TransportModelInterface
     {
     public:
+	/// \TODO document me, especially method.
 	TransportModelPolymer(const UnstructuredGrid& grid,
 			      const double* porosity,
 			      const double* porevolume,
 			      const IncompPropertiesInterface& props,
 			      const PolymerData& polyprops,
-			      int method);
+			      const int method,
+			      const double tol,
+			      const int maxit);
 
 	/// Solve transport eqn with implicit Euler scheme, reordered.
 	/// \TODO Now saturation is expected to be one sw value per cell,
@@ -105,6 +108,10 @@ namespace Opm
 	const double* porevolume_;  // one volume per cell
 	const IncompPropertiesInterface& props_;
 	const PolymerData& polyprops_;
+	std::vector<double> smin_;
+	std::vector<double> smax_;
+	double tol_;
+	double maxit_;
 
 	const double* darcyflux_;   // one flux per grid face
 	const double* source_;      // one source per cell

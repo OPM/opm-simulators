@@ -37,12 +37,16 @@ namespace Opm
 						 const double* porevolume,
 						 const IncompPropertiesInterface& props,
 						 const PolymerData& polyprops,
-						 int method)
+						 const int method,
+						 const double tol,
+						 const int maxit)
 	: grid_(grid),
 	  porosity_(porosity),
 	  porevolume_(porevolume),
 	  props_(props),
 	  polyprops_(polyprops),
+	  tol_(tol),
+	  maxit_(maxit),
 	  darcyflux_(0),
 	  source_(0),
 	  dt_(0.0),
@@ -58,6 +62,16 @@ namespace Opm
 	    THROW("Property object must have 2 phases");
 	}
 	visc_ = props.viscosity();
+
+	// Set up smin_ and smax_
+	int num_cells = props.numCells();
+	smin_.resize(props.numPhases()*num_cells);
+	smax_.resize(props.numPhases()*num_cells);
+	std::vector<int> cells(num_cells);
+	for (int i = 0; i < num_cells; ++i) {
+	    cells[i] = i;
+	}
+	props.satRange(props.numCells(), &cells[0], &smin_[0], &smax_[0]);
     }
 
 
@@ -182,13 +196,9 @@ namespace Opm
 	double operator()(double c) const
 	{
 	    ResidualS res_s(tm, cell, s0, influx, outflux, dtpv, c);
-	    const double a = 0.2;   // TODO: Make this a proper s_min value.
-	    const double b = 1.0;
-	    const int maxit = 20;
-	    const double tol = 1e-9;
 	    int iters_used;
 	    // Solve for s first.
-	    s = modifiedRegulaFalsi(res_s, a, b, maxit, tol, iters_used);
+	    s = modifiedRegulaFalsi(res_s, tm.smin_[2*cell], tm.smax_[2*cell], tm.maxit_, tm.tol_, iters_used);
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
 	    double dps = tm.polyprops_.dps;
@@ -479,10 +489,8 @@ namespace Opm
 	    ResidualC res(*this, cell);
 	    const double a = 0.0;
 	    const double b = polyprops_.c_max_limit;
-	    const int maxit = 20;
-	    const double tol = 1e-9;
 	    int iters_used;
-	    concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit, tol, iters_used);
+	    concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
 	    saturation_[cell] = res.lastSaturation();
 	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
