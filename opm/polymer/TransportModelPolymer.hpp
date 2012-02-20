@@ -93,7 +93,8 @@ namespace Opm
 		   double* concentration,
 		   double* cmax);
 
-	virtual void solveSingleCell(int cell);
+	virtual void solveSingleCell(const int cell);
+	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
 	void solveSingleCellSplitting(int cell);
 

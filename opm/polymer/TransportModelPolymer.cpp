@@ -693,6 +693,12 @@ namespace Opm
 	}
     }
 
+    void TransportModelPolymer::solveMultiCell(const int num_cells, const int* /*cells*/)
+    {
+	THROW("TransportModelPolymer::solveMultiCell() not yet implemented, "
+	      "got a component of size " << num_cells);
+    }
+
 
 
 
