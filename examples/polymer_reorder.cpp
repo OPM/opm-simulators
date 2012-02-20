@@ -179,7 +179,7 @@ private:
 
 
 
-double polymerInflowAtTime(double time)
+static double polymerInflowAtTime(double time)
 {
     if (time >= 300.0*Opm::unit::day && time < 800.0*Opm::unit::day) {
     	return 5.0;
