@@ -44,10 +44,20 @@ namespace Opm
 	{
 	    return Opm::linearInterpolation(c_vals_visc, visc_mult_vals, c);
 	}
+	double viscMultWithDer(double c, double* der) const
+	{
+	    *der = Opm::linearInterpolationDerivative(c_vals_visc, visc_mult_vals, c);
+	    return Opm::linearInterpolation(c_vals_visc, visc_mult_vals, c);
+	}
 	double rhor;
 	double dps;
 	double adsorbtion(double c) const
 	{
+	    return Opm::linearInterpolation(c_vals_ads, ads_vals, c);
+	}
+	double adsorbtionWithDer(double c, double* der) const
+	{
+	    *der = Opm::linearInterpolationDerivative(c_vals_ads, ads_vals, c);
 	    return Opm::linearInterpolation(c_vals_ads, ads_vals, c);
 	}
 
@@ -69,7 +79,8 @@ namespace Opm
 			      const double* porosity,
 			      const double* porevolume,
 			      const IncompPropertiesInterface& props,
-			      const PolymerData& polyprops);
+			      const PolymerData& polyprops,
+			      int method);
 
 	/// Solve transport eqn with implicit Euler scheme, reordered.
 	/// \TODO Now saturation is expected to be one sw value per cell,
@@ -83,6 +94,9 @@ namespace Opm
 		   double* cmax);
 
 	virtual void solveSingleCell(int cell);
+	void solveSingleCellBracketing(int cell);
+	void solveSingleCellSplitting(int cell);
+
 
     private:
 	const UnstructuredGrid& grid_;
@@ -101,11 +115,19 @@ namespace Opm
 	std::vector<double> fractionalflow_;  // one per cell
 	std::vector<double> mc_;  // one per cell
 	const double* visc_;
+	int method_; // method == 1: double bracketing, method == 2 splitting
 
 	struct ResidualC;
 	struct ResidualS;
+
+	struct ResidualCDir;
+	struct ResidualSDir;
+	struct Residual;
+
 	double fracFlow(double s, double c, int cell) const;
+	double fracFlowWithDer(double s, double c, int cell, double* der) const;
 	double computeMc(double c) const;
+	double computeMcWithDer(double c, double* der) const;
     };
 
 } // namespace Opm

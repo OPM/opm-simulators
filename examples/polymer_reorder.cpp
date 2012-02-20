@@ -91,10 +91,17 @@ public:
 			 double* kr,
 			 double* dkrds) const
     {
-	ASSERT(dkrds == 0);
+	// ASSERT(dkrds == 0);
+	// We assume two phases flow
 	for (int i = 0; i < n; ++i) {
 	    kr[2*i] = krw(s[2*i]);
 	    kr[2*i+1] = kro(s[2*i+1]);
+	    if (dkrds != 0) {
+		dkrds[2*i] = krw_dsw(s[2*i]);
+		dkrds[2*i+3] = kro_dso(s[2*i+1]);
+		dkrds[2*i+1] = -dkrds[2*i+3];
+		dkrds[2*i+2] = -dkrds[2*i];
+	    }
 	}
     }
 
@@ -103,6 +110,16 @@ private:
     double krw(double s) const
     {
 	return Opm::linearInterpolation(sw_, krw_, s);
+    }
+
+    double krw_dsw(double s) const
+    {
+	return Opm::linearInterpolationDerivative(sw_, krw_, s);
+    }
+
+    double kro_dso(double s) const
+    {
+	return Opm::linearInterpolationDerivative(sw_, krw_, s);
     }
 
     double kro(double s) const
@@ -281,6 +298,7 @@ main(int argc, char** argv)
 	polydata.ads_vals[2] = 0.0025;
     }
     bool new_code = param.getDefault("new_code", false);
+    int method = param.getDefault("method", 1);
 
     // Extra rock init.
     std::vector<double> porevol;
@@ -289,7 +307,8 @@ main(int argc, char** argv)
 
     // Solvers init.
     Opm::PressureSolver psolver(grid->c_grid(), *props);
-    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata);
+
+    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata, method);
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
