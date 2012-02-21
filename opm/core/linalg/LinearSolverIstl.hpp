@@ -70,7 +70,7 @@ namespace Opm
                                          const int* ja,
                                          const double* sa,
                                          const double* rhs,
-                                         double* solution);
+                                         double* solution) const;
     private:
         double linsolver_residual_tolerance_;
         int linsolver_verbosity_;

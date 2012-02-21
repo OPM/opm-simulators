@@ -76,7 +76,7 @@ namespace Opm
                                          const int* ja,
                                          const double* sa,
                                          const double* rhs,
-                                         double* solution);
+                                         double* solution) const;
     };
 
 

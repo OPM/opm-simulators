@@ -35,7 +35,7 @@ namespace Opm
     LinearSolverInterface::LinearSolverReport
     LinearSolverInterface::solve(const CSRMatrix* A,
                                  const double* rhs,
-                                 double* solution)
+                                 double* solution) const
     {
         return solve(A->m, A->nnz, A->ia, A->ja, A->sa, rhs, solution);
     }

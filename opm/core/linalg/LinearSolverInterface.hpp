@@ -52,7 +52,7 @@ namespace Opm
         /// Note: this method is a convenience method that calls the virtual solve() method.
         LinearSolverReport solve(const CSRMatrix* A,
                                  const double* rhs,
-                                 double* solution);
+                                 double* solution) const;
 
         /// Solve a linear system, with a matrix given in compressed sparse row format.
         /// \param[in] size        # of rows in matrix
@@ -69,7 +69,7 @@ namespace Opm
                                          const int* ja,
                                          const double* sa,
                                          const double* rhs,
-                                         double* solution) = 0;
+                                         double* solution) const = 0;
 
     };
 
