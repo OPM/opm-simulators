@@ -4,14 +4,13 @@
 % file instead!!                                                %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\-This model implements a one-\/phase flow of a compressible fluid, that consists of two components, using a standard \-Darcy approach as the equation for the conservation of momentum\-: \[ v_{D} = - \frac{\textbf K}{\mu} \left(\text{grad} p - \varrho {\textbf g} \right) \]
 
-Adaption of the BOX scheme to the one-\/phase two-\/component flow model. This model implements an one-\/phase flow of an incompressible fluid, that consists of two components, using a standard Darcy approach as the equation for the conservation of momentum: \[ v_{D} = - \frac{K}{\mu} \left(\text{grad} p - \varrho g \right) \]
+\-Gravity can be enabled or disabled via the property system. \-By inserting this into the continuity equation, one gets \[ \Phi \frac{\partial \varrho}{\partial t} - \text{div} \left\{ \varrho \frac{\textbf K}{\mu} \left(\text{grad}\, p - \varrho {\textbf g} \right) \right\} = q \;, \]
 
-Gravity can be enabled or disabled via the Property system. By inserting this into the continuity equation, one gets \[ - \text{div} \left\{ \varrho \frac{K}{\mu} \left(\text{grad} p - \varrho g \right) \right\} = q \;, \]
+\-The transport of the components is described by the following equation\-: \[ \Phi \frac{ \partial \varrho x}{\partial t} - \text{div} \left( \varrho \frac{{\textbf K} x}{\mu} \left( \text{grad}\, p - \varrho {\textbf g} \right) + \varrho \tau \Phi D \text{grad} x \right) = q. \]
 
-The transport of the components is described by the following equation: \[ \Phi \varrho \frac{ \partial x}{\partial t} - \text{div} \left( \varrho \frac{K x}{\mu} \left( \text{grad} p - \varrho g \right) + \varrho \tau \Phi D \text{grad} x \right) = q. \]
+\-All equations are discretized using a fully-\/coupled vertex-\/centered finite volume (box) scheme as spatial and the implicit \-Euler method as time discretization.
 
-All equations are discretized using a fully-\/coupled vertex centered finite volume (box) scheme as spatial and the implicit Euler method as time discretization.
-
-The primary variables are the pressure $p$ and the mole fraction of dissolved component $x$.
+\-The primary variables are the pressure $p$ and the mole or mass fraction of dissolved component $x$.
 
