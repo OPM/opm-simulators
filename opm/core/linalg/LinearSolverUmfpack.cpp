@@ -55,6 +55,9 @@ namespace Opm
             const_cast<double*>(sa)
         };
         call_UMFPACK(&A, rhs, solution);
+        LinearSolverReport rep;
+        rep.converged = true;
+        return rep;
     }
 
 } // namespace Opm

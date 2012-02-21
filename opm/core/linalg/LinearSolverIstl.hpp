@@ -30,7 +30,7 @@ namespace Opm
 {
 
 
-    /// Abstract interface for linear solvers.
+    /// Concrete class encapsulating some dune-istl linear solvers.
     class LinearSolverIstl : public LinearSolverInterface
     {
     public:

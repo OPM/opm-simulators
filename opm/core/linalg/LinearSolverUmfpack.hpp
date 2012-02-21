@@ -49,7 +49,7 @@ namespace Opm
 {
 
 
-    /// Abstract interface for linear solvers.
+    /// Concrete class encapsulating the UMFPACK direct linear solver.
     class LinearSolverUmfpack : public LinearSolverInterface
     {
     public:
