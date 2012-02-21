@@ -21,7 +21,7 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
+#include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
@@ -38,8 +38,10 @@ namespace Opm
     ///                          have D elements.
     IncompTpfa::IncompTpfa(const UnstructuredGrid& g,
 			   const double* permeability,
-			   const double* gravity)
+			   const double* gravity,
+                           const LinearSolverInterface& linsolver)
 	: grid_(g),
+          linsolver_(linsolver),
 	  htrans_(g.cell_facepos[ g.number_of_cells ]),
 	  trans_ (g.number_of_faces)
     {
@@ -105,8 +107,7 @@ namespace Opm
 
 	ifs_tpfa_assemble(gg, &trans_[0], &src[0], &gpress_omegaweighted_[0], h_);
 
-	LinearSolverUmfpack linsolve;
-	linsolve.solve(h_->A, h_->b, h_->x);
+	linsolver_.solve(h_->A, h_->b, h_->x);
 
 	pressure.resize(grid_.number_of_cells);
 	faceflux.resize(grid_.number_of_faces);

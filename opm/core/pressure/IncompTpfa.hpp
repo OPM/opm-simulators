@@ -30,6 +30,8 @@ struct ifs_tpfa_data;
 namespace Opm
 {
 
+    class LinearSolverInterface;
+
     /// Encapsulating a tpfa pressure solver for the incompressible case.
     /// Supports gravity and simple sources as driving forces.
     /// Below we use the shortcuts D for the number of dimensions, N
@@ -47,7 +49,8 @@ namespace Opm
 	///                          have D elements.
 	IncompTpfa(const UnstructuredGrid& g,
 		   const double* permeability,
-		   const double* gravity);
+		   const double* gravity,
+                   const LinearSolverInterface& linsolver);
 
 	/// Destructor.
 	~IncompTpfa();
@@ -71,6 +74,7 @@ namespace Opm
 
     private:
 	const UnstructuredGrid& grid_;
+        const LinearSolverInterface& linsolver_;
 	::std::vector<double> htrans_;
 	::std::vector<double> trans_ ;
 	::std::vector<double> gpress_;
