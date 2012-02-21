@@ -21,7 +21,7 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
-#include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
+#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
@@ -105,8 +105,7 @@ namespace Opm
 
 	ifs_tpfa_assemble(gg, &trans_[0], &src[0], &gpress_omegaweighted_[0], h_);
 
-	using Opm::ImplicitTransportLinAlgSupport::CSRMatrixUmfpackSolver;
-	CSRMatrixUmfpackSolver linsolve;
+	LinearSolverUmfpack linsolve;
 	linsolve.solve(h_->A, h_->b, h_->x);
 
 	pressure.resize(grid_.number_of_cells);
