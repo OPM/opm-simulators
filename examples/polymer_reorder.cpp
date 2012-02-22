@@ -36,7 +36,7 @@
 #include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 
-#include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
+#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 
 #include <opm/polymer/polymertransport.hpp>
 #include <opm/polymer/polymermodel.hpp>
@@ -326,7 +326,8 @@ main(int argc, char** argv)
     double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
 
     // Solvers init.
-    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), 0);
+    Opm::LinearSolverUmfpack linsolver;
+    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), 0, linsolver);
 
     const int method = param.getDefault("method", 1);
     const double nltol = param.getDefault("nl_tolerance", 1e-9);
