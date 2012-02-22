@@ -37,6 +37,7 @@
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
+// #include <opm/core/linalg/LinearSolverIstl.hpp>
 
 #include <opm/polymer/polymertransport.hpp>
 #include <opm/polymer/polymermodel.hpp>
@@ -325,9 +326,24 @@ main(int argc, char** argv)
     compute_porevolume(grid->c_grid(), *props, porevol);
     double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
 
+    // Gravity init.
+    double gravity[3] = { 0.0 };
+    double g = param.getDefault("gravity", 0.0);
+    bool use_gravity = g != 0.0;
+    if (use_gravity) {
+	gravity[grid->c_grid()->dimensions - 1] = g;
+	if (props->density()[0] == props->density()[1]) {
+	    std::cout << "**** Warning: nonzero gravity, but zero density difference." << std::endl;
+	}
+    }
+
     // Solvers init.
     Opm::LinearSolverUmfpack linsolver;
-    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), 0, linsolver);
+    // Opm::LinearSolverIstl linsolver(param);
+    Opm::IncompTpfa psolver(*grid->c_grid(),
+                            props->permeability(),
+                            use_gravity ? gravity : 0,
+                            linsolver);
 
     const int method = param.getDefault("method", 1);
     const double nltol = param.getDefault("nl_tolerance", 1e-9);
@@ -388,7 +404,11 @@ main(int argc, char** argv)
 	    outputState(grid->c_grid(), state, pstep, output_dir);
 	}
 
-	compute_totmob(*props, state.saturation(), totmob);
+	if (use_gravity) {
+	    compute_totmob_omega(*props, state.saturation(), totmob, omega);
+	} else {
+	    compute_totmob(*props, state.saturation(), totmob);
+	}
 	pressure_timer.start();
 	psolver.solve(totmob, omega, src, state.pressure(), state.faceflux());
 	pressure_timer.stop();
