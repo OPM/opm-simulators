@@ -89,11 +89,11 @@ public:
      * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
      * gradient of the chemical potential and follows the law
      *
-     * \f[ J = - D \mathbf{grad} mu_\kappa \f]
+     * \f[ J = - D \mathbf{\grad} \mu_\kappa \f]
      *
      * where \f$\mu_\kappa\f$ is the component's chemical potential,
      * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
-     * diffusive flux. \f$mu_\kappa\f$ is connected to the component's
+     * diffusive flux. \f$\mu_\kappa\f$ is connected to the component's
      * fugacity \f$f_\kappa\f$ by the relation
      *
      * \f[ \mu_\kappa = R T_\alpha \mathrm{ln} \frac{f_\kappa}{p_\alpha} \f]
