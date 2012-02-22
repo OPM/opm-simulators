@@ -701,10 +701,60 @@ namespace Opm
 	}
     }
 
-    void TransportModelPolymer::solveMultiCell(const int num_cells, const int* /*cells*/)
+    void TransportModelPolymer::solveMultiCell(const int num_cells, const int* cells)
     {
-	THROW("TransportModelPolymer::solveMultiCell() not yet implemented, "
-	      "got a component of size " << num_cells);
+	double max_s_change = 0.0;
+	double max_c_change = 0.0;
+	int num_iters = 0;
+	// Must store state variables before we start.
+	std::vector<double> s0(num_cells);
+	std::vector<double> c0(num_cells);
+	std::vector<double> cmax0(num_cells);
+	// Must set initial fractional flows etc. before we start.
+	for (int i = 0; i < num_cells; ++i) {
+	    const int cell = cells[i];
+	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
+	    mc_[cell] = computeMc(concentration_[cell]);
+	    s0[i] = saturation_[cell];
+	    c0[i] = concentration_[cell];
+	    cmax0[i] = cmax_[i];
+	}
+	do {
+	    int max_s_change_cell = -1;
+	    int max_c_change_cell = -1;
+	    max_s_change = 0.0;
+	    max_c_change = 0.0;
+	    for (int i = 0; i < num_cells; ++i) {
+		const int cell = cells[i];
+		const double old_s = saturation_[cell];
+		const double old_c = concentration_[cell];
+		saturation_[cell] = s0[i];
+		concentration_[cell] = c0[i];
+		cmax_[cell] = cmax0[i];
+		solveSingleCell(cell);
+		// std::cout << "cell = " << cell << "    delta s = " << saturation_[cell] - old_s << std::endl;
+		if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
+		    max_s_change_cell = cell;
+		}
+		if (max_c_change < std::fabs(concentration_[cell] - old_c)) {
+		    max_c_change_cell = cell;
+		}
+		max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
+		max_c_change = std::max(max_c_change, std::fabs(concentration_[cell] - old_c));
+	    }
+	    // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change
+	    // 	      << "    in cell " << max_change_cell << std::endl;
+	} while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
+	if (max_s_change > tol_) {
+	    THROW("In solveMultiCell(), we did not converge after "
+	    	  << num_iters << " iterations. Delta s = " << max_s_change);
+	}
+	if (max_c_change > tol_) {
+	    THROW("In solveMultiCell(), we did not converge after "
+	    	  << num_iters << " iterations. Delta c = " << max_c_change);
+	}
+	std::cout << "Solved " << num_cells << " cell multicell problem in "
+		  << num_iters << " iterations." << std::endl;
     }
 
 
