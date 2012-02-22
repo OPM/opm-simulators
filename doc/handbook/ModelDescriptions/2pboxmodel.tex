@@ -4,9 +4,11 @@
 % file instead!!                                                %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\-This model implements two-\/phase flow of two completely immiscible fluids $\alpha \in \{ w, n \}$ using a standard multiphase \-Darcy approach as the equation for the conservation of momentum\-: \[ v_\alpha = - \frac{k_{r\alpha}}{\mu_\alpha} \textbf{K} \left(\text{grad}\, p_\alpha - \varrho_{\alpha} {\textbf g} \right) \]
+\-This model implements two-\/phase flow of two immiscible fluids $\alpha \in \{ w, n \}$ using a standard multiphase \-Darcy approach as the equation for the conservation of momentum, i.\-e. \[ v_\alpha = - \frac{k_{r\alpha}}{\mu_\alpha} \textbf{K} \left(\textbf{grad}\, p_\alpha - \varrho_{\alpha} {\textbf g} \right) \]
 
-\-By inserting this into the equation for the conservation of the phase mass, one gets \[ \phi \frac{\partial \varrho_\alpha S_\alpha}{\partial t} - \text{div} \left\{ \varrho_\alpha \frac{k_{r\alpha}}{\mu_\alpha} \mbox{\bf K} \left(\text{grad}\, p_\alpha - \varrho_{\alpha} \mbox{\bf g} \right) \right\} - q_\alpha = 0 \;, \] discretized by a fully-\/coupled vertex centered finite volume (box) scheme as spatial and the implicit \-Euler method as time discretization.
+\-By inserting this into the equation for the conservation of the phase mass, one gets \[ \phi \frac{\partial \varrho_\alpha S_\alpha}{\partial t} - \text{div} \left\{ \varrho_\alpha \frac{k_{r\alpha}}{\mu_\alpha} \mbox{\bf K} \left(\textbf{grad}\, p_\alpha - \varrho_{\alpha} \mbox{\bf g} \right) \right\} - q_\alpha = 0 \;, \]
+
+\-This equations are by a fully-\/coupled vertex centered finite volume (box) scheme as spatial and the implicit \-Euler method as time discretization.
 
 \-By using constitutive relations for the capillary pressure $p_c = p_n - p_w$ and relative permeability $k_{r\alpha}$ and taking advantage of the fact that $S_w + S_n = 1$, the number of unknowns can be reduced to two. \-Currently the model supports choosing either $p_w$ and $S_n$ or $p_n$ and $S_w$ as primary variables. \-The formulation which ought to be used can be specified by setting the {\ttfamily \-Formulation} property to either {\ttfamily \-Two\-P\-Common\-Indices\-::p\-Ws\-N} or {\ttfamily \-Two\-P\-Common\-Indices\-::p\-Ns\-W}. \-By default, the model uses $p_w$ and $S_n$.
 

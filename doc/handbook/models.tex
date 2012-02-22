@@ -178,11 +178,14 @@ subdirectories of \texttt{dumux/boxmodels} of the \Dumux distribution.
 \subsubsection{The non-isothermal two-phase, two-component model: TwoPTwoCNIBoxModel} 
 \input{ModelDescriptions/2p2cniboxmodel}
 
-\subsubsection{The three-phase, three-component model: ThreePThreeCNIBoxModel}
+\subsubsection{The three-phase, three-component model: ThreePThreeCBoxModel}
 \input{ModelDescriptions/3p3cboxmodel}
 
 \subsubsection{The non-isothermal three-phase, three-component model: ThreePThreeCNIBoxModel} 
 \input{ModelDescriptions/3p3cniboxmodel}
+
+\subsubsection{The $M$-phase, $N$-component model: MpNcBoxModel} 
+\input{ModelDescriptions/mpncboxmodel}
 
 \subsubsection{The \textsc{Stokes} model: StokesModel} 
 \input{ModelDescriptions/stokesmodel}
@@ -199,9 +202,15 @@ The basic idea the so-called decoupled models have in common is to reformulate t
 In comparison to a fully implicit model, the decoupled structure allows the use of different discretization methods for the different equations. The standard method used in the decoupled models is a cell centered finite volume method. Further schemes, so far only available for the two-phase pressure equation, are cell centered finite volumes with multi-point flux approximation (MPFA O-method) and mimetic finite differences.
 %
 \subsubsection{The one-phase model}
+\input{ModelDescriptions/1pdecoupledmodel}
 
-\subsection{The two-phase model}
-\input{ModelDescriptions/2pdecoupledmodel}
+\subsubsection{The two-phase model}
+
+\paragraph{Pressure model}
+\input{ModelDescriptions/2pdecoupledpressuremodel}
+
+\paragraph{Saturation model}
+\input{ModelDescriptions/2pdecoupledsaturationmodel}
 
 \subsubsection{The two-phase, two-component model}
 \input{ModelDescriptions/decoupled2p2c}

@@ -1,7 +1,0 @@
-The model implements the decoupled equations of two-phase flow of two completely immiscible fluids. These equations can be derived from the two-phase flow equations shown for the two-phase box model (\doxyref{TwoPBoxModel}{p.}{classDune_1_1TwoPBoxModel}). The first equation to solve is a pressure equation of elliptic character. The second one is a saturation equation, which can be hyperbolic or parabolic.
-
-This model allows different combinations of primary variables, which can be $p_w$-$S_w$, $p_w$-$S_n$, $p_n$-$S_w$, $p_n$-$S_n$, or $p$-$S_w$ and $p$-$S_n$, where $p$ is no phase pressure but a global pressure.
-
-As the equations are only weakly coupled they do not have to be solved simultaneously but can be solved sequentially. First the pressure equation is solved implicitly, second the saturation equation can be solved explicitly. This solution procedure is called \doxyref{IMPES}{p.}{classDune_1_1IMPES} algorithm (IMplicit Pressure Explicit Saturation).
-
-In comparison to a fully coupled model, different discretization methods can be applied to the different equations. So far, the pressure equation is discretized using a cell centered finite volume scheme (optionally with multi point flux approximation), a mimetic finite difference scheme or a finite element scheme. The saturation equation is discretized using a cell centered finite volume scheme. Default time discretization scheme is an explicit Euler scheme. 
