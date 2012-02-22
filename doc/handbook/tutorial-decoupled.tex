@@ -53,35 +53,34 @@ essential functions and classes are included.
 At line \ref{tutorial-decoupled:set-type-tag} the type tag of the
 problem which is going to be simulated is set. All other data types
 can be retrieved by the \Dumux property system and only depend on this
-single type tag. Retrieving them is done between line
-\ref{tutorial-decoupled:retrieve-types-begin} and
-\ref{tutorial-decoupled:retrieve-types-end}. For an introduction to the
+single type tag. For an introduction to the
 property system, see section \ref{sec:propertysystem}.
 
-The first thing which should be done at run time is to initialize the
-message passing interface using \Dune's \texttt{MPIHelper} class. Line
-\ref{tutorial-decoupled:init-mpi} is essential if the simulation is
-intended to be run on more than one processor at the same time. Next,
-the command line arguments are parsed starting at line
-\ref{tutorial-decoupled:parse-args-begin} until line
-\ref{tutorial-decoupled:parse-args-end}. In this case, we check whether and
-at which time a previous run of the simulation should be restarted, and we
-parse the time when the simulation ends. As the maximum time-step in the 
-sequential model is strictly bound by a CFL-criterion, the first time-step
-size is initialized with the simulation time.
+After this \Dumux' default startup routine \texttt{Dumux::start()} is
+called on line \ref{tutorial-decoupled:call-start}. This function deals
+with parsing the command line arguments, reading the parameter file,
+setting up the infrastructure necessary for \Dune, loads the grid, and
+starts the simulation. When it comes to parameters, all parameters can
+be either specified by command line arguments of the form
+(\texttt{-ParameterName ParameterValue}), in the file specified by the
+\texttt{-parameterFile} argument, or if the latter is not specified,
+in the file \texttt{tutorial\_decoupled.input}. If a parameter gets
+specified on the command line as well as in the parameter file, the
+values provided in the command line have
+precedence. Listing~\ref{tutorial-decoupled:parameter-file} shows the
+default parameter file for the tutorial problem.
 
-After this, a grid is created in line \ref{tutorial-decoupled:create-grid}. 
-The problem is instantiated with the time manager and information about the grid
-(via its leaf grid view) on line \ref{tutorial-decoupled:instantiate-problem}.
-The time manager controlling the simulation run is instantiated 
-with the start parameters in line \ref{tutorial-decoupled:initTimeManager}.
-If demanded, the time manager also restarts a state written to
-disk by a previous simulation run via the last flag, using the appropriate 
-starting time (which has to be the same as the restart file).
-Finally, the simulation proceedure is started by the time manager in line
-\ref{tutorial-decoupled:execute}.
+\begin{lst}[File tutorial/tutorial\_decoupled.input]\label{tutorial-decoupled:parameter-file} \mbox{}
+\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny]{../../tutorial/tutorial_decoupled.input}
+\end{lst}
 
-
+To provide an error message, the usage message which is displayed to
+the user if the simulation is called incorrectly, is printed via the
+custom function which is defined on
+line~\ref{tutorial-decoupled:usage-function}. In this function the usage
+message is customized to the problem at hand. This means that at least
+the necessary parameters are listed here.  For more information about
+the input file please refer to section \ref{sec:inputFiles}.
 
 \subsection{The problem class} \label{decoupled_problem}
 
@@ -104,15 +103,15 @@ is chosen as discretization scheme (defined via the include in line
 \ref{tutorial-decoupled:parent-problem}). On line \ref{tutorial-decoupled:set-problem}, 
 a problem class is attached to the new type tag, while the grid which
 is going to be used is defined in line \ref{tutorial-decoupled:set-grid-type} --
-in this case an \texttt{SGrid} is created.  Since in \Dune, there's no uniform
-mechanism to allocate grids, the \texttt{Grid} property also contains
-a static \texttt{create()} method which provides just that: From line 
-\ref{tutorial-decoupled:grid-begin} to \ref{tutorial-decoupled:grid-end}, 
-the geometry is defined and the grid is generated. The three variables of 
-Type \texttt{Dune::FieldVector} define the lower left corner of the domain 
-(\texttt{L}), the upper right corner of the domain (\texttt{H}) and the number 
-of cells in $x$ and $y$ direction (\texttt{N}). The grid of type 
-\texttt{Dune::SGrid} is then generated in line \ref{tutorial-decoupled:grid-end}. 
+in this case an \texttt{YaspGrid} is created. Since there's no uniform mechanism to
+allocate grids in \Dune, \Dumux features the concept of grid creators.
+In this case the generic \texttt{CubeGridCreator} (line \ref{tutorial-decoupled:set-gridcreator}) which creates a
+structured hexahedron grid of a specified size and resolution. For
+this grid creator the  physical domain of the grid is specified via the
+run-time parameters \texttt{Grid.upperRightX},
+\texttt{Grid.upperRightY}, \texttt{Grid.numberOfCellsX} and
+\texttt{Grid.numberOfCellsY}. These parameters can be specified via
+the command-line or in a parameter file.
 For more information about the \Dune grid interface, the different grid types 
 that are supported and the generation of different grids consult 
 the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}. 
@@ -130,8 +129,9 @@ for the problem of interest are specified in line
 \ref{tutorial-decoupled:set-spatialparameters}. 
 
 Now we arrive at some model parameters of the applied two-phase decoupled 
-model. Line \ref{tutorial-decoupled:cfl} assigns the CFL-factor to be used in the
-simulation run, which determines the time step size. The last property in line \ref{tutorial-decoupled:gravity} 
+model. First, in line  \ref{tutorial-decoupled:cflflux} a flux function for the evaluation of the cfl-criterion is defined. This is optional as there exists also a default flux function. The choice depends on the problem which has to be solved. For cases which are not advection dominated the one chosen here is more reasonable.
+Line \ref{tutorial-decoupled:cflfactor} assigns the CFL-factor to be used in the
+simulation run, which scales the time step size (kind of security factor). The last property in line \ref{tutorial-decoupled:gravity} 
 is optional and tells the model not to use gravity.
 
 After all necessary information is written into the property system and 
@@ -148,10 +148,7 @@ general information about the current simulation. First, the name used by
 the \texttt{VTK-writer} to generate output is defined in the method of line
 \ref{tutorial-decoupled:name}, and line \ref{tutorial-decoupled:restart} indicates
 wether restart files are written. As decoupled schemes usually feature small 
-timesteps, the method controlling the output in line \ref{tutorial-decoupled:output}
-is very useful. The divisor of the modulo operation defines after how many timesteps
-output should be written out -- the default ``1'' resembles output after each 
-step.
+timesteps, it can be usefull to set an output interval larger than 1. The respective function is called in line \ref{tutorial-decoupled:outputinterval}, which gets the output interval as argument.
 
 The following methods all have in common that they may be dependent on space.
 Hence, they all have either an \texttt{element} or an \texttt{intersection} as their
@@ -190,8 +187,8 @@ with the decoupled modelling framework.
 For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled 1e5}. The number behind the simulation name defines the timespan of the simulation run in seconds. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
-As you can see, the simulation creates roughly 150 output files. To reduce these in order to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:output} in the file \texttt{tutorialproblem\_decoupled}) as to write an output only every 20 timesteps by changeing the divisor. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
+To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. The runtime parameters which are set can be found in the input file (listing~\ref{tutorial-decoupled:parameter-file}). If the input file has the same name than the main file (e.g. \texttt{tutorial\_decoupled.cc} and \texttt{tutorial\_decoupled.input}), it is automatically chosen. If the name differs the programm has to be started typing \texttt{./tutorial\_decoupled -parameterFile <filename>.input}. For more options you can also type \texttt{./tutorial\_decoupled -h}.For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+As you can see, the simulation creates many output files. To reduce these in order to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:outputinterval} in the file \texttt{tutorialproblem\_decoupled}) as to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle

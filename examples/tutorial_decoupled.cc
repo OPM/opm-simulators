@@ -29,90 +29,33 @@
 #include "config.h" /*@\label{tutorial-decoupled:include-begin}@*/
 
 #include "tutorialproblem_decoupled.hh" /*@\label{tutorial-decoupled:include-problem-header}@*/
+#include <dumux/common/start.hh> /*@\label{tutorial-decoupled:include-end}@*/
 
-#include <dune/grid/common/gridinfo.hh>
-
-#include <dune/common/exceptions.hh>
-#include <dune/common/mpihelper.hh>
-
-#include <iostream> /*@\label{tutorial-decoupled:include-end}@*/
-
-////////////////////////////////////////////
-// function to check the input parameters
-////////////////////////////////////////////
-void usage(const char *progname)
+//! Prints a usage/help message if something goes wrong or the user asks for help
+void usage(const char *progName, const std::string &errorMsg)  /*@\label{tutorial-decoupled:usage-function}@*/
 {
-    std::cout << "usage: "<<progname<<" [--restart restartTime] tEnd\n";
-    exit(1);
+    std::cout
+        <<  "\nUsage: " << progName << " [options]\n";
+    if (errorMsg.size() > 0)
+        std::cout << errorMsg << "\n";
+    std::cout
+        << "\n"
+        << "The List of Mandatory arguments for this program is:\n"
+        << "\t-tEnd                The end of the simulation [s]\n"
+        << "\t-dtInitial           The initial timestep size [s]\n"
+        << "\t-Grid.upperRightX    The x-coordinate of the grid's upper-right corner [m]\n"
+        << "\t-Grid.upperRightY    The y-coordinate of the grid's upper-right corner [m]\n"
+        << "\t-Grid.numberOfCellsX The grid's x-resolution\n"
+        << "\t-Grid.numberOfCellsY The grid's y-resolution\n"
+        << "\n";
 }
+
 
 ////////////////////////
 // the main function
 ////////////////////////
 int main(int argc, char** argv)
 {
-    try {
-        typedef TTAG(TutorialProblemDecoupled) TypeTag; /*@\label{tutorial-decoupled:set-type-tag}@*/
-        typedef GET_PROP_TYPE(TypeTag, Scalar) Scalar;    /*@\label{tutorial-decoupled:retrieve-types-begin}@*/
-        typedef GET_PROP_TYPE(TypeTag, Grid) Grid;
-        typedef GET_PROP_TYPE(TypeTag, Problem) Problem;
-        typedef GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
-        typedef Dune::FieldVector<Scalar, Grid::dimensionworld> GlobalPosition; /*@\label{tutorial-decoupled:retrieve-types-end}@*/
-
-        // initialize MPI, finalize is done automatically on exit
-        Dune::MPIHelper::instance(argc, argv);  /*@\label{tutorial-decoupled:init-mpi}@*/
-
-        ////////////////////////////////////////////////////////////
-        // parse the command line arguments
-        ////////////////////////////////////////////////////////////
-        if (argc < 2)   /*@\label{tutorial-decoupled:parse-args-begin}@*/
-            usage(argv[0]);
-
-        // deal with the restart stuff
-        int argPos = 1;
-        bool restart = false;
-        double startTime = 0.;
-        if (std::string("--restart") == argv[argPos]) {
-            restart = true;
-            ++argPos;
-            // use restart time as start time
-            std::istringstream(argv[argPos++]) >> startTime;
-        }
-        // output in case of wrong numbers of input parameters
-        if (argc - argPos != 1) {
-            usage(argv[0]);
-        }
-
-        // read the initial time step and the end time
-        double tEnd, dt;
-        std::istringstream(argv[argPos++]) >> tEnd;
-        dt = tEnd;  /*@\label{tutorial-decoupled:parse-args-end}@*/
-
-        // create the grid
-        Grid *gridPtr = GET_PROP(TypeTag, Grid)::create(); /*@\label{tutorial-decoupled:create-grid}@*/
-
-        // create time manager responsible for global simulation control
-        TimeManager timeManager;
-
-        ////////////////////////////////////////////////////////////
-        // instantiate and run the concrete problem
-        ////////////////////////////////////////////////////////////
-        Problem problem(timeManager, gridPtr->leafView()); /*@\label{tutorial-decoupled:instantiate-problem}@*/
-
-        // define simulation parameters
-        timeManager.init(problem, startTime, dt, tEnd, restart); /*@\label{tutorial-decoupled:initTimeManager}@*/
-
-        // run the simulation
-        timeManager.run();    /*@\label{tutorial-decoupled:execute}@*/
-        return 0;
-    }
-    catch (Dune::Exception &e) {
-        std::cerr << "Dune reported error: " << e << std::endl;
-    }
-    catch (...) {
-        std::cerr << "Unknown exception thrown!\n";
-        throw;
-    }
-
-    return 3;
+    typedef TTAG(TutorialProblemDecoupled) TypeTag; /*@\label{tutorial-decoupled:set-type-tag}@*/
+    return Dumux::start<TypeTag>(argc, argv, usage); /*@\label{tutorial-decoupled:call-start}@*/
 }
