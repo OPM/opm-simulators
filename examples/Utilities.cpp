@@ -104,6 +104,38 @@ namespace Opm
     }
 
 
+    void
+    compute_totmob_omega(const Opm::IncompPropertiesInterface& props,
+			 const std::vector<double>& s,
+			 std::vector<double>& totmob,
+			 std::vector<double>& omega)
+    {
+	int num_cells = props.numCells();
+	int num_phases = props.numPhases();
+	totmob.resize(num_cells);
+	omega.resize(num_cells);
+	ASSERT(int(s.size()) == num_cells*num_phases);
+	std::vector<int> cells(num_cells);
+	for (int cell = 0; cell < num_cells; ++cell) {
+	    cells[cell] = cell;
+	}
+	std::vector<double> kr(num_cells*num_phases);
+	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
+	const double* mu = props.viscosity();
+	for (int cell = 0; cell < num_cells; ++cell) {
+	    totmob[cell] = 0.0;
+	    for (int phase = 0; phase < num_phases; ++phase) {	
+		totmob[cell] += kr[2*cell + phase]/mu[phase];
+	    }
+	}
+	const double* rho = props.density();
+	for (int cell = 0; cell < num_cells; ++cell) {
+	    omega[cell] = 0.0;
+	    for (int phase = 0; phase < num_phases; ++phase) {	
+		omega[cell] += rho[phase]*(kr[2*cell + phase]/mu[phase])/totmob[cell];
+	    }
+	}
+    }
 
 
 

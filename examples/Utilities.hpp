@@ -71,6 +71,13 @@ namespace Opm
 		   std::vector<double>& totmob);
 
 
+    void
+    compute_totmob_omega(const Opm::IncompPropertiesInterface& props,
+			 const std::vector<double>& s,
+			 std::vector<double>& totmob,
+			 std::vector<double>& omega);
+
+
     void toWaterSat(const std::vector<double>& sboth, std::vector<double>& sw);
 
     void toBothSat(const std::vector<double>& sw, std::vector<double>& sboth);
