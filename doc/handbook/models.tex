@@ -150,7 +150,12 @@ The following description of the available models is automatically extracted
 from the Doxygen documentation.
 % \textbf{TODO}: Unify notation. 
 
-\subsection{Fully coupled models} 
+\subsection{Fully-implicit models} 
+
+The fully-implicit models described in this section are using the box
+scheme as described in~\ref{box} for spatial and the implicit euler
+method as temporal discretization. The models itself are located in
+subdirectories of \texttt{dumux/boxmodels} of the \Dumux distribution.
 
 \subsubsection{The single-phase model: OnePBoxModel} 
 \input{ModelDescriptions/1pboxmodel}
