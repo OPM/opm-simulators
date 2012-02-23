@@ -55,7 +55,7 @@ $\varrho_{\alpha}$ & mass density of phase $\alpha$ & $h_\alpha$ & specific enth
 $k_{\text{r}\alpha}$ & relative permeability & $c_\text{s}$ & specific heat enthalpy \\
 $\mu_\alpha$ & phase viscosity & $\lambda_\text{pm}$ & heat conductivity \\
 $D_\alpha^\kappa$ & diffusivity of component $\kappa$ in phase $\alpha$ & $q^h$ & heat source term \\
-$v_\alpha$ & Darcy velocity & $v_{a,\alpha}$  & advective velocity
+$\boldsymbol{v}_\alpha$ & Darcy velocity & $\boldsymbol{v}_{a,\alpha}$  & advective velocity
 \end{tabular}
 
 
@@ -67,21 +67,20 @@ us to drop source/sink terms for describing the mass transfer between
 phases. Then, the
 molar mass balance can be written as:
 %
-\begin{eqnarray}
+\begin{multline}
   \label{A3:eqmass1}
-  && \phi \frac{\partial (\sum_\alpha \varrho_{\text{mol}, \alpha}
-    x_\alpha^\kappa S_\alpha )}{\partial t} \nonumber 
+ \phi \frac{\partial (\sum_\alpha \varrho_{\text{mol}, \alpha}
+    x_\alpha^\kappa S_\alpha )}{\partial t}  
  - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\text{mol}, \alpha}
     x_\alpha^\kappa K (\grad p_\alpha -
-    \varrho_{\alpha} \boldsymbol{g}) \right) \nonumber \\
+    \varrho_{\alpha} \boldsymbol{g}) \right)  \\
+  % 
   %
-  \nonumber \\
-  %
-  && - \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mol},
-      \alpha} \grad x_\alpha^\kappa \right) \nonumber 
+ - \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mol},
+      \alpha} \grad x_\alpha^\kappa \right)  
  - q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
-\end{eqnarray}
+\end{multline}
 
 The component mass balance can also be written in terms of mass fractions 
 by replacing molar densities by mass densities and mole by mass fractions.
@@ -92,46 +91,42 @@ C^\kappa = \sum_\alpha \phi S_\alpha \varrho_{\text{mass},\alpha} X_\alpha^\kapp
 \end{displaymath}
 Using this definition, the component mass balance is written as:
 
-\begin{eqnarray}
+\begin{multline}
   \label{A3:eqmass2}
-  &&  \frac{\partial C^\kappa}{\partial t} = 
+    \frac{\partial C^\kappa}{\partial t} = 
   \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\text{mass}, \alpha}
     X_\alpha^\kappa K (\grad p_\alpha +
-    \varrho_{\text{mass}, \alpha} \boldsymbol{g}) \right) \nonumber \\
+    \varrho_{\text{mass}, \alpha} \boldsymbol{g}) \right)  \\
   %
-  \nonumber \\
   %
-  && + \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mass},
-      \alpha} \grad X_\alpha^\kappa \right) \nonumber 
+   + \sum\limits_\alpha \Div \left( \tau \phi S_\alpha D_\alpha^\kappa \varrho_{\text{mass},
+      \alpha} \grad X_\alpha^\kappa \right)  
  + q^\kappa = 0, \qquad \kappa \in \{\text{w,a,c}\}.
-\end{eqnarray}
+\end{multline}
 
 
 In the case of non-isothermal systems, we further have to balance the
 thermal energy. We assume fully reversible processes, such that entropy
 is not needed as a model parameter. Furthermore, we neglect 
 dissipative effects and the heat transport due to molecular
-diffusion. The heat balance can then be
+diffusion. The energy balance can then be
 formulated as:
 %
-\begin{eqnarray}
+\begin{multline}
   \label{A3:eqenergmak1}
-  && \phi \frac{\partial \left( \sum_\alpha \varrho_{\alpha}
+  \phi \frac{\partial \left( \sum_\alpha \varrho_{\alpha}
       u_\alpha S_\alpha \right)}{\partial t} + \left( 1 -
     \phi \right) \frac{\partial \varrho_{\text{s}} c_{\text{s}}
-    T}{\partial t} \nonumber 
+    T}{\partial t}  
  - \Div \left( \lambda_{\text{pm}} \grad T \right)
-  \nonumber \\
-  %
-  \nonumber \\
-  %
-  && - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
+   \\
+   - \sum\limits_\alpha \Div \left( \frac{k_{\text{r}
         \alpha}}{\mu_\alpha} \varrho_{\alpha} h_\alpha
     K \left( \grad p_\alpha - \varrho_{\alpha}
-      \boldsymbol{g} \right) \right) \nonumber 
+      \boldsymbol{g} \right) \right)  
  - q^h \; = \; 0.
-\end{eqnarray}
+\end{multline}
 
 In order to close the system, supplementary constraints for capillary pressure, saturations and mole
 fractions are needed, \cite{A3:helmig:1997}. 

@@ -17,7 +17,7 @@ The advantage of the FE method is that unstructured grids can be used, while the
  	f(\tilde u(x^k_{ij})) \cdot \mathbf n^k_{ij} \: |e^k_{ij}| \qquad \textrm{with} \qquad \tilde u(x^k_{ij}) = \sum_i N_i(x^k_{ij}) \cdot \hat u_i .
 \end{equation}
 
-In the following, the discretization of the balance equation is going to be derived. From the \textsc{reynolds}s transport theorem follows the general balance equation:
+In the following, the discretization of the balance equation is going to be derived. From the \textsc{Reynolds} transport theorem follows the general balance equation:
 
 \begin{equation}
 	\underbrace{\int_G \frac{\partial}{\partial t} \: u \: dG}_{1} + \underbrace{\int_{\partial G} (\mathbf{v} u + \mathbf w) \cdot \textbf n \: d\varGamma}_{2} = \underbrace{\int_G q \: dG}_{3}
@@ -26,8 +26,7 @@ In the following, the discretization of the balance equation is going to be deri
 \begin{equation}
 	f(u) = \int_G \frac{\partial u}{\partial t} \: dG + \int_{G} \nabla \cdot \underbrace{\left[  \mathbf{v} u + \mathbf w(u)\right] }_{F(u)}  \: dG - \int_G q \: dG = 0
 \end{equation}
- 
-where term 1 describes the changes of entity $u$ within a control volume over time, term 2 the advective, diffusive and dispersive fluxes over the interfaces of the control volume and term 3 is the source and sink term. $G$ denotes the model domain and $F(u) = F(\mathbf v, p) = F(\mathbf v(x,t), p(x,t))$.\\
+where term 1 describes the changes of entity $u$ within a control volume over time, term 2 the advective, diffusive and dispersive fluxes over the interfaces of the control volume and term 3 is the source and sink term. $G$ denotes the model domain and $F(u) = F(\mathbf v, p) = F(\mathbf v(x,t), p(x,t))$.
 
 Like the FE method, the BOX-method follows the principle of weighted residuals. In the function $f(u)$ the unknown $u$ is approximated by discrete values at the nodes of the FE mesh $\hat u_i$ and linear basis functions $N_i$ yielding an approximate function $f(\tilde u)$. For $u\in \lbrace \mathbf v, p, x^\kappa \rbrace$ this means
 
@@ -72,14 +71,13 @@ Application of the principle of weighted residuals, meaning the multiplication o
 \begin{equation}
 	\int_G W_j \cdot \varepsilon \: \overset {!}{=} \: 0 \qquad \textrm{with} \qquad \sum_j W_j =1
 \end{equation}
-
 yields the following equation:
 
 \begin{equation}
 	\int_G W_j \frac{\partial \tilde u}{\partial t} \: dG + \int_G W_j \cdot \left[ \nabla \cdot F(\tilde u) \right]  \: dG - \int_G W_j \cdot q \: dG = \int_G W_j \cdot \varepsilon \: dG \: \overset {!}{=} \: 0 .
 \end{equation}
 
-Then, the chain rule and the \textsc{green-gaussian} integral theorem are applied.
+Then, the chain rule and the \textsc{Green-Gaussian} integral theorem are applied.
 
 \begin{equation}
 	\int_G W_j \frac{\partial \sum_i N_i \hat u_i}{\partial t} \: dG + \int_{\partial G}  \left[ W_j \cdot F(\tilde u)\right]  \cdot \mathbf n \: d\varGamma_G + \int_G  \nabla W_j \cdot F(\tilde u)  \: dG - \int_G W_j \cdot q \: dG = 0
@@ -92,11 +90,10 @@ A mass lumping technique is applied by assuming that the storage capacity is red
 	0 &i \neq j\\
 	         \end{cases}
 \end{equation}
-
 where $V_i$ is the volume of the FV box $B_i$ associated with node i. The application of this assumption in combination with $\int_G W_j \:q \: dG = V_i \: q$ yields
 
 \begin{equation}
-	V_i \frac{\partial \hat u_i}{\partial t} + \int_{\partial G}  \left[ W_j \cdot F(\tilde u)\right]  \cdot \mathbf n \: d\varGamma_G + \int_G  \nabla W_j \cdot F(\tilde u)  \: dG- V_i \cdot q = 0
+	V_i \frac{\partial \hat u_i}{\partial t} + \int_{\partial G}  \left[ W_j \cdot F(\tilde u)\right]  \cdot \mathbf n \: d\varGamma_G + \int_G  \nabla W_j \cdot F(\tilde u)  \: dG- V_i \cdot q = 0 \, .
 \end{equation}
 
 Defining the weighting function $W_j$ to be piecewisely constant over a control volume box $B_i$ 
