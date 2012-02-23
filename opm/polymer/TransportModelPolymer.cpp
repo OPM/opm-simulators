@@ -34,12 +34,16 @@ namespace Opm
 						 const double* porevolume,
 						 const IncompPropertiesInterface& props,
 						 const PolymerData& polyprops,
-						 int method)
+						 const int method,
+						 const double tol,
+						 const int maxit)
 	: grid_(grid),
 	  porosity_(porosity),
 	  porevolume_(porevolume),
 	  props_(props),
 	  polyprops_(polyprops),
+	  tol_(tol),
+	  maxit_(maxit),
 	  darcyflux_(0),
 	  source_(0),
 	  dt_(0.0),
@@ -55,6 +59,16 @@ namespace Opm
 	    THROW("Property object must have 2 phases");
 	}
 	visc_ = props.viscosity();
+
+	// Set up smin_ and smax_
+	int num_cells = props.numCells();
+	smin_.resize(props.numPhases()*num_cells);
+	smax_.resize(props.numPhases()*num_cells);
+	std::vector<int> cells(num_cells);
+	for (int i = 0; i < num_cells; ++i) {
+	    cells[i] = i;
+	}
+	props.satRange(props.numCells(), &cells[0], &smin_[0], &smax_[0]);
     }
 
 
@@ -180,13 +194,9 @@ namespace Opm
 	double operator()(double c) const
 	{
 	    ResidualS res_s(tm, cell, s0, influx, outflux, dtpv, c);
-	    const double a = 0.2;   // TODO: Make this a proper s_min value.
-	    const double b = 1.0;
-	    const int maxit = 20;
-	    const double tol = 1e-9;
 	    int iters_used;
 	    // Solve for s first.
-	    s = modifiedRegulaFalsi(res_s, a, b, maxit, tol, iters_used);
+	    s = modifiedRegulaFalsi(res_s, tm.smin_[2*cell], tm.smax_[2*cell], tm.maxit_, tm.tol_, iters_used);
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
 	    double dps = tm.polyprops_.dps;
@@ -642,10 +652,8 @@ namespace Opm
 	    ResidualC res(*this, cell);
 	    const double a = 0.0;
 	    const double b = polyprops_.c_max_limit;
-	    const int maxit = 20;
-	    const double tol = 1e-9;
 	    int iters_used;
-	    concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit, tol, iters_used);
+	    concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
 	    saturation_[cell] = res.lastSaturation();
 	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
@@ -776,10 +784,60 @@ namespace Opm
 	}
     }
 
-    void TransportModelPolymer::solveMultiCell(const int num_cells, const int* /*cells*/)
+    void TransportModelPolymer::solveMultiCell(const int num_cells, const int* cells)
     {
-	THROW("TransportModelPolymer::solveMultiCell() not yet implemented, "
-	      "got a component of size " << num_cells);
+	double max_s_change = 0.0;
+	double max_c_change = 0.0;
+	int num_iters = 0;
+	// Must store state variables before we start.
+	std::vector<double> s0(num_cells);
+	std::vector<double> c0(num_cells);
+	std::vector<double> cmax0(num_cells);
+	// Must set initial fractional flows etc. before we start.
+	for (int i = 0; i < num_cells; ++i) {
+	    const int cell = cells[i];
+	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
+	    mc_[cell] = computeMc(concentration_[cell]);
+	    s0[i] = saturation_[cell];
+	    c0[i] = concentration_[cell];
+	    cmax0[i] = cmax_[i];
+	}
+	do {
+	    int max_s_change_cell = -1;
+	    int max_c_change_cell = -1;
+	    max_s_change = 0.0;
+	    max_c_change = 0.0;
+	    for (int i = 0; i < num_cells; ++i) {
+		const int cell = cells[i];
+		const double old_s = saturation_[cell];
+		const double old_c = concentration_[cell];
+		saturation_[cell] = s0[i];
+		concentration_[cell] = c0[i];
+		cmax_[cell] = cmax0[i];
+		solveSingleCell(cell);
+		// std::cout << "cell = " << cell << "    delta s = " << saturation_[cell] - old_s << std::endl;
+		if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
+		    max_s_change_cell = cell;
+		}
+		if (max_c_change < std::fabs(concentration_[cell] - old_c)) {
+		    max_c_change_cell = cell;
+		}
+		max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
+		max_c_change = std::max(max_c_change, std::fabs(concentration_[cell] - old_c));
+	    }
+	    // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change
+	    // 	      << "    in cell " << max_change_cell << std::endl;
+	} while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
+	if (max_s_change > tol_) {
+	    THROW("In solveMultiCell(), we did not converge after "
+	    	  << num_iters << " iterations. Delta s = " << max_s_change);
+	}
+	if (max_c_change > tol_) {
+	    THROW("In solveMultiCell(), we did not converge after "
+	    	  << num_iters << " iterations. Delta c = " << max_c_change);
+	}
+	std::cout << "Solved " << num_cells << " cell multicell problem in "
+		  << num_iters << " iterations." << std::endl;
     }
 
 

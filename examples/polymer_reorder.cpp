@@ -22,22 +22,22 @@
 
 #include "Utilities.hpp"
 
-#include <opm/core/pressure/tpfa/ifs_tpfa.h>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/core/pressure/IncompTpfa.hpp>
 
-#include <opm/core/utility/cart_grid.h>
+#include <opm/core/grid.h>
+#include <opm/core/GridManager.hpp>
+#include <opm/core/utility/writeVtkData.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/utility/cpgpreprocess/cgridinterface.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/fluid/SimpleFluid2p.hpp>
 #include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 
-#include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
+#include <opm/core/linalg/LinearSolverUmfpack.hpp>
+// #include <opm/core/linalg/LinearSolverIstl.hpp>
 
 #include <opm/polymer/polymertransport.hpp>
 #include <opm/polymer/polymermodel.hpp>
@@ -177,15 +177,28 @@ private:
 
 
 
-
-double polymerInflowAtTime(double time)
+class PolymerInflow
 {
-    if (time >= 300.0*Opm::unit::day && time < 800.0*Opm::unit::day) {
-    	return 5.0;
-    } else {
-    	return 0.0;
+public:
+    PolymerInflow(const double starttime,
+		  const double endtime,
+		  const double amount)
+	: stime_(starttime), etime_(endtime), amount_(amount)
+    {
     }
-}
+    double operator()(double time)
+    {
+	if (time >= stime_ && time < etime_) {
+	    return amount_;
+	} else {
+	    return 0.0;
+	}
+    }
+private:
+    double stime_;
+    double etime_;
+    double amount_;
+};
 
 
 
@@ -207,7 +220,7 @@ void outputState(const UnstructuredGrid* grid,
     dm["saturation"] = &state.saturation();
     dm["pressure"] = &state.pressure();
     dm["concentration"] = &state.concentration();
-    Opm::writeVtkDataGeneralGrid(grid, dm, vtkfile);
+    Opm::writeVtkData(grid, dm, vtkfile);
 
     // Write data (not grid) in Matlab format
     for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
@@ -250,15 +263,16 @@ main(int argc, char** argv)
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    boost::scoped_ptr<Opm::Grid> grid;
+    boost::scoped_ptr<Opm::GridManager> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
     Opm::PolymerData polydata;
     if (use_deck) {
-	THROW("We do not yet read polymer keywords from deck.");
+	std::cout << "**** Warning: We do not yet read polymer keywords from deck. "
+	    "Polymer behaviour is hardcoded." << std::endl;
 	std::string deck_filename = param.get<std::string>("deck_filename");
 	Opm::EclipseGridParser deck(deck_filename);
 	// Grid init
-	grid.reset(new Opm::Grid(deck));
+	grid.reset(new Opm::GridManager(deck));
 	// Rock and fluid init
 	const int* gc = grid->c_grid()->global_cell;
 	std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
@@ -271,47 +285,75 @@ main(int argc, char** argv)
 	const int dx = param.getDefault("dx", 1.0);
 	const int dy = param.getDefault("dy", 1.0);
 	const int dz = param.getDefault("dz", 1.0);
-	grid.reset(new Opm::Grid(nx, ny, nz, dx, dy, dz));
+	grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
 	// Rock and fluid init.
 	// props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
 	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-	// Setting polydata defaults to mimic a simple example case.
-	polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
-	polydata.omega = param.getDefault("omega", 1.0);
-	polydata.rhor = param.getDefault("rock_density", 1000.0);
-	polydata.dps = param.getDefault("dead_pore_space", 0.15);
-	polydata.c_vals_visc.resize(2);
-	polydata.c_vals_visc[0] = 0.0;
-	polydata.c_vals_visc[1] = 7.0;
-	polydata.visc_mult_vals.resize(2);
-	polydata.visc_mult_vals[0] = 1.0;
-	// polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-	polydata.visc_mult_vals[1] = 20.0;
-	polydata.c_vals_ads.resize(3);
-	polydata.c_vals_ads[0] = 0.0;
-	polydata.c_vals_ads[1] = 2.0;
-	polydata.c_vals_ads[2] = 8.0;
-	polydata.ads_vals.resize(3);
-	polydata.ads_vals[0] = 0.0;
-	// polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
-	polydata.ads_vals[1] = 0.0015;
-	polydata.ads_vals[2] = 0.0025;
     }
+
+    // Setting polydata defaults to mimic a simple example case.
+    polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
+    polydata.omega = param.getDefault("omega", 1.0);
+    polydata.rhor = param.getDefault("rock_density", 1000.0);
+    polydata.dps = param.getDefault("dead_pore_space", 0.15);
+    polydata.c_vals_visc.resize(2);
+    polydata.c_vals_visc[0] = 0.0;
+    polydata.c_vals_visc[1] = 7.0;
+    polydata.visc_mult_vals.resize(2);
+    polydata.visc_mult_vals[0] = 1.0;
+    // polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+    polydata.visc_mult_vals[1] = 20.0;
+    polydata.c_vals_ads.resize(3);
+    polydata.c_vals_ads[0] = 0.0;
+    polydata.c_vals_ads[1] = 2.0;
+    polydata.c_vals_ads[2] = 8.0;
+    polydata.ads_vals.resize(3);
+    polydata.ads_vals[0] = 0.0;
+    // polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+    polydata.ads_vals[1] = 0.0015;
+    polydata.ads_vals[2] = 0.0025;
+
+
+    double poly_start = param.getDefault("poly_start_days", 300.0)*Opm::unit::day;
+    double poly_end = param.getDefault("poly_end_days", 800.0)*Opm::unit::day;
+    double poly_amount = param.getDefault("poly_amount", 5.0);
+    PolymerInflow poly_inflow(poly_start, poly_end, poly_amount);
+
     bool new_code = param.getDefault("new_code", false);
-    int method = param.getDefault("method", 1);
 
     // Extra rock init.
     std::vector<double> porevol;
     compute_porevolume(grid->c_grid(), *props, porevol);
     double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
 
-    // Solvers init.
-    Opm::PressureSolver psolver(grid->c_grid(), *props);
+    // Gravity init.
+    double gravity[3] = { 0.0 };
+    double g = param.getDefault("gravity", 0.0);
+    bool use_gravity = g != 0.0;
+    if (use_gravity) {
+	gravity[grid->c_grid()->dimensions - 1] = g;
+	if (props->density()[0] == props->density()[1]) {
+	    std::cout << "**** Warning: nonzero gravity, but zero density difference." << std::endl;
+	}
+    }
 
-    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata, method);
+    // Solvers init.
+    Opm::LinearSolverUmfpack linsolver;
+    // Opm::LinearSolverIstl linsolver(param);
+    Opm::IncompTpfa psolver(*grid->c_grid(),
+                            props->permeability(),
+                            use_gravity ? gravity : 0,
+                            linsolver);
+
+    const int method = param.getDefault("method", 1);
+    const double nltol = param.getDefault("nl_tolerance", 1e-9);
+    const int maxit = param.getDefault("nl_maxiter", 30);
+    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata,
+				      method, nltol, maxit);
 
     // State-related and source-related variables init.
     std::vector<double> totmob;
+    std::vector<double> omega; // Empty dummy unless/until we include gravity here.
     double init_sat = param.getDefault("init_sat", 0.0);
     ReservoirState state(grid->c_grid(), props->numPhases(), init_sat);
     // We need a separate reorder_sat, because the reorder
@@ -362,15 +404,24 @@ main(int argc, char** argv)
 	    outputState(grid->c_grid(), state, pstep, output_dir);
 	}
 
-	compute_totmob(*props, state.saturation(), totmob);
+	if (use_gravity) {
+	    compute_totmob_omega(*props, state.saturation(), totmob, omega);
+	} else {
+	    compute_totmob(*props, state.saturation(), totmob);
+	}
 	pressure_timer.start();
-	psolver.solve(grid->c_grid(), totmob, src, state);
+	psolver.solve(totmob, omega, src, state.pressure(), state.faceflux());
 	pressure_timer.stop();
 	double pt = pressure_timer.secsSinceStart();
 	std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
 	ptime += pt;
 
-	double inflow_c = polymerInflowAtTime(current_time);
+	const double inflowc0 = poly_inflow(current_time + 1e-5*stepsize);
+	const double inflowc1 = poly_inflow(current_time + (1.0 - 1e-5)*stepsize);
+	if (inflowc0 != inflowc1) {
+	    std::cout << "**** Warning: polymer inflow rate changes during timestep. Using rate near start of step.";
+	}
+	const double inflow_c = inflowc0;
 	Opm::toWaterSat(state.saturation(), reorder_sat);
 	// We must treat reorder_src here,
 	// if we are to handle anything but simple water
