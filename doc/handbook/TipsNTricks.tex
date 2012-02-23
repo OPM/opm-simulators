@@ -1,38 +1,37 @@
 \chapter{Tips \& Tricks}
 
 This chapter tries to be a useful collection of tips and tricks that can be handy when working with 
-\Dumux. One of the most prominent ideas for developing \Dune / \Dumux is that reinventing the wheel in terms of FEM-code should
+\Dumux. One of the most prominent ideas for developing \Dune / \Dumux is that reinventing the wheel in terms of FEM code should
 be avoided.  We try to follow this idea also in the day-to-day work by stating the \emph{tell us dogma}: ``If you found something useful, 
-handy or for other reasons helping when working with \Dumux: put it into this chapter.'' (or at least write it to the mailing list \\ \verb+dumux@iws.uni-stuttgart.de+ so somebody else can). 
-\begin{itemize}
- \item Using the \Dumux-Eclipse profile:
+handy or for other reasons helping when working with \Dumux: put it into this chapter.'' or inform at least the other developers and write 
+to the mailing list \texttt{dumux@iws.uni-stuttgart.de} so somebody else can.
 
-Everybody using the same profile has the advantage of  resulting in less conflicts when different developing environments are used:
-\begin{itemize}
- \item in eclipse open: \verb#window->preferences->C/C++->Code Style#
-  \item press the \verb+Import+ button
-  \item choose the file \verb+eclipse_profile.xml+ from your dumux-devel directory
-  \item make sure that that now DuMux is chosen in ``select a profile''
-\end{itemize}
+\paragraph{Using the \Dumux-Eclipse profile}
 
-\item Checking whether commit worked:
+Everybody using the same profile has the advantage of resulting in less conflicts when different developing environments are used:
+\begin{enumerate}
+  \item in eclipse open: \texttt{Window} $\rightarrow$ \texttt{Preferences} $\rightarrow$ \texttt{C/C++}  $\rightarrow$ \texttt{Code Style}
+  \item press the \texttt{Import} button
+  \item choose the file \texttt{eclipse\_profile.xml} from your dumux-devel directory
+  \item make sure that that now \Dumux is chosen in \texttt{Select a profile}
+\end{enumerate}
 
-\Dumux is developed with the help of svn (which is pronounced ``subversion'', see \\\verb+http://subversion.apache.org/pronunciation/index.html+). This means that at some point you will commit your new 
+\paragraph{Checking whether commit worked}
+
+\Dumux is developed with the help of Subversion (short SVN, see \texttt{http://subversion.apache.org/pronunciation/index.html}). This means that at some point you will commit your new 
 and/or advanced features (hereafter called ``stuff'') to the repository. But maybe you forgot to commit this one and tiny change in one file you forgot about. 
-This may result in \Dumux not compiling any more on another person's computer after updating . How to prevent this?
-
-Simply check out \Dune / \Dumux twice. How is this helping? Now you can work in one version and after commiting you can simply update the pristine version and see whether it still works there, too. 
+This may result in \Dumux not compiling any more on another person's computer after updating. You can prevent this by checking out \Dune and \Dumux twice. Now you can work in one version and after committing you can simply update the pristine version and see whether it still works there, too. 
 This approach really helps keeping the bumps in the work-flow small.
 
-\item Using \Dune debug streams:
+\paragraph{Using \Dune debug streams}
 
-  \Dune provides a helpful feature, for keeping your debug-output organized. 
-  In stead of juggling with a bazillion \verb+std::cout<<+ statements or keeping some debug-precompiler statements organized (which are generally and strongly discouraged see \ref{guidelines} ) in order not to get 
-  flooded away by your output \Dune gives you a nice tool: so called debug streams. 
+\Dune provides a helpful feature, for keeping your debug-output organized. 
+  In stead of juggling with a bazillion \texttt{std::cout <<} statements or keeping some debug-precompiler statements organized, which are generally and strongly discouraged see \ref{guidelines} in order not to get 
+  flooded away by your output \Dune gives you a nice tool by the so called debug streams. 
 
-  These are streams (like \verb+cout+) but they can be switched on and off for the whole project. 
-  May be if you are really in the  dark you want to see all your debug information. Another time you may only want to be warned if something is going seriously wrong during a simulation. 
-  This can be achieved by setting the debug streams to desired values. There are 5 levels:
+  These are streams like \texttt{cout} but they can be switched on and off for the whole project. 
+  Maybe if you are really in the  dark you want to see all your debug information. Another time you may only want to be warned if something is going seriously wrong during a simulation. 
+  This can be achieved by setting the debug streams to desired values. There are five levels:
 \begin{verbatim}
 5 - grave (dgrave)
 4 - warning (dwarn)
@@ -40,33 +39,23 @@ This approach really helps keeping the bumps in the work-flow small.
 2 - verbose (dverb)
 1 - very verbose (dvverb)
 \end{verbatim}
-Which are used as follows:
 
-\verb+Dune::dinfo << "here I am \n " ;+\\
-or \\
-\verb+Dune::dgrave  << "This value should not be reached \n " ;+ . \\
-The debug streams are switched on/off via  setting  \\
-\verb+#define DUNE_MINIMAL_DEBUG_LEVEL 4 + \\ 
-in \\
-\verb+dumux-devel/config.h+ \\
-to the desired value and recompiling your application. E.g. if the value is set to 4 the out put generated after \verb+Dune::dinfo+ (level 4 and 5) will printed anywhere. 
+They are used as follows: \lstinline{Dune::dinfo << "message";} or \lstinline{Dune::dgrave  << "message";} .
+The debug streams are switched on/off via  setting \lstinline{#define DUNE_MINIMAL_DEBUG_LEVEL 4}
+in the source your application. If the value is set to i.\,g. 4 the output generated after \lstinline{Dune::dinfo} (level 4 and 5) will printed anywhere.
 
- \item filename / line number predefined macro:
+\paragraph{Filename and line number by predefined macro}
 
-If you want to  know where some output / debug information came from, you can use the predefined macros \verb+__FILE__+ and \verb+__LINE__+ 
-which are used like            
+If you want to  know where some output or debug information came from, you can use the predefined macros \lstinline{__FILE__} and \lstinline{__LINE__}
+which are used like\\
+\lstinline{dataFile << "# This was written from "<< __FILE__ << ", line " <<__LINE__ << "\n";}\\
+which translates into a line in the output file reading\\
+\lstinline{# This was written from [..]/DUMUX_kila/dumux/dumux/io/outputToFile.hh, line 261}\\
+This can also be very useful, if you want to have information about where some warning or debug information was issued. 
 
-\verb+ dataFile << "# This was written from "<< __FILE__ << ", line " <<__LINE__ << "\n";+
+\paragraph{Opttion files optim.opts and debug.opts}
 
-which translates into a line in the output file reading 
-
-\verb+# This was written from [..]/DUMUX_kila/dumux/dumux/io/outputToFile.hh, line 261+
-
-This can also be very useful, if you want to have information about where some warning / debug information was issued. 
-
-\item optim.opts / debug.opts
-
-As explained on page \pageref{buildIt} \Dune and \Dumux are built with the help of the \verb+dunecontrol+ buildsystem. 
+As explained on page \pageref{buildIt} \Dune and \Dumux are built with the help of the \texttt{dunecontrol}. 
 A lot of options need to be specified for that, which is done in the \verb+debug.opts+ resp. \verb+optim.opts+ 
 (plus \verb+.suse11.2+ if applicable) in your \verb+dumux-devel+ directory. These two files differ in the way \Dune / \Dumux is compiled: either for debugging or for fast simulation. Switching between these two states is really 
 worth it: speedup of factor $\approx 2$. 
@@ -88,8 +77,6 @@ be debugged because the debugger gets confused. But the cool thing is, that you 
 
 Debugging with the optimization options active will lead to erratic beviour while debugging. 
 
-\item Faster build with dunecontrol:\\
+\paragraph{Faster build with dunecontrol}
 A complete build using \texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/debug.opts all} takes some time. If there were just small changes in the folder structure, it is usually sufficient to run dunecontrol with option \texttt{autogen} instead of \texttt{all}, and afterwards creating the makefiles with option \texttt{configure}.
-
-\end{itemize}
 

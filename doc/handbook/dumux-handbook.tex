@@ -12,24 +12,23 @@
   commentstyle=\it, extendedchars=true, escapeinside={/*@}{@*/}}
 
 % for listings of bash code in install.tex
-\definecolor{BashGrey}{rgb}{0.9,0.9,0.9}
 \lstdefinestyle{Bash}
  {language=Bash,
- backgroundcolor=\color{BashGrey},
+ backgroundcolor=\color{lightgray},
  basicstyle=\ttfamily\small,
  numbers=none,
  captionpos=b,
  tabsize=4,
  breaklines=true,
- breakatwhitespace=true,
  frame=single,
- rulecolor=\color{BashGrey},
+ rulecolor=\color{lightgray},
  framerule=1pt,
  framesep=1pt,
  rulesep=0pt,
  aboveskip=\bigskipamount,
  belowskip=\bigskipamount
 }
+\lstset{showstringspaces=false}
 
 \usepackage{hyperref}
 \usepackage{psfrag}
@@ -37,7 +36,6 @@
 \usepackage{graphicx}
 \usepackage{xspace}
 \usepackage[htt]{hyphenat}
-\usepackage{color}
 \usepackage{lscape}
 \usepackage{enumerate}
 \usepackage{rotating}
@@ -51,7 +49,6 @@
 
 \usepackage[normalem]{ulem}
 \usepackage{tabularx}
-\usepackage{graphics}
 \newcommand{\snakeline}{%
 % {\uwave{\makebox[\linewidth]{\mbox{}}}}
 \uwave{\mbox{}}
@@ -64,7 +61,7 @@
 \DeclareGraphicsExtensions{.eps, .jpg}
 
 \newcommand{\Dune}{{DUNE}\xspace}
-\newcommand{\Dumux}{DuMu$^\text{x}$\xspace}
+\newcommand{\Dumux}{Du\-Mu$^x$\xspace}
 
 \newcommand{\porosity}{\phi}
 \newcommand{\saturation}{S}
