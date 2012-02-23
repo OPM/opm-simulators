@@ -88,7 +88,7 @@ class TutorialSpatialParametersCoupled: public BoxSpatialParameters<TypeTag> /*@
 public:
     // get material law from property system
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    // determine appropriate parameters depening on selected materialLaw
+    // determine appropriate parameters depending on selected materialLaw
     typedef typename MaterialLaw::Params MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
     /*! Intrinsic permeability tensor K \f$[m^2]\f$ depending
@@ -98,38 +98,39 @@ public:
      *  \param fvElemGeom The finite-volume geometry in the box scheme
      *  \param scvIdx The local vertex index
      *
-     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos)
+     *  could be defined, where globalPos is the vector including the global coordinates
+     *  of the finite volume.
      */
     const Dune::FieldMatrix<Scalar, dim, dim> &intrinsicPermeability(const Element &element, /*@\label{tutorial-coupled:permeability}@*/
                                                     const FVElementGeometry &fvElemGeom,
                                                     int scvIdx) const
     { return K_; }
 
-    /*! Define the porosity \f$[-]\f$ of the porous medium depending
+    /*! Defines the porosity \f$[-]\f$ of the porous medium depending
      * on the position in the domain
      *
      *  \param element The finite volume element
      *  \param fvElemGeom The finite-volume geometry in the box scheme
      *  \param scvIdx The local vertex index
      *
-     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined,
+     *  where globalPos is the vector including the global coordinates of the finite volume.
      */
     Scalar porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
                     const FVElementGeometry &fvElemGeom,
                     int scvIdx) const
     { return 0.2; }
 
-    /*! Return the parameter object for the material law (i.e. Brooks-Corey)
+    /*! Returns the parameter object for the material law (i.e. Brooks-Corey)
      *  depending on the position in the domain
      *
      *  \param element The finite volume element
      *  \param fvElemGeom The finite-volume geometry in the box scheme
      *  \param scvIdx The local vertex index
      *
-     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined,
+     *  where globalPos is the vector including the global coordinates of the finite volume.
      */
     const MaterialLawParams& materialLawParams(const Element &element,            /*@\label{tutorial-coupled:matLawParams}@*/
                                                const FVElementGeometry &fvElemGeom,

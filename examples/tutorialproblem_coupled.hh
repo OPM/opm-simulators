@@ -34,7 +34,6 @@
 // The DUNE grid used
 #include <dune/grid/yaspgrid.hh>
 
-// Spatialy dependent parameters
 #include "tutorialspatialparameters_coupled.hh"
 
 // The components that are used
@@ -132,7 +131,7 @@ public:
             (this->timeManager().timeStepIndex() % 1 == 0);
     }
 
-    //! Return the temperature within a finite volume. We use constant
+    //! Returns the temperature within a finite volume. We use constant
     //! 10 degrees Celsius.
     Scalar temperature() const
     { return 283.15; };
@@ -149,7 +148,7 @@ public:
 
     }
 
-    //! Evaluate the Dirichlet boundary conditions for a finite volume
+    //! Evaluates the Dirichlet boundary conditions for a finite volume
     //! on the grid boundary. Here, the 'values' parameter stores
     //! primary variables.
     void dirichlet(PrimaryVariables &values, const Vertex &vertex) const
@@ -158,7 +157,7 @@ public:
         values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
     }
 
-    //! Evaluate the boundary conditions for a Neumann boundary
+    //! Evaluates the boundary conditions for a Neumann boundary
     //! segment. Here, the 'values' parameter stores the mass flux in
     //! [kg/(m^2 * s)] in normal direction of each phase. Negative
     //! values mean influx.
@@ -184,7 +183,7 @@ public:
         }
     }
 
-    //! Evaluate the initial value for a control volume. For this
+    //! Evaluates the initial value for a control volume. For this
     //! method, the 'values' parameter stores primary variables.
     void initial(PrimaryVariables &values,
                  const Element &element,
@@ -195,9 +194,9 @@ public:
         values[Indices::SnIdx] = 1.0;
     }
 
-    //! Evaluate the source term for all phases within a given
+    //! Evaluates the source term for all phases within a given
     //! sub-control-volume. In this case, the 'values' parameter
-    //! stores the rate mass generated or annihilate per volume unit
+    //! stores the rate mass generated or annihilated per volume unit
     //! in [kg / (m^3 * s)]. Positive values mean that mass is created.
     void source(PrimaryVariables &values,
                 const Element &element,
