@@ -24,14 +24,11 @@
 #include <opm/core/utility/RootFinders.hpp>
 #include <cmath>
 
-#define DEBUG
-
 static double norm(double* res);
+
 
 namespace Opm
 {
-
-
     TransportModelPolymer::TransportModelPolymer(const UnstructuredGrid& grid,
 						 const double* porosity,
 						 const double* porevolume,
@@ -59,6 +56,7 @@ namespace Opm
 	}
 	visc_ = props.viscosity();
     }
+
 
 
 
@@ -211,6 +209,7 @@ namespace Opm
     };
 
 
+    // Residual for s and c. Includes method to compute the gradient.
     struct TransportModelPolymer::Residual
     {
 	int cell;
@@ -279,42 +278,74 @@ namespace Opm
 		+ dtpv*(outflux*ff*mc + influx_polymer);
 	}
 
-	void computeGradient(const double* x, double* res, double* gradient, bool s_or_c) const
-	// If s_or_c == true, compute the gradient of s-residual, if s_or_c == false, compute gradient of c-residual
+	// Compute gradient using finite difference.
+	void computeGradient(const double* x, double* res, double* gradient, bool if_res_s, const int& method) const
+     	// If if_res_s == true, compute the gradient of s-residual, otherwise, compute gradient of c-residual.
+	// If method == 1, use finite diference
+	// If method == 2, use analytic expresions
 	{
-	    double s = x[0];
-	    double c = x[1];
-	    double ff_ds_dc[2];
-	    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
-	    double mc_dc;
-	    double mc = tm.computeMcWithDer(c, &mc_dc);
-	    double dps = tm.polyprops_.dps;
-	    double rhor = tm.polyprops_.rhor;
-	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	    double ads;
-	    double ads_dc;
-	    if (c < cmax0) {
-		ads = tm.polyprops_.adsorbtion(cmax0);
-		ads_dc = 0;
-	    } else {
-		ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
-	    }
-	    res[0] = s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
-	    res[1] = (s - dps)*c - (s0 - dps)*c0
-		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer);
-	    if (s_or_c == true) {
-		gradient[0] = 1 + dtpv*outflux*ff_ds_dc[0];
-		gradient[1] = dtpv*outflux*ff_ds_dc[1];
-	    } else if (s_or_c == false) {
-		gradient[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
-		gradient[1] = s - dps + rhor*((1.0 - porosity)/porosity)*(ads_dc - ads0)
-		    + dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
-	    }
+	    if (method == 1) {
+		    double epsi = 1e-5;
+		    double res_epsi[2];
+		    double x_epsi[2];
+		    computeResidual(x, res);
+		    if (if_res_s) {
+			x_epsi[0] = x[0] + epsi;
+			x_epsi[1] = x[1];
+			computeResidual(x_epsi, res_epsi);
+			gradient[0] =  (res_epsi[0] - res[0])/epsi;
+			x_epsi[0] = x[0];
+			x_epsi[1] = x[1] + epsi;
+			computeResidual(x_epsi, res_epsi);
+			gradient[1] = (res_epsi[0] - res[0])/epsi;
+		    } else {
+			x_epsi[0] = x[0] + epsi;
+			x_epsi[1] = x[1];
+			computeResidual(x_epsi, res_epsi);
+			gradient[0] =  (res_epsi[1] - res[1])/epsi;
+			x_epsi[0] = x[0];
+			x_epsi[1] = x[1] + epsi;
+			computeResidual(x_epsi, res_epsi);
+			gradient[1] = (res_epsi[1] - res[1])/epsi;
+		    }
+		} else if (method == 2)  {
+		    double s = x[0];
+		    double c = x[1];
+		    double ff_ds_dc[2];
+		    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
+		    double mc_dc;
+		    double mc = tm.computeMcWithDer(c, &mc_dc);
+		    double dps = tm.polyprops_.dps;
+		    double rhor = tm.polyprops_.rhor;
+		    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+		    double ads;
+		    double ads_dc;
+		    if (c < cmax0) {
+			ads = tm.polyprops_.adsorbtion(cmax0);
+			ads_dc = 0;
+		    } else {
+			ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
+		    }
+		    res[0] = s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
+		    res[1] = (s - dps)*c - (s0 - dps)*c0
+			+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+			+ dtpv*(outflux*ff*mc + influx_polymer);
+		    if (if_res_s == true) {
+			gradient[0] = 1 + dtpv*outflux*ff_ds_dc[0];
+			gradient[1] = dtpv*outflux*ff_ds_dc[1];
+		    } else if (if_res_s == false) {
+			gradient[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
+			gradient[1] = s - dps + rhor*((1.0 - porosity)/porosity)*(ads_dc - ads0)
+			    + dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
+		    }
+		}
+
 	}
+
     };
 
-
+    // Compute residual in s for a given piecewise linear curve (with only one node) in the s-c
+    // plane. The method operator() is used by a 1d root solver.
 
     struct TransportModelPolymer::ResidualSDir
     {
@@ -328,6 +359,12 @@ namespace Opm
 	double porosity;
 	double dtpv;    // dt/pv(i)
 	double direction[2];
+	double end_point[2];
+	double x_max[2];
+	double x_min[2];
+	double t_out;
+	double t_max; // t_max = t_out + 1
+	double x_out[2];
 	double x[2];
 	const TransportModelPolymer& tm;
 
@@ -370,21 +407,79 @@ namespace Opm
 	    }
 	}
 
-	void setup(const double* x_arg, const double* direction_arg) {
+
+	// For a given point x=(s,c) in the s,c plane, set up a piecewise linear curve wich starts
+	// from "x" with slope "direction", hits the bound of the rectangle
+	// [s_min,s_max]x[c_min,c_max] and continue in a straight line to "end_point".  The curve is
+	// parametrized by t in [0, t_max], t_out is equal to t when the curve hits the bounding
+	// rectangle, x_out=(s_out, c_out) denotes the values of s and c at that point.
+
+	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, double& t_max_arg)
+	{
+	    double t0, t1;
 	    x[0] = x_arg[0];
 	    x[1] = x_arg[1];
+	    x_max[0] = x_max_arg[0];
+	    x_max[1] = x_max_arg[1];
+	    x_min[0] = x_min_arg[0];
+	    x_min[1] = x_min_arg[1];
 	    direction[0] = direction_arg[0];
 	    direction[1] = direction_arg[1];
+	    end_point[0] = end_point_arg[0];
+	    end_point[1] = end_point_arg[1];
+	    if ((end_point[0]-x[0])*direction[0] + (end_point[1]-x[1])*direction[1] < 0) {
+		direction[0] *= -1;
+		direction[1] *= -1;
+	    }
+	    if (direction[0] > 0) {
+		t0 = (x_max[0] - x[0])/direction[0];
+	    } else {
+		t0 = (x_min[0] - x[0])/direction[0];
+	    }
+	    if (direction[1] > 0) {
+		t1 = (x_max[1] - x[1])/direction[1];
+	    } else {
+		t1 = (x_min[1] - x[1])/direction[1];
+	    }
+	    t_out = std::min(t0, t1);
+	    x_out[0] = x[0] + t_out*direction[0];
+	    x_out[1] = x[1] + t_out*direction[1];
+	    t_max = t_out + 1;
+	    t_max_arg = t_max;
 	}
+
+
+	// Compute x=(s,c) for a given t (t is the parameter for the piecewise linear curve)
+	void compute_new_x(double* x_new, const double t) {
+	    if (t <= t_out) {
+		x_new[0] = x[0] + t*direction[0];
+		x_new[1] = x[1] + t*direction[1];
+	    } else {
+		x_new[0] = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
+		x_new[1] = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+	    }
+	}
+
+
 
 	double operator()(double t) const
 	{
-	    double s = x[0] + t*direction[0];
-	    double c = x[1] + t*direction[1];
-	    return s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
+	    double s;
+	    double c;
+	    if (t <= t_out) {
+		s = x[0] + t*direction[0];
+		c = x[1] + t*direction[1];
+	    } else {
+		s = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
+		c = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+	    }
+ 	    return s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
 	}
+
+
     };
 
+    // Same as ResidualSDir but for the residual in c
     struct TransportModelPolymer::ResidualCDir
     {
 	int cell;
@@ -397,6 +492,12 @@ namespace Opm
 	double porosity;
 	double dtpv;    // dt/pv(i)
 	double direction[2];
+	double end_point[2];
+	double t_out;
+	double t_max; // t_max = t_out + 1
+	double x_out[2];
+	double x_min[2];
+	double x_max[2];
 	double x[2];
 	const TransportModelPolymer& tm;
 
@@ -439,17 +540,79 @@ namespace Opm
 	    }
 	}
 
-	void setup(const double* x_arg, const double* direction_arg) {
+	void compute_new_x(double* x_new, const double t) {
+	    if (t <= t_out) {
+		x_new[0] = x[0] + t*direction[0];
+		x_new[1] = x[1] + t*direction[1];
+	    } else {
+		x_new[0] = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
+		x_new[1] = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+	    }
+	}
+
+	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, double& t_max_arg)
+	{
+	    bool if_t0 = true;
+	    bool if_t1 = true;
+	    double t0, t1;
 	    x[0] = x_arg[0];
 	    x[1] = x_arg[1];
+	    x_max[0] = x_max_arg[0];
+	    x_max[1] = x_max_arg[1];
+	    x_min[0] = x_min_arg[0];
+	    x_min[1] = x_min_arg[1];
 	    direction[0] = direction_arg[0];
 	    direction[1] = direction_arg[1];
+	    end_point[0] = end_point_arg[0];
+	    end_point[1] = end_point_arg[1];
+	    if ((end_point[0]-x[0])*direction[0] + (end_point[1]-x[1])*direction[1] < 0) {
+		direction[0] *= -1;
+		direction[1] *= -1;
+	    }
+	    if (direction[0] == 0) {
+		if_t0 = false;
+	    } else {
+		if (direction[0] > 0) {
+		    t0 = (x_max[0] - x[0])/direction[0];
+		} else {
+		    t0 = (x_min[0] - x[0])/direction[0];
+		}
+	    }
+	    if (direction[1] == 0) {
+		if_t1 = false;
+	    } else {
+		if (direction[1] > 0) {
+		    t1 = (x_max[1] - x[1])/direction[1];
+		} else {
+		    t1 = (x_min[1] - x[1])/direction[1];
+		}
+	    }
+	    if (if_t0 && if_t1) {
+		t_out = std::min(t0, t1);
+	    } else {
+		if (if_t0) {
+		    t_out = t0;
+		} else {
+		    t_out = t1;
+		}
+	    }
+	    x_out[0] = x[0] + t_out*direction[0];
+	    x_out[1] = x[1] + t_out*direction[1];
+	    t_max = t_out + 1;
+	    t_max_arg = t_max;
 	}
 
 	double operator()(double t) const
 	{
-	    double s = x[0] + t*direction[0];
-	    double c = x[1] + t*direction[1];
+	    double s;
+	    double c;
+	    if (t <= t_out) {
+		s = x[0] + t*direction[0];
+		c = x[1] + t*direction[1];
+	    } else {
+		s = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
+		c = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+	    }
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
 	    double dps = tm.polyprops_.dps;
@@ -489,6 +652,10 @@ namespace Opm
 	    mc_[cell] = computeMc(concentration_[cell]);
     }
 
+
+    // Splitting method, where we compute alternatively the zeros for the residual in s and c along
+    // a specified piecewise linear curve. At each iteration, we use a robust 1d solver.
+
     void TransportModelPolymer::solveSingleCellSplitting(int cell)
     {
 	const int max_iters_falsi = 20;
@@ -506,177 +673,93 @@ namespace Opm
 
 	if (norm(res) < tol) {
 	    return;
-#ifdef DEBUG
-	    std::cout << "short escape" << std::endl;
-#endif
 	}
 
-	bool use_zero_search = true;
 	bool res_s_done;
 	double x_min[2] = {0.0, 0.0};
 	double x_max[2] = {1.0, polyprops_.c_max_limit};
-	double t_min;
-	double t_max;
 	double t;
-	double res_s_t_min;
-	double res_s_t_max;
-	double res_c_t_min;
-	double res_c_t_max;
+	double t_max;
 	double direction[2];
+	double end_point[2];
 	double gradient[2];
 
-#ifdef DEBUG
-	std::cout << "Initial step" << std::endl;
-#endif
-
 	if (std::abs(res[0]) < std::abs(res[1])) {
-	    // solve for s-residual in a 45 degree diagonal direction (down right)
-	    direction[0] = 1;
-	    direction[1] = -1;
-	    residual_s_dir.setup(x, direction);
-	    if (res[0] < 0) {
-		t_min = 0.;
-		res_s_t_min = res[0];
-		t_max = std::min((x_max[0]-x[0])/direction[0], (x_min[1]-x[1])/direction[1]);
-		res_s_t_max = residual_s_dir(t_max);
-		if (res_s_t_max*res_s_t_min >= 0) {
-		    use_zero_search = false;
-		    t = t_max;
+	    if (std::abs(res[0]) > tol) {
+		if (res[0] < 0) {
+		    end_point[0] = x_max[0];
+		    end_point[1] = x_min[1];
+		    direction[0] = end_point[0] - x[0];
+		    direction[1] = end_point[1] - x[1];
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		} else {
+		    end_point[0] = x_min[0];
+		    end_point[1] = x_max[1];
+		    direction[0] = end_point[0] - x[0];
+		    direction[1] = end_point[1] - x[1];
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
 		}
-	    } else {
-		t_max = 0.;
-		res_s_t_max = res[0];
-		t_min = -std::min((x[0]-x_min[0])/direction[0], (x[1]-x_max[1])/direction[1]);
-		res_s_t_min = residual_s_dir(t_min);
-		if (res_s_t_max*res_s_t_min >= 0) {
-		    use_zero_search = false;
-		    t = t_min;
-		}
+		t = modifiedRegulaFalsi(residual_s_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		residual_s_dir.compute_new_x(x, t);
 	    }
-	    if (use_zero_search) {
-		t = modifiedRegulaFalsi(residual_s_dir, t_min, t_max, max_iters_falsi, tol, iters_used_falsi);
-	    }
-	    x[0] +=  t*direction[0];
-	    x[1] +=  t*direction[1];
 	    res_s_done = true;
-	    residual.computeGradient(x, res, gradient, true);
+	    residual.computeGradient(x, res, gradient, true, 1);
 	} else {
-	    // solve for c-residual in 45 degree diagonal direction (up-right)
-	    direction[0] = 1.;
-	    direction[1] = 1.;
-	    residual_c_dir.setup(x, direction);
-	    if (res[1] < 0) {
-		t_min = 0.;
-		res_c_t_min = res[1];
-		t_max = std::min((x_max[0]-x[0])/direction[0], (x_max[1]-x[1])/direction[1]);
-		res_c_t_max = residual_c_dir(t_max);
-		if (res_c_t_max*res_c_t_min >= 0) {
-		    use_zero_search = false;
-		    t = t_max;
+	    if (std::abs(res[1]) > tol) {
+		if (res[1] < 0) {
+		    end_point[0] = x_max[0];
+		    end_point[1] = x_max[1];
+		    direction[0] = end_point[0] - x[0];
+		    direction[1] = end_point[1] - x[1];
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		} else {
+		    end_point[0] = x_min[0];
+		    end_point[1] = x_min[1];
+		    direction[0] = end_point[0] - x[0];
+		    direction[1] = end_point[1] - x[1];
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
 		}
-	    } else {
-		t_max = 0;
-		res_c_t_max = res[1];
-		t_min = -std::min((x[0]-x_min[0])/direction[0], (x[1]-x_min[1])/direction[1]);
-		res_c_t_min = residual_c_dir(t_min);
-		if (res_c_t_max*res_c_t_min >= 0) {
-		    use_zero_search = false;
-		    t = t_min;
-		}
+		t = modifiedRegulaFalsi(residual_c_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		residual_c_dir.compute_new_x(x, t);
 	    }
-	    if (use_zero_search) {
-		t = modifiedRegulaFalsi(residual_c_dir, t_min, t_max, max_iters_falsi, tol, iters_used_falsi);
-	    }
-	    x[0] +=  t*direction[0];
-	    x[1] +=  t*direction[1];
 	    res_s_done = false;
-	    residual.computeGradient(x, res, gradient, false);
+	    residual.computeGradient(x, res, gradient, false, 1);
 	}
 
-#ifdef DEBUG
-	std::cout << "s: " << x[0] << std::endl;
-	std::cout << "c: " << x[1] << std::endl;
-	std::cout << "res[0]: " << res[0] << std::endl;
-	std::cout << "res[1]: " << res[1] << std::endl;
-	std::cout << "res_s_done" << res_s_done << std::endl;
-	std::cout << "gradient[0]: " << gradient[0] << std::endl;
-	std::cout << "gradient[1]: " << gradient[1] << std::endl;
-#endif
-
-
 	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
-	    use_zero_search = true;
 	    if (res_s_done) { // solve for c-residual
 		direction[0] = -gradient[1];
 		direction[1] = gradient[0];
-		residual_c_dir.setup(x, direction);
 		if (res[1] < 0) {
-		    t_min = 0.;
-		    res_c_t_min = res[1];
-		    t_max = std::min((x_max[0]-x[0])/direction[0], (x_max[1]-x[1])/direction[1]);
-		    residual_c_dir(t_max);
-		    if (res_c_t_max*res_c_t_min >= 0) {
-			use_zero_search = false;
-			t = t_max;
-		    }
+		    end_point[0] = x_max[0];
+		    end_point[1] = x_max[1];
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
 		} else {
-		    t_max = 0;
-		    res_c_t_max = res[1];
-		    t_min = -std::min((x[0]-x_min[0])/direction[0], (x[1]-x_min[1])/direction[1]);
-		    res_c_t_min = residual_c_dir(t_min);
-		    if (res_c_t_max*res_c_t_min >= 0) {
-			use_zero_search = false;
-			t = t_min;
-		    }
+		    end_point[0] = x_min[0];
+		    end_point[1] = x_min[1];
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
 		}
-		if (use_zero_search) {
-		    t = modifiedRegulaFalsi(residual_c_dir, t_min, t_max, max_iters_falsi, tol, iters_used_falsi);
-		}
-		x[0] +=  t*direction[0];
-		x[1] +=  t*direction[1];
+		t = modifiedRegulaFalsi(residual_c_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		residual_c_dir.compute_new_x(x, t);
+		residual.computeGradient(x, res, gradient, false, 1);
 		res_s_done = false;
-		residual.computeGradient(x, res, gradient, false);
 	    } else { // solve for s residual
-		use_zero_search = true;
 		direction[0] = gradient[1];
 		direction[1] = -gradient[0];
-		residual_s_dir.setup(x, direction);
 		if (res[0] < 0) {
-		    t_min = 0.;
-		    res_s_t_min = res[0];
-		    t_max = std::min((x_max[0]-x[0])/direction[0], (x_min[1]-x[1])/direction[1]);
-		    res_s_t_max = residual_s_dir(t_max);
-		    if (res_s_t_max*res_s_t_min >= 0) {
-			use_zero_search = false;
-			t = t_max;
-		    }
+		    end_point[0] = x_max[0];
+		    end_point[1] = x_min[1];
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
 		} else {
-		    t_max = 0.;
-		    res_s_t_max = res[0];
-		    t_min = -std::min((x[0]-x_min[0])/direction[0], (x[1]-x_max[1])/direction[1]);
-		    res_s_t_min = residual_s_dir(t_min);
-		    if (res_s_t_max*res_s_t_min >= 0) {
-			use_zero_search = false;
-			t = t_min;
-		    }
+		    end_point[0] = x_min[0];
+		    end_point[1] = x_max[1];
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
 		}
-		if (use_zero_search) {
-		    t = modifiedRegulaFalsi(residual_s_dir, t_min, t_max, max_iters_falsi, tol, iters_used_falsi);
-		}
-		x[0] +=  t*direction[0];
-		x[1] +=  t*direction[1];
+		t = modifiedRegulaFalsi(residual_s_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		residual_s_dir.compute_new_x(x, t);
 		res_s_done = true;
-		residual.computeGradient(x, res, gradient, true);
+		residual.computeGradient(x, res, gradient, true, 1);
 	    }
-#ifdef DEBUG
-	    std::cout << "s: " << x[0] << std::endl;
-	    std::cout << "c: " << x[1] << std::endl;
-	    std::cout << "res[0]: " << res[0] << std::endl;
-	    std::cout << "res[1]: " << res[1] << std::endl;
-	    std::cout << "res_s_done" << res_s_done << std::endl;
-	    std::cout << "gradient[0]: " << gradient[0] << std::endl;
-	    std::cout << "gradient[1]: " << gradient[1] << std::endl;
-#endif
 
 	    iters_used_split += 1;
 	}
@@ -764,7 +847,6 @@ namespace Opm
  	return mob[0]/(mob[0] + mob[1]);
     }
 
-
     double TransportModelPolymer::computeMc(double c) const
     {
 	double c_max_limit = polyprops_.c_max_limit;
@@ -818,6 +900,9 @@ static double norm(double* res) {
 	return absres0;
     }
 }
+
+
+
 
 /* Local Variables:    */
 /* c-basic-offset:4    */

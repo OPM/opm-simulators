@@ -121,6 +121,7 @@ namespace Opm
 	struct ResidualC;
 	struct ResidualS;
 
+	// Residual functions which are used in splitting method
 	struct ResidualCDir;
 	struct ResidualSDir;
 	struct Residual;
