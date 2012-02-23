@@ -17,7 +17,7 @@ of both pressure- and transport step. Primary variables, according to default
 settings of the model, are the pressure and the saturation of the wetting phase.
 
 The problem which is solved in this tutorial is illustrated in figure 
-\ref{tutorial-decoupled:problemfigure}. A rectangular domain with now flow 
+\ref{tutorial-decoupled:problemfigure}. A rectangular domain with no flow 
 boundaries on the top and at the bottom, which is initially saturated with oil, 
 is considered. Water infiltrates from the left side into the domain. Gravity 
 effects are neglected.
@@ -57,14 +57,14 @@ single type tag. For an introduction to the
 property system, see section \ref{sec:propertysystem}.
 
 After this \Dumux' default startup routine \texttt{Dumux::start()} is
-called on line \ref{tutorial-decoupled:call-start}. This function deals
+called in line \ref{tutorial-decoupled:call-start}. This function deals
 with parsing the command line arguments, reading the parameter file,
-setting up the infrastructure necessary for \Dune, loads the grid, and
-starts the simulation. When it comes to parameters, all parameters can
+setting up the infrastructure necessary for \Dune, loading the grid, and
+starting the simulation. All parameters can
 be either specified by command line arguments of the form
 (\texttt{-ParameterName ParameterValue}), in the file specified by the
 \texttt{-parameterFile} argument, or if the latter is not specified,
-in the file \texttt{tutorial\_decoupled.input}. If a parameter gets
+in the file \texttt{tutorial\_decoupled.input}. If a parameter is
 specified on the command line as well as in the parameter file, the
 values provided in the command line have
 precedence. Listing~\ref{tutorial-decoupled:parameter-file} shows the
@@ -137,7 +137,7 @@ is optional and tells the model not to use gravity.
 After all necessary information is written into the property system and 
 its namespace is closed in line \ref{tutorial-decoupled:propertysystem-end},
 the problem class is defined in line \ref{tutorial-decoupled:def-problem}. 
-As its property, the problem class itsself is also derived from a parent, 
+As its property, the problem class itself is also derived from a parent, 
 \texttt{IMPESProblem2P}. The class constructor (line 
 \ref{tutorial-decoupled:constructor-problem}) is able to hold two vectors,
 which is not needed in this tutorial.
@@ -147,7 +147,7 @@ subsection \label{decoupled-problem:boundary}), the problem class also contains
 general information about the current simulation. First, the name used by
 the \texttt{VTK-writer} to generate output is defined in the method of line
 \ref{tutorial-decoupled:name}, and line \ref{tutorial-decoupled:restart} indicates
-wether restart files are written. As decoupled schemes usually feature small 
+whether restart files are written. As decoupled schemes usually feature small 
 timesteps, it can be usefull to set an output interval larger than 1. The respective function is called in line \ref{tutorial-decoupled:outputinterval}, which gets the output interval as argument.
 
 The following methods all have in common that they may be dependent on space.
@@ -158,7 +158,7 @@ function argument: Both are \Dune entities, depending on whether the parameter o
 There are the methods for general parameters, source- or
 sinkterms, boundary conditions (lines \ref{tutorial-decoupled:bctype} to
 \ref{tutorial-decoupled:neumann}) and initial values for the transported
-quantity in line \label{tutorial-decoupled:init}. For more information
+quantity in line \label{tutorial-decoupled:initial}. For more information
 on the functions, consult the documentation in the code.
 
 \subsection{The definition of the parameters that are dependent on space}\label{tutorial-decoupled:description-spatialParameters}
@@ -176,7 +176,7 @@ However, as a standard Finite-Volume--scheme is used, in contrast to the box-met
 in the coupled case, the argument list here is the same as for the problem 
 functions: Either an \texttt{element}, or only the global position if the function is called \texttt{...AtPos(...)}.
 
-\subsection{Exercise}
+\subsection{Exercises}
 \label{tutorial-deoucpled:exercises}
 The following exercises will give you the opportunity to learn how you can change 
 soil parameters, boundary conditions and fluid properties in \Dumux and to play along 
@@ -187,7 +187,8 @@ with the decoupled modelling framework.
 For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. The runtime parameters which are set can be found in the input file (listing~\ref{tutorial-decoupled:parameter-file}). If the input file has the same name than the main file (e.g. \texttt{tutorial\_decoupled.cc} and \texttt{tutorial\_decoupled.input}), it is automatically chosen. If the name differs the programm has to be started typing \texttt{./tutorial\_decoupled -parameterFile <filename>.input}. For more options you can also type \texttt{./tutorial\_decoupled -h}.For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+
+To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. The runtime parameters which are set can be found in the input file (listing~\ref{tutorial-decoupled:parameter-file}). If the input file has the same name than the main file (e.g. \texttt{tutorial\_decoupled.cc} and \texttt{tutorial\_decoupled.input}), it is automatically chosen. If the name differs the program has to be started typing \texttt{./tutorial\_decoupled -parameterFile <filename>.input}. For more options you can also type \texttt{./tutorial\_decoupled -h}. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
 As you can see, the simulation creates many output files. To reduce these in order to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:outputinterval} in the file \texttt{tutorialproblem\_decoupled}) as to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
@@ -207,7 +208,7 @@ If you want to take a closer look at how the fluid classes are defined and which
 \item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
 \Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}, see also chapter \ref{sec:fluidframework}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
 Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this rather complicated fluidsystem uses tabularized fluid data, which need to be initialized (i.e. the tables need to be filled with values) in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}.\\ 
-As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simultation duration to 2e4 seconds.\\
+As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simulation duration to 2e4 seconds.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
@@ -233,8 +234,8 @@ the file \texttt{tutorialproblem\_decoupled.hh} (e.g. with the name
 just like \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to
 be included in the file \texttt{tutorial\_decoupled.cc}. 
 
-The new files should contain the definition of a new classes with 
-names that relate to the file name, such as \texttt{Ex2TutorialProblemDecoupled}. 
+Each new files should contain the definition of a new class with a 
+name that relates to the file name, such as \texttt{Ex2TutorialProblemDecoupled}. 
 Make sure that you also adjust the guardian
 macros in lines \ref{tutorial-decoupled:guardian1} and \ref{tutorial-decoupled:guardian2}
  in the header files (e.g. change \\

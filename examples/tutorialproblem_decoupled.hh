@@ -168,8 +168,8 @@ public:
      *
      *  \param element The finite volume element
      *
-     * Alternatively, the function temperatureAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     * is the vector including the global coordinates of the finite volume.
+     * Alternatively, the function temperatureAtPos(const GlobalPosition& globalPos) could be
+     * defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     Scalar temperature(const Element& element) const /*@\label{tutorial-decoupled:temperature}@*/
     {
@@ -183,8 +183,8 @@ public:
      *
      * \param element The finite volume element
      *
-     * Alternatively, the function referencePressureAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     * is the vector including the global coordinates of the finite volume.
+     * Alternatively, the function referencePressureAtPos(const GlobalPosition& globalPos) could be
+     * defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     Scalar referencePressure(const Element& element) const /*@\label{tutorial-decoupled:refPressure}@*/
     {
@@ -201,8 +201,8 @@ public:
      *  The method returns the mass generated (positive) or
      *  annihilated (negative) per volume unit.
      *
-     * Alternatively, the function sourceAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) could be defined, where globalPos
-     * is the vector including the global coordinates of the finite volume.
+     * Alternatively, the function sourceAtPos(PrimaryVariables &values, const GlobalPosition& globalPos)
+     * could be defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     void source(PrimaryVariables &values, const Element& element) const /*@\label{tutorial-decoupled:source}@*/
     {
@@ -218,8 +218,8 @@ public:
      *  \param bcTypes Includes the types of boundary conditions
      *  \param globalPos The position of the center of the finite volume
      *
-     *  Alternatively, the function boundaryTypes(PrimaryVariables &values, const Intersection& intersection) could be defined,
-     *  where intersection is the boundary intersection.
+     *  Alternatively, the function boundaryTypes(PrimaryVariables &values, const Intersection&
+     *  intersection) could be defined, where intersection is the boundary intersection.
      */
     void boundaryTypesAtPos(BoundaryTypes &bcTypes, const GlobalPosition& globalPos) const /*@\label{tutorial-decoupled:bctype}@*/
     {
@@ -238,14 +238,14 @@ public:
             }
     }
     //! Value for dirichlet boundary condition at position globalPos.
-    /*! In case of a dirichlet BC for the pressure equation the pressure \f$ [Pa] \f$, and for the transport equation the saturation [-]
-     *  have to be defined on boundaries.
+    /*! In case of a dirichlet BC for the pressure equation the pressure \f$ [Pa] \f$, and for
+     *  the transport equation the saturation [-] have to be defined on boundaries.
      *
      *  \param values Values of primary variables at the boundary
      *  \param intersection The boundary intersection
      *
-     *  Alternatively, the function dirichletAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function dirichletAtPos(PrimaryVariables &values, const GlobalPosition& globalPos)
+     *  could be defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     void dirichlet(PrimaryVariables &values, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichlet}@*/
     {
@@ -276,8 +276,8 @@ public:
      *  \param values Values of primary variables
      *  \param element The finite volume element
      *
-     *  Alternatively, the function initialAtPos(PrimaryVariables &values, const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function initialAtPos(PrimaryVariables &values, const GlobalPosition& globalPos)
+     *  could be defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     void initial(PrimaryVariables &values,
             const Element &element) const /*@\label{tutorial-decoupled:initial}@*/

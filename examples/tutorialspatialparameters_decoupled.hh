@@ -46,7 +46,8 @@ namespace Properties
 NEW_TYPE_TAG(TutorialSpatialParametersDecoupled);
 
 // Set the spatial parameters
-SET_TYPE_PROP(TutorialSpatialParametersDecoupled, SpatialParameters, Dumux::TutorialSpatialParametersDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
+SET_TYPE_PROP(TutorialSpatialParametersDecoupled, SpatialParameters,
+        Dumux::TutorialSpatialParametersDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
 
 // Set the material law
 SET_PROP(TutorialSpatialParametersDecoupled, MaterialLaw)
@@ -88,8 +89,8 @@ public:
      *
      *  \param element The finite volume element
      *
-     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be
+     *  defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     const FieldMatrix& intrinsicPermeability (const Element& element) const
     {
@@ -101,8 +102,8 @@ public:
      *
      *  \param element The finite volume element
      *
-     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be
+     *  defined, where globalPos is the vector including the global coordinates of the finite volume.
      */
     double porosity(const Element& element) const
     {
@@ -114,8 +115,9 @@ public:
      *
      *  \param element The finite volume element
      *
-     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos)
+     *  could be defined, where globalPos is the vector including the global coordinates of
+     *  the finite volume.
      */
     const MaterialLawParams& materialLawParams(const Element &element) const
     {
