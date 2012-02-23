@@ -85,14 +85,14 @@ namespace FluidSystems
  * at the end of this file.
  */
 template <class Scalar,
-          class H2Otype = Dumux::TabulatedComponent<Scalar, Dumux::H2O<Scalar> >,
+          class H2Otype = Dumux::SimpleH2O<Scalar>,
+          //class H2Otype = Dumux::TabulatedComponent<Scalar, Dumux::H2O<Scalar> >,
           bool useComplexRelations = true>
 class H2OAir
-: public BaseFluidSystem<Scalar, H2OAir<Scalar, H2Otype, useComplexRelations> >
+    : public BaseFluidSystem<Scalar, H2OAir<Scalar, H2Otype, useComplexRelations> >
 {
     typedef H2OAir<Scalar,H2Otype, useComplexRelations > ThisType;
     typedef BaseFluidSystem <Scalar, ThisType> Base;
-
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
 public:
