@@ -34,6 +34,7 @@
 // The DUNE grid used
 #include <dune/grid/yaspgrid.hh>
 
+// Spatially dependent parameters
 #include "tutorialspatialparameters_coupled.hh"
 
 // The components that are used

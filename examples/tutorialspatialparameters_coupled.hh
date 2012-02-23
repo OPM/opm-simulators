@@ -46,7 +46,8 @@ namespace Properties
 NEW_TYPE_TAG(TutorialSpatialParametersCoupled);/*@\label{tutorial-coupled:define-spatialparameters-typetag}@*/
 
 // Set the spatial parameters
-SET_TYPE_PROP(TutorialSpatialParametersCoupled, SpatialParameters, Dumux::TutorialSpatialParametersCoupled<TypeTag>); /*@\label{tutorial-coupled:set-spatialparameters}@*/
+SET_TYPE_PROP(TutorialSpatialParametersCoupled, SpatialParameters,
+        Dumux::TutorialSpatialParametersCoupled<TypeTag>); /*@\label{tutorial-coupled:set-spatialparameters}@*/
 
 // Set the material law
 SET_PROP(TutorialSpatialParametersCoupled, MaterialLaw)
@@ -114,8 +115,9 @@ public:
      *  \param fvElemGeom The finite-volume geometry in the box scheme
      *  \param scvIdx The local vertex index
      *
-     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined,
-     *  where globalPos is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos)
+     *  could be defined, where globalPos is the vector including the global coordinates
+     *  of the finite volume.
      */
     Scalar porosity(const Element &element,                    /*@\label{tutorial-coupled:porosity}@*/
                     const FVElementGeometry &fvElemGeom,
@@ -129,8 +131,9 @@ public:
      *  \param fvElemGeom The finite-volume geometry in the box scheme
      *  \param scvIdx The local vertex index
      *
-     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined,
-     *  where globalPos is the vector including the global coordinates of the finite volume.
+     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos)
+     *  could be defined, where globalPos is the vector including the global coordinates
+     *  of the finite volume.
      */
     const MaterialLawParams& materialLawParams(const Element &element,            /*@\label{tutorial-coupled:matLawParams}@*/
                                                const FVElementGeometry &fvElemGeom,
