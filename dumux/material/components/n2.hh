@@ -280,6 +280,21 @@ public:
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;
     }
+
+    /*!
+     * \brief Specific heat conductivity of steam \f$\mathrm{[W/(m K)]}\f$.
+     *
+     * Isobaric Properties for Nitrogen in: NIST Standard Reference
+     * Database Number 69, Eds. P.J. Linstrom and W.G. Mallard
+     * evaluated at p=.1 MPa, T=8°C, does not change dramatically with
+     * p,T
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar gasThermalConductivity(Scalar temperature,
+                                                  Scalar pressure)
+    { return 0.024572; }
 };
 
 } // end namepace

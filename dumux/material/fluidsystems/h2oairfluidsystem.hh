@@ -85,8 +85,8 @@ namespace FluidSystems
  * at the end of this file.
  */
 template <class Scalar,
-          class H2Otype = Dumux::SimpleH2O<Scalar>,
-          //class H2Otype = Dumux::TabulatedComponent<Scalar, Dumux::H2O<Scalar> >,
+          //class H2Otype = Dumux::SimpleH2O<Scalar>,
+          class H2Otype = Dumux::TabulatedComponent<Scalar, Dumux::H2O<Scalar> >,
           bool useComplexRelations = true>
 class H2OAir
     : public BaseFluidSystem<Scalar, H2OAir<Scalar, H2Otype, useComplexRelations> >
@@ -666,16 +666,42 @@ public:
     /*!
      * \brief Thermal conductivity of a fluid phase [W/(m K)].
      *
-     * Use the conductivity of air and water as a first approximation.
-     * Source:
-     * http://en.wikipedia.org/wiki/List_of_thermal_conductivities
+     * \param fluidState An abitrary fluid state
+     * \param phaseIdx The index of the fluid phase to consider
      */
     using Base::thermalConductivity;
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
                                       int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAir::thermalConductivity()");
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+
+        Scalar temperature  = fluidState.temperature(phaseIdx) ;
+        Scalar pressure = fluidState.pressure(phaseIdx);
+
+        if (phaseIdx == lPhaseIdx){// liquid phase
+            return H2O::liquidThermalConductivity(temperature, pressure);
+        }
+        else{// gas phase
+            Scalar lambdaDryAir = Air::gasThermalConductivity(temperature, pressure);
+
+            if (useComplexRelations){
+                Scalar xAir = fluidState.moleFraction(phaseIdx, AirIdx);
+                Scalar xH2O = fluidState.moleFraction(phaseIdx, H2OIdx);
+                Scalar lambdaAir = xAir * lambdaDryAir;
+
+                // Assuming Raoult's, Daltons law and ideal gas
+                // in order to obtain the partial density of water in the air phase
+                Scalar partialPressure  = pressure * xH2O;
+
+                Scalar lambdaH2O =
+                    xH2O
+                    * H2O::gasThermalConductivity(temperature, partialPressure);
+                return lambdaAir + lambdaH2O;
+            }
+            else
+                return lambdaDryAir; // conductivity of Nitrogen [W / (m K ) ]
+        }
     }
 
     /*!

@@ -183,6 +183,27 @@ public:
             liquidEnthalpy(temperature, pressure) -
             pressure/liquidDensity(temperature, pressure); }
 
+
+    /*!
+     * \brief Specific heat conductivity of liquid water \f$\mathrm{[W/(m K)]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar liquidThermalConductivity(Scalar temperature,
+                                                  Scalar pressure)
+    { return 0.028224; } // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+
+    /*!
+     * \brief Specific heat conductivity of steam \f$\mathrm{[W/(m K)]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar gasThermalConductivity(Scalar temperature,
+                                                  Scalar pressure)
+    { return 0.578078; } // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */

@@ -644,7 +644,7 @@ public:
     /*!
      * \brief Thermal conductivity of a fluid phase [W/(m K)].
      *
-     * Use the conductivity of air and water as a first approximation.
+     * Use the conductivity of air and water as a approximation.
      *
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
@@ -656,31 +656,22 @@ public:
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
+        Scalar temperature = fluidState.temperature(phaseIdx) ;
+        Scalar pressure = fluidState.pressure(phaseIdx);
+
         if (phaseIdx == lPhaseIdx){// liquid phase
-            if(useComplexRelations){
-                Scalar temperature  = fluidState.temperature(phaseIdx) ;
-                Scalar pressure = fluidState.pressure(phaseIdx);
-                return H2O::liquidThermalConductivity(temperature, pressure);
-            }
-            else
-                return  0.578078;   // conductivity of water[W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+            return H2O::liquidThermalConductivity(temperature, pressure);
         }
         else{// gas phase
+            Scalar lambdaDryN2 = N2::gasThermalConductivity(temperature, pressure);
 
-            // Isobaric Properties for Nitrogen in: NIST Standard
-            // Reference Database Number 69, Eds. P.J. Linstrom and
-            // W.G. Mallard evaluated at p=.1 MPa, T=8°C, does not
-            // change dramatically with p,T
-            Scalar lambdaPureN2 = 0.024572;
             if (useComplexRelations){
                 Scalar xN2 = fluidState.moleFraction(phaseIdx, N2Idx);
                 Scalar xH2O = fluidState.moleFraction(phaseIdx, H2OIdx);
-                Scalar lambdaN2 = xN2 * lambdaPureN2;
+                Scalar lambdaN2 = xN2 * lambdaDryN2;
 
                 // Assuming Raoult's, Daltons law and ideal gas
                 // in order to obtain the partial density of water in the air phase
-                Scalar temperature = fluidState.temperature(phaseIdx) ;
-                Scalar pressure = fluidState.pressure(phaseIdx);
                 Scalar partialPressure  = pressure * xH2O;
 
                 Scalar lambdaH2O =
@@ -689,7 +680,7 @@ public:
                 return lambdaN2 + lambdaH2O;
             }
             else
-                return lambdaPureN2; // conductivity of Nitrogen [W / (m K ) ]
+                return lambdaDryN2; // conductivity of Nitrogen [W / (m K ) ]
         }
     }
 
