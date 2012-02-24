@@ -5,10 +5,10 @@ if BUILD_HANDBOOK
 #EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 TEXSOURCE = *.tex ./EPS/*.eps
 MAINDOCS = dumux-handbook.dvi dumux-handbook.pdf dumux-handbook.ps
-EXTRA_DIST = dumux-handbook.pdf 
+EXTRA_DIST = dumux-handbook.pdf $(TEXSOURCE) dumux-handbook.bib ModelDescriptions/*.tex
 #Makefile.dist.in Makefile.dist.am
 
-DOCS = $(HTDOCS) $(MAINDOCS) $(WMLDOCS)
+DOCS = $(HTDOCS) $(MAINDOCS)
 
 # setting like in dune-web
 BASEDIR=../..
