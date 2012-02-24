@@ -424,7 +424,7 @@ namespace Opm
 	// parametrized by t in [0, t_max], t_out is equal to t when the curve hits the bounding
 	// rectangle, x_out=(s_out, c_out) denotes the values of s and c at that point.
 
-	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, double& t_max_arg)
+	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, double& t_max_out, double& t_out_out)
 	{
 	    double t0, t1;
 	    x[0] = x_arg[0];
@@ -455,7 +455,8 @@ namespace Opm
 	    x_out[0] = x[0] + t_out*direction[0];
 	    x_out[1] = x[1] + t_out*direction[1];
 	    t_max = t_out + 1;
-	    t_max_arg = t_max;
+	    t_max_out = t_max;
+	    t_out_out = t_out;
 	}
 
 
@@ -465,8 +466,8 @@ namespace Opm
 		x_new[0] = x[0] + t*direction[0];
 		x_new[1] = x[1] + t*direction[1];
 	    } else {
-		x_new[0] = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
-		x_new[1] = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+		x_new[0] = 1/(t_max-t_out)*((t_max - t)*x_out[0] + end_point[0]*(t - t_out));
+		x_new[1] = 1/(t_max-t_out)*((t_max - t)*x_out[1] + end_point[1]*(t - t_out));
 	    }
 	}
 
@@ -480,10 +481,10 @@ namespace Opm
 		s = x[0] + t*direction[0];
 		c = x[1] + t*direction[1];
 	    } else {
-		s = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
-		c = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+		s = 1/(t_max-t_out)*((t_max - t)*x_out[0] + end_point[0]*(t - t_out));
+		c = 1/(t_max-t_out)*((t_max - t)*x_out[1] + end_point[1]*(t - t_out));
 	    }
- 	    return s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
+	    return s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
 	}
 
 
@@ -555,12 +556,12 @@ namespace Opm
 		x_new[0] = x[0] + t*direction[0];
 		x_new[1] = x[1] + t*direction[1];
 	    } else {
-		x_new[0] = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
-		x_new[1] = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+		x_new[0] = 1/(t_max-t_out)*((t_max - t)*x_out[0] + end_point[0]*(t - t_out));
+		x_new[1] = 1/(t_max-t_out)*((t_max - t)*x_out[1] + end_point[1]*(t - t_out));
 	    }
 	}
 
-	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, double& t_max_arg)
+	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, double& t_max_out, double& t_out_out)
 	{
 	    bool if_t0 = true;
 	    bool if_t1 = true;
@@ -609,7 +610,8 @@ namespace Opm
 	    x_out[0] = x[0] + t_out*direction[0];
 	    x_out[1] = x[1] + t_out*direction[1];
 	    t_max = t_out + 1;
-	    t_max_arg = t_max;
+	    t_max_out = t_max;
+	    t_out_out = t_out;
 	}
 
 	double operator()(double t) const
@@ -620,8 +622,8 @@ namespace Opm
 		s = x[0] + t*direction[0];
 		c = x[1] + t*direction[1];
 	    } else {
-		s = (t_max - t)*x_out[0] + end_point[0]*(t - t_out);
-		c = (t_max - t)*x_out[1] + end_point[1]*(t - t_out);
+		s = 1/(t_max-t_out)*((t_max - t)*x_out[0] + end_point[0]*(t - t_out));
+		c = 1/(t_max-t_out)*((t_max - t)*x_out[1] + end_point[1]*(t - t_out));
 	    }
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
@@ -635,6 +637,171 @@ namespace Opm
 	}
     };
 
+    struct TransportModelPolymer::ResidualDir
+    {
+	int cell;
+	int s_or_c; // s_or_c = 0 if s direction, s_or_c = 1 if c direction,
+	double s0;
+	double c0;
+	double cmax0;
+	double influx;  // sum_j min(v_ij, 0)*f(s_j)
+	double influx_polymer;  // sum_j min(v_ij, 0)*f(s_j)*mc(c_j)
+	double outflux; // sum_j max(v_ij, 0)
+	double porosity;
+	double dtpv;    // dt/pv(i)
+	double direction[2];
+	double end_point[2];
+	double x_max[2];
+	double x_min[2];
+	double t_out;
+	double t_max; // t_max = t_out + 1
+	double x_out[2];
+	double x[2];
+	const TransportModelPolymer& tm;
+
+	ResidualDir(const TransportModelPolymer& tmodel, int cell_index)
+	    : tm(tmodel)
+	{
+	    cell    = cell_index;
+	    s0      = tm.saturation_[cell];
+	    c0      = tm.concentration_[cell];
+	    cmax0   = tm.cmax_[cell];
+            double dflux       = -tm.source_[cell];
+            bool src_is_inflow = dflux < 0.0;
+	    influx  =  src_is_inflow ? dflux : 0.0;
+	    influx_polymer = src_is_inflow ? dflux*tm.computeMc(tm.inflow_c_) : 0.0;
+	    outflux = !src_is_inflow ? dflux : 0.0;
+	    dtpv    = tm.dt_/tm.porevolume_[cell];
+	    porosity = tm.porosity_[cell];
+
+	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
+		int f = tm.grid_.cell_faces[i];
+		double flux;
+		int other;
+		// Compute cell flux
+		if (cell == tm.grid_.face_cells[2*f]) {
+		    flux  = tm.darcyflux_[f];
+		    other = tm.grid_.face_cells[2*f+1];
+		} else {
+		    flux  =-tm.darcyflux_[f];
+		    other = tm.grid_.face_cells[2*f];
+		}
+		// Add flux to influx or outflux, if interior.
+		if (other != -1) {
+		    if (flux < 0.0) {
+			influx  += flux*tm.fractionalflow_[other];
+			influx_polymer += flux*tm.fractionalflow_[other]*tm.mc_[other];
+		    } else {
+			outflux += flux;
+		    }
+		}
+	    }
+	}
+
+
+	// For a given point x=(s,c) in the s,c plane, set up a piecewise linear curve wich starts
+	// from "x" with slope "direction", hits the bound of the rectangle
+	// [s_min,s_max]x[c_min,c_max] and continue in a straight line to "end_point".  The curve is
+	// parametrized by t in [0, t_max], t_out is equal to t when the curve hits the bounding
+	// rectangle, x_out=(s_out, c_out) denotes the values of s and c at that point.
+
+	void setup(const double* x_arg, const double* direction_arg, const double* end_point_arg, const double* x_min_arg, const double* x_max_arg, const int& s_or_c_arg, double& t_max_out, double& t_out_out)
+	{
+	    bool if_t0 = true;
+	    bool if_t1 = true;
+	    double t0, t1;
+
+	    s_or_c = s_or_c_arg;
+	    x[0] = x_arg[0];
+	    x[1] = x_arg[1];
+	    x_max[0] = x_max_arg[0];
+	    x_max[1] = x_max_arg[1];
+	    x_min[0] = x_min_arg[0];
+	    x_min[1] = x_min_arg[1];
+	    direction[0] = direction_arg[0];
+	    direction[1] = direction_arg[1];
+	    end_point[0] = end_point_arg[0];
+	    end_point[1] = end_point_arg[1];
+	    if ((end_point[0]-x[0])*direction[0] + (end_point[1]-x[1])*direction[1] < 0) {
+		direction[0] *= -1;
+		direction[1] *= -1;
+	    }
+	    if (direction[0] == 0) {
+		if_t0 = false;
+	    } else {
+		if (direction[0] > 0) {
+		    t0 = (x_max[0] - x[0])/direction[0];
+		} else {
+		    t0 = (x_min[0] - x[0])/direction[0];
+		}
+	    }
+	    if (direction[1] == 0) {
+		if_t1 = false;
+	    } else {
+		if (direction[1] > 0) {
+		    t1 = (x_max[1] - x[1])/direction[1];
+		} else {
+		    t1 = (x_min[1] - x[1])/direction[1];
+		}
+	    }
+	    if (if_t0 && if_t1) {
+		t_out = std::min(t0, t1);
+	    } else {
+		if (if_t0) {
+		    t_out = t0;
+		} else {
+		    t_out = t1;
+		}
+	    }
+	    x_out[0] = x[0] + t_out*direction[0];
+	    x_out[1] = x[1] + t_out*direction[1];
+	    t_max = t_out + 1;
+	    t_max_out = t_max;
+	    t_out_out = t_out;
+	}
+
+
+	// Compute x=(s,c) for a given t (t is the parameter for the piecewise linear curve)
+	void compute_new_x(double* x_new, const double t) {
+	    if (t <= t_out) {
+		x_new[0] = x[0] + t*direction[0];
+		x_new[1] = x[1] + t*direction[1];
+	    } else {
+		x_new[0] = 1/(t_max-t_out)*((t_max - t)*x_out[0] + end_point[0]*(t - t_out));
+		x_new[1] = 1/(t_max-t_out)*((t_max - t)*x_out[1] + end_point[1]*(t - t_out));
+	    }
+	}
+
+
+
+	double operator()(double t) const
+	{
+	    double s;
+	    double c;
+	    if (t <= t_out) {
+		s = x[0] + t*direction[0];
+		c = x[1] + t*direction[1];
+	    } else {
+		s = 1/(t_max-t_out)*((t_max - t)*x_out[0] + end_point[0]*(t - t_out));
+		c = 1/(t_max-t_out)*((t_max - t)*x_out[1] + end_point[1]*(t - t_out));
+	    }
+	    if (s_or_c == 0) {
+		return s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
+	    } else if (s_or_c == 1) {
+		double ff = tm.fracFlow(s, c, cell);
+		double mc = tm.computeMc(c);
+		double dps = tm.polyprops_.dps;
+		double rhor = tm.polyprops_.rhor;
+		double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+		double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+		return (s - dps)*c - (s0 - dps)*c0
+		    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+		    + dtpv*(outflux*ff*mc + influx_polymer);
+	    } else {
+		std::cout << "problem!" << std::endl;
+	    }
+	}
+    };
 
     void TransportModelPolymer::solveSingleCell(const int cell)
     {
@@ -667,7 +834,7 @@ namespace Opm
     void TransportModelPolymer::solveSingleCellSplitting(int cell)
     {
 	const int max_iters_falsi = 20;
-	const double tol = 1e-9;
+	const double tol = 1e-7;
 	int iters_used_falsi = 0;
 	const int max_iters_split = 20;
 	int iters_used_split = 0;
@@ -675,6 +842,9 @@ namespace Opm
 	Residual residual(*this, cell);
 	ResidualSDir residual_s_dir(*this, cell);
 	ResidualCDir residual_c_dir(*this, cell);
+	// const int sdir = 0;
+	// const int cdir = 1;
+	// ResidualDir residual_dir(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
 	double res[2];
 	residual.computeResidual(x, res);
@@ -688,6 +858,7 @@ namespace Opm
 	double x_max[2] = {1.0, polyprops_.c_max_limit};
 	double t;
 	double t_max;
+	double t_out;
 	double direction[2];
 	double end_point[2];
 	double gradient[2];
@@ -699,15 +870,24 @@ namespace Opm
 		    end_point[1] = x_min[1];
 		    direction[0] = end_point[0] - x[0];
 		    direction[1] = end_point[1] - x[1];
-		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_s_dir(t_out) >= 0) {
+			t_max = t_out;
+		    }
 		} else {
 		    end_point[0] = x_min[0];
 		    end_point[1] = x_max[1];
 		    direction[0] = end_point[0] - x[0];
 		    direction[1] = end_point[1] - x[1];
-		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_s_dir(t_out) <= 0) {
+			t_max = t_out;
+		    }
 		}
 		t = modifiedRegulaFalsi(residual_s_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		if (std::abs(residual_s_dir(t)) > tol) {
+		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
+		}
 		residual_s_dir.compute_new_x(x, t);
 	    }
 	    res_s_done = true;
@@ -719,15 +899,24 @@ namespace Opm
 		    end_point[1] = x_max[1];
 		    direction[0] = end_point[0] - x[0];
 		    direction[1] = end_point[1] - x[1];
-		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_c_dir(t_out) >= 0) {
+			t_max = t_out;
+		    }
 		} else {
 		    end_point[0] = x_min[0];
 		    end_point[1] = x_min[1];
 		    direction[0] = end_point[0] - x[0];
 		    direction[1] = end_point[1] - x[1];
-		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_c_dir(t_out) <= 0) {
+			t_max = t_out;
+		    }
 		}
 		t = modifiedRegulaFalsi(residual_c_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		if (std::abs(residual_c_dir(t)) > tol) {
+		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
+		}
 		residual_c_dir.compute_new_x(x, t);
 	    }
 	    res_s_done = false;
@@ -739,15 +928,37 @@ namespace Opm
 		direction[0] = -gradient[1];
 		direction[1] = gradient[0];
 		if (res[1] < 0) {
+		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
+		    // increasing). We do it only for a significantly large res[1]
+		    if (res[1] < -tol ) {
+			x_min[0] = x[0];
+			x_min[1] = x[1];
+		    }
+		    //
 		    end_point[0] = x_max[0];
 		    end_point[1] = x_max[1];
-		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_c_dir(t_out) >= 0) {
+			t_max = t_out;
+		    }
 		} else {
+		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is increasing)
+		    if (res[1] > tol) {
+			x_max[0] = x[0];
+			x_max[1] = x[1];
+		    }
+		    //
 		    end_point[0] = x_min[0];
 		    end_point[1] = x_min[1];
-		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_c_dir(t_out) <= 0) {
+			t_max = t_out;
+		    }
 		}
 		t = modifiedRegulaFalsi(residual_c_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		if (std::abs(residual_c_dir(t)) > tol) {
+		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
+		}
 		residual_c_dir.compute_new_x(x, t);
 		residual.computeGradient(x, res, gradient, false, 1);
 		res_s_done = false;
@@ -757,13 +968,22 @@ namespace Opm
 		if (res[0] < 0) {
 		    end_point[0] = x_max[0];
 		    end_point[1] = x_min[1];
-		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_s_dir(t_out) >= 0) {
+			t_max = t_out;
+		    }
 		} else {
 		    end_point[0] = x_min[0];
 		    end_point[1] = x_max[1];
-		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max);
+		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+		    if (residual_s_dir(t_out) <= 0) {
+			t_max = t_out;
+		    }
 		}
 		t = modifiedRegulaFalsi(residual_s_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
+		if (std::abs(residual_s_dir(t)) > tol) {
+		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
+		}
 		residual_s_dir.compute_new_x(x, t);
 		res_s_done = true;
 		residual.computeGradient(x, res, gradient, true, 1);
@@ -830,11 +1050,11 @@ namespace Opm
 	} while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
 	if (max_s_change > tol_) {
 	    THROW("In solveMultiCell(), we did not converge after "
-	    	  << num_iters << " iterations. Delta s = " << max_s_change);
+		  << num_iters << " iterations. Delta s = " << max_s_change);
 	}
 	if (max_c_change > tol_) {
 	    THROW("In solveMultiCell(), we did not converge after "
-	    	  << num_iters << " iterations. Delta c = " << max_c_change);
+		  << num_iters << " iterations. Delta c = " << max_c_change);
 	}
 	std::cout << "Solved " << num_cells << " cell multicell problem in "
 		  << num_iters << " iterations." << std::endl;

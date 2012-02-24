@@ -131,6 +131,7 @@ namespace Opm
 	// Residual functions which are used in splitting method
 	struct ResidualCDir;
 	struct ResidualSDir;
+	struct ResidualDir;
 	struct Residual;
 
 	double fracFlow(double s, double c, int cell) const;
