@@ -9,7 +9,6 @@ effort to write them in the first place. The remainder of this section
 is almost a verbatim copy of the DUNE coding guidelines found at
 \cite{DUNE-HP}. These guidelines are also recommended for coding with
 \Dumux as developer and user.
-\\
 
 In order to keep the code maintainable we have decided upon a set of
 coding rules.  Some of them may seem like splitting hairs to you, but
@@ -20,12 +19,12 @@ been written by oneself.
 \item Naming: 
 \begin{itemize}
 \item Comments: they are helpful! Please document freely what each part of your code does. 
-\item all comments / documentation is in english
+\item all comments / documentation is in English
 \item Variables: Names for variables should only consist of letters and digits. The first letter should be a lower case one. If your variable names consists of several words, then the first letter of each new word should be capital. As we decided on the only exception are the begin and end methods.
 \item Variables should be named as self-explaining as possible: especially abbreviations should be avoided (saturation in stead of S)
 \item Method parameters which are not self-explanatory should always
   have a meaningful comment a at calling sites. Example:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
    localResidual.eval(/*includeBoundaries=*/true);
 \end{lstlisting}
 \item Private Data Variables: Names of private data variables end with an underscore and are the only variables that contain underscores. 

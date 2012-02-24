@@ -24,7 +24,7 @@ This list shows the algorithmic outline of a typical \Dumux run employing a full
 \begin{tabbing}
 \textbf{\numberThis{main}{init}} 			\hspace{0.01\textwidth} \=
 \textbf{\numberThis{time step}{prep}} 			\hspace{0.01\textwidth} \=
-\textbf{\numberThis{\textsc{Newton} step}{elem}} 	\hspace{0.01\textwidth}	\= 
+\textbf{\numberThis{Newton step}{elem}} 	\hspace{0.01\textwidth}	\= 
 \textbf{\numberThis{Element}{calc}} 			\hspace{0.01\textwidth} \\
 \\
 initialize \\
@@ -88,7 +88,7 @@ finalize\\
 \textcircled{\ref{init}} main\\
 \textcircled{\ref{prep}} time step\\
 \textcircled{\ref{elem}} \textsc{Newton} step\\
-\textcircled{\ref{calc}} Element-wise assembly\\
+\textcircled{\ref{calc}} Element-wise assembly
 
 \section{Structure --  by implementation}
  \label{implementation}
@@ -413,7 +413,7 @@ $\left \lbrace
      \verb?derivative is (residual(+eps) - residual(-eps))/2eps?\\
   \end{tabular}
   \right .
- $\\
+ $
     \end{minipage}
 \hspace{.25\textwidth}
   {\scriptsize$\overrightarrow{}$ }

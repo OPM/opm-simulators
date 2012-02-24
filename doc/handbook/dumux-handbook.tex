@@ -28,6 +28,15 @@
  aboveskip=\bigskipamount,
  belowskip=\bigskipamount
 }
+% for listings of DuMuX code
+\lstdefinestyle{DumuxCode}
+ {language=C++,
+ basicstyle=\ttfamily\scriptsize,
+ numbers=left,
+ numberstyle=\tiny,
+ numbersep=5pt,
+ breaklines=true
+}
 \lstset{showstringspaces=false}
 
 \usepackage{hyperref}
@@ -41,6 +50,8 @@
 \usepackage{rotating}
 \usepackage{subfig}
 \usepackage{units}
+\usepackage{url}
+\usepackage{breakurl}
 
 \ifpdf
 \usepackage{auto-pst-pdf}
@@ -55,13 +66,12 @@
 }
 \usepackage{layout}
 
-%\usepackage{ngerman}
 \usepackage[english]{babel}
 
 \DeclareGraphicsExtensions{.eps, .jpg}
 
 \newcommand{\Dune}{{DUNE}\xspace}
-\newcommand{\Dumux}{Du\-Mu$^x$\xspace}
+\newcommand{\Dumux}{\texorpdfstring{Du\-Mu$^x$\xspace}{DuMuX}}
 
 \newcommand{\porosity}{\phi}
 \newcommand{\saturation}{S}

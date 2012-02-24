@@ -43,7 +43,7 @@ namespace \texttt{Dumux::Properties}.
 \subsection*{Defining Type Tags}
 
 New nodes in the type tag hierarchy can be defined using
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 NEW_TYPE_TAG(NewTypeTagName, INHERITS_FROM(BaseTagName1, BaseTagName2, ...));
 \end{lstlisting}
 where the \texttt{INHERITS\_FROM} part is optional. To avoid
@@ -52,7 +52,7 @@ once for a program.
 
 \vskip1ex\noindent
 Example:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 namespace Dumux {
 namespace Properties {
 NEW_TYPE_TAG(MyBaseTypeTag1);
@@ -66,7 +66,7 @@ NEW_TYPE_TAG(MyDerivedTypeTag, INHERITS_FROM(MyBaseTypeTag1, MyBaseTypeTag2));
 
 New property tags -- i.e. labels for properties -- are declared
 using
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 NEW_PROP_TAG(NewPropTagName);
 \end{lstlisting}
 A property tag can be declared arbitrarily often, in fact it is
@@ -75,7 +75,7 @@ are used.
 
 \vskip1ex\noindent
 Example:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 namespace Dumux {
 namespace Properties {
 NEW_PROP_TAG(MyPropertyTag);
@@ -86,7 +86,7 @@ NEW_PROP_TAG(MyPropertyTag);
 
 The value of a property on a given node of the type tag hierarchy is
 defined using
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 SET_PROP(TypeTagName, PropertyTagName)
 {
   // arbitrary body of a struct
@@ -97,7 +97,7 @@ although properties may be overwritten for derived type tags.
 
 Also, the following convenience macros are available to define simple
 properties:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 SET_TYPE_PROP(TypeTagName, PropertyTagName, type);
 SET_BOOL_PROP(TypeTagName, PropertyTagName, booleanValue);
 SET_INT_PROP(TypeTagName, PropertyTagName, integerValue);
@@ -106,7 +106,7 @@ SET_SCALAR_PROP(TypeTagName, PropertyTagName, floatingPointValue);
 
 \vskip1ex\noindent
 Example:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 namespace Dumux {
 namespace Properties {
 NEW_TYPE_TAG(MyTypeTag);
@@ -135,7 +135,7 @@ SET_SCALAR_PROP(MyTypeTag, MyScalarValue, 12345.67890);
 Sometimes some inherited properties do not make sense for a certain
 node in the type tag hierarchy. These properties can be explicitly
 un-set using
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 UNSET_PROP(TypeTagName, PropertyTagName);
 \end{lstlisting}
 The un-set property can not be set for the same type tag, but of
@@ -143,7 +143,7 @@ course derived type tags may set it again.
 
 \vskip1ex\noindent
 Example:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 namespace Dumux {
 namespace Properties {
 NEW_TYPE_TAG(BaseTypeTag);
@@ -169,11 +169,11 @@ ought to be used.
 \subsection*{Retrieving Property Values}
 
 The value of a property can be retrieved using
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 GET_PROP(TypeTag, PropertyTag)
 \end{lstlisting}
 or using the convenience macros
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 GET_PROP_TYPE(TypeTag, PropertyTag)
 GET_PROP_VALUE(TypeTag, PropertyTag)
 \end{lstlisting}
@@ -182,19 +182,19 @@ GET_PROP_VALUE(TypeTag, PropertyTag)
 \noindent
 The first convenience macro retrieves the type defined using
 \texttt{SET\_TYPE\_PROP} and is equivalent to
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 GET_PROP(TypeTag, PropertyTag)::type
 \end{lstlisting}
 while the second convenience macro retrieves the value of any property
-defined using \texttt{SET\_\{INT,BOOL,SCALAR\}\_PROP} and is
+defined using one of the macros \texttt{SET\_}$\{$\texttt{INT,BOOL,SCALAR}$\}$\texttt{\_PROP} and is
 equivalent to
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 GET_PROP(TypeTag, PropertyTag)::value
 \end{lstlisting}
 
 \vskip1ex\noindent
 Example:\nolinebreak
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 template <TypeTag>
 class MyClass {
   // retrieve the ::value attribute of the 'NumEq' property
@@ -219,7 +219,7 @@ retrieve other properties using the \texttt{GET\_PROP} macros.
 
 \vskip1ex\noindent
 Example:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{lstlisting}[style=DumuxCode]
 SET_PROP(MyModelTypeTag, Vector)
 {
 private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -257,7 +257,7 @@ diagram for the car types above might look like outlined in Figure
 
 Using the \Dumux property system, this inheritance hierarchy is
 defined by:
-\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[name=propsyscars,style=DumuxCode]
 #include <dumux/common/propertysystem.hh>
 #include <iostream>
 
@@ -275,7 +275,7 @@ Figure \ref{fig:car-propertynames} lists a few property names which
 make sense for at least one of the nodes of Figure
 \ref{fig:car-hierarchy}. These property names can be declared as
 follows:
-\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[name=propsyscars,style=DumuxCode]
 NEW_PROP_TAG(TopSpeed); // [km/h]
 NEW_PROP_TAG(NumSeats); // []
 NEW_PROP_TAG(CanonCaliber); // [mm]
@@ -311,7 +311,7 @@ the following:
 \noindent
 Using the \Dumux property system, these assumptions are formulated
 using
-\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[name=propsyscars,style=DumuxCode]
 SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, GasUsage) * 30);
 SET_INT_PROP(CompactCar, NumSeats, 5);
 SET_INT_PROP(CompactCar, GasUsage, 4);
@@ -337,7 +337,7 @@ SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), TopSpeed));
 \noindent
 At this point, the Hummer-H1 has a $120\;mm$ canon which it inherited
 from its military ancestor. It can be removed by
-\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[name=propsyscars,style=DumuxCode]
 UNSET_PROP(HummerH1, CanonCaliber);
 
 }} // close namespaces
@@ -346,7 +346,7 @@ UNSET_PROP(HummerH1, CanonCaliber);
 \noindent
 Now property values can be retrieved and some diagnostic messages can
 be generated. For example
-\begin{lstlisting}[name=propsyscars,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[name=propsyscars,style=DumuxCode]
 int main()
 {
     std::cout << "top speed of sedan: " << GET_PROP_VALUE(TTAG(Sedan), TopSpeed) << "\n";
@@ -359,7 +359,7 @@ int main()
 }
 \end{lstlisting}
 will yield the following output:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
+\begin{lstlisting}[style=DumuxCode]
 top speed of sedan: 210
 top speed of truck: 100
 Properties for Sedan:

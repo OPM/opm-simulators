@@ -42,8 +42,7 @@ effects are neglected.
 Listing \ref{tutorial-deoucpled:mainfile} shows how the main file, which has to be executed, has to be set up, if the problem described above is to be solved using a decoupled model. This main file can be found in the directory \texttt{/tutorial} of the stable part of \Dumux.
 
 \begin{lst}[File tutorial/tutorial\_decoupled.cc]\label{tutorial-deoucpled:mainfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
-numberstyle=\tiny, numbersep=5pt, firstline=28]{../../tutorial/tutorial_decoupled.cc}
+\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=28]{../../tutorial/tutorial_decoupled.cc}
 \end{lst}
 
 First, from line \ref{tutorial-decoupled:include-begin} to line
@@ -71,7 +70,7 @@ precedence. Listing~\ref{tutorial-decoupled:parameter-file} shows the
 default parameter file for the tutorial problem.
 
 \begin{lst}[File tutorial/tutorial\_decoupled.input]\label{tutorial-decoupled:parameter-file} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny]{../../tutorial/tutorial_decoupled.input}
+\lstinputlisting[style=DumuxCode]{../../tutorial/tutorial_decoupled.input}
 \end{lst}
 
 To provide an error message, the usage message which is displayed to
@@ -90,8 +89,7 @@ so-called \textit{problem file} as shown in listing
 \texttt{tutorialproblem\_decoupled.hh}.
 
 \begin{lst}[File tutorial/tutorialproblem\_decoupled.hh]\label{tutorial-decoupled:problemfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-numberstyle=\tiny, numbersep=5pt, firstline=28]{../../tutorial/tutorialproblem_decoupled.hh}
+\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=28]{../../tutorial/tutorialproblem_decoupled.hh}
 \end{lst}
 
 First, both \Dune  grid handlers and the decoupled model of \Dumux 
@@ -158,7 +156,7 @@ function argument: Both are \Dune entities, depending on whether the parameter o
 There are the methods for general parameters, source- or
 sinkterms, boundary conditions (lines \ref{tutorial-decoupled:bctype} to
 \ref{tutorial-decoupled:neumann}) and initial values for the transported
-quantity in line \label{tutorial-decoupled:initial}. For more information
+quantity in line \ref{tutorial-decoupled:initial}. For more information
 on the functions, consult the documentation in the code.
 
 \subsection{The definition of the parameters that are dependent on space}\label{tutorial-decoupled:description-spatialParameters}
@@ -167,8 +165,7 @@ Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
 \verb+tutorialspatialparameters_decoupled.hh+:
 
 \begin{lst}[File tutorial/tutorialspatialparameters\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-numberstyle=\tiny, numbersep=5pt, firstline=26]{../../tutorial/tutorialspatialparameters_decoupled.hh}
+\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=26]{../../tutorial/tutorialspatialparameters_decoupled.hh}
 \end{lst}
 As this file only slightly differs from the coupled version, consult 
 chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
@@ -194,7 +191,7 @@ As you can see, the simulation creates many output files. To reduce these in ord
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
 with edge lengths of x = 300 m \\  and y = 300 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 10$ m. \\
-Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes.  \\
+Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes.
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:

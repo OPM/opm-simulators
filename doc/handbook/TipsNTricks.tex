@@ -53,30 +53,32 @@ which translates into a line in the output file reading\\
 \lstinline{# This was written from [..]/DUMUX_kila/dumux/dumux/io/outputToFile.hh, line 261}\\
 This can also be very useful, if you want to have information about where some warning or debug information was issued. 
 
-\paragraph{Opttion files optim.opts and debug.opts}
+\paragraph{Option files optim.opts and debug.opts}
 
 As explained on page \pageref{buildIt} \Dune and \Dumux are built with the help of the \texttt{dunecontrol}. 
-A lot of options need to be specified for that, which is done in the \verb+debug.opts+ resp. \verb+optim.opts+ 
-(plus \verb+.suse11.2+ if applicable) in your \verb+dumux-devel+ directory. These two files differ in the way \Dune / \Dumux is compiled: either for debugging or for fast simulation. Switching between these two states is really 
+A lot of options need to be specified for that, which is done in the \texttt{debug.opts} resp. \texttt{optim.opts}
+(plus \texttt{.suse11.2} if applicable) in your \texttt{dumux-devel} directory. These two files differ in the way \Dune and \Dumux are compiled: either for debugging or for fast simulation. Switching between these two states is really 
 worth it: speedup of factor $\approx 2$. 
 
-If you want your \Dumux fast than simply build dunecontrol with the \verb+optim.opts+. BUT: Programs that are compiled with optimization can hardly 
+If you want your \Dumux fast than simply build dunecontrol with the \texttt{optim.opts}. BUT: Programs that are compiled with optimization can hardly 
 be debugged because the debugger gets confused. But the cool thing is, that you do NOT need to run dunecontrol if you want to start debugging. You can simply remove the optimization options from your application's Makefile:
 \begin{itemize}
 \item open your application's Makefile with the text editor of your choice
-\item find the line including \verb+CXXFLAGS = [...]+
+\item find the line including \texttt{CXXFLAGS =}
 \item these are the options given to the C++ compiler
-\item add \verb+-g+ (debugging symbols)
-\item remove  \verb+-O3+ (third level optimization, i.e. do not care for anything but execution speed),  \verb+-march=native+ and \verb+-DNDEBUG+.
+\item add \texttt{-g} (debugging symbols)
+\item remove \texttt{-O3} (third level optimization, i.\,e. do not care for anything but execution speed),  \texttt{-march=native} and \texttt{-DNDEBUG}.
 \item build your application again. 
-\item as long as you only debug your application (and no \Dune stuff) this works, otherwise recompile with dunecontrol and \verb+debug.opts+
+\item as long as you only debug your application (and no \Dune stuff) this works, otherwise recompile with dunecontrol and \texttt{debug.opts}
 \item compiling without optimization takes also shorter time
 \end{itemize}
 
-(The other possibility is to run dunecontrol with \verb+debug.opts+ and afterwards adding \verb+-O3+ into your application Makefile. The performance  penalty does not make a big difference and so do the other options besides \verb+-O3+.)
+(The other possibility is to run dunecontrol with \texttt{debug.opts} and afterwards adding \texttt{-O3} into your application Makefile. The performance penalty does not make a big difference and so do the other options besides \texttt{-O3})
 
-Debugging with the optimization options active will lead to erratic beviour while debugging. 
+Debugging with the optimization options active will lead to erratic behavior while debugging. 
 
 \paragraph{Faster build with dunecontrol}
-A complete build using \texttt{./dune-common/bin/dunecontrol --opts=\$DUMUX\_ROOT/debug.opts all} takes some time. If there were just small changes in the folder structure, it is usually sufficient to run dunecontrol with option \texttt{autogen} instead of \texttt{all}, and afterwards creating the makefiles with option \texttt{configure}.
+A complete build using \texttt{dunecontrol} takes some time. If there were just small changes in the folder structure, it is usually sufficient to run dunecontrol with option \texttt{autogen} instead of \texttt{all}, and afterwards creating the makefiles with option \texttt{configure}.
+
+An other possibility to speed up dunecontrol is caching of configure results. Add to the configure flags the line \texttt{--cache-file=/tmp/dune-config.cache} in you options file.
 

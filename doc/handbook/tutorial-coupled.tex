@@ -57,8 +57,7 @@ model. This file has to be compiled and executed in order to solve the problem d
 above.
 
 \begin{lst}[File tutorial/tutorial\_coupled.cc]\label{tutorial-coupled:mainfile} \mbox{}
-  \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-  numberstyle=\tiny, numbersep=5pt, firstline=29]{../../tutorial/tutorial_coupled.cc}
+  \lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=29]{../../tutorial/tutorial_coupled.cc}
 \end{lst}
 
 From line \ref{tutorial-coupled:include-begin} to line
@@ -88,7 +87,7 @@ precedence. Listing~\ref{tutorial-coupled:parameter-file} shows the
 default parameter file for the tutorial problem.
 
 \begin{lst}[File tutorial/tutorial\_coupled.input]\label{tutorial-coupled:parameter-file} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny]{../../tutorial/tutorial_coupled.input}
+\lstinputlisting[style=DumuxCode]{../../tutorial/tutorial_coupled.input}
 \end{lst}
 
 To provide an error message, the usage message which is displayed to
@@ -107,8 +106,7 @@ so-called \textit{problem file} as shown in
 listing~\ref{tutorial-coupled:problemfile}.
 
 \begin{lst}[File tutorial/tutorialproblem\_coupled.hh]\label{tutorial-coupled:problemfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-numberstyle=\tiny, numbersep=5pt, firstline=28]{../../tutorial/tutorialproblem_coupled.hh}
+\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=28]{../../tutorial/tutorialproblem_coupled.hh}
 \end{lst}
 
 First, a new type tag is created for the problem in line
@@ -262,8 +260,7 @@ should be derived from the base class
 \verb+tutorialspatialparameters_coupled.hh+:
 
 \begin{lst}[File tutorial/tutorialspatialparameters\_coupled.hh]\label{tutorial-coupled:spatialparametersfile} \mbox{}
-\lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left,
-numberstyle=\tiny, numbersep=5pt, firstline=28]{../../tutorial/tutorialspatialparameters_coupled.hh}
+\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=28]{../../tutorial/tutorialspatialparameters_coupled.hh}
 \end{lst}
 
 First, the spatial parameters type tag is created on line
@@ -349,7 +346,7 @@ to make only some small changes in the tutorial files.
 \begin{enumerate}
 
 \item \textbf{Running the Program} \\
-  To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled}. Note, that the time-step size is automatically adapted during the simulation. For the visualization of the results using paraview please refer to section \ref{quick-start-guide}.\\
+  To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled}. Note, that the time-step size is automatically adapted during the simulation. For the visualization of the results using paraview please refer to section \ref{quick-start-guide}.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
@@ -494,7 +491,7 @@ compile the program.
 
 As you have experienced, compilation takes quite some time. Therefore,
 \Dumux provides a simple method to read in parameters at run-time
-via \textit{parameter input files}.\\
+via \textit{parameter input files}.
 
 In the code, parameters can be read via the macro
 \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar,
