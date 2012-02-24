@@ -13,7 +13,6 @@ It is contained in the download section of the \Dumux web page \cite{DUMUX-HP}.
 For example the second line below will check out the required \Dune modules and \texttt{dumux}, 
 \texttt{dumux-devel} and the \texttt{external} folder, which contains some useful external software and libraries.
 Again,  \texttt{joeuser} needs to be replaced by the actual user name.
-
 \begin{lstlisting}[style=Bash]
 $ checkout-dumux -h      # show help,
 $ checkout-dumux -gme -u joeuser -p password -d DUMUX 
@@ -28,26 +27,17 @@ If something fails during the execution of \texttt{dunecontrol} feel free to rep
 but also try to include error details.
 
 It is possible to compile \Dumux with nearly no explicit options to the build system.
-%, but experience showed that the code quality through all parts of \Dune is not yet high enough to give the compiler full 
-%freedom for allowing certain kinds of optimizations. 
 However, for the successful compilation of \Dune and \Dumux, it is currently necessary to pass the
-%As options, switches for the optimization can be set in parts
-%build system for code by default, it is safer to pass 
 the option \texttt{-fno-strict-aliasing} to the C++-compiler
 \cite{WIKIPED-ALIASING}, which is done here via a command-line argument to \texttt{dunecontrol}:
-
-
 \begin{lstlisting}[style=Bash]
 $ # make sure you are in the directory DUNE-Root
 $ ./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all
 \end{lstlisting}
 
-Too many options can make life hard. That's why usually option-files are being used together with dunecontrol and its sub-tools.
+Too many options can make life hard. That's why usually option files are being used together with dunecontrol and its sub-tools.
 Larger sets of options are kept in them. If you are going to compile with options suited for debugging the code, the following
 can be a starting point:
-
-%Below in command-line make sure to insert the right name of dumux' root directory, which is in the case of installation from tar-files \texttt{dumux-2.0} or in the case of installation from subversion just \texttt{dumux}. For a developer it is also possible to take the options file from \texttt{dumux-devel}.
-
 \begin{lstlisting}[style=Bash]
 $ # make sure you are in the directory DUNE-Root
 $ cp dumux/debug.opts my-debug.opts      # create a personal version
@@ -56,7 +46,6 @@ $ ./dune-common/bin/dunecontrol --opts=my-debug.opts all
 \end{lstlisting}
 
 More optimized code, which is typically not usable for standard debugging tasks, can be produced by 
-
 \begin{lstlisting}[style=Bash]
 $ cp dumux/optim.opts my-optim.opts 
 $ ./dune-common/bin/dunecontrol --opts=my-optim.opts all
