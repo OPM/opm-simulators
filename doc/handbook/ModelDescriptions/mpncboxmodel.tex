@@ -8,13 +8,13 @@
 
 \-The standard multi-\/phase \-Darcy law is used as the equation for the conservation of momentum\-: \[ v_\alpha = - \frac{k_{r\alpha}}{\mu_\alpha} \boldsymbol{K} \left( \text{grad}\left(p_\alpha - \varrho_{\alpha} g\right) \right) \]
 
-\-By inserting this into the equations for the conservation of the mass of each component, one gets one mass-\/continuity equation for each component $\kappa$ \[ \sum_{\kappa} \left( \phi \frac{\partial \varrho_\alpha x_\alpha^\kappa S_\alpha}{\partial t} - \mathrm{div}\; \left\{ \frac{\varrho_\alpha}{\overline M_\alpha} x_\alpha^\kappa \frac{k_{r\alpha}}{\mu_\alpha} \boldsymbol{K} \mathbf{grad}\left( p_\alpha - \varrho_{\alpha} g\right) \right\} \right) = q^\kappa \] with $\overline M_\alpha$ being the average molar mass of the phase $\alpha$\-: \[ \overline M_\alpha = \sum_\kappa M^\kappa \; x_\alpha^\kappa \]
+\-By inserting this into the equations for the conservation of the mass of each component, one gets one mass-\/continuity equation for each component $\kappa$ \[ \sum_{\kappa} \left( \phi \frac{\partial \varrho_\alpha x_\alpha^\kappa S_\alpha}{\partial t} - \mathrm{div}\; \left\{ \frac{\varrho_\alpha}{\overline M_\alpha} x_\alpha^\kappa \frac{k_{r\alpha}}{\mu_\alpha} \boldsymbol{K} \text{grad}\left( p_\alpha - \varrho_{\alpha} g\right) \right\} \right) = q^\kappa \] with $\overline M_\alpha$ being the average molar mass of the phase $\alpha$\-: \[ \overline M_\alpha = \sum_\kappa M^\kappa \; x_\alpha^\kappa \]
 
 \-For the missing $M$ model assumptions, the model assumes that if a fluid phase is not present, the sum of the mole fractions of this fluid phase is smaller than $1$, i.\-e. \[ \forall \alpha: S_\alpha = 0 \implies \sum_\kappa x_\alpha^\kappa \leq 1 \]
 
 \-Also, if a fluid phase may be present at a given spatial location its saturation must be positive\-: \[ \forall \alpha: \sum_\kappa x_\alpha^\kappa = 1 \implies S_\alpha \geq 0 \]
 
-\-Since at any given spatial location, a phase is always either present or not present, the one of the strict equalities on the right hand side is always true, i.\-e. \[ \forall \alpha: S_\alpha \left( \sum_\kappa x_\alpha^\kappa - 1 \right) = 0 \] always holds.
+\-Since at any given spatial location, a phase is always either present or not present, one of the strict equalities on the right hand side is always true, i.\-e. \[ \forall \alpha: S_\alpha \left( \sum_\kappa x_\alpha^\kappa - 1 \right) = 0 \] always holds.
 
 \-These three equations constitute a non-\/linear complementarity problem, which can be solved using so-\/called non-\/linear complementarity functions $\Phi(a, b)$ which have the property \[\Phi(a,b) = 0 \iff a \geq0 \land b \geq0 \land a \cdot b = 0 \]
 
