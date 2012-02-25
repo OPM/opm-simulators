@@ -79,7 +79,6 @@ namespace Opm
 	// 		       &seq[0], &comp[0], &ncomp,
 	// 		       &ia_[0], &ja_[0]);
 
-
 	reorderAndTransport(grid_, darcyflux);
     }
 
@@ -149,6 +148,45 @@ namespace Opm
 	fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
     }
 
+    // namespace {
+    // 	class TofComputer
+    // 	{
+    // 	public:
+    // 	    TofComputer(const int num_cells,
+    // 			const int* ia,
+    // 			const int* ja,
+    // 			const int startcell,
+    // 			std::vector<int>& tof)
+    // 		: ia_(ia),
+    // 		  ja_(ja)
+    // 	    {
+    // 		tof.clear();
+    // 		tof.resize(num_cells, num_cells);
+    // 		tof[startcell] = 0;
+    // 		tof_ = &tof[0];
+    // 		visitTof(startcell);
+    // 	    }
+
+    // 	private:
+    // 	    const int* ia_;
+    // 	    const int* ja_;
+    // 	    int* tof_;
+
+    // 	    void visitTof(const int cell)
+    // 	    {
+    // 		for (int j = ia_[cell]; j < ia_[cell+1]; ++j) {
+    // 		    const int nb_cell = ja_[j];
+    // 		    if (tof_[nb_cell] > tof_[cell] + 1) {
+    // 			tof_[nb_cell] = tof_[cell] + 1;
+    // 			visitTof(nb_cell);
+    // 		    }
+    // 		}
+    // 	    }
+
+    // 	};
+    // } // anon namespace
+
+
     void TransportModelTwophase::solveMultiCell(const int num_cells, const int* cells)
     {
 	// std::ofstream os("dump");
@@ -168,7 +206,7 @@ namespace Opm
 	//     upstream_pos.push_back(0);
 	//     done_pos[0] = 1;
 	//     int current = 0;
-	//     while (new_pos.size() < num_cells) {
+	//     while (int(new_pos.size()) < num_cells) {
 	// 	const int i = upstream_pos[current++];
 	// 	new_pos.push_back(i);
 	// 	const int cell = cells[i];
@@ -188,6 +226,13 @@ namespace Opm
 	// Verdict: amazingly, reduced #iterations by approx. 25%!
 	// int* c = const_cast<int*>(cells);
 	// std::random_shuffle(c, c + num_cells);
+
+	// Experiment: compute topological tof from first cell.
+	// Verdict: maybe useful, not tried to exploit it yet.
+	// std::vector<int> tof;
+	// TofComputer comp(grid_.number_of_cells, &ia_[0], &ja_[0], cells[0], tof);
+	// std::ofstream tofdump("tofdump");
+	// std::copy(tof.begin(), tof.end(), std::ostream_iterator<double>(tofdump, "\n"));
 
 	// Experiment: implement a metric measuring badness of ordering
 	//             as average distance in (cyclic) ordering from
