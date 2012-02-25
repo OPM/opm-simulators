@@ -63,9 +63,11 @@ namespace Opm
 	double* saturation_;        // one per cell
 	std::vector<double> fractionalflow_;  // one per cell
 
-	// Storing the upwind graph for experiments.
-	// std::vector<int> ia_;
-	// std::vector<int> ja_;
+	// Storing the upwind and downwind graphs for experiments.
+	std::vector<int> ia_upw_;
+	std::vector<int> ja_upw_;
+	std::vector<int> ia_downw_;
+	std::vector<int> ja_downw_;
 
 	struct Residual;
 	double fracFlow(double s, int cell) const;
