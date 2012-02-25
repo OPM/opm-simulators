@@ -25,6 +25,11 @@
 
 #include <fstream>
 #include <iterator>
+#include <numeric>
+
+
+// #define EXPERIMENT_GAUSS_SEIDEL
+
 
 namespace Opm
 {
@@ -45,8 +50,12 @@ namespace Opm
 	  dt_(0.0),
 	  saturation_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0)
-	  // ia_(grid.number_of_cells + 1, -1),
-	  // ja_(grid.number_of_faces, -1)
+#ifdef EXPERIMENT_GAUSS_SEIDEL
+	, ia_upw_(grid.number_of_cells + 1, -1),
+	  ja_upw_(grid.number_of_faces, -1),
+	  ia_downw_(grid.number_of_cells + 1, -1),
+	  ja_downw_(grid.number_of_faces, -1)
+#endif
     {
 	if (props.numPhases() != 2) {
 	    THROW("Property object must have 2 phases");
@@ -72,12 +81,20 @@ namespace Opm
 	dt_ = dt;
 	saturation_ = saturation;
 
-	// std::vector<int> seq(grid_.number_of_cells);
-	// std::vector<int> comp(grid_.number_of_cells + 1);
-	// int ncomp;
-	// compute_sequence_graph(&grid_, darcyflux_,
-	// 		       &seq[0], &comp[0], &ncomp,
-	// 		       &ia_[0], &ja_[0]);
+#ifdef EXPERIMENT_GAUSS_SEIDEL
+	std::vector<int> seq(grid_.number_of_cells);
+	std::vector<int> comp(grid_.number_of_cells + 1);
+	int ncomp;
+	compute_sequence_graph(&grid_, darcyflux_,
+			       &seq[0], &comp[0], &ncomp,
+			       &ia_upw_[0], &ja_upw_[0]);
+	const int nf = grid_.number_of_faces;
+	std::vector<double> neg_darcyflux(nf);
+	std::transform(darcyflux, darcyflux + nf, neg_darcyflux.begin(), std::negate<double>());
+	compute_sequence_graph(&grid_, &neg_darcyflux[0],
+			       &seq[0], &comp[0], &ncomp,
+			       &ia_downw_[0], &ja_downw_[0]);
+#endif
 
 	reorderAndTransport(grid_, darcyflux);
     }
@@ -263,6 +280,68 @@ namespace Opm
 	// std::cout << "Average distance from upstream neighbours: " << diffsum/double(num_cells)
 	// 	  << std::endl;
 
+#ifdef EXPERIMENT_GAUSS_SEIDEL
+	// Experiment: when a cell changes more than the tolerance,
+	//             mark all downwind cells as needing updates. After
+	//             computing a single update in each cell, use marks
+	//             to guide further updating. Clear mark in cell when
+	//             its solution gets updated.
+	// Verdict: this is a good one! Approx. halved total time.
+	std::vector<int> needs_update(num_cells, 1);
+	// This one also needs the mapping from all cells to
+	// the strongly connected subset to filter out connections 
+	std::vector<int> pos(grid_.number_of_cells, -1);
+	for (int i = 0; i < num_cells; ++i) {
+	    const int cell = cells[i];
+	    pos[cell] = i;
+	}
+
+	// Note: partially copied from below.
+	const double tol = 1e-9;
+	const int max_iters = 300;
+	// Must store s0 before we start.
+	std::vector<double> s0(num_cells);
+	// Must set initial fractional flows before we start.
+	for (int i = 0; i < num_cells; ++i) {
+	    const int cell = cells[i];
+	    fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
+	    s0[i] = saturation_[cell];
+	}
+	// Solve once in each cell.
+	int num_iters = 0;
+	int update_count = 0; // Change name/meaning to cells_updated?
+	do {
+	    update_count = 0; // Must reset count for every iteration.
+	    for (int i = 0; i < num_cells; ++i) {
+		if (!needs_update[i]) {
+		    continue;
+		}
+		++update_count;
+		const int cell = cells[i];
+		const double old_s = saturation_[cell];
+		saturation_[cell] = s0[i];
+		solveSingleCell(cell);
+		const double s_change = std::fabs(saturation_[cell] - old_s);
+		if (s_change > tol) {
+		    // Mark downwind cells.
+		    for (int j = ia_downw_[cell]; j < ia_downw_[cell+1]; ++j) {
+			const int downwind_cell = ja_downw_[j];
+			needs_update[pos[downwind_cell]] = 1;
+		    }
+		}
+		// Unmark this cell.
+		needs_update[i] = 0;
+	    }
+	    // std::cout << "Iter = " << num_iters << "    update_count = " << update_count << std::endl;
+	} while (update_count > 0 && ++num_iters < max_iters);
+	if (update_count > 0) {
+	    THROW("In solveMultiCell(), we did not converge after "
+	    	  << num_iters << " iterations. Remaining update count = " << update_count);
+	}
+	std::cout << "Solved " << num_cells << " cell multicell problem in "
+		  << num_iters << " iterations." << std::endl;
+
+#else
 	double max_s_change = 0.0;
 	const double tol = 1e-9;
 	const int max_iters = 300;
@@ -283,11 +362,12 @@ namespace Opm
 		const double old_s = saturation_[cell];
 		saturation_[cell] = s0[i];
 		solveSingleCell(cell);
-		// std::cout << "cell = " << cell << "    delta s = " << saturation_[cell] - old_s << std::endl;
-		if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
+		double s_change = std::fabs(saturation_[cell] - old_s);
+		// std::cout << "cell = " << cell << "    delta s = " << s_change << std::endl;
+		if (max_s_change < s_change) {
 		    max_change_cell = cell;
+		    max_s_change = s_change;
 		}
-		max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
 	    }
 	    // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change
 	    // 	      << "    in cell " << max_change_cell << std::endl;
@@ -298,6 +378,7 @@ namespace Opm
 	}
 	std::cout << "Solved " << num_cells << " cell multicell problem in "
 		  << num_iters << " iterations." << std::endl;
+#endif // EXPERIMENT_GAUSS_SEIDEL
     }
 
     double TransportModelTwophase::fracFlow(double s, int cell) const
