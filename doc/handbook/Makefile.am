@@ -40,11 +40,10 @@ dumux-handbook.pdf: $(TEXSOURCE)
 
 EXTRA_TEXINPUTS=$(top_srcdir)
 
-include $(top_srcdir)/am/global-rules
-include $(top_srcdir)/am/latex
-
 else
 doc:
 	echo -n ""
 endif
 
+include $(top_srcdir)/am/global-rules
+include $(top_srcdir)/am/latex
