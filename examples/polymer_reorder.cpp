@@ -39,8 +39,6 @@
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 // #include <opm/core/linalg/LinearSolverIstl.hpp>
 
-#include <opm/polymer/polymertransport.hpp>
-#include <opm/polymer/polymermodel.hpp>
 #include <opm/polymer/TransportModelPolymer.hpp>
 
 #include <boost/filesystem/convenience.hpp>
@@ -319,8 +317,6 @@ main(int argc, char** argv)
     double poly_amount = param.getDefault("poly_amount", 5.0);
     PolymerInflow poly_inflow(poly_start, poly_end, poly_amount);
 
-    bool new_code = param.getDefault("new_code", false);
-
     // Extra rock init.
     std::vector<double> porevol;
     compute_porevolume(grid->c_grid(), *props, porevol);
@@ -432,23 +428,8 @@ main(int argc, char** argv)
 	// boundary flows must be accumulated into
 	// source term following the same convention.
 	transport_timer.start();
-	if (new_code) {
-	    tmodel.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
-			 &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
-	} else {
-	    polymertransport(&porevol[0],
-			     props->porosity(),
-			     &reorder_src[0],
-			     stepsize,
-			     inflow_c,
-			     const_cast<UnstructuredGrid*>(grid->c_grid()),
-			     props.get(),
-			     &polydata,
-			     &state.faceflux()[0],
-			     &reorder_sat[0],
-			     &state.concentration()[0],
-			     &state.cmax()[0]);
-	}
+	tmodel.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
+		     &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
 	transport_timer.stop();
 	double tt = transport_timer.secsSinceStart();
 	std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
