@@ -12,6 +12,4 @@ noinst_PROGRAMS =				\
 polymer_reorder
 
 polymer_reorder_SOURCES =			\
-polymer_reorder.cpp				\
-Utilities.hpp					\
-Utilities.cpp
+polymer_reorder.cpp

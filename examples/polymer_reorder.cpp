@@ -20,14 +20,13 @@
 
 #include "config.h"
 
-#include "Utilities.hpp"
-
 #include <opm/core/pressure/IncompTpfa.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/utility/writeVtkData.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -319,7 +318,7 @@ main(int argc, char** argv)
 
     // Extra rock init.
     std::vector<double> porevol;
-    compute_porevolume(grid->c_grid(), *props, porevol);
+    computePorevolume(*grid->c_grid(), *props, porevol);
     double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
 
     // Gravity init.
@@ -348,25 +347,33 @@ main(int argc, char** argv)
 				      method, nltol, maxit);
 
     // State-related and source-related variables init.
+    int num_cells = grid->c_grid()->number_of_cells;
     std::vector<double> totmob;
     std::vector<double> omega; // Empty dummy unless/until we include gravity here.
     double init_sat = param.getDefault("init_sat", 0.0);
     ReservoirState state(grid->c_grid(), props->numPhases(), init_sat);
     // We need a separate reorder_sat, because the reorder
     // code expects a scalar sw, not both sw and so.
-    std::vector<double> reorder_sat(grid->c_grid()->number_of_cells);
+    std::vector<double> reorder_sat(num_cells);
     double flow_per_sec = 0.1*tot_porevol/Opm::unit::day;
     if (param.has("injection_rate_per_day")) {
 	flow_per_sec = param.get<double>("injection_rate_per_day")/Opm::unit::day;
     }
-    std::vector<double> src   (grid->c_grid()->number_of_cells, 0.0);
-    src[0]                         =  flow_per_sec;
-    src[grid->c_grid()->number_of_cells - 1] = -flow_per_sec;
+    std::vector<double> src(num_cells, 0.0);
+    src[0]             =  flow_per_sec;
+    src[num_cells - 1] = -flow_per_sec;
     std::vector<double> reorder_src = src;
 
     // Control init.
     double current_time = 0.0;
     double total_time = stepsize*num_psteps;
+
+    // The allcells vector is used in calls to computeTotalMobility()
+    // and computeTotalMobilityOmega().
+    std::vector<int> allcells(num_cells);
+    for (int cell = 0; cell < num_cells; ++cell) {
+	allcells[cell] = cell;
+    }
 
     // Warn if any parameters are unused.
     if (param.anyUnused()) {
@@ -401,9 +408,9 @@ main(int argc, char** argv)
 	}
 
 	if (use_gravity) {
-	    compute_totmob_omega(*props, state.saturation(), totmob, omega);
+	    computeTotalMobilityOmega(*props, allcells, state.saturation(), totmob, omega);
 	} else {
-	    compute_totmob(*props, state.saturation(), totmob);
+	    computeTotalMobility(*props, allcells, state.saturation(), totmob);
 	}
 	pressure_timer.start();
 	psolver.solve(totmob, omega, src, state.pressure(), state.faceflux());
