@@ -303,66 +303,64 @@ namespace Opm
 
 	// Compute gradient using finite difference.
 	void computeGradient(const double* x, double* res, double* gradient, const int& method) const
-     	// If if_res_s == true, compute the gradient of s-residual, otherwise, compute gradient of c-residual.
 	// If method == 1, use finite diference
 	// If method == 2, use analytic expresions
 	{
 	    if (method == 1) {
-		    double epsi = 1e-5;
-		    double res_epsi[2];
-		    double x_epsi[2];
-		    computeResidual(x, res);
-		    if (if_res_s) {
-			x_epsi[0] = x[0] + epsi;
-			x_epsi[1] = x[1];
-			computeResidual(x_epsi, res_epsi);
-			gradient[0] =  (res_epsi[0] - res[0])/epsi;
-			x_epsi[0] = x[0];
-			x_epsi[1] = x[1] + epsi;
-			computeResidual(x_epsi, res_epsi);
-			gradient[1] = (res_epsi[0] - res[0])/epsi;
-		    } else {
-			x_epsi[0] = x[0] + epsi;
-			x_epsi[1] = x[1];
-			computeResidual(x_epsi, res_epsi);
-			gradient[0] =  (res_epsi[1] - res[1])/epsi;
-			x_epsi[0] = x[0];
-			x_epsi[1] = x[1] + epsi;
-			computeResidual(x_epsi, res_epsi);
-			gradient[1] = (res_epsi[1] - res[1])/epsi;
-		    }
-		} else if (method == 2)  {
-		    double s = x[0];
-		    double c = x[1];
-		    double ff_ds_dc[2];
-		    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
-		    double mc_dc;
-		    double mc = tm.computeMcWithDer(c, &mc_dc);
-		    double dps = tm.polyprops_.dps;
-		    double rhor = tm.polyprops_.rhor;
-		    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-		    double ads;
-		    double ads_dc;
-		    if (c < cmax0) {
-			ads = tm.polyprops_.adsorbtion(cmax0);
-			ads_dc = 0;
-		    } else {
-			ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
-		    }
-		    res[0] = s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
-		    res[1] = (s - dps)*c - (s0 - dps)*c0
-			+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-			+ dtpv*(outflux*ff*mc + influx_polymer);
-		    if (if_res_s == true) {
-			gradient[0] = 1 + dtpv*outflux*ff_ds_dc[0];
-			gradient[1] = dtpv*outflux*ff_ds_dc[1];
-		    } else if (if_res_s == false) {
-			gradient[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
-			gradient[1] = s - dps + rhor*((1.0 - porosity)/porosity)*(ads_dc - ads0)
-			    + dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
-		    }
+		double epsi = 1e-8;
+		double res_epsi[2];
+		double x_epsi[2];
+		computeResidual(x, res);
+		if (if_res_s) {
+		    x_epsi[0] = x[0] + epsi;
+		    x_epsi[1] = x[1];
+		    computeResidual(x_epsi, res_epsi);
+		    gradient[0] =  (res_epsi[0] - res[0])/epsi;
+		    x_epsi[0] = x[0];
+		    x_epsi[1] = x[1] + epsi;
+		    computeResidual(x_epsi, res_epsi);
+		    gradient[1] = (res_epsi[0] - res[0])/epsi;
+		} else {
+		    x_epsi[0] = x[0] + epsi;
+		    x_epsi[1] = x[1];
+		    computeResidual(x_epsi, res_epsi);
+		    gradient[0] =  (res_epsi[1] - res[1])/epsi;
+		    x_epsi[0] = x[0];
+		    x_epsi[1] = x[1] + epsi;
+		    computeResidual(x_epsi, res_epsi);
+		    gradient[1] = (res_epsi[1] - res[1])/epsi;
 		}
-
+	    } else if (method == 2)  {
+		double s = x[0];
+		double c = x[1];
+		double ff_ds_dc[2];
+		double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
+		double mc_dc;
+		double mc = tm.computeMcWithDer(c, &mc_dc);
+		double dps = tm.polyprops_.dps;
+		double rhor = tm.polyprops_.rhor;
+		double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+		double ads;
+		double ads_dc;
+		if (c < cmax0) {
+		    ads = tm.polyprops_.adsorbtion(cmax0);
+		    ads_dc = 0;
+		} else {
+		    ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
+		}
+		res[0] = s - s0 +  dtpv*(outflux*ff + influx);
+		res[1] = (s - dps)*c - (s0 - dps)*c0
+		    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+		    + dtpv*(outflux*ff*mc + influx_polymer);
+		if (if_res_s) {
+		    gradient[0] = 1 + dtpv*outflux*ff_ds_dc[0];
+		    gradient[1] = dtpv*outflux*ff_ds_dc[1];
+		} else {
+		    gradient[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
+		    gradient[1] = s - dps + rhor*((1.0 - porosity)/porosity)*ads_dc
+			+ dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
+		}
+	    }
 	}
 
 	// setup 1d function, which is called by operator()
@@ -460,7 +458,7 @@ namespace Opm
 		return (s - dps)*c - (s0 - dps)*c0
 		    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 		    + dtpv*(outflux*ff*mc + influx_polymer);
-	    } 
+	    }
 	}
     };
 
@@ -498,16 +496,17 @@ namespace Opm
     {
 	const int max_iters_falsi = 20;
 	const double tol = 1e-7;
+	// the tolerance for 1d solver is set as a function of the residual
+	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
+	double falsi_tol;
+	double reduc_factor_falsi_tol = 1e-5;
+	const double gradient_method = 2; // method to compute derivative ( 1: finite difference, 2: formulae)
 	int iters_used_falsi = 0;
 	const int max_iters_split = 20;
 	int iters_used_split = 0;
 
+
 	Residual residual(*this, cell);
-	// ResidualSDir residual_s_dir(*this, cell);
-	// ResidualCDir residual_c_dir(*this, cell);
-	// const int sdir = 0;
-	// const int cdir = 1;
-	// ResidualDir residual_dir(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
 	double res[2];
 	residual.computeResidual(x, res);
@@ -527,6 +526,7 @@ namespace Opm
 	double gradient[2];
 
 	if (std::abs(res[0]) < std::abs(res[1])) {
+	    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
 	    if (std::abs(res[0]) > tol) {
 		if (res[0] < 0) {
 		    direction[0] = x_max[0] - x[0];
@@ -538,6 +538,7 @@ namespace Opm
 		res_s_done = false; // means that we will start by finding zero of s-residual.
 	    }
 	}  else {
+	    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
 	    if (std::abs(res[1]) > tol) {
 		if (res[1] < 0) {
 		    direction[0] = x_max[0] - x[0];
@@ -550,7 +551,7 @@ namespace Opm
 	    res_s_done = true; // means that we will start by finding zero of c-residual.
 	}
 
-	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
+ 	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
 	    if (res_s_done) { // solve for c-residual
 		if (res[1] < 0) {
 		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
@@ -580,12 +581,13 @@ namespace Opm
 			t_max = t_out;
 		    }
 		}
-		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
-		if (std::abs(residual(t)) > tol) {
+		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
+		if (std::abs(residual(t)) > falsi_tol) {
 		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		}
 		residual.compute_new_x(x, t);
-		residual.computeGradient(x, res, gradient, 1);
+		residual.computeGradient(x, res, gradient, gradient_method);
+		falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
 		direction[0] = gradient[1];
 		direction[1] = -gradient[0];
 		res_s_done = false;
@@ -605,12 +607,13 @@ namespace Opm
 			t_max = t_out;
 		    }
 		}
-		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
-		if (std::abs(residual(t)) > tol) {
+		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
+		if (std::abs(residual(t)) > falsi_tol) {
 		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		}
 		residual.compute_new_x(x, t);
-		residual.computeGradient(x, res, gradient, 1);
+		residual.computeGradient(x, res, gradient, gradient_method);
+		falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
 		res_s_done = true;
 		direction[0] = -gradient[1];
 		direction[1] = gradient[0];
@@ -722,17 +725,14 @@ namespace Opm
 	mu_m_dc *= mu_w;
 	double mu_p = polyprops_.viscMult(polyprops_.c_max_limit)*mu_w;
 	double omega = polyprops_.omega;
-	double mu_m_omega = std::pow(mu_m, omega);
-	double mu_m_omega_minus1 = std::pow(mu_m, omega - 1.0);
-	double mu_w_omega = std::pow(mu_w, 1.0 - omega);
-	double mu_w_e   = mu_m_omega*mu_w_omega;
-	double mu_w_e_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_w_omega;
-	double mu_p_omega = std::pow(mu_p, 1.0 - omega);
-	double mu_p_eff = mu_m_omega*mu_p_omega;
-	double mu_p_eff_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_p_omega;
+ 	double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
+	double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
+	double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
+	double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
 	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
-	double inv_mu_w_eff_dc = -mu_w_e_dc/(mu_w_e*mu_w_e)*(1. - cbar) - mu_p_eff_dc/(mu_p_eff*mu_p_eff)*cbar + (1./mu_p_eff - 1./mu_w_e);
-	double mu_w_eff_dc = -mu_w_eff*mu_w_eff*inv_mu_w_eff_dc;
+	double mu_w_eff_dc = -1./c_max_limit*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e)
+	    + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc
+	    + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
 	double visc_eff[2] = { mu_w_eff, visc_[1] };
 	double sat[2] = { s, 1.0 - s };
 	double mob[2];
@@ -743,10 +743,10 @@ namespace Opm
 	props_.relperm(1, sat, &cell, perm, perm_ds);
 	mob[0] = perm[0]/visc_eff[0];
 	mob[1] = perm[1]/visc_eff[1];
-	mob_ds[0] = perm_ds[0]/mu_w_eff;
-	mob_ds[1] = perm_ds[1]/mu_w_eff;
+	mob_ds[0] = perm_ds[0]/visc_eff[0];
+	mob_ds[1] = perm_ds[1]/visc_eff[1];
 	mob_dc[0] = - perm[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff);
-	mob_dc[1] = - perm[1]*mu_p_eff_dc/(mu_p_eff*mu_p_eff);
+	mob_dc[1] = 0.;
 	der[0] = (mob_ds[0]*mob[1] - mob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
 	der[1] = (mob_dc[0]*mob[1] - mob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
  	return mob[0]/(mob[0] + mob[1]);

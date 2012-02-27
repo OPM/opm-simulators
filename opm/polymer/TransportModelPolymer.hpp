@@ -128,10 +128,7 @@ namespace Opm
 	struct ResidualC;
 	struct ResidualS;
 
-	// Residual functions which are used in splitting method
-	struct ResidualCDir;
-	struct ResidualSDir;
-	struct ResidualDir;
+	// Residual function which is used in splitting method
 	struct Residual;
 
 	double fracFlow(double s, double c, int cell) const;
