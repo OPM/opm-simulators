@@ -213,7 +213,7 @@ public:
                 * rhobar + thcond_b2
                 * exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
 
-        Scalar DTbar = abs(Tbar - 1) + thcond_c4;
+        Scalar DTbar = fabs(Tbar - 1) + thcond_c4;
         Scalar DTbarpow = pow(DTbar, 3./5);
         Scalar Q = 2. + thcond_c5 / DTbarpow;
 
