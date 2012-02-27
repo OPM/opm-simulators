@@ -134,13 +134,12 @@ impl_allocate(struct UnstructuredGrid                 *G       ,
               int                     np      )
 /* ---------------------------------------------------------------------- */
 {
-    size_t                nnu, ngconn, nwperf;
+    size_t                nnu, nwperf;
     struct cfs_tpfa_res_impl *new;
 
     size_t ddata_sz;
 
     nnu    = G->number_of_cells;
-    ngconn = G->cell_facepos[ G->number_of_cells ];
     nwperf = 0;
 
     if (wconn != NULL) {
@@ -536,11 +535,9 @@ compute_cell_contrib(struct UnstructuredGrid               *G    ,
                      const double         *dAc  ,
                      struct cfs_tpfa_res_impl *pimpl)
 {
-    int        c1, c2, f, i, off, nconn, np2, p;
+    int        c1, c2, f, i, off, nconn, p;
     MAT_SIZE_T nrhs;
     double     s, dF1, dF2, *dv, *dv1, *dv2;
-
-    np2   = np * np;
 
     nconn = init_cell_contrib(G, c, np, pvol, dt, z, pimpl);
     nrhs  = 1 + (1 + 2)*nconn;  /* [z, Af*v, Af*dv] */
@@ -627,9 +624,6 @@ assemble_cell_contrib(struct UnstructuredGrid               *G,
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, i, f, j1, j2, off;
-    int is_neumann;
-
-    is_neumann = 1;
 
     j1 = csrmatrix_elm_index(c, c, h->J);
 
@@ -1061,7 +1055,7 @@ cfs_tpfa_res_construct(struct UnstructuredGrid                 *G      ,
                        int                     nphases)
 /* ---------------------------------------------------------------------- */
 {
-    size_t                    nc, nf, nwperf, ngconn;
+    size_t                    nf, nwperf;
     struct cfs_tpfa_res_data *h;
 
     h = malloc(1 * sizeof *h);
@@ -1077,10 +1071,8 @@ cfs_tpfa_res_construct(struct UnstructuredGrid                 *G      ,
     }
 
     if (h != NULL) {
-        nc     = G->number_of_cells;
         nf     = G->number_of_faces;
         nwperf = 0;
-        ngconn = G->cell_facepos[nc];
 
         if (wconn != NULL) {
             nwperf = wconn->well_connpos[ wconn->number_of_wells ];

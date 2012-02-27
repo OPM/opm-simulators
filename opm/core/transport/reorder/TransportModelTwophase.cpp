@@ -355,7 +355,6 @@ namespace Opm
 	    s0[i] = saturation_[cell];
 	}
 	do {
-	    int max_change_cell = -1;
 	    max_s_change = 0.0;
 	    for (int i = 0; i < num_cells; ++i) {
 		const int cell = cells[i];
@@ -365,7 +364,6 @@ namespace Opm
 		double s_change = std::fabs(saturation_[cell] - old_s);
 		// std::cout << "cell = " << cell << "    delta s = " << s_change << std::endl;
 		if (max_s_change < s_change) {
-		    max_change_cell = cell;
 		    max_s_change = s_change;
 		}
 	    }
