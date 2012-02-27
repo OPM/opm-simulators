@@ -619,7 +619,7 @@ public:
 /*!
  * \brief A one-phase fluid system with water and nitrogen as components.
  *
- * This is an adapter to use Dumux::H2ON2OnePhaseFluidSystem<TypeTag>, as is
+ * This is an adapter to use Dumux::H2ON2LiquidPhaseFluidSystem<TypeTag>, as is
  * done with most other classes in Dumux.
  */
 template<class TypeTag>
