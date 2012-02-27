@@ -441,17 +441,34 @@ namespace Opm
 		direction[0] *= -1;
 		direction[1] *= -1;
 	    }
+	    bool test_dir0 = true;
+	    bool test_dir1 = true;
 	    if (direction[0] > 0) {
 		t0 = (x_max[0] - x[0])/direction[0];
-	    } else {
+	    } else if (direction[0] < 0) {
 		t0 = (x_min[0] - x[0])/direction[0];
+	    } else {
+		test_dir0 = false;
 	    }
 	    if (direction[1] > 0) {
 		t1 = (x_max[1] - x[1])/direction[1];
-	    } else {
+	    } else if (direction[1] < 0) {
 		t1 = (x_min[1] - x[1])/direction[1];
+	    } else {
+		test_dir1 = false;
 	    }
-	    t_out = std::min(t0, t1);
+	    if (test_dir0) {
+		if (test_dir1) {
+		    t_out = std::min(t0, t1);
+		}
+		else {
+		    t_out = t0;
+		}
+	    } else {
+		if (test_dir1) {
+		    t_out = t1;
+		}
+	    }
 	    x_out[0] = x[0] + t_out*direction[0];
 	    x_out[1] = x[1] + t_out*direction[1];
 	    t_max = t_out + 1;
@@ -866,74 +883,36 @@ namespace Opm
 	if (std::abs(res[0]) < std::abs(res[1])) {
 	    if (std::abs(res[0]) > tol) {
 		if (res[0] < 0) {
-		    end_point[0] = x_max[0];
-		    end_point[1] = x_min[1];
-		    direction[0] = end_point[0] - x[0];
-		    direction[1] = end_point[1] - x[1];
-		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
-		    if (residual_s_dir(t_out) >= 0) {
-			t_max = t_out;
-		    }
+		    direction[0] = x_max[0] - x[0];
+		    direction[1] = x_min[1] - x[1];
 		} else {
-		    end_point[0] = x_min[0];
-		    end_point[1] = x_max[1];
-		    direction[0] = end_point[0] - x[0];
-		    direction[1] = end_point[1] - x[1];
-		    residual_s_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
-		    if (residual_s_dir(t_out) <= 0) {
-			t_max = t_out;
-		    }
+		    direction[0] = x_min[0] - x[0];
+		    direction[1] = x_max[1] - x[1];
 		}
-		t = modifiedRegulaFalsi(residual_s_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
-		if (std::abs(residual_s_dir(t)) > tol) {
-		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
-		}
-		residual_s_dir.compute_new_x(x, t);
+		res_s_done = false; // means that we will start by finding zero of s-residual.
 	    }
-	    res_s_done = true;
-	    residual.computeGradient(x, res, gradient, true, 1);
-	} else {
+	}  else {
 	    if (std::abs(res[1]) > tol) {
 		if (res[1] < 0) {
-		    end_point[0] = x_max[0];
-		    end_point[1] = x_max[1];
-		    direction[0] = end_point[0] - x[0];
-		    direction[1] = end_point[1] - x[1];
-		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
-		    if (residual_c_dir(t_out) >= 0) {
-			t_max = t_out;
-		    }
-		} else {
-		    end_point[0] = x_min[0];
-		    end_point[1] = x_min[1];
-		    direction[0] = end_point[0] - x[0];
-		    direction[1] = end_point[1] - x[1];
-		    residual_c_dir.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
-		    if (residual_c_dir(t_out) <= 0) {
-			t_max = t_out;
-		    }
+		    direction[0] = x_max[0] - x[0];
+		    direction[1] = x_max[1] - x[1];
 		}
-		t = modifiedRegulaFalsi(residual_c_dir, 0., t_max, max_iters_falsi, tol, iters_used_falsi);
-		if (std::abs(residual_c_dir(t)) > tol) {
-		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
-		}
-		residual_c_dir.compute_new_x(x, t);
+	    } else {
+		direction[0] = x_min[0] - x[0];
+		direction[1] = x_min[1] - x[1];
 	    }
-	    res_s_done = false;
-	    residual.computeGradient(x, res, gradient, false, 1);
+	    res_s_done = true; // means that we will start by finding zero of c-residual.
 	}
 
 	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
 	    if (res_s_done) { // solve for c-residual
-		direction[0] = -gradient[1];
-		direction[1] = gradient[0];
 		if (res[1] < 0) {
 		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
 		    // increasing). We do it only for a significantly large res[1]
-		    if (res[1] < -tol ) {
-			x_min[0] = x[0];
-			x_min[1] = x[1];
-		    }
+		    // if (res[1] < -tol ) {
+		    // 	x_min[0] = x[0];
+		    // 	x_min[1] = x[1];
+		    // }
 		    //
 		    end_point[0] = x_max[0];
 		    end_point[1] = x_max[1];
@@ -943,10 +922,10 @@ namespace Opm
 		    }
 		} else {
 		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is increasing)
-		    if (res[1] > tol) {
-			x_max[0] = x[0];
-			x_max[1] = x[1];
-		    }
+		    // if (res[1] > tol) {
+		    // 	x_max[0] = x[0];
+		    // 	x_max[1] = x[1];
+		    // }
 		    //
 		    end_point[0] = x_min[0];
 		    end_point[1] = x_min[1];
@@ -961,10 +940,10 @@ namespace Opm
 		}
 		residual_c_dir.compute_new_x(x, t);
 		residual.computeGradient(x, res, gradient, false, 1);
-		res_s_done = false;
-	    } else { // solve for s residual
 		direction[0] = gradient[1];
 		direction[1] = -gradient[0];
+		res_s_done = false;
+	    } else { // solve for s residual
 		if (res[0] < 0) {
 		    end_point[0] = x_max[0];
 		    end_point[1] = x_min[1];
@@ -985,8 +964,10 @@ namespace Opm
 		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		}
 		residual_s_dir.compute_new_x(x, t);
-		res_s_done = true;
 		residual.computeGradient(x, res, gradient, true, 1);
+		res_s_done = true;
+		direction[0] = -gradient[1];
+		direction[1] = gradient[0];
 	    }
 
 	    iters_used_split += 1;
