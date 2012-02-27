@@ -72,6 +72,9 @@ namespace Opm
 		   std::vector<double>& pressure,
 		   std::vector<double>& faceflux);
 
+        /// Expose read-only reference to internal half-transmissibility.
+        const ::std::vector<double>& getHalfTrans() const { return htrans_; }
+
     private:
 	const UnstructuredGrid& grid_;
         const LinearSolverInterface& linsolver_;
