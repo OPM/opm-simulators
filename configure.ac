@@ -11,7 +11,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 m4_ifdef([LT_INIT], [LT_INIT])
 
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([opm/polymer/HelloPolymer.hpp])
+AC_CONFIG_SRCDIR([opm/polymer/TransportModelPolymer.hpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
