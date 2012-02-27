@@ -114,15 +114,17 @@ private:
 	return Opm::linearInterpolationDerivative(sw_, krw_, s);
     }
 
-    double kro_dso(double s) const
-    {
-	return Opm::linearInterpolationDerivative(sw_, krw_, s);
-    }
 
     double kro(double s) const
     {
 	return Opm::linearInterpolation(so_, kro_, s);
     }
+
+    double kro_dso(double s) const
+    {
+	return Opm::linearInterpolationDerivative(so_, kro_, s);
+    }
+
     std::vector<double> sw_;
     std::vector<double> krw_;
     std::vector<double> so_;
