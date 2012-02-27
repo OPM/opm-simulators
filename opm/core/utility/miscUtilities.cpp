@@ -65,7 +65,7 @@ namespace Opm
 	for (int cell = 0; cell < num_cells; ++cell) {
 	    totmob[cell] = 0;
 	    for (int phase = 0; phase < num_phases; ++phase) {	
-		totmob[cell] += kr[2*cell + phase]/mu[phase];
+		totmob[cell] += kr[num_phases*cell + phase]/mu[phase];
 	    }
 	}
     }
@@ -95,14 +95,14 @@ namespace Opm
 	for (int cell = 0; cell < num_cells; ++cell) {
 	    totmob[cell] = 0.0;
 	    for (int phase = 0; phase < num_phases; ++phase) {	
-		totmob[cell] += kr[2*cell + phase]/mu[phase];
+		totmob[cell] += kr[num_phases*cell + phase]/mu[phase];
 	    }
 	}
 	const double* rho = props.density();
 	for (int cell = 0; cell < num_cells; ++cell) {
 	    omega[cell] = 0.0;
 	    for (int phase = 0; phase < num_phases; ++phase) {	
-		omega[cell] += rho[phase]*(kr[2*cell + phase]/mu[phase])/totmob[cell];
+		omega[cell] += rho[phase]*(kr[num_phases*cell + phase]/mu[phase])/totmob[cell];
 	    }
 	}
     }
