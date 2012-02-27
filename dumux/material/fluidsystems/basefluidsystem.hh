@@ -42,7 +42,7 @@ public:
     typedef Dumux::NullParameterCache ParameterCache;
 
     /*!
-     * \brief Calculate the molar volume [m^3/mol] of a fluid phase
+     * \brief Calculate the density [kg/m^3] of a fluid phase
      */
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
@@ -159,8 +159,7 @@ public:
     }
 
     /*!
-     * \brief Specific isobaric heat capacity of a fluid phase.
-     *        \f$\mathrm{[J/kg]}\f$.
+     * \brief Specific isobaric heat capacity of a fluid phase [J/kg].
      *
      * \param paramCache   mutable parameters
      * \param phaseIdx  for which phase to give back the heat capacity
