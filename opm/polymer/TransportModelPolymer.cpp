@@ -259,7 +259,6 @@ namespace Opm
 	    outflux = !src_is_inflow ? dflux : 0.0;
 	    dtpv    = tm.dt_/tm.porevolume_[cell];
 	    porosity = tm.porosity_[cell];
-
 	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
 		int f = tm.grid_.cell_faces[i];
 		double flux;
@@ -284,6 +283,31 @@ namespace Opm
 	    }
 	}
 
+	void computeExplicitStep(const double* xmin, const double* xmax, double* x) const {
+	    double ff = tm.fracFlow(s0, c0, cell);
+	    double mc = tm.computeMc(c0);
+	    double dps = tm.polyprops_.dps;
+	    //In this explicit step, we do not compute absorption and take ads0=ads
+	    // double rhor = tm.polyprops_.rhor;
+	    // double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+	    // double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+
+	    x[0] =  s0 -  dtpv*(outflux*ff + influx);
+	    x[1] = 1./(x[0] - dps)*((s0 - dps)*c0 - dtpv*(outflux*ff*mc + influx_polymer)); // + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+
+	    // We check that the values we obtain remains admissible (this is not guaranted for an explicit step)
+	    if (x[0] < xmin[0]) {
+		x[0] = xmin[0];
+	    } else if (x[0] > xmax[0]) {
+		x[0] = xmax[0];
+	    }
+	    if (x[1] < xmin[1]) {
+		x[1] = xmin[1];
+	    } else if (x[1] > xmax[1]) {
+		x[1] = xmax[1];
+	    }
+	}
+
 	void computeResidual(const double* x, double* res) const
 	{
 	    double s = x[0];
@@ -301,12 +325,81 @@ namespace Opm
 	}
 
 
-	// Compute gradient using finite difference.
-	void computeGradient(const double* x, double* res, double* gradient, const int& method) const
-	// If method == 1, use finite diference
-	// If method == 2, use analytic expresions
+	bool solveNewtonStep(const double* x, double* x_new, const int& gradient_method) {
+
+	    // If gradient_method == 1, use finite difference
+	    // If gradient_method == 2, use analytic expresions
+
+	    double res[2];
+	    double res_s_ds_dc[2];
+	    double res_c_ds_dc[2];
+
+	    if (gradient_method == 1) {
+		double epsi = 1e-8;
+		double res_epsi[2];
+		double x_epsi[2];
+		computeResidual(x, res);
+		x_epsi[0] = x[0] + epsi;
+		x_epsi[1] = x[1];
+		computeResidual(x_epsi, res_epsi);
+		res_s_ds_dc[0] =  (res_epsi[0] - res[0])/epsi;
+		x_epsi[0] = x[0];
+		x_epsi[1] = x[1] + epsi;
+		computeResidual(x_epsi, res_epsi);
+		res_s_ds_dc[1] = (res_epsi[0] - res[0])/epsi;
+		x_epsi[0] = x[0] + epsi;
+		x_epsi[1] = x[1];
+		computeResidual(x_epsi, res_epsi);
+		res_c_ds_dc[0] =  (res_epsi[1] - res[1])/epsi;
+		x_epsi[0] = x[0];
+		x_epsi[1] = x[1] + epsi;
+		computeResidual(x_epsi, res_epsi);
+		res_c_ds_dc[1] = (res_epsi[1] - res[1])/epsi;
+	    } else if (gradient_method == 2)  {
+		double s = x[0];
+		double c = x[1];
+		double ff_ds_dc[2];
+		double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
+		double mc_dc;
+		double mc = tm.computeMcWithDer(c, &mc_dc);
+		double dps = tm.polyprops_.dps;
+		double rhor = tm.polyprops_.rhor;
+		double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+		double ads;
+		double ads_dc;
+		if (c < cmax0) {
+		    ads = tm.polyprops_.adsorbtion(cmax0);
+		    ads_dc = 0;
+		} else {
+		    ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
+		}
+		res[0] = s - s0 +  dtpv*(outflux*ff + influx);
+		res[1] = (s - dps)*c - (s0 - dps)*c0
+		    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+		    + dtpv*(outflux*ff*mc + influx_polymer);
+		res_s_ds_dc[0] = 1 + dtpv*outflux*ff_ds_dc[0];
+		res_s_ds_dc[1] = dtpv*outflux*ff_ds_dc[1];
+		res_c_ds_dc[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
+		res_c_ds_dc[1] = s - dps + rhor*((1.0 - porosity)/porosity)*ads_dc
+		    + dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
+	    }
+
+	    double det = res_s_ds_dc[0]*res_c_ds_dc[1] - res_c_ds_dc[0]*res_s_ds_dc[1];
+	    if (std::abs(det) < 1e-8) {
+		return false;
+	    } else {
+		x_new[0] = x[0] - (res[0]*res_c_ds_dc[1] - res[1]*res_s_ds_dc[1])/det;
+		x_new[1] = x[1] - (res[1]*res_s_ds_dc[0] - res[0]*res_c_ds_dc[0])/det;
+		return true;
+	    }
+
+	}
+
+	void computeGradient(const double* x, double* res, double* gradient, const int& gradient_method) const
+	// If gradient_method == 1, use finite difference
+	// If gradient_method == 2, use analytic expresions
 	{
-	    if (method == 1) {
+	    if (gradient_method == 1) {
 		double epsi = 1e-8;
 		double res_epsi[2];
 		double x_epsi[2];
@@ -330,7 +423,7 @@ namespace Opm
 		    computeResidual(x_epsi, res_epsi);
 		    gradient[1] = (res_epsi[1] - res[1])/epsi;
 		}
-	    } else if (method == 2)  {
+	    } else if (gradient_method == 2)  {
 		double s = x[0];
 		double c = x[1];
 		double ff_ds_dc[2];
@@ -499,7 +592,7 @@ namespace Opm
 	// the tolerance for 1d solver is set as a function of the residual
 	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
 	double falsi_tol;
-	double reduc_factor_falsi_tol = 1e-5;
+	double reduc_factor_falsi_tol = 1e-4;
 	const double gradient_method = 2; // method to compute derivative ( 1: finite difference, 2: formulae)
 	int iters_used_falsi = 0;
 	const int max_iters_split = 20;
@@ -509,14 +602,18 @@ namespace Opm
 	Residual residual(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
 	double res[2];
+
 	residual.computeResidual(x, res);
 
 	if (norm(res) < tol) {
+	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+ 	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
+	    mc_[cell] = computeMc(concentration_[cell]);
 	    return;
 	}
 
 	bool res_s_done;
-	double x_min[2] = {0.0, 0.0};
+	double x_min[2] = {polyprops_.dps, 0.0};
 	double x_max[2] = {1.0, polyprops_.c_max_limit};
 	double t;
 	double t_max;
@@ -524,6 +621,13 @@ namespace Opm
 	double direction[2];
 	double end_point[2];
 	double gradient[2];
+	bool unsuccessfull_newton_step;
+	double x_new[2];
+	double res_new[2];
+
+	// // Update x=(s, c) with an explicit solver.
+	// residual.computeExplicitStep(x_min, x_max, x);
+	// residual.computeResidual(x, res);
 
 	if (std::abs(res[0]) < std::abs(res[1])) {
 	    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
@@ -552,79 +656,123 @@ namespace Opm
 	}
 
  	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
-	    if (res_s_done) { // solve for c-residual
-		if (res[1] < 0) {
-		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
-		    // increasing). We do it only for a significantly large res[1]
-		    // if (res[1] < -tol ) {
-		    // 	x_min[0] = x[0];
-		    // 	x_min[1] = x[1];
-		    // }
-		    //
-		    end_point[0] = x_max[0];
-		    end_point[1] = x_max[1];
-		    residual.setup(x, direction, end_point, x_min, x_max, false, t_max, t_out);
-		    if (residual(t_out) >= 0) {
-			t_max = t_out;
-		    }
+	    // We first try a Newton step
+	    if (residual.solveNewtonStep(x, x_new, gradient_method)) {
+		residual.computeResidual(x_new, res_new);
+		unsuccessfull_newton_step = false;
+		if (norm(res_new) > norm(res) || x_new[0] < x_min[0] || x_new[1] < x_min[1] || x_new[0] > x_max[0] || x_new[1] > x_max[1]) {
+		    unsuccessfull_newton_step = true;
 		} else {
-		    // We update the bounding box (Here we assume that the curve res_s(s,c)=0 is increasing)
-		    // if (res[1] > tol) {
-		    // 	x_max[0] = x[0];
-		    // 	x_max[1] = x[1];
-		    // }
-		    //
-		    end_point[0] = x_min[0];
-		    end_point[1] = x_min[1];
-		    residual.setup(x, direction, end_point, x_min, x_max, false, t_max, t_out);
-		    if (residual(t_out) <= 0) {
-			t_max = t_out;
+		    x[0] = x_new[0];
+		    x[1] = x_new[1];
+		    res[0] = res_new[0];
+		    res[1] = res_new[1];
+		    if (std::abs(res[0]) < std::abs(res[1])) {
+			falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
+			if (std::abs(res[0]) > tol) {
+			    if (res[0] < 0) {
+				direction[0] = x_max[0] - x[0];
+				direction[1] = x_min[1] - x[1];
+			    } else {
+				direction[0] = x_min[0] - x[0];
+				direction[1] = x_max[1] - x[1];
+			    }
+			    res_s_done = false; // means that we will start by finding zero of s-residual.
+			}
+		    }  else {
+			falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
+			if (std::abs(res[1]) > tol) {
+			    if (res[1] < 0) {
+				direction[0] = x_max[0] - x[0];
+				direction[1] = x_max[1] - x[1];
+			    }
+			} else {
+			    direction[0] = x_min[0] - x[0];
+			    direction[1] = x_min[1] - x[1];
+			}
+			res_s_done = true; // means that we will start by finding zero of c-residual.
 		    }
+
 		}
-		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
-		if (std::abs(residual(t)) > falsi_tol) {
-		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
-		}
-		residual.compute_new_x(x, t);
-		residual.computeGradient(x, res, gradient, gradient_method);
-		falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
-		direction[0] = gradient[1];
-		direction[1] = -gradient[0];
-		res_s_done = false;
-	    } else { // solve for s residual
-		if (res[0] < 0) {
-		    end_point[0] = x_max[0];
-		    end_point[1] = x_min[1];
-		    residual.setup(x, direction, end_point, x_min, x_max, true, t_max, t_out);
-		    if (residual(t_out) >= 0) {
-			t_max = t_out;
-		    }
-		} else {
-		    end_point[0] = x_min[0];
-		    end_point[1] = x_max[1];
-		    residual.setup(x, direction, end_point, x_min, x_max, true, t_max, t_out);
-		    if (residual(t_out) <= 0) {
-			t_max = t_out;
-		    }
-		}
-		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
-		if (std::abs(residual(t)) > falsi_tol) {
-		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
-		}
-		residual.compute_new_x(x, t);
-		residual.computeGradient(x, res, gradient, gradient_method);
-		falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
-		res_s_done = true;
-		direction[0] = -gradient[1];
-		direction[1] = gradient[0];
+	    } else {
+		unsuccessfull_newton_step = true;
 	    }
 
-	    iters_used_split += 1;
+	    if (unsuccessfull_newton_step) {
+		if (res_s_done) { // solve for c-residual
+		    if (res[1] < 0) {
+			// We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
+			// increasing). We do it only for a significantly large res[1]
+			// if (res[1] < -tol ) {
+			// 	x_min[0] = x[0];
+			// 	x_min[1] = x[1];
+			// }
+			//
+			end_point[0] = x_max[0];
+			end_point[1] = x_max[1];
+			residual.setup(x, direction, end_point, x_min, x_max, false, t_max, t_out);
+			if (residual(t_out) >= 0) {
+			    t_max = t_out;
+			}
+		    } else {
+			// We update the bounding box (Here we assume that the curve res_s(s,c)=0 is increasing)
+			// if (res[1] > tol) {
+			// 	x_max[0] = x[0];
+			// 	x_max[1] = x[1];
+			// }
+			//
+			end_point[0] = x_min[0];
+			end_point[1] = x_min[1];
+			residual.setup(x, direction, end_point, x_min, x_max, false, t_max, t_out);
+			if (residual(t_out) <= 0) {
+			    t_max = t_out;
+			}
+		    }
+		    t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
+		    if (std::abs(residual(t)) > falsi_tol) {
+			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
+		    }
+		    residual.compute_new_x(x, t);
+		    residual.computeGradient(x, res, gradient, gradient_method);
+		    falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
+		    direction[0] = gradient[1];
+		    direction[1] = -gradient[0];
+		    res_s_done = false;
+		} else { // solve for s residual
+		    if (res[0] < 0) {
+			end_point[0] = x_max[0];
+			end_point[1] = x_min[1];
+			residual.setup(x, direction, end_point, x_min, x_max, true, t_max, t_out);
+			if (residual(t_out) >= 0) {
+			    t_max = t_out;
+			}
+		    } else {
+			end_point[0] = x_min[0];
+			end_point[1] = x_max[1];
+			residual.setup(x, direction, end_point, x_min, x_max, true, t_max, t_out);
+			if (residual(t_out) <= 0) {
+			    t_max = t_out;
+			}
+		    }
+		    t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
+		    if (std::abs(residual(t)) > falsi_tol) {
+			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
+		    }
+		    residual.compute_new_x(x, t);
+		    residual.computeGradient(x, res, gradient, gradient_method);
+		    falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
+		    res_s_done = true;
+		    direction[0] = -gradient[1];
+		    direction[1] = gradient[0];
+		}
+		iters_used_split += 1;
+	    }
 	}
 
 	if ((iters_used_split >=  max_iters_split) && (norm(res) >= tol)) {
 	    solveSingleCellBracketing(cell);
 	    std::cout << "splitting did not work" << std::endl;
+	    std::cout << "cell number" << cell << std::endl;
 	} else {
 	    concentration_[cell] = x[1];
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
