@@ -281,9 +281,9 @@ main(int argc, char** argv)
 	const int nx = param.getDefault("nx", 100);
 	const int ny = param.getDefault("ny", 100);
 	const int nz = param.getDefault("nz", 1);
-	const int dx = param.getDefault("dx", 1.0);
-	const int dy = param.getDefault("dy", 1.0);
-	const int dz = param.getDefault("dz", 1.0);
+	const double dx = param.getDefault("dx", 1.0);
+	const double dy = param.getDefault("dy", 1.0);
+	const double dz = param.getDefault("dz", 1.0);
 	grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
 	// Rock and fluid init.
 	// props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
@@ -337,10 +337,8 @@ main(int argc, char** argv)
     // Solvers init.
     Opm::LinearSolverUmfpack linsolver;
     // Opm::LinearSolverIstl linsolver(param);
-    Opm::IncompTpfa psolver(*grid->c_grid(),
-                            props->permeability(),
-                            use_gravity ? gravity : 0,
-                            linsolver);
+    const double *grav = use_gravity ? &gravity[0] : 0;
+    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), grav, linsolver);
 
     const int method = param.getDefault("method", 1);
     const double nltol = param.getDefault("nl_tolerance", 1e-9);
