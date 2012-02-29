@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
-#include <opm/core/eclipse/SpecialEclipseFields.hpp>
+#include <opm/core/eclipse/EclipseGridParser.hpp>
 
 
 #ifndef OPM_POLYMERPROPERTIES_HEADER_INCLUDED
@@ -31,40 +31,58 @@ namespace Opm
     {
 
     public:
-	PolymerProperties(double c_max_limit_arg, double omega_arg, double rhor_arg, double dps_arg,
-			  std::vector<double> c_vals_visc, std::vector<double> visc_mult_vals, 
-			  std::vector<double> c_vals_ads, std::vector<double> ads_vals) 
+
+	PolymerProperties() {
+	}
+
+	PolymerProperties(double c_max, double mix_param, double rock_density, double dead_pore_vol,
+			  std::vector<double> c_vals_visc, std::vector<double> visc_mult_vals,
+			  std::vector<double> c_vals_ads, std::vector<double> ads_vals)
 	{
-	    c_max_limit = c_max_limit_arg;
-	    omega = omega_arg;
-	    rhor = rhor_arg;
-	    dps = dps_arg;
+	    set(c_max, mix_param, rock_density, dead_pore_vol, c_vals_visc, visc_mult_vals,
+		c_vals_ads, ads_vals);
+	}
+
+	PolymerProperties(const EclipseGridParser& gridparser)
+	{
+
+	    readFromDeck(gridparser);
+	}
+
+	void set(double c_max, double mix_param, double rock_density, double dead_pore_vol,
+			  std::vector<double> c_vals_visc, std::vector<double> visc_mult_vals,
+			  std::vector<double> c_vals_ads, std::vector<double> ads_vals)
+	{
+	    c_max_ = c_max;
+	    mix_param_ = mix_param;
+	    rock_density_ = rock_density;
+	    dead_pore_vol_ = dead_pore_vol;
 	    c_vals_visc_ = c_vals_visc;
 	    visc_mult_vals_ = visc_mult_vals;
 	    c_vals_ads_ = c_vals_ads;
 	    ads_vals_ = ads_vals;
 	}
 
-	PolymerProperties(const EclipseGridParser& gridparser)
+	void readFromDeck(const EclipseGridParser& gridparser)
 	{
 
 	    // We assume NTMISC=1
 	    const std::vector<double>& plymax = gridparser.getPLYMAX().plymax_;
-	    c_max_limit = plymax[0];
+	    c_max_ = plymax[0];
 	    const std::vector<double>& tlmixpar = gridparser.getTLMIXPAR().tlmixpar_;
-	    omega = tlmixpar[0];
+	    mix_param_ = tlmixpar[0];
 
-	    rhor = gridparser.getFloatingPointValue("ROCKDEN")[0];
-	    
+	    rock_density_ = gridparser.getFloatingPointValue("ROCKDEN")[0];
+
 	    // We assume NTSFUN=1
 	    const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
-	    dps = plyrock[0];
+	    dead_pore_vol_ = plyrock[0];
 
 	    // We assume NTPVT=1
 	    const PLYVISC& plyvisc = gridparser.getPLYVISC();
 	    c_vals_visc_ = plyvisc.concentration_;
 	    visc_mult_vals_ = plyvisc.factor_;
-	    
+
 	    // We assume NTSFUN=1
 	    const PLYADS& plyads = gridparser.getPLYADS();
 	    c_vals_ads_ = plyads.local_concentration_;
@@ -72,10 +90,21 @@ namespace Opm
 
 	}
 
-	double c_max_limit;
-	double omega;
-	double rhor;
-	double dps;
+ 	double cMax() const {
+	    return c_max_;
+	};
+
+ 	double mixParam() const {
+	    return mix_param_;
+	};
+
+ 	double rockDensity() const {
+	    return rock_density_;
+	};
+
+ 	double deadPoreVol() const {
+	    return dead_pore_vol_;
+	};
 
 	double viscMult(double c) const
 	{
@@ -96,13 +125,17 @@ namespace Opm
 	    return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
 	}
 
-    private:    
+    private:
+	double c_max_;
+	double mix_param_;
+	double rock_density_;
+	double dead_pore_vol_;
 	std::vector<double> c_vals_visc_;
 	std::vector<double> visc_mult_vals_;
 	std::vector<double> c_vals_ads_;
 	std::vector<double> ads_vals_;
     };
-    
+
 } // namespace Opm
 
 #endif // OPM_POLYMERPROPERTIES_HEADER_INCLUDED
