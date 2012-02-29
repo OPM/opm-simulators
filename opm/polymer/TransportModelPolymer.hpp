@@ -20,6 +20,7 @@
 #ifndef OPM_TRANSPORTMODELPOLYMER_HEADER_INCLUDED
 #define OPM_TRANSPORTMODELPOLYMER_HEADER_INCLUDED
 
+#include <opm/polymer/PolymerProperties.hpp>
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <vector>
@@ -30,44 +31,6 @@ namespace Opm
 {
 
     class IncompPropertiesInterface;
-
-
-    /// Containing all the extra information needed to model
-    /// polymer-affected flow behaviour. This as an alternative
-    /// to changing the IncompPropertiesInterface class.
-    /// \TODO Improve encapsulation.
-    struct PolymerData
-    {
-	double c_max_limit;
-	double omega;
-	double viscMult(double c) const
-	{
-	    return Opm::linearInterpolation(c_vals_visc, visc_mult_vals, c);
-	}
-	double viscMultWithDer(double c, double* der) const
-	{
-	    *der = Opm::linearInterpolationDerivative(c_vals_visc, visc_mult_vals, c);
-	    return Opm::linearInterpolation(c_vals_visc, visc_mult_vals, c);
-	}
-	double rhor;
-	double dps;
-	double adsorbtion(double c) const
-	{
-	    return Opm::linearInterpolation(c_vals_ads, ads_vals, c);
-	}
-	double adsorbtionWithDer(double c, double* der) const
-	{
-	    *der = Opm::linearInterpolationDerivative(c_vals_ads, ads_vals, c);
-	    return Opm::linearInterpolation(c_vals_ads, ads_vals, c);
-	}
-
-	std::vector<double> c_vals_visc;
-	std::vector<double> visc_mult_vals;
-	std::vector<double> c_vals_ads;
-	std::vector<double> ads_vals;
-    };
-
-
 
     /// A transport model for two-phase flow with polymer in the
     /// water phase.
@@ -80,7 +43,7 @@ namespace Opm
 			      const double* porosity,
 			      const double* porevolume,
 			      const IncompPropertiesInterface& props,
-			      const PolymerData& polyprops,
+			      const PolymerProperties& polyprops,
 			      const int method,
 			      const double tol,
 			      const int maxit);
@@ -107,7 +70,7 @@ namespace Opm
 	const double* porosity_;
 	const double* porevolume_;  // one volume per cell
 	const IncompPropertiesInterface& props_;
-	const PolymerData& polyprops_;
+	const PolymerProperties& polyprops_;
 	std::vector<double> smin_;
 	std::vector<double> smax_;
 	double tol_;

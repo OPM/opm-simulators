@@ -33,7 +33,7 @@ namespace Opm
 						 const double* porosity,
 						 const double* porevolume,
 						 const IncompPropertiesInterface& props,
-						 const PolymerData& polyprops,
+						 const PolymerProperties& polyprops,
 						 const int method,
 						 const double tol,
 						 const int maxit)
@@ -199,8 +199,8 @@ namespace Opm
 	    s = modifiedRegulaFalsi(res_s, tm.smin_[2*cell], tm.smax_[2*cell], tm.maxit_, tm.tol_, iters_used);
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
-	    double dps = tm.polyprops_.dps;
-	    double rhor = tm.polyprops_.rhor;
+	    double dps = tm.polyprops_.deadPoreVol();
+	    double rhor = tm.polyprops_.rockDensity();
 	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	    double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
 	    double res = (s - dps)*c - (s0 - dps)*c0
@@ -286,9 +286,9 @@ namespace Opm
 	void computeExplicitStep(const double* xmin, const double* xmax, double* x) const {
 	    double ff = tm.fracFlow(s0, c0, cell);
 	    double mc = tm.computeMc(c0);
-	    double dps = tm.polyprops_.dps;
+	    double dps = tm.polyprops_.deadPoreVol();
 	    //In this explicit step, we do not compute absorption and take ads0=ads
-	    // double rhor = tm.polyprops_.rhor;
+	    // double rhor = tm.polyprops_.rockDensity();
 	    // double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	    // double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
 
@@ -314,8 +314,8 @@ namespace Opm
 	    double c = x[1];
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
-	    double dps = tm.polyprops_.dps;
-	    double rhor = tm.polyprops_.rhor;
+	    double dps = tm.polyprops_.deadPoreVol();
+	    double rhor = tm.polyprops_.rockDensity();
 	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	    double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
 	    res[0] = s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
@@ -362,8 +362,8 @@ namespace Opm
 		double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
 		double mc_dc;
 		double mc = tm.computeMcWithDer(c, &mc_dc);
-		double dps = tm.polyprops_.dps;
-		double rhor = tm.polyprops_.rhor;
+		double dps = tm.polyprops_.deadPoreVol();
+		double rhor = tm.polyprops_.rockDensity();
 		double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 		double ads;
 		double ads_dc;
@@ -430,8 +430,8 @@ namespace Opm
 		double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
 		double mc_dc;
 		double mc = tm.computeMcWithDer(c, &mc_dc);
-		double dps = tm.polyprops_.dps;
-		double rhor = tm.polyprops_.rhor;
+		double dps = tm.polyprops_.deadPoreVol();
+		double rhor = tm.polyprops_.rockDensity();
 		double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 		double ads;
 		double ads_dc;
@@ -544,8 +544,8 @@ namespace Opm
 	    } else {
 		double ff = tm.fracFlow(s, c, cell);
 		double mc = tm.computeMc(c);
-		double dps = tm.polyprops_.dps;
-		double rhor = tm.polyprops_.rhor;
+		double dps = tm.polyprops_.deadPoreVol();
+		double rhor = tm.polyprops_.rockDensity();
 		double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 		double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
 		return (s - dps)*c - (s0 - dps)*c0
@@ -572,7 +572,7 @@ namespace Opm
     {
 	    ResidualC res(*this, cell);
 	    const double a = 0.0;
-	    const double b = polyprops_.c_max_limit;
+	    const double b = polyprops_.cMax();
 	    int iters_used;
 	    concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
@@ -613,8 +613,8 @@ namespace Opm
 	}
 
 	bool res_s_done;
-	double x_min[2] = {polyprops_.dps, 0.0};
-	double x_max[2] = {1.0, polyprops_.c_max_limit};
+	double x_min[2] = {polyprops_.deadPoreVol(), 0.0};
+	double x_max[2] = {1.0, polyprops_.cMax()};
 	double t;
 	double t_max;
 	double t_out;
@@ -843,12 +843,12 @@ namespace Opm
 
     double TransportModelPolymer::fracFlow(double s, double c, int cell) const
     {
-	double c_max_limit = polyprops_.c_max_limit;
+	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
 	double mu_w = visc_[0];
 	double mu_m = polyprops_.viscMult(c)*mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.c_max_limit)*mu_w;
-	double omega = polyprops_.omega;
+	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double omega = polyprops_.mixParam();
 	double mu_m_omega = std::pow(mu_m, omega);
 	double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - omega);
 	double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - omega);
@@ -865,14 +865,14 @@ namespace Opm
     double TransportModelPolymer::fracFlowWithDer(double s, double c, int cell, double* der) const
     {
 	// We should check the dimension of der
-	double c_max_limit = polyprops_.c_max_limit;
+	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
 	double mu_w = visc_[0];
 	double mu_m_dc; // derivative of mu_m with respect to c
 	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
 	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.c_max_limit)*mu_w;
-	double omega = polyprops_.omega;
+	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double omega = polyprops_.mixParam();
  	double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
 	double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
 	double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
@@ -902,12 +902,12 @@ namespace Opm
 
     double TransportModelPolymer::computeMc(double c) const
     {
-	double c_max_limit = polyprops_.c_max_limit;
+	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
 	double mu_w = visc_[0];
 	double mu_m = polyprops_.viscMult(c)*mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.c_max_limit)*mu_w;
-	double omega = polyprops_.omega;
+	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double omega = polyprops_.mixParam();
 	double mu_m_omega = std::pow(mu_m, omega);
 	double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - omega);
 	double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - omega);
@@ -917,14 +917,14 @@ namespace Opm
 
     double TransportModelPolymer::computeMcWithDer(double c, double* der) const
     {
-	double c_max_limit = polyprops_.c_max_limit;
+	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
 	double mu_w = visc_[0];
 	double mu_m_dc; // derivative of mu_m with respect to c
 	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
 	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.c_max_limit)*mu_w;
-	double omega = polyprops_.omega;
+	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double omega = polyprops_.mixParam();
 	double mu_m_omega = std::pow(mu_m, omega);
 	double mu_m_omega_minus1 = std::pow(mu_m, omega-1);
 	double mu_w_omega = std::pow(mu_w, 1.0 - omega);
