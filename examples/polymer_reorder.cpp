@@ -271,11 +271,19 @@ main(int argc, char** argv)
 	Opm::EclipseGridParser deck(deck_filename);
 	polydata.readFromDeck(deck);
 	// Grid init
-	grid.reset(new Opm::GridManager(deck));
+	// grid.reset(new Opm::GridManager(deck));
+	const int nx = param.getDefault("nx", 100);
+	const int ny = param.getDefault("ny", 100);
+	const int nz = param.getDefault("nz", 1);
+	const double dx = param.getDefault("dx", 1.0);
+	const double dy = param.getDefault("dy", 1.0);
+	const double dz = param.getDefault("dz", 1.0);
+	grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
 	// Rock and fluid init
-	const int* gc = grid->c_grid()->global_cell;
-	std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
-	props.reset(new Opm::IncompPropertiesFromDeck(deck, global_cell));
+	// const int* gc = grid->c_grid()->global_cell;
+	// std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
+	// props.reset(new Opm::IncompPropertiesFromDeck(deck, global_cell));
+	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
     } else {
 	// Grid init.
 	const int nx = param.getDefault("nx", 100);

@@ -72,11 +72,10 @@ namespace Opm
 	    const std::vector<double>& tlmixpar = gridparser.getTLMIXPAR().tlmixpar_;
 	    mix_param_ = tlmixpar[0];
 
-	    rock_density_ = gridparser.getFloatingPointValue("ROCKDEN")[0];
-
 	    // We assume NTSFUN=1
 	    const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
 	    dead_pore_vol_ = plyrock[0];
+	    rock_density_ = plyrock[3];
 
 	    // We assume NTPVT=1
 	    const PLYVISC& plyvisc = gridparser.getPLYVISC();
