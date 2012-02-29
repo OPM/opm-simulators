@@ -39,6 +39,7 @@
 // #include <opm/core/linalg/LinearSolverIstl.hpp>
 
 #include <opm/polymer/TransportModelPolymer.hpp>
+#include <opm/polymer/PolymerProperties.hpp>
 
 #include <boost/filesystem/convenience.hpp>
 #include <boost/scoped_ptr.hpp>
