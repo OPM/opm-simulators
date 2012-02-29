@@ -265,12 +265,11 @@ main(int argc, char** argv)
     bool use_deck = param.has("deck_filename");
     boost::scoped_ptr<Opm::GridManager> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
-    Opm::PolymerData polydata;
+    Opm::PolymerProperties polydata;
     if (use_deck) {
-	std::cout << "**** Warning: We do not yet read polymer keywords from deck. "
-	    "Polymer behaviour is hardcoded." << std::endl;
 	std::string deck_filename = param.get<std::string>("deck_filename");
 	Opm::EclipseGridParser deck(deck_filename);
+	polydata.readFromDeck(deck);
 	// Grid init
 	grid.reset(new Opm::GridManager(deck));
 	// Rock and fluid init
@@ -289,29 +288,31 @@ main(int argc, char** argv)
 	// Rock and fluid init.
 	// props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
 	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+	// Setting polydata defaults to mimic a simple example case.
+
+	double c_max = param.getDefault("c_max_limit", 5.0);
+	double mix_param = param.getDefault("mix_param", 1.0);
+	double rock_density = param.getDefault("rock_density", 1000.0);
+	double dead_pore_vol = param.getDefault("dead_pore_vol", 0.15);
+	std::vector<double> c_vals_visc(2, -1e100);
+	c_vals_visc[0] = 0.0;
+	c_vals_visc[1] = 7.0;
+	std::vector<double> visc_mult_vals(2, -1e100);
+	visc_mult_vals[0] = 1.0;
+	// polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+	visc_mult_vals[1] = 20.0;
+	std::vector<double> c_vals_ads(3, -1e100);
+	c_vals_ads[0] = 0.0;
+	c_vals_ads[1] = 2.0;
+	c_vals_ads[2] = 8.0;
+	std::vector<double> ads_vals(3, -1e100);
+	ads_vals[0] = 0.0;
+	// polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+	ads_vals[1] = 0.0015;
+	ads_vals[2] = 0.0025;
+	polydata.set(c_max, mix_param, rock_density, dead_pore_vol, c_vals_visc, visc_mult_vals, c_vals_ads, ads_vals);
     }
 
-    // Setting polydata defaults to mimic a simple example case.
-    polydata.c_max_limit = param.getDefault("c_max_limit", 5.0);
-    polydata.omega = param.getDefault("omega", 1.0);
-    polydata.rhor = param.getDefault("rock_density", 1000.0);
-    polydata.dps = param.getDefault("dead_pore_space", 0.15);
-    polydata.c_vals_visc.resize(2);
-    polydata.c_vals_visc[0] = 0.0;
-    polydata.c_vals_visc[1] = 7.0;
-    polydata.visc_mult_vals.resize(2);
-    polydata.visc_mult_vals[0] = 1.0;
-    // polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-    polydata.visc_mult_vals[1] = 20.0;
-    polydata.c_vals_ads.resize(3);
-    polydata.c_vals_ads[0] = 0.0;
-    polydata.c_vals_ads[1] = 2.0;
-    polydata.c_vals_ads[2] = 8.0;
-    polydata.ads_vals.resize(3);
-    polydata.ads_vals[0] = 0.0;
-    // polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
-    polydata.ads_vals[1] = 0.0015;
-    polydata.ads_vals[2] = 0.0025;
 
 
     double poly_start = param.getDefault("poly_start_days", 300.0)*Opm::unit::day;
