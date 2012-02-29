@@ -612,7 +612,6 @@ namespace Opm
 	    return;
 	}
 
-	bool res_s_done;
 	double x_min[2] = {polyprops_.deadPoreVol(), 0.0};
 	double x_max[2] = {1.0, polyprops_.cMax()};
 	double t;
@@ -629,31 +628,6 @@ namespace Opm
 	// residual.computeExplicitStep(x_min, x_max, x);
 	// residual.computeResidual(x, res);
 
-	if (std::abs(res[0]) < std::abs(res[1])) {
-	    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
-	    if (std::abs(res[0]) > tol) {
-		if (res[0] < 0) {
-		    direction[0] = x_max[0] - x[0];
-		    direction[1] = x_min[1] - x[1];
-		} else {
-		    direction[0] = x_min[0] - x[0];
-		    direction[1] = x_max[1] - x[1];
-		}
-		res_s_done = false; // means that we will start by finding zero of s-residual.
-	    }
-	}  else {
-	    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
-	    if (std::abs(res[1]) > tol) {
-		if (res[1] < 0) {
-		    direction[0] = x_max[0] - x[0];
-		    direction[1] = x_max[1] - x[1];
-		}
-	    } else {
-		direction[0] = x_min[0] - x[0];
-		direction[1] = x_min[1] - x[1];
-	    }
-	    res_s_done = true; // means that we will start by finding zero of c-residual.
-	}
 
  	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
@@ -667,39 +641,26 @@ namespace Opm
 		    x[1] = x_new[1];
 		    res[0] = res_new[0];
 		    res[1] = res_new[1];
-		    if (std::abs(res[0]) < std::abs(res[1])) {
-			falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
-			if (std::abs(res[0]) > tol) {
-			    if (res[0] < 0) {
-				direction[0] = x_max[0] - x[0];
-				direction[1] = x_min[1] - x[1];
-			    } else {
-				direction[0] = x_min[0] - x[0];
-				direction[1] = x_max[1] - x[1];
-			    }
-			    res_s_done = false; // means that we will start by finding zero of s-residual.
-			}
-		    }  else {
-			falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
-			if (std::abs(res[1]) > tol) {
-			    if (res[1] < 0) {
-				direction[0] = x_max[0] - x[0];
-				direction[1] = x_max[1] - x[1];
-			    }
-			} else {
-			    direction[0] = x_min[0] - x[0];
-			    direction[1] = x_min[1] - x[1];
-			}
-			res_s_done = true; // means that we will start by finding zero of c-residual.
-		    }
-
+		    iters_used_split += 1;
 		}
 	    } else {
 		unsuccessfull_newton_step = true;
 	    }
 
 	    if (unsuccessfull_newton_step) {
-		if (res_s_done) { // solve for c-residual
+		if (std::abs(res[0]) < std::abs(res[1])) {
+		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
+		    if (res[0] < -falsi_tol) {
+			    direction[0] = x_max[0] - x[0];
+			    direction[1] = x_min[1] - x[1];
+		    } else if (res[0] < -falsi_tol) {
+			    direction[0] = x_min[0] - x[0];
+			    direction[1] = x_max[1] - x[1];
+		    } else {
+			residual.computeGradient(x, res, gradient, gradient_method);
+			direction[0] = -gradient[1];
+			direction[1] = gradient[0];
+		    }
 		    if (res[1] < 0) {
 			// We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
 			// increasing). We do it only for a significantly large res[1]
@@ -733,12 +694,20 @@ namespace Opm
 			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		    }
 		    residual.compute_new_x(x, t);
-		    residual.computeGradient(x, res, gradient, gradient_method);
-		    falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
-		    direction[0] = gradient[1];
-		    direction[1] = -gradient[0];
-		    res_s_done = false;
-		} else { // solve for s residual
+		    residual.computeResidual(x, res);
+		} else {
+		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
+		    if (res[1] < -falsi_tol) {
+			direction[0] = x_max[0] - x[0];
+			direction[1] = x_max[1] - x[1];
+		    } else if (res[1] > falsi_tol) {
+			direction[0] = x_min[0] - x[0];
+			direction[1] = x_min[1] - x[1];
+		    } else {
+			residual.computeGradient(x, res, gradient, gradient_method);
+			direction[0] = -gradient[1];
+			direction[1] = gradient[0];
+		    }
 		    if (res[0] < 0) {
 			end_point[0] = x_max[0];
 			end_point[1] = x_min[1];
@@ -759,11 +728,7 @@ namespace Opm
 			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		    }
 		    residual.compute_new_x(x, t);
-		    residual.computeGradient(x, res, gradient, gradient_method);
-		    falsi_tol = std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
-		    res_s_done = true;
-		    direction[0] = -gradient[1];
-		    direction[1] = gradient[0];
+		    residual.computeResidual(x, res);
 		}
 		iters_used_split += 1;
 	    }
