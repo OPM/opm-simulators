@@ -280,10 +280,10 @@ main(int argc, char** argv)
 	const double dz = param.getDefault("dz", 1.0);
 	grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
 	// Rock and fluid init
-	// const int* gc = grid->c_grid()->global_cell;
-	// std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
-	// props.reset(new Opm::IncompPropertiesFromDeck(deck, global_cell));
-	props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+	const int* gc = grid->c_grid()->global_cell;
+	std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
+	props.reset(new Opm::IncompPropertiesFromDeck(deck, global_cell));
+	// props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
     } else {
 	// Grid init.
 	const int nx = param.getDefault("nx", 100);
