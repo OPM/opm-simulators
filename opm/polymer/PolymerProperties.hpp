@@ -17,41 +17,57 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_POLYMERPROPERTIES_HEADER_INCLUDED
+#define OPM_POLYMERPROPERTIES_HEADER_INCLUDED
+
+
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
 
-#ifndef OPM_POLYMERPROPERTIES_HEADER_INCLUDED
-#define OPM_POLYMERPROPERTIES_HEADER_INCLUDED
-
 namespace Opm
 {
+
     class PolymerProperties
     {
-
     public:
-
-	PolymerProperties() {
+	PolymerProperties()
+	{
 	}
 
-	PolymerProperties(double c_max, double mix_param, double rock_density, double dead_pore_vol,
-			  std::vector<double> c_vals_visc, std::vector<double> visc_mult_vals,
-			  std::vector<double> c_vals_ads, std::vector<double> ads_vals)
+	PolymerProperties(double c_max,
+			  double mix_param,
+			  double rock_density,
+			  double dead_pore_vol,
+			  const std::vector<double>& c_vals_visc,
+			  const std::vector<double>& visc_mult_vals,
+			  const std::vector<double>& c_vals_ads,
+			  const std::vector<double>& ads_vals)
+	    : c_max_(c_max),
+	      mix_param_(mix_param),
+	      rock_density_(rock_density),
+	      dead_pore_vol_(dead_pore_vol),
+	      c_vals_visc_(c_vals_visc),
+	      visc_mult_vals_(visc_mult_vals),
+	      c_vals_ads_(c_vals_ads),
+	      ads_vals_(ads_vals)
 	{
-	    set(c_max, mix_param, rock_density, dead_pore_vol, c_vals_visc, visc_mult_vals,
-		c_vals_ads, ads_vals);
 	}
 
 	PolymerProperties(const EclipseGridParser& gridparser)
 	{
-
 	    readFromDeck(gridparser);
 	}
 
-	void set(double c_max, double mix_param, double rock_density, double dead_pore_vol,
-			  std::vector<double> c_vals_visc, std::vector<double> visc_mult_vals,
-			  std::vector<double> c_vals_ads, std::vector<double> ads_vals)
+	void set(double c_max,
+		 double mix_param,
+		 double rock_density,
+		 double dead_pore_vol,
+		 const std::vector<double>& c_vals_visc,
+		 const std::vector<double>& visc_mult_vals,
+		 const std::vector<double>& c_vals_ads,
+		 const std::vector<double>& ads_vals)
 	{
 	    c_max_ = c_max;
 	    mix_param_ = mix_param;
@@ -89,35 +105,42 @@ namespace Opm
 
 	}
 
- 	double cMax() const {
+ 	double cMax() const
+	{
 	    return c_max_;
-	};
+	}
 
- 	double mixParam() const {
+ 	double mixParam() const
+	{
 	    return mix_param_;
-	};
+	}
 
- 	double rockDensity() const {
+ 	double rockDensity() const
+	{
 	    return rock_density_;
 	};
 
- 	double deadPoreVol() const {
+ 	double deadPoreVol() const
+	{
 	    return dead_pore_vol_;
-	};
+	}
 
 	double viscMult(double c) const
 	{
 	    return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
 	}
+
 	double viscMultWithDer(double c, double* der) const
 	{
 	    *der = Opm::linearInterpolationDerivative(c_vals_visc_, visc_mult_vals_, c);
 	    return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
 	}
+
 	double adsorbtion(double c) const
 	{
 	    return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
 	}
+
 	double adsorbtionWithDer(double c, double* der) const
 	{
 	    *der = Opm::linearInterpolationDerivative(c_vals_ads_, ads_vals_, c);
