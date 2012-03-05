@@ -289,31 +289,6 @@ namespace Opm
 	    }
 	}
 
-	void computeExplicitStep(const double* xmin, const double* xmax, double* x) const {
-	    double ff = tm.fracFlow(s0, c0, cell);
-	    double mc = tm.computeMc(c0);
-	    double dps = tm.polyprops_.deadPoreVol();
-	    //In this explicit step, we do not compute absorption and take ads0=ads
-	    // double rhor = tm.polyprops_.rockDensity();
-	    // double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	    // double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
-
-	    x[0] =  s0 -  dtpv*(outflux*ff + influx);
-	    x[1] = 1./(x[0] - dps)*((s0 - dps)*c0 - dtpv*(outflux*ff*mc + influx_polymer)); // + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-
-	    // We check that the values we obtain remains admissible (this is not guaranted for an explicit step)
-	    if (x[0] < xmin[0]) {
-		x[0] = xmin[0];
-	    } else if (x[0] > xmax[0]) {
-		x[0] = xmax[0];
-	    }
-	    if (x[1] < xmin[1]) {
-		x[1] = xmin[1];
-	    } else if (x[1] > xmax[1]) {
-		x[1] = xmax[1];
-	    }
-	}
-
 	void computeResidual(const double* x, double* res) const
 	{
 	    double s = x[0];
@@ -652,11 +627,6 @@ namespace Opm
 	bool unsuccessfull_newton_step;
 	double x_new[2];
 	double res_new[2];
-
-	// // Update x=(s, c) with an explicit solver.
-	// residual.computeExplicitStep(x_min, x_max, x);
-	// residual.computeResidual(x, res);
-
 
  	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
