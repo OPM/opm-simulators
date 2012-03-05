@@ -39,7 +39,8 @@
 #include <dumux/material/binarycoefficients/h2o_xylene.hh>
 #include <dumux/material/binarycoefficients/air_xylene.hh>
 
-#include <dumux/material/fluidsystems/basefluidsystem.hh>
+#include "basefluidsystem.hh"
+#include "nullparametercache.hh"
 
 namespace Dumux
 {
@@ -58,6 +59,8 @@ class H2OAirXylene
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
+    typedef NullParameterCache ParameterCache;
+
     typedef Dumux::H2O<Scalar> H2O;
     typedef Dumux::Xylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
@@ -179,9 +182,10 @@ public:
      * \brief Given all mole fractions in a phase, return the phase
      *        density [kg/m^3].
      */
-    using Base::density;
     template <class FluidState>
-    static Scalar density(const FluidState &fluidState, int phaseIdx)
+    static Scalar density(const FluidState &fluidState, 
+                          const ParameterCache &paramCache,
+                          int phaseIdx)
     {
         if (phaseIdx == wPhaseIdx) {
             // See: Ochs 2008
@@ -223,9 +227,9 @@ public:
     /*!
      * \brief Return the viscosity of a phase.
      */
-    using Base::viscosity;
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
                             int phaseIdx)
     {
         if (phaseIdx == wPhaseIdx) {
@@ -296,9 +300,9 @@ public:
      * \brief Given all mole fractions, return the diffusion
      *        coefficent of a component in a phase.
      */
-    using Base::diffusionCoefficient;
     template <class FluidState>
     static Scalar diffusionCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
                                        int phaseIdx,
                                        int compIdx)
     {
@@ -348,16 +352,6 @@ public:
         return 0;
     }
 
-    using Base::binaryDiffusionCoefficient;
-    template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAirXylene::binaryDiffusionCoefficient()");
-    }
-
     /*!
      * \brief Returns the fugacity coefficient [-] of a component in a
      *        phase.
@@ -368,9 +362,9 @@ public:
      * respectively in the liquid phases it is the inverse of the
      * Henry coefficients scaled by pressure
      */
-    using Base::fugacityCoefficient;
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
+                                      const ParameterCache &paramCache,
                                       int phaseIdx,
                                       int compIdx)
     {
@@ -415,13 +409,9 @@ public:
      * \brief Given all mole fractions in a phase, return the specific
      *        phase enthalpy [J/kg].
      */
-    /*!
-     *  \todo This system neglects the contribution of gas-molecules in the liquid phase.
-     *        This contribution is probably not big. Somebody would have to find out the enthalpy of solution for this system. ...
-     */
-    using Base::enthalpy;
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
                            int phaseIdx)
     {
         if (phaseIdx == wPhaseIdx) {
@@ -445,22 +435,6 @@ public:
             return result;
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
-    }
-
-    using Base::heatCapacity;
-    template <class FluidState>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               int phaseIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAirXylene::heatCapacity()");
-    }
-
-    using Base::thermalConductivity;
-    template <class FluidState>
-    static Scalar thermalConductivity(const FluidState &fluidState,
-                                      int phaseIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAirXylene::thermalConductivity()");
     }
 
 private:

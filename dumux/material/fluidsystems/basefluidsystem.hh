@@ -27,8 +27,6 @@
 #ifndef DUMUX_BASE_FLUID_SYSTEM_HH
 #define DUMUX_BASE_FLUID_SYSTEM_HH
 
-#include "nullparametercache.hh"
-
 namespace Dumux
 {
 /*!
@@ -38,18 +36,15 @@ template <class Scalar, class Implementation>
 class BaseFluidSystem
 {
 public:
-    //! The type of parameter cache objects
-    typedef Dumux::NullParameterCache ParameterCache;
-
     /*!
      * \brief Calculate the density [kg/m^3] of a fluid phase
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
-        return Implementation::density(fluidState, phaseIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a density() method!");
     }
 
     /*!
@@ -62,24 +57,24 @@ public:
      *
      * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
                                       int phaseIdx,
                                       int compIdx)
     {
-        return Implementation::fugacityCoefficient(fluidState, phaseIdx, compIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a fugacityCoefficient() method!");
     }
 
     /*!
      * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
-        return Implementation::viscosity(fluidState, phaseIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a viscosity() method!");
     }
 
     /*!
@@ -101,13 +96,13 @@ public:
      * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
      * pressure and temperature.
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar diffusionCoefficient(const FluidState &fluidState,
                                        const ParameterCache &paramCache,
                                        int phaseIdx,
                                        int compIdx)
     {
-        return Implementation::diffusionCoefficient(fluidState, phaseIdx, compIdx);
+         DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a diffusionCoefficient() method!");
     }
 
     /*!
@@ -115,7 +110,7 @@ public:
      *        return the binary diffusion coefficient for components
      *        \f$i\f$ and \f$j\f$ in this phase.
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
                                              int phaseIdx,
@@ -123,7 +118,7 @@ public:
                                              int compJIdx)
 
     {
-        return Implementation::binaryDiffusionCoefficient(fluidState, phaseIdx, compIIdx, compJIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a binaryDiffusionCoefficient() method!");
     }
 
     /*!
@@ -135,12 +130,12 @@ public:
      *        probably not big. Somebody would have to find out the
      *        enthalpy of solution for this system. ...
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar enthalpy(const FluidState &fluidState,
-                                 const ParameterCache &paramCache,
-                                 int phaseIdx)
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
-        return Implementation::enthalpy(fluidState, phaseIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide an enthalpy() method!");
     }
 
     /*!
@@ -150,12 +145,12 @@ public:
      * Source:
      * http://en.wikipedia.org/wiki/List_of_thermal_conductivities
      */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar thermalConductivity(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
                                       int phaseIdx)
     {
-        return Implementation::thermalConductivity(fluidState, phaseIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a thermalConductivity() method!");
     }
 
     /*!
@@ -166,12 +161,12 @@ public:
      * \param fluidState represents all relevant thermodynamic quantities of a
      *  fluid system
      * */
-    template <class FluidState>
+    template <class FluidState, class ParameterCache>
     static Scalar heatCapacity(const FluidState &fluidState,
                                const ParameterCache &paramCache,
                                int phaseIdx)
     {
-        return Implementation::heatCapacity(fluidState, phaseIdx);
+        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a heatCapacity() method!");
     }
 };
 

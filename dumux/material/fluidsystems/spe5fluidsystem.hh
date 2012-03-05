@@ -36,6 +36,7 @@
 #ifndef DUMUX_SPE5_FLUID_SYSTEM_HH
 #define DUMUX_SPE5_FLUID_SYSTEM_HH
 
+#include "basefluidsystem.hh"
 #include "spe5parametercache.hh"
 
 #include <dumux/common/spline.hh>
@@ -59,6 +60,7 @@ namespace FluidSystems
  */
 template <class Scalar>
 class Spe5
+    : public BaseFluidSystem<Scalar, Spe5<Scalar> >
 {
     typedef Dumux::FluidSystems::Spe5<Scalar> ThisType;
 
@@ -432,75 +434,6 @@ public:
                 / fs.pressure(wPhaseIdx);
         }
     }
-
-
-    /*!
-     * \brief Calculate the binary molecular diffusion coefficient for
-     *        a component in a fluid phase [mol^2 * s / (kg*m^3)]
-     *
-     * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
-     * gradient of the chemical potential and follows the law
-     *
-     * \f[ J = - D grad \mu_\kappa \f]
-     *
-     * where \f$\mu_\kappa\f$ is the component's chemical potential,
-     * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
-     * diffusive flux. \f$\mu_\kappa\f$ is connected to the component's
-     * fugacity \f$f_\kappa\f$ by the relation
-     *
-     * \f[ \mu_\kappa = R T_\alpha \mathrm{ln} \frac{f_\kappa}{p_\alpha} \f]
-     *
-     * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
-     * pressure and temperature.
-     */
-    template <class FluidState>
-    static Scalar diffusionCoefficient(const FluidState &fs,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
-    { DUNE_THROW(Dune::NotImplemented, "Diffusion coefficients"); }
-
-    /*!
-     * \brief Given a phase's composition, temperature and pressure,
-     *        return the binary diffusion coefficient for components
-     *        \f$i\f$ and \f$j\f$ in this phase.
-     *
-     * \param fluidState An abitrary fluid state
-     * \param paramCache Container for cache parameters
-     * \param phaseIdx The index of the fluid phase to consider
-     * \param compIIdx The index of the first component to consider
-     * \param compJIdx The index of the second component to consider
-     */
-    template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             const ParameterCache &paramCache,
-                                             int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
-    { DUNE_THROW(Dune::NotImplemented, "Binary diffusion coefficients"); }
-
-    /*!
-     * \brief Given a phase's composition, temperature and pressure,
-     *        calculate its specific enthalpy [J/kg].
-     */
-    template <class FluidState>
-    static Scalar enthalpy(const FluidState &fs,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
-    { DUNE_THROW(Dune::NotImplemented, "Enthalpies"); }
-
-    template <class FluidState>
-    static Scalar thermalConductivity(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx)
-    { DUNE_THROW(Dune::NotImplemented, "Thermal conductivities"); }
-
-    template <class FluidState>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               const ParameterCache &paramCache,
-                               int phaseIdx)
-    { DUNE_THROW(Dune::NotImplemented, "Heat capacities"); }
-
 
 private:
     static Scalar henryCoeffWater_(int compIdx, Scalar temperature)

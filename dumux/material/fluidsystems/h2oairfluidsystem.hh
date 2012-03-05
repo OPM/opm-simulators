@@ -20,7 +20,6 @@
  *   You should have received a copy of the GNU General Public License       *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
-
 /*!
  * \file
  *
@@ -33,21 +32,18 @@
 
 #include <dumux/material/idealgas.hh>
 
-#include <dumux/material/fluidsystems/basefluidsystem.hh>
-
 #include <dumux/material/binarycoefficients/h2o_air.hh>
-#include <dumux/material/fluidsystems/defaultcomponents.hh>
 #include <dumux/material/components/air.hh>
+#include <dumux/material/components/h2o.hh>
+#include <dumux/material/components/tabulatedcomponent.hh>
 
 #include <dumux/common/valgrind.hh>
 #include <dumux/common/exceptions.hh>
 
 #include <assert.h>
 
-#ifdef DUMUX_PROPERTIES_HH
-#include <dumux/common/propertysystem.hh>
-#include <dumux/common/basicproperties.hh>
-#endif
+#include "basefluidsystem.hh"
+#include "nullparametercache.hh"
 
 namespace Dumux
 {
@@ -62,27 +58,6 @@ namespace FluidSystems
  *
  *  This fluidsystem is applied by default with the tabulated version of
  *  water of the IAPWS-formulation.
- *
- *  To change the component formulation (i.e. to use nontabulated or
- *  incompressible water), or to switch on verbosity of tabulation,
- *  specify the water formulation via template arguments or via the property
- *  system, as described in the TypeTag Adapter at the end of the file.
- *
-            // Select fluid system
-            SET_PROP(TestDecTwoPTwoCProblem, FluidSystem)
-            {
-                typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-                typedef Dumux::FluidSystems::H2OAir<Scalar, Dumux::SimpleH2O<Scalar> > type;
-            };
-
- *   Also remember to initialize tabulated components (FluidSystem::init()), while this
- *   is not necessary for non-tabularized ones.
- *
- * This FluidSystem can be used without the PropertySystem that is applied in Dumux,
- * as all Parameters are defined via template parameters. Hence it is in an
- * additional namespace Dumux::FluidSystem::.
- * An adapter class using Dumux::FluidSystem<TypeTag> is also provided
- * at the end of this file.
  */
 template <class Scalar,
           //class H2Otype = Dumux::SimpleH2O<Scalar>,
@@ -96,6 +71,8 @@ class H2OAir
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
 public:
+    typedef NullParameterCache ParameterCache;
+
     typedef H2Otype H2O;
     typedef Dumux::Air<Scalar> Air;
 
@@ -264,18 +241,6 @@ public:
     };
 
     /*!
-     * \brief Molar volume of a component at the critical point [m^3/mol].
-     *
-     * \param compIdx The index of the component to consider
-     */
-    static Scalar criticalMolarVolume(int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented,
-                   "H2OAirFluidSystem::criticalMolarVolume()");
-        return 0;
-    };
-
-    /*!
      * \brief The acentric factor of a component [].
      *
      * \param compIdx The index of the component to consider
@@ -359,9 +324,9 @@ public:
      *
      * \tparam FluidState the fluid state class
      */
-    using Base::density;
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
+                          const ParameterCache &paramCache,
                           int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -434,9 +399,9 @@ public:
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::viscosity;
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -517,9 +482,9 @@ public:
      * inverse Henry constant for the solutes and the saturated vapor pressure
      * both divided by phase pressure.
      */
-    using Base::fugacityCoefficient;
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
+                                      const ParameterCache &paramCache,
                                       int phaseIdx,
                                       int compIdx)
     {
@@ -540,15 +505,6 @@ public:
         return 1.0;
     }
 
-    using Base::diffusionCoefficient;
-    template <class FluidState>
-    static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       int phaseIdx,
-                                       int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAir::diffusionCoefficient()");
-    }
-
     /*!
      * \brief Given a phase's composition, temperature and pressure,
      *        return the binary diffusion coefficient for components
@@ -559,9 +515,9 @@ public:
      * \param compIIdx The index of the first component to consider
      * \param compJIdx The index of the second component to consider
      */
-    using Base::binaryDiffusionCoefficient;
     template <class FluidState>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
+                                             const ParameterCache &paramCache,
                                              int phaseIdx,
                                              int compIIdx,
                                              int compJIdx)
@@ -628,13 +584,9 @@ public:
      * Formula (2.42):
      * the specifiv enthalpy of a gasphase result from the sum of (enthalpies*mass fraction) of the components
      */
-    /*!
-     *  \todo This system neglects the contribution of gas-molecules in the liquid phase.
-     *        This contribution is probably not big. Somebody would have to find out the enthalpy of solution for this system. ...
-     */
-    using Base::enthalpy;
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
                            int phaseIdx)
     {
         Scalar T = fluidState.temperature(phaseIdx);
@@ -669,9 +621,9 @@ public:
      * \param fluidState An abitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::thermalConductivity;
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
+                                      const ParameterCache &paramCache,
                                       int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -703,66 +655,9 @@ public:
                 return lambdaDryAir; // conductivity of Nitrogen [W / (m K ) ]
         }
     }
-
-    /*!
-     * \brief Specific isobaric heat capacity of a fluid phase.
-     *        \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param params    mutable parameters
-     * \param phaseIdx  for which phase to give back the heat capacity
-     */
-    using Base::heatCapacity;
-    template <class FluidState>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               int phaseIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "FluidSystems::H2OAir::heatCapacity()");
-    }
 };
 
 } // end namepace FluidSystems
-
-#ifdef DUMUX_PROPERTIES_HH
-// forward defintions of the property tags
-namespace Properties {
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Components);
-}
-
-/*!
- * \brief A twophase fluid system with water and air as components.
- *
- * This is an adapter to use Dumux::H2OAirFluidSystem<TypeTag>, as is
- * done with most other classes in Dumux.
- *  This fluidsystem is applied by default with the tabulated version of
- *  water of the IAPWS-formulation.
- *
- *  To change the component formulation (ie to use nontabulated or
- *  incompressible water), or to switch on verbosity of tabulation,
- *  use the property system and the property "Components":
- *
-        // Select desired version of the component
-        SET_PROP(myApplicationProperty, Components) : public GET_PROP(TypeTag, DefaultComponents)
-        {
-            typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-
-        // Do not use the defaults !
-        //    typedef Dumux::TabulatedComponent<Scalar, Dumux::H2O<Scalar> > H2O;
-
-        // Apply e.g. untabulated water:
-        typedef Dumux::H2O<Scalar> H2O;
-        };
-
- *   Also remember to initialize tabulated components (FluidSystem::init()), while this
- *   is not necessary for non-tabularized ones.
- */
-template<class TypeTag>
-class H2OAirFluidSystem
-: public FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar),
-                              typename GET_PROP(TypeTag, Components)::H2O,
-                             GET_PROP_VALUE(TypeTag, EnableComplicatedFluidSystem)>
-{};
-#endif
 
 } // end namepace
 

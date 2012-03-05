@@ -39,14 +39,10 @@
 #include <dumux/common/valgrind.hh>
 #include <dumux/common/exceptions.hh>
 
-#include <dumux/material/fluidsystems/basefluidsystem.hh>
-
 #include <assert.h>
 
-#ifdef DUMUX_PROPERTIES_HH
-#include <dumux/common/basicproperties.hh>
-#include <dumux/material/fluidsystems/defaultcomponents.hh>
-#endif
+#include "basefluidsystem.hh"
+#include "nullparametercache.hh"
 
 namespace Dumux
 {
@@ -61,8 +57,6 @@ namespace FluidSystems
  * This FluidSystem can be used without the PropertySystem that is applied in Dumux,
  * as all Parameters are defined via template parameters. Hence it is in an
  * additional namespace Dumux::FluidSystems::.
- * An adapter class using Dumux::FluidSystem<TypeTag> is also provided
- * at the end of this file.
  */
 template <class Scalar, bool useComplexRelations = true>
 class H2ON2LiquidPhase
@@ -77,6 +71,8 @@ class H2ON2LiquidPhase
     typedef Dumux::N2<Scalar> SimpleN2;
 
 public:
+    typedef NullParameterCache ParameterCache;
+ 
     /****************************************
      * Fluid phase related static parameters
      ****************************************/
@@ -248,18 +244,6 @@ public:
     }
 
     /*!
-     * \brief Molar volume of a component at the critical point [m^3/mol].
-     *
-     * \param compIdx The index of the component to consider
-     */
-    static Scalar criticalMolarVolume(int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented,
-                   "H2ON2OnePhaseFluidSystem::criticalMolarVolume()");
-        return 0;
-    }
-
-    /*!
      * \brief The acentric factor of a component [].
      *
      * \param compIdx The index of the component to consider
@@ -336,9 +320,9 @@ public:
      * \param fluidState An arbitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::density;
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
+                          const ParameterCache &paramCache,
                           int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -381,9 +365,9 @@ public:
      * \param fluidState An arbitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::viscosity;
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -427,9 +411,9 @@ public:
      * \param phaseIdx The index of the fluid phase to consider
      * \param compIdx The index of the component to consider
      */
-    using Base::fugacityCoefficient;
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
+                                      const ParameterCache &paramCache,
                                       int phaseIdx,
                                       int compIdx)
     {
@@ -449,40 +433,6 @@ public:
             DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
-
-    /*!
-     * \brief Calculate the molecular diffusion coefficient for a
-     *        component in a fluid phase [mol^2 * s / (kg*m^3)].
-     *
-     * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
-     * gradient of the chemical potential and follows the law
-     *
-     * \f[ J = - D \mathbf{grad} \mu_\kappa \f]
-     *
-     * where \f$\mu_\kappa\f$ is the component's chemical potential,
-     * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
-     * diffusive flux. \f$mu_\kappa\f$ is connected to the component's
-     * fugacity \f$f_\kappa\f$ by the relation
-     *
-     * \f[ \mu_\kappa = R T_\alpha \mathrm{ln} \frac{f_\kappa}{p_\alpha} \f]
-     *
-     * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
-     * pressure and temperature.
-     *
-     * \param fluidState An arbitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     * \param compIdx The index of the component to consider
-     */
-    using Base::diffusionCoefficient;
-    template <class FluidState>
-    static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       int phaseIdx,
-                                       int compIdx)
-    {
-        // TODO!
-        DUNE_THROW(Dune::NotImplemented, "Diffusion coefficients");
-    }
-
     /*!
      * \brief Given a phase's composition, temperature and pressure,
      *        return the binary diffusion coefficient for components
@@ -493,9 +443,9 @@ public:
      * \param compIIdx The index of the first component to consider
      * \param compJIdx The index of the second component to consider
      */
-    using Base::binaryDiffusionCoefficient;
     template <class FluidState>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
+                                             const ParameterCache &paramCache,
                                              int phaseIdx,
                                              int compIIdx,
                                              int compJIdx)
@@ -544,9 +494,9 @@ public:
      * \param fluidState An arbitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::enthalpy;
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
                            int phaseIdx)
     {
         Scalar T = fluidState.temperature(phaseIdx);
@@ -571,9 +521,9 @@ public:
      * \param fluidState An arbitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::thermalConductivity;
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
+                                      const ParameterCache &paramCache,
                                       const int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
@@ -598,9 +548,9 @@ public:
      * \param fluidState An arbitrary fluid state
      * \param phaseIdx The index of the fluid phase to consider
      */
-    using Base::heatCapacity;
     template <class FluidState>
     static Scalar heatCapacity(const FluidState &fluidState,
+                               const ParameterCache &paramCache,
                                int phaseIdx)
     {
         if (phaseIdx == lPhaseIdx) {
@@ -613,20 +563,6 @@ public:
 };
 
 } // end namepace FluidSystems
-
-#ifdef DUMUX_PROPERTIES_HH
-/*!
- * \brief A one-phase fluid system with water and nitrogen as components.
- *
- * This is an adapter to use Dumux::H2ON2LiquidPhaseFluidSystem<TypeTag>, as is
- * done with most other classes in Dumux.
- */
-template<class TypeTag>
-class H2ON2LiquidPhaseFluidSystem
-: public FluidSystems::H2ON2LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                             GET_PROP_VALUE(TypeTag, EnableComplicatedFluidSystem)>
-{};
-#endif
 
 } // end namepace
 
