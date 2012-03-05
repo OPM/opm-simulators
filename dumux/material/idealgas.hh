@@ -66,11 +66,6 @@ public:
     static Scalar molarDensity(Scalar temperature,
                                 Scalar pressure)
     { return pressure/(R*temperature); }
-
-    DUMUX_DEPRECATED_MSG("use molarDensity()")
-    static Scalar concentration(Scalar temperature,
-                                Scalar pressure)
-    { return molarDensity(temperature, pressure); }
 };
 
 template <class Scalar>
