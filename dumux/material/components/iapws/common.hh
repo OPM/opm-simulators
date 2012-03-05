@@ -200,7 +200,7 @@ public:
         Scalar rhobar = rho / thcond_rhostar;
 
         /* fast implementation... minimised calls to 'pow' routine... */
-        Scalar Troot = sqrt(Tbar);
+        Scalar Troot = std::sqrt(Tbar);
         Scalar Tpow = Troot;
         Scalar lam = 0;
 
@@ -209,12 +209,13 @@ public:
             Tpow *= Tbar;
         }
 
-        lam += thcond_b0 + thcond_b1
-                * rhobar + thcond_b2
-                * exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
+        lam += 
+            thcond_b0 + thcond_b1
+            * rhobar + thcond_b2
+            * std::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
 
-        Scalar DTbar = fabs(Tbar - 1) + thcond_c4;
-        Scalar DTbarpow = pow(DTbar, 3./5);
+        Scalar DTbar = std::abs(Tbar - 1) + thcond_c4;
+        Scalar DTbarpow = std::pow(DTbar, 3./5);
         Scalar Q = 2. + thcond_c5 / DTbarpow;
 
         Scalar S;
@@ -224,16 +225,16 @@ public:
             S = thcond_c6 / DTbarpow;
         }
 
-        Scalar rhobar18 = pow(rhobar, 1.8);
-        Scalar rhobarQ = pow(rhobar, Q);
+        Scalar rhobar18 = std::pow(rhobar, 1.8);
+        Scalar rhobarQ = std::pow(rhobar, Q);
 
         lam +=
-            (thcond_d1 / pow(Tbar,10) + thcond_d2) * rhobar18 *
-                exp(thcond_c1 * (1 - rhobar * rhobar18))
+            (thcond_d1 / std::pow(Tbar,10) + thcond_d2) * rhobar18 *
+            std::exp(thcond_c1 * (1 - rhobar * rhobar18))
             + thcond_d3 * S * rhobarQ *
-                exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
+            std::exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
             + thcond_d4 *
-                exp(thcond_c2 * pow(Troot,3) + thcond_c3 / pow(rhobar,5));
+            std::exp(thcond_c2 * std::pow(Troot,3) + thcond_c3 / std::pow(rhobar,5));
         return /*thcond_kstar * */ lam;
     }
 };

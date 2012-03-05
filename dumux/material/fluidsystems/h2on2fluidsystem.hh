@@ -448,9 +448,9 @@ public:
             for (int i = 0; i < numComponents; ++i) {
                 Scalar divisor = 0;
                 for (int j = 0; j < numComponents; ++j) {
-                    Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) * pow(molarMass(j)/molarMass(i), 1/4.0);
+                    Scalar phiIJ = 1 + std::sqrt(mu[i]/mu[j]) * std::pow(molarMass(j)/molarMass(i), 1/4.0);
                     phiIJ *= phiIJ;
-                    phiIJ /= sqrt(8*(1 + molarMass(i)/molarMass(j)));
+                    phiIJ /= std::sqrt(8*(1 + molarMass(i)/molarMass(j)));
                     divisor += fluidState.moleFraction(phaseIdx, j)/sumx * phiIJ;
                 }
                 muResult += fluidState.moleFraction(phaseIdx, i)/sumx * mu[i] / divisor;

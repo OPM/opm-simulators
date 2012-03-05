@@ -484,11 +484,11 @@ public:
                     Scalar divisor = 0;
                     for (int j = 0; j < numComponents; ++j)
                     {
-                        Scalar phiIJ = 1 + sqrt(mu[i]/mu[j]) * // 1 + (mu[i]/mu[j]^1/2
-                            pow(M[j]/M[i], 1./4.0);   // (M[i]/M[j])^1/4
+                        Scalar phiIJ = 1 + std::sqrt(mu[i]/mu[j]) * // 1 + (mu[i]/mu[j]^1/2
+                            std::pow(M[j]/M[i], 1./4.0);   // (M[i]/M[j])^1/4
 
                         phiIJ *= phiIJ;
-                        phiIJ /= sqrt(8*(1 + M[i]/M[j]));
+                        phiIJ /= std::sqrt(8*(1 + M[i]/M[j]));
                         divisor += fluidState.moleFraction(phaseIdx, j)*phiIJ;
                     }
                     muResult += fluidState.moleFraction(phaseIdx, i)*mu[i] / divisor;

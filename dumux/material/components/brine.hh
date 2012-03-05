@@ -151,7 +151,7 @@ public:
         theta = T - 273.15;
 
         Scalar S = salinity;
-        S_lSAT = f[0] + f[1]*theta + f[2]*pow(theta,2) + f[3]*pow(theta,3);
+        S_lSAT = f[0] + f[1]*theta + f[2]*std::pow(theta,2) + f[3]*std::pow(theta,3);
         /*Regularization*/
         if (S>S_lSAT) {
             S = S_lSAT;
@@ -161,7 +161,7 @@ public:
 
         /*DAUBERT and DANNER*/
         /*U=*/h_NaCl = (3.6710E4*T + 0.5*(6.2770E1)*T*T - ((6.6670E-2)/3)*T*T*T
-                        +((2.8000E-5)/4)*pow(T,4))/(58.44E3)- 2.045698e+02; /* kJ/kg */
+                        +((2.8000E-5)/4)*std::pow(T,4))/(58.44E3)- 2.045698e+02; /* kJ/kg */
 
         m = (1E3/58.44)*(S/(1-S));
         i = 0;
@@ -170,7 +170,7 @@ public:
 
         for (i = 0; i<=3; i++) {
             for (j=0; j<=2; j++) {
-                d_h = d_h + a[i][j] * pow(theta, i) * pow(m, j);
+                d_h = d_h + a[i][j] * std::pow(theta, i) * std::pow(m, j);
             }
         }
 
@@ -376,8 +376,8 @@ public:
         { temperature = 275; }
         Scalar T_C = temperature - 273.15;
 
-        Scalar A = (0.42*pow((pow(salinity, 0.8)-0.17), 2) + 0.045)*pow(T_C, 0.8);
-        Scalar mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*exp(-A);
+        Scalar A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*std::pow(T_C, 0.8);
+        Scalar mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*std::exp(-A);
 
         return mu_brine/1000.0; /* unit: Pa s */
     }

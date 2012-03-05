@@ -72,7 +72,7 @@ public:
     static Scalar pC(const Params &params, Scalar Swe)
     {
         assert(0 <= Swe && Swe <= 1);
-        return pow(pow(Swe, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+        return std::pow(std::pow(Swe, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
     }
 
     /*!
@@ -93,7 +93,7 @@ public:
     {
         assert(pC >= 0);
 
-        return pow(pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
+        return std::pow(std::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
 
     /*!
@@ -116,8 +116,8 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        Scalar powSwe = pow(Swe, -1/params.vgM());
-        return - 1/params.vgAlpha() * pow(powSwe - 1, 1/params.vgN() - 1)/params.vgN()
+        Scalar powSwe = std::pow(Swe, -1/params.vgM());
+        return - 1/params.vgAlpha() * std::pow(powSwe - 1, 1/params.vgN() - 1)/params.vgN()
             * powSwe/Swe/params.vgM();
     }
 
@@ -134,8 +134,8 @@ public:
     {
         assert(pC >= 0);
 
-        Scalar powAlphaPc = pow(params.vgAlpha()*pC, params.vgN());
-        return -pow(powAlphaPc + 1, -params.vgM()-1)*
+        Scalar powAlphaPc = std::pow(params.vgAlpha()*pC, params.vgN());
+        return -std::pow(powAlphaPc + 1, -params.vgM()-1)*
             params.vgM()*powAlphaPc/pC*params.vgN();
     }
 
@@ -152,8 +152,8 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        Scalar r = 1. - pow(1 - pow(Swe, 1/params.vgM()), params.vgM());
-        return sqrt(Swe)*r*r;
+        Scalar r = 1. - std::pow(1 - std::pow(Swe, 1/params.vgM()), params.vgM());
+        return std::sqrt(Swe)*r*r;
     };
 
     /*!
@@ -191,8 +191,8 @@ public:
         assert(0 <= Swe && Swe <= 1);
 
         return
-            pow(1 - Swe, 1.0/3) *
-            pow(1 - pow(Swe, 1/params.vgM()), 2*params.vgM());
+            std::pow(1 - Swe, 1.0/3) *
+            std::pow(1 - std::pow(Swe, 1/params.vgM()), 2*params.vgM());
     };
 
     /*!

@@ -170,7 +170,7 @@ public:
             DUNE_THROW(Dune::NotImplemented,
                 "ConstrelAir: Temperature out of range at ");
         }
-        r = 1.496*1.E-6*pow(temperature,1.5)/(temperature+120.);
+        r = 1.496*1.E-6*std::pow(temperature,1.5)/(temperature+120.);
         return (r);
 
     };

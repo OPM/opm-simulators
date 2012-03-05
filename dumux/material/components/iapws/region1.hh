@@ -145,7 +145,7 @@ public:
 
         Scalar result = 0;
         for (int i = 0; i < 34; ++i) {
-            result += n(i)*pow(7.1 - pi_, I(i))*pow(tau_ - 1.222, J(i));
+            result += n(i)*std::pow(7.1 - pi_, I(i))*std::pow(tau_ - 1.222, J(i));
         }
 
         return result;

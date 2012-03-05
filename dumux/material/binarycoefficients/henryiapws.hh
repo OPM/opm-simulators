@@ -67,20 +67,20 @@ inline Scalar henryIAPWS(Scalar E,
 
     Scalar f = 0;
     for (int i = 0; i < 6; ++i) {
-        f += c[i]*pow(tau, d[i]);
+        f += c[i]*std::pow(tau, d[i]);
     }
 
     Scalar exponent =
         q*F +
         E/temperature*f +
         (F +
-         G*pow(tau, 2.0/3) +
+         G*std::pow(tau, 2.0/3) +
          H*tau)*
-        exp((H2O::tripleTemperature() - temperature)/100);
+        std::exp((H2O::tripleTemperature() - temperature)/100);
     // CAUTION: K_D is formulated in mole fractions. We have to
     // multiply it with the vapor pressure of water in order to get
     // derivative of the partial pressure.
-    return exp(exponent)*H2O::vaporPressure(temperature);
+    return std::exp(exponent)*H2O::vaporPressure(temperature);
 }
 }
 

@@ -74,7 +74,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return params.pe()*pow(Swe, -1.0/params.lambda());
+        return params.pe()*std::pow(Swe, -1.0/params.lambda());
     }
 
     /*!
@@ -95,7 +95,7 @@ public:
     {
         assert(pC >= 0);
 
-        Scalar tmp = pow(pC/params.pe(), -params.lambda());
+        Scalar tmp = std::pow(pC/params.pe(), -params.lambda());
         return std::min(std::max(tmp, Scalar(0.0)), Scalar(1.0));
     }
 
@@ -119,7 +119,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return - params.pe()/params.lambda() * pow(Swe, -1/params.lambda() - 1);
+        return - params.pe()/params.lambda() * std::pow(Swe, -1/params.lambda() - 1);
     }
 
     /*!
@@ -136,7 +136,7 @@ public:
     {
         assert(pC >= 0);
 
-        return -params.lambda()/params.pe() * pow(pC/params.pe(), - params.lambda() - 1);
+        return -params.lambda()/params.pe() * std::pow(pC/params.pe(), - params.lambda() - 1);
     }
 
     /*!
@@ -154,7 +154,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return pow(Swe, 2.0/params.lambda() + 3);
+        return std::pow(Swe, 2.0/params.lambda() + 3);
     };
 
     /*!
@@ -172,7 +172,7 @@ public:
     {
         assert(0 <= Swe && Swe <= 1);
 
-        return (2.0/params.lambda() + 3)*pow(Swe, 2.0/params.lambda() + 2);
+        return (2.0/params.lambda() + 3)*std::pow(Swe, 2.0/params.lambda() + 2);
     };
 
     /*!
@@ -192,7 +192,7 @@ public:
 
         Scalar exponent = 2.0/params.lambda() + 1;
         Scalar tmp = 1. - Swe;
-        return tmp*tmp*(1. - pow(Swe, exponent));
+        return tmp*tmp*(1. - std::pow(Swe, exponent));
     }
 
     /*!
@@ -214,7 +214,7 @@ public:
         return
             2.0*(Swe - 1)*(
                 1 +
-                pow(Swe, 2.0/params.lambda())*(
+                std::pow(Swe, 2.0/params.lambda())*(
                     1.0/params.lambda() + 1.0/2 -
                     Swe*(1.0/params.lambda() + 1.0/2)
                     )

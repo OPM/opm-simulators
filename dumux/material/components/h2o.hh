@@ -845,7 +845,7 @@ private:
     static Scalar heatCap_p_Region1_(Scalar temperature, Scalar pressure)
     {
         return
-            - pow(Region1::tau(temperature), 2 ) *
+            - std::pow(Region1::tau(temperature), 2 ) *
             Region1::ddgamma_ddtau(temperature, pressure) *
             Rs;
     };
@@ -855,10 +855,10 @@ private:
     {
         double tau = Region1::tau(temperature);
         double num = Region1::dgamma_dpi(temperature, pressure) - tau * Region1::ddgamma_dtaudpi(temperature, pressure);
-        double diff = pow(num, 2) / Region1::ddgamma_ddpi(temperature, pressure);
+        double diff = std::pow(num, 2) / Region1::ddgamma_ddpi(temperature, pressure);
 
         return
-            - pow(tau, 2 ) *
+            - std::pow(tau, 2 ) *
             Region1::ddgamma_ddtau(temperature, pressure) * Rs +
             diff;
     };
@@ -903,7 +903,7 @@ private:
     static Scalar heatCap_p_Region2_(Scalar temperature, Scalar pressure)
     {
         return
-            - pow(Region2::tau(temperature), 2 ) *
+            - std::pow(Region2::tau(temperature), 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) *
             Rs;
     };
@@ -916,7 +916,7 @@ private:
         double num = 1 + pi * Region2::dgamma_dpi(temperature, pressure) + tau * pi * Region2::ddgamma_dtaudpi(temperature, pressure);
         double diff = num * num / (1 - pi * pi * Region2::ddgamma_ddpi(temperature, pressure));
         return
-            - pow(tau, 2 ) *
+            - std::pow(tau, 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) * Rs
             - diff;
     };
