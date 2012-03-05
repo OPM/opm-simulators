@@ -350,7 +350,15 @@ main(int argc, char** argv)
     const double *grav = use_gravity ? &gravity[0] : 0;
     Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), grav, linsolver);
 
-    const int method = param.getDefault("method", 1);
+    Opm::TransportModelPolymer::SingleCellMethod method;
+    std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
+    if (method_string == "Bracketing") {
+	method = Opm::TransportModelPolymer::Bracketing;
+    } else if (method_string == "Newton") {
+	method = Opm::TransportModelPolymer::Newton;
+    } else {
+	THROW("Unknown method: " << method_string);
+    }
     const double nltol = param.getDefault("nl_tolerance", 1e-9);
     const int maxit = param.getDefault("nl_maxiter", 30);
     Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata,

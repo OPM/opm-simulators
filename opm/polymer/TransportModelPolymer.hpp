@@ -38,13 +38,16 @@ namespace Opm
     class TransportModelPolymer : public TransportModelInterface
     {
     public:
+
+	enum SingleCellMethod { Bracketing, Newton };
+
 	/// \TODO document me, especially method.
 	TransportModelPolymer(const UnstructuredGrid& grid,
 			      const double* porosity,
 			      const double* porevolume,
 			      const IncompPropertiesInterface& props,
 			      const PolymerProperties& polyprops,
-			      const int method,
+			      const SingleCellMethod method,
 			      const double tol,
 			      const int maxit);
 
@@ -62,7 +65,7 @@ namespace Opm
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
-	void solveSingleCellSplitting(int cell);
+	void solveSingleCellNewton(int cell);
 
 
     private:
@@ -86,7 +89,7 @@ namespace Opm
 	std::vector<double> fractionalflow_;  // one per cell
 	std::vector<double> mc_;  // one per cell
 	const double* visc_;
-	int method_; // method == 1: double bracketing, method == 2 splitting
+	SingleCellMethod method_;
 
 	struct ResidualC;
 	struct ResidualS;

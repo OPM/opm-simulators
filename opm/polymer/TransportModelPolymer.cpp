@@ -34,7 +34,7 @@ namespace Opm
 						 const double* porevolume,
 						 const IncompPropertiesInterface& props,
 						 const PolymerProperties& polyprops,
-						 const int method,
+						 const SingleCellMethod method,
 						 const double tol,
 						 const int maxit)
 	: grid_(grid),
@@ -324,6 +324,22 @@ namespace Opm
 		+ dtpv*(outflux*ff*mc + influx_polymer);
 	}
 
+	void computeResidual(const double* x, double* res, double& mc, double& ff) const
+	{
+	    double s = x[0];
+	    double c = x[1];
+	    ff = tm.fracFlow(s, c, cell);
+	    mc = tm.computeMc(c);
+	    double dps = tm.polyprops_.deadPoreVol();
+	    double rhor = tm.polyprops_.rockDensity();
+	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+	    double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+	    res[0] = s - s0 +  dtpv*(outflux*tm.fracFlow(s, c, cell) + influx);
+	    res[1] = (s - dps)*c - (s0 - dps)*c0
+		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+		+ dtpv*(outflux*ff*mc + influx_polymer);
+	}
+
 
 	bool solveNewtonStep(const double* x, double* x_new, const int& gradient_method) {
 
@@ -559,12 +575,15 @@ namespace Opm
 
     void TransportModelPolymer::solveSingleCell(const int cell)
     {
-	if (method_ == 1) {
+	switch (method_) {
+	case Bracketing:
 	    solveSingleCellBracketing(cell);
-	} else if (method_ == 2) {
-	    solveSingleCellSplitting(cell);
-	} else {
-	    THROW("Method is " << method_ << "");
+	    break;
+	case Newton:
+	    solveSingleCellNewton(cell);
+	    break;
+	default:
+	    THROW("Unknown method " << method_);
 	}
     }
 
@@ -582,10 +601,10 @@ namespace Opm
     }
 
 
-    // Splitting method, where we compute alternatively the zeros for the residual in s and c along
+    // Newton method, where we compute alternatively the zeros for the residual in s and c along
     // a specified piecewise linear curve. At each iteration, we use a robust 1d solver.
 
-    void TransportModelPolymer::solveSingleCellSplitting(int cell)
+    void TransportModelPolymer::solveSingleCellNewton(int cell)
     {
 	const int max_iters_falsi = 20;
 	const double tol = 1e-7;
@@ -602,13 +621,15 @@ namespace Opm
 	Residual residual(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
 	double res[2];
+	double mc;
+	double ff;
 
-	residual.computeResidual(x, res);
+	residual.computeResidual(x, res, mc, ff);
 
 	if (norm(res) < tol) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
- 	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
-	    mc_[cell] = computeMc(concentration_[cell]);
+ 	    fractionalflow_[cell] = ff;
+	    mc_[cell] = mc;
 	    return;
 	}
 
@@ -632,7 +653,7 @@ namespace Opm
  	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
 	    if (residual.solveNewtonStep(x, x_new, gradient_method)) {
-		residual.computeResidual(x_new, res_new);
+		residual.computeResidual(x_new, res_new, mc, ff);
 		unsuccessfull_newton_step = false;
 		if (norm(res_new) > norm(res) || x_new[0] < x_min[0] || x_new[1] < x_min[1] || x_new[0] > x_max[0] || x_new[1] > x_max[1]) {
 		    unsuccessfull_newton_step = true;
@@ -694,7 +715,7 @@ namespace Opm
 			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		    }
 		    residual.compute_new_x(x, t);
-		    residual.computeResidual(x, res);
+		    residual.computeResidual(x, res, mc, ff);
 		} else {
 		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
 		    if (res[1] < -falsi_tol) {
@@ -728,7 +749,7 @@ namespace Opm
 			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		    }
 		    residual.compute_new_x(x, t);
-		    residual.computeResidual(x, res);
+		    residual.computeResidual(x, res, mc, ff);
 		}
 		iters_used_split += 1;
 	    }
@@ -742,8 +763,8 @@ namespace Opm
 	    concentration_[cell] = x[1];
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
 	    saturation_[cell] = x[0];
-	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
-	    mc_[cell] = computeMc(concentration_[cell]);
+	    fractionalflow_[cell] = ff;
+	    mc_[cell] = mc;
 	}
     }
 
