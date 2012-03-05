@@ -24,8 +24,13 @@
 #include <opm/core/utility/RootFinders.hpp>
 #include <cmath>
 
-static double norm(double* res);
-
+namespace 
+{
+    double norm(double* res) 
+    {
+	return std::max(std::abs(res[0]), std::abs(res[1]));
+    }
+}
 
 namespace Opm
 {
@@ -193,13 +198,14 @@ namespace Opm
 	}
 	double operator()(double c) const
 	{
+	    double dps = tm.polyprops_.deadPoreVol();
 	    ResidualS res_s(tm, cell, s0, influx, outflux, dtpv, c);
 	    int iters_used;
 	    // Solve for s first.
-	    s = modifiedRegulaFalsi(res_s, tm.smin_[2*cell], tm.smax_[2*cell], tm.maxit_, tm.tol_, iters_used);
+	    s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
+				    tm.maxit_, tm.tol_, iters_used);
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
-	    double dps = tm.polyprops_.deadPoreVol();
 	    double rhor = tm.polyprops_.rockDensity();
 	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	    double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
@@ -587,23 +593,26 @@ namespace Opm
 	}
     }
 
+
+
+
     void TransportModelPolymer::solveSingleCellBracketing(int cell)
     {
-	    ResidualC res(*this, cell);
-	    const double a = 0.0;
-	    const double b = polyprops_.cMax();
-	    int iters_used;
-	    concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
-	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
-	    saturation_[cell] = res.lastSaturation();
-	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
-	    mc_[cell] = computeMc(concentration_[cell]);
+	ResidualC res(*this, cell);
+	const double a = 0.0;
+	const double b = polyprops_.cMax();
+	int iters_used;
+	concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
+	cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+	saturation_[cell] = res.lastSaturation();
+	fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
+	mc_[cell] = computeMc(concentration_[cell]);
     }
+
 
 
     // Newton method, where we compute alternatively the zeros for the residual in s and c along
     // a specified piecewise linear curve. At each iteration, we use a robust 1d solver.
-
     void TransportModelPolymer::solveSingleCellNewton(int cell)
     {
 	const int max_iters_falsi = 20;
@@ -611,12 +620,11 @@ namespace Opm
 	// the tolerance for 1d solver is set as a function of the residual
 	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
 	double falsi_tol;
-	double reduc_factor_falsi_tol = 1e-4;
+	const double reduc_factor_falsi_tol = 1e-4;
 	const double gradient_method = 2; // method to compute derivative ( 1: finite difference, 2: formulae)
 	int iters_used_falsi = 0;
 	const int max_iters_split = 20;
 	int iters_used_split = 0;
-
 
 	Residual residual(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
@@ -633,8 +641,8 @@ namespace Opm
 	    return;
 	}
 
-	double x_min[2] = {polyprops_.deadPoreVol(), 0.0};
-	double x_max[2] = {1.0, polyprops_.cMax()};
+	double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
+	double x_max[2] = { 1.0, polyprops_.cMax() };
 	double t;
 	double t_max;
 	double t_out;
@@ -929,16 +937,6 @@ namespace Opm
 } // namespace Opm
 
 
-static double norm(double* res) {
-    double absres0 = std::abs(res[0]);
-    double absres1 = std::abs(res[1]);
-    if (absres0 <= absres1) {
-	return absres1;
-    }
-    else {
-	return absres0;
-    }
-}
 
 
 
