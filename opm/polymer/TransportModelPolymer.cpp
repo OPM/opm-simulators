@@ -601,15 +601,14 @@ namespace Opm
 	const int max_iters_split = 20;
 	int iters_used_split = 0;
 
+	// Check if current state is an acceptable solution.
 	Residual residual(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
 	double res[2];
 	double mc;
 	double ff;
-
 	residual.computeResidual(x, res, mc, ff);
-
-	if (norm(res) < tol) {
+	if (norm(res) <= tol) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
  	    fractionalflow_[cell] = ff;
 	    mc_[cell] = mc;
@@ -733,7 +732,7 @@ namespace Opm
 	    }
 	}
 
-	if ((iters_used_split >=  max_iters_split) && (norm(res) >= tol)) {
+	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol)) {
 	    solveSingleCellBracketing(cell);
 	    std::cout << "splitting did not work" << std::endl;
 	    std::cout << "cell number" << cell << std::endl;
