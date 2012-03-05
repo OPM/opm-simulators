@@ -53,6 +53,7 @@ class BoxSpatialParameters: public BoxSpatialParametersOneP<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, SpatialParameters) Implementation;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
@@ -67,7 +68,7 @@ class BoxSpatialParameters: public BoxSpatialParametersOneP<TypeTag>
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar,dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<CoordScalar,dimWorld> Vector;
+    typedef Dune::FieldVector<Scalar,dimWorld> Vector;
 
 public:
     BoxSpatialParameters(const GridView &gv)
