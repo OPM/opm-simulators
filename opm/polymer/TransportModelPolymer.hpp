@@ -66,6 +66,7 @@ namespace Opm
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
 	void solveSingleCellNewton(int cell);
+	class ResidualEquation;
 
 
     private:
@@ -94,8 +95,6 @@ namespace Opm
 	struct ResidualC;
 	struct ResidualS;
 
-	// Residual function which is used in splitting method
-	struct Residual;
 
 	double fracFlow(double s, double c, int cell) const;
 	double fracFlowWithDer(double s, double c, int cell, double* der) const;
