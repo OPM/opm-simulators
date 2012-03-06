@@ -47,7 +47,7 @@ namespace Opm
 
     /// @brief Computes total mobility for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
-    /// @param[int] cells     cells with which the saturation values are associated
+    /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobilities.
     void computeTotalMobility(const Opm::IncompPropertiesInterface& props,
@@ -73,7 +73,7 @@ namespace Opm
 
     /// @brief Computes total mobility and omega for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
-    /// @param[int] cells     cells with which the saturation values are associated
+    /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobility
     /// @param[out] omega     mobility-weighted (or fractional-flow weighted)
