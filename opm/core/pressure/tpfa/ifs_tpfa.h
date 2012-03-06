@@ -38,13 +38,18 @@ struct ifs_tpfa_data {
 };
 
 
+struct ifs_tpfa_forces {
+    const double *src;
+};
+
+
 struct ifs_tpfa_data *
 ifs_tpfa_construct(struct UnstructuredGrid *G);
 
 void
 ifs_tpfa_assemble(struct UnstructuredGrid               *G,
+                  const struct ifs_tpfa_forces *F,
                   const double         *trans,
-                  const double         *src,
                   const double         *gpress,
                   struct ifs_tpfa_data *h);
 

@@ -22,25 +22,55 @@
 
 #include <stddef.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum flowbc_type { UNSET, PRESSURE, FLUX };
+enum FlowBCType { BC_NOFLOW      ,
+                  BC_PRESSURE    ,
+                  BC_FLUX_TOTVOL };
 
-typedef struct {
-    enum flowbc_type *type;
-    double           *bcval;
-} flowbc_t;
+/* Boundary condition structure.
+ *
+ * Condition i (in [0 .. nbc-1]) affects (outer) interface face[i], is
+ * of type type[i], and specifies a target value of value[i].
+ *
+ * The field 'cpty' is for internal use by the implementation. */
+struct FlowBoundaryConditions {
+    size_t           nbc;       /* Current number of bdry. conditions */
+    size_t           cpty;      /* Internal management.  Do not touch */
+
+    enum FlowBCType *type;      /* Condition type */
+    double          *value;     /* Condition value (target) */
+    int             *face;      /* Outer faces affected by ind. target */
+};
 
 
-flowbc_t *
-allocate_flowbc(size_t nf);
+/* Allocate a 'FlowBoundaryConditions' structure, initially capable of
+ * managing 'nbc' individual boundary conditions.  */
+struct FlowBoundaryConditions *
+flow_conditions_construct(size_t nbc);
 
+
+/* Release memory resources managed by 'fbc', including the containing
+ * 'struct' pointer, 'fbc'. */
 void
-deallocate_flowbc(flowbc_t *fbc);
+flow_conditions_destroy(struct FlowBoundaryConditions *fbc);
 
+
+/* Append a new boundary condition to existing set.
+ *
+ * Return one (1) if successful, and zero (0) otherwise. */
+int
+flow_conditions_append(enum FlowBCType                type ,
+                       int                            face ,
+                       double                         value,
+                       struct FlowBoundaryConditions *fbc  );
+
+
+/* Clear existing set of boundary conditions */
+void
+flow_conditions_clear(struct FlowBoundaryConditions *fbc);
 
 #ifdef __cplusplus
 }
