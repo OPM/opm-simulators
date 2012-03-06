@@ -21,9 +21,10 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionsparams
  *
- * \brief Specification of the material parameters
- *       for the van Genuchten constitutive relations.
+ * \brief Specification of the material parameters for the van
+ *        Genuchten constitutive relations.
  */
 #ifndef VAN_GENUCHTEN_PARAMS_HH
 #define VAN_GENUCHTEN_PARAMS_HH
@@ -31,14 +32,14 @@
 namespace Dumux
 {
 /*!
- *
- * \brief Specification of the material parameters
- *       for the van Genuchten constitutive relations.
- *
- *       In this implementation setting either the \f$n\f$ or \f$m\f$ shape parameter
- *       automatically calculates the other. I.e. they cannot be set independently.
- *
  * \ingroup fluidmatrixinteractionsparams
+ *
+ * \brief Specification of the material parameters for the van
+ *        Genuchten constitutive relations.
+ *
+ * In this implementation setting either the \f$n\f$ or \f$m\f$ shape
+ * parameter automatically calculates the other. I.e. they cannot be
+ * set independently.
  */
 template<class ScalarT>
 class VanGenuchtenParams

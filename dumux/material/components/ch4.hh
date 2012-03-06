@@ -24,7 +24,7 @@
  *
  * \ingroup Components
  *
- * \brief Properties of methane \f$CH_4\f$.
+ * \brief Component for pure molecular methane (\f$CH_4\f)$.
  */
 #ifndef DUMUX_CH4_HH
 #define DUMUX_CH4_HH
@@ -41,7 +41,7 @@ namespace Dumux
 /*!
  * \ingroup Components
  *
- * \brief Properties of pure molecular methane \f$CH_4\f$.
+ * \brief Component for pure molecular methane (\f$CH_4\f)$.
  *
  * \tparam Scalar The type used for scalar values
  */

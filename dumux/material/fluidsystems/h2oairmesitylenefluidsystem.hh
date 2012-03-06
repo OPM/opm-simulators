@@ -22,6 +22,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief A fluid system with water, gas and NAPL as phases and
  *        \f$H_2O\f$ and \f$Air\f$ and \f$NAPL (contaminant)\f$ as components.
@@ -50,6 +51,7 @@ namespace FluidSystems
 {
 
 /*!
+ * \ingroup Fluidsystems
  * \brief A compositional fluid with water and molecular nitrogen as
  *        components in both, the liquid and the gas phase.
  */

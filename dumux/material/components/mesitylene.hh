@@ -20,6 +20,11 @@
  *   You should have received a copy of the GNU General Public License       *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
+/*!
+ * \file
+ * \ingroup Components
+ * \brief Component for Mesitylene
+ */
 #ifndef DUMUX_MESITYLENE_HH
 #define DUMUX_MESITYLENE_HH
 
@@ -31,7 +36,7 @@ namespace Dumux
 {
 /*!
  * \ingroup Components
- * \brief mesitylene
+ * \brief Component for Mesitylene
  *
  * \tparam Scalar The type used for scalar values
  */

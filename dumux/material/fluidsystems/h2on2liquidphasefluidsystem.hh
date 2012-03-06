@@ -22,6 +22,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief A one-phase (water-phase) fluid system with water and nitrogen as components.
  */

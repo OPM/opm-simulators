@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of a regularized version of the Brooks-Corey
  *        capillary pressure / relative permeability  <-> saturation relation.
@@ -31,14 +32,12 @@
 #include "brookscorey.hh"
 #include "regularizedbrookscoreyparams.hh"
 
-
-
 #include <dumux/common/spline.hh>
 
 namespace Dumux
 {
-/*!\ingroup fluidmatrixinteractionslaws
- *
+/*!
+ * \ingroup fluidmatrixinteractionslaws
  * \brief Implementation of the regularized  Brooks-Corey
  *        capillary pressure / relative permeability  <-> saturation relation.
  *        This class bundles the "raw" curves as

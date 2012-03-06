@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief This material law takes a material law defined for effective
  *        saturations and converts it to a material law defined on
@@ -41,24 +42,32 @@ namespace Dumux
  *        saturations and converts it to a material law defined on absolute
  *        saturations.
  *
- *        The idea: "material laws" (like VanGenuchten or BrooksCorey) are defined for effective saturations.
- *        The numeric calculations however are performed with absolute saturations. The EffToAbsLaw class gets
- *        the "material laws" actually used as well as the corresponding parameter container as template arguments.
+ * The idea: "material laws" (like VanGenuchten or BrooksCorey) are
+ * defined for effective saturations.  The numeric calculations
+ * however are performed with absolute saturations. The EffToAbsLaw
+ * class gets the "material laws" actually used as well as the
+ * corresponding parameter container as template arguments.
  *
- *        Subsequently, the desired function (pc, Sw... ) of the actually used "material laws" are called but with the
- *        saturations already converted from absolute to effective.
+ * Subsequently, the desired function (pc, Sw... ) of the actually
+ * used "material laws" are called but with the saturations already
+ * converted from absolute to effective.
  *
- *        This approach makes sure that in the "material laws" only effective saturations are considered, which makes sense,
- *        as these laws only deal with effective saturations. This also allows for changing the calculation of the effective
- *        saturations easily, as this is subject of discussion / may be problem specific.
+ * This approach makes sure that in the "material laws" only effective
+ * saturations are considered, which makes sense, as these laws only
+ * deal with effective saturations. This also allows for changing the
+ * calculation of the effective saturations easily, as this is subject
+ * of discussion / may be problem specific.
  *
- *        Additionally, handing over effective saturations to the "material laws" in stead of them calculating effective
- *        saturations prevents accidently "converting twice".
+ * Additionally, handing over effective saturations to the "material
+ * laws" in stead of them calculating effective saturations prevents
+ * accidently "converting twice".
  *
- *        This boils down to:
- *        - the actual material laws (linear, VanGenuchten...) do not need to deal with any kind of conversion
- *        - the definition of the material law in the spatial parameters is not really intuitive, but using it is:
- *          Hand in values, get back values, do not deal with conversion.
+ * This boils down to:
+ * - the actual material laws (linear, VanGenuchten...) do not need to
+ *   deal with any kind of conversion
+ * - the definition of the material law in the spatial parameters is
+ *   not really intuitive, but using it is: Hand in values, get back
+ *   values, do not deal with conversion.
  */
 template <class EffLawT, class AbsParamsT = EffToAbsLawParams<typename EffLawT::Params> >
 class EffToAbsLaw
@@ -73,13 +82,16 @@ public:
      * \brief The capillary pressure-saturation curve.
      *
      *
-     * \param Sw        Absolute saturation of the wetting phase \f$\overline{S}_w\f$. It is converted to effective saturation
-     *                  and then handed over to the material law actually used for calculation.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Capillary pressure calculated by specific constitutive relation (EffLaw e.g. Brooks & Corey, van Genuchten, linear...)
+     * \param Sw Absolute saturation of the wetting phase
+     *           \f$\overline{S}_w\f$. It is converted to effective
+     *           saturation and then handed over to the material law
+     *           actually used for calculation.
+     * \param params A object that stores the appropriate coefficients
+     *                for the respective law.
      *
+     * \return Capillary pressure [Pa] calculated by specific
+     *         constitutive relation (e.g. Brooks & Corey, van
+     *         Genuchten, linear...)
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
@@ -106,7 +118,7 @@ public:
      * \brief Returns the partial derivative of the capillary
      *        pressure w.r.t the absolute saturation.
      *
-     *        In this case the chain rule needs to be applied:
+     * In this case the chain rule needs to be applied:
      \f[
              p_c = p_c( \overline S_w (S_w))
              \rightarrow p_c ^\prime = \frac{\partial  p_c}{\partial \overline S_w} \frac{\partial \overline S_w}{\partial S_w}

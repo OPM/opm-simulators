@@ -21,8 +21,10 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
- * \brief The mixing rule for the oil and the gas phases of the SPE5 problem.
+ * \brief The fluid system for the oil, gas and water phases of the
+ *        SPE5 problem.
  *
  * This problem comprises \f$H_2O\f$, \f$C_1\f$, \f$C_3\f$, \f$C_6\f$,
  * \f$C_10\f$, \f$C_15\f$ and \f$C_20\f$ as components.
@@ -47,7 +49,9 @@ namespace Dumux
 namespace FluidSystems
 {
 /*!
- * \brief The fluid system for the SPE-5 benchmark problem.
+ * \ingroup Fluidsystems
+ * \brief The fluid system for the oil, gas and water phases of the
+ *        SPE5 problem.
  *
  * This problem comprises \f$H_2O\f$, \f$C_1\f$, \f$C_3\f$, \f$C_6\f$,
  * \f$C_10\f$, \f$C_15\f$ and \f$C_20\f$ as components.

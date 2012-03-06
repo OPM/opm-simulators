@@ -23,7 +23,7 @@
  * \file
  * \ingroup Components
  * \brief Tabulates all thermodynamic properties of a given
- *        untabulated chemical species.
+ *        component.
  *
  * At the moment, this class can only handle the sub-critical fluids
  * since it tabulates along the vapor pressure curve.
@@ -44,8 +44,8 @@ namespace Dumux
 /*!
  * \ingroup Components
  *
- * \brief  Tabulates all thermodynamic properties of a given
- *        untabulated chemical species.
+ * \brief Tabulates all thermodynamic properties of a given
+ *        component.
  *
  * At the moment, this class can only handle the sub-critical fluids
  * since it tabulates along the vapor pressure curve.

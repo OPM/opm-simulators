@@ -20,6 +20,11 @@
  *   You should have received a copy of the GNU General Public License       *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
+/*!
+ * \file
+ * \ingroup Components
+ * \brief Component for Xylene
+ */
 #ifndef DUMUX_XYLENE_HH
 #define DUMUX_XYLENE_HH
 
@@ -32,7 +37,7 @@ namespace Dumux
 {
 /*!
  * \ingroup Components
- * \brief xylene
+ * \brief Component for Xylene
  *
  * \tparam Scalar The type used for scalar values
  */

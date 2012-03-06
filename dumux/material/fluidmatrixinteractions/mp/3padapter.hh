@@ -20,10 +20,10 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file 3padapter.hh
- *
- * Makes the three-phase capillary pressure-saturation relations
- * available under the M-phase API for material laws.
+ * \ingroup fluidmatrixinteractionslaws
+ * \file
+ * \brief Makes the three-phase capillary pressure-saturation
+ *        relations available under the M-phase API for material laws.
  */
 #ifndef DUMUX_MP_3P_ADAPTER_HH
 #define DUMUX_MP_3P_ADAPTER_HH
@@ -33,7 +33,7 @@
 namespace Dumux
 {
 /*!
- * \ingroup material
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Makes the three-phase capillary pressure-saturation relations
  *        available under the M-phase API for material laws.

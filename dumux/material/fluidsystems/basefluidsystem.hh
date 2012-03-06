@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief Fluid system base class.
  */
@@ -30,6 +31,7 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Fluidsystems
  * \brief Fluid system base class.
  */
 template <class Scalar, class Implementation>

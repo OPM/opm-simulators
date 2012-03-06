@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief A liquid phase consisting of a single component.
  */
@@ -31,7 +32,8 @@ namespace Dumux
 {
 
 /*!
- * \brief liquid phase consisting of a single component
+ * \ingroup Fluidsystems
+ * \brief Liquid phase consisting of a single component
  */
 template <class Scalar, class ComponentT>
 class LiquidPhase

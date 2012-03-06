@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief A twophase fluid system with water and nitrogen as components.
  */

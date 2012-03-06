@@ -22,8 +22,7 @@
 /*!
  * \file
  * \ingroup Components
- * \brief A much simpler (and thus potentially less buggy) version of
- *        pure water.
+ * \brief A simple component for an exemplary dense NAPL (TCE).
  */
 #ifndef DUMUX_SIMPLE_DNAPL_HH
 #define DUMUX_SIMPLE_DNAPL_HH
@@ -36,7 +35,7 @@ namespace Dumux
 {
 /*!
  * \ingroup Components
- * \brief A much simple component for an exemplary dense NAPL (TCE).
+ * \brief A simple component for an exemplary dense NAPL (TCE).
  *
  * \tparam Scalar The type used for scalar values
  */

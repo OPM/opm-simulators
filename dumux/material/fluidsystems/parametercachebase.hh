@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief The base class of the parameter cache classes for fluid systems
  */
@@ -30,6 +31,7 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Fluidsystems
  * \brief The base class of the parameter cache classes for fluid systems
  */
 template <class Implementation>

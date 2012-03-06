@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief   Regularized linear capillary pressure and
  *          relative permeability <-> saturation relations.
@@ -31,15 +32,12 @@
 #include "linearmaterial.hh"
 #include "regularizedlinearmaterialparams.hh"
 
-
-
 #include <dumux/common/spline.hh>
 
 namespace Dumux
 {
 /*!
  * \ingroup fluidmatrixinteractionslaws
- *
  * \brief Implements a linear saturation-capillary pressure relation
  *
  * The entry pressure is reached at \f$\overline S_w = 1\f$, the maximum

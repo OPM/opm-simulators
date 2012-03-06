@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief   Implementation of the capillary pressure and
  *          relative permeability <-> saturation relations according to van Genuchten.

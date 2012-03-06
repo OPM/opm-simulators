@@ -19,12 +19,12 @@
  *   You should have received a copy of the GNU General Public License       *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
-
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionsparams
  *
- * \brief Specification of the material parameters
- *       for the Brooks Corey constitutive relations.
+ * \brief Specification of the material parameters for the Brooks
+ *        Corey constitutive relations.
  */
 #ifndef DUMUX_BROOKS_COREY_PARAMS_HH
 #define DUMUX_BROOKS_COREY_PARAMS_HH
@@ -35,10 +35,10 @@ namespace Dumux
 {
 
 /*!
- * \brief Specification of the material parameters
- *       for the Brooks Corey constitutive relations.
+ * \ingroup fluidmatrixinteractionsparams
  *
- *        \ingroup fluidmatrixinteractionsparams
+ * \brief Specification of the material parameters for the
+ *        Brooks-Corey constitutive relations.
  *
  *\see BrooksCorey
  */

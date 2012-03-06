@@ -21,12 +21,11 @@
  *****************************************************************************/
 /*!
  * \file
- *\ingroup Components
- * \brief  Rough estimate of some oil for testing purposes.
+ * \ingroup Components
+ * \brief Rough approximation of some light oil for testing purposes.
  */
 #ifndef DUMUX_OIL_HH
 #define DUMUX_OIL_HH
-
 
 #include "component.hh"
 
@@ -35,7 +34,7 @@ namespace Dumux
 /*!
  * \ingroup Components
  *
- * \brief Rough estimate for testing purposes of some oil.
+ * \brief Rough approximation of some light oil for testing purposes.
  *
  * \tparam Scalar The type used for scalar values
  */

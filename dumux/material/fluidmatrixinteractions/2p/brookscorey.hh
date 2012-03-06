@@ -20,10 +20,10 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
+ * \ingroup fluidmatrixinteractionslaws
  * \file
  *
- * \brief Implementation of the capillary pressure and
- * relative permeability <-> saturation relations according to Brooks and Corey.
+ * \brief Implementation of the capillary pressure and relative permeability <-> saturation relations according to Brooks and Corey.
  *
  */
 #ifndef DUMUX_BROOKS_COREY_HH
@@ -39,11 +39,11 @@ namespace Dumux
  * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of the Brooks-Corey capillary pressure <->
- *        saturation relation. This class bundles the "raw" curves
- *        as static members and doesn't concern itself converting
- *        absolute to effective saturations and vice versa.
- *
- * For general info: EffToAbsLaw
+ *        saturation relation. 
+ * 
+ * This class provides the "raw" curves as static members and doesn't
+ * concern itself converting absolute to effective saturations and
+ * vice versa.
  *
  *\see BrooksCoreyParams
  */

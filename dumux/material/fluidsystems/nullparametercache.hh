@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup Fluidsystems
  *
  * \brief The a parameter cache which does nothing
  */
@@ -32,6 +33,7 @@
 namespace Dumux
 {
 /*!
+ * \ingroup Fluidsystems
  * \brief The a parameter cache which does nothing
  */
 class NullParameterCache : public ParameterCacheBase<NullParameterCache>

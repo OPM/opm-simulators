@@ -21,6 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of the regularized version of the van Genuchten's
  *        capillary pressure / relative permeability  <-> saturation relation.
@@ -38,36 +39,34 @@
 
 namespace Dumux
 {
-/*!\ingroup fluidmatrixinteractionslaws
-
-
+/*!
+ * \ingroup fluidmatrixinteractionslaws
  * \brief Implementation of the regularized  van Genuchten's
  *        capillary pressure / relative permeability  <-> saturation relation.
  *
- *        This class bundles the "raw" curves as
- *        static members and doesn't concern itself converting
- *        absolute to effective saturations and vice versa.
+ * This class bundles the "raw" curves as static members and doesn't
+ * concern itself converting absolute to effective saturations and
+ * vice versa.
  *
- *        In order to avoid very steep gradients the marginal values
- *        are "regularized".  This means that in stead of following
- *        the curve of the material law in these regions, some linear
- *        approximation is used.  Doing this is not worse than
- *        following the material law. E.g. for very low wetting phase
- *        values the material laws predict infinite values for
- *        \f$p_c\f$ which is completely unphysical. In case of very
- *        high wetting phase saturations the difference between
- *        regularized and "pure" material law is not big.
+ * In order to avoid very steep gradients the marginal values are
+ * "regularized".  This means that in stead of following the curve of
+ * the material law in these regions, some linear approximation is
+ * used.  Doing this is not worse than following the material
+ * law. E.g. for very low wetting phase values the material laws
+ * predict infinite values for \f$p_c\f$ which is completely
+ * unphysical. In case of very high wetting phase saturations the
+ * difference between regularized and "pure" material law is not big.
  *
- *        Regularizing has the additional benefit of being numerically
- *        friendly: Newton's method does not like infinite gradients.
+ * Regularizing has the additional benefit of being numerically
+ * friendly: Newton's method does not like infinite gradients.
  *
- *        The implementation is accomplished as follows:
- *        - check whether we are in the range of regularization
- *         - yes: use the regularization
- *         - no: forward to the standard material law.
+ * The implementation is accomplished as follows:
+ * - check whether we are in the range of regularization
+ *  - yes: use the regularization
+ *  - no: forward to the standard material law.
  *
- *        An example of the regularization of the capillary pressure curve is shown below:
- *        \image html regularizedVanGenuchten.png
+ * An example of the regularization of the capillary pressure curve is
+ * shown below: \image html regularizedVanGenuchten.png
  *
  * \see VanGenuchten
  */

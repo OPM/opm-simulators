@@ -21,11 +21,11 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file vangenuchtenparams.hh Specification of the material params
- *       for the van Genuchten capillary pressure model.
+ * \file
+ * \ingroup fluidmatrixinteractionsparams
  *
- * In comparison to the 2p version, this parameter container also includes
- * the residual saturations, as their inclusion is very model-specific.
+ * \brief Specification of the material params for the three-phase van
+ *        Genuchten capillary pressure model.
  */
 #ifndef PARKERVANGEN_PARAMS_3P_HH
 #define PARKERVANGEN_PARAMS_3P_HH
@@ -35,7 +35,14 @@
 namespace Dumux
 {
 /*!
- * \brief Reference implementation of a van Genuchten params
+ * \ingroup fluidmatrixinteractionsparams
+ *
+ * \brief Specification of the material params for the three-phase van
+ *        Genuchten capillary pressure model.
+ *
+ * In comparison to the two-phase version, this parameter object also
+ * includes the residual saturations, as their handling is very
+ * model-specific.
  */
 template<class ScalarT>
 class ParkerVanGen3PParams

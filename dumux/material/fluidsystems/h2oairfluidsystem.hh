@@ -22,8 +22,8 @@
  *****************************************************************************/
 /*!
  * \file
- *
  * \ingroup Fluidsystems
+ *
  * \brief A fluid system with a liquid and a gaseous phase and \f$H_2O\f$ and \f$Air\f$
  *        as components.
  */

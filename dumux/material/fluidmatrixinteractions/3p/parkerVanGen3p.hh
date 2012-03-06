@@ -21,12 +21,14 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file parkerVanGen3pparams.hh Implementation of van Genuchten's capillary
- *                       pressure <-> saturation relation
+ * \file
+ * \ingroup fluidmatrixinteractionslaws
+ *
+ * \brief Implementation of the three-phase van Genuchten's capillary
+ *        pressure <-> saturation relation
  */
 #ifndef PARKERVANGEN_3P_HH
 #define PARKERVANGEN_3P_HH
-
 
 #include "parkerVanGen3pparams.hh"
 
@@ -36,12 +38,10 @@
 namespace Dumux
 {
 /*!
- * \ingroup material
+ * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of van Genuchten's capillary pressure <->
- *        saturation relation. This class bundles the "raw" curves
- *        as static members and doesn't concern itself converting
- *        absolute to effective saturations and vince versa.
+ *        saturation relation.
  *
  * \sa VanGenuchten, VanGenuchtenThreephase
  */
