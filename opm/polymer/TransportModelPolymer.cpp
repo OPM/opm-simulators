@@ -595,7 +595,7 @@ namespace Opm
 	// the tolerance for 1d solver is set as a function of the residual
 	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
 	double falsi_tol;
-	const double reduc_factor_falsi_tol = 1e-4;
+	const double reduc_factor_falsi_tol = 1e-2;
 	int iters_used_falsi = 0;
 	const int max_iters_split = maxit_;
 	int iters_used_split = 0;
@@ -614,7 +614,7 @@ namespace Opm
 	    return;
 	}
 
-
+	falsi_tol =  std::max(reduc_factor_falsi_tol*norm(res), tol_);
 	double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
 	double x_max[2] = { 1.0, polyprops_.cMax() };
 	double t;
@@ -623,35 +623,43 @@ namespace Opm
 	double direction[2];
 	double end_point[2];
 	double gradient[2];
-	bool unsuccessfull_newton_step;
+	bool unsuccessfull_newton_step = true;
 	double x_new[2];
 	double res_new[2];
 	ResSOnCurve res_s_on_curve(res_eq);
 	ResCOnCurve res_c_on_curve(res_eq);
 	bool if_res_s;
+	int counter_drop_newton = 0;
+	bool not_so_successfull_newton_step = false;
 
  	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
-	    if (solveNewtonStep(x, res_eq, res, x_new)) {
+	    if (counter_drop_newton == 0 && solveNewtonStep(x, res_eq, res, x_new)) {
 		res_eq.computeResidual(x_new, res_new, mc, ff);
 		unsuccessfull_newton_step = false;
+		not_so_successfull_newton_step = false;
 		if (norm(res_new) > norm(res) || x_new[0] < x_min[0] || x_new[1] < x_min[1] || x_new[0] > x_max[0] || x_new[1] > x_max[1]) {
 		    unsuccessfull_newton_step = true;
 		} else  {
 		    x[0] = x_new[0];
 		    x[1] = x_new[1];
+		    if (norm(res_new) > 1e-1*norm(res) && norm(res_new) < 1e1*falsi_tol) {
+			// drop Newton for two iteration
+			counter_drop_newton = 4;
+			not_so_successfull_newton_step = true;
+		    }
 		    res[0] = res_new[0];
 		    res[1] = res_new[1];
 		    iters_used_split += 1;
-		    if (norm(res_new) > 1e-1*norm(res)) {
-			unsuccessfull_newton_step = true;
-		    }
 		}
 	    } else {
 		unsuccessfull_newton_step = true;
 	    }
 
-	    if (unsuccessfull_newton_step) {
+	    if (not_so_successfull_newton_step || unsuccessfull_newton_step) {
+		if (not_so_successfull_newton_step) {
+		    counter_drop_newton -= 1;
+		}
 		if (std::abs(res[0]) < std::abs(res[1])) {
 		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol_);
 		    if (res[0] < -falsi_tol) {
@@ -959,7 +967,7 @@ namespace
 	    direction_[1] = end_point_[1]-x_[1];
 	}
 	bool t0_exists = true;
-	double t0;
+	double t0 = 0; // dummy default value (so that compiler does not complain).
 	if (direction_[0] > 0) {
 	    t0 = (x_max_[0] - x_[0])/direction_[0];
 	} else if (direction_[0] < 0) {
@@ -968,7 +976,7 @@ namespace
 	    t0_exists = false;
 	}
 	bool t1_exists = true;
-	double t1;
+	double t1 = 0; // dummy default value.
 	if (direction_[1] > 0) {
 	    t1 = (x_max_[1] - x_[1])/direction_[1];
 	} else if (direction[1] < 0) {
