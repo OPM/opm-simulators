@@ -492,6 +492,10 @@ namespace Opm
 		direction[0] *= -1.0;
 		direction[1] *= -1.0;
 	    }
+	    if ((std::abs(direction[0]) + std::abs(direction[0])) == 0) {
+		direction[0] = end_point[0]-x[0];
+		direction[1] = end_point[1]-x[1];
+	    }
 	    bool t0_exists = true;
 	    double t0;
 	    if (direction[0] > 0) {
@@ -613,7 +617,7 @@ namespace Opm
     // a specified piecewise linear curve. At each iteration, we use a robust 1d solver.
     void TransportModelPolymer::solveSingleCellNewton(int cell)
     {
-	const int max_iters_falsi = 20;
+	const int max_iters_falsi = 200;
 	const double tol = 1e-7;
 	// the tolerance for 1d solver is set as a function of the residual
 	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
