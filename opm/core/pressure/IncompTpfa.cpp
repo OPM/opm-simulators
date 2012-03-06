@@ -105,7 +105,10 @@ namespace Opm
 	    }
 	}
 
-	ifs_tpfa_assemble(gg, &trans_[0], &src[0], &gpress_omegaweighted_[0], h_);
+        ifs_tpfa_forces F;
+        F.src = &src[0];
+
+	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
 	linsolver_.solve(h_->A, h_->b, h_->x);
 

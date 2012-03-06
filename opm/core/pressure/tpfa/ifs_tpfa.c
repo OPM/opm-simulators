@@ -186,8 +186,8 @@ ifs_tpfa_construct(struct UnstructuredGrid *G)
 /* ---------------------------------------------------------------------- */
 void
 ifs_tpfa_assemble(struct UnstructuredGrid               *G,
+                  const struct ifs_tpfa_forces *F,
                   const double         *trans,
-                  const double         *src,
                   const double         *gpress,
                   struct ifs_tpfa_data *h)
 /* ---------------------------------------------------------------------- */
@@ -223,7 +223,9 @@ ifs_tpfa_assemble(struct UnstructuredGrid               *G,
             }
         }
 
-        h->b[c] += src[c];
+        if ((F != NULL) && (F->src != NULL)) {
+            h->b[c] += F->src[c];
+        }
     }
 
     h->A->sa[0] *= 2;
