@@ -147,6 +147,21 @@ namespace Opm
             return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
         }
 
+
+	void effectiveInvVisc(const double c, const double* visc, double* inv_visc_eff) const
+	{
+	    double cbar = c/c_max_;
+	    double mu_w = visc[0];
+	    double mu_m = viscMult(c)*mu_w;
+	    double mu_p = viscMult(c_max_)*mu_w;
+	    double mu_m_omega = std::pow(mu_m, mix_param_);
+	    double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - mix_param_);
+	    double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - mix_param_);
+	    double inv_mu_w_eff = (1.0 - cbar)/mu_w_e + cbar/mu_p_eff;
+	    inv_visc_eff[0] = inv_mu_w_eff;
+	    inv_visc_eff[1] = 1.0/visc[1];
+	}
+
     private:
         double c_max_;
         double mix_param_;
