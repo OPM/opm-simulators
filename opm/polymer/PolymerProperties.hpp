@@ -21,6 +21,7 @@
 #define OPM_POLYMERPROPERTIES_HEADER_INCLUDED
 
 
+#include <cmath>
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
