@@ -617,8 +617,6 @@ namespace Opm
     // a specified piecewise linear curve. At each iteration, we use a robust 1d solver.
     void TransportModelPolymer::solveSingleCellNewton(int cell)
     {
-	const int max_iters_falsi = 200;
-	const double tol = 1e-7;
 	// the tolerance for 1d solver is set as a function of the residual
 	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
 	double falsi_tol;
@@ -635,7 +633,7 @@ namespace Opm
 	double mc;
 	double ff;
 	residual.computeResidual(x, res, mc, ff);
-	if (norm(res) <= tol) {
+	if (norm(res) <= tol_) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
  	    fractionalflow_[cell] = ff;
 	    mc_[cell] = mc;
@@ -654,7 +652,7 @@ namespace Opm
 	double x_new[2];
 	double res_new[2];
 
- 	while ((norm(res) > tol) && (iters_used_split < max_iters_split)) {
+ 	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
 	    if (residual.solveNewtonStep(x, x_new, gradient_method)) {
 		residual.computeResidual(x_new, res_new, mc, ff);
@@ -674,7 +672,7 @@ namespace Opm
 
 	    if (unsuccessfull_newton_step) {
 		if (std::abs(res[0]) < std::abs(res[1])) {
-		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol);
+		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol_);
 		    if (res[0] < -falsi_tol) {
 			    direction[0] = x_max[0] - x[0];
 			    direction[1] = x_min[1] - x[1];
@@ -690,7 +688,7 @@ namespace Opm
 			residual.if_res_s = false;
 		    }
 		} else {
-		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol);
+		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol_);
 		    if (res[1] < -falsi_tol) {
 			direction[0] = x_max[0] - x[0];
 			direction[1] = x_max[1] - x[1];
@@ -753,7 +751,7 @@ namespace Opm
 		    }
 		}
 
-		t = modifiedRegulaFalsi(residual, 0., t_max, max_iters_falsi, falsi_tol, iters_used_falsi);
+		t = modifiedRegulaFalsi(residual, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
 		if (std::abs(residual(t)) > falsi_tol) {
 		    std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
 		}
@@ -765,7 +763,7 @@ namespace Opm
 	}
 
 
-	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol)) {
+	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
 	    MESSAGE("Newton for single cell did not work in cell number " << cell);
 	    solveSingleCellBracketing(cell);
 	} else {
