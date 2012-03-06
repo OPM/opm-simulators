@@ -26,6 +26,7 @@
 #include <opm/core/utility/Units.hpp>
 
 #include <tr1/array>
+#include <cmath>
 
 
 // Helper structs and functions for the implementation.
@@ -125,6 +126,7 @@ namespace
 			    const double* cell_permeability,
 			    const double skin_factor)
     {
+	using namespace std;
 	// sse: Using the Peaceman model.
 	// NOTE: The formula is valid for cartesian grids, so the result can be a bit
 	// (in worst case: there is no upper bound for the error) off the mark.
