@@ -153,7 +153,7 @@ compute_grav_term(struct UnstructuredGrid *G, const double *gpress,
 /* ---------------------------------------------------------------------- */
 static int
 assemble_bc_contrib(struct UnstructuredGrid       *G    ,
-                    struct FlowBoundaryConditions *bc   ,
+                    const struct FlowBoundaryConditions *bc   ,
                     const double                  *trans,
                     struct ifs_tpfa_data          *h    )
 /* ---------------------------------------------------------------------- */

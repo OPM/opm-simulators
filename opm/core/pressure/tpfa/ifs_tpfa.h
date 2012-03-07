@@ -41,7 +41,7 @@ struct ifs_tpfa_data {
 
 struct ifs_tpfa_forces {
     const double *src;
-    struct FlowBoundaryConditions *bc;
+    const struct FlowBoundaryConditions *bc;
 };
 
 

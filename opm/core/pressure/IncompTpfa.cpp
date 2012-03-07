@@ -21,8 +21,10 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
+#include <opm/core/pressure/flow_bc.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/pressure/flow_bc.h>
 
 namespace Opm
 {
@@ -81,13 +83,16 @@ namespace Opm
     /// \param[in]  src        Must contain N source rates (one per cell).
     ///                        Positive values represent total inflow rates,
     ///                        negative values represent total outflow rates.
+    /// \param[in]  bcs        If non-null, specifies boundary conditions.
+    ///                        If null, noflow conditions are assumed.
     /// \param[out] pressure   Will contain N cell-pressure values.
     /// \param[out] faceflux   Will contain F signed face flux values.
     void IncompTpfa::solve(const std::vector<double>& totmob,
-		      const std::vector<double>& omega,
-		      const std::vector<double>& src,
-		      std::vector<double>& pressure,
-		      std::vector<double>& faceflux)
+			   const std::vector<double>& omega,
+			   const std::vector<double>& src,
+			   const FlowBoundaryConditions* bcs,
+			   std::vector<double>& pressure,
+			   std::vector<double>& faceflux)
     {
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
 	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
@@ -105,9 +110,9 @@ namespace Opm
 	    }
 	}
 
-        ifs_tpfa_forces F;
-        F.src = &src[0];
-        F.bc  = 0;              // No boundary conditions.
+        const ifs_tpfa_forces F = { &src[0], bcs };
+        //F.src = &src[0];
+        //F.bc  = bcs;
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 

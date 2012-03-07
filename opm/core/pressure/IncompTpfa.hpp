@@ -25,7 +25,7 @@
 
 struct UnstructuredGrid;
 struct ifs_tpfa_data;
-
+struct FlowBoundaryConditions;
 
 namespace Opm
 {
@@ -64,11 +64,14 @@ namespace Opm
 	/// \param[in]  src        Must contain N source rates (one per cell).
 	///                        Positive values represent total inflow rates,
 	///                        negative values represent total outflow rates.
+	/// \param[in]  bcs        If non-null, specifies boundary conditions.
+	///                        If null, noflow conditions are assumed.
 	/// \param[out] pressure   Will contain N cell-pressure values.
 	/// \param[out] faceflux   Will contain F signed face flux values.
 	void solve(const std::vector<double>& totmob,
 		   const std::vector<double>& omega,
 		   const std::vector<double>& src,
+		   const FlowBoundaryConditions* bcs,
 		   std::vector<double>& pressure,
 		   std::vector<double>& faceflux);
 
