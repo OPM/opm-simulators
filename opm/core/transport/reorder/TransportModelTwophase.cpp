@@ -28,7 +28,7 @@
 #include <numeric>
 
 
-// #define EXPERIMENT_GAUSS_SEIDEL
+#define EXPERIMENT_GAUSS_SEIDEL
 
 
 namespace Opm
@@ -302,17 +302,46 @@ namespace Opm
 	// Must store s0 before we start.
 	std::vector<double> s0(num_cells);
 	// Must set initial fractional flows before we start.
+	// Also, we compute the # of upstream neighbours.
+	// std::vector<int> num_upstream(num_cells);
 	for (int i = 0; i < num_cells; ++i) {
 	    const int cell = cells[i];
 	    fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
 	    s0[i] = saturation_[cell];
+	    // num_upstream[i] = ia_upw_[cell + 1] - ia_upw_[cell];
 	}
 	// Solve once in each cell.
+	// std::vector<int> fully_marked_stack;
+	// fully_marked_stack.reserve(num_cells);
 	int num_iters = 0;
 	int update_count = 0; // Change name/meaning to cells_updated?
 	do {
 	    update_count = 0; // Must reset count for every iteration.
 	    for (int i = 0; i < num_cells; ++i) {
+		// while (!fully_marked_stack.empty()) {
+		//     // std::cout << "# fully marked cells = " << fully_marked_stack.size() << std::endl;
+		//     const int fully_marked_ci = fully_marked_stack.back();
+		//     fully_marked_stack.pop_back();
+		//     ++update_count;
+		//     const int cell = cells[fully_marked_ci];
+		//     const double old_s = saturation_[cell];
+		//     saturation_[cell] = s0[fully_marked_ci];
+		//     solveSingleCell(cell);
+		//     const double s_change = std::fabs(saturation_[cell] - old_s);
+		//     if (s_change > tol) {
+		// 	// Mark downwind cells.
+		// 	for (int j = ia_downw_[cell]; j < ia_downw_[cell+1]; ++j) {
+		// 	    const int downwind_cell = ja_downw_[j];
+		// 	    int ci = pos[downwind_cell];
+		// 	    ++needs_update[ci];
+		// 	    if (needs_update[ci] == num_upstream[ci]) {
+		// 		fully_marked_stack.push_back(ci);
+		// 	    }
+		// 	}
+		//     }
+		//     // Unmark this cell.
+		//     needs_update[fully_marked_ci] = 0;
+		// }
 		if (!needs_update[i]) {
 		    continue;
 		}
@@ -326,14 +355,23 @@ namespace Opm
 		    // Mark downwind cells.
 		    for (int j = ia_downw_[cell]; j < ia_downw_[cell+1]; ++j) {
 			const int downwind_cell = ja_downw_[j];
-			needs_update[pos[downwind_cell]] = 1;
+			int ci = pos[downwind_cell];
+			needs_update[ci] = 1;
+			// ++needs_update[ci];
+			// if (needs_update[ci] == num_upstream[ci]) {
+			//     fully_marked_stack.push_back(ci);
+			// }
 		    }
 		}
 		// Unmark this cell.
 		needs_update[i] = 0;
 	    }
-	    // std::cout << "Iter = " << num_iters << "    update_count = " << update_count << std::endl;
+	    // std::cout << "Iter = " << num_iters << "    update_count = " << update_count
+	    // 	      << "    # marked cells = "
+	    // 	      << std::accumulate(needs_update.begin(), needs_update.end(), 0) << std::endl;
 	} while (update_count > 0 && ++num_iters < max_iters);
+
+	// Done with iterations, check if we succeeded.
 	if (update_count > 0) {
 	    THROW("In solveMultiCell(), we did not converge after "
 	    	  << num_iters << " iterations. Remaining update count = " << update_count);
