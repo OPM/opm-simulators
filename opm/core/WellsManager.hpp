@@ -31,7 +31,7 @@ namespace Opm
 
     class EclipseGridParser;
 
-    /// This class manages an Wells in the sense that it
+    /// This class manages a Wells struct in the sense that it
     /// encapsulates creation and destruction of the wells
     /// data structure.
     /// The resulting Wells is available through the c_wells() method.
