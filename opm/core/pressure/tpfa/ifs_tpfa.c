@@ -161,7 +161,7 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
     int is_neumann;
     int i, f, c1, c2;
 
-    size_t j;
+    size_t j, ix;
 
     is_neumann = 1;
 
@@ -169,17 +169,19 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
         if (bc->type[ i ] == BC_PRESSURE) {
             is_neumann = 0;
 
-            f  = bc->face[ i ];
-            c1 = G->face_cells[2*f + 0];
-            c2 = G->face_cells[2*f + 1];
+            for (j = bc->cond_pos[ i ]; j < bc->cond_pos[i + 1]; j++) {
+                f  = bc->face[ j ];
+                c1 = G->face_cells[2*f + 0];
+                c2 = G->face_cells[2*f + 1];
 
-            assert ((c1 < 0) ^ (c2 < 0)); /* BCs on ext. faces only */
+                assert ((c1 < 0) ^ (c2 < 0)); /* BCs on ext. faces only */
 
-            c1 = (c1 >= 0) ? c1 : c2;
-            j  = csrmatrix_elm_index(c1, c1, h->A);
+                c1 = (c1 >= 0) ? c1 : c2;
+                ix = csrmatrix_elm_index(c1, c1, h->A);
 
-            h->A->sa[ j ] += trans[ f ];
-            h->b    [ c1] += trans[ f ] * bc->value[ i ];
+                h->A->sa[ ix ] += trans[ f ];
+                h->b    [ c1 ] += trans[ f ] * bc->value[ i ];
+            }
         }
 
         /* Other types currently not handled */

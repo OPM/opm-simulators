@@ -38,7 +38,11 @@ enum FlowBCType { BC_NOFLOW      ,
  * The field 'cpty' is for internal use by the implementation. */
 struct FlowBoundaryConditions {
     size_t           nbc;       /* Current number of bdry. conditions */
-    size_t           cpty;      /* Internal management.  Do not touch */
+
+    size_t           face_cpty; /* Internal management.  Do not touch */
+    size_t           cond_cpty; /* Internal management.  Do not touch */
+
+    size_t          *cond_pos;  /* Indirection pointer into '.face' */
 
     enum FlowBCType *type;      /* Condition type */
     double          *value;     /* Condition value (target) */
@@ -66,6 +70,16 @@ flow_conditions_append(enum FlowBCType                type ,
                        int                            face ,
                        double                         value,
                        struct FlowBoundaryConditions *fbc  );
+
+/* Append a new boundary condition that affects multiple interfaces.
+ *
+ * Return one (1) if successful, and zero (0) otherwise. */
+int
+flow_conditions_append_multi(enum FlowBCType                type  ,
+                             size_t                         nfaces,
+                             const int                     *faces ,
+                             double                         value ,
+                             struct FlowBoundaryConditions *fbc   );
 
 
 /* Clear existing set of boundary conditions */

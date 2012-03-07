@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <opm/core/pressure/flow_bc.h>
 
@@ -50,48 +51,63 @@ static void
 initialise_structure(struct FlowBoundaryConditions *fbc)
 /* ---------------------------------------------------------------------- */
 {
-    fbc->nbc  = 0;
-    fbc->cpty = 0;
+    fbc->nbc       = 0;
+    fbc->cond_cpty = 0;
+    fbc->face_cpty = 0;
 
-    fbc->type  = NULL;
-    fbc->value = NULL;
-    fbc->face  = NULL;
+    fbc->cond_pos  = NULL;
+    fbc->type      = NULL;
+    fbc->value     = NULL;
+    fbc->face      = NULL;
 }
 
 
 /* ---------------------------------------------------------------------- */
 static int
 expand_tables(size_t                         nbc,
+              size_t                         nf ,
               struct FlowBoundaryConditions *fbc)
 /* ---------------------------------------------------------------------- */
 {
-    int     ok;
+    int     ok_cond, ok_face;
     size_t  alloc_sz;
-    void   *p1, *p2, *p3;
+    void   *p1, *p2, *p3, *p4;
 
-    ok = nbc <= fbc->cpty;
+    ok_cond = nbc <= fbc->cond_cpty;
+    ok_face = nf  <= fbc->face_cpty;
 
-    if (! ok) {
-        alloc_sz = alloc_size(nbc, fbc->cpty);
+    if (! ok_cond) {
+        alloc_sz = alloc_size(nbc, fbc->cond_cpty);
 
-        p1 = realloc(fbc->type , alloc_sz * sizeof *fbc->type );
-        p2 = realloc(fbc->value, alloc_sz * sizeof *fbc->value);
-        p3 = realloc(fbc->face , alloc_sz * sizeof *fbc->face );
+        p1 = realloc(fbc->type    , (alloc_sz + 0) * sizeof *fbc->type    );
+        p2 = realloc(fbc->value   , (alloc_sz + 0) * sizeof *fbc->value   );
+        p3 = realloc(fbc->cond_pos, (alloc_sz + 1) * sizeof *fbc->cond_pos);
 
-        ok = (p1 != NULL) && (p2 != NULL) && (p3 != NULL);
+        ok_cond = (p1 != NULL) && (p2 != NULL) && (p3 != NULL);
 
-        if (ok) {
-            fbc->type  = p1;
-            fbc->value = p2;
-            fbc->face  = p3;
+        if (p1 != NULL) { fbc->type     = p1; }
+        if (p2 != NULL) { fbc->value    = p2; }
+        if (p3 != NULL) { fbc->cond_pos = p3; }
 
-            fbc->cpty  = alloc_sz;
-        } else {
-            free(p3);  free(p2);  free(p1);
+        if (ok_cond) {
+            fbc->cond_cpty = alloc_sz;
         }
     }
 
-    return ok;
+    if (! ok_face) {
+        alloc_sz = alloc_size(nf, fbc->face_cpty);
+
+        p4 = realloc(fbc->face, alloc_sz * sizeof *fbc->face);
+
+        ok_face = p4 != NULL;
+
+        if (ok_face) {
+            fbc->face      = p4;
+            fbc->face_cpty = alloc_sz;
+        }
+    }
+
+    return ok_cond && ok_face;
 }
 
 
@@ -116,12 +132,14 @@ flow_conditions_construct(size_t nbc)
     if (fbc != NULL) {
         initialise_structure(fbc);
 
-        ok = expand_tables(nbc, fbc);
+        ok = expand_tables(nbc, nbc, fbc);
 
         if (! ok) {
             flow_conditions_destroy(fbc);
 
             fbc = NULL;
+        } else {
+            fbc->cond_pos[0] = 0;
         }
     }
 
@@ -138,9 +156,10 @@ flow_conditions_destroy(struct FlowBoundaryConditions *fbc)
 /* ---------------------------------------------------------------------- */
 {
     if (fbc != NULL) {
-        free(fbc->face );
-        free(fbc->value);
-        free(fbc->type );
+        free(fbc->face    );
+        free(fbc->cond_pos);
+        free(fbc->value   );
+        free(fbc->type    );
     }
 
     free(fbc);
@@ -159,14 +178,38 @@ flow_conditions_append(enum FlowBCType                type ,
                        struct FlowBoundaryConditions *fbc  )
 /* ---------------------------------------------------------------------- */
 {
-    int ok;
+    return flow_conditions_append_multi(type, 1, &face, value, fbc);
+}
 
-    ok = expand_tables(fbc->nbc + 1, fbc);
+
+/* ---------------------------------------------------------------------- */
+/* Append a new boundary condition that affects multiple interfaces.
+ *
+ * Return one (1) if successful, and zero (0) otherwise. */
+/* ---------------------------------------------------------------------- */
+int
+flow_conditions_append_multi(enum FlowBCType                type  ,
+                             size_t                         nfaces,
+                             const int                     *faces ,
+                             double                         value ,
+                             struct FlowBoundaryConditions *fbc   )
+/* ---------------------------------------------------------------------- */
+{
+    int    ok;
+    size_t nbc;
+
+    nbc = fbc->nbc;
+
+    ok  = expand_tables(nbc + 1, fbc->cond_pos[ nbc ] + nfaces, fbc);
 
     if (ok) {
-        fbc->type [ fbc->nbc ] = type ;
-        fbc->value[ fbc->nbc ] = value;
-        fbc->face [ fbc->nbc ] = face ;
+        memcpy(fbc->face + fbc->cond_pos[ nbc ],
+               faces, nfaces * sizeof *faces);
+
+        fbc->type [ nbc ] = type;
+        fbc->value[ nbc ] = value;
+
+        fbc->cond_pos[ nbc + 1 ] = fbc->cond_pos[ nbc ] + nfaces;
 
         fbc->nbc += 1;
     }
