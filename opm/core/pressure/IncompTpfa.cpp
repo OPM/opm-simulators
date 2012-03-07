@@ -107,6 +107,7 @@ namespace Opm
 
         ifs_tpfa_forces F;
         F.src = &src[0];
+        F.bc  = 0;              // No boundary conditions.
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
@@ -115,7 +116,7 @@ namespace Opm
 	pressure.resize(grid_.number_of_cells);
 	faceflux.resize(grid_.number_of_faces);
 
-	ifs_tpfa_press_flux(gg, &trans_[0], h_,
+	ifs_tpfa_press_flux(gg, &F, &trans_[0], h_,
 			    &pressure[0],
 			    &faceflux[0]);
     }

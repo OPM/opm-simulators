@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <opm/core/linalg/sparse_sys.h>
+
+#include <opm/core/pressure/flow_bc.h>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
 
@@ -148,6 +150,44 @@ compute_grav_term(struct UnstructuredGrid *G, const double *gpress,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static int
+assemble_bc_contrib(struct UnstructuredGrid       *G    ,
+                    struct FlowBoundaryConditions *bc   ,
+                    const double                  *trans,
+                    struct ifs_tpfa_data          *h    )
+/* ---------------------------------------------------------------------- */
+{
+    int is_neumann;
+    int i, f, c1, c2;
+
+    size_t j;
+
+    is_neumann = 1;
+
+    for (i = 0; ((size_t) i) < bc->nbc; i++) {
+        if (bc->type[ i ] == BC_PRESSURE) {
+            is_neumann = 0;
+
+            f  = bc->face[ i ];
+            c1 = G->face_cells[2*f + 0];
+            c2 = G->face_cells[2*f + 1];
+
+            assert ((c1 < 0) ^ (c2 < 0)); /* BCs on ext. faces only */
+
+            c1 = (c1 >= 0) ? c1 : c2;
+            j  = csrmatrix_elm_index(c1, c1, h->A);
+
+            h->A->sa[ j ] += trans[ f ];
+            h->b    [ c1] += trans[ f ] * bc->value[ i ];
+        }
+
+        /* Other types currently not handled */
+    }
+
+    return is_neumann;
+}
+
 
 /* ======================================================================
  * Public interface below separator.
@@ -194,6 +234,8 @@ ifs_tpfa_assemble(struct UnstructuredGrid               *G,
 {
     int c1, c2, c, i, f, j1, j2;
 
+    int is_neumann;
+
     double s;
 
     csrmatrix_zero(         h->A);
@@ -228,13 +270,22 @@ ifs_tpfa_assemble(struct UnstructuredGrid               *G,
         }
     }
 
-    h->A->sa[0] *= 2;
+    is_neumann = 1;
+    if ((F != NULL) && (F->bc != NULL)) {
+        is_neumann = assemble_bc_contrib(G, F->bc, trans, h);
+    }
+
+    if (is_neumann) {
+        /* Remove zero eigenvalue associated to constant pressure */
+        h->A->sa[0] *= 2;
+    }
 }
 
 
 /* ---------------------------------------------------------------------- */
 void
 ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
+                    const struct ifs_tpfa_forces *F,
                     const double         *trans,
                     struct ifs_tpfa_data *h,
                     double               *cpress,
@@ -242,6 +293,7 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
 /* ---------------------------------------------------------------------- */
 {
     int    c1, c2, f;
+    size_t i;
     double dh;
 
     /* Assign cell pressure directly from solution vector */
@@ -256,6 +308,29 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
             fflux[f] = trans[f] * dh;
         } else {
             fflux[f] = 0.0;
+        }
+    }
+
+    if ((F != NULL) && (F->bc != NULL)) {
+        for (i = 0; i < F->bc->nbc; i++) {
+            if (F->bc->type[ i ] == BC_PRESSURE) {
+                f  = F->bc->face[ i ];
+                c1 = G->face_cells[2*f + 0];
+                c2 = G->face_cells[2*f + 1];
+
+                assert ((c1 < 0) ^ (c2 < 0));
+
+                if (c1 < 0) {   /* Environment -> c2 */
+                    dh = F->bc->value[ i ] - cpress[c2];
+                }
+                else {          /* c1 -> environment */
+                    dh = cpress[c1] - F->bc->value[ i ];
+                }
+
+                fflux[f] = trans[f] * (dh + h->pimpl->fgrav[f]);
+            }
+
+            /* Other boundary condtions currently not handled */
         }
     }
 }
