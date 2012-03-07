@@ -24,7 +24,6 @@
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/pressure/flow_bc.h>
 
 namespace Opm
 {
