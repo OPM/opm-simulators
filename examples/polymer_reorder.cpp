@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <opm/core/pressure/IncompTpfa.hpp>
+#include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
@@ -394,6 +395,9 @@ main(int argc, char** argv)
     Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata,
 				      method, nltol, maxit);
 
+    // Boundary conditions.
+    Opm::FlowBCManager bcs;
+
     // State-related and source-related variables init.
     int num_cells = grid->c_grid()->number_of_cells;
     std::vector<double> totmob;
@@ -466,7 +470,7 @@ main(int argc, char** argv)
 				 totmob);
 	}
 	pressure_timer.start();
-	psolver.solve(totmob, omega, src, state.pressure(), state.faceflux());
+	psolver.solve(totmob, omega, src, bcs.c_bcs(), state.pressure(), state.faceflux());
 	pressure_timer.stop();
 	double pt = pressure_timer.secsSinceStart();
 	std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
