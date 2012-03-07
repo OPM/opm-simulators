@@ -62,15 +62,21 @@ namespace
 	return std::max(std::abs(res[0]), std::abs(res[1]));
     }
 
-    bool solveNewtonStep(const double* , const Opm::TransportModelPolymer::ResidualEquation& , const double*, double*);
+    bool solveNewtonStep(const double* , const Opm::TransportModelPolymer::ResidualEquation&,
+			 const double*, double*);
 
+
+    // Define a piecewise linear curve along which we will look for zero of the "s" or "r" residual.
+    // The curve starts at "x", goes along the direction "direction" until it hits the boundary of the box of
+    // admissible values for "s" and "x" (which is given by "[x_min[0], x_max[0]]x[x_min[1], x_max[1]]").
+    // Then it joins in a straight line the point "end_point".
     class CurveInSCPlane{
     public:
 	CurveInSCPlane();
-	void setup(const double* , const double* ,
-		   const double* , const double* ,
-		   const double* , double& ,
-		   double& );
+	void setup(const double* x, const double* direction,
+		   const double* end_point, const double* x_min,
+		   const double* x_max, double& t_max_out,
+		   double& t_out_out);
 	void computeXOfT(double*, const double) const;
 
     private:
@@ -84,6 +90,9 @@ namespace
 	double x_[2];
     };
 
+
+    // Compute the "s" residual along the curve "curve" for a given residual equation "res_eq".
+    // The operator() is sent to a root solver.
     class ResSOnCurve
     {
     public:
@@ -94,6 +103,8 @@ namespace
 	Opm::TransportModelPolymer::ResidualEquation res_eq_;
     };
 
+    // Compute the "c" residual along the curve "curve" for a given residual equation "res_eq".
+    // The operator() is sent to a root solver.
     class ResCOnCurve
     {
     public:
@@ -316,9 +327,8 @@ namespace Opm
     };
 
 
-    // ResidualEquation gathers parameter to construct residual equations and to compute the value
-    // of the residual and of its derivative.
-
+    // ResidualEquation gathers parameters to construct the residual, computes its
+    // value and the values of its derivatives.
 
     TransportModelPolymer::ResidualEquation::ResidualEquation(const TransportModelPolymer& tmodel, int cell_index)
 	: tm(tmodel)
@@ -502,6 +512,7 @@ namespace Opm
 	}
     }
 
+    // Compute the Jacobian of the residual equations.
     void TransportModelPolymer::ResidualEquation::computeJacobiRes(const double* x, double* res_s_ds_dc, double* res_c_ds_dc) const
     {
 	if (gradient_method == 1) {
@@ -547,6 +558,7 @@ namespace Opm
 	}
     }
 
+
     void TransportModelPolymer::solveSingleCell(const int cell)
     {
 	switch (method_) {
@@ -588,12 +600,16 @@ namespace Opm
 
 
 
-    // Newton method, where we compute alternatively the zeros for the residual in s and c along
-    // a specified piecewise linear curve. At each iteration, we use a robust 1d solver.
+    // Newton method, where we first try a Newton step. Then, if it does not work well, we look for
+    // the zero of either the residual in s or the residual in c along a specified piecewise linear
+    // curve. In these cases, we can use a robust 1d solver.
     void TransportModelPolymer::solveSingleCellNewton(int cell)
     {
-	// the tolerance for 1d solver is set as a function of the residual
-	// The tolerance falsi_tol is improved by (reduc_factor_falsi_tol * "previous residual") at each step
+	// the tolerance for 1d solver is set as a function of the residual, because if we are far
+	// from the solution we do not need a very accurate 1d solver (recall that the 1d solver
+	// solves for only one of the two residuals)
+	// The tolerance falsi_tol is improved by
+	// (reduc_factor_falsi_tol * "previous residual") at each step
 	double falsi_tol;
 	const double reduc_factor_falsi_tol = 1e-2;
 	int iters_used_falsi = 0;
@@ -632,6 +648,7 @@ namespace Opm
 	int counter_drop_newton = 0;
 	bool not_so_successfull_newton_step = false;
 
+
  	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
 	    if (counter_drop_newton == 0 && solveNewtonStep(x, res_eq, res, x_new)) {
@@ -643,10 +660,11 @@ namespace Opm
 		} else  {
 		    x[0] = x_new[0];
 		    x[1] = x_new[1];
-		    if (norm(res_new) > 1e-1*norm(res) && norm(res_new) < 1e1*falsi_tol) {
-			// drop Newton for two iteration
-			counter_drop_newton = 4;
+		    if (norm(res_new) > 1e-1*norm(res) && norm(res_new) < 1e1*tol_) {
+			// We are close to the solution and Newton does not perform well.
+			// Then, we drop Newton for a given number of iterations.
 			not_so_successfull_newton_step = true;
+			counter_drop_newton = 4;
 		    }
 		    res[0] = res_new[0];
 		    res[1] = res_new[1];
@@ -657,19 +675,30 @@ namespace Opm
 	    }
 
 	    if (not_so_successfull_newton_step || unsuccessfull_newton_step) {
+		// Newton was not satisfactory. We start 1d solvers.
 		if (not_so_successfull_newton_step) {
 		    counter_drop_newton -= 1;
 		}
+		// General comment on the zero curves of the s and c residuals:
+		// Typically res_s(s,c)=0 defines an increasing curve in the s-c plane while
+		// res_c(s,c)=0 defines a decreasing curve. However, we do not assume that in the algorithm.
+		// We know that res_s(x_top_left)<0, res_s(x_bottom_right)>0
+		// and res_c(x_bottom_left)<0, res_c(x_top_right)>0
+		// Here, "top", "bottom", ... refer to the corner of the admissible box of (s,c) values.
+		// We use these results to construct a 1d curve for which we are sure that res_s or res_c change sign
+		// and which can therefore be used by a 1d solver.
+
+		// We start with the zero curve of the s and r residual we are closest to.
 		if (std::abs(res[0]) < std::abs(res[1])) {
 		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol_);
 		    if (res[0] < -falsi_tol) {
-			    direction[0] = x_max[0] - x[0];
-			    direction[1] = x_min[1] - x[1];
-			    if_res_s = true;
+			direction[0] = x_max[0] - x[0];
+			direction[1] = x_min[1] - x[1];
+			if_res_s = true;
 		    } else if (res[0] > falsi_tol) {
-			    direction[0] = x_min[0] - x[0];
-			    direction[1] = x_max[1] - x[1];
-			    if_res_s = true;
+			direction[0] = x_min[0] - x[0];
+			direction[1] = x_max[1] - x[1];
+			if_res_s = true;
 		    } else {
 			res_eq.computeGradientResS(x, res, gradient);
 			direction[0] = -gradient[1];
@@ -709,20 +738,11 @@ namespace Opm
 			    t_max = t_out;
 			}
 		    }
+		    // Note: In some experiments modifiedRegularFalsi does not yield a result under the given tolerance.
 		    t = modifiedRegulaFalsi(res_s_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
-		    if (std::abs(res_s_on_curve(t)) > falsi_tol) {
-			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
-		    }
 		    res_s_on_curve.curve.computeXOfT(x, t);
 		} else {
 		    if (res[1] < 0) {
-			// We update the bounding box (Here we assume that the curve res_s(s,c)=0 is
-			// increasing). We do it only for a significantly large res[1]
-			// if (res[1] < -tol ) {
-			// 	x_min[0] = x[0];
-			// 	x_min[1] = x[1];
-			// }
-			//
 			end_point[0] = x_max[0];
 			end_point[1] = x_max[1];
 			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
@@ -730,12 +750,6 @@ namespace Opm
 			    t_max = t_out;
 			}
 		    } else {
-			// We update the bounding box (Here we assume that the curve res_s(s,c)=0 is increasing)
-			// if (res[1] > tol) {
-			// 	x_max[0] = x[0];
-			// 	x_max[1] = x[1];
-			// }
-			//
 			end_point[0] = x_min[0];
 			end_point[1] = x_min[1];
 			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
@@ -744,9 +758,6 @@ namespace Opm
 			}
 		    }
 		    t = modifiedRegulaFalsi(res_c_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
-		    if (std::abs(res_c_on_curve(t)) > falsi_tol) {
-			std::cout << "modifiedRegulaFalsi did not produce result under tolerance." << std::endl;
-		    }
 		    res_c_on_curve.curve.computeXOfT(x, t);
 
 		}
@@ -933,16 +944,13 @@ namespace Opm
 namespace
 {
 
-    // setup 1d function, which is called by operator()
-    // For a given point x=(s,c) in the s,c plane, set up a piecewise linear curve wich starts
-    // from "x" with slope "direction", hits the bound of the rectangle
-    // [s_min,s_max]x[c_min,c_max] and continue in a straight line to "end_point".  The curve is
-    // parametrized by t in [0, t_max], t_out is equal to t when the curve hits the bounding
-    // rectangle, x_out=(s_out, c_out) denotes the values of s and c at that point.
     CurveInSCPlane::CurveInSCPlane()
 	{
 	}
 
+    // Setup the curve (see comment above).
+    // The curve is parametrized by t in [0, t_max], t_out is equal to t when the curve hits the bounding
+    // rectangle. x_out=(s_out, c_out) denotes the values of s and c at that point.
     void CurveInSCPlane::setup(const double* x, const double* direction,
 		   const double* end_point, const double* x_min,
 		   const double* x_max, double& t_max_out,
@@ -1039,7 +1047,8 @@ namespace
 	return res_eq_.computeResidualC(x_of_t);
     }
 
-    bool solveNewtonStep(const double* x, const  Opm::TransportModelPolymer::ResidualEquation& res_eq, const double* res, double* x_new) {
+    bool solveNewtonStep(const double* x, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
+			 const double* res, double* x_new) {
 
     	double res_s_ds_dc[2];
     	double res_c_ds_dc[2];
