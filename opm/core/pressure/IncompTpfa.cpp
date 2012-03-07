@@ -110,8 +110,6 @@ namespace Opm
 	}
 
         const ifs_tpfa_forces F = { &src[0], bcs };
-        //F.src = &src[0];
-        //F.bc  = bcs;
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
