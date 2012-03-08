@@ -22,6 +22,8 @@
 
 #include <opm/core/pressure/flow_bc.h>
 
+struct UnstructuredGrid;
+
 namespace Opm
 {
 
@@ -56,6 +58,33 @@ namespace Opm
 	void append(const FlowBCType type,
 		    const int face,
 		    const double value);
+
+	/// Defines the canonical sides for logical cartesian grids.
+	enum Side { Xmin, Xmax, Ymin, Ymax, Zmin, Zmax };
+
+	/// Add BC_PRESSURE boundary conditions to all faces on a given side.
+	/// The grid must have a logical cartesian structure, and grid
+	/// faces must be tagged (i.e. grid.cell_facetag must be
+	/// non-null). Only the set of faces adjacent to cells with
+	/// minimum/maximum I/J/K coordinate (depending on side) are
+	/// considered.
+	void pressureSide(const UnstructuredGrid& grid,
+			  const Side side,
+			  const double pressure);
+
+	/// Add BC_FLUX_TOTVOL boundary conditions to all faces on a given side.
+	/// The grid must have a logical cartesian structure, and grid
+	/// faces must be tagged (i.e. grid.cell_facetag must be
+	/// non-null). Only the set of faces adjacent to cells with
+	/// minimum/maximum I/J/K coordinate (depending on side) are
+	/// considered.
+	/// The flux specified is taken to be the total flux through
+	/// the side, each individual face receiving a part of the
+	/// total flux in proportion to its area, so that all faces
+	/// will have identical normal velocities.
+	void fluxSide(const UnstructuredGrid& grid,
+		      const Side side,
+		      const double flux);
 
 	/// Access the managed boundary conditions.
 	/// The method is named similarly to c_str() in std::string,

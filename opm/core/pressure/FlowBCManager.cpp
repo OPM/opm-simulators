@@ -20,10 +20,19 @@
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/grid.h>
+#include <vector>
 
 namespace Opm
 {
 
+    namespace
+    {
+	std::string sideString(FlowBCManager::Side s);
+	void findSideFaces(const UnstructuredGrid& grid,
+			   const FlowBCManager::Side side,
+			   std::vector<int>& faces);
+    } // anon namespace
 
 
     /// Default constructor sets up empty boundary conditions.
@@ -74,6 +83,61 @@ namespace Opm
     }
 
 
+    /// Add BC_PRESSURE boundary conditions to all faces on a given side.
+    /// The grid must have a logical cartesian structure, and grid
+    /// faces must be tagged (i.e. grid.cell_facetag must be
+    /// non-null). Only the set of faces adjacent to cells with
+    /// minimum/maximum I/J/K coordinate (depending on side) are
+    /// considered.
+    void FlowBCManager::pressureSide(const UnstructuredGrid& grid,
+				     const Side side,
+				     const double pressure)
+    {
+	std::vector<int> faces;
+	findSideFaces(grid, side, faces);
+	int ok = flow_conditions_append_multi(BC_PRESSURE, faces.size(), &faces[0], pressure, bc_);
+	if (!ok) {
+	    THROW("Failed to append pressure boundary conditions for side " << sideString(side));
+	}	
+    }
+
+
+    /// Add BC_FLUX_TOTVOL boundary conditions to all faces on a given side.
+    /// The grid must have a logical cartesian structure, and grid
+    /// faces must be tagged (i.e. grid.cell_facetag must be
+    /// non-null). Only the set of faces adjacent to cells with
+    /// minimum/maximum I/J/K coordinate (depending on side) are
+    /// considered.
+    /// The flux specified is taken to be the total flux through
+    /// the side, each individual face receiving a part of the
+    /// total flux in proportion to its area, so that all faces
+    /// will have identical normal velocities.
+    void FlowBCManager::fluxSide(const UnstructuredGrid& grid,
+				 const Side side,
+				 const double flux)
+    {
+	// Find side faces.
+	std::vector<int> faces;
+	findSideFaces(grid, side, faces);
+
+	// Compute total area of faces.
+	double tot_area = 0.0;
+	for (int fi = 0; fi < int(faces.size()); ++fi) {
+	    tot_area += grid.face_areas[faces[fi]];
+	}
+
+	// Append flux conditions for all the faces individually.
+	for (int fi = 0; fi < int(faces.size()); ++fi) {
+	    const double face_flux = flux * grid.face_areas[faces[fi]] / tot_area;
+	    int ok = flow_conditions_append(BC_FLUX_TOTVOL, faces[fi], face_flux, bc_);
+	    if (!ok) {
+		THROW("Failed to append flux boundary conditions for face " << faces[fi] << " on side " << sideString(side));
+	    }
+	}
+    }
+
+
+
     /// Access the managed boundary conditions.
     /// The method is named similarly to c_str() in std::string,
     /// to make it clear that we are returning a C-compatible struct.
@@ -83,5 +147,76 @@ namespace Opm
     }
 
 
+
+
+    // ------ Utility functions ------
+
+
+    namespace
+    {
+	std::string sideString(FlowBCManager::Side s)
+	{
+	    switch (s) {
+	    case FlowBCManager::Xmin: return "Xmin";
+	    case FlowBCManager::Xmax: return "Xmax";
+	    case FlowBCManager::Ymin: return "Ymin";
+	    case FlowBCManager::Ymax: return "Ymax";
+	    case FlowBCManager::Zmin: return "Zmin";
+	    case FlowBCManager::Zmax: return "Zmax";
+	    default: THROW("Unknown side tag " << s);
+	    }
+	}
+
+
+
+	void cartCoord(const int log_cart_coord,
+		       const int* dims,
+		       int* ijk)
+	{
+	    ijk[2] = log_cart_coord / (dims[0]*dims[1]);
+	    ijk[1] = (log_cart_coord - ijk[2]*(dims[0]*dims[1])) / dims[0];
+	    ijk[0] = log_cart_coord % dims[0];
+	}
+
+
+
+	/// The grid must have a logical cartesian structure, and grid
+	/// faces must be tagged (i.e. grid.cell_facetag must be
+	/// non-null). Only the set of faces adjacent to cells with
+	/// minimum/maximum I/J/K coordinate (depending on side) are
+	/// considered.
+	void findSideFaces(const UnstructuredGrid& grid,
+			   const FlowBCManager::Side side,
+			   std::vector<int>& faces)
+	{
+	    if (grid.cell_facetag == 0) {
+		THROW("Faces not tagged - cannot extract " << sideString(side) << " faces.");
+	    }
+
+	    // Get all boundary faces with the correct tag and with
+	    // min/max i/j/k (depending on side).
+	    const int correct_ijk = (side % 2) ? grid.cartdims[side/2] : 0;
+	    for (int c = 0; c < grid.number_of_cells; ++c) {
+		int ijk[3] = { -1 };
+		cartCoord(grid.global_cell[c], grid.cartdims, ijk);
+		if (ijk[side/2] != correct_ijk) {
+		    continue;
+		}
+		for (int hf = grid.cell_facepos[c]; hf < grid.cell_facepos[c + 1]; ++hf) {
+		    if (grid.cell_facetag[hf] == side) {
+			// Tag is correct.
+			const int f = grid.cell_faces[hf];
+			if (grid.face_cells[2*f] == -1 || grid.face_cells[2*f + 1] == -1) {
+			    // Face is on boundary.
+			    faces.push_back(f);
+			} else {
+			    THROW("Face not on boundary, even with correct tag and boundary cell. This should not occur.");
+			}
+		    }
+		}
+	    }
+	}
+
+    } // anon namespace
 
 } // namespace Opm
