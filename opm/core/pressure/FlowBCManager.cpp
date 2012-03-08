@@ -173,9 +173,11 @@ namespace Opm
 		       const int* dims,
 		       int* ijk)
 	{
-	    ijk[2] = log_cart_coord / (dims[0]*dims[1]);
-	    ijk[1] = (log_cart_coord - ijk[2]*(dims[0]*dims[1])) / dims[0];
-	    ijk[0] = log_cart_coord % dims[0];
+            int ix = log_cart_coord;
+
+            ijk[0] = ix % dims[0];   ix /= dims[0];
+            ijk[1] = ix % dims[1];   ix /= dims[1];
+            ijk[2] = ix % dims[2];
 	}
 
 
