@@ -47,7 +47,7 @@ alloc_size(size_t n, size_t c)
 /* ---------------------------------------------------------------------- */
 /* Put structure in a well-defined, initial state */
 /* ---------------------------------------------------------------------- */
-static void
+static int
 initialise_structure(struct FlowBoundaryConditions *fbc)
 /* ---------------------------------------------------------------------- */
 {
@@ -55,10 +55,12 @@ initialise_structure(struct FlowBoundaryConditions *fbc)
     fbc->cond_cpty = 0;
     fbc->face_cpty = 0;
 
-    fbc->cond_pos  = NULL;
+    fbc->cond_pos  = malloc(1 * sizeof *fbc->cond_pos);
     fbc->type      = NULL;
     fbc->value     = NULL;
     fbc->face      = NULL;
+
+    return fbc->cond_pos != NULL;
 }
 
 
@@ -130,9 +132,9 @@ flow_conditions_construct(size_t nbc)
     fbc = malloc(1 * sizeof *fbc);
 
     if (fbc != NULL) {
-        initialise_structure(fbc);
+        ok = initialise_structure(fbc);
 
-        ok = expand_tables(nbc, nbc, fbc);
+        ok = ok && expand_tables(nbc, nbc, fbc);
 
         if (! ok) {
             flow_conditions_destroy(fbc);
