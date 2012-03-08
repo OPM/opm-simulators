@@ -198,7 +198,8 @@ namespace Opm
 	    const int correct_ijk = (side % 2) ? grid.cartdims[side/2] : 0;
 	    for (int c = 0; c < grid.number_of_cells; ++c) {
 		int ijk[3] = { -1, -1, -1 };
-		cartCoord(grid.global_cell[c], grid.cartdims, ijk);
+                int gc = (grid.global_cell != 0) ? grid.global_cell[c] : c;
+		cartCoord(gc, grid.cartdims, ijk);
 		if (ijk[side/2] != correct_ijk) {
 		    continue;
 		}
