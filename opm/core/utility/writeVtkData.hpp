@@ -27,7 +27,7 @@
 #include <tr1/array>
 #include <iosfwd>
 
-class UnstructuredGrid;
+struct UnstructuredGrid;
 
 namespace Opm
 {

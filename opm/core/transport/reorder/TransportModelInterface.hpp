@@ -20,7 +20,7 @@
 #ifndef OPM_TRANSPORTMODELINTERFACE_HEADER_INCLUDED
 #define OPM_TRANSPORTMODELINTERFACE_HEADER_INCLUDED
 
-class UnstructuredGrid;
+struct UnstructuredGrid;
 
 namespace Opm
 {

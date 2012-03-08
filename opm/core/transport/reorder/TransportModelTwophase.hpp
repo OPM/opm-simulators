@@ -23,7 +23,7 @@
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
 
-class UnstructuredGrid;
+struct UnstructuredGrid;
 
 namespace Opm
 {
