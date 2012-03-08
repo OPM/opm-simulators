@@ -61,7 +61,7 @@ namespace Opm
 	if (deck.hasField("PVTW")) {
 	    const std::vector<double>& pvtw = deck.getPVTW().pvtw_[region_number];
 	    if (pvtw[2] != 0.0 || pvtw[4] != 0.0) {
-		THROW("PvtPropertiesIncompFromDeck::init() -- must have no compressibility effects in PVTW.");
+		MESSAGE("Compressibility effects in PVTW are ignored.");
 	    }
 	    viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = pvtw[3];
 	} else {
@@ -74,7 +74,7 @@ namespace Opm
 	if (deck.hasField("PVCDO")) {
 	    const std::vector<double>& pvcdo = deck.getPVCDO().pvcdo_[region_number];
 	    if (pvcdo[2] != 0.0 || pvcdo[4] != 0.0) {
-		THROW("PvtPropertiesIncompFromDeck::init() -- must have no compressibility effects in PVCDO.");
+		MESSAGE("Compressibility effects in PVCDO are ignored.");
 	    }
 	    viscosity_[phase_usage.phase_pos[PhaseUsage::Liquid]] = pvcdo[3];
 	} else {
