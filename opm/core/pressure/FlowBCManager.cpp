@@ -169,15 +169,21 @@ namespace Opm
 
 
 
-	void cartCoord(const int log_cart_coord,
+	void cartCoord(const int ndims,
+                       const int log_cart_coord,
 		       const int* dims,
 		       int* ijk)
 	{
             int ix = log_cart_coord;
 
-            ijk[0] = ix % dims[0];   ix /= dims[0];
-            ijk[1] = ix % dims[1];   ix /= dims[1];
-            ijk[2] = ix % dims[2];
+            for (int dim = 0; dim < ndims; ++dim) {
+                ijk[dim]  = ix % dims[dim];
+                ix       /=      dims[dim];
+            }
+
+            ASSERT2 (ix == 0,
+                     "Lexicographic index is not consistent "
+                     "with grid dimensions.");
 	}
 
 
@@ -195,13 +201,20 @@ namespace Opm
 		THROW("Faces not tagged - cannot extract " << sideString(side) << " faces.");
 	    }
 
+            ASSERT2 (grid.dimensions <= 3,
+                     "Grid must have three dimensions or less.");
+
+            ASSERT2 (side < 2 * grid.dimensions,
+                     "Boundary condition side not consistent with "
+                     "number of physical grid dimensions.");
+
 	    // Get all boundary faces with the correct tag and with
 	    // min/max i/j/k (depending on side).
 	    const int correct_ijk = (side % 2) ? grid.cartdims[side/2] : 0;
 	    for (int c = 0; c < grid.number_of_cells; ++c) {
 		int ijk[3] = { -1, -1, -1 };
                 int gc = (grid.global_cell != 0) ? grid.global_cell[c] : c;
-		cartCoord(gc, grid.cartdims, ijk);
+		cartCoord(grid.dimensions, gc, grid.cartdims, ijk);
 		if (ijk[side/2] != correct_ijk) {
 		    continue;
 		}
