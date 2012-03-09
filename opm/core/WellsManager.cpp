@@ -171,6 +171,14 @@ namespace Opm
 {
 
 
+    /// Default constructor.
+    WellsManager::WellsManager()
+	: w_(0)
+    {
+    }
+
+
+
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseGridParser& deck,
 			       const UnstructuredGrid& grid,

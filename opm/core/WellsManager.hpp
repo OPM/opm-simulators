@@ -38,6 +38,9 @@ namespace Opm
     class WellsManager
     {
     public:
+	/// Default constructor -- no wells.
+	WellsManager();
+
 	/// Construct from input deck and grid.
 	/// The permeability argument may be zero if the input contain
 	/// well productivity indices, otherwise it must be given in
