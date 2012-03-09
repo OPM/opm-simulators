@@ -210,7 +210,7 @@ namespace Opm
 
 	    // Get all boundary faces with the correct tag and with
 	    // min/max i/j/k (depending on side).
-	    const int correct_ijk = (side % 2) ? grid.cartdims[side/2] : 0;
+	    const int correct_ijk = (side % 2) ? grid.cartdims[side/2] - 1 : 0;
 	    for (int c = 0; c < grid.number_of_cells; ++c) {
 		int ijk[3] = { -1, -1, -1 };
                 int gc = (grid.global_cell != 0) ? grid.global_cell[c] : c;
