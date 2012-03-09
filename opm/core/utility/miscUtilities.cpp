@@ -45,6 +45,40 @@ namespace Opm
     }
 
 
+    /// @brief Computes average saturations over all grid cells.
+    /// @param[out] pv        the pore volume by cell.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[out] aver_sat  must point to a valid array with P elements,
+    ///                       where P = s.size()/pv.size().
+    ///                       For each phase p, we compute
+    ///                       aver_sat_p = (sum_i s_p_i pv_i) / (sum_i pv_i).
+    void computeAverageSat(const std::vector<double>& pv,
+			   const std::vector<double>& s,
+			   double* aver_sat)
+    {
+	const int num_cells = pv.size();
+	const int np = s.size()/pv.size();
+	if (int(s.size()) != num_cells*np) {
+	    THROW("Sizes of s and pv vectors do not match.");
+	}
+	double tot_pv = 0.0;
+	// Note that we abuse the output array to accumulate the
+	// saturated pore volumes.
+	std::fill(aver_sat, aver_sat + np, 0.0);
+	for (int c = 0; c < num_cells; ++c) {
+	    tot_pv += pv[c];
+	    for (int p = 0; p < np; ++p) {
+		aver_sat[p] += pv[c]*s[np*c + p];
+	    }
+	}
+	// Must divide by pore volumes to get saturations.
+	for (int p = 0; p < np; ++p) {
+	    aver_sat[p] /= tot_pv;
+	}
+    }
+
+
+
     /// @brief Computes total mobility for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
     /// @param[in]  cells     cells with which the saturation values are associated
