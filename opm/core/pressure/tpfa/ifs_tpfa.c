@@ -159,13 +159,13 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
 /* ---------------------------------------------------------------------- */
 {
     int is_neumann;
-    int i, f, c1, c2;
+    int f, c1, c2;
 
-    size_t j, ix;
+    size_t i, j, ix;
 
     is_neumann = 1;
 
-    for (i = 0; ((size_t) i) < bc->nbc; i++) {
+    for (i = 0; i < bc->nbc; i++) {
         if (bc->type[ i ] == BC_PRESSURE) {
             is_neumann = 0;
 
