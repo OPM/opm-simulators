@@ -73,6 +73,27 @@ namespace Opm
 				   std::vector<double>& totmob,
 				   std::vector<double>& omega);
 
+    /// Compute two-phase transport source terms from face fluxes,
+    /// and pressure equation source terms. This puts boundary flows
+    /// into the source terms for the transport equation.
+    /// \param[in]  grid          The grid used.
+    /// \param[in]  src           Pressure eq. source terms. The sign convention is:
+    ///                           (+) positive  total inflow (positive velocity divergence)
+    ///                           (-) negative  total outflow
+    /// \param[in]  faceflux      Signed face fluxes, typically the result from a flow solver.
+    /// \param[in]  inflow_frac   Fraction of inflow that consists of first phase.
+    ///                           Example: if only water is injected, inflow_frac == 1.0.
+    ///                           Note: it is not possible (with this method) to use different fractions
+    ///                           for different inflow sources, be they source terms of boundary flows.
+    /// \param[out] transport_src The transport source terms. They are to be interpreted depending on sign:
+    ///                           (+) positive  inflow of first phase (water)
+    ///                           (-) negative  total outflow of both phases
+    void computeTransportSource(const UnstructuredGrid& grid,
+				const std::vector<double>& src,
+				const std::vector<double>& faceflux,
+				const double inflow_frac,
+				std::vector<double>& transport_src);
+
     /// @brief Estimates a scalar cell velocity from face fluxes.
     /// @param[in]  grid            a grid
     /// @param[in]  face_flux       signed per-face fluxes
@@ -90,6 +111,7 @@ namespace Opm
     /// a vector of water saturations.
     void toBothSat(const std::vector<double>& sw,
 		   std::vector<double>& sboth);
+
 
 } // namespace Opm
 

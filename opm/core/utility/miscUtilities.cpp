@@ -141,6 +141,48 @@ namespace Opm
 	}
     }
 
+    /// Compute two-phase transport source terms from face fluxes,
+    /// and pressure equation source terms. This puts boundary flows
+    /// into the source terms for the transport equation.
+    /// \param[in]  grid          The grid used.
+    /// \param[in]  src           Pressure eq. source terms. The sign convention is:
+    ///                           (+) positive  total inflow (positive velocity divergence)
+    ///                           (-) negative  total outflow
+    /// \param[in]  faceflux      Signed face fluxes, typically the result from a flow solver.
+    /// \param[in]  inflow_frac   Fraction of inflow that consists of first phase.
+    ///                           Example: if only water is injected, inflow_frac == 1.0.
+    ///                           Note: it is not possible (with this method) to use different fractions
+    ///                           for different inflow sources, be they source terms of boundary flows.
+    /// \param[out] transport_src The transport source terms. They are to be interpreted depending on sign:
+    ///                           (+) positive  inflow of first phase (water)
+    ///                           (-) negative  total outflow of both phases
+    void computeTransportSource(const UnstructuredGrid& grid,
+				const std::vector<double>& src,
+				const std::vector<double>& faceflux,
+				const double inflow_frac,
+				std::vector<double>& transport_src)
+    {
+	int nc = grid.number_of_cells;
+	transport_src.resize(nc);
+	for (int c = 0; c < nc; ++c) {
+	    transport_src[c] = 0.0;
+	    transport_src[c] += src[c] > 0.0 ? inflow_frac*src[c] : src[c];
+	    for (int hf = grid.cell_facepos[c]; hf < grid.cell_facepos[c + 1]; ++hf) {
+		int f = grid.cell_faces[hf];
+		const int* f2c = &grid.face_cells[2*f];
+		double bdy_influx = 0.0;
+		if (f2c[0] == c && f2c[1] == -1) {
+		    bdy_influx = -faceflux[f];
+		} else if (f2c[0] == -1 && f2c[1] == c) {
+		    bdy_influx = faceflux[f];
+		}
+		if (bdy_influx != 0.0) {
+		    transport_src[c] += bdy_influx > 0.0 ? inflow_frac*bdy_influx : bdy_influx;
+		}
+	    }
+	}
+    }
+
     /// @brief Estimates a scalar cell velocity from face fluxes.
     /// @param[in]  grid            a grid
     /// @param[in]  face_flux       signed per-face fluxes
