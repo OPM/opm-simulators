@@ -141,6 +141,30 @@ namespace Opm
 	}
     }
 
+    void computePhaseMobilities(const Opm::IncompPropertiesInterface& props,
+                                const std::vector<int>&               cells,
+                                const std::vector<double>&            s    ,
+                                std::vector<double>&                  pmobc)
+    {
+        const std::vector<int>::size_type nc = cells.size();
+        const std::size_t                 np = props.numPhases();
+
+        ASSERT (s.size() == nc * np);
+
+        std::vector<double>(nc * np, 0.0).swap(pmobc );
+        double*                                dpmobc = 0;
+        props.relperm(static_cast<const int>(nc), &s[0], &cells[0],
+                      &pmobc[0], dpmobc);
+
+        const double*                 mu  = props.viscosity();
+        std::vector<double>::iterator lam = pmobc.begin();
+        for (std::vector<int>::size_type c = 0; c < nc; ++c) {
+            for (std::size_t p = 0; p < np; ++p, ++lam) {
+                *lam /= mu[ p ];
+            }
+        }
+    }
+
     /// @brief Estimates a scalar cell velocity from face fluxes.
     /// @param[in]  grid            a grid
     /// @param[in]  face_flux       signed per-face fluxes

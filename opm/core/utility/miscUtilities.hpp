@@ -73,6 +73,11 @@ namespace Opm
 				   std::vector<double>& totmob,
 				   std::vector<double>& omega);
 
+    void computePhaseMobilities(const Opm::IncompPropertiesInterface& props,
+                                const std::vector<int>&               cells,
+                                const std::vector<double>&            s    ,
+                                std::vector<double>&                  pmobc);
+
     /// @brief Estimates a scalar cell velocity from face fluxes.
     /// @param[in]  grid            a grid
     /// @param[in]  face_flux       signed per-face fluxes
