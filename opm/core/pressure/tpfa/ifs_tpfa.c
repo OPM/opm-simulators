@@ -266,15 +266,17 @@ ifs_tpfa_assemble(struct UnstructuredGrid               *G,
                 h->A->sa[j2] -= trans[f];
             }
         }
-
-        if ((F != NULL) && (F->src != NULL)) {
-            h->b[c] += F->src[c];
-        }
     }
 
     is_neumann = 1;
     if ((F != NULL) && (F->bc != NULL)) {
         is_neumann = assemble_bc_contrib(G, F->bc, trans, h);
+    }
+
+    if ((F != NULL) && (F->src != NULL)) {
+        for (c = 0; c < G->number_of_cells; c++) {
+            h->b[c] += F->src[c];
+        }
     }
 
     if (is_neumann) {
