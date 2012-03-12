@@ -89,19 +89,20 @@ namespace Opm
 			      const std::vector<double>& s,
 			      std::vector<double>& totmob)
     {
-	int num_cells = cells.size();
-	int num_phases = props.numPhases();
-	totmob.resize(num_cells);
-	ASSERT(int(s.size()) == num_cells*num_phases);
-	std::vector<double> kr(num_cells*num_phases);
-	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
-	const double* mu = props.viscosity();
-	for (int cell = 0; cell < num_cells; ++cell) {
-	    totmob[cell] = 0;
-	    for (int phase = 0; phase < num_phases; ++phase) {	
-		totmob[cell] += kr[num_phases*cell + phase]/mu[phase];
-	    }
-	}
+        std::vector<double> pmobc;
+
+        computePhaseMobilities(props, cells, s, pmobc);
+
+        const std::size_t                 np = props.numPhases();
+        const std::vector<int>::size_type nc = cells.size();
+
+        std::vector<double>(cells.size(), 0.0).swap(totmob);
+
+        for (std::vector<int>::size_type c = 0; c < nc; ++c) {
+            for (std::size_t p = 0; p < np; ++p) {
+                totmob[ c ] += pmobc[c*np + p];
+            }
+        }
     }
 
 
