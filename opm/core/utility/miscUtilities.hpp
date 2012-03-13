@@ -38,6 +38,18 @@ namespace Opm
 			   std::vector<double>& porevol);
 
 
+    /// @brief Computes total saturated volumes over all grid cells.
+    /// @param[out] pv        the pore volume by cell.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[out] sat_vol   must point to a valid array with P elements,
+    ///                       where P = s.size()/pv.size().
+    ///                       For each phase p, we compute
+    ///                       sat_vol_p = sum_i s_p_i pv_i
+    void computeSaturatedVol(const std::vector<double>& pv,
+			     const std::vector<double>& s,
+			     double* sat_vol);
+
+
     /// @brief Computes average saturations over all grid cells.
     /// @param[out] pv        the pore volume by cell.
     /// @param[in]  s         saturation values (for all P phases)
@@ -49,6 +61,25 @@ namespace Opm
 			   const std::vector<double>& s,
 			   double* aver_sat);
 
+
+    /// @brief Computes injected and produced volumes of all phases.
+    /// Note 1: assumes that only the first phase is injected.
+    /// Note 2: assumes that transport has been done with an
+    ///         implicit method, i.e. that the current state
+    ///         gives the mobilities used for the preceding timestep.
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  dt        timestep used
+    /// @param[out] injected  must point to a valid array with P elements,
+    ///                       where P = s.size()/src.size().
+    /// @param[out] produced  must also point to a valid array with P elements.
+    void computeInjectedProduced(const IncompPropertiesInterface& props,
+				 const std::vector<double>& s,
+				 const std::vector<double>& src,
+				 const double dt,
+				 double* injected,
+				 double* produced);
 
     /// @brief Computes total mobility for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
@@ -107,11 +138,10 @@ namespace Opm
     void toWaterSat(const std::vector<double>& sboth,
 		    std::vector<double>& sw);
 
-    /// Make a a vector of interleaved water and oil saturations from
+    /// Make a vector of interleaved water and oil saturations from
     /// a vector of water saturations.
     void toBothSat(const std::vector<double>& sw,
 		   std::vector<double>& sboth);
-
 
 } // namespace Opm
 

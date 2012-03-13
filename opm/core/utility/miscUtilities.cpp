@@ -45,8 +45,33 @@ namespace Opm
     }
 
 
+    /// @brief Computes total saturated volumes over all grid cells.
+    /// @param[in]  pv        the pore volume by cell.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[out] sat_vol   must point to a valid array with P elements,
+    ///                       where P = s.size()/pv.size().
+    ///                       For each phase p, we compute
+    ///                       sat_vol_p = sum_i s_p_i pv_i
+    void computeSaturatedVol(const std::vector<double>& pv,
+			     const std::vector<double>& s,
+			     double* sat_vol)
+    {
+	const int num_cells = pv.size();
+	const int np = s.size()/pv.size();
+	if (int(s.size()) != num_cells*np) {
+	    THROW("Sizes of s and pv vectors do not match.");
+	}
+	std::fill(sat_vol, sat_vol + np, 0.0);
+	for (int c = 0; c < num_cells; ++c) {
+	    for (int p = 0; p < np; ++p) {
+		sat_vol[p] += pv[c]*s[np*c + p];
+	    }
+	}
+    }
+
+
     /// @brief Computes average saturations over all grid cells.
-    /// @param[out] pv        the pore volume by cell.
+    /// @param[in]  pv        the pore volume by cell.
     /// @param[in]  s         saturation values (for all P phases)
     /// @param[out] aver_sat  must point to a valid array with P elements,
     ///                       where P = s.size()/pv.size().
@@ -74,6 +99,54 @@ namespace Opm
 	// Must divide by pore volumes to get saturations.
 	for (int p = 0; p < np; ++p) {
 	    aver_sat[p] /= tot_pv;
+	}
+    }
+
+
+    /// @brief Computes injected and produced volumes of all phases.
+    /// Note 1: assumes that only the first phase is injected.
+    /// Note 2: assumes that transport has been done with an
+    ///         implicit method, i.e. that the current state
+    ///         gives the mobilities used for the preceding timestep.
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  dt        timestep used
+    /// @param[out] injected  must point to a valid array with P elements,
+    ///                       where P = s.size()/src.size().
+    /// @param[out] produced  must also point to a valid array with P elements.
+    void computeInjectedProduced(const IncompPropertiesInterface& props,
+				 const std::vector<double>& s,
+				 const std::vector<double>& src,
+				 const double dt,
+				 double* injected,
+				 double* produced)
+    {
+	const int num_cells = src.size();
+	const int np = s.size()/src.size();
+	if (int(s.size()) != num_cells*np) {
+	    THROW("Sizes of s and src vectors do not match.");
+	}
+	std::fill(injected, injected + np, 0.0);
+	std::fill(produced, produced + np, 0.0);
+	const double* visc = props.viscosity();
+	std::vector<double> mob(np);
+	for (int c = 0; c < num_cells; ++c) {
+	    if (src[c] > 0.0) {
+		injected[0] += src[c]*dt;
+	    } else if (src[c] < 0.0) {
+		const double flux = -src[c]*dt;
+		const double* sat = &s[np*c];
+		props.relperm(1, sat, &c, &mob[0], 0);
+		double totmob = 0.0;
+		for (int p = 0; p < np; ++p) {
+		    mob[p] /= visc[p];
+		    totmob += mob[p];
+		}
+		for (int p = 0; p < np; ++p) {
+		    produced[p] += (mob[p]/totmob)*flux;
+		}
+	    }
 	}
     }
 
