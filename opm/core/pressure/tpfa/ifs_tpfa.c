@@ -322,7 +322,7 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
 {
     int    c1, c2, f;
     size_t i, j;
-    double dh;
+    double dh, s;
 
     /* Assign cell pressure directly from solution vector */
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
@@ -361,7 +361,24 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
                 }
             }
 
-            /* Other boundary condtions currently not handled */
+            else if (F->bc->type[ i ] == BC_FLUX_TOTVOL) {
+                assert (F->bc->cond_pos[i+1] - F->bc->cond_pos[i] == 1);
+
+                for (j = F->bc->cond_pos[ i + 0 ];
+                     j < F->bc->cond_pos[ i + 1 ]; j++) {
+                    
+                    f  = F->bc->face[ j ];
+                    c1 = G->face_cells[2*f + 0];
+                    c2 = G->face_cells[2*f + 1];
+
+                    assert ((c1 < 0) ^ (c2 < 0));
+
+                    /* BC flux is positive into reservoir. */
+                    s = 2.0*(c1 < 0) - 1.0;
+
+                    fflux[f] = s * F->bc->value[ i ];
+                }
+            }
         }
     }
 }
