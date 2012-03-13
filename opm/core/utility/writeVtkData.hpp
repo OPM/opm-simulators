@@ -42,7 +42,7 @@ namespace Opm
 		      std::ostream& os);
 
     /// Vtk output for general grids.
-    void writeVtkData(const UnstructuredGrid* grid,
+    void writeVtkData(const UnstructuredGrid& grid,
 		      const DataMap& data,
 		      std::ostream& os);
 } // namespace Opm
