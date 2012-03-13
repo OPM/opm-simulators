@@ -190,6 +190,24 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
             }
         }
 
+        else if (bc->type[ i ] == BC_FLUX_TOTVOL) {
+            /* We currently support individual flux faces only. */
+            assert (bc->cond_pos[i + 1] - bc->cond_pos[i] == 1);
+
+            for (j = bc->cond_pos[ i ]; j < bc->cond_pos[i + 1]; j++) {
+                f  = bc->face[ j ];
+                c1 = G->face_cells[2*f + 0];
+                c2 = G->face_cells[2*f + 1];
+
+                assert ((c1 < 0) ^ (c2 < 0)); /* BCs on ext. faces only */
+
+                c1 = (c1 >= 0) ? c1 : c2;
+
+                /* Interpret BC as flow *INTO* cell */
+                h->b[ c1 ] += bc->value[ i ];
+            }
+        }
+
         /* Other types currently not handled */
     }
 
