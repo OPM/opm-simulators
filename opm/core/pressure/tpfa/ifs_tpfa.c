@@ -162,7 +162,7 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
     int f, c1, c2;
 
     size_t i, j, ix;
-    double s;
+    double s, t;
 
     is_neumann = 1;
 
@@ -179,13 +179,14 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
 
                 is_inflow = c1 >= 0;
 
+                t  = trans[ f ];
                 s  = 2.0*is_inflow - 1.0;
                 c1 = is_inflow ? c1 : c2;
                 ix = csrmatrix_elm_index(c1, c1, h->A);
 
-                h->A->sa[ ix ] += trans[ f ];
-                h->b    [ c1 ] += trans[ f ] * bc->value[ i ];
-                h->b    [ c1 ] -= s * trans[f] * h->pimpl->fgrav[f];
+                h->A->sa[ ix ] += t;
+                h->b    [ c1 ] += t * bc->value[ i ];
+                h->b    [ c1 ] -= s * t * h->pimpl->fgrav[ f ];
             }
         }
 
