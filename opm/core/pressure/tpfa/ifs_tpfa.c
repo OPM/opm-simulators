@@ -321,7 +321,7 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
 /* ---------------------------------------------------------------------- */
 {
     int    c1, c2, f;
-    size_t i;
+    size_t i, j;
     double dh;
 
     /* Assign cell pressure directly from solution vector */
@@ -342,20 +342,23 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
     if ((F != NULL) && (F->bc != NULL)) {
         for (i = 0; i < F->bc->nbc; i++) {
             if (F->bc->type[ i ] == BC_PRESSURE) {
-                f  = F->bc->face[ i ];
-                c1 = G->face_cells[2*f + 0];
-                c2 = G->face_cells[2*f + 1];
+                for (j = F->bc->cond_pos[ i + 0 ];
+                     j < F->bc->cond_pos[ i + 1 ]; j++) {
+                    f  = F->bc->face[ j ];
+                    c1 = G->face_cells[2*f + 0];
+                    c2 = G->face_cells[2*f + 1];
 
-                assert ((c1 < 0) ^ (c2 < 0));
+                    assert ((c1 < 0) ^ (c2 < 0));
 
-                if (c1 < 0) {   /* Environment -> c2 */
-                    dh = F->bc->value[ i ] - cpress[c2];
+                    if (c1 < 0) {   /* Environment -> c2 */
+                        dh = F->bc->value[ i ] - cpress[c2];
+                    }
+                    else {          /* c1 -> environment */
+                        dh = cpress[c1] - F->bc->value[ i ];
+                    }
+
+                    fflux[f] = trans[f] * (dh + h->pimpl->fgrav[f]);
                 }
-                else {          /* c1 -> environment */
-                    dh = cpress[c1] - F->bc->value[ i ];
-                }
-
-                fflux[f] = trans[f] * (dh + h->pimpl->fgrav[f]);
             }
 
             /* Other boundary condtions currently not handled */
