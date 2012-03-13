@@ -158,7 +158,7 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
                     struct ifs_tpfa_data          *h    )
 /* ---------------------------------------------------------------------- */
 {
-    int is_neumann, is_inflow;
+    int is_neumann, is_outflow;
     int f, c1, c2;
 
     size_t i, j, ix;
@@ -177,11 +177,11 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
 
                 assert ((c1 < 0) ^ (c2 < 0)); /* BCs on ext. faces only */
 
-                is_inflow = c1 >= 0;
+                is_outflow = c1 >= 0;
 
                 t  = trans[ f ];
-                s  = 2.0*is_inflow - 1.0;
-                c1 = is_inflow ? c1 : c2;
+                s  = 2.0*is_outflow - 1.0;
+                c1 = is_outflow ? c1 : c2;
                 ix = csrmatrix_elm_index(c1, c1, h->A);
 
                 h->A->sa[ ix ] += t;
