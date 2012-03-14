@@ -433,8 +433,7 @@ main(int argc, char** argv)
         polydata.set(c_max, mix_param, rock_density, dead_pore_vol, c_vals_visc, visc_mult_vals, c_vals_ads, ads_vals);
     }
 
-
-
+    // Initialize polymer inflow function.
     double poly_start = param.getDefault("poly_start_days", 300.0)*Opm::unit::day;
     double poly_end = param.getDefault("poly_end_days", 800.0)*Opm::unit::day;
     double poly_amount = param.getDefault("poly_amount", polydata.cMax());
