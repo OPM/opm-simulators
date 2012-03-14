@@ -21,6 +21,7 @@
 #define OPM_MISCUTILITIES_HEADER_INCLUDED
 
 #include <vector>
+#include <iosfwd>
 
 struct Wells;
 struct UnstructuredGrid;
@@ -157,6 +158,15 @@ namespace Opm
     /// single-perforation.
     void wellsToSrc(const Wells& wells, const int num_cells, std::vector<double>& src);
 
+    /// Encapsulates the watercut curves.
+    class Watercut
+    {
+    public:
+        void push(double time, double fraction, double produced);
+        void write(std::ostream& os) const;
+    private:
+        std::vector<double> data_;
+    };
 
 } // namespace Opm
 

@@ -18,6 +18,7 @@
 */
 
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
@@ -356,6 +357,23 @@ namespace Opm
 	    const double cell = wells.well_cells[wells.well_connpos[w]];
 	    src[cell] = (wells.type[w] == INJECTOR) ? flow : -flow;
 	}
+    }
+
+    void Watercut::push(double time, double fraction, double produced)
+    {
+        data_.push_back(time);
+        data_.push_back(fraction);
+        data_.push_back(produced);
+    }
+
+    void Watercut::write(std::ostream& os) const
+    {
+        int sz = data_.size()/3;
+        for (int i = 0; i < sz; ++i) {
+            os << data_[3*i]/Opm::unit::day << "   "
+               << data_[3*i+1] << "   "
+               << data_[3*i+2] << '\n';
+        }
     }
 
 
