@@ -181,7 +181,7 @@ namespace Opm
 	}
         double polymass = 0.0;
 	for (int cell = 0; cell < num_cells; ++cell) {
-            polymass += c[cell]*pv[cell]*s[np*cell + 0]*(1.0 - dps);
+            polymass += c[cell]*pv[cell]*(s[np*cell + 0] - dps);
 	}
         return polymass;
     }
