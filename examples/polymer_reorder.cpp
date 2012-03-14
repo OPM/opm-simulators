@@ -18,26 +18,33 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if HAVE_CONFIG_H
 #include "config.h"
+#endif // HAVE_CONFIG_H
 
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
-#include <opm/core/utility/writeVtkData.hpp>
-#include <opm/core/utility/linearInterpolation.hpp>
-#include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/newwells.h>
+#include <opm/core/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
+#include <opm/core/utility/writeVtkData.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
-// #include <opm/core/linalg/LinearSolverIstl.hpp>
+// #define EXPERIMENT_ISTL
+#ifdef EXPERIMENT_ISTL
+#include <opm/core/linalg/LinearSolverIstl.hpp>
+#endif
 
 #include <opm/polymer/TransportModelPolymer.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
