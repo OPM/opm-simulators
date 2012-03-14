@@ -251,7 +251,7 @@ void outputState(const UnstructuredGrid* grid,
     dm["saturation"] = &state.saturation();
     dm["pressure"] = &state.pressure();
     dm["concentration"] = &state.concentration();
-    Opm::writeVtkData(grid, dm, vtkfile);
+    Opm::writeVtkData(*grid, dm, vtkfile);
 
     // Write data (not grid) in Matlab format
     for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
