@@ -20,14 +20,15 @@
 #ifndef OPM_MISCUTILITIES_HEADER_INCLUDED
 #define OPM_MISCUTILITIES_HEADER_INCLUDED
 
-
-#include <opm/core/grid.h>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <vector>
 
+struct Wells;
+struct UnstructuredGrid;
 
 namespace Opm
 {
+
+    class IncompPropertiesInterface;
 
     /// @brief Computes pore volume of all cells in a grid.
     /// @param[in]  grid      a grid
@@ -150,6 +151,12 @@ namespace Opm
     /// a vector of water saturations.
     void toBothSat(const std::vector<double>& sw,
 		   std::vector<double>& sboth);
+
+    /// Create a src vector equivalent to a wells structure.
+    /// For this to be valid, the wells must be all rate-controlled and
+    /// single-perforation.
+    void wellsToSrc(const Wells& wells, const int num_cells, std::vector<double>& src);
+
 
 } // namespace Opm
 

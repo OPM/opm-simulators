@@ -18,6 +18,9 @@
 */
 
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/grid.h>
+#include <opm/core/newwells.h>
+#include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <functional>
@@ -333,6 +336,27 @@ namespace Opm
     }
 
 
+    /// Create a src vector equivalent to a wells structure.
+    /// For this to be valid, the wells must be all rate-controlled and
+    /// single-perforation.
+    void wellsToSrc(const Wells& wells, const int num_cells, std::vector<double>& src)
+    {
+	src.resize(num_cells);
+	for (int w = 0; w < wells.number_of_wells; ++w) {
+	    if (wells.ctrls[w]->num != 1) {
+		THROW("In wellsToSrc(): well has more than one control.");
+	    }
+	    if (wells.ctrls[w]->type[0] != RATE) {
+		THROW("In wellsToSrc(): well is BHP, not RATE.");
+	    }
+	    if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
+		THROW("In wellsToSrc(): well has multiple perforations.");
+	    }
+	    const double flow = wells.ctrls[w]->target[0];
+	    const double cell = wells.well_cells[wells.well_connpos[w]];
+	    src[cell] = (wells.type[w] == INJECTOR) ? flow : -flow;
+	}
+    }
 
 
 } // namespace Opm
