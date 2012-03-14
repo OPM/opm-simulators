@@ -112,8 +112,7 @@ namespace Opm
     double computePolymerAdsorbed(const Opm::PolymerProperties& polyprops,
                                   const std::vector<double>& pv,
                                   const std::vector<double>& s,
-                                  const std::vector<double>& cmax,
-                                  const double dps);
+                                  const std::vector<double>& cmax);
 
 } // namespace Opm
 

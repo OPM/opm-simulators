@@ -198,14 +198,14 @@ namespace Opm
     double computePolymerAdsorbed(const Opm::PolymerProperties& polyprops,
                                   const std::vector<double>& pv,
                                   const std::vector<double>& s,
-                                  const std::vector<double>& cmax,
-                                  const double dps)
+                                  const std::vector<double>& cmax)
     {
 	const int num_cells = pv.size();
 	const int np = s.size()/pv.size();
 	if (int(s.size()) != num_cells*np) {
 	    THROW("Sizes of s and pv vectors do not match.");
 	}
+        const double dps = polyprops.deadPoreVol();
         double abs_mass = 0.0;
 	for (int cell = 0; cell < num_cells; ++cell) {
             const double max_polymass = cmax[cell]*pv[cell]*s[np*cell + 0]*(1.0 - dps);
