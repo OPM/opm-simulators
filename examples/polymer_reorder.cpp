@@ -630,11 +630,17 @@ main(int argc, char** argv)
     total_timer.start();
     std::cout << "\n\n================    Starting main simulation loop     ===============" << std::endl;
     double init_satvol[2] = { 0.0 };
+    double init_polymass = 0.0;
     double satvol[2] = { 0.0 };
+    double polymass = 0.0;
     double injected[2] = { 0.0 };
     double produced[2] = { 0.0 };
+    double polyinj = 0.0;
+    double polyprod = 0.0;
     double tot_injected[2] = { 0.0 };
     double tot_produced[2] = { 0.0 };
+    double tot_polyinj = 0.0;
+    double tot_polyprod = 0.0;
     Opm::computeSaturatedVol(porevol, state.saturation(), init_satvol);
     std::cout << "\nInitial saturations are    " << init_satvol[0]/tot_porevol
               << "    " << init_satvol[1]/tot_porevol << std::endl;
@@ -688,35 +694,48 @@ main(int argc, char** argv)
 
         // Report volume balances.
         Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
-        Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
+        polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration());
+        Opm::computeInjectedProduced(*props, polydata, state.saturation(), state.concentration(),
+                                     src, simtimer.currentStepLength(), inflow_c,
+                                     injected, produced, polyinj, polyprod);
         tot_injected[0] += injected[0];
         tot_injected[1] += injected[1];
         tot_produced[0] += produced[0];
         tot_produced[1] += produced[1];
+        tot_polyinj += polyinj;
+        tot_polyprod += polyprod;
         std::cout.precision(5);
         const int width = 18;
-        std::cout << "\nVolume balance report (all numbers relative to total pore volume).\n";
+        std::cout << "\nVolume and polymer mass balance: "
+            "   water(pv)           oil(pv)       polymer(kg)\n";
         std::cout << "    Saturated volumes:     "
                   << std::setw(width) << satvol[0]/tot_porevol
-                  << std::setw(width) << satvol[1]/tot_porevol << std::endl;
+                  << std::setw(width) << satvol[1]/tot_porevol
+                  << std::setw(width) << polymass << std::endl;
         std::cout << "    Injected volumes:      "
                   << std::setw(width) << injected[0]/tot_porevol
-                  << std::setw(width) << injected[1]/tot_porevol << std::endl;
+                  << std::setw(width) << injected[1]/tot_porevol
+                  << std::setw(width) << polyinj << std::endl;
         std::cout << "    Produced volumes:      "
                   << std::setw(width) << produced[0]/tot_porevol
-                  << std::setw(width) << produced[1]/tot_porevol << std::endl;
+                  << std::setw(width) << produced[1]/tot_porevol
+                  << std::setw(width) << polyprod << std::endl;
         std::cout << "    Total inj volumes:     "
                   << std::setw(width) << tot_injected[0]/tot_porevol
-                  << std::setw(width) << tot_injected[1]/tot_porevol << std::endl;
+                  << std::setw(width) << tot_injected[1]/tot_porevol
+                  << std::setw(width) << tot_polyinj << std::endl;
         std::cout << "    Total prod volumes:    "
                   << std::setw(width) << tot_produced[0]/tot_porevol
-                  << std::setw(width) << tot_produced[1]/tot_porevol << std::endl;
+                  << std::setw(width) << tot_produced[1]/tot_porevol
+                  << std::setw(width) << tot_polyprod << std::endl;
         std::cout << "    In-place + prod - inj: "
                   << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol
-                  << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol << std::endl;
+                  << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol
+                  << std::setw(width) << (polymass + tot_polyprod - tot_polyinj) << std::endl;
         std::cout << "    Init - now - pr + inj: "
                   << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol
                   << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol
+                  << std::setw(width) << (init_polymass - polymass - tot_polyprod + tot_polyinj)
                   << std::endl;
         std::cout.precision(8);
 
