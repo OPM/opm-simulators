@@ -109,7 +109,7 @@ namespace Opm
     /// @param[in]  cmax      max polymer concentration for cell
     /// @param[in]  dps       dead pore space
     /// @return               total absorbed polymer mass.
-    double computePolymerAbsorbed(const Opm::PolymerProperties& polyprops,
+    double computePolymerAdsorbed(const Opm::PolymerProperties& polyprops,
                                   const std::vector<double>& pv,
                                   const std::vector<double>& s,
                                   const std::vector<double>& cmax,
