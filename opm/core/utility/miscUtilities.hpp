@@ -41,7 +41,7 @@ namespace Opm
 
 
     /// @brief Computes total saturated volumes over all grid cells.
-    /// @param[out] pv        the pore volume by cell.
+    /// @param[in]  pv        the pore volume by cell.
     /// @param[in]  s         saturation values (for all P phases)
     /// @param[out] sat_vol   must point to a valid array with P elements,
     ///                       where P = s.size()/pv.size().
@@ -53,7 +53,7 @@ namespace Opm
 
 
     /// @brief Computes average saturations over all grid cells.
-    /// @param[out] pv        the pore volume by cell.
+    /// @param[in]  pv        the pore volume by cell.
     /// @param[in]  s         saturation values (for all P phases)
     /// @param[out] aver_sat  must point to a valid array with P elements,
     ///                       where P = s.size()/pv.size().
