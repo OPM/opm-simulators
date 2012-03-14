@@ -284,9 +284,9 @@ private:
 
 
 static void outputState(const UnstructuredGrid& grid,
-			const ReservoirState& state,
-			const int step,
-			const std::string& output_dir)
+                        const ReservoirState& state,
+                        const int step,
+                        const std::string& output_dir)
 {
     // Write data in VTK format.
     std::ostringstream vtkfilename;
@@ -616,7 +616,7 @@ main(int argc, char** argv)
     std::cout << "\n\n================    Starting main simulation loop     ===============" << std::endl;
     for (; !simtimer.done(); ++simtimer) {
         // Report timestep and (optionally) write state to disk.
-	simtimer.report(std::cout);
+        simtimer.report(std::cout);
         if (output) {
             outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
         }
@@ -635,8 +635,8 @@ main(int argc, char** argv)
         std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
         ptime += pt;
 
-	const double current_time = simtimer.currentTime();
-	const double stepsize = simtimer.currentStepLength();
+        const double current_time = simtimer.currentTime();
+        const double stepsize = simtimer.currentStepLength();
         const double inflowc0 = poly_inflow(current_time + 1e-5*stepsize);
         const double inflowc1 = poly_inflow(current_time + (1.0 - 1e-5)*stepsize);
         if (inflowc0 != inflowc1) {
