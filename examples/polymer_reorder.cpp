@@ -437,7 +437,7 @@ main(int argc, char** argv)
 
     double poly_start = param.getDefault("poly_start_days", 300.0)*Opm::unit::day;
     double poly_end = param.getDefault("poly_end_days", 800.0)*Opm::unit::day;
-    double poly_amount = param.getDefault("poly_amount", 5.0);
+    double poly_amount = param.getDefault("poly_amount", polydata.cMax());
     PolymerInflow poly_inflow(poly_start, poly_end, poly_amount);
 
     // Extra rock init.
