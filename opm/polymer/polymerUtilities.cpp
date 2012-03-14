@@ -167,10 +167,12 @@ namespace Opm
     /// @param[in]  pv        the pore volume by cell.
     /// @param[in]  s         saturation values (for all P phases)
     /// @param[in]  c         polymer concentration
+    /// @param[in]  dps       dead pore space
     /// @return               total polymer mass in grid.
     double computePolymerMass(const std::vector<double>& pv,
                               const std::vector<double>& s,
-                              const std::vector<double>& c)
+                              const std::vector<double>& c,
+                              const double dps)
     {
 	const int num_cells = pv.size();
 	const int np = s.size()/pv.size();
@@ -179,10 +181,40 @@ namespace Opm
 	}
         double polymass = 0.0;
 	for (int cell = 0; cell < num_cells; ++cell) {
-            polymass += c[cell]*pv[cell]*s[np*cell + 0];
+            polymass += c[cell]*pv[cell]*s[np*cell + 0]*(1.0 - dps);
 	}
         return polymass;
     }
+
+
+
+    /// @brief Computes total absorbed polymer mass over all grid cells.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  pv        the pore volume by cell.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[in]  cmax      max polymer concentration for cell
+    /// @param[in]  dps       dead pore space
+    /// @return               total absorbed polymer mass.
+    double computePolymerAbsorbed(const Opm::PolymerProperties& polyprops,
+                                  const std::vector<double>& pv,
+                                  const std::vector<double>& s,
+                                  const std::vector<double>& cmax,
+                                  const double dps)
+    {
+	const int num_cells = pv.size();
+	const int np = s.size()/pv.size();
+	if (int(s.size()) != num_cells*np) {
+	    THROW("Sizes of s and pv vectors do not match.");
+	}
+        double abs_mass = 0.0;
+	for (int cell = 0; cell < num_cells; ++cell) {
+            const double max_polymass = cmax[cell]*pv[cell]*s[np*cell + 0]*(1.0 - dps);
+            abs_mass += polyprops.adsorbtion(cmax[cell])*max_polymass;
+	}
+        return abs_mass;
+    }
+
+
 
 } // namespace Opm
 
