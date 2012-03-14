@@ -98,5 +98,91 @@ namespace Opm
     }
 
 
+    /// @brief Computes injected and produced volumes of all phases,
+    ///        and injeced and produced polymer mass.
+    /// Note 1: assumes that only the first phase is injected.
+    /// Note 2: assumes that transport has been done with an
+    ///         implicit method, i.e. that the current state
+    ///         gives the mobilities used for the preceding timestep.
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[in]  c         polymer concentration
+    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  dt        timestep used
+    /// @param[in]  inj_c     injected concentration
+    /// @param[out] injected  must point to a valid array with P elements,
+    ///                       where P = s.size()/src.size().
+    /// @param[out] produced  must also point to a valid array with P elements.
+    /// @param[out] polyinj   injected mass of polymer
+    /// @param[out] polyprod  produced mass of polymer
+    void computeInjectedProduced(const IncompPropertiesInterface& props,
+                                 const Opm::PolymerProperties& polyprops,
+				 const std::vector<double>& s,
+				 const std::vector<double>& c,
+				 const std::vector<double>& src,
+				 const double dt,
+                                 const double inj_c,
+				 double* injected,
+				 double* produced,
+                                 double& polyinj,
+                                 double& polyprod)
+    {
+        const int num_cells = src.size();
+        const int np = s.size()/src.size();
+        if (int(s.size()) != num_cells*np) {
+            THROW("Sizes of s and src vectors do not match.");
+        }
+        std::fill(injected, injected + np, 0.0);
+        std::fill(produced, produced + np, 0.0);
+        polyinj = 0.0;
+        polyprod = 0.0;
+        std::vector<double> inv_eff_visc(np);
+        const double* visc = props.viscosity();
+        std::vector<double> mob(np);
+        for (int cell = 0; cell < num_cells; ++cell) {
+            if (src[cell] > 0.0) {
+                injected[0] += src[cell]*dt;
+                polyinj += src[cell]*dt*inj_c;
+            } else if (src[cell] < 0.0) {
+                const double flux = -src[cell]*dt;
+                const double* sat = &s[np*cell];
+                props.relperm(1, sat, &cell, &mob[0], 0);
+                polyprops.effectiveInvVisc(c[cell], visc, &inv_eff_visc[0]);
+                double totmob = 0.0;
+                for (int p = 0; p < np; ++p) {
+                    mob[p] *= inv_eff_visc[p];
+                    totmob += mob[p];
+                }
+                for (int p = 0; p < np; ++p) {
+                    produced[p] += (mob[p]/totmob)*flux;
+                }
+                polyprod += (mob[0]/totmob)*flux*c[cell]; // TODO check this term.
+            }
+        }
+    }
+
+
+    /// @brief Computes total polymer mass over all grid cells.
+    /// @param[in]  pv        the pore volume by cell.
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[in]  c         polymer concentration
+    /// @return               total polymer mass in grid.
+    double computePolymerMass(const std::vector<double>& pv,
+                              const std::vector<double>& s,
+                              const std::vector<double>& c)
+    {
+	const int num_cells = pv.size();
+	const int np = s.size()/pv.size();
+	if (int(s.size()) != num_cells*np) {
+	    THROW("Sizes of s and pv vectors do not match.");
+	}
+        double polymass = 0.0;
+	for (int cell = 0; cell < num_cells; ++cell) {
+            polymass += c[cell]*pv[cell]*s[np*cell + 0];
+	}
+        return polymass;
+    }
+
 } // namespace Opm
 
