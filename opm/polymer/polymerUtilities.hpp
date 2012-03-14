@@ -105,14 +105,12 @@ namespace Opm
     /// @brief Computes total absorbed polymer mass over all grid cells.
     /// @param[in]  polyprops polymer properties
     /// @param[in]  pv        the pore volume by cell.
-    /// @param[in]  s         saturation values (for all P phases)
     /// @param[in]  cmax      max polymer concentration for cell
-    /// @param[in]  dps       dead pore space
     /// @return               total absorbed polymer mass.
     double computePolymerAdsorbed(const Opm::PolymerProperties& polyprops,
                                   const std::vector<double>& pv,
-                                  const std::vector<double>& s,
                                   const std::vector<double>& cmax);
+
 
 } // namespace Opm
 

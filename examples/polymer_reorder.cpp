@@ -696,7 +696,7 @@ main(int argc, char** argv)
         // Report volume balances.
         Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
         polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), polydata.deadPoreVol());
-        polymass_adsorbed = Opm::computePolymerAdsorbed(polydata, porevol, state.saturation(), state.cmax());
+        polymass_adsorbed = Opm::computePolymerAdsorbed(polydata, porevol, state.cmax());
         Opm::computeInjectedProduced(*props, polydata, state.saturation(), state.concentration(),
                                      src, simtimer.currentStepLength(), inflow_c,
                                      injected, produced, polyinj, polyprod);
