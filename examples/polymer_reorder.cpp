@@ -346,11 +346,13 @@ main(int argc, char** argv)
     // Reading various control parameters.
     const bool output = param.getDefault("output", true);
     std::string output_dir;
+    int output_interval = 1;
     if (output) {
         output_dir = param.getDefault("output_dir", std::string("output"));
         // Ensure that output dir exists
         boost::filesystem::path fpath(output_dir);
         create_directories(fpath);
+        output_interval = param.getDefault("output_interval", output_interval);
     }
 
     // If we have a "deck_filename", grid and props will be read from that.
@@ -650,7 +652,7 @@ main(int argc, char** argv)
     for (; !simtimer.done(); ++simtimer) {
         // Report timestep and (optionally) write state to disk.
         simtimer.report(std::cout);
-        if (output) {
+        if (output && (simtimer.currentStepNum() % output_interval == 0)) {
             outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
         }
 
