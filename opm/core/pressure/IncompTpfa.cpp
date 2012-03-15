@@ -59,7 +59,7 @@ namespace Opm
 	// gpress_omegaweighted_ is sent to assembler always, and it dislikes
 	// getting a zero pointer.
 	gpress_omegaweighted_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
-	h_ = ifs_tpfa_construct(gg);
+	h_ = ifs_tpfa_construct(gg, 0);
     }
 
 

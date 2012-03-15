@@ -5,6 +5,7 @@
 
 #include <opm/core/linalg/sparse_sys.h>
 
+#include <opm/core/newwells.h>
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
@@ -32,15 +33,22 @@ impl_deallocate(struct ifs_tpfa_impl *pimpl)
 
 /* ---------------------------------------------------------------------- */
 static struct ifs_tpfa_impl *
-impl_allocate(struct UnstructuredGrid *G)
+impl_allocate(struct UnstructuredGrid *G,
+              struct Wells            *W)
 /* ---------------------------------------------------------------------- */
 {
     struct ifs_tpfa_impl *new;
 
+    size_t nnu;
     size_t ddata_sz;
 
-    ddata_sz  = 2 * G->number_of_cells;                /* b, x */
-    ddata_sz += 1 * G->number_of_faces;                /* fgrav */
+    nnu = G->number_of_cells;
+    if (W != NULL) {
+        nnu += W->number_of_wells;
+    }
+
+    ddata_sz  = 2 * nnu;                 /* b, x */
+    ddata_sz += 1 * G->number_of_faces;  /* fgrav */
 
     new = malloc(1 * sizeof *new);
 
@@ -59,19 +67,25 @@ impl_allocate(struct UnstructuredGrid *G)
 
 /* ---------------------------------------------------------------------- */
 static struct CSRMatrix *
-ifs_tpfa_construct_matrix(struct UnstructuredGrid *G)
+ifs_tpfa_construct_matrix(struct UnstructuredGrid *G,
+                          struct Wells            *W)
 /* ---------------------------------------------------------------------- */
 {
-    int    f, c1, c2;
+    int    f, c1, c2, w, i, nc, nnu;
     size_t nnz;
 
     struct CSRMatrix *A;
 
-    A = csrmatrix_new_count_nnz(G->number_of_cells);
+    nc = nnu = G->number_of_cells;
+    if (W != NULL) {
+        nnu += W->number_of_wells;
+    }
+
+    A = csrmatrix_new_count_nnz(nnu);
 
     if (A != NULL) {
         /* Self connections */
-        for (c1 = 0; c1 < G->number_of_cells; c1++) {
+        for (c1 = 0; c1 < nnu; c1++) {
             A->ia[ c1 + 1 ] = 1;
         }
 
@@ -86,6 +100,18 @@ ifs_tpfa_construct_matrix(struct UnstructuredGrid *G)
             }
         }
 
+        if (W != NULL) {
+            /* Well <-> cell connections */
+            for (w = i = 0; w < W->number_of_wells; w++) {
+                for (; i < W->well_connpos[w + 1]; i++) {
+                    c1 = W->well_cells[i];
+
+                    A->ia[ 0  + c1 + 1 ] += 1; /* c -> w */
+                    A->ia[ nc + w  + 1 ] += 1; /* w -> c */
+                }
+            }
+        }
+
         nnz = csrmatrix_new_elms_pushback(A);
         if (nnz == 0) {
             csrmatrix_delete(A);
@@ -95,8 +121,8 @@ ifs_tpfa_construct_matrix(struct UnstructuredGrid *G)
 
     if (A != NULL) {
         /* Fill self connections */
-        for (c1 = 0; c1 < G->number_of_cells; c1++) {
-            A->ja[ A->ia[ c1 + 1 ] ++ ] = c1;
+        for (i = 0; i < nnu; i++) {
+            A->ja[ A->ia[ i + 1 ] ++ ] = i;
         }
 
         /* Fill other connections */
@@ -110,7 +136,19 @@ ifs_tpfa_construct_matrix(struct UnstructuredGrid *G)
             }
         }
 
-        assert ((size_t) A->ia[ G->number_of_cells ] == nnz);
+        if (W != NULL) {
+            /* Fill well <-> cell connections */
+            for (w = i = 0; w < W->number_of_wells; w++) {
+                for (; i < W->well_connpos[w + 1]; i++) {
+                    c1 = W->well_cells[i];
+
+                    A->ja[ A->ia[ 0  + c1 + 1 ] ++ ] = nc + w;
+                    A->ja[ A->ia[ nc + w  + 1 ] ++ ] = c1    ;
+                }
+            }
+        }
+
+        assert ((size_t) A->ia[ nnu ] == nnz);
 
         /* Guarantee sorted rows */
         csrmatrix_sortrows(A);
@@ -221,7 +259,8 @@ assemble_bc_contrib(struct UnstructuredGrid       *G    ,
 
 /* ---------------------------------------------------------------------- */
 struct ifs_tpfa_data *
-ifs_tpfa_construct(struct UnstructuredGrid *G)
+ifs_tpfa_construct(struct UnstructuredGrid *G,
+                   struct Wells            *W)
 /* ---------------------------------------------------------------------- */
 {
     struct ifs_tpfa_data *new;
@@ -229,8 +268,8 @@ ifs_tpfa_construct(struct UnstructuredGrid *G)
     new = malloc(1 * sizeof *new);
 
     if (new != NULL) {
-        new->pimpl = impl_allocate(G);
-        new->A     = ifs_tpfa_construct_matrix(G);
+        new->pimpl = impl_allocate(G, W);
+        new->A     = ifs_tpfa_construct_matrix(G, W);
 
         if ((new->pimpl == NULL) || (new->A == NULL)) {
             ifs_tpfa_destroy(new);

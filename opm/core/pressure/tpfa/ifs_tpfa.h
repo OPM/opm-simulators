@@ -29,6 +29,7 @@ extern "C" {
 struct ifs_tpfa_impl;
 struct CSRMatrix;
 struct FlowBoundaryConditions;
+struct Wells;
 
 struct ifs_tpfa_data {
     struct CSRMatrix     *A;
@@ -46,7 +47,8 @@ struct ifs_tpfa_forces {
 
 
 struct ifs_tpfa_data *
-ifs_tpfa_construct(struct UnstructuredGrid *G);
+ifs_tpfa_construct(struct UnstructuredGrid *G,
+                   struct Wells            *W);
 
 void
 ifs_tpfa_assemble(struct UnstructuredGrid               *G,
