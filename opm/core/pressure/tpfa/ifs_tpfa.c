@@ -355,13 +355,21 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
                     const struct ifs_tpfa_forces *F,
                     const double         *trans,
                     struct ifs_tpfa_data *h,
-                    double               *cpress,
-                    double               *fflux)
+                    struct ifs_tpfa_solution *soln)
 /* ---------------------------------------------------------------------- */
 {
     int    c1, c2, f;
     size_t i, j;
     double dh, s;
+
+    double *cpress, *fflux;
+
+    assert (soln             != NULL);
+    assert (soln->cell_press != NULL);
+    assert (soln->face_flux  != NULL);
+
+    cpress = soln->cell_press;
+    fflux  = soln->face_flux ;
 
     /* Assign cell pressure directly from solution vector */
     memcpy(cpress, h->x, G->number_of_cells * sizeof *cpress);
