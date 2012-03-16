@@ -39,6 +39,10 @@ struct ifs_tpfa_data {
     struct ifs_tpfa_impl *pimpl;
 };
 
+struct ifs_tpfa_solution {
+    double *cell_press;
+    double *face_flux ;
+};
 
 struct ifs_tpfa_forces {
     const double *src;
@@ -62,8 +66,7 @@ ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
                     const struct ifs_tpfa_forces *F,
                     const double         *trans,
                     struct ifs_tpfa_data *h,
-                    double               *cpress,
-                    double               *fflux);
+                    struct ifs_tpfa_solution *soln);
 
 void
 ifs_tpfa_destroy(struct ifs_tpfa_data *h);
