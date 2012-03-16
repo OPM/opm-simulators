@@ -253,6 +253,62 @@ assemble_bc_contrib(struct UnstructuredGrid             *G    ,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static void
+boundary_fluxes(struct UnstructuredGrid             *G     ,
+                const struct FlowBoundaryConditions *bc    ,
+                const double                        *trans ,
+                const double                        *cpress,
+                const struct ifs_tpfa_data          *h     ,
+                double                              *fflux )
+/* ---------------------------------------------------------------------- */
+{
+    int    f, c1, c2;
+    size_t i, j;
+    double s, dh;
+
+    for (i = 0; i < bc->nbc; i++) {
+        if (bc->type[ i ] == BC_PRESSURE) {
+            for (j = bc->cond_pos[ i ]; j < bc->cond_pos[ i + 1 ]; j++) {
+
+                f  = bc->face[ j ];
+                c1 = G->face_cells[2*f + 0];
+                c2 = G->face_cells[2*f + 1];
+
+                assert ((c1 < 0) ^ (c2 < 0));
+
+                if (c1 < 0) {   /* Environment -> c2 */
+                    dh = bc->value[ i ] - cpress[c2];
+                }
+                else {          /* c1 -> environment */
+                    dh = cpress[c1] - bc->value[ i ];
+                }
+
+                fflux[f] = trans[f] * (dh + h->pimpl->fgrav[f]);
+            }
+        }
+
+        else if (bc->type[ i ] == BC_FLUX_TOTVOL) {
+            assert (bc->cond_pos[i+1] - bc->cond_pos[i] == 1);
+
+            for (j = bc->cond_pos[ i ]; j < bc->cond_pos[ i + 1 ]; j++) {
+                    
+                f  = bc->face[ j ];
+                c1 = G->face_cells[2*f + 0];
+                c2 = G->face_cells[2*f + 1];
+
+                assert ((c1 < 0) ^ (c2 < 0));
+
+                /* BC flux is positive into reservoir. */
+                s = 2.0*(c1 < 0) - 1.0;
+
+                fflux[f] = s * bc->value[ i ];
+            }
+        }
+    }
+}
+
+
 /* ======================================================================
  * Public interface below separator.
  * ====================================================================== */
@@ -359,8 +415,7 @@ ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
 /* ---------------------------------------------------------------------- */
 {
     int    c1, c2, f;
-    size_t i, j;
-    double dh, s;
+    double dh;
 
     double *cpress, *fflux;
 
@@ -386,46 +441,9 @@ ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
         }
     }
 
-    if ((F != NULL) && (F->bc != NULL)) {
-        for (i = 0; i < F->bc->nbc; i++) {
-            if (F->bc->type[ i ] == BC_PRESSURE) {
-                for (j = F->bc->cond_pos[ i + 0 ];
-                     j < F->bc->cond_pos[ i + 1 ]; j++) {
-                    f  = F->bc->face[ j ];
-                    c1 = G->face_cells[2*f + 0];
-                    c2 = G->face_cells[2*f + 1];
-
-                    assert ((c1 < 0) ^ (c2 < 0));
-
-                    if (c1 < 0) {   /* Environment -> c2 */
-                        dh = F->bc->value[ i ] - cpress[c2];
-                    }
-                    else {          /* c1 -> environment */
-                        dh = cpress[c1] - F->bc->value[ i ];
-                    }
-
-                    fflux[f] = trans[f] * (dh + h->pimpl->fgrav[f]);
-                }
-            }
-
-            else if (F->bc->type[ i ] == BC_FLUX_TOTVOL) {
-                assert (F->bc->cond_pos[i+1] - F->bc->cond_pos[i] == 1);
-
-                for (j = F->bc->cond_pos[ i + 0 ];
-                     j < F->bc->cond_pos[ i + 1 ]; j++) {
-                    
-                    f  = F->bc->face[ j ];
-                    c1 = G->face_cells[2*f + 0];
-                    c2 = G->face_cells[2*f + 1];
-
-                    assert ((c1 < 0) ^ (c2 < 0));
-
-                    /* BC flux is positive into reservoir. */
-                    s = 2.0*(c1 < 0) - 1.0;
-
-                    fflux[f] = s * F->bc->value[ i ];
-                }
-            }
+    if (F != NULL) {
+        if (F->bc != NULL) {
+            boundary_fluxes(G, F->bc, trans, cpress, h, fflux);
         }
     }
 }
