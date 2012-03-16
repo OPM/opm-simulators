@@ -22,6 +22,7 @@
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
+#include <map>
 
 struct UnstructuredGrid;
 
@@ -47,6 +48,15 @@ namespace Opm
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 
+        void initGravity(const double* grav);
+        void solveSingleCellGravity(const std::vector<int>& cells,
+                                    const int pos,
+                                    const double* gravflux);
+        void solveGravityColumn(const std::vector<int>& cells);
+        void solveGravity(const std::map<int, std::vector<int> >& columns,
+                          const double dt,
+                          double* saturation);
+
     private:
 	const UnstructuredGrid& grid_;
 	const double* porevolume_;  // one volume per cell
@@ -61,7 +71,10 @@ namespace Opm
 	const double* source_;      // one source per cell
 	double dt_;
 	double* saturation_;        // one per cell
-	std::vector<double> fractionalflow_;  // one per cell
+	std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
+        // For gravity segregation.
+        std::vector<double> gravflux_;
+        std::vector<double> mob_;
 
 	// Storing the upwind and downwind graphs for experiments.
 	std::vector<int> ia_upw_;
@@ -71,6 +84,9 @@ namespace Opm
 
 	struct Residual;
 	double fracFlow(double s, int cell) const;
+
+        struct GravityResidual;
+        void mobility(double s, int cell, double* mob) const;
     };
 
 } // namespace Opm
