@@ -22,6 +22,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/utility/RootFinders.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
 #include <fstream>
@@ -471,16 +472,21 @@ namespace Opm
 	double operator()(double s) const
 	{
 	    double res = s - s0;
-
+            double mobcell[2];
+            tm.mobility(s, cell, mobcell);
             for (int nb = 0; nb < 2; ++nb) {
 		if (nbcell[nb] != -1) {
-		    if (gf[nb] < 0.0) {
-                        double m[2] = { tm.mob_[2*cell], tm.mob_[2*nbcell[nb] + 1] };
-			res += -dtpv*gf[nb]*m[0]*m[1]/(m[0] + m[1]);
+                    double m[2];
+                    if (gf[nb] < 0.0) {
+                        m[0] = mobcell[0];
+                        m[1] = tm.mob_[2*nbcell[nb] + 1];
 		    } else {
-                        double m[2] = { tm.mob_[2*nbcell[nb]], tm.mob_[2*cell + 1] };
-			res += -dtpv*gf[nb]*m[0]*m[1]/(m[0] + m[1]);
+                        m[0] = tm.mob_[2*nbcell[nb]];
+                        m[1] = mobcell[1];
 		    }
+                    if (m[0] + m[1] > 0.0) { 
+                        res += -dtpv*gf[nb]*m[0]*m[1]/(m[0] + m[1]);
+                    }
 		}
             }
             return res;
@@ -510,8 +516,10 @@ namespace Opm
         for (int f = 0; f < nf; ++f) {
             const int* c = &grid_.face_cells[2*f];
             double gdz = 0.0;
-            for (int d = 0; d < dim; ++d) {
-                gdz += grav[d]*(grid_.cell_centroids[dim*c[0] + d] - grid_.cell_centroids[dim*c[1] + d]);
+            if (c[0] != -1 && c[1] != -1) {
+                for (int d = 0; d < dim; ++d) {
+                    gdz += grav[d]*(grid_.cell_centroids[dim*c[0] + d] - grid_.cell_centroids[dim*c[1] + d]);
+                }
             }
             gravflux_[f] *= delta_rho*gdz;
         }
@@ -525,8 +533,11 @@ namespace Opm
     {
         const int cell = cells[pos];
         GravityResidual res(*this, cells, pos, gravflux);
-	int iters_used;
-	saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+        if (std::fabs(res(saturation_[cell])) > tol_) {
+            int iters_used;
+            saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+        }
+        saturation_[cell] = std::min(std::max(saturation_[cell], smin_[2*cell]), smax_[2*cell]);
 	mobility(saturation_[cell], cell, &mob_[2*cell]);
     }
 
@@ -551,20 +562,29 @@ namespace Opm
 	    }
         }
 
+        // Store initial saturation s0
+        s0_.resize(nc);
+        for (int ci = 0; ci < nc; ++ci) {
+            s0_[ci] = saturation_[cells[ci]];
+        }
+
         // Solve single cell problems, repeating if necessary.
 	double max_s_change = 0.0;
         int num_iters = 0;
         do {
             max_s_change = 0.0;
             for (int ci = 0; ci < nc; ++ci) {
+                const int ci2 = nc - ci - 1;
                 double old_s[2] = { saturation_[cells[ci]],
-                                    saturation_[cells[nc-ci]] };
+                                    saturation_[cells[ci2]] };
+                saturation_[cells[ci]] = s0_[ci];
+                saturation_[cells[ci2]] = s0_[ci2];
                 solveSingleCellGravity(cells, ci, &col_gravflux[0]);
-                solveSingleCellGravity(cells, nc - ci, &col_gravflux[0]);
+                solveSingleCellGravity(cells, ci2, &col_gravflux[0]);
                 max_s_change = std::max(max_s_change, std::max(std::fabs(saturation_[cells[ci]] - old_s[0]),
-                                                               std::fabs(saturation_[cells[nc-ci]] - old_s[1])));
+                                                               std::fabs(saturation_[cells[ci2]] - old_s[1])));
             }
-            std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change << std::endl;
+            // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change << std::endl;
 	} while (max_s_change > tol_ && ++num_iters < maxit_);
 
 	if (max_s_change > tol_) {
@@ -578,7 +598,7 @@ namespace Opm
 
     void TransportModelTwophase::solveGravity(const std::map<int, std::vector<int> >& columns,
                                               const double dt,
-                                              double* saturation)
+                                              std::vector<double>& saturation)
     {
         // Initialize mobilities.
         const int nc = grid_.number_of_cells;
@@ -587,7 +607,9 @@ namespace Opm
             cells[c] = c;
         }
         mob_.resize(2*nc);
-        props_.relperm(cells.size(), saturation, &cells[0], &mob_[0], 0);
+        std::vector<double> boths;
+        Opm::toBothSat(saturation, boths);
+        props_.relperm(cells.size(), &boths[0], &cells[0], &mob_[0], 0);
         const double* mu = props_.viscosity();
         for (int c = 0; c < nc; ++c) {
             mob_[2*c] /= mu[0];
@@ -596,11 +618,12 @@ namespace Opm
 
         // Set up other variables.
         dt_ = dt;
-        saturation_ = saturation;
+        saturation_ = &saturation[0];
 
         // Solve on all columns.
         std::map<int, std::vector<int> >::const_iterator it;
         for (it = columns.begin(); it != columns.end(); ++it) {
+            // std::cout << "==== new column" << std::endl;
             solveGravityColumn(it->second);
         }
     }

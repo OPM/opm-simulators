@@ -55,7 +55,7 @@ namespace Opm
         void solveGravityColumn(const std::vector<int>& cells);
         void solveGravity(const std::map<int, std::vector<int> >& columns,
                           const double dt,
-                          double* saturation);
+                          std::vector<double>& saturation);
 
     private:
 	const UnstructuredGrid& grid_;
@@ -75,6 +75,7 @@ namespace Opm
         // For gravity segregation.
         std::vector<double> gravflux_;
         std::vector<double> mob_;
+        std::vector<double> s0_;
 
 	// Storing the upwind and downwind graphs for experiments.
 	std::vector<int> ia_upw_;
