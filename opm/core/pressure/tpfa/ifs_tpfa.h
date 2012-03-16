@@ -45,8 +45,8 @@ struct ifs_tpfa_solution {
 };
 
 struct ifs_tpfa_forces {
-    const double *src;
-    const struct FlowBoundaryConditions *bc;
+    const double                        *src;
+    const struct FlowBoundaryConditions *bc ;
 };
 
 
@@ -55,18 +55,18 @@ ifs_tpfa_construct(struct UnstructuredGrid *G,
                    struct Wells            *W);
 
 void
-ifs_tpfa_assemble(struct UnstructuredGrid               *G,
-                  const struct ifs_tpfa_forces *F,
-                  const double         *trans,
-                  const double         *gpress,
-                  struct ifs_tpfa_data *h);
+ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
+                  const struct ifs_tpfa_forces *F     ,
+                  const double                 *trans ,
+                  const double                 *gpress,
+                  struct ifs_tpfa_data         *h     );
 
 void
-ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
-                    const struct ifs_tpfa_forces *F,
-                    const double         *trans,
-                    struct ifs_tpfa_data *h,
-                    struct ifs_tpfa_solution *soln);
+ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
+                    const struct ifs_tpfa_forces *F    ,
+                    const double                 *trans,
+                    struct ifs_tpfa_data         *h    ,
+                    struct ifs_tpfa_solution     *soln );
 
 void
 ifs_tpfa_destroy(struct ifs_tpfa_data *h);

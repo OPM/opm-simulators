@@ -190,10 +190,10 @@ compute_grav_term(struct UnstructuredGrid *G, const double *gpress,
 
 /* ---------------------------------------------------------------------- */
 static int
-assemble_bc_contrib(struct UnstructuredGrid       *G    ,
+assemble_bc_contrib(struct UnstructuredGrid             *G    ,
                     const struct FlowBoundaryConditions *bc   ,
-                    const double                  *trans,
-                    struct ifs_tpfa_data          *h    )
+                    const double                        *trans,
+                    struct ifs_tpfa_data                *h    )
 /* ---------------------------------------------------------------------- */
 {
     int is_neumann, is_outflow;
@@ -290,11 +290,11 @@ ifs_tpfa_construct(struct UnstructuredGrid *G,
 
 /* ---------------------------------------------------------------------- */
 void
-ifs_tpfa_assemble(struct UnstructuredGrid               *G,
-                  const struct ifs_tpfa_forces *F,
-                  const double         *trans,
-                  const double         *gpress,
-                  struct ifs_tpfa_data *h)
+ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
+                  const struct ifs_tpfa_forces *F     ,
+                  const double                 *trans ,
+                  const double                 *gpress,
+                  struct ifs_tpfa_data         *h     )
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, c, i, f, j1, j2;
@@ -351,11 +351,11 @@ ifs_tpfa_assemble(struct UnstructuredGrid               *G,
 
 /* ---------------------------------------------------------------------- */
 void
-ifs_tpfa_press_flux(struct UnstructuredGrid               *G,
-                    const struct ifs_tpfa_forces *F,
-                    const double         *trans,
-                    struct ifs_tpfa_data *h,
-                    struct ifs_tpfa_solution *soln)
+ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
+                    const struct ifs_tpfa_forces *F    ,
+                    const double                 *trans,
+                    struct ifs_tpfa_data         *h    ,
+                    struct ifs_tpfa_solution     *soln )
 /* ---------------------------------------------------------------------- */
 {
     int    c1, c2, f;
