@@ -48,7 +48,7 @@ namespace Opm {
         class ModelParameterStorage {
         public:
             ModelParameterStorage(int nc, int totconn)
-                : drho_(0.0), mob_(0), dmobds_(0), dmobwatdc_(0), mc_(0), dmcds_(0), dmcdc_(0),
+                : drho_(0.0), mob_(0), dmobds_(0), dmobwatdc_(0), mc_(0), dmcdc_(0),
                   porevol_(0), deadporespace_(0), dg_(0), sw_(0), c_(0), ds_(0), dsc_(0), pc_(0), dpc_(0), trans_(0),
                   data_()
             {
@@ -58,7 +58,6 @@ namespace Opm {
                 alloc_sz += 2 * nc;        // dmobds_
                 alloc_sz +=  nc;           // dmobwatdc_
                 alloc_sz +=  nc;           // mc_
-                alloc_sz +=  nc;           // dmcds_
                 alloc_sz +=  nc;           // dmcdc_
                 alloc_sz += 1 * nc;        // porevol_
                 alloc_sz += 1 * nc;        // deadporespave__
@@ -76,8 +75,7 @@ namespace Opm {
                 dmobds_        = mob_            + (2 * nc     );
                 dmobwatdc_     = dmobwatds_      + (2 * nc     );
                 mc_            = dmobdc_         + (1 * nc     );
-                dmcds_         = mc_             + (1 * nc     );
-                dmcdc_         = dmcds_          + (1 * nc     );   
+                dmcdc_         = mc_          + (1 * nc     );
                 porevol_       = dmcdc_          + (1 * nc     );
                 deadporespace_ = porevol_        + (1 * nc     );
                 dg_            = deadporespace_  + (1 * nc     );
@@ -104,9 +102,6 @@ namespace Opm {
 
             double&       mc    (int cell)       { return mc_[cell]; }
             double        mc    (int cell) const { return mc_[cell]; }
-
-            double&       dmcds    (int cell)       { return dmcds_[cell]; }
-            double        dmcds    (int cell) const { return dmcds_[cell]; }
 
             double&       dmcdc    (int cell)       { return dmcdc_[cell]; }
             double        dmcdc    (int cell) const { return dmcdc_[cell]; }
@@ -147,7 +142,6 @@ namespace Opm {
             double *dmobds_      ;
             double *dmobdc_      ;
             double *mc_          ;
-            double *dmcds_       ;
             double *dmcdc_       ;
             double *porevol_     ;
             double *dg_          ;
@@ -155,7 +149,7 @@ namespace Opm {
             double *dsc_          ;
             double *pc_          ;
             double *dpc_         ;
-            double *trans_       ;  
+            double *trans_       ;
 
             std::vector<double> data_;
         };
@@ -251,11 +245,11 @@ namespace Opm {
         void
         fluxConnection(const ReservoirState& state  ,
                        const Grid&           g      ,
-                       const double          dt     ,   
+                       const double          dt     ,
                        const int             cell   ,
                        const int             f      ,
                        double* F                    , // F[0] = s-residual, F[1] = c-residual
-                       double* dFd1                 , //Jacobi matrix for residual with respect to variables in cell 
+                       double* dFd1                 , //Jacobi matrix for residual with respect to variables in cell
                        double* dFd2                 , //Jacobi matrix for residual with respect to variables in OTHER cell
                                                       //dFd1[0]= d(F[0])/d(s1), dFd1[1]= d(F[0])/d(c1), dFd1[2]= d(F[1])/d(s1), dFd1[3]= d(F[1])/d(c1),
                                                       //dFd2[0]= d(F[0])/d(s2), dFd2[1]= d(F[0])/d(c2), dFd2[2]= d(F[1])/d(s2), dFd2[3]= d(F[1])/d(c2).
@@ -271,8 +265,8 @@ namespace Opm {
 
             int    pix[2];
             double m[2], dmds[2], dmobwatdc;
-            double mc, dmcds, dmcdc;
-            upwindMobility(dflux, gflux, n, pix, m, dmds, dmobwatdc, mc, dmcds, dmcdc);
+            double mc, dmcdc;
+            upwindMobility(dflux, gflux, n, pix, m, dmds, dmobwatdc, mc, dmcdc);
 
             assert (! ((m[0] < 0) || (m[1] < 0)));
 
@@ -306,7 +300,7 @@ namespace Opm {
                 *dFd2[0] += sgn*dt * f1            * dpcflux[1] * m[1];
                 *dFd1[2] += sgn*dt * f1 * mc       * dpcflux[0] * m[1];
                 *dFd2[2] += sgn*dt * f1 * mc       * dpcflux[1] * m[1];
-		// We assume that the capillary pressure is independent of the polymer concentration. 
+		// We assume that the capillary pressure is independent of the polymer concentration.
                 // Hence, no more contributions.
             } else {
                 dFsds[0] = dFsds2; dFsds[1] = dFsds1;
@@ -318,7 +312,7 @@ namespace Opm {
                 *dFd2[0] += sgn*dt * f1            * dpcflux[0] * m[1];
                 *dFd1[2] += sgn*dt * f1 * mc       * dpcflux[1] * m[1];
                 *dFd2[2] += sgn*dt * f1 * mc       * dpcflux[0] * m[1];
-		// We assume that the capillary pressure is independent of the polymer concentration. 
+		// We assume that the capillary pressure is independent of the polymer concentration.
                 // Hence, no more contributions.
             }
 
@@ -326,12 +320,11 @@ namespace Opm {
             *dFsds[ pix[0] ] += dt * (1 - f1) / mt * v1      * dmds[0];
             // dFc/dm_1 \cdot dm_1/ds
             *dFcds[ pix[0] ] += dt * (1 - f1) / mt * v1 * mc * dmds[0];
-            *dFcds[ pix[0] ] += dt * f1 * v1 * dmcds;                   // Polymer is only carried by  water.
 
-            // dFs/dm_2 \cdot dm_2/ds 
+            // dFs/dm_2 \cdot dm_2/ds
             *dFsds[ pix[1] ] -= dt * f1       / mt * v1    *      dmds[1];
             *dFsds[ pix[1] ] += dt * f1            * gflux *      dmds[1];
-            // dFc/dm_2 \cdot dm_2/ds 
+            // dFc/dm_2 \cdot dm_2/ds
             *dFcds[ pix[1] ] -= dt * f1       / mt * v1    * mc * dmds[1];
             *dFcds[ pix[1] ] += dt * f1            * gflux * mc * dmds[1];
 
@@ -339,7 +332,7 @@ namespace Opm {
             *dFsdc[ pix[0] ] += dt * (1 - f1) / mt * v1      * dmobwatdc;
             // dFc/dm_1 \cdot dm_1/dc
             *dFcdc[ pix[0] ] += dt * (1 - f1) / mt * v1 * mc * dmobwatdc;
-            *dFcdc[ pix[0] ] += dt * f1 * v1 * dmobwatdc;                 // Polymer is only carried by water.
+            *dFcdc[ pix[0] ] += dt * f1 * v1 * dmcdc;                 // Polymer is only carried by water.
         }
 
         template <class Grid>
@@ -469,7 +462,7 @@ namespace Opm {
 
             double s[2],  mob[2],  dmobds[2 * 2], dmobdc[2 * 2];
             double c;
-            double mc, dmcds, dmcdc;
+            double mc, dmcdc;
             double pc, dpc;
 
             const typename JacobianSystem::vector_type& x =
@@ -480,13 +473,13 @@ namespace Opm {
             bool in_range = true;
             for (int cell = 0; cell < g.number_of_cells; ++cell) {
                 // Store wat-sat, sat-change, cpoly, (sat * cpoly)-change for accumulation().
-                store_.ds(cell) = x[2*cell + 0]; 
+                store_.ds(cell) = x[2*cell + 0];
                 s[0] = sat[cell*2 + 0] + x[2*cell + 0];
                 c = cpoly[cell] + x[2*cell + 1];
                 store_.sw(cell) = s[0];
                 store_.c(cell) = c;
                 store_.dsc(cell) = s[0]*c - sat[cell*2 + 0]*cpoly[cell];
-                
+
 
                 double s_min = fluid_.s_min(cell);
                 double s_max = fluid_.s_max(cell);
@@ -505,7 +498,7 @@ namespace Opm {
                 s[1] = 1 - s[0];
 
                 fluid_.mobility(cell, s, mob, dmobds, dmobwatdc);
-                fluid_.mc(cell, s, mc, dmcds, dmcdc);
+                fluid_.mc(cell, s, mc, dmcdc);
                 fluid_.pc(cell, s, pc, dpc);
 
                 store_.mob (cell)[0]   =  mob [0];
@@ -514,7 +507,6 @@ namespace Opm {
                 store_.dmobds(cell)[1] = -dmobds[1*2 + 1];
                 store_.dmobwatdc(cell) =  dmobwatdc;
                 store_.mc(cell)        = mc;
-                store_.dmcds(cell)     = dmcds;
                 store_.dmcdc(cell)     = dmcdc;
                 store_.pc(cell)        = pc;
                 store_.dpc(cell)       = dpc;
@@ -572,7 +564,6 @@ namespace Opm {
                        double*      dmds ,
                        double&      dmobwatdc ,
                        double&      mc,
-                       double&      dmcds,
                        double&      dmcdc) const {
             bool equal_sign = ( (! (dflux < 0)) && (! (gflux < 0)) ) ||
                 ( (! (dflux > 0)) && (! (gflux > 0)) );
@@ -607,7 +598,6 @@ namespace Opm {
             dmds[0]   = store_.dmobds(n[ pix[0] ]) [ 0 ];
             dmds[1]   = store_.dmobds(n[ pix[1] ]) [ 1 ];
             dmobwatdc = store_.dmobwatdc(n[ pix[0] ]);
-            dmcds     = store_.dmcds(n[ pix[0] ]);
             dmcdc     = store_.dmcdc(n[ pix[0] ]);
         }
 
