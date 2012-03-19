@@ -31,8 +31,8 @@ namespace Opm
         : pref_(0.0),
           rock_comp_(0.0)
     {
-        pref_ = param.getDefault("rock_compressibility_pref", 100*unit::barsa);
-        pref_ = param.getDefault("rock_compressibility", 0.0);
+        pref_ = param.getDefault("rock_compressibility_pref", 100.0)*unit::barsa;
+        rock_comp_ = param.getDefault("rock_compressibility", 0.0)/unit::barsa;
     }
 
     RockCompressibility::RockCompressibility(const EclipseGridParser& deck)

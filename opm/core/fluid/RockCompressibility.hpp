@@ -35,6 +35,9 @@ namespace Opm
         RockCompressibility(const EclipseGridParser& deck);
 
         /// Construct from parameters.
+        /// Accepts the following parameters (with defaults).
+        ///    rock_compressibility_pref (100.0)   [given in bar]
+        ///    rock_compressibility      (0.0)     [given in bar^{-1}]
         RockCompressibility(const parameter::ParameterGroup& param);
 
         /// Porosity multiplier.
