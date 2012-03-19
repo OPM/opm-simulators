@@ -46,6 +46,10 @@
 #include <opm/core/linalg/LinearSolverIstl.hpp>
 #endif
 
+#include <opm/core/ColumnExtract.hpp>
+
+#include <opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp>
+#include <opm/polymer/GravityColumnSolverPolymer.hpp>
 #include <opm/polymer/TransportModelPolymer.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
@@ -153,6 +157,142 @@ private:
     std::vector<double> so_;
     std::vector<double> kro_;
 };
+
+
+// --------------- Types needed to define transport solver ---------------
+
+class PolymerFluid2pWrappingProps
+{
+public:
+    PolymerFluid2pWrappingProps(const Opm::IncompPropertiesInterface& props, const Opm::PolymerProperties& polyprops)
+    : props_(props),
+      polyprops_(polyprops),
+      smin_(props.numCells()*props.numPhases()),
+      smax_(props.numCells()*props.numPhases())
+    {
+        if (props.numPhases() != 2) {
+            THROW("PolymerFluid2pWrapper requires 2 phases.");
+        }
+        const int num_cells = props.numCells();
+        std::vector<int> cells(num_cells);
+        for (int c = 0; c < num_cells; ++c) {
+            cells[c] = c;
+        }
+        props.satRange(num_cells, &cells[0], &smin_[0], &smax_[0]);
+    }
+
+    double density(int phase) const
+    {
+        return props_.density()[phase];
+    }
+
+    template <class Sat,
+              class PolyC,
+              class Mob,
+              class DMobDs,
+              class DMobWatDc>
+    void mobility(int cell, const Sat& s, const PolyC& c,
+                  Mob& mob, DMobDs& dmobds, DMobWatDc& dmobwatdc) const
+    {
+	double c_max_limit = polyprops_.cMax();
+	double cbar = c/c_max_limit;
+        const double* mu = props_.viscosity();
+	double mu_w = mu[0];
+	double mu_m_dc; // derivative of mu_m with respect to c
+	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
+	mu_m_dc *= mu_w;
+	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double omega = polyprops_.mixParam();
+ 	double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
+	double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
+	double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
+	double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
+	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
+	double mu_w_eff_dc = -1./c_max_limit*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e)
+	    + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc
+	    + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
+	double visc_eff[2] = { mu_w_eff, mu[1] };
+
+	props_.relperm(1, &s[0], &cell, &mob[0], &dmobds[0]);
+	dmobwatdc = - mob[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff);
+
+	mob[0] /= visc_eff[0];
+	mob[1] /= visc_eff[1];
+
+        dmobds[0*2 + 0] /= visc_eff[0];
+        dmobds[0*2 + 1] /= visc_eff[1];
+        dmobds[1*2 + 0] /= visc_eff[0];
+        dmobds[1*2 + 1] /= visc_eff[1];
+
+
+    }
+
+    template <class Sat,
+    class Pcap,
+    class DPcap>
+    void pc(int c, const Sat& s, Pcap& pcap, DPcap& dpcap) const
+    {
+        double pc[2];
+        double dpc[4];
+        props_.capPress(1, &s[0], &c, pc, dpc);
+        pcap = pc[0];
+        ASSERT(pc[1] == 0.0);
+        dpcap = dpc[0];
+        ASSERT(dpc[1] == 0.0);
+        ASSERT(dpc[2] == 0.0);
+        ASSERT(dpc[3] == 0.0);
+    }
+
+    double s_min(int c) const
+    {
+        return smin_[2*c + 0];
+    }
+
+    double s_max(int c) const
+    {
+        return smax_[2*c + 0];
+    }
+
+
+    template <class PolyC,
+              class Mc,
+              class DMcDc>
+    void mc(const PolyC& c,  Mc& mc,
+            DMcDc& dmcdc) const
+    {
+	double c_max_limit = polyprops_.cMax();
+	double cbar = c/c_max_limit;
+        const double* mu = props_.viscosity();
+	double mu_w = mu[0];
+	double mu_m_dc; // derivative of mu_m with respect to c
+	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
+	mu_m_dc *= mu_w;
+	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double omega = polyprops_.mixParam();
+	double mu_m_omega = std::pow(mu_m, omega);
+	double mu_m_omega_minus1 = std::pow(mu_m, omega-1);
+	double mu_w_omega = std::pow(mu_w, 1.0 - omega);
+	double mu_w_e   = mu_m_omega*mu_w_omega;
+	double mu_w_e_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_w_omega;
+	double mu_p_omega = std::pow(mu_p, 1.0 - omega);
+	double mu_p_eff = mu_m_omega*mu_p_omega;
+	double mu_p_eff_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_p_omega;
+	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
+	double inv_mu_w_eff_dc = -mu_w_e_dc/(mu_w_e*mu_w_e)*(1. - cbar) - mu_p_eff_dc/(mu_p_eff*mu_p_eff)*cbar + (1./mu_p_eff - 1./mu_w_e);
+	double mu_w_eff_dc = -mu_w_eff*mu_w_eff*inv_mu_w_eff_dc;
+ 	mc = c*mu_w_eff/mu_p_eff;
+	dmcdc = mu_w_eff/mu_p_eff + c*mu_w_eff_dc/mu_p_eff - c*mu_p_eff_dc*mu_w_eff/(mu_p_eff*mu_p_eff);
+    }
+
+private:
+    const Opm::IncompPropertiesInterface& props_;
+    const Opm::PolymerProperties& polyprops_;
+    std::vector<double> smin_;
+    std::vector<double> smax_;
+};
+
+typedef PolymerFluid2pWrappingProps TwophaseFluidPolymer;
+typedef Opm::SinglePointUpwindTwoPhasePolymer<TwophaseFluidPolymer> NewtonPolymerTransportModel;
 
 
 class ReservoirState
@@ -344,6 +484,7 @@ main(int argc, char** argv)
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
     // Reading various control parameters.
+    const bool guess_old_solution = param.getDefault("guess_old_solution", false);
     const bool output = param.getDefault("output", true);
     std::string output_dir;
     int output_interval = 1;
@@ -363,7 +504,7 @@ main(int argc, char** argv)
     Opm::SimulatorTimer simtimer;
     double water_oil_contact = 0.0;
     bool woc_set = false;
-    Opm::PolymerProperties polydata;
+    Opm::PolymerProperties polyprop;
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::EclipseGridParser deck(deck_filename);
@@ -390,7 +531,7 @@ main(int argc, char** argv)
             water_oil_contact = param.get<double>("water_oil_contact");
             woc_set = true;
         }
-        polydata.readFromDeck(deck);
+        polyprop.readFromDeck(deck);
     } else {
         // Grid init.
         const int nx = param.getDefault("nx", 100);
@@ -411,7 +552,7 @@ main(int argc, char** argv)
             water_oil_contact = param.get<double>("water_oil_contact");
             woc_set = true;
         }
-        // Setting polydata defaults to mimic a simple example case.
+        // Setting polyprop defaults to mimic a simple example case.
         double c_max = param.getDefault("c_max_limit", 5.0);
         double mix_param = param.getDefault("mix_param", 1.0);
         double rock_density = param.getDefault("rock_density", 1000.0);
@@ -421,7 +562,7 @@ main(int argc, char** argv)
         c_vals_visc[1] = 7.0;
         std::vector<double> visc_mult_vals(2, -1e100);
         visc_mult_vals[0] = 1.0;
-        // polydata.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+        // polyprop.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
         visc_mult_vals[1] = 20.0;
         std::vector<double> c_vals_ads(3, -1e100);
         c_vals_ads[0] = 0.0;
@@ -429,22 +570,26 @@ main(int argc, char** argv)
         c_vals_ads[2] = 8.0;
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
-        // polydata.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
+        // polyprop.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
         ads_vals[1] = 0.0015;
         ads_vals[2] = 0.0025;
-        polydata.set(c_max, mix_param, rock_density, dead_pore_vol, c_vals_visc, visc_mult_vals, c_vals_ads, ads_vals);
+        polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, c_vals_visc, visc_mult_vals, c_vals_ads, ads_vals);
     }
 
     // Initialize polymer inflow function.
     double poly_start = param.getDefault("poly_start_days", 300.0)*Opm::unit::day;
     double poly_end = param.getDefault("poly_end_days", 800.0)*Opm::unit::day;
-    double poly_amount = param.getDefault("poly_amount", polydata.cMax());
+    double poly_amount = param.getDefault("poly_amount", polyprop.cMax());
     PolymerInflow poly_inflow(poly_start, poly_end, poly_amount);
 
     // Extra rock init.
     std::vector<double> porevol;
     computePorevolume(*grid->c_grid(), *props, porevol);
     double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
+
+    // Extra fluid init for transport solver.
+    TwophaseFluidPolymer fluid(*props, polyprop);
+
 
     // Gravity init.
     double gravity[3] = { 0.0 };
@@ -478,8 +623,20 @@ main(int argc, char** argv)
     } else {
         THROW("Unknown method: " << method_string);
     }
-    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polydata,
+    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polyprop,
                                       method, nltol, maxit);
+
+    // Column-based gravity segregation solver.
+    NewtonPolymerTransportModel  model  (fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
+    if (use_gravity) {
+        model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
+    }
+    typedef std::map<int, std::vector<int> > ColMap;
+    ColMap columns;
+    Opm::extractColumn(*grid->c_grid(), columns);
+
+    Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nltol, maxit);
+
 
     // Boundary conditions.
     Opm::FlowBCManager bcs;
@@ -658,10 +815,10 @@ main(int argc, char** argv)
 
         // Solve pressure.
         if (use_gravity) {
-            computeTotalMobilityOmega(*props, polydata, allcells, state.saturation(), state.concentration(),
+            computeTotalMobilityOmega(*props, polyprop, allcells, state.saturation(), state.concentration(),
                                       totmob, omega);
         } else {
-            computeTotalMobility(*props, polydata, allcells, state.saturation(), state.concentration(),
+            computeTotalMobility(*props, polyprop, allcells, state.saturation(), state.concentration(),
                                  totmob);
         }
         pressure_timer.start();
@@ -684,12 +841,18 @@ main(int argc, char** argv)
         }
         const double inflow_c = inflowc0;
 
-        // Solve transport.
+        // Solve transport using reorder.
         transport_timer.start();
         Opm::toWaterSat(state.saturation(), reorder_sat);
         tmodel.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
                      &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
         Opm::toBothSat(reorder_sat, state.saturation());
+
+        // use segragation splitting and column solver
+        if (use_gravity) {
+            colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration());
+        }
+
         transport_timer.stop();
         double tt = transport_timer.secsSinceStart();
         std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
@@ -697,9 +860,9 @@ main(int argc, char** argv)
 
         // Report volume balances.
         Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
-        polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), polydata.deadPoreVol());
-        polymass_adsorbed = Opm::computePolymerAdsorbed(polydata, porevol, state.cmax());
-        Opm::computeInjectedProduced(*props, polydata, state.saturation(), state.concentration(),
+        polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), polyprop.deadPoreVol());
+        polymass_adsorbed = Opm::computePolymerAdsorbed(polyprop, porevol, state.cmax());
+        Opm::computeInjectedProduced(*props, polyprop, state.saturation(), state.concentration(),
                                      src, simtimer.currentStepLength(), inflow_c,
                                      injected, produced, polyinj, polyprod);
         tot_injected[0] += injected[0];
