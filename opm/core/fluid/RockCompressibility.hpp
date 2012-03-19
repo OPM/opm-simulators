@@ -26,12 +26,16 @@ namespace Opm
 {
 
     class EclipseGridParser;
+    namespace parameter { class ParameterGroup; }
 
     class RockCompressibility
     {
     public:
         /// Construct from input deck.
         RockCompressibility(const EclipseGridParser& deck);
+
+        /// Construct from parameters.
+        RockCompressibility(const parameter::ParameterGroup& param);
 
         /// Porosity multiplier.
         double poroMult(double pressure);

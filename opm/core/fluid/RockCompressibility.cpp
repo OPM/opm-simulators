@@ -19,11 +19,21 @@
 
 #include <opm/core/fluid/RockCompressibility.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 
 namespace Opm
 {
+
+    RockCompressibility::RockCompressibility(const parameter::ParameterGroup& param)
+        : pref_(0.0),
+          rock_comp_(0.0)
+    {
+        pref_ = param.getDefault("rock_compressibility_pref", 100*unit::barsa);
+        pref_ = param.getDefault("rock_compressibility", 0.0);
+    }
 
     RockCompressibility::RockCompressibility(const EclipseGridParser& deck)
         : pref_(0.0),
