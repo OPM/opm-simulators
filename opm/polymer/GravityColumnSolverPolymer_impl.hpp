@@ -93,9 +93,9 @@ namespace Opm
             
             // compute the position where to store the coefficient of a matrix A_{i,j} (i,j=0,...,N-1)
             // in a array which is sent to the band matrix solver of LAPACK.
-            int coef(int i, int j) {
-                return kl_ + ku_ + i - j + j*nrow_
-            };
+            int operator ()(int i, int j) {
+                return kl_ + ku_ + i - j + j*nrow_;
+            }
 
             const int ku_;
             const int kl_;
@@ -199,21 +199,21 @@ namespace Opm
                     dFd2.assign(4, 0.);
 		    model_.fluxConnection(state, grid_, dt, cell, face, &F[0], &dFd1[0], &dFd2[0]);
 		    if (c1 == prev_cell || c2 == prev_cell) {
-                        hm[bmc.coef(2*ci + 0, 2*(ci - 1) + 0)] += dFd2[0];
-                        hm[bmc.coef(2*ci + 0, 2*(ci - 1) + 1)] += dFd2[1];
-                        hm[bmc.coef(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[2];
-                        hm[bmc.coef(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[3];
+                        hm[bmc(2*ci + 0, 2*(ci - 1) + 0)] += dFd2[0];
+                        hm[bmc(2*ci + 0, 2*(ci - 1) + 1)] += dFd2[1];
+                        hm[bmc(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[2];
+                        hm[bmc(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[3];
 		    } else {
 			ASSERT(c1 == next_cell || c2 == next_cell);
-                        hm[bmc.coef(2*ci + 0, 2*(ci + 1) + 0)] += dFd2[0];
-                        hm[bmc.coef(2*ci + 0, 2*(ci + 1) + 1)] += dFd2[1];
-                        hm[bmc.coef(2*ci + 1, 2*(ci + 1) + 1)] += dFd2[2];
-                        hm[bmc.coef(2*ci + 1, 2*(ci + 1) + 1)] += dFd2[3];
+                        hm[bmc(2*ci + 0, 2*(ci + 1) + 0)] += dFd2[0];
+                        hm[bmc(2*ci + 0, 2*(ci + 1) + 1)] += dFd2[1];
+                        hm[bmc(2*ci + 1, 2*(ci + 1) + 1)] += dFd2[2];
+                        hm[bmc(2*ci + 1, 2*(ci + 1) + 1)] += dFd2[3];
 		    }
-                    hm[bmc.coef(2*ci + 0, 2*ci + 0)] += dFd1[0];
-                    hm[bmc.coef(2*ci + 0, 2*ci + 1)] += dFd1[1];
-                    hm[bmc.coef(2*ci + 1, 2*ci + 0)] += dFd1[2];
-                    hm[bmc.coef(2*ci + 1, 2*ci + 1)] += dFd1[3];
+                    hm[bmc(2*ci + 0, 2*ci + 0)] += dFd1[0];
+                    hm[bmc(2*ci + 0, 2*ci + 1)] += dFd1[1];
+                    hm[bmc(2*ci + 1, 2*ci + 0)] += dFd1[2];
+                    hm[bmc(2*ci + 1, 2*ci + 1)] += dFd1[3];
                     
 		    rhs[2*ci + 0] += F[0];
 		    rhs[2*ci + 1] += F[1];
@@ -222,10 +222,10 @@ namespace Opm
 	    F.assign(2, 0.);
             dF.assign(4, 0.);
 	    model_.accumulation(grid_, cell, &F[0], &dF[0]);
-            hm[bmc.coef(2*ci + 0, 2*ci + 0)] += dF[0];
-            hm[bmc.coef(2*ci + 0, 2*ci + 1)] += dF[1];
-            hm[bmc.coef(2*ci + 1, 2*ci + 0)] += dF[2];
-            hm[bmc.coef(2*ci + 1, 2*ci + 1)] += dF[3];
+            hm[bmc(2*ci + 0, 2*ci + 0)] += dF[0];
+            hm[bmc(2*ci + 0, 2*ci + 1)] += dF[1];
+            hm[bmc(2*ci + 1, 2*ci + 0)] += dF[2];
+            hm[bmc(2*ci + 1, 2*ci + 1)] += dF[3];
 
             rhs[2*ci + 0]     += F[0];
             rhs[2*ci + 1] += F[1];
