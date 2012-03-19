@@ -862,7 +862,6 @@ namespace Opm
 
     double TransportModelPolymer::fracFlowWithDer(double s, double c, int cell, double* der) const
     {
-	// We should check the dimension of der
 	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
 	double mu_w = visc_[0];
