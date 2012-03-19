@@ -55,7 +55,7 @@ namespace Opm
 	/// Destructor.
 	~IncompTpfa();
 
-	/// Assemble and solve pressure system.
+	/// Assemble and solve incompressible pressure system.
 	/// \param[in]  totmob     Must contain N total mobility values (one per cell).
 	///                        totmob = \sum_{p} kr_p/mu_p.
 	/// \param[in]  omega      Must be empty if constructor gravity argument was null.
@@ -74,6 +74,33 @@ namespace Opm
 		   const FlowBoundaryConditions* bcs,
 		   std::vector<double>& pressure,
 		   std::vector<double>& faceflux);
+
+        /// Assemble and solve pressure system with rock compressibility (assumed constant per cell).
+        /// \param[in]  totmob     Must contain N total mobility values (one per cell).
+        ///                        totmob = \sum_{p} kr_p/mu_p.
+        /// \param[in]  omega      Must be empty if constructor gravity argument was null.
+        ///                        Otherwise must contain N mobility-weighted density values (one per cell).
+        ///                        omega = \frac{\sum_{p} mob_p rho_p}{\sum_p rho_p}.
+        /// \param[in]  src        Must contain N source rates (one per cell).
+        ///                        Positive values represent total inflow rates,
+        ///                        negative values represent total outflow rates.
+        /// \param[in]  bcs        If non-null, specifies boundary conditions.
+        ///                        If null, noflow conditions are assumed.
+        /// \param[in]  porevol    Must contain N pore volumes.
+        /// \param[in]  rock_comp  Must contain N rock compressibilities.
+        ///                        rock_comp = (d poro / d p)*(1/poro).
+        /// \param[in]  dt         Timestep.
+        /// \param[out] pressure   Will contain N cell-pressure values.
+        /// \param[out] faceflux   Will contain F signed face flux values.
+        void solve(const std::vector<double>& totmob,
+                   const std::vector<double>& omega,
+                   const std::vector<double>& src,
+                   const FlowBoundaryConditions* bcs,
+                   const std::vector<double>& porevol,
+                   const std::vector<double>& rock_comp,
+                   const double dt,
+                   std::vector<double>& pressure,
+                   std::vector<double>& faceflux);
 
         /// Expose read-only reference to internal half-transmissibility.
         const ::std::vector<double>& getHalfTrans() const { return htrans_; }

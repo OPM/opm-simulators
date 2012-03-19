@@ -23,6 +23,7 @@
 #include <opm/core/pressure/mimetic/mimetic.h>
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
@@ -109,7 +110,7 @@ namespace Opm
 	    }
 	}
 
-        ifs_tpfa_forces F = { 0 };
+        ifs_tpfa_forces F = { NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
 
@@ -120,13 +121,93 @@ namespace Opm
 	pressure.resize(grid_.number_of_cells);
 	faceflux.resize(grid_.number_of_faces);
 
-        ifs_tpfa_solution soln = { 0 };
+        ifs_tpfa_solution soln = { NULL, NULL };
         soln.cell_press = &pressure[0];
         soln.face_flux  = &faceflux[0];
 
         ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
     }
 
+
+    /// Assemble and solve pressure system with rock compressibility (assumed constant per cell).
+    /// \param[in]  totmob     Must contain N total mobility values (one per cell).
+    ///                        totmob = \sum_{p} kr_p/mu_p.
+    /// \param[in]  omega      Must be empty if constructor gravity argument was null.
+    ///                        Otherwise must contain N mobility-weighted density values (one per cell).
+    ///                        omega = \frac{\sum_{p} mob_p rho_p}{\sum_p rho_p}.
+    /// \param[in]  src        Must contain N source rates (one per cell).
+    ///                        Positive values represent total inflow rates,
+    ///                        negative values represent total outflow rates.
+    /// \param[in]  bcs        If non-null, specifies boundary conditions.
+    ///                        If null, noflow conditions are assumed.
+    /// \param[in]  porevol    Must contain N pore volumes.
+    /// \param[in]  rock_comp  Must contain N rock compressibilities.
+    ///                        rock_comp = (d poro / d p)*(1/poro).
+    /// \param[in]  dt         Timestep.
+    /// \param[out] pressure   Will contain N cell-pressure values.
+    /// \param[out] faceflux   Will contain F signed face flux values.
+    void IncompTpfa::solve(const std::vector<double>& totmob,
+                           const std::vector<double>& omega,
+                           const std::vector<double>& src,
+                           const FlowBoundaryConditions* bcs,
+                           const std::vector<double>& porevol,
+                           const std::vector<double>& rock_comp,
+                           const double dt,
+                           std::vector<double>& pressure,
+                           std::vector<double>& faceflux)
+    {
+	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
+
+	if (!omega.empty()) {
+	    if (gpress_.empty()) {
+		THROW("Nozero omega argument given, but gravity was null in constructor.");
+	    }
+	    mim_ip_density_update(gg->number_of_cells, gg->cell_facepos,
+				  &omega[0],
+				  &gpress_[0], &gpress_omegaweighted_[0]);
+	} else {
+	    if (!gpress_.empty()) {
+		THROW("Empty omega argument given, but gravity was non-null in constructor.");
+	    }
+	}
+
+        ifs_tpfa_forces F = { NULL, NULL };
+        if (! src.empty()) { F.src = &src[0]; }
+        F.bc = bcs;
+
+	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+
+        if (!rock_comp.empty()) {
+            // The extra term of the equation is
+            //
+            //     porevol*rock_comp*(p - p0)/dt.
+            //
+            // The p part goes on the diagonal, the p0 on the rhs.
+            for (int c = 0; c < gg->number_of_cells; ++c) {
+                // Find diagonal
+                int j = h_->A->ia[c];
+                for (; j < h_->A->ia[c+1]; ++j) {
+                    if (h_->A->ja[j] == c) {
+                        break;
+                    }
+                }
+                h_->A->sa[j] += porevol[c]*rock_comp[c]/dt;
+                h_->b[c] += porevol[c]*rock_comp[c]*pressure[c]/dt;
+            }
+        }
+
+	linsolver_.solve(h_->A, h_->b, h_->x);
+
+	pressure.resize(grid_.number_of_cells);
+	faceflux.resize(grid_.number_of_faces);
+
+        ifs_tpfa_solution soln = { NULL, NULL };
+        soln.cell_press = &pressure[0];
+        soln.face_flux  = &faceflux[0];
+
+        ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
+    }
 
 
 
