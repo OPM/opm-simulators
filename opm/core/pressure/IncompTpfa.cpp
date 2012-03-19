@@ -186,12 +186,7 @@ namespace Opm
             // The p part goes on the diagonal, the p0 on the rhs.
             for (int c = 0; c < gg->number_of_cells; ++c) {
                 // Find diagonal
-                int j = h_->A->ia[c];
-                for (; j < h_->A->ia[c+1]; ++j) {
-                    if (h_->A->ja[j] == c) {
-                        break;
-                    }
-                }
+                size_t j = csrmatrix_elm_index(c, c, h_->A);
                 h_->A->sa[j] += porevol[c]*rock_comp[c]/dt;
                 h_->b[c] += porevol[c]*rock_comp[c]*pressure[c]/dt;
             }
