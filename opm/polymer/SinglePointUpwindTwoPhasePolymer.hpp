@@ -44,7 +44,7 @@
 #include <iostream>
 
 namespace Opm {
-    namespace spu_2p {
+    namespace polymer_reorder {
         class ModelParameterStorage {
         public:
             ModelParameterStorage(int nc, int totconn)
@@ -73,9 +73,9 @@ namespace Opm {
 
                 mob_           = &data_[0];
                 dmobds_        = mob_            + (2 * nc     );
-                dmobwatdc_     = dmobwatds_      + (2 * nc     );
-                mc_            = dmobdc_         + (1 * nc     );
-                dmcdc_         = mc_          + (1 * nc     );
+                dmobwatdc_     = dmobds_         + (2 * nc     );
+                mc_            = dmobwatdc_      + (1 * nc     );
+                dmcdc_         = mc_             + (1 * nc     );
                 porevol_       = dmcdc_          + (1 * nc     );
                 deadporespace_ = porevol_        + (1 * nc     );
                 dg_            = deadporespace_  + (1 * nc     );
@@ -97,8 +97,8 @@ namespace Opm {
             double*       dmobds    (int cell)       { return dmobds_  + (2*cell + 0); }
             const double* dmobds    (int cell) const { return dmobds_  + (2*cell + 0); }
 
-            double&       dmobwatdc    (int cell)       { return dmobdc_[cell]; }
-            double        dmobwatdc    (int cell) const { return dmobdc_[cell]; }
+            double&       dmobwatdc    (int cell)       { return dmobwatdc_[cell]; }
+            double        dmobwatdc    (int cell) const { return dmobwatdc_[cell]; }
 
             double&       mc    (int cell)       { return mc_[cell]; }
             double        mc    (int cell) const { return mc_[cell]; }
@@ -140,13 +140,16 @@ namespace Opm {
             double  drho_        ;
             double *mob_         ;
             double *dmobds_      ;
-            double *dmobdc_      ;
+            double *dmobwatdc_   ;
             double *mc_          ;
             double *dmcdc_       ;
             double *porevol_     ;
+            double *deadporespace_   ;
             double *dg_          ;
+            double *sw_          ;
+            double *c_           ;
             double *ds_          ;
-            double *dsc_          ;
+            double *dsc_         ;
             double *pc_          ;
             double *dpc_         ;
             double *trans_       ;
@@ -250,7 +253,7 @@ namespace Opm {
                        const int             f      ,
                        double* F                    , // F[0] = s-residual, F[1] = c-residual
                        double* dFd1                 , //Jacobi matrix for residual with respect to variables in cell
-                       double* dFd2                 , //Jacobi matrix for residual with respect to variables in OTHER cell
+                       double* dFd2                   //Jacobi matrix for residual with respect to variables in OTHER cell
                                                       //dFd1[0]= d(F[0])/d(s1), dFd1[1]= d(F[0])/d(c1), dFd1[2]= d(F[1])/d(s1), dFd1[3]= d(F[1])/d(c1),
                                                       //dFd2[0]= d(F[0])/d(s2), dFd2[1]= d(F[0])/d(c2), dFd2[2]= d(F[1])/d(s2), dFd2[3]= d(F[1])/d(c2).
 
@@ -296,22 +299,22 @@ namespace Opm {
                 dFcds[0] = &dFd1[2]; dFcds[1] = &dFd2[2];
                 dFcdc[0] = &dFd1[3]; dFcdc[1] = &dFd2[3];
                 // sign is positive
-                *dFd1[0] += sgn*dt * f1            * dpcflux[0] * m[1];
-                *dFd2[0] += sgn*dt * f1            * dpcflux[1] * m[1];
-                *dFd1[2] += sgn*dt * f1 * mc       * dpcflux[0] * m[1];
-                *dFd2[2] += sgn*dt * f1 * mc       * dpcflux[1] * m[1];
+                dFd1[0] += sgn*dt * f1            * dpcflux[0] * m[1];
+                dFd2[0] += sgn*dt * f1            * dpcflux[1] * m[1];
+                dFd1[2] += sgn*dt * f1 * mc       * dpcflux[0] * m[1];
+                dFd2[2] += sgn*dt * f1 * mc       * dpcflux[1] * m[1];
 		// We assume that the capillary pressure is independent of the polymer concentration.
                 // Hence, no more contributions.
             } else {
-                dFsds[0] = dFsds2; dFsds[1] = dFsds1;
-                dFsdc[0] = dFsdc2; dFsdc[1] = dFsdc1;
-                dFcds[0] = dFcds2; dFcds[1] = dFcds1;
-                dFcdc[0] = dFcdc2; dFcdc[1] = dFcdc1;
+                dFsds[0] = &dFd2[0]; dFsds[1] = &dFd1[0];
+                dFsdc[0] = &dFd2[1]; dFsdc[1] = &dFd1[1];
+                dFcds[0] = &dFd2[2]; dFcds[1] = &dFd1[2];
+                dFcdc[0] = &dFd2[3]; dFcdc[1] = &dFd1[3];
                 // sign is negative
-                *dFd1[0] += sgn*dt * f1            * dpcflux[1] * m[1];
-                *dFd2[0] += sgn*dt * f1            * dpcflux[0] * m[1];
-                *dFd1[2] += sgn*dt * f1 * mc       * dpcflux[1] * m[1];
-                *dFd2[2] += sgn*dt * f1 * mc       * dpcflux[0] * m[1];
+                dFd1[0] += sgn*dt * f1            * dpcflux[1] * m[1];
+                dFd2[0] += sgn*dt * f1            * dpcflux[0] * m[1];
+                dFd1[2] += sgn*dt * f1 * mc       * dpcflux[1] * m[1];
+                dFd2[2] += sgn*dt * f1 * mc       * dpcflux[0] * m[1];
 		// We assume that the capillary pressure is independent of the polymer concentration.
                 // Hence, no more contributions.
             }
@@ -374,9 +377,9 @@ namespace Opm {
                 *F += dt * dflux * src->saturation[2*i + 0];
             } else {
                 // cell -> src
-                const int     c  = src->cell[i];
-                const double* m  = store_.mob (c);
-                const double* dm = store_.dmob(c);
+                const int     cell  = src->cell[i];
+                const double* m  = store_.mob (cell);
+                const double* dm = store_.dmobds(cell);
 
                 const double  mt = m[0] + m[1];
 
@@ -460,7 +463,10 @@ namespace Opm {
                       const Grid&           g    ,
                       JacobianSystem&       sys) {
 
-            double s[2],  mob[2],  dmobds[2 * 2], dmobdc[2 * 2];
+            std::vector<double> s(2, 0.);
+            std::vector<double> mob(2, 0.);
+            std::vector<double> dmobds(4, 0.);
+            double dmobwatdc;
             double c;
             double mc, dmcdc;
             double pc, dpc;
@@ -497,8 +503,8 @@ namespace Opm {
                 s[0] = std::min(s_max, s[0]);
                 s[1] = 1 - s[0];
 
-                fluid_.mobility(cell, s, mob, dmobds, dmobwatdc);
-                fluid_.mc(cell, s, mc, dmcdc);
+                fluid_.mobility(cell, s, c, mob, dmobds, dmobwatdc);
+                fluid_.mc(c, mc, dmcdc);
                 fluid_.pc(cell, s, pc, dpc);
 
                 store_.mob (cell)[0]   =  mob [0];
@@ -654,10 +660,10 @@ namespace Opm {
             dpcflux[1]  = store_.trans(f)*store_.dpc(i2);
         }
 
-        TwophaseFluid                 fluid_  ;
+        TwophaseFluidPolymer          fluid_  ;
         const double*                 gravity_;
         std::vector<int>              f2hf_   ;
-        spu_2p::ModelParameterStorage store_  ;
+        polymer_reorder::ModelParameterStorage store_  ;
 	bool init_step_use_previous_sol_;
 	double sat_tol_;
     };

@@ -54,9 +54,8 @@ namespace Opm
 			       const double dt,
 			       std::vector<double>& s,
 			       std::vector<double>& c,
-			       std::vector<double>& sol_s_vec
-			       std::vector<double>& sol_c_vec
-			       );
+			       std::vector<double>& sol_vec
+ 			       );
 	Model& model_;
 	const UnstructuredGrid& grid_;
 	const double tol_;
@@ -65,6 +64,6 @@ namespace Opm
 
 } // namespace Opm
 
-#include <opm/core/transport/GravityColumnSolverPolymer_impl.hpp>
+#include <opm/polymer/GravityColumnSolverPolymer_impl.hpp>
 
 #endif // OPM_GRAVITYCOLUMNSOLVERPOLYMER_HEADER_INCLUDED

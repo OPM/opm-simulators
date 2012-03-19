@@ -93,15 +93,15 @@ namespace Opm
             
             // compute the position where to store the coefficient of a matrix A_{i,j} (i,j=0,...,N-1)
             // in a array which is sent to the band matrix solver of LAPACK.
-            int operator ()(int i, int j) {
+            int operator ()(int i, int j) const {
                 return kl_ + ku_ + i - j + j*nrow_;
             }
 
+            const int N_;
             const int ku_;
             const int kl_;
             const int nrow_;
-            const int N_;
-        }
+        };
 
     } // anon namespace
 
@@ -158,19 +158,21 @@ namespace Opm
 
 
 
+
     /// \param[in] column_cells    the cells on which to solve the segregation
     ///                            problem. Must be in a single vertical column,
     ///                            and ordered (direction doesn't matter).
     template <class Model>
-    void GravityColumnSolver<Model>::solveSingleColumn(const std::vector<int>& column_cells,
-						       const double dt,
-						       std::vector<double>& s,
-						       std::vector<double>& sol_vec)
+    void GravityColumnSolverPolymer<Model>::solveSingleColumn(const std::vector<int>& column_cells,
+                                                              const double dt,
+                                                              std::vector<double>& s,
+                                                              std::vector<double>& c,
+                                                              std::vector<double>& sol_vec)
     {
 	// This is written only to work with SinglePointUpwindTwoPhase,
 	// not with arbitrary problem models.
 	const int col_size = column_cells.size();
-	StateWithZeroFlux state(s); // This holds s by reference.
+	StateWithZeroFlux state(s, c); // This holds s by reference.
 
 	// Assemble.
         const int kl = 3;
@@ -235,8 +237,8 @@ namespace Opm
 	// Solve.
 	const int num_rhs = 1;
 	int info = 0;
+        int ipiv;
 	// Solution will be written to rhs.
-	dgtsv_(&col_size, &num_rhs, DL, D, DU, &rhs[0], &col_size, &info);
         dgbsv_(&col_size, &kl, &ku, &num_rhs, &hm[0], &nrow, &ipiv, &rhs[0], &col_size, &info);
 	if (info != 0) {
 	    THROW("Lapack reported error in dgtsv: " << info);
