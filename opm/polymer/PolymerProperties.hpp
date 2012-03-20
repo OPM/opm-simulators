@@ -162,6 +162,71 @@ namespace Opm
 	    inv_visc_eff[0] = inv_mu_w_eff;
 	    inv_visc_eff[1] = 1.0/visc[1];
 	}
+        
+        void effectiveMobilities(const double c,
+                                 const double* visc,
+                                 const double* relperm,
+                                 const double* drelpermds,
+                                 std::vector<double>& mob, 
+                                 std::vector<double>& dmobds,
+                                 double& dmobwatdc) const 
+        {
+            double cbar = c/c_max_;
+            double mu_w = visc[0];
+            double mu_m_dc; // derivative of mu_m with respect to c
+            double mu_m = viscMultWithDer(c, &mu_m_dc)*mu_w;
+            mu_m_dc *= mu_w;
+            double mu_p = viscMult(c_max_)*mu_w;
+            double omega = mix_param_;
+            double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
+            double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
+            double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
+            double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
+            double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
+            double mu_w_eff_dc = -1./c_max_*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e)
+                + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc
+                + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
+            double visc_eff[2] = { mu_w_eff, visc[1] };
+
+            dmobwatdc = - mob[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff);
+
+            mob[0] = relperm[0]/visc_eff[0];
+            mob[1] = relperm[1]/visc_eff[1];
+
+            dmobds[0*2 + 0] = drelpermds[0*2 + 0]/visc_eff[0];
+            dmobds[0*2 + 1] = drelpermds[0*2 + 1]/visc_eff[1];
+            dmobds[1*2 + 0] = drelpermds[1*2 + 0]/visc_eff[0];
+            dmobds[1*2 + 1] = drelpermds[1*2 + 1]/visc_eff[1];
+        }
+
+        void computeMc(const double& c,  
+                       const double* visc,
+                       double& mc,
+                       double& dmcdc) const 
+        {
+            double cbar = c/c_max_;
+            double mu_w = visc[0];
+            double mu_m_dc; // derivative of mu_m with respect to c
+            double mu_m = viscMultWithDer(c, &mu_m_dc)*mu_w;
+            mu_m_dc *= mu_w;
+            double mu_p = viscMult(c_max_)*mu_w;
+            double omega = mix_param_;
+            double mu_m_omega = std::pow(mu_m, omega);
+            double mu_m_omega_minus1 = std::pow(mu_m, omega-1);
+            double mu_w_omega = std::pow(mu_w, 1.0 - omega);
+            double mu_w_e   = mu_m_omega*mu_w_omega;
+            double mu_w_e_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_w_omega;
+            double mu_p_omega = std::pow(mu_p, 1.0 - omega);
+            double mu_p_eff = mu_m_omega*mu_p_omega;
+            double mu_p_eff_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_p_omega;
+            double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
+            double inv_mu_w_eff_dc = -mu_w_e_dc/(mu_w_e*mu_w_e)*(1. - cbar) - mu_p_eff_dc/(mu_p_eff*mu_p_eff)*cbar + (1./mu_p_eff - 1./mu_w_e);
+            double mu_w_eff_dc = -mu_w_eff*mu_w_eff*inv_mu_w_eff_dc;
+            mc = c*mu_w_eff/mu_p_eff;
+            dmcdc = mu_w_eff/mu_p_eff + c*mu_w_eff_dc/mu_p_eff - c*mu_p_eff_dc*mu_w_eff/(mu_p_eff*mu_p_eff);
+
+        }
+
 
     private:
         double c_max_;
