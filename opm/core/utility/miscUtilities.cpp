@@ -211,8 +211,7 @@ namespace Opm
     /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobility
-    /// @param[out] omega     mobility-weighted (or fractional-flow weighted)
-    ///                       fluid densities.
+    /// @param[out] omega     fractional-flow weighted fluid densities.
     void computeTotalMobilityOmega(const Opm::IncompPropertiesInterface& props,
 				   const std::vector<int>& cells,
 				   const std::vector<double>& s,
