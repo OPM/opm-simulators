@@ -1,7 +1,8 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2011 by Bernd Flemisch, Andreas Lauser                    *
+ *   Copyright (C) 2011 by Bernd Flemisch                                    *
+ *   Copyright (C) 2011 by Andreas Lauser                                    *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -28,6 +29,10 @@
 #ifndef DUMUX_BASE_FLUID_SYSTEM_HH
 #define DUMUX_BASE_FLUID_SYSTEM_HH
 
+#include <dune/common/classname.hh>
+
+#include <dumux/common/exceptions.hh>
+
 namespace Dumux
 {
 /*!
@@ -46,7 +51,8 @@ public:
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a density() method!");
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a density() method!");
     }
 
     /*!
@@ -65,7 +71,7 @@ public:
                                       int phaseIdx,
                                       int compIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a fugacityCoefficient() method!");
+        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a fugacityCoefficient() method!");
     }
 
     /*!
@@ -76,7 +82,7 @@ public:
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a viscosity() method!");
+        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a viscosity() method!");
     }
 
     /*!
@@ -104,7 +110,7 @@ public:
                                        int phaseIdx,
                                        int compIdx)
     {
-         DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a diffusionCoefficient() method!");
+         DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
     }
 
     /*!
@@ -120,7 +126,7 @@ public:
                                              int compJIdx)
 
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a binaryDiffusionCoefficient() method!");
+        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a binaryDiffusionCoefficient() method!");
     }
 
     /*!
@@ -137,7 +143,7 @@ public:
                            const ParameterCache &paramCache,
                            int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide an enthalpy() method!");
+        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide an enthalpy() method!");
     }
 
     /*!
@@ -152,7 +158,7 @@ public:
                                       const ParameterCache &paramCache,
                                       int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a thermalConductivity() method!");
+        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a thermalConductivity() method!");
     }
 
     /*!
@@ -168,7 +174,7 @@ public:
                                const ParameterCache &paramCache,
                                int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The specified fluid system does not provide a heatCapacity() method!");
+        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a heatCapacity() method!");
     }
 };
 

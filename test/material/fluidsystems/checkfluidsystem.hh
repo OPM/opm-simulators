@@ -51,6 +51,9 @@
 
 #include <dune/common/classname.hh>
 
+#include <iostream>
+#include <string>
+
 // this is a fluid state which makes sure that only the quantities
 // allowed are accessed
 template <class Scalar,

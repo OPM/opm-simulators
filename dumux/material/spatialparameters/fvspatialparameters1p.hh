@@ -29,11 +29,12 @@
 #ifndef DUMUX_FV_SPATIAL_PARAMETERS_ONE_P_HH
 #define DUMUX_FV_SPATIAL_PARAMETERS_ONE_P_HH
 
+#include <dumux/decoupled/common/decoupledproperties.hh>
+
 #include <dumux/common/propertysystem.hh>
 #include <dumux/common/math.hh>
 
-#include <dumux/decoupled/common/decoupledproperties.hh>
-
+#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
 namespace Dumux

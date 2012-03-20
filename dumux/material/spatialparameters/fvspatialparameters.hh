@@ -31,6 +31,8 @@
 
 #include "fvspatialparameters1p.hh"
 
+#include <dune/common/fvector.hh>
+
 namespace Dumux
 {
 // forward declation of property tags

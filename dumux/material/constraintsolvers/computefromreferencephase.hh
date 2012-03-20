@@ -34,11 +34,10 @@
 
 #include <dumux/material/constraintsolvers/compositionfromfugacities.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
-
 #include <dumux/common/exceptions.hh>
 #include <dumux/common/valgrind.hh>
+
+#include <dune/common/fvector.hh>
 
 namespace Dumux {
 

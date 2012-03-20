@@ -28,11 +28,13 @@
 #ifndef DUMUX_NCP_FLASH_HH
 #define DUMUX_NCP_FLASH_HH
 
+#include <dumux/common/exceptions.hh>
+#include <dumux/common/valgrind.hh>
+
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <dumux/common/exceptions.hh>
-#include <dumux/common/valgrind.hh>
+#include <iostream>
 
 namespace Dumux {
 

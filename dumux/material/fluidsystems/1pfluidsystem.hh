@@ -28,22 +28,20 @@
 #ifndef DUMUX_1P_FLUIDSYSTEM_HH
 #define DUMUX_1P_FLUIDSYSTEM_HH
 
+#include "basefluidsystem.hh"
+#include "nullparametercache.hh"
+
 #include <dumux/material/fluidsystems/liquidphase.hh>
 #include <dumux/material/fluidsystems/gasphase.hh>
-
-#include <dune/common/exceptions.hh>
-
-#include "basefluidsystem.hh"
 #include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/n2.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
+
+#include <dune/common/exceptions.hh>
+
 #include <limits>
-
 #include <assert.h>
-
-#include "basefluidsystem.hh"
-#include "nullparametercache.hh"
 
 namespace Dumux {
 namespace FluidSystems {

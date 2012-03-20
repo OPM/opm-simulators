@@ -43,8 +43,6 @@
 #include <dumux/common/math.hh>
 #include <dumux/common/tabulated2dfunction.hh>
 
-#include <iostream>
-
 namespace Dumux
 {
 

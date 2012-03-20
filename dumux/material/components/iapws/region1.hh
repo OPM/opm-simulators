@@ -36,7 +36,6 @@
 #define DUMUX_IAPWS_REGION1_HH
 
 #include <cmath>
-#include <iostream>
 
 namespace Dumux
 {

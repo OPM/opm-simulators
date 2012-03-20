@@ -39,7 +39,6 @@
 #include <dumux/material/constants.hh>
 
 #include <cmath>
-#include <iostream>
 
 namespace Dumux
 {
