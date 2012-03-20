@@ -133,8 +133,8 @@ namespace Opm
     /// \param[in]  totmob     Must contain N total mobility values (one per cell).
     ///                        totmob = \sum_{p} kr_p/mu_p.
     /// \param[in]  omega      Must be empty if constructor gravity argument was null.
-    ///                        Otherwise must contain N mobility-weighted density values (one per cell).
-    ///                        omega = \frac{\sum_{p} mob_p rho_p}{\sum_p rho_p}.
+    ///                        Otherwise must contain N fractional-flow-weighted density
+    ///                        values (one per cell).
     /// \param[in]  src        Must contain N source rates (one per cell).
     ///                        Positive values represent total inflow rates,
     ///                        negative values represent total outflow rates.
