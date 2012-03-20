@@ -235,6 +235,39 @@ assemble_rate_well(int nc, int w,
                    struct ifs_tpfa_data *h  )
 /* ---------------------------------------------------------------------- */
 {
+    int    c, i, wdof;
+    size_t jc, jw;
+    double trans, resv;
+
+    struct WellControls *ctrls;
+
+    ctrls = W->ctrls[ w ];
+    wdof  = nc + w;
+    resv  = ctrls->target[ ctrls->current ];
+
+    for (i = W->well_connpos[w]; i < W->well_connpos[w + 1]; i++) {
+
+        c     = W->well_cells  [ i ];
+        trans = mt[ c ] * W->WI[ i ];
+
+        /* c->w connection */
+        jc = csrmatrix_elm_index(c, c   , h->A);
+        jw = csrmatrix_elm_index(c, wdof, h->A);
+
+        h->A->sa[ jc ] += trans;
+        h->A->sa[ jw ] -= trans;
+        h->b    [ c  ] += trans * wdp[ i ];
+
+        /* w->c connection */
+        jc = csrmatrix_elm_index(wdof, c   , h->A);
+        jw = csrmatrix_elm_index(wdof, wdof, h->A);
+
+        h->A->sa[ jc   ] -= trans;
+        h->A->sa[ jw   ] += trans;
+        h->b    [ wdof ] -= trans * wdp[ i ];
+    }
+
+    h->b[ wdof ] += resv;
 }
 
 
