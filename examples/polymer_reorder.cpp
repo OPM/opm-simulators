@@ -89,16 +89,18 @@ public:
         : Opm::IncompPropertiesBasic(param, dim, num_cells)
     {
         ASSERT(numPhases() == 2);
-        sw_.resize(3);
-        sw_[0] = 0.2;
-        sw_[1] = 0.7;
-        sw_[2] = 1.0;
-        krw_.resize(3);
+        sw_.resize(4);
+        sw_[0] = 0.;
+        sw_[1] = 0.3;
+        sw_[2] = 0.7;
+        sw_[3] = 1.0;
+        krw_.resize(4);
         krw_[0] = 0.0;
-        krw_[1] = 0.7;
-        krw_[2] = 1.0;
+        krw_[1] = 0.3;
+        krw_[2] = 0.7;
+        krw_[3] = 1.0;
         so_.resize(2);
-        so_[0] = 0.3;
+        so_[0] = 0.0;
         so_[1] = 0.8;
         kro_.resize(2);
         kro_[0] = 0.0;
@@ -895,25 +897,25 @@ main(int argc, char** argv)
             Opm::toWaterSat(state.saturation(), reorder_sat);
             reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
                      &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
-        Opm::toBothSat(reorder_sat, state.saturation());
-        Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
-        if (use_segregation_split) {
-            if (use_column_solver) {
-                if (use_gauss_seidel_gravity) {
-                    // // Not implemented for polymer
-                    // reorder_model.solveGravity(columns, simtimer.currentStepLength(), reorder_sat);
-                    // Opm::toBothSat(reorder_sat, state.saturation());
+            Opm::toBothSat(reorder_sat, state.saturation());
+            Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
+            if (use_segregation_split) {
+                if (use_column_solver) {
+                    if (use_gauss_seidel_gravity) {
+                        // // Not implemented for polymer
+                        // reorder_model.solveGravity(columns, simtimer.currentStepLength(), reorder_sat);
+                        // Opm::toBothSat(reorder_sat, state.saturation());
+                    } else {
+                        colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration());
+                    }
                 } else {
-                    colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration());
+                    // // Not implemented for polymer
+                    // std::vector<double> fluxes = state.faceflux();
+                    // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
+                    // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
+                    // std::cout << rpt;
+                    // state.faceflux() = fluxes;
                 }
-            } else {
-                // // Not implemented for polymer
-                // std::vector<double> fluxes = state.faceflux();
-                // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
-                // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
-                // std::cout << rpt;
-                // state.faceflux() = fluxes;
-            }
             }
         } else {
             // // Not implemented for polymer
