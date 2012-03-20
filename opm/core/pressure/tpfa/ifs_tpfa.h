@@ -30,6 +30,7 @@ struct ifs_tpfa_impl;
 struct CSRMatrix;
 struct FlowBoundaryConditions;
 struct Wells;
+struct CompletionData;
 
 struct ifs_tpfa_data {
     struct CSRMatrix     *A;
@@ -47,6 +48,9 @@ struct ifs_tpfa_solution {
 struct ifs_tpfa_forces {
     const double                        *src;
     const struct FlowBoundaryConditions *bc ;
+
+    const struct Wells          *W    ;
+    const struct CompletionData *Wdata;
 };
 
 
