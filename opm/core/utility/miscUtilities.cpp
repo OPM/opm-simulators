@@ -22,6 +22,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
+#include <opm/core/fluid/RockCompressibility.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <functional>
@@ -46,6 +47,28 @@ namespace Opm
 		       grid.cell_volumes,
 		       porevol.begin(),
 		       std::multiplies<double>());
+    }
+
+
+    /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
+    /// @param[in]  grid      a grid
+    /// @param[in]  props     rock and fluid properties
+    /// @param[in]  rock_comp rock compressibility properties
+    /// @param[in]  pressure  pressure by cell
+    /// @param[out] porevol   the pore volume by cell.
+    void computePorevolume(const UnstructuredGrid& grid,
+                           const IncompPropertiesInterface& props,
+                           const RockCompressibility& rock_comp,
+                           const std::vector<double>& pressure,
+                           std::vector<double>& porevol)
+    {
+        int num_cells = grid.number_of_cells;
+        ASSERT(num_cells == props.numCells());
+        porevol.resize(num_cells);
+        const double* poro = props.porosity();
+        for (int i = 0; i < num_cells; ++i) {
+            porevol[i] = poro[i]*grid.cell_volumes[i]*rock_comp.poroMult(pressure[i]);
+        }
     }
 
 

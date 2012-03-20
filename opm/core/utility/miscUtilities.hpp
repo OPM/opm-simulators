@@ -30,6 +30,7 @@ namespace Opm
 {
 
     class IncompPropertiesInterface;
+    class RockCompressibility;
 
     /// @brief Computes pore volume of all cells in a grid.
     /// @param[in]  grid      a grid
@@ -38,6 +39,19 @@ namespace Opm
     void computePorevolume(const UnstructuredGrid& grid,
 			   const Opm::IncompPropertiesInterface& props,
 			   std::vector<double>& porevol);
+
+
+    /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
+    /// @param[in]  grid      a grid
+    /// @param[in]  props     rock and fluid properties
+    /// @param[in]  rock_comp rock compressibility properties
+    /// @param[in]  pressure  pressure by cell
+    /// @param[out] porevol   the pore volume by cell.
+    void computePorevolume(const UnstructuredGrid& grid,
+                           const IncompPropertiesInterface& props,
+                           const RockCompressibility& rock_comp,
+                           const std::vector<double>& pressure,
+                           std::vector<double>& porevol);
 
 
     /// @brief Computes total saturated volumes over all grid cells.
