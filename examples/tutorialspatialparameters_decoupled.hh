@@ -27,11 +27,13 @@
 #ifndef DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 #define DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 
-
 #include <dumux/material/spatialparameters/fvspatialparameters.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
 
 namespace Dumux
 {

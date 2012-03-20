@@ -31,19 +31,22 @@
 // The numerical model
 #include <dumux/boxmodels/2p/2pmodel.hh>
 
-// The DUNE grid used
-#include <dune/grid/yaspgrid.hh>
-
-// Spatially dependent parameters
 // The components that are used
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/oil.hh>
-#include <dumux/common/cubegridcreator.hh>
 
-// include material laws
+// The material laws
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 #include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
+
+// The DUNE grid used
+#include <dune/grid/yaspgrid.hh>
+#include <dumux/common/cubegridcreator.hh>
+
+// Dune::FieldVector and Dune::FieldMatrix
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
 
 namespace Dumux {
 

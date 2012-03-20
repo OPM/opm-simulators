@@ -29,18 +29,13 @@
 #ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian1}@*/
 #define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian2}@*/
 
-// the grid includes
-#include <dune/grid/yaspgrid.hh>
-#include <dumux/common/cubegridcreator.hh>
+// assign parameters dependent on space (e.g. spatial parameters)
+#include "tutorialspatialparameters_decoupled.hh" /*@\label{tutorial-decoupled:spatialparameters}@*/
 
 // dumux 2p-decoupled environment
 #include <dumux/decoupled/2p/diffusion/fv/fvpressureproperties2p.hh>
 #include <dumux/decoupled/2p/transport/fv/fvtransportproperties2p.hh>
-#include <dumux/decoupled/2p/impes/impesproblem2p.hh>
 #include <dumux/decoupled/2p/impes/impesproblem2p.hh> /*@\label{tutorial-decoupled:parent-problem}@*/
-
-// assign parameters dependent on space (e.g. spatial parameters)
-#include "tutorialspatialparameters_decoupled.hh" /*@\label{tutorial-decoupled:spatialparameters}@*/
 
 // include cfl-criterion after coats: more suitable if the problem is not advection dominated
 #include<dumux/decoupled/2p/transport/fv/evalcflfluxcoats.hh>
@@ -48,6 +43,13 @@
 // the components that are used
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/oil.hh>
+
+// the grid includes
+#include <dumux/common/cubegridcreator.hh>
+#include <dune/grid/yaspgrid.hh>
+
+// provides Dune::FieldVector
+#include <dune/common/fvector.hh>
 
 namespace Dumux
 {
