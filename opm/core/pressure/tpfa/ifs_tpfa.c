@@ -380,7 +380,7 @@ boundary_fluxes(struct UnstructuredGrid             *G     ,
             assert (bc->cond_pos[i+1] - bc->cond_pos[i] == 1);
 
             for (j = bc->cond_pos[ i ]; j < bc->cond_pos[ i + 1 ]; j++) {
-                    
+
                 f  = bc->face[ j ];
                 c1 = G->face_cells[2*f + 0];
                 c2 = G->face_cells[2*f + 1];
