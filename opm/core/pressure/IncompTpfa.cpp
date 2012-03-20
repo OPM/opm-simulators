@@ -178,7 +178,13 @@ namespace Opm
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
+        // TODO: this is a hack, it would be better to handle this in a
+        // (variant of) ifs_tpfa_assemble().
         if (!rock_comp.empty()) {
+            // We must compensate for adjustment made in ifs_tpfa_assemble()
+            // to make the system nonsingular.
+            h_->A->sa[0] *= 0.5;
+
             // The extra term of the equation is
             //
             //     porevol*rock_comp*(p - p0)/dt.
