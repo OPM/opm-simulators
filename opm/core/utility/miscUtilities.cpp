@@ -217,6 +217,12 @@ namespace Opm
         }
     }
 
+
+    /// @brief Computes phase mobilities for a set of saturation values.
+    /// @param[in]  props     rock and fluid properties
+    /// @param[in]  cells     cells with which the saturation values are associated
+    /// @param[in]  s         saturation values (for all phases)
+    /// @param[out] pmobc     phase mobilities (for all phases).
     void computePhaseMobilities(const Opm::IncompPropertiesInterface& props,
                                 const std::vector<int>&               cells,
                                 const std::vector<double>&            s    ,
