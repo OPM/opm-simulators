@@ -178,10 +178,11 @@ namespace Opm
         const int kl = 3;
         const int ku = 3;
         const int nrow = 2*kl + ku + 1;
-        const BandMatrixCoeff bmc(col_size, ku, kl);
+        const int N = 2*col_size; // N unknowns: s and c for each cell.
+        const BandMatrixCoeff bmc(N, ku, kl);
 
-	std::vector<double> hm(nrow*col_size, 0.0); // band matrix with 3 upper and 3 lower diagonals.
-	std::vector<double> rhs(col_size, 0.0);
+	std::vector<double> hm(nrow*N, 0.0); // band matrix with 3 upper and 3 lower diagonals.
+	std::vector<double> rhs(N, 0.0);
 	for (int ci = 0; ci < col_size; ++ci) {
 	    std::vector<double> F(2, 0.);   
 	    std::vector<double> dFd1(4, 0.);
@@ -203,13 +204,13 @@ namespace Opm
 		    if (c1 == prev_cell || c2 == prev_cell) {
                         hm[bmc(2*ci + 0, 2*(ci - 1) + 0)] += dFd2[0];
                         hm[bmc(2*ci + 0, 2*(ci - 1) + 1)] += dFd2[1];
-                        hm[bmc(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[2];
+                        hm[bmc(2*ci + 1, 2*(ci - 1) + 0)] += dFd2[2];
                         hm[bmc(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[3];
 		    } else {
 			ASSERT(c1 == next_cell || c2 == next_cell);
                         hm[bmc(2*ci + 0, 2*(ci + 1) + 0)] += dFd2[0];
                         hm[bmc(2*ci + 0, 2*(ci + 1) + 1)] += dFd2[1];
-                        hm[bmc(2*ci + 1, 2*(ci + 1) + 1)] += dFd2[2];
+                        hm[bmc(2*ci + 1, 2*(ci + 1) + 0)] += dFd2[2];
                         hm[bmc(2*ci + 1, 2*(ci + 1) + 1)] += dFd2[3];
 		    }
                     hm[bmc(2*ci + 0, 2*ci + 0)] += dFd1[0];
@@ -229,7 +230,7 @@ namespace Opm
             hm[bmc(2*ci + 1, 2*ci + 0)] += dF[2];
             hm[bmc(2*ci + 1, 2*ci + 1)] += dF[3];
 
-            rhs[2*ci + 0]     += F[0];
+            rhs[2*ci + 0] += F[0];
             rhs[2*ci + 1] += F[1];
 
 	}
@@ -239,7 +240,7 @@ namespace Opm
 	int info = 0;
         int ipiv;
 	// Solution will be written to rhs.
-        dgbsv_(&col_size, &kl, &ku, &num_rhs, &hm[0], &nrow, &ipiv, &rhs[0], &col_size, &info);
+        dgbsv_(&N, &kl, &ku, &num_rhs, &hm[0], &nrow, &ipiv, &rhs[0], &N, &info);
 	if (info != 0) {
 	    THROW("Lapack reported error in dgtsv: " << info);
 	}

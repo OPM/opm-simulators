@@ -441,7 +441,7 @@ namespace Opm {
             typename JacobianSystem::vector_type& x =
                 sys.vector().writableSolution();
 
-            assert (x.size() == (::std::size_t) (g.number_of_cells));
+            assert (x.size() == (::std::size_t) (2*g.number_of_cells));
 
 	    if (init_step_use_previous_sol_) {
 		std::fill(x.begin(), x.end(), 0.0);
@@ -546,10 +546,9 @@ namespace Opm {
             double *s = &state.saturation()[0*2 + 0];
             double *c = &state.concentration()[0*1 + 0];
 
-            for (int cell = 0; cell < g.number_of_cells; ++cell, s += 2) {
+            for (int cell = 0; cell < g.number_of_cells; ++cell, s += 2, c += 1) {
                 s[0] += x[2*cell + 0];
                 c[0] += x[2*cell + 1];
-                c += 1;
                 double s_min = fluid_.s_min(cell);
                 double s_max = fluid_.s_max(cell);
                 assert(s[0] >= s_min - sat_tol_);
