@@ -41,12 +41,12 @@ namespace Opm
     {
         if (deck.hasField("ROCKTAB")) {
             const table_t& rt = deck.getROCKTAB().rocktab_;
-            int n = rt[0].size();
+            int n = rt[0][0].size();
             p_.resize(n);
             poromult_.resize(n);
             for (int i = 0; i < n; ++i) {
-                p_[i] = rt[0][i][0];
-                poromult_[i] = rt[0][i][1];
+                p_[i] = rt[0][0][i];
+                poromult_[i] = rt[0][1][i];
             }
         } else if (deck.hasField("ROCK")) {
             const ROCK& r = deck.getROCK();
@@ -59,7 +59,7 @@ namespace Opm
 
     bool RockCompressibility::isActive() const
     {
-        return p_.empty() && (rock_comp_ == 0.0);
+        return !p_.empty() || (rock_comp_ != 0.0);
     }
 
     double RockCompressibility::poroMult(double pressure) const
