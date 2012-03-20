@@ -45,10 +45,10 @@ namespace Opm
         bool isActive() const;
 
         /// Porosity multiplier.
-        double poroMult(double pressure);
+        double poroMult(double pressure) const;
 
         /// Rock compressibility = (d poro / d p)*(1 / poro).
-        double rockComp(double pressure);
+        double rockComp(double pressure) const;
 
     private:
         std::vector<double> p_;

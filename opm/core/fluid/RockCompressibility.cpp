@@ -62,7 +62,7 @@ namespace Opm
         return p_.empty() && (rock_comp_ == 0.0);
     }
 
-    double RockCompressibility::poroMult(double pressure)
+    double RockCompressibility::poroMult(double pressure) const
     {
         if (p_.empty()) {
             // Approximating with a quadratic curve.
@@ -73,7 +73,7 @@ namespace Opm
         }
     }
 
-    double RockCompressibility::rockComp(double pressure)
+    double RockCompressibility::rockComp(double pressure) const
     {
         if (p_.empty()) {
             return rock_comp_;
