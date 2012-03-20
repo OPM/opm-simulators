@@ -197,7 +197,7 @@ assemble_bhp_well(int nc, int w,
                   struct ifs_tpfa_data *h  )
 /* ---------------------------------------------------------------------- */
 {
-    int    c, i, wdof, p;
+    int    c, i, wdof;
     size_t jc, jw;
     double trans, bhp;
 
