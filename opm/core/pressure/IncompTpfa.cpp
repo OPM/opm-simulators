@@ -110,7 +110,7 @@ namespace Opm
 	    }
 	}
 
-        ifs_tpfa_forces F = { NULL, NULL, NULL, NULL };
+        ifs_tpfa_forces F = { NULL, NULL, 0, NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
 
@@ -172,7 +172,7 @@ namespace Opm
 	    }
 	}
 
-        ifs_tpfa_forces F = { NULL, NULL, NULL, NULL };
+        ifs_tpfa_forces F = { NULL, NULL, 0, NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
 

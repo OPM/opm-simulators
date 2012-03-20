@@ -49,8 +49,9 @@ struct ifs_tpfa_forces {
     const double                        *src;
     const struct FlowBoundaryConditions *bc ;
 
-    const struct Wells          *W    ;
-    const struct CompletionData *Wdata;
+    int                          nphase; /* for Wdata->phasemob */
+    const struct Wells          *W     ;
+    const struct CompletionData *Wdata ;
 };
 
 
