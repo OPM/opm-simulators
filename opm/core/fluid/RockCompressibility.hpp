@@ -32,6 +32,7 @@ namespace Opm
     {
     public:
         /// Construct from input deck.
+        /// Looks for the keywords ROCK and ROCKTAB.
         RockCompressibility(const EclipseGridParser& deck);
 
         /// Construct from parameters.
@@ -39,6 +40,9 @@ namespace Opm
         ///    rock_compressibility_pref (100.0)   [given in bar]
         ///    rock_compressibility      (0.0)     [given in bar^{-1}]
         RockCompressibility(const parameter::ParameterGroup& param);
+
+        /// Returns true if there are compressibility effects.
+        bool isActive() const;
 
         /// Porosity multiplier.
         double poroMult(double pressure);

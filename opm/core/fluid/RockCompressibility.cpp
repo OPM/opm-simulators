@@ -57,6 +57,11 @@ namespace Opm
         }
     }
 
+    bool RockCompressibility::isActive() const
+    {
+        return p_.empty() && (rock_comp_ == 0.0);
+    }
+
     double RockCompressibility::poroMult(double pressure)
     {
         if (p_.empty()) {
