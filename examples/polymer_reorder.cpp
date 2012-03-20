@@ -46,6 +46,15 @@
 #include <opm/core/linalg/LinearSolverIstl.hpp>
 #endif
 
+#include <opm/core/transport/transport_source.h>
+#include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
+#include <opm/core/transport/NormSupport.hpp>
+#include <opm/core/transport/ImplicitAssembly.hpp>
+#include <opm/core/transport/ImplicitTransport.hpp>
+#include <opm/core/transport/JacobianSystem.hpp>
+#include <opm/core/transport/CSRMatrixBlockAssembler.hpp>
+#include <opm/core/transport/SinglePointUpwindTwoPhase.hpp>
+
 #include <opm/core/ColumnExtract.hpp>
 
 #include <opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp>
@@ -194,37 +203,11 @@ public:
     void mobility(int cell, const Sat& s, const PolyC& c,
                   Mob& mob, DMobDs& dmobds, DMobWatDc& dmobwatdc) const
     {
-	double c_max_limit = polyprops_.cMax();
-	double cbar = c/c_max_limit;
-        const double* mu = props_.viscosity();
-	double mu_w = mu[0];
-	double mu_m_dc; // derivative of mu_m with respect to c
-	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
-	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
-	double omega = polyprops_.mixParam();
- 	double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
-	double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
-	double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
-	double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
-	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
-	double mu_w_eff_dc = -1./c_max_limit*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e)
-	    + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc
-	    + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
-	double visc_eff[2] = { mu_w_eff, mu[1] };
-
-	props_.relperm(1, &s[0], &cell, &mob[0], &dmobds[0]);
-	dmobwatdc = - mob[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff);
-
-	mob[0] /= visc_eff[0];
-	mob[1] /= visc_eff[1];
-
-        dmobds[0*2 + 0] /= visc_eff[0];
-        dmobds[0*2 + 1] /= visc_eff[1];
-        dmobds[1*2 + 0] /= visc_eff[0];
-        dmobds[1*2 + 1] /= visc_eff[1];
-
-
+        const double* visc = props_.viscosity();
+        double relperm[2];
+        double drelpermds[4];
+	props_.relperm(1, &s[0], &cell, relperm, drelpermds);
+        polyprops_.effectiveMobilities(c, visc, relperm, drelpermds, mob, dmobds, dmobwatdc);
     }
 
     template <class Sat,
@@ -260,28 +243,8 @@ public:
     void mc(const PolyC& c,  Mc& mc,
             DMcDc& dmcdc) const
     {
-	double c_max_limit = polyprops_.cMax();
-	double cbar = c/c_max_limit;
-        const double* mu = props_.viscosity();
-	double mu_w = mu[0];
-	double mu_m_dc; // derivative of mu_m with respect to c
-	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
-	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
-	double omega = polyprops_.mixParam();
-	double mu_m_omega = std::pow(mu_m, omega);
-	double mu_m_omega_minus1 = std::pow(mu_m, omega-1);
-	double mu_w_omega = std::pow(mu_w, 1.0 - omega);
-	double mu_w_e   = mu_m_omega*mu_w_omega;
-	double mu_w_e_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_w_omega;
-	double mu_p_omega = std::pow(mu_p, 1.0 - omega);
-	double mu_p_eff = mu_m_omega*mu_p_omega;
-	double mu_p_eff_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_p_omega;
-	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
-	double inv_mu_w_eff_dc = -mu_w_e_dc/(mu_w_e*mu_w_e)*(1. - cbar) - mu_p_eff_dc/(mu_p_eff*mu_p_eff)*cbar + (1./mu_p_eff - 1./mu_w_e);
-	double mu_w_eff_dc = -mu_w_eff*mu_w_eff*inv_mu_w_eff_dc;
- 	mc = c*mu_w_eff/mu_p_eff;
-	dmcdc = mu_w_eff/mu_p_eff + c*mu_w_eff_dc/mu_p_eff - c*mu_p_eff_dc*mu_w_eff/(mu_p_eff*mu_p_eff);
+        const double* visc = props_.viscosity();
+        polyprops_.computeMc(c, visc, mc, dmcdc);
     }
 
 private:
@@ -293,6 +256,28 @@ private:
 
 typedef PolymerFluid2pWrappingProps TwophaseFluidPolymer;
 typedef Opm::SinglePointUpwindTwoPhasePolymer<TwophaseFluidPolymer> NewtonPolymerTransportModel;
+
+using namespace Opm::ImplicitTransportDefault;
+
+typedef NewtonVectorCollection< ::std::vector<double> >      NVecColl;
+typedef JacobianSystem        < struct CSRMatrix, NVecColl > JacSys;
+
+template <class Vector>
+class MaxNorm {
+public:
+    static double
+    norm(const Vector& v) {
+        return AccumulationNorm <Vector, MaxAbs>::norm(v);
+    }
+};
+
+typedef Opm::ImplicitTransport<NewtonPolymerTransportModel,
+        JacSys        ,
+        MaxNorm       ,
+        VectorNegater ,
+        VectorZero    ,
+        MatrixZero    ,
+        VectorAssign  > TransportSolver;
 
 
 class ReservoirState
@@ -485,6 +470,7 @@ main(int argc, char** argv)
 
     // Reading various control parameters.
     const bool guess_old_solution = param.getDefault("guess_old_solution", false);
+    const bool use_reorder = param.getDefault("use_reorder", true);
     const bool output = param.getDefault("output", true);
     std::string output_dir;
     int output_interval = 1;
@@ -602,6 +588,21 @@ main(int argc, char** argv)
         }
     }
 
+    bool use_segregation_split = false;
+    bool use_column_solver = false;
+    bool use_gauss_seidel_gravity = false;
+    if (use_gravity && use_reorder) {
+        use_segregation_split = param.getDefault("use_segregation_split", use_segregation_split);
+        if (use_segregation_split) {
+            use_column_solver = param.getDefault("use_column_solver", use_column_solver);
+            if (use_column_solver) {
+                // use_gauss_seidel_gravity is not implemented for polymer.
+                use_gauss_seidel_gravity = param.getDefault("use_gauss_seidel_gravity", use_gauss_seidel_gravity);
+            }
+        }
+    }
+
+
     // Solvers init.
     // Pressure solver.
 #ifdef EXPERIMENT_ISTL
@@ -623,17 +624,27 @@ main(int argc, char** argv)
     } else {
         THROW("Unknown method: " << method_string);
     }
-    Opm::TransportModelPolymer tmodel(*grid->c_grid(), props->porosity(), &porevol[0], *props, polyprop,
+
+    Opm::TransportModelPolymer reorder_model(*grid->c_grid(), props->porosity(), &porevol[0], *props, polyprop,
                                       method, nltol, maxit);
+
+    if (use_gauss_seidel_gravity) {
+        // // Not yet implemented for polymer
+        // reorder_model.initGravity(grav);
+    }
+
 
     // Column-based gravity segregation solver.
     NewtonPolymerTransportModel  model  (fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
     if (use_gravity) {
         model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
     }
+    TransportSolver tsolver(model);
     typedef std::map<int, std::vector<int> > ColMap;
     ColMap columns;
-    Opm::extractColumn(*grid->c_grid(), columns);
+    if (use_column_solver) {
+        Opm::extractColumn(*grid->c_grid(), columns);
+    }
 
     Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nltol, maxit);
 
@@ -752,6 +763,18 @@ main(int argc, char** argv)
             THROW("==== Scenario " << scenario << " is unknown.");
         }
     }
+    TransportSource* tsrc = create_transport_source(2, 2);
+    double ssrc[]   = { 1.0, 0.0 };
+    double ssink[]  = { 0.0, 1.0 };
+    double zdummy[] = { 0.0, 0.0 };
+    for (int cell = 0; cell < num_cells; ++cell) {
+        if (src[cell] > 0.0) {
+            append_transport_source(cell, 2, 0, src[cell], ssrc, zdummy, tsrc);
+        } else if (src[cell] < 0.0) {
+            append_transport_source(cell, 2, 0, src[cell], ssink, zdummy, tsrc);
+        }
+    }
+
     std::vector<double> reorder_src = src;
 
     // Dirichlet boundary conditions.
@@ -760,6 +783,20 @@ main(int argc, char** argv)
         double pside_pressure = param.get<double>("pside_pressure");
         bcs.pressureSide(*grid->c_grid(), Opm::FlowBCManager::Side(pside), pside_pressure);
     }
+
+
+    // // // Not implemented for polymer.
+    // // Control init.
+    // Opm::ImplicitTransportDetails::NRReport  rpt;
+    // Opm::ImplicitTransportDetails::NRControl ctrl;
+    // if (!use_reorder || use_segregation_split) {
+    //     ctrl.max_it = param.getDefault("max_it", 20);
+    //     ctrl.verbosity = param.getDefault("verbosity", 0);
+    //     ctrl.max_it_ls = param.getDefault("max_it_ls", 5);
+    // }
+    // // Linear solver init.
+    // using Opm::ImplicitTransportLinAlgSupport::CSRMatrixUmfpackSolver;
+    // CSRMatrixUmfpackSolver linsolve;
 
     // The allcells vector is used in calls to computeTotalMobility()
     // and computeTotalMobilityOmega().
@@ -829,7 +866,18 @@ main(int argc, char** argv)
         ptime += pt;
 
         // Process transport sources (to include bdy terms).
-        Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0, reorder_src);
+        if (use_reorder) {
+            Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0, reorder_src);
+        } else {
+            clear_transport_source(tsrc);
+            for (int cell = 0; cell < num_cells; ++cell) {
+                if (src[cell] > 0.0) {
+                    append_transport_source(cell, 2, 0, src[cell], ssrc, zdummy, tsrc);
+                } else if (src[cell] < 0.0) {
+                    append_transport_source(cell, 2, 0, src[cell], ssink, zdummy, tsrc);
+                }
+            }
+        }
 
         // Find inflow rate.
         const double current_time = simtimer.currentTime();
@@ -843,14 +891,35 @@ main(int argc, char** argv)
 
         // Solve transport using reorder.
         transport_timer.start();
-        Opm::toWaterSat(state.saturation(), reorder_sat);
-        tmodel.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
+        if (use_reorder) {
+            Opm::toWaterSat(state.saturation(), reorder_sat);
+            reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
                      &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
         Opm::toBothSat(reorder_sat, state.saturation());
-
-        // use segragation splitting and column solver
-        if (use_gravity) {
-            colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration());
+        Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
+        if (use_segregation_split) {
+            if (use_column_solver) {
+                if (use_gauss_seidel_gravity) {
+                    // // Not implemented for polymer
+                    // reorder_model.solveGravity(columns, simtimer.currentStepLength(), reorder_sat);
+                    // Opm::toBothSat(reorder_sat, state.saturation());
+                } else {
+                    colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration());
+                }
+            } else {
+                // // Not implemented for polymer
+                // std::vector<double> fluxes = state.faceflux();
+                // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
+                // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
+                // std::cout << rpt;
+                // state.faceflux() = fluxes;
+            }
+            }
+        } else {
+            // // Not implemented for polymer
+            // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
+            // std::cout << rpt;
+            // Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
         }
 
         transport_timer.stop();
