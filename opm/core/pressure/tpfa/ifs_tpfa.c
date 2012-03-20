@@ -189,6 +189,94 @@ compute_grav_term(struct UnstructuredGrid *G, const double *gpress,
 
 
 /* ---------------------------------------------------------------------- */
+static void
+assemble_bhp_well(int nc, int w,
+                  const struct Wells   *W  ,
+                  const double         *mt ,
+                  const double         *wdp,
+                  struct ifs_tpfa_data *h  )
+/* ---------------------------------------------------------------------- */
+{
+    int    c, i, wdof, p;
+    size_t jc, jw;
+    double trans, bhp;
+
+    struct WellControls *ctrls;
+
+    ctrls = W->ctrls[ w ];
+    wdof  = nc + w;
+    bhp   = ctrls->target[ ctrls->current ];
+
+    for (i = W->well_connpos[w]; i < W->well_connpos[w + 1]; i++) {
+
+        c     = W->well_cells  [ i ];
+        trans = mt[ c ] * W->WI[ i ];
+
+        jc = csrmatrix_elm_index(c   , c   , h->A);
+        jw = csrmatrix_elm_index(wdof, wdof, h->A);
+
+        /* c<->c diagonal contribution from well */
+        h->A->sa[ jc   ] += trans;
+        h->b    [ c    ] += trans * (bhp + wdp[ i ]);
+
+        /* w<->w diagonal contribution from well, trivial eqn. */
+        h->A->sa[ jw   ] += trans;
+        h->b    [ wdof ] += trans * bhp;
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+assemble_rate_well(int nc, int w,
+                   const struct Wells   *W  ,
+                   const double         *mt ,
+                   const double         *wdp,
+                   struct ifs_tpfa_data *h  )
+/* ---------------------------------------------------------------------- */
+{
+}
+
+
+/* ---------------------------------------------------------------------- */
+static int
+assemble_well_contrib(int                   nc ,
+                      const struct Wells   *W  ,
+                      const double         *mt ,
+                      const double         *wdp,
+                      struct ifs_tpfa_data *h  )
+/* ---------------------------------------------------------------------- */
+{
+    int w;
+    int are_rate;
+
+    struct WellControls *ctrls;
+
+    are_rate = 1;
+
+    for (w = 0; w < W->number_of_wells; w++) {
+        ctrls = W->ctrls[ w ];
+
+        assert (ctrls->current >= 0         );
+        assert (ctrls->current <  ctrls->num);
+
+        switch (ctrls->type[ ctrls->current ]) {
+        case BHP:
+            are_rate = 0;
+            assemble_bhp_well (nc, w, W, mt, wdp, h);
+            break;
+
+        case RATE:
+            assemble_rate_well(nc, w, W, mt, wdp, h);
+            break;
+        }
+    }
+
+    return are_rate;
+}
+
+
+/* ---------------------------------------------------------------------- */
 static int
 assemble_bc_contrib(struct UnstructuredGrid             *G    ,
                     const struct FlowBoundaryConditions *bc   ,
@@ -355,7 +443,7 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
 {
     int c1, c2, c, i, f, j1, j2;
 
-    int is_neumann;
+    int res_is_neumann, wells_are_rate;
 
     double s;
 
@@ -387,20 +475,37 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
         }
     }
 
-    is_neumann = 1;
+
+    /* Assemble contributions from driving forces other than gravity */
+    res_is_neumann = 1;
+    wells_are_rate = 1;
     if (F != NULL) {
+        if ((F->W != NULL) && (F->totmob != NULL) && (F->wdp != NULL)) {
+            /* Contributions from wells */
+
+            /* Ensure modicum of internal consistency. */
+            assert (h->A->m ==
+                    (size_t) G->number_of_cells +
+                    (size_t) F->W->number_of_wells);
+
+            wells_are_rate = assemble_well_contrib(G->number_of_cells, F->W,
+                                                   F->totmob, F->wdp, h);
+        }
+
         if (F->bc != NULL) {
-            is_neumann = assemble_bc_contrib(G, F->bc, trans, h);
+            /* Contributions from boundary conditions */
+            res_is_neumann = assemble_bc_contrib(G, F->bc, trans, h);
         }
 
         if (F->src != NULL) {
+            /* Contributions from explicit source terms. */
             for (c = 0; c < G->number_of_cells; c++) {
                 h->b[c] += F->src[c];
             }
         }
     }
 
-    if (is_neumann) {
+    if (res_is_neumann && wells_are_rate) {
         /* Remove zero eigenvalue associated to constant pressure */
         h->A->sa[0] *= 2;
     }
