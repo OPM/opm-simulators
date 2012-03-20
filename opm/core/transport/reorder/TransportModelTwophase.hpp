@@ -35,12 +35,12 @@ namespace Opm
     {
     public:
 	TransportModelTwophase(const UnstructuredGrid& grid,
-			       const double* porevolume,
 			       const Opm::IncompPropertiesInterface& props,
 			       const double tol,
 			       const int maxit);
 
 	void solve(const double* darcyflux,
+                   const double* porevolume,
 		   const double* source,
 		   const double dt,
 		   double* saturation);
@@ -54,12 +54,12 @@ namespace Opm
                                     const double* gravflux);
         void solveGravityColumn(const std::vector<int>& cells);
         void solveGravity(const std::map<int, std::vector<int> >& columns,
+                          const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
 
     private:
 	const UnstructuredGrid& grid_;
-	const double* porevolume_;  // one volume per cell
 	const IncompPropertiesInterface& props_;
 	const double* visc_;
 	std::vector<double> smin_;
@@ -68,6 +68,7 @@ namespace Opm
 	double maxit_;
 
 	const double* darcyflux_;   // one flux per grid face
+	const double* porevolume_;  // one volume per cell
 	const double* source_;      // one source per cell
 	double dt_;
 	double* saturation_;        // one per cell

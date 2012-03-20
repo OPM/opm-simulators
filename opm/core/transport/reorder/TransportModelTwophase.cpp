@@ -38,12 +38,10 @@ namespace Opm
 
 
     TransportModelTwophase::TransportModelTwophase(const UnstructuredGrid& grid,
-						   const double* porevolume,
 						   const Opm::IncompPropertiesInterface& props,
 						   const double tol,
 						   const int maxit)
 	: grid_(grid),
-	  porevolume_(porevolume),
 	  props_(props),
 	  tol_(tol),
 	  maxit_(maxit),
@@ -75,11 +73,13 @@ namespace Opm
     }
 
     void TransportModelTwophase::solve(const double* darcyflux,
+                                       const double* porevolume,
 				       const double* source,
 				       const double dt,
 				       double* saturation)
     {
 	darcyflux_ = darcyflux;
+        porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
 	saturation_ = saturation;
@@ -112,8 +112,9 @@ namespace Opm
     {
 	int cell;
 	double s0;
-	double influx;  // sum_j min(v_ij, 0)*f(s_j)
-	double outflux; // sum_j max(v_ij, 0)
+	double influx;    // sum_j min(v_ij, 0)*f(s_j) + q_w
+	double outflux;   // sum_j max(v_ij, 0) - q
+        double comp_term; // q - sum_j v_ij
 	double dtpv;    // dt/pv(i)
 	const TransportModelTwophase& tm;
 	explicit Residual(const TransportModelTwophase& tmodel, int cell_index)
@@ -121,10 +122,11 @@ namespace Opm
 	{
 	    cell    = cell_index;
 	    s0      = tm.saturation_[cell];
-            double dflux       = -tm.source_[cell];
-            bool src_is_inflow = dflux < 0.0;
-	    influx  =  src_is_inflow ? dflux : 0.0;
-	    outflux = !src_is_inflow ? dflux : 0.0;
+            double src_flux       = -tm.source_[cell];
+            bool src_is_inflow = src_flux < 0.0;
+	    influx  =  src_is_inflow ? src_flux : 0.0;
+	    outflux = !src_is_inflow ? src_flux : 0.0;
+            comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
 	    dtpv    = tm.dt_/tm.porevolume_[cell];
 
 	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
@@ -146,12 +148,13 @@ namespace Opm
 		    } else {
 			outflux += flux;
 		    }
+                    comp_term -= flux;
 		}
 	    }
 	}
 	double operator()(double s) const
 	{
-	    return s - s0 +  dtpv*(outflux*tm.fracFlow(s, cell) + influx);
+	    return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx) + dtpv*s*comp_term;
 	}
     };
 
@@ -597,6 +600,7 @@ namespace Opm
 
 
     void TransportModelTwophase::solveGravity(const std::map<int, std::vector<int> >& columns,
+                                              const double* porevolume,
                                               const double dt,
                                               std::vector<double>& saturation)
     {
@@ -617,6 +621,7 @@ namespace Opm
         }
 
         // Set up other variables.
+        porevolume_ = porevolume;
         dt_ = dt;
         saturation_ = &saturation[0];
 
