@@ -187,8 +187,9 @@ namespace Opm
             for (int c = 0; c < gg->number_of_cells; ++c) {
                 // Find diagonal
                 size_t j = csrmatrix_elm_index(c, c, h_->A);
-                h_->A->sa[j] += porevol[c]*rock_comp[c]/dt;
-                h_->b[c] += porevol[c]*rock_comp[c]*pressure[c]/dt;
+                double d = porevol[c] * rock_comp[c] / dt;
+                h_->A->sa[j] += d;
+                h_->b[c]     += d * pressure[c];
             }
         }
 
