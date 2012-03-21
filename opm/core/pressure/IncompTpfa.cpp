@@ -121,7 +121,7 @@ namespace Opm
 	pressure.resize(grid_.number_of_cells);
 	faceflux.resize(grid_.number_of_faces);
 
-        ifs_tpfa_solution soln = { NULL, NULL };
+        ifs_tpfa_solution soln = { NULL, NULL, NULL, NULL };
         soln.cell_press = &pressure[0];
         soln.face_flux  = &faceflux[0];
 
@@ -204,7 +204,7 @@ namespace Opm
 	pressure.resize(grid_.number_of_cells);
 	faceflux.resize(grid_.number_of_faces);
 
-        ifs_tpfa_solution soln = { NULL, NULL };
+        ifs_tpfa_solution soln = { NULL, NULL, NULL, NULL };
         soln.cell_press = &pressure[0];
         soln.face_flux  = &faceflux[0];
 

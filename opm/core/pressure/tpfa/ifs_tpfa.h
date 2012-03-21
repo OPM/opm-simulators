@@ -42,6 +42,9 @@ struct ifs_tpfa_data {
 struct ifs_tpfa_solution {
     double *cell_press;
     double *face_flux ;
+
+    double *well_press;         /* BHP */
+    double *well_flux ;         /* Perforation (total) fluxes */
 };
 
 struct ifs_tpfa_forces {
