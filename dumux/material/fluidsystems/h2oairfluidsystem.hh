@@ -80,9 +80,6 @@ public:
     static constexpr int lPhaseIdx = 0; // index of the liquid phase
     static constexpr int gPhaseIdx = 1; // index of the gas phase
 
-    static constexpr int wPhaseIdx = lPhaseIdx; // index of the wetting phase
-    static constexpr int nPhaseIdx = gPhaseIdx; // index of the non-wetting phase
-
     /*!
      * \brief Return the human readable name of a phase
      *
