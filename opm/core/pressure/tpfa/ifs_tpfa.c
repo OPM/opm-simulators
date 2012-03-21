@@ -236,7 +236,7 @@ assemble_rate_well(int nc, int w,
 /* ---------------------------------------------------------------------- */
 {
     int    c, i, wdof;
-    size_t jc, jw;
+    size_t jcc, jcw, jwc, jww;
     double trans, resv;
 
     struct WellControls *ctrls;
@@ -245,25 +245,27 @@ assemble_rate_well(int nc, int w,
     wdof  = nc + w;
     resv  = ctrls->target[ ctrls->current ];
 
+    jww   = csrmatrix_elm_index(wdof, wdof, h->A);
+
     for (i = W->well_connpos[w]; i < W->well_connpos[w + 1]; i++) {
 
-        c     = W->well_cells  [ i ];
+        c   = W->well_cells[ i ];
+
+        jcc = csrmatrix_elm_index(c   , c   , h->A);
+        jcw = csrmatrix_elm_index(c   , wdof, h->A);
+        jwc = csrmatrix_elm_index(wdof, c   , h->A);
+
+        /* Connection transmissibility */
         trans = mt[ c ] * W->WI[ i ];
 
         /* c->w connection */
-        jc = csrmatrix_elm_index(c, c   , h->A);
-        jw = csrmatrix_elm_index(c, wdof, h->A);
-
-        h->A->sa[ jc ] += trans;
-        h->A->sa[ jw ] -= trans;
-        h->b    [ c  ] += trans * wdp[ i ];
+        h->A->sa[ jcc  ] += trans;
+        h->A->sa[ jcw  ] -= trans;
+        h->b    [ c    ] += trans * wdp[ i ];
 
         /* w->c connection */
-        jc = csrmatrix_elm_index(wdof, c   , h->A);
-        jw = csrmatrix_elm_index(wdof, wdof, h->A);
-
-        h->A->sa[ jc   ] -= trans;
-        h->A->sa[ jw   ] += trans;
+        h->A->sa[ jwc  ] -= trans;
+        h->A->sa[ jww  ] += trans;
         h->b    [ wdof ] -= trans * wdp[ i ];
     }
 
