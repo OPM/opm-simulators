@@ -207,13 +207,14 @@ assemble_bhp_well(int nc, int w,
     wdof  = nc + w;
     bhp   = ctrls->target[ ctrls->current ];
 
+    jw    = csrmatrix_elm_index(wdof, wdof, h->A);
+
     for (i = W->well_connpos[w]; i < W->well_connpos[w + 1]; i++) {
 
         c     = W->well_cells  [ i ];
         trans = mt[ c ] * W->WI[ i ];
 
-        jc = csrmatrix_elm_index(c   , c   , h->A);
-        jw = csrmatrix_elm_index(wdof, wdof, h->A);
+        jc = csrmatrix_elm_index(c, c, h->A);
 
         /* c<->c diagonal contribution from well */
         h->A->sa[ jc   ] += trans;
