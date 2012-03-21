@@ -433,6 +433,47 @@ boundary_fluxes(struct UnstructuredGrid             *G     ,
 }
 
 
+/* ---------------------------------------------------------------------- */
+static void
+well_solution(const struct UnstructuredGrid *G   ,
+              const struct ifs_tpfa_forces  *F   ,
+              const struct ifs_tpfa_data    *h   ,
+              struct ifs_tpfa_solution      *soln)
+/* ---------------------------------------------------------------------- */
+{
+    int           c, w, i;
+    double        bhp, dp, trans;
+    const double *mt, *WI, *wdp;
+
+
+    if (soln->well_press != NULL) {
+        /* Extract BHP directly from solution vector */
+        memcpy(soln->well_press, h->x + G->number_of_cells,
+               F->W->number_of_wells * sizeof *soln->well_press);
+    }
+
+    if (soln->well_flux != NULL) {
+        WI  = F->W->WI;
+        mt  = F->totmob;
+        wdp = F->wdp;
+
+        for (w = i = 0; w < F->W->number_of_wells; w++) {
+            bhp = h->x[G->number_of_cells + w];
+
+            for (; i < F->W->well_connpos[ w + 1 ]; i++) {
+
+                c = F->W->well_cells[ i ];
+
+                trans = mt[ c ] * WI[ i ];
+                dp    = bhp + wdp[ i ] - soln->cell_press[ c ];
+
+                soln->well_flux[i] = trans * dp;
+            }
+        }
+    }
+}
+
+
 /* ======================================================================
  * Public interface below separator.
  * ====================================================================== */
@@ -587,6 +628,10 @@ ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
     if (F != NULL) {
         if (F->bc != NULL) {
             boundary_fluxes(G, F->bc, trans, cpress, h, fflux);
+        }
+
+        if (F->W != NULL) {
+            well_solution(G, F, h, soln);
         }
     }
 }
