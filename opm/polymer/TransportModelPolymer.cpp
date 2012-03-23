@@ -38,6 +38,8 @@ public:
     double porosity;
     double dtpv;    // dt/pv(i)
     double dps;
+    double res_factor;
+    double c_max_ads;
     double rhor;
     double ads0;
     int gradient_method;
@@ -197,6 +199,7 @@ namespace Opm
 	const TransportModelPolymer& tm_;
 	const int cell_;
 	const double s0_;
+	const double cmax0_;
 	const double influx_;  // sum_j min(v_ij, 0)*f(s_j)
 	const double outflux_; // sum_j max(v_ij, 0)
 	const double dtpv_;    // dt/pv(i)
@@ -204,6 +207,7 @@ namespace Opm
 	explicit ResidualS(const TransportModelPolymer& tmodel,
 			   const int cell,
 			   const double s0,
+			   const double cmax0,
 			   const double influx,
 			   const double outflux,
 			   const double dtpv,
@@ -211,6 +215,7 @@ namespace Opm
 	    : tm_(tmodel),
 	      cell_(cell),
 	      s0_(s0),
+	      cmax0_(cmax0),
 	      influx_(influx),
 	      outflux_(outflux),
 	      dtpv_(dtpv),
@@ -301,7 +306,7 @@ namespace Opm
 	double operator()(double c) const
 	{
 	    double dps = tm.polyprops_.deadPoreVol();
-	    ResidualS res_s(tm, cell, s0, influx, outflux, dtpv, c);
+	    ResidualS res_s(tm, cell, s0, cmax0, influx, outflux, dtpv, c);
 	    int iters_used;
 	    // Solve for s first.
 	    s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
@@ -341,7 +346,8 @@ namespace Opm
 	dps = tm.polyprops_.deadPoreVol();
 	rhor = tm.polyprops_.rockDensity();
 	ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-
+	res_factor = tm.polyprops_.resFactor();
+	c_max_ads = tm.polyprops_.cMaxAds();
 	double dflux       = -tm.source_[cell];
 	bool src_is_inflow = dflux < 0.0;
 	influx  =  src_is_inflow ? dflux : 0.0;
@@ -843,6 +849,10 @@ namespace Opm
     {
 	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
+	double c_ads = polyprops_.adsorbtion(std::max(c, cmax_[cell]));
+	double c_max_ads = polyprops_.cMaxAds();
+        double res_factor = polyprops_.resFactor();
+        double res_k = 1 + (res_factor - 1)*c_ads/c_max_ads;
 	double mu_w = visc_[0];
 	double mu_m = polyprops_.viscMult(c)*mu_w;
 	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
@@ -855,7 +865,7 @@ namespace Opm
 	double sat[2] = { s, 1.0 - s };
 	double mob[2];
 	props_.relperm(1, sat, &cell, mob, 0);
-	mob[0] *= inv_visc_eff[0];
+	mob[0] *= inv_visc_eff[0]/res_k;
 	mob[1] *= inv_visc_eff[1];
 	return mob[0]/(mob[0] + mob[1]);
     }
@@ -864,6 +874,19 @@ namespace Opm
     {
 	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
+        double c_ads;
+        double c_ads_dc;
+        double c_max = cmax_[cell];
+        if (c < c_max) {
+            c_ads = polyprops_.adsorbtion(c_max);
+            c_ads_dc = 0;
+        } else {
+            c_ads = polyprops_.adsorbtionWithDer(c, &c_ads_dc);
+        }
+	double c_max_ads = polyprops_.cMaxAds();
+        double res_factor = polyprops_.resFactor();
+        double res_k = 1 + (res_factor - 1)*c_ads/c_max_ads;
+        double res_k_dc = (res_factor - 1)*c_ads_dc/c_max_ads;
 	double mu_w = visc_[0];
 	double mu_m_dc; // derivative of mu_m with respect to c
 	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
@@ -886,11 +909,11 @@ namespace Opm
 	double perm[2];
 	double perm_ds[4];
 	props_.relperm(1, sat, &cell, perm, perm_ds);
-	mob[0] = perm[0]/visc_eff[0];
+	mob[0] = perm[0]/visc_eff[0]/res_k;
 	mob[1] = perm[1]/visc_eff[1];
-	mob_ds[0] = perm_ds[0]/visc_eff[0];
+	mob_ds[0] = perm_ds[0]/visc_eff[0]/res_k;
 	mob_ds[1] = perm_ds[1]/visc_eff[1];
-	mob_dc[0] = - perm[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff);
+	mob_dc[0] = - perm[0]*(mu_w_eff_dc/(mu_w_eff*mu_w_eff*res_k) + res_k_dc/(res_k*res_k*mu_w_eff));
 	mob_dc[1] = 0.;
 	der[0] = (mob_ds[0]*mob[1] - mob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
 	der[1] = (mob_dc[0]*mob[1] - mob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));

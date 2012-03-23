@@ -41,6 +41,8 @@ namespace Opm
                           double mix_param,
                           double rock_density,
                           double dead_pore_vol,
+                          double res_factor,
+                          double c_max_ads,
                           const std::vector<double>& c_vals_visc,
                           const std::vector<double>& visc_mult_vals,
                           const std::vector<double>& c_vals_ads,
@@ -49,6 +51,8 @@ namespace Opm
               mix_param_(mix_param),
               rock_density_(rock_density),
               dead_pore_vol_(dead_pore_vol),
+              res_factor_(res_factor),
+              c_max_ads_(c_max_ads),
               c_vals_visc_(c_vals_visc),
               visc_mult_vals_(visc_mult_vals),
               c_vals_ads_(c_vals_ads),
@@ -65,6 +69,8 @@ namespace Opm
                  double mix_param,
                  double rock_density,
                  double dead_pore_vol,
+                 double res_factor,
+                 double c_max_ads,
                  const std::vector<double>& c_vals_visc,
                  const std::vector<double>& visc_mult_vals,
                  const std::vector<double>& c_vals_ads,
@@ -74,6 +80,8 @@ namespace Opm
             mix_param_ = mix_param;
             rock_density_ = rock_density;
             dead_pore_vol_ = dead_pore_vol;
+            res_factor_ = res_factor;
+            c_max_ads_ = c_max_ads;
             c_vals_visc_ = c_vals_visc;
             visc_mult_vals_ = visc_mult_vals;
             c_vals_ads_ = c_vals_ads;
@@ -92,7 +100,9 @@ namespace Opm
             // We assume NTSFUN=1
             const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
             dead_pore_vol_ = plyrock[0];
+            res_factor_ = plyrock[2];
             rock_density_ = plyrock[3];
+            c_max_ads_ = plyrock[5];
 
             // We assume NTPVT=1
             const PLYVISC& plyvisc = gridparser.getPLYVISC();
@@ -124,6 +134,16 @@ namespace Opm
         double deadPoreVol() const
         {
             return dead_pore_vol_;
+        }
+
+        double resFactor() const
+        {
+            return res_factor_;
+        }
+
+        double cMaxAds() const
+        {
+            return c_max_ads_;
         }
 
         double viscMult(double c) const
@@ -233,6 +253,8 @@ namespace Opm
         double mix_param_;
         double rock_density_;
         double dead_pore_vol_;
+        double res_factor_;
+        double c_max_ads_;
         std::vector<double> c_vals_visc_;
         std::vector<double> visc_mult_vals_;
         std::vector<double> c_vals_ads_;
