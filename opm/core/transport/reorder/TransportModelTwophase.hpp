@@ -53,7 +53,7 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         void solveGravityColumn(const std::vector<int>& cells);
-        void solveGravity(const std::map<int, std::vector<int> >& columns,
+        void solveGravity(const std::pair<std::vector<int>, std::vector<std::vector<int> > >& columns,
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);

@@ -599,7 +599,7 @@ namespace Opm
 
 
 
-    void TransportModelTwophase::solveGravity(const std::map<int, std::vector<int> >& columns,
+    void TransportModelTwophase::solveGravity(const std::pair<std::vector<int>, std::vector<std::vector<int> > >& columns,
                                               const double* porevolume,
                                               const double dt,
                                               std::vector<double>& saturation)
@@ -626,10 +626,10 @@ namespace Opm
         saturation_ = &saturation[0];
 
         // Solve on all columns.
-        std::map<int, std::vector<int> >::const_iterator it;
-        for (it = columns.begin(); it != columns.end(); ++it) {
+
+        for (int i = 0; i < columns.second.size(); i++) {
             // std::cout << "==== new column" << std::endl;
-            solveGravityColumn(it->second);
+            solveGravityColumn(columns.second[i]);
         }
     }
 
