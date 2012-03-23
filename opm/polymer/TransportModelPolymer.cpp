@@ -292,7 +292,7 @@ namespace Opm
 	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	    double ads = tm.polyprops_.adsorbtion(std::max(c_arg, cmax0));
 	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx);
-	    res_c = (s_arg - dps)*c_arg - (s0 - dps)*c0
+	    res_c = s_arg*(1 - dps)*c_arg - (s0 - dps)*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer);
 
@@ -311,7 +311,7 @@ namespace Opm
 	    double rhor = tm.polyprops_.rockDensity();
 	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	    double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
-	    double res = (s - dps)*c - (s0 - dps)*c0
+	    double res = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer);
 #ifdef EXTRA_DEBUG_OUTPUT
@@ -384,7 +384,7 @@ namespace Opm
 	double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
 	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	res[1] = (s - dps)*c - (s0 - dps)*c0
+	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 	    + dtpv*(outflux*ff*mc + influx_polymer);
     }
@@ -400,7 +400,7 @@ namespace Opm
 	double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
 	double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
 	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	res[1] = (s - dps)*c - (s0 - dps)*c0
+	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 	    + dtpv*(outflux*ff*mc + influx_polymer);
     }
@@ -421,7 +421,7 @@ namespace Opm
 	double ff = tm.fracFlow(s, c, cell);
 	double mc = tm.computeMc(c);
 	double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
-	return (s - dps)*c - (s0 - dps)*c0
+	return (1 - dps)*s*c - (1 - dps)*s0*c0
 	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 	    + dtpv*(outflux*ff*mc + influx_polymer);
     }
@@ -459,7 +459,7 @@ namespace Opm
 		ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
 	    }
 	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	    res[1] = (s - dps)*c - (s0 - dps)*c0
+	    res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer);
 	    gradient[0] = 1 + dtpv*outflux*ff_ds_dc[0];
@@ -503,11 +503,11 @@ namespace Opm
 		ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
 	    }
 	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	    res[1] = (s - dps)*c - (s0 - dps)*c0
+	    res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer);
-	    gradient[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
-	    gradient[1] = s - dps + rhor*((1.0 - porosity)/porosity)*ads_dc
+	    gradient[0] = (1 - dps)*c + dtpv*outflux*(ff_ds_dc[0])*mc;
+	    gradient[1] = (1 - dps)*s + rhor*((1.0 - porosity)/porosity)*ads_dc
 		+ dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
 	}
     }
@@ -552,8 +552,8 @@ namespace Opm
 	    }
 	    res_s_ds_dc[0] = 1 + dtpv*outflux*ff_ds_dc[0];
 	    res_s_ds_dc[1] = dtpv*outflux*ff_ds_dc[1];
-	    res_c_ds_dc[0] = c + dtpv*outflux*(ff_ds_dc[0])*mc;
-	    res_c_ds_dc[1] = s - dps + rhor*((1.0 - porosity)/porosity)*ads_dc
+	    res_c_ds_dc[0] = (1 - dps)*c + dtpv*outflux*(ff_ds_dc[0])*mc;
+	    res_c_ds_dc[1] = (1 - dps)*s + rhor*((1.0 - porosity)/porosity)*ads_dc
 		+ dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
 	}
     }
