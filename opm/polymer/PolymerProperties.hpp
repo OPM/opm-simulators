@@ -43,16 +43,19 @@ namespace Opm
                           double dead_pore_vol,
                           double res_factor,
                           double c_max_ads,
+                          int ads_index,
                           const std::vector<double>& c_vals_visc,
                           const std::vector<double>& visc_mult_vals,
                           const std::vector<double>& c_vals_ads,
-                          const std::vector<double>& ads_vals)
+                          const std::vector<double>& ads_vals
+                          )
             : c_max_(c_max),
               mix_param_(mix_param),
               rock_density_(rock_density),
               dead_pore_vol_(dead_pore_vol),
               res_factor_(res_factor),
               c_max_ads_(c_max_ads),
+              ads_index_(ads_index),
               c_vals_visc_(c_vals_visc),
               visc_mult_vals_(visc_mult_vals),
               c_vals_ads_(c_vals_ads),
@@ -71,10 +74,12 @@ namespace Opm
                  double dead_pore_vol,
                  double res_factor,
                  double c_max_ads,
+                 int ads_index,
                  const std::vector<double>& c_vals_visc,
                  const std::vector<double>& visc_mult_vals,
                  const std::vector<double>& c_vals_ads,
-                 const std::vector<double>& ads_vals)
+                 const std::vector<double>& ads_vals
+                 )
         {
             c_max_ = c_max;
             mix_param_ = mix_param;
@@ -86,6 +91,7 @@ namespace Opm
             visc_mult_vals_ = visc_mult_vals;
             c_vals_ads_ = c_vals_ads;
             ads_vals_ = ads_vals;
+            ads_index_ = ads_index;
         }
 
         void readFromDeck(const EclipseGridParser& gridparser)
@@ -102,6 +108,7 @@ namespace Opm
             dead_pore_vol_ = plyrock[0];
             res_factor_ = plyrock[2];
             rock_density_ = plyrock[3];
+            ads_index_ = plyrock[4];
             c_max_ads_ = plyrock[5];
 
             // We assume NTPVT=1
@@ -146,6 +153,11 @@ namespace Opm
             return c_max_ads_;
         }
 
+        int adsIndex() const
+        {
+            return ads_index_;
+        }
+
         double viscMult(double c) const
         {
             return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
@@ -157,15 +169,42 @@ namespace Opm
             return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
         }
 
-        double adsorbtion(double c) const
+        double simpleAdsorbtion(double c) const
         {
             return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
         }
 
-        double adsorbtionWithDer(double c, double* der) const
+        double simpleAdsorbtionWithDer(double c, double* der) const
         {
             *der = Opm::linearInterpolationDerivative(c_vals_ads_, ads_vals_, c);
             return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
+        }
+
+        double adsorbtion(double c, double cmax) const
+        {
+            if (ads_index_ == 1) {
+                return simpleAdsorbtion(c);
+            } else if (ads_index_ == 2) {
+                return simpleAdsorbtion(std::max(c, cmax));
+            } else {
+                THROW("Invalid Adsoption index");
+            }
+        }
+
+        double adsorbtionWithDer(double c, double cmax, double* der) const
+        {
+            if (ads_index_ == 1) {
+                return simpleAdsorbtionWithDer(c, der);
+            } else if (ads_index_ == 2) {
+                if (c < cmax) {
+                    *der = 0;
+                    return simpleAdsorbtion(cmax);
+                } else {
+                    return simpleAdsorbtionWithDer(c, der);
+                }
+            } else {
+                THROW("Invalid Adsoption index");
+            }
         }
 
 
@@ -238,6 +277,7 @@ namespace Opm
         double dead_pore_vol_;
         double res_factor_;
         double c_max_ads_;
+        int ads_index_;
         std::vector<double> c_vals_visc_;
         std::vector<double> visc_mult_vals_;
         std::vector<double> c_vals_ads_;

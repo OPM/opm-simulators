@@ -294,8 +294,8 @@ namespace Opm
 	    ff = tm.fracFlow(s_arg, c_arg, cell);
 	    mc = tm.computeMc(c_arg);
 	    double rhor = tm.polyprops_.rockDensity();
-	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	    double ads = tm.polyprops_.adsorbtion(std::max(c_arg, cmax0));
+	    double ads0 = tm.polyprops_.adsorbtion(c0, cmax0);
+	    double ads = tm.polyprops_.adsorbtion(c_arg, cmax0);
 	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx);
 	    res_c = s_arg*(1 - dps)*c_arg - (s0 - dps)*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
@@ -314,8 +314,8 @@ namespace Opm
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
 	    double rhor = tm.polyprops_.rockDensity();
-	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	    double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+	    double ads0 = tm.polyprops_.adsorbtion(c0, cmax0);
+	    double ads = tm.polyprops_.adsorbtion(c, cmax0);
 	    double res = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer);
@@ -345,7 +345,7 @@ namespace Opm
 	cmax0   = tm.cmax_[cell];
 	dps = tm.polyprops_.deadPoreVol();
 	rhor = tm.polyprops_.rockDensity();
-	ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
+	ads0 = tm.polyprops_.adsorbtion(c0, cmax0);
 	res_factor = tm.polyprops_.resFactor();
 	c_max_ads = tm.polyprops_.cMaxAds();
 	double dflux       = -tm.source_[cell];
@@ -387,8 +387,8 @@ namespace Opm
 	double mc = tm.computeMc(c);
 	double dps = tm.polyprops_.deadPoreVol();
 	double rhor = tm.polyprops_.rockDensity();
-	double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+	double ads0 = tm.polyprops_.adsorbtion(c0, cmax0);
+	double ads = tm.polyprops_.adsorbtion(c, cmax0);
 	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
 	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
@@ -403,8 +403,8 @@ namespace Opm
 	mc = tm.computeMc(c);
 	double dps = tm.polyprops_.deadPoreVol();
 	double rhor = tm.polyprops_.rockDensity();
-	double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+	double ads0 = tm.polyprops_.adsorbtion(c0, cmax0);
+	double ads = tm.polyprops_.adsorbtion(c, cmax0);
 	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
 	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
@@ -426,7 +426,7 @@ namespace Opm
 	double c = x[1];
 	double ff = tm.fracFlow(s, c, cell);
 	double mc = tm.computeMc(c);
-	double ads = tm.polyprops_.adsorbtion(std::max(c, cmax0));
+	double ads = tm.polyprops_.adsorbtion(c, cmax0);
 	return (1 - dps)*s*c - (1 - dps)*s0*c0
 	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
 	    + dtpv*(outflux*ff*mc + influx_polymer);
@@ -456,14 +456,8 @@ namespace Opm
 	    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
 	    double mc_dc;
 	    double mc = tm.computeMcWithDer(c, &mc_dc);
-	    double ads;
 	    double ads_dc;
-	    if (c < cmax0) {
-		ads = tm.polyprops_.adsorbtion(cmax0);
-		ads_dc = 0;
-	    } else {
-		ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
-	    }
+            double ads = tm.polyprops_.adsorbtionWithDer(c, cmax0, &ads_dc);
 	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
 	    res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
@@ -499,15 +493,9 @@ namespace Opm
 	    double mc = tm.computeMcWithDer(c, &mc_dc);
 	    double dps = tm.polyprops_.deadPoreVol();
 	    double rhor = tm.polyprops_.rockDensity();
-	    double ads0 = tm.polyprops_.adsorbtion(std::max(c0, cmax0));
-	    double ads;
+	    double ads0 = tm.polyprops_.adsorbtion(c0, cmax0);
 	    double ads_dc;
-	    if (c < cmax0) {
-		ads = tm.polyprops_.adsorbtion(cmax0);
-		ads_dc = 0;
-	    } else {
-		ads = tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
-	    }
+            double ads = tm.polyprops_.adsorbtionWithDer(c, cmax0, &ads_dc);
 	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
 	    res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
@@ -551,11 +539,7 @@ namespace Opm
 	    double mc_dc;
 	    double mc = tm.computeMcWithDer(c, &mc_dc);
 	    double ads_dc;
-	    if (c < cmax0) {
-		ads_dc = 0;
-	    } else {
-		tm.polyprops_.adsorbtionWithDer(c, &ads_dc);
-	    }
+            tm.polyprops_.adsorbtionWithDer(c, cmax0, &ads_dc);
 	    res_s_ds_dc[0] = 1 + dtpv*outflux*ff_ds_dc[0];
 	    res_s_ds_dc[1] = dtpv*outflux*ff_ds_dc[1];
 	    res_c_ds_dc[0] = (1 - dps)*c + dtpv*outflux*(ff_ds_dc[0])*mc;
@@ -849,7 +833,7 @@ namespace Opm
     {
 	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
-	double c_ads = polyprops_.adsorbtion(std::max(c, cmax_[cell]));
+	double c_ads = polyprops_.adsorbtion(c, cmax_[cell]);
 	double c_max_ads = polyprops_.cMaxAds();
         double res_factor = polyprops_.resFactor();
         double res_k = 1 + (res_factor - 1)*c_ads/c_max_ads;
@@ -874,15 +858,9 @@ namespace Opm
     {
 	double c_max_limit = polyprops_.cMax();
 	double cbar = c/c_max_limit;
-        double c_ads;
         double c_ads_dc;
         double c_max = cmax_[cell];
-        if (c < c_max) {
-            c_ads = polyprops_.adsorbtion(c_max);
-            c_ads_dc = 0;
-        } else {
-            c_ads = polyprops_.adsorbtionWithDer(c, &c_ads_dc);
-        }
+        double c_ads = polyprops_.adsorbtionWithDer(c, c_max, &c_ads_dc);
 	double c_max_ads = polyprops_.cMaxAds();
         double res_factor = polyprops_.resFactor();
         double res_k = 1 + (res_factor - 1)*c_ads/c_max_ads;
