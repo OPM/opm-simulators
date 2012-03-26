@@ -189,19 +189,22 @@ namespace Opm
 
 
     /// @brief Computes total absorbed polymer mass over all grid cells.
+    /// @param[in]  props     fluid and rock properties.
     /// @param[in]  polyprops polymer properties
     /// @param[in]  pv        the pore volume by cell.
     /// @param[in]  cmax      max polymer concentration for cell
     /// @return               total absorbed polymer mass.
-    double computePolymerAdsorbed(const Opm::PolymerProperties& polyprops,
+    double computePolymerAdsorbed(const IncompPropertiesInterface& props,
+                                  const Opm::PolymerProperties& polyprops,
                                   const std::vector<double>& pv,
                                   const std::vector<double>& cmax)
     {
 	const int num_cells = pv.size();
         const double rhor = polyprops.rockDensity();
+        const double* poro = props.porosity();
         double abs_mass = 0.0;
 	for (int cell = 0; cell < num_cells; ++cell) {
-            abs_mass += polyprops.adsorbtion(cmax[cell])*pv[cell]*rhor;
+            abs_mass += polyprops.adsorbtion(cmax[cell])*pv[cell]*((1.0 - poro[cell])/poro[cell])*rhor;
 	}
         return abs_mass;
     }
