@@ -220,7 +220,6 @@ namespace Opm
         }
 
         void computeMc(const double& c,  
-                       const double* visc,
                        double& mc,
                        double& dmcdc) const 
         {
@@ -228,7 +227,7 @@ namespace Opm
             double omega = mix_param_;
             double r = std::pow(viscMult(c_max_), 1 - omega); // viscMult(c_max_)=mu_p/mu_w
             mc = c/(cbar + (1 - cbar)*r);
-            dmdc = r/std::pow(cbar + (1 - cbar)*r, 2);
+            dmcdc = r/std::pow(cbar + (1 - cbar)*r, 2);
         }
 
 
