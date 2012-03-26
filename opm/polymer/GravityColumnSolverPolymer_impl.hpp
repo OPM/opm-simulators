@@ -171,7 +171,7 @@ namespace Opm
     {
 	// This is written only to work with SinglePointUpwindTwoPhase,
 	// not with arbitrary problem models.
-	const int col_size = column_cells.size();
+        int col_size = column_cells.size();
 	StateWithZeroFlux state(s, c); // This holds s by reference.
 
 	// Assemble.
@@ -179,10 +179,11 @@ namespace Opm
         const int ku = 3;
         const int nrow = 2*kl + ku + 1;
         const int N = 2*col_size; // N unknowns: s and c for each cell.
-        const BandMatrixCoeff bmc(N, ku, kl);
-
 	std::vector<double> hm(nrow*N, 0.0); // band matrix with 3 upper and 3 lower diagonals.
 	std::vector<double> rhs(N, 0.0);
+        const BandMatrixCoeff bmc(N, ku, kl);
+
+
 	for (int ci = 0; ci < col_size; ++ci) {
 	    std::vector<double> F(2, 0.);   
 	    std::vector<double> dFd1(4, 0.);
@@ -238,9 +239,9 @@ namespace Opm
 	// Solve.
 	const int num_rhs = 1;
 	int info = 0;
-        int ipiv;
+        std::vector<int> ipiv(N, 0);
 	// Solution will be written to rhs.
-        dgbsv_(&N, &kl, &ku, &num_rhs, &hm[0], &nrow, &ipiv, &rhs[0], &N, &info);
+        dgbsv_(&N, &kl, &ku, &num_rhs, &hm[0], &nrow, &ipiv[0], &rhs[0], &N, &info);
 	if (info != 0) {
 	    THROW("Lapack reported error in dgtsv: " << info);
 	}
