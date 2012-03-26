@@ -245,8 +245,7 @@ public:
     void mc(const PolyC& c,  Mc& mc,
             DMcDc& dmcdc) const
     {
-        const double* visc = props_.viscosity();
-        polyprops_.computeMc(c, visc, mc, dmcdc);
+        polyprops_.computeMc(c, mc, dmcdc);
     }
 
 private:
@@ -745,6 +744,12 @@ main(int argc, char** argv)
                 sat[2*cell] = top ? 1.0 : 0.0;
                 sat[2*cell + 1 ] = 1.0 - sat[2*cell];
             }
+            double flow_per_sec = 0.0*tot_porevol/Opm::unit::day;
+            if (param.has("injection_rate_per_day")) {
+                flow_per_sec = param.get<double>("injection_rate_per_day")/Opm::unit::day;
+            }
+            src[0] = flow_per_sec;
+            src[num_cells - 1] = -flow_per_sec;
             break;
         }
     case 4:
