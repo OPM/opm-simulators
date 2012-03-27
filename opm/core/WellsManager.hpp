@@ -20,8 +20,6 @@
 #ifndef OPM_WELLSMANAGER_HEADER_INCLUDED
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
 
-#include <boost/property_tree/ptree.hpp>
-
 struct Wells;
 struct UnstructuredGrid;
 
