@@ -629,7 +629,7 @@ namespace Opm
 
         // Solve on all columns.
 
-        for (int i = 0; i < columns.second.size(); i++) {
+        for (std::vector<std::vector<int> >::size_type i = 0; i < columns.second.size(); i++) {
             // std::cout << "==== new column" << std::endl;
             solveGravityColumn(columns.second[i]);
         }
