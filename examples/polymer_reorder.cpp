@@ -89,18 +89,16 @@ public:
         : Opm::IncompPropertiesBasic(param, dim, num_cells)
     {
         ASSERT(numPhases() == 2);
-        sw_.resize(4);
-        sw_[0] = 0.;
-        sw_[1] = 0.3;
-        sw_[2] = 0.7;
-        sw_[3] = 1.0;
-        krw_.resize(4);
+        sw_.resize(3);
+        sw_[0] = 0.2;
+        sw_[1] = 0.7;
+        sw_[2] = 1.0;
+        krw_.resize(3);
         krw_[0] = 0.0;
-        krw_[1] = 0.3;
-        krw_[2] = 0.7;
-        krw_[3] = 1.0;
+        krw_[1] = 0.7;
+        krw_[2] = 1.0;
         so_.resize(2);
-        so_[0] = 0.0;
+        so_[0] = 0.3;
         so_[1] = 0.8;
         kro_.resize(2);
         kro_[0] = 0.0;
@@ -591,7 +589,6 @@ main(int argc, char** argv)
             std::cout << "**** Warning: nonzero gravity, but zero density difference." << std::endl;
         }
     }
-
     bool use_segregation_split = false;
     bool use_column_solver = false;
     bool use_gauss_seidel_gravity = false;
@@ -734,16 +731,18 @@ main(int argc, char** argv)
             if (grid->c_grid()->cartdims[2] <= 1) {
                 std::cout << "**** Warning: running gravity segregation scenario, which expects nz > 1." << std::endl;
             }
-            std::vector<double>& sat = state.saturation();
+            std::vector<int> top_cells;
             const int *glob_cell = grid->c_grid()->global_cell;
             // Water on top
             for (int cell = 0; cell < num_cells; ++cell) {
                 const int* cd = grid->c_grid()->cartdims;
                 const int gc = glob_cell == 0 ? cell : glob_cell[cell];
                 bool top = (gc / cd[0] / cd[1]) < cd[2]/2;
-                sat[2*cell] = top ? 1.0 : 0.0;
-                sat[2*cell + 1 ] = 1.0 - sat[2*cell];
+                if (top) {
+                    top_cells.push_back(cell);
+                }
             }
+            state.setWaterSat(top_cells, *props, ReservoirState::MaxSat);
             double flow_per_sec = 0.0*tot_porevol/Opm::unit::day;
             if (param.has("injection_rate_per_day")) {
                 flow_per_sec = param.get<double>("injection_rate_per_day")/Opm::unit::day;
