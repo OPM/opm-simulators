@@ -566,7 +566,7 @@ main(int argc, char** argv)
         double dead_pore_vol = param.getDefault("dead_pore_vol", 0.15);
         double res_factor = param.getDefault("res_factor", 1.) ; // res_factor = 1 gives no change in permeability
         double c_max_ads = param.getDefault("c_max_ads", 1.);
-        int ads_index = param.getDefault("ads_index", 2);
+        int ads_index = param.getDefault<int>("ads_index", Opm::PolymerProperties::NoDesorption);
         std::vector<double> c_vals_visc(2, -1e100);
         c_vals_visc[0] = 0.0;
         c_vals_visc[1] = 7.0;
@@ -584,7 +584,8 @@ main(int argc, char** argv)
         ads_vals[1] = 0.0015;
         ads_vals[2] = 0.0025;
         polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads, 
-                     ads_index, c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
+                     static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
+                     c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
     }
 
     // Initialize polymer inflow function.

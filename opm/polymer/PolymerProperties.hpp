@@ -37,13 +37,15 @@ namespace Opm
         {
         }
 
+        enum AdsorptionBehaviour { Desorption = 1, NoDesorption = 2 };
+
         PolymerProperties(double c_max,
                           double mix_param,
                           double rock_density,
                           double dead_pore_vol,
                           double res_factor,
                           double c_max_ads,
-                          int ads_index,
+                          AdsorptionBehaviour ads_index,
                           const std::vector<double>& c_vals_visc,
                           const std::vector<double>& visc_mult_vals,
                           const std::vector<double>& c_vals_ads,
@@ -74,7 +76,7 @@ namespace Opm
                  double dead_pore_vol,
                  double res_factor,
                  double c_max_ads,
-                 int ads_index,
+                 AdsorptionBehaviour ads_index,
                  const std::vector<double>& c_vals_visc,
                  const std::vector<double>& visc_mult_vals,
                  const std::vector<double>& c_vals_ads,
@@ -108,7 +110,7 @@ namespace Opm
             dead_pore_vol_ = plyrock[0];
             res_factor_ = plyrock[2];
             rock_density_ = plyrock[3];
-            ads_index_ = plyrock[4];
+            ads_index_ = static_cast<AdsorptionBehaviour>(plyrock[4]);
             c_max_ads_ = plyrock[5];
 
             // We assume NTPVT=1
@@ -182,9 +184,9 @@ namespace Opm
 
         double adsorption(double c, double cmax) const
         {
-            if (ads_index_ == 1) {
+            if (ads_index_ == Desorption) {
                 return simpleAdsorption(c);
-            } else if (ads_index_ == 2) {
+            } else if (ads_index_ == NoDesorption) {
                 return simpleAdsorption(std::max(c, cmax));
             } else {
                 THROW("Invalid Adsoption index");
@@ -193,9 +195,9 @@ namespace Opm
 
         double adsorptionWithDer(double c, double cmax, double* der) const
         {
-            if (ads_index_ == 1) {
+            if (ads_index_ == Desorption) {
                 return simpleAdsorptionWithDer(c, der);
-            } else if (ads_index_ == 2) {
+            } else if (ads_index_ == NoDesorption) {
                 if (c < cmax) {
                     *der = 0;
                     return simpleAdsorption(cmax);
@@ -277,7 +279,7 @@ namespace Opm
         double dead_pore_vol_;
         double res_factor_;
         double c_max_ads_;
-        int ads_index_;
+        AdsorptionBehaviour ads_index_;
         std::vector<double> c_vals_visc_;
         std::vector<double> visc_mult_vals_;
         std::vector<double> c_vals_ads_;
