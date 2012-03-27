@@ -414,7 +414,7 @@ namespace Opm
                             well_data[wix].target = wconprods.wconprod[kw].THP_limit_;
                             break;
                         case 7:
-                            well_data[wix].control = GRUP;
+                            // Handle group here.
                             break;
                         default:
                             THROW("Unknown well control mode; WCONPROD  = "
@@ -503,6 +503,11 @@ namespace Opm
 		THROW("Failed to add well controls.");
 	    }
 	}
+        
+        if(deck.hasField("GRUPTREE") {
+        
+            
+        }
     }
 
 
