@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
 enum well_type         { INJECTOR, PRODUCER };
-enum control_type      { BHP     , RATE, GRUP     };
+enum control_type      { BHP     , RATE     };
 enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
 
 

@@ -20,7 +20,7 @@
 #ifndef OPM_WELLSMANAGER_HEADER_INCLUDED
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
 
-
+#include <boost/property_tree/ptree.hpp>
 
 struct Wells;
 struct UnstructuredGrid;
@@ -63,6 +63,8 @@ namespace Opm
 	WellsManager& operator=(const WellsManager& other);
 	// The managed Wells.
 	Wells* w_;
+
+        boost::property_tree groups_;
     };
 
 } // namespace Opm
