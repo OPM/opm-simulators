@@ -516,9 +516,9 @@ namespace Opm {
                 store_.dsc(cell) = s[0]*c - sat[cell*2 + 0]*cpoly[cell];
                 double dcadsdc;
                 double cads;
-                fluid_.adsorbtion(cpoly[cell], cmax[cell], cads, dcadsdc);
+                fluid_.adsorption(cpoly[cell], cmax[cell], cads, dcadsdc);
                 store_.dcads(cell) =  -cads;
-                fluid_.adsorbtion(c, cmax[cell], cads, dcadsdc);
+                fluid_.adsorption(c, cmax[cell], cads, dcadsdc);
                 store_.dcads(cell) +=  cads;
                 store_.dcadsdc(cell) = dcadsdc;
                 double s_min = fluid_.s_min(cell);

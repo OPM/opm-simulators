@@ -201,8 +201,8 @@ public:
               class CAds,
               class DCAdsDc>
 
-    void adsorbtion(const PolyC& c, const PolyC& cmax, CAds& cads, DCAdsDc& dcadsdc) {
-        cads = polyprops_.adsorbtionWithDer(c, cmax, &dcadsdc);
+    void adsorption(const PolyC& c, const PolyC& cmax, CAds& cads, DCAdsDc& dcadsdc) {
+        cads = polyprops_.adsorptionWithDer(c, cmax, &dcadsdc);
     }
 
     const std::vector<double> porosity() const {

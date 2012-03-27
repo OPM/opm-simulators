@@ -169,38 +169,38 @@ namespace Opm
             return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
         }
 
-        double simpleAdsorbtion(double c) const
+        double simpleAdsorption(double c) const
         {
             return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
         }
 
-        double simpleAdsorbtionWithDer(double c, double* der) const
+        double simpleAdsorptionWithDer(double c, double* der) const
         {
             *der = Opm::linearInterpolationDerivative(c_vals_ads_, ads_vals_, c);
             return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
         }
 
-        double adsorbtion(double c, double cmax) const
+        double adsorption(double c, double cmax) const
         {
             if (ads_index_ == 1) {
-                return simpleAdsorbtion(c);
+                return simpleAdsorption(c);
             } else if (ads_index_ == 2) {
-                return simpleAdsorbtion(std::max(c, cmax));
+                return simpleAdsorption(std::max(c, cmax));
             } else {
                 THROW("Invalid Adsoption index");
             }
         }
 
-        double adsorbtionWithDer(double c, double cmax, double* der) const
+        double adsorptionWithDer(double c, double cmax, double* der) const
         {
             if (ads_index_ == 1) {
-                return simpleAdsorbtionWithDer(c, der);
+                return simpleAdsorptionWithDer(c, der);
             } else if (ads_index_ == 2) {
                 if (c < cmax) {
                     *der = 0;
-                    return simpleAdsorbtion(cmax);
+                    return simpleAdsorption(cmax);
                 } else {
-                    return simpleAdsorbtionWithDer(c, der);
+                    return simpleAdsorptionWithDer(c, der);
                 }
             } else {
                 THROW("Invalid Adsoption index");
