@@ -362,7 +362,9 @@ namespace Opm
 		    for (int j = ia_downw_[cell]; j < ia_downw_[cell+1]; ++j) {
 			const int downwind_cell = ja_downw_[j];
 			int ci = pos[downwind_cell];
-			needs_update[ci] = 1;
+                        if (ci != -1) {
+                            needs_update[ci] = 1;
+                        }
 			// ++needs_update[ci];
 			// if (needs_update[ci] == num_upstream[ci]) {
 			//     fully_marked_stack.push_back(ci);
