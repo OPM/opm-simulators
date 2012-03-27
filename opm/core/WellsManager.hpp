@@ -64,7 +64,6 @@ namespace Opm
 	// The managed Wells.
 	Wells* w_;
 
-        boost::property_tree groups_;
     };
 
 } // namespace Opm

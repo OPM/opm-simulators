@@ -504,10 +504,7 @@ namespace Opm
 	    }
 	}
         
-        if(deck.hasField("GRUPTREE") {
-        
-            
-        }
+
     }
 
 
