@@ -117,7 +117,7 @@ namespace Opm
     ///                            vertical column, and ordered
     ///                            (direction doesn't matter).
     template <class Model>
-    void GravityColumnSolverPolymer<Model>::solve(const std::map<int, std::vector<int> >& columns,
+    void GravityColumnSolverPolymer<Model>::solve(const std::pair<std::vector<int>, std::vector<std::vector<int> > >& columns,
 						  const double dt,
 						  std::vector<double>& s,
 						  std::vector<double>& c,
@@ -134,9 +134,9 @@ namespace Opm
 	double max_delta = 1e100;
 	while (iter < maxit_) {
 	    model_.initIteration(state, grid_, sys);
-	    std::map<int, std::vector<int> >::const_iterator it;
-	    for (it = columns.begin(); it != columns.end(); ++it) {
-		solveSingleColumn(it->second, dt, s, c, cmax, increment);
+            int size = columns.second.size();
+            for(int i = 0; i < size; ++i) {
+		solveSingleColumn(columns.second[i], dt, s, c, cmax, increment);
 	    }
 	    for (int cell = 0; cell < grid_.number_of_cells; ++cell) {
 		sys.vector().writableSolution()[2*cell + 0] += increment[2*cell + 0];

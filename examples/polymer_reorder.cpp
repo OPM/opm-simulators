@@ -664,14 +664,13 @@ main(int argc, char** argv)
         model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
     }
     TransportSolver tsolver(model);
-    typedef std::map<int, std::vector<int> > ColMap;
+    typedef std::pair<std::vector<int>, std::vector<std::vector<int> > > ColMap;
     ColMap columns;
     if (use_column_solver) {
         Opm::extractColumn(*grid->c_grid(), columns);
     }
 
     Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nltol, maxit);
-
 
     // Boundary conditions.
     Opm::FlowBCManager bcs;
