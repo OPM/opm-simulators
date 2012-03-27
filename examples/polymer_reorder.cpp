@@ -197,6 +197,28 @@ public:
         return props_.density()[phase];
     }
 
+    template <class PolyC,
+              class CAds,
+              class DCAdsDc>
+
+    void adsorbtion(const PolyC& c, const PolyC& cmax, CAds& cads, DCAdsDc& dcadsdc) {
+        cads = polyprops_.adsorbtionWithDer(c, cmax, &dcadsdc);
+    }
+
+    const std::vector<double> porosity() const {
+        const int num_cells = props_.numCells();
+        std::vector<double> porosity(num_cells, 0.);
+        const double* poro = props_.porosity();
+        for (std::vector<double>::iterator it = porosity.begin(); it != porosity.end(); ++it, ++poro) {
+            *it = poro[0];
+        }
+        return porosity;
+    }
+
+    double rockdensity() const {
+        return polyprops_.rockDensity();
+    }
+
     template <class Sat,
               class PolyC,
               class Mob,
@@ -364,14 +386,14 @@ public:
     std::vector<double>& faceflux    () { return flux_  ; }
     std::vector<double>& saturation  () { return sat_   ; }
     std::vector<double>& concentration() { return concentration_; }
-    std::vector<double>& cmax() { return cmax_; }
+    std::vector<double>& maxconcentration() { return cmax_; }
 
     const std::vector<double>& pressure    () const { return press_ ; }
     const std::vector<double>& facepressure() const { return fpress_; }
     const std::vector<double>& faceflux    () const { return flux_  ; }
     const std::vector<double>& saturation  () const { return sat_   ; }
     const std::vector<double>& concentration() const { return concentration_; }
-    const std::vector<double>& cmax() const { return cmax_; }
+    const std::vector<double>& maxconcentration() const { return cmax_; }
 
 private:
     std::vector<double> press_ ;
@@ -401,7 +423,7 @@ static void outputState(const UnstructuredGrid& grid,
     dm["saturation"] = &state.saturation();
     dm["pressure"] = &state.pressure();
     dm["concentration"] = &state.concentration();
-    dm["cmax"] = &state.cmax();
+    dm["cmax"] = &state.maxconcentration();
     std::vector<double> cell_velocity;
     Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
     dm["velocity"] = &cell_velocity;
@@ -905,7 +927,7 @@ main(int argc, char** argv)
         if (use_reorder) {
             Opm::toWaterSat(state.saturation(), reorder_sat);
             reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
-                     &reorder_sat[0], &state.concentration()[0], &state.cmax()[0]);
+                     &reorder_sat[0], &state.concentration()[0], &state.maxconcentration()[0]);
             Opm::toBothSat(reorder_sat, state.saturation());
             Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
             if (use_segregation_split) {
@@ -915,7 +937,8 @@ main(int argc, char** argv)
                         // reorder_model.solveGravity(columns, simtimer.currentStepLength(), reorder_sat);
                         // Opm::toBothSat(reorder_sat, state.saturation());
                     } else {
-                        colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration());
+                        colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration(),
+                                        state.maxconcentration());
                     }
                 } else {
                     // // Not implemented for polymer
@@ -941,7 +964,7 @@ main(int argc, char** argv)
         // Report volume balances.
         Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
         polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), polyprop.deadPoreVol());
-        polymass_adsorbed = Opm::computePolymerAdsorbed(*props, polyprop, porevol, state.cmax());
+        polymass_adsorbed = Opm::computePolymerAdsorbed(*props, polyprop, porevol, state.maxconcentration());
         Opm::computeInjectedProduced(*props, polyprop, state.saturation(), state.concentration(),
                                      src, simtimer.currentStepLength(), inflow_c,
                                      injected, produced, polyinj, polyprod);

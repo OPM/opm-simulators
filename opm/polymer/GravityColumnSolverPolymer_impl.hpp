@@ -59,16 +59,20 @@ namespace Opm
 	};
 	struct StateWithZeroFlux
 	{
-	    StateWithZeroFlux(std::vector<double>& s, std::vector<double>& c) : sat(s), cpoly(c) {}
+	    StateWithZeroFlux(std::vector<double>& s, std::vector<double>& c, std::vector<double>& cmax_arg) : sat(s), cpoly(c), cmax(cmax_arg) {}
 	    const ZeroVec& faceflux() const { return zv; }
 	    const std::vector<double>& saturation() const { return sat; }
 	    std::vector<double>& saturation() { return sat; }
 	    const std::vector<double>& concentration() const { return cpoly; }
 	    std::vector<double>& concentration() { return cpoly; }
+	    const std::vector<double>& maxconcentration() const { return cmax; }
+	    std::vector<double>& maxconcentration() { return cmax; }
 	    ZeroVec zv;
 	    std::vector<double>& sat;
 	    std::vector<double>& cpoly;
+	    std::vector<double>& cmax;
 	};
+
 	struct Vecs
 	{
 	    Vecs(int sz) : sol(sz, 0.0) {}
@@ -84,13 +88,13 @@ namespace Opm
 	    Vecs v;
 	    typedef std::vector<double> vector_type;
 	};
-        
-        struct BandMatrixCoeff 
+
+        struct BandMatrixCoeff
         {
             BandMatrixCoeff(int N, int ku, int kl) : N_(N), ku_(ku), kl_(kl), nrow_(2*kl + ku + 1) {
             }
-            
-            
+
+
             // compute the position where to store the coefficient of a matrix A_{i,j} (i,j=0,...,N-1)
             // in a array which is sent to the band matrix solver of LAPACK.
             int operator ()(int i, int j) const {
@@ -116,11 +120,12 @@ namespace Opm
     void GravityColumnSolverPolymer<Model>::solve(const std::map<int, std::vector<int> >& columns,
 						  const double dt,
 						  std::vector<double>& s,
-						  std::vector<double>& c
+						  std::vector<double>& c,
+                                                  std::vector<double>& cmax
 						  )
     {
 	// Initialize model. These things are done for the whole grid!
-	StateWithZeroFlux state(s, c); // This holds s and c by reference.
+	StateWithZeroFlux state(s, c, cmax); // This holds s, c and cmax by reference.
 	JacSys sys(2*grid_.number_of_cells);
 	std::vector<double> increment(2*grid_.number_of_cells, 0.0);
 	model_.initStep(state, grid_, sys);
@@ -131,7 +136,7 @@ namespace Opm
 	    model_.initIteration(state, grid_, sys);
 	    std::map<int, std::vector<int> >::const_iterator it;
 	    for (it = columns.begin(); it != columns.end(); ++it) {
-		solveSingleColumn(it->second, dt, s, c, increment);
+		solveSingleColumn(it->second, dt, s, c, cmax, increment);
 	    }
 	    for (int cell = 0; cell < grid_.number_of_cells; ++cell) {
 		sys.vector().writableSolution()[2*cell + 0] += increment[2*cell + 0];
@@ -150,9 +155,9 @@ namespace Opm
 	    THROW("Failed to converge!");
 	}
 	// Finalize.
-	// model_.finishIteration(); // Doesn't do anything in th 2p model.
+	// model_.finishIteration(); //
 	// finishStep() writes to state, which holds s by reference.
-	// This will update the entire grid's state...
+	// This will update the entire grid's state... cmax is updated here.
 	model_.finishStep(grid_, sys.vector().solution(), state);
     }
 
@@ -167,12 +172,13 @@ namespace Opm
                                                               const double dt,
                                                               std::vector<double>& s,
                                                               std::vector<double>& c,
+                                                              std::vector<double>& cmax,
                                                               std::vector<double>& sol_vec)
     {
 	// This is written only to work with SinglePointUpwindTwoPhase,
 	// not with arbitrary problem models.
         int col_size = column_cells.size();
-	StateWithZeroFlux state(s, c); // This holds s by reference.
+	StateWithZeroFlux state(s, c, cmax); // This holds s by reference.
 
 	// Assemble.
         const int kl = 3;
@@ -185,7 +191,7 @@ namespace Opm
 
 
 	for (int ci = 0; ci < col_size; ++ci) {
-	    std::vector<double> F(2, 0.);   
+	    std::vector<double> F(2, 0.);
 	    std::vector<double> dFd1(4, 0.);
 	    std::vector<double> dFd2(4, 0.);
 	    std::vector<double> dF(4, 0.);
@@ -198,7 +204,7 @@ namespace Opm
 		const int c1 = grid_.face_cells[2*face + 0];
                 const int c2 = grid_.face_cells[2*face + 1];
 		if (c1 == prev_cell || c2 == prev_cell || c1 == next_cell || c2 == next_cell) {
-                    F.assign(2, 0.);   
+                    F.assign(2, 0.);
                     dFd1.assign(4, 0.);
                     dFd2.assign(4, 0.);
 		    model_.fluxConnection(state, grid_, dt, cell, face, &F[0], &dFd1[0], &dFd2[0]);
@@ -218,7 +224,7 @@ namespace Opm
                     hm[bmc(2*ci + 0, 2*ci + 1)] += dFd1[1];
                     hm[bmc(2*ci + 1, 2*ci + 0)] += dFd1[2];
                     hm[bmc(2*ci + 1, 2*ci + 1)] += dFd1[3];
-                    
+
 		    rhs[2*ci + 0] += F[0];
 		    rhs[2*ci + 1] += F[1];
 		}
@@ -235,7 +241,7 @@ namespace Opm
             rhs[2*ci + 1] += F[1];
 
 	}
-	// model_.sourceTerms(); // Not needed 
+	// model_.sourceTerms(); // Not needed
 	// Solve.
 	const int num_rhs = 1;
 	int info = 0;

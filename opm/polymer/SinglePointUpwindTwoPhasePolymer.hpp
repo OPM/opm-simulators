@@ -48,9 +48,9 @@ namespace Opm {
         class ModelParameterStorage {
         public:
             ModelParameterStorage(int nc, int totconn)
-                : drho_(0.0), mob_(0), dmobds_(0), dmobwatdc_(0), mc_(0), dmcdc_(0),
-                  porevol_(0), deadporespace_(0), dg_(0), sw_(0), c_(0), ds_(0), dsc_(0), pc_(0), dpc_(0), trans_(0),
-                  data_()
+                : drho_(0.0), deadporespace_(0.0), rockdensity_(0.0), mob_(0), dmobds_(0), dmobwatdc_(0), mc_(0),
+                  dmcdc_(0), porevol_(0), porosity_(0), dg_(0), sw_(0), c_(0),
+                  ds_(0), dsc_(0), dcads_(0), dcadsdc_(0), pc_(0), dpc_(0), trans_(0), data_()
             {
                 size_t alloc_sz;
 
@@ -60,12 +60,15 @@ namespace Opm {
                 alloc_sz +=  nc;           // mc_
                 alloc_sz +=  nc;           // dmcdc_
                 alloc_sz += 1 * nc;        // porevol_
-                alloc_sz += 1 * nc;        // deadporespave__
+                alloc_sz += 1 * nc;        // porosity_
+                alloc_sz += 1 * nc;        // deadporespace_
                 alloc_sz += 1 * totconn;   // dg_
                 alloc_sz += 1 * nc;        // sw_
                 alloc_sz += 1 * nc;        // c_
                 alloc_sz += 1 * nc;        // dc_
                 alloc_sz += 1 * nc;        // dsc_
+                alloc_sz += 1 * nc;        // dcads_
+                alloc_sz += 1 * nc;        // dcadsdc_
                 alloc_sz += 1 * nc;        // pc_
                 alloc_sz += 1 * nc;        // dpc_
                 alloc_sz += 1 * totconn;   // trans_
@@ -77,19 +80,27 @@ namespace Opm {
                 mc_            = dmobwatdc_      + (1 * nc     );
                 dmcdc_         = mc_             + (1 * nc     );
                 porevol_       = dmcdc_          + (1 * nc     );
-                deadporespace_ = porevol_        + (1 * nc     );
-                dg_            = deadporespace_  + (1 * nc     );
+                porosity_      = porevol_        + (1 * nc     );
+                dg_            = porosity_       + (1 * nc     );
                 sw_            = dg_             + (1 * totconn);
                 c_             = sw_             + (1 * nc     );
                 ds_            = c_              + (1 * nc     );
                 dsc_           = ds_             + (1 * nc     );
-                pc_            = dsc_            + (1 * nc     );
+                dcads_         = dsc_            + (1 * nc     );
+                dcadsdc_       = dcads_          + (1 * nc     );
+                pc_            = dcadsdc_        + (1 * nc     );
                 dpc_           = pc_             + (1 * nc     );
                 trans_         = dpc_            + (1 * nc     );
             }
 
             double&       drho   ()            { return drho_            ; }
             double        drho   ()      const { return drho_            ; }
+
+            double&       deadporespace()            { return deadporespace_      ; }
+            double        deadporespace()    const { return deadporespace_  ; }
+
+            double&       rockdensity()            { return rockdensity_      ; }
+            double        rockdensity()    const { return rockdensity_  ; }
 
             double*       mob    (int cell)       { return mob_  + (2*cell + 0); }
             const double* mob    (int cell) const { return mob_  + (2*cell + 0); }
@@ -109,8 +120,9 @@ namespace Opm {
             double*       porevol()            { return porevol_      ; }
             double        porevol(int cell) const { return porevol_[cell]   ; }
 
-            double*       deadporespace()            { return deadporespace_      ; }
-            double        deadporespace(int cell) const { return deadporespace_[cell]   ; }
+            double*       porosity()            { return porosity_      ; }
+            double        porosity(int cell) const { return porosity_[cell]   ; }
+
 
             double&       dg(int i)            { return dg_[i]        ; }
             double        dg(int i)      const { return dg_[i]        ; }
@@ -127,6 +139,12 @@ namespace Opm {
             double&       dsc(int cell)            { return dsc_[cell]        ; }
             double        dsc(int cell)      const { return dsc_[cell]        ; }
 
+            double&       dcads(int cell)            { return dcads_[cell]        ; }
+            double        dcads(int cell)      const { return dcads_[cell]        ; }
+
+            double&       dcadsdc(int cell)            { return dcadsdc_[cell]        ; }
+            double        dcadsdc(int cell)      const { return dcadsdc_[cell]        ; }
+
             double&       pc(int cell)            { return pc_[cell]        ; }
             double        pc(int cell)      const { return pc_[cell]        ; }
 
@@ -138,18 +156,22 @@ namespace Opm {
 
         private:
             double  drho_        ;
+            double  deadporespace_ ;
+            double  rockdensity_  ;
             double *mob_         ;
             double *dmobds_      ;
             double *dmobwatdc_   ;
             double *mc_          ;
             double *dmcdc_       ;
             double *porevol_     ;
-            double *deadporespace_   ;
+            double *porosity_    ;
             double *dg_          ;
             double *sw_          ;
             double *c_           ;
             double *ds_          ;
             double *dsc_         ;
+            double *dcads_       ; // difference of cads to compute residual
+            double *dcadsdc_     ; // derivative of cads
             double *pc_          ;
             double *dpc_         ;
             double *trans_       ;
@@ -190,7 +212,11 @@ namespace Opm {
             }
 
             std::copy(porevol.begin(), porevol.end(), store_.porevol());
+            const std::vector<double> porosity = fluid.porosity();
+            std::copy(porosity.begin(), porosity.end(), store_.porosity());
+            store_.rockdensity() = fluid.rockdensity();
         }
+
         void makefhfQPeriodic(  const std::vector<int>& p_faces,const std::vector<int>& hf_faces,
                                 const std::vector<int>& nb_faces)
         {
@@ -347,15 +373,17 @@ namespace Opm {
                      ) const {
             (void) g;
 
-            const double pv = store_.porevol(cell);
-            const double dps = store_.deadporespace(cell);
+            const double pv   = store_.porevol(cell);
+            const double dps  = store_.deadporespace();
+            const double rhor = fluid_.rockdensity();
+            const double poro = store_.porosity(cell);
 
-            F[0]    += pv * store_.ds(cell);
-            F[1]    += pv * (1 - dps) * store_.dsc(cell);
+            F[0]  += pv * store_.ds(cell);
+            F[1]  += pv * (1 - dps) * store_.dsc(cell) + rhor*(1 - poro)/poro*pv*store_.dcads(cell);
             dF[0] += pv;
             dF[1] += 0.;
             dF[2] += pv * (1 - dps) * store_.c(cell);
-            dF[3] += pv * (1 - dps) * store_.sw(cell);
+            dF[3] += pv * (1 - dps) * store_.sw(cell) + rhor*(1 - poro)/poro*pv*store_.dcadsdc(cell);
         }
 
         template <class Grid       ,
@@ -475,6 +503,7 @@ namespace Opm {
                 sys.vector().solution();
             const ::std::vector<double>& sat = state.saturation();
             const ::std::vector<double>& cpoly = state.concentration();
+            const ::std::vector<double>& cmax = state.maxconcentration();
 
             bool in_range = true;
             for (int cell = 0; cell < g.number_of_cells; ++cell) {
@@ -485,8 +514,13 @@ namespace Opm {
                 store_.sw(cell) = s[0];
                 store_.c(cell) = c;
                 store_.dsc(cell) = s[0]*c - sat[cell*2 + 0]*cpoly[cell];
-
-
+                double dcadsdc;
+                double cads;
+                fluid_.adsorbtion(cpoly[cell], cmax[cell], cads, dcadsdc);
+                store_.dcads(cell) =  -cads;
+                fluid_.adsorbtion(c, cmax[cell], cads, dcadsdc);
+                store_.dcads(cell) +=  cads;
+                store_.dcadsdc(cell) = dcadsdc;
                 double s_min = fluid_.s_min(cell);
                 double s_max = fluid_.s_max(cell);
 
@@ -543,12 +577,14 @@ namespace Opm {
                    const SolutionVector& x    ,
                    ReservoirState&       state) {
 
-            double *s = &state.saturation()[0*2 + 0];
-            double *c = &state.concentration()[0*1 + 0];
+            double *s    = &state.saturation()[0*2 + 0];
+            double *c    = &state.concentration()[0*1 + 0];
+            double *cmax = &state.maxconcentration()[0*1 + 0];
 
-            for (int cell = 0; cell < g.number_of_cells; ++cell, s += 2, c += 1) {
+            for (int cell = 0; cell < g.number_of_cells; ++cell, s += 2, c += 1, cmax +=1) {
                 s[0] += x[2*cell + 0];
                 c[0] += x[2*cell + 1];
+                cmax[0] = std::max(c[0], cmax[0]);
                 double s_min = fluid_.s_min(cell);
                 double s_max = fluid_.s_max(cell);
                 assert(s[0] >= s_min - sat_tol_);

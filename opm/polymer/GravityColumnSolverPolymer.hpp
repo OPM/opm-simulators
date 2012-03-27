@@ -48,12 +48,15 @@ namespace Opm
 	void solve(const std::map<int, std::vector<int> >& columns,
 		   const double dt,
 		   std::vector<double>& s,
-		   std::vector<double>& c);
+		   std::vector<double>& c,
+		   std::vector<double>& cmax);
+
     private:
 	void solveSingleColumn(const std::vector<int>& column_cells,
 			       const double dt,
 			       std::vector<double>& s,
 			       std::vector<double>& c,
+			       std::vector<double>& cmax,
 			       std::vector<double>& sol_vec
  			       );
 	Model& model_;
