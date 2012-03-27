@@ -342,6 +342,8 @@ namespace Opm
                             well_data[wix].control = BHP;
                             well_data[wix].target = wconinjes.wconinje[kw].THP_limit_;
                             break;
+                        case 4:
+                            break;
                         default:
                             THROW("Unknown well control mode; WCONIJE  = "
                                   << wconinjes.wconinje[kw].control_mode_
@@ -410,6 +412,9 @@ namespace Opm
                         case 6:  // THP 
                             well_data[wix].control = BHP;
                             well_data[wix].target = wconprods.wconprod[kw].THP_limit_;
+                            break;
+                        case 7:
+                            well_data[wix].control = GRUP;
                             break;
                         default:
                             THROW("Unknown well control mode; WCONPROD  = "
