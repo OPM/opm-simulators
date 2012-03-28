@@ -59,6 +59,8 @@ public:
 
 namespace
 {
+    bool check_interval(double* x, const double* xmin, const double* xmax);
+
     double norm(double* res)
     {
 	return std::max(std::abs(res[0]), std::abs(res[1]));
@@ -658,6 +660,9 @@ namespace Opm
 		    }
 		    res[0] = res_new[0];
 		    res[1] = res_new[1];
+                    if (check_interval(x, x_min, x_max)) {
+                        res_eq.computeResidual(x, res, mc, ff);
+                    }
 		    iters_used_split += 1;
 		}
 	    } else {
@@ -751,7 +756,7 @@ namespace Opm
 		    res_c_on_curve.curve.computeXOfT(x, t);
 
 		}
-
+                check_interval(x, x_min, x_max);
 		res_eq.computeResidual(x, res, mc, ff);
 		iters_used_split += 1;
 	    }
@@ -943,6 +948,25 @@ namespace Opm
 
 namespace
 {
+    bool check_interval(double* x, const double* xmin, const double* xmax) {
+        bool test = false;
+        if (x[0] < xmin[0]) {
+            test = true;
+            x[0] = xmin[0];
+        } else if (x[0] > xmax[0]) {
+            test = true;
+            x[0] = xmax[0];
+        }
+        if (x[1] < xmin[1]) {
+            test = true;
+            x[1] = xmin[1];
+        } else if (x[1] > xmax[1]) {
+            test = true;
+            x[1] = xmax[1];
+        }
+        return test;
+    }
+
 
     CurveInSCPlane::CurveInSCPlane()
 	{
