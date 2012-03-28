@@ -14,7 +14,6 @@ public:
     };
     
     InjectionSpecification();
-    InjectionSpecification(const InjectionSpecification& orig);
     virtual ~InjectionSpecification();
     
     Component component();
