@@ -42,7 +42,7 @@ public:
     double c_max_ads;
     double rhor;
     double ads0;
-    int gradient_method;
+    GradientMethod gradient_method;
     const TransportModelPolymer& tm;
 
     ResidualEquation(const TransportModelPolymer& tmodel, int cell_index);
@@ -338,7 +338,7 @@ namespace Opm
     TransportModelPolymer::ResidualEquation::ResidualEquation(const TransportModelPolymer& tmodel, int cell_index)
 	: tm(tmodel)
     {
-	gradient_method = 1;
+	gradient_method = Analytic;
 	cell    = cell_index;
 	s0      = tm.saturation_[cell];
 	c0      = tm.concentration_[cell];
@@ -433,10 +433,10 @@ namespace Opm
     }
 
     void TransportModelPolymer::ResidualEquation::computeGradientResS(const double* x, double* res, double* gradient) const
-    // If gradient_method == 1, use finite difference
-    // If gradient_method == 2, use analytic expresions
+    // If gradient_method == FinDif, use finite difference
+    // If gradient_method == Analytic, use analytic expresions
     {
-	if (gradient_method == 1) {
+	if (gradient_method == FinDif) {
 	    double epsi = 1e-8;
 	    double res_epsi[2];
 	    double x_epsi[2];
@@ -449,7 +449,7 @@ namespace Opm
 	    x_epsi[1] = x[1] + epsi;
 	    computeResidual(x_epsi, res_epsi);
 	    gradient[1] = (res_epsi[0] - res[0])/epsi;
-	} else if (gradient_method == 2)  {
+	} else if (gradient_method == Analytic)  {
 	    double s = x[0];
 	    double c = x[1];
 	    double ff_ds_dc[2];
@@ -468,10 +468,10 @@ namespace Opm
     }
 
     void TransportModelPolymer::ResidualEquation::computeGradientResC(const double* x, double* res, double* gradient) const
-    // If gradient_method == 1, use finite difference
-    // If gradient_method == 2, use analytic expresions
+    // If gradient_method == FinDif, use finite difference
+    // If gradient_method == Analytic, use analytic expresions
     {
-	if (gradient_method == 1) {
+	if (gradient_method == FinDif) {
 	    double epsi = 1e-8;
 	    double res_epsi[2];
 	    double x_epsi[2];
@@ -484,7 +484,7 @@ namespace Opm
 	    x_epsi[1] = x[1] + epsi;
 	    computeResidual(x_epsi, res_epsi);
 	    gradient[1] = (res_epsi[1] - res[1])/epsi;
-	} else if (gradient_method == 2)  {
+	} else if (gradient_method == Analytic)  {
 	    double s = x[0];
 	    double c = x[1];
 	    double ff_ds_dc[2];
@@ -509,7 +509,7 @@ namespace Opm
     // Compute the Jacobian of the residual equations.
     void TransportModelPolymer::ResidualEquation::computeJacobiRes(const double* x, double* res_s_ds_dc, double* res_c_ds_dc) const
     {
-	if (gradient_method == 1) {
+	if (gradient_method == FinDif) {
 	    double epsi = 1e-8;
 	    double res[2];
 	    double res_epsi[2];
@@ -531,7 +531,7 @@ namespace Opm
 	    x_epsi[1] = x[1] + epsi;
 	    computeResidual(x_epsi, res_epsi);
 	    res_c_ds_dc[1] = (res_epsi[1] - res[1])/epsi;
-	} else if (gradient_method == 2)  {
+	} else if (gradient_method == Analytic)  {
 	    double s = x[0];
 	    double c = x[1];
 	    double ff_ds_dc[2];
@@ -869,7 +869,7 @@ namespace Opm
 	double mu_m_dc; // derivative of mu_m with respect to c
 	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
 	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
+	double mu_p = polyprops_.viscMult(c_max_limit)*mu_w;
 	double omega = polyprops_.mixParam();
  	double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
 	double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);

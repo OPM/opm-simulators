@@ -40,6 +40,7 @@ namespace Opm
     public:
 
 	enum SingleCellMethod { Bracketing, Newton };
+        enum GradientMethod { Analytic, FinDif }; // Analytic is chosen (hard-coded)
 
 	/// \TODO document me, especially method.
 	TransportModelPolymer(const UnstructuredGrid& grid,
