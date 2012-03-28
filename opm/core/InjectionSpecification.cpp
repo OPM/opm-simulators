@@ -7,9 +7,6 @@ reinjection_fraction_target_(0.0), BHP_target_(0.0) {
 
 }
 
-InjectionSpecification::InjectionSpecification(const InjectionSpecification& orig) {
-}
-
 InjectionSpecification::~InjectionSpecification() {
 }
 
