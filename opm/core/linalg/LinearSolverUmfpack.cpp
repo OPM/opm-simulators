@@ -48,8 +48,8 @@ namespace Opm
                                double* solution) const
     {
         CSRMatrix A  = {
-            size,
-            nonzeros,
+            (size_t)size,
+            (size_t)nonzeros,
             const_cast<int*>(ia),
             const_cast<int*>(ja),
             const_cast<double*>(sa)
