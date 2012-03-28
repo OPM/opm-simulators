@@ -7,13 +7,13 @@
 
 #include "WellsGroup.hpp"
 namespace Opm {
-AbstractWellsGroup::AbstractWellsGroup() {
+WellsGroupInterface::AbstractWellsGroup() {
 }
 
-AbstractWellsGroup::~AbstractWellsGroup() {
+WellsGroupInterface::~WellsGroupInterface() {
 }
 
-const std::string& AbstractWellsGroup::get_name() {
+const std::string& WellsGroupInterface::name() {
     return name_;
 }
 }
