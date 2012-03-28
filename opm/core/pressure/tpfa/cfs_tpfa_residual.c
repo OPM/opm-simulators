@@ -785,7 +785,7 @@ assemble_completion_to_well(int w, int c, int nc, int np,
 {
     int    wdof;
     size_t jc, jw;
-    double res, w2c, w2w;
+    double res = 0.0, w2c = 0.0, w2w = 0.0;
 
     switch (W->ctrl->ctrl[w]) {
     case BHP :
