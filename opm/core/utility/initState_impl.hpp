@@ -161,6 +161,12 @@ namespace Opm
         }
         state.init(grid);
         const int num_cells = props.numCells();
+        // By default: initialise water saturation to minimum everywhere.
+        std::vector<int> all_cells(num_cells);
+        for (int i = 0; i < num_cells; ++i) {
+            all_cells[i] = i;
+        }
+        state.setWaterSat(all_cells, props, State::MinSat);
         const bool convection_testcase = param.getDefault("convection_testcase", false);
         const bool segregation_testcase = param.getDefault("segregation_testcase", false);
         if (convection_testcase) {
@@ -222,12 +228,7 @@ namespace Opm
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
             initHydrostaticPressure(grid, dens, ref_z, gravity, ref_z, ref_p, state);
         } else {
-            // By default: initialise water saturation to minimum everywhere.
-            std::vector<int> all_cells(num_cells);
-            for (int i = 0; i < num_cells; ++i) {
-                all_cells[i] = i;
-            }
-            state.setWaterSat(all_cells, props, State::MinSat);
+            // Use default: water saturation is minimum everywhere.
             // Initialise pressure to hydrostatic state.
             const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
             const double rho =  props.density()[1];
