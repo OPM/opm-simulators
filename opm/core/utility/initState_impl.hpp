@@ -159,6 +159,7 @@ namespace Opm
         if (state.numPhases() != 2) {
             THROW("initStateTwophaseFromDeck(): state must have two phases.");
         }
+        state.init(grid);
         const int num_cells = props.numCells();
         const bool convection_testcase = param.getDefault("convection_testcase", false);
         const bool segregation_testcase = param.getDefault("segregation_testcase", false);
@@ -179,6 +180,13 @@ namespace Opm
             const double init_p = param.getDefault("ref_pressure", 100)*unit::barsa;
             std::fill(state.pressure().begin(), state.pressure().end(), init_p);
         } else if (segregation_testcase) {
+            // Warn against error-prone usage.
+            if (gravity == 0.0) {
+                std::cout << "**** Warning: running gravity segregation scenario, but gravity is zero." << std::endl;
+            }
+            if (grid.cartdims[2] <= 1) {
+                std::cout << "**** Warning: running gravity segregation scenario, which expects nz > 1." << std::endl;
+            }
             // Initialise water saturation to max *above* water-oil contact.
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterAbove, state);
@@ -187,6 +195,13 @@ namespace Opm
             double dens[2] = { props.density()[1], props.density()[0] };
             initHydrostaticPressure(grid, dens, woc, gravity, woc, ref_p, state);
         } else if (param.has("water_oil_contact")) {
+            // Warn against error-prone usage.
+            if (gravity == 0.0) {
+                std::cout << "**** Warning: running gravity convection scenario, but gravity is zero." << std::endl;
+            }
+            if (grid.cartdims[2] <= 1) {
+                std::cout << "**** Warning: running gravity convection scenario, which expects nz > 1." << std::endl;
+            }
             // Initialise water saturation to max below water-oil contact.
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterBelow, state);
@@ -240,6 +255,7 @@ namespace Opm
         if (state.numPhases() != 2) {
             THROW("initStateTwophaseFromDeck(): state must have two phases.");
         }
+        state.init(grid);
         if (deck.hasField("EQUIL")) {
             // Set saturations depending on oil-water contact.
             const EQUIL& equil= deck.getEQUIL();
