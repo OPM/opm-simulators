@@ -189,10 +189,10 @@ namespace Opm
         } else if (param.has("water_oil_contact")) {
             // Initialise water saturation to max below water-oil contact.
             const double woc = param.get<double>("water_oil_contact");
-            initWaterOilContact(grid, props.density(), woc, WaterBelow, state);
+            initWaterOilContact(grid, props, woc, WaterBelow, state);
             // Initialise pressure to hydrostatic state.
             const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
-            initHydrostaticPressure(grid, props, woc, gravity, woc, ref_p, state);
+            initHydrostaticPressure(grid, props.density(), woc, gravity, woc, ref_p, state);
         } else if (param.has("init_sat")) {
             // Initialise water saturation to init_sat parameter.
             const double init_sat = param.get<double>("init_sat");
@@ -247,11 +247,11 @@ namespace Opm
                 THROW("No region support yet.");
             }
             const double woc = equil.equil[0].water_oil_contact_depth_;
-            initWaterOilContact(grid, props, woc, state);
+            initWaterOilContact(grid, props, woc, WaterBelow, state);
             // Set pressure depending on densities and depths.
             const double datum_z = equil.equil[0].datum_depth_;
             const double datum_p = equil.equil[0].datum_depth_pressure_;
-            initHydrostaticPressure(grid, props, woc, gravity, datum_z, datum_p, state);
+            initHydrostaticPressure(grid, props.density(), woc, gravity, datum_z, datum_p, state);
         } else if (deck.hasField("SWAT") && deck.hasField("PRESSURE")) {
             // Set saturations from SWAT, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
