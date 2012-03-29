@@ -31,12 +31,26 @@ namespace Opm
 
     /// Initialize a state from parameters.
     /// The following parameters are accepted (defaults):
-    ///    num_phases         (2)         Must be 1 or 2.
-    ///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
-    ///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
-    ///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
-    ///    porosity           (1.0)       Porosity
-    ///    permeability       (100.0)     Permeability in mD
+    ///    convection_testcase   (false)    Water in the 'left' part of the grid.
+    ///    ref_pressure          (100)      Initial pressure in bar for all cells
+    ///                                     (if convection_testcase is true),
+    ///                                     or pressure at woc depth.
+    ///    segregation_testcase  (false)    Water above the woc instead of below.
+    ///    water_oil_contact     (none)     Depth of water-oil contact (woc).
+    ///    init_saturation       (none)     Initial water saturation for all cells.
+    /// If convection_testcase is true, the saturation is initialised
+    /// as indicated, and pressure is initialised to a constant value
+    /// ('ref_pressure').
+    /// If segregation_testcase is true, the saturation is initialised
+    /// as indicated, and pressure is initialised hydrostatically.
+    /// Otherwise we have 3 cases:
+    ///   1) If 'water_oil_contact' is given, saturation is initialised
+    ///      accordingly.
+    ///   2) If 'water_oil_contact' is not given, but 'init_saturation'
+    ///      is given, water saturation is set to that value everywhere.
+    ///   3) If neither are given, water saturation is set to minimum.
+    /// In all three cases, pressure is initialised hydrostatically.
+    /// In case 2) and 3), the depth of the first cell is used as reference depth.
     template <class State>
     void initStateTwophaseBasic(const UnstructuredGrid& grid,
                                 const IncompPropertiesInterface& props,
