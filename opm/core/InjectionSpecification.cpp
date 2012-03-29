@@ -3,8 +3,8 @@ namespace Opm
 {
 
     InjectionSpecification::InjectionSpecification()
-    : component_(WATER), control_mode_(NONE), surface_injection_target_(0.0),
-    reinjection_fraction_target_(0.0), BHP_target_(0.0)
+    : injector_type_(WATER), control_mode_(NONE), surface_flow_max_rate_(0.0),
+    reinjection_fraction_target_(0.0), BHP_limit_(0.0)
     {
 
     }

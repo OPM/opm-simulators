@@ -10,16 +10,16 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE, RATE, REIN, RESV, VREP, WGRA, FLD
+            NONE, ORAT, REIN, RESV, VREP, WGRA, FLD, GRUP
         };
 
         InjectionSpecification();
 
-        surface_component component_;
+        surface_component injector_type_;
         ControlMode control_mode_;
-        double surface_injection_target_;
+        double surface_flow_max_rate_;
         double reinjection_fraction_target_;
-        double BHP_target_;
+        double BHP_limit_;
     };
 }
 #endif	/* OPM_INJECTORSPECIFICATION_HPP */
