@@ -24,6 +24,7 @@
 #include <opm/core/newwells.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
+#include <opm/core/WellCollection.hpp>
 
 #include <tr1/array>
 #include <cmath>
@@ -503,6 +504,25 @@ namespace Opm
 		THROW("Failed to add well controls.");
 	    }
 	}
+        
+        WellCollection well_collection;
+        if (deck.hasField("GRUPTREE")) {
+            std::cout << "Found gruptree" << std::endl;
+            const GRUPTREE& gruptree = deck.getGRUPTREE();
+            
+            std::map<std::string, std::string>::const_iterator it = gruptree.tree.begin();
+            for( ; it != gruptree.tree.end(); ++it) {
+                well_collection.addChild(it->first, it->second, deck);
+            }
+        }
+        
+        if(deck.hasField("WELSPECS")) {
+            WELSPECS welspecs = deck.getWELSPECS();
+            for(int i = 0; i < welspecs.welspecs.size(); ++i) {
+                WelspecsLine line = welspecs.welspecs[i];
+                well_collection.addChild(line.name_, line.group_, deck);
+            }
+        }
         
 
     }

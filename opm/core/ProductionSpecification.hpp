@@ -11,7 +11,7 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE_CM, ORAT, WRAT, REIN, RESV, VREP, WGRA, FLD
+            NONE_CM, ORAT, WRAT, REIN, RESV, VREP, WGRA, FLD, GRUP
         };
 
         enum Procedure
@@ -21,15 +21,15 @@ namespace Opm
 
         ProductionSpecification();
  
-        surface_component component_;
         ControlMode control_mode_;
         Procedure procedure_;
 
-        double oil_production_target_;
+        double oil_max_rate_;
         double water_production_target_;
-        double liquid_production_target_;
-        double BHP_target_;
-
+        double fluid_volume_max_rate_;
+        double BHP_limit_;
+        double gas_max_rate_;
+        double liquid_max_rate_;
 
     };
 }
