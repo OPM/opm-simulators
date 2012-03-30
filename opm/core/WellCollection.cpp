@@ -63,7 +63,13 @@ namespace Opm
         }
         parent_as_group->addChild(child);
 
-
+        if(child->isLeafNode()) {
+            leaf_nodes_.push_back(child);
+        }
+    }
+    
+    const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& WellCollection::getLeafNodes() const {
+        return leaf_nodes_;
     }
 
     WellsGroupInterface* WellCollection::findNode(std::string name)

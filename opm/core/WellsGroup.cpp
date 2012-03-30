@@ -31,6 +31,10 @@ namespace Opm
     : WellsGroupInterface(name, prod_spec, inj_spec)
     {
     }
+    
+    bool WellsGroupInterface::isLeafNode() const {
+        return false;
+    }
 
     WellsGroupInterface* WellsGroup::findGroup(std::string name_of_node)
     {
@@ -67,6 +71,10 @@ namespace Opm
             return NULL;
         }
 
+    }
+    
+    bool WellNode::isLeafNode() const {
+        return true;
     }
 
     surface_component toSurfaceComponent(std::string type)

@@ -17,9 +17,17 @@ namespace Opm
                 InjectionSpecification inj_spec);
         virtual ~WellsGroupInterface();
 
+        /// The unique identifier for the well or well group.
         const std::string& name();
+        
+        /// Production specifications for the well or well group.
         const ProductionSpecification& prodSpec() const;
+        
+        /// Injection specifications for the well or well group.
         const InjectionSpecification& injSpec() const;
+        
+        /// \returns true if the object is a leaf node (WellNode), false otherwise.
+        virtual bool isLeafNode() const;
 
         /// \returns the pointer to the WellsGroupInterface with the given name. NULL if 
         ///          the name is not found.a
@@ -51,6 +59,8 @@ namespace Opm
                 InjectionSpecification inj_spec);
 
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
+        
+        virtual bool isLeafNode() const;
 
     };
 
