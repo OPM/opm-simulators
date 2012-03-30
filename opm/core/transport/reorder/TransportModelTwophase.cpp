@@ -154,7 +154,7 @@ namespace Opm
 	}
 	double operator()(double s) const
 	{
-	    return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx) + dtpv*s*comp_term;
+	    return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx + s*comp_term);
 	}
     };
 
