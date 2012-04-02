@@ -29,6 +29,8 @@ namespace Opm
 {
 
     /// Simulator state for a two-phase simulator with polymer.
+    /// Inheritance is not used for runtime polymorphism,
+    /// just for simplicity of implementation.
     class PolymerState : public TwophaseState
     {
     public:
