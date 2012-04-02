@@ -167,7 +167,8 @@ namespace Opm
 	//     return;
 	// }
 	int iters_used;
-	saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+	// saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+	saturation_[cell] = modifiedRegulaFalsi(res, saturation_[cell], 0.0, 1.0, maxit_, tol_, iters_used);
 	fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
     }
 
