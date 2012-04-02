@@ -14,6 +14,7 @@ nobase_include_HEADERS =			  \
 opm/polymer/GravityColumnSolverPolymer.hpp        \
 opm/polymer/GravityColumnSolverPolymer_impl.hpp   \
 opm/polymer/PolymerProperties.hpp		  \
+opm/polymer/PolymerState.hpp		          \
 opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp  \
 opm/polymer/TransportModelPolymer.hpp		  \
 opm/polymer/polymerUtilities.hpp
