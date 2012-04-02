@@ -1,7 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2010-2011 by Andreas Lauser                               *
+ *   Copyright (C) 2011 by Markus Wolff                                      *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -22,12 +22,11 @@
 /*!
  * \file
  *
- * \brief Represents all relevant thermodynamic quantities of a
- *        multi-phase, multi-component fluid system without using
- *        any assumptions.
+ * \brief Represents all relevant thermodynamic quantities of a isothermal immiscible
+ *        multi-phase fluid system
  */
-#ifndef DUMUX_NON_EQUILIBRIUM_FLUID_STATE_HH
-#define DUMUX_NON_EQUILIBRIUM_FLUID_STATE_HH
+#ifndef DUMUX_ISOTHERMAL_IMMISCIBLE_FLUID_STATE_HH
+#define DUMUX_ISOTHERMAL_IMMISCIBLE_FLUID_STATE_HH
 
 #include "modularfluidstate.hh"
 
@@ -42,19 +41,18 @@ namespace Dumux
  *        thermodynamic equilibrium.
  */
 template <class Scalar, class FluidSystem>
-class NonEquilibriumFluidState
+class IsothermalImmiscibleFluidState
     : public ModularFluidState<Scalar,
                                FluidSystem,
-                               FluidStateExplicitPressureModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitTemperatureModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitCompositionModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitFugacityModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitDensityModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitEnthalpyModule<Scalar, FluidSystem, NonEquilibriumFluidState<Scalar, FluidSystem> > >                            
-{
-};
+                               FluidStateExplicitPressureModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateImmiscibleCompositionModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateNullFugacityModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateExplicitDensityModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> >,
+                               FluidStateNullEnthalpyModule<Scalar, FluidSystem, IsothermalImmiscibleFluidState<Scalar, FluidSystem> > >                            
+{};
 
 } // end namespace
 
