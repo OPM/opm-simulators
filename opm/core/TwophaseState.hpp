@@ -27,6 +27,7 @@
 namespace Opm
 {
 
+    /// Simulator state for a two-phase simulator.
     class TwophaseState
     {
     public:
@@ -37,6 +38,9 @@ namespace Opm
             fpress_.resize(g.number_of_faces, 0.0);
             flux_.resize(g.number_of_faces, 0.0);
             sat_.resize(2 * g.number_of_cells, 0.0);
+            for (int cell = 0; cell < g.number_of_cells; ++cell) {
+                sat_[2*cell + 1] = 1.0; // Defaulting oil saturations to 1.0.
+            }
         }
 
         enum ExtremalSat { MinSat, MaxSat };
