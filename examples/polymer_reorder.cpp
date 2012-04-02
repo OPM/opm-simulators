@@ -30,6 +30,7 @@
 #include <opm/core/newwells.h>
 #include <opm/core/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/initState.hpp>
 #include <opm/core/utility/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -57,6 +58,7 @@
 
 #include <opm/core/ColumnExtract.hpp>
 
+#include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp>
 #include <opm/polymer/GravityColumnSolverPolymer.hpp>
 #include <opm/polymer/TransportModelPolymer.hpp>
@@ -301,112 +303,9 @@ typedef Opm::ImplicitTransport<NewtonPolymerTransportModel,
         VectorAssign  > TransportSolver;
 
 
-class ReservoirState
-{
-public:
-    ReservoirState(const UnstructuredGrid* g, const double init_sat = 0.0)
-        : press_ (g->number_of_cells, 0.0),
-          fpress_(g->number_of_faces, 0.0),
-          flux_  (g->number_of_faces, 0.0),
-          sat_   (2 * g->number_of_cells, 0.0),
-          concentration_(g->number_of_cells, 0.0),
-          cmax_(g->number_of_cells, 0.0)
-    {
-        for (int cell = 0; cell < g->number_of_cells; ++cell) {
-            sat_[2*cell] = init_sat;
-            sat_[2*cell + 1] = 1.0 - init_sat;
-        }
-    }
-
-    enum ExtremalSat { MinSat, MaxSat };
-
-    void setToMinimumWaterSat(const Opm::IncompPropertiesInterface& props)
-    {
-        const int n = props.numCells();
-        std::vector<int> cells(n);
-        for (int i = 0; i < n; ++i) {
-            cells[i] = i;
-        }
-        setWaterSat(cells, props, MinSat);
-    }
-
-    void setWaterSat(const std::vector<int>& cells,
-                     const Opm::IncompPropertiesInterface& props,
-                     ExtremalSat es)
-    {
-        const int n = cells.size();
-        std::vector<double> smin(2*n);
-        std::vector<double> smax(2*n);
-        props.satRange(n, &cells[0], &smin[0], &smax[0]);
-        const double* svals = (es == MinSat) ? &smin[0] : &smax[0];
-        for (int ci = 0; ci < n; ++ci) {
-            const int cell = cells[ci];
-            sat_[2*cell] = svals[2*ci];
-            sat_[2*cell + 1] = 1.0 - sat_[2*cell];
-        }
-    }
-
-    // Initialize saturations so that there is water below woc,
-    // and oil above.
-    // TODO: add 'anitialiasing', obtaining a more precise woc
-    //       by f. ex. subdividing cells cut by the woc.
-    void initWaterOilContact(const UnstructuredGrid& grid,
-                             const Opm::IncompPropertiesInterface& props,
-                             const double woc)
-    {
-        // Find out which cells should have water and which should have oil.
-        std::vector<int> oil;
-        std::vector<int> water;
-        const int num_cells = grid.number_of_cells;
-        oil.reserve(num_cells);
-        water.reserve(num_cells);
-        const int dim = grid.dimensions;
-        for (int c = 0; c < num_cells; ++c) {
-            const double z = grid.cell_centroids[dim*c + dim - 1];
-            if (z > woc) {
-                // Z is depth, we put water in the deepest parts
-                // (even if oil is heavier...).
-                water.push_back(c);
-            } else {
-                oil.push_back(c);
-            }
-        }
-
-        // Set saturations.
-        setWaterSat(oil, props, MinSat);
-        setWaterSat(water, props, MaxSat);
-    }
-
-    int numPhases() const { return sat_.size()/press_.size(); }
-
-    std::vector<double>& pressure    () { return press_ ; }
-    std::vector<double>& facepressure() { return fpress_; }
-    std::vector<double>& faceflux    () { return flux_  ; }
-    std::vector<double>& saturation  () { return sat_   ; }
-    std::vector<double>& concentration() { return concentration_; }
-    std::vector<double>& maxconcentration() { return cmax_; }
-
-    const std::vector<double>& pressure    () const { return press_ ; }
-    const std::vector<double>& facepressure() const { return fpress_; }
-    const std::vector<double>& faceflux    () const { return flux_  ; }
-    const std::vector<double>& saturation  () const { return sat_   ; }
-    const std::vector<double>& concentration() const { return concentration_; }
-    const std::vector<double>& maxconcentration() const { return cmax_; }
-
-private:
-    std::vector<double> press_ ;
-    std::vector<double> fpress_;
-    std::vector<double> flux_  ;
-    std::vector<double> sat_   ;
-    std::vector<double> concentration_;
-    std::vector<double> cmax_;
-};
-
-
-
 
 static void outputState(const UnstructuredGrid& grid,
-                        const ReservoirState& state,
+                        const Opm::PolymerState& state,
                         const int step,
                         const std::string& output_dir)
 {
@@ -509,9 +408,9 @@ main(int argc, char** argv)
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
     boost::scoped_ptr<Opm::WellsManager> wells;
     Opm::SimulatorTimer simtimer;
-    double water_oil_contact = 0.0;
-    bool woc_set = false;
+    Opm::PolymerState state;
     Opm::PolymerProperties polyprop;
+    double gravity[3] = { 0.0 };
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::EclipseGridParser deck(deck_filename);
@@ -530,14 +429,11 @@ main(int argc, char** argv)
         } else {
             simtimer.init(param);
         }
-        // Water-oil contact.
-        if (deck.hasField("EQUIL")) {
-            water_oil_contact = deck.getEQUIL().equil[0].water_oil_contact_depth_;
-            woc_set = true;
-        } else if (param.has("water_oil_contact")) {
-            water_oil_contact = param.get<double>("water_oil_contact");
-            woc_set = true;
-        }
+        // Gravity.
+        gravity[2] = deck.hasField("NOGRAV") ? 0.0 : Opm::unit::gravity;
+        // Init state variables (saturation and pressure).
+        initStateTwophaseFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        // Init polymer properties.
         polyprop.readFromDeck(deck);
     } else {
         // Grid init.
@@ -555,11 +451,12 @@ main(int argc, char** argv)
         wells.reset(new Opm::WellsManager());
         // Timer init.
         simtimer.init(param);
-        if (param.has("water_oil_contact")) {
-            water_oil_contact = param.get<double>("water_oil_contact");
-            woc_set = true;
-        }
-        // Setting polyprop defaults to mimic a simple example case.
+        // Gravity.
+        gravity[2] = param.getDefault("gravity", 0.0);
+        // Init state variables (saturation and pressure).
+        initStateTwophaseBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        // Init polymer properties.
+        // Setting defaults to provide a simple example case.
         double c_max = param.getDefault("c_max_limit", 5.0);
         double mix_param = param.getDefault("mix_param", 1.0);
         double rock_density = param.getDefault("rock_density", 1000.0);
@@ -594,21 +491,12 @@ main(int argc, char** argv)
     double poly_amount = param.getDefault("poly_amount", polyprop.cMax());
     PolymerInflow poly_inflow(poly_start, poly_end, poly_amount);
 
-    // Extra rock init.
-    std::vector<double> porevol;
-    computePorevolume(*grid->c_grid(), *props, porevol);
-    double tot_porevol = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-
     // Extra fluid init for transport solver.
     TwophaseFluidPolymer fluid(*props, polyprop);
 
-
-    // Gravity init.
-    double gravity[3] = { 0.0 };
-    double g = param.getDefault("gravity", 0.0);
-    bool use_gravity = g != 0.0;
+    // Warn if gravity but no density difference.
+    bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     if (use_gravity) {
-        gravity[grid->c_grid()->dimensions - 1] = g;
         if (props->density()[0] == props->density()[1]) {
             std::cout << "**** Warning: nonzero gravity, but zero density difference." << std::endl;
         }
@@ -627,174 +515,31 @@ main(int argc, char** argv)
         }
     }
 
-
-    // Solvers init.
-    // Pressure solver.
-#ifdef EXPERIMENT_ISTL
-    Opm::LinearSolverIstl linsolver(param);
-#else
-    Opm::LinearSolverUmfpack linsolver;
-#endif // EXPERIMENT_ISTL
-    const double *grav = use_gravity ? &gravity[0] : 0;
-    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), grav, linsolver);
-    // Reordering solver.
-    const double nltol = param.getDefault("nl_tolerance", 1e-9);
-    const int maxit = param.getDefault("nl_maxiter", 30);
-    Opm::TransportModelPolymer::SingleCellMethod method;
-    std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
-    if (method_string == "Bracketing") {
-        method = Opm::TransportModelPolymer::Bracketing;
-    } else if (method_string == "Newton") {
-        method = Opm::TransportModelPolymer::Newton;
-    } else {
-        THROW("Unknown method: " << method_string);
-    }
-
-    Opm::TransportModelPolymer reorder_model(*grid->c_grid(), props->porosity(), &porevol[0], *props, polyprop,
-                                      method, nltol, maxit);
-
-    if (use_gauss_seidel_gravity) {
-        // // Not yet implemented for polymer
-        // reorder_model.initGravity(grav);
-    }
-
-
-    // Column-based gravity segregation solver.
-    NewtonPolymerTransportModel  model  (fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
-    if (use_gravity) {
-        model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
-    }
-    TransportSolver tsolver(model);
-    typedef std::pair<std::vector<int>, std::vector<std::vector<int> > > ColMap;
-    ColMap columns;
-    if (use_column_solver) {
-        Opm::extractColumn(*grid->c_grid(), columns);
-    }
-
-    Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nltol, maxit);
-
-    // Boundary conditions.
-    Opm::FlowBCManager bcs;
-
-    // State-related and source-related variables init.
+    // Source-related variables init.
     int num_cells = grid->c_grid()->number_of_cells;
     std::vector<double> totmob;
     std::vector<double> omega; // Will remain empty if no gravity.
-    double init_sat = param.getDefault("init_sat", 0.0);
-    ReservoirState state(grid->c_grid(), init_sat);
-    if (!param.has("init_sat")) {
-        state.setToMinimumWaterSat(*props);
-    }
+    // Extra rock init.
+    std::vector<double> porevol;
+    computePorevolume(*grid->c_grid(), *props, porevol);
+    double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
+
     // We need a separate reorder_sat, because the reorder
     // code expects a scalar sw, not both sw and so.
     std::vector<double> reorder_sat(num_cells);
     std::vector<double> src(num_cells, 0.0);
-    int scenario = param.getDefault("scenario", woc_set ? 4 : 0);
-    switch (scenario) {
-    case 0:
-        {
-            std::cout << "==== Scenario 0: simple wells or single-cell source and sink.\n";
-            if (wells->c_wells()) {
-                Opm::wellsToSrc(*wells->c_wells(), num_cells, src);
-            } else {
-                double flow_per_sec = 0.1*tot_porevol/Opm::unit::day;
-                if (param.has("injection_rate_per_day")) {
-                    flow_per_sec = param.get<double>("injection_rate_per_day")/Opm::unit::day;
-                }
-                src[0] = flow_per_sec;
-                src[num_cells - 1] = -flow_per_sec;
-            }
-            break;
-        }
-    case 1:
-        {
-            std::cout << "==== Scenario 1: half source, half sink.\n";
-            double flow_per_sec = 0.1*porevol[0]/Opm::unit::day;
-            std::fill(src.begin(), src.begin() + src.size()/2, flow_per_sec);
-            std::fill(src.begin() + src.size()/2, src.end(), -flow_per_sec);
-            break;
-        }
-    case 2:
-        {
-            std::cout << "==== Scenario 2: gravity convection.\n";
-            if (!use_gravity) {
-                std::cout << "**** Warning: running gravity convection scenario, but gravity is zero." << std::endl;
-            }
-            if (use_deck) {
-                std::cout << "**** Warning: running gravity convection scenario, which expects a cartesian grid."
-                          << std::endl;
-            }
-            if (grid->c_grid()->cartdims[2] <= 1) {
-                std::cout << "**** Warning: running gravity convection scenario, which expects nz > 1." << std::endl;
-            }
-            std::vector<int> left_cells;
-            left_cells.reserve(num_cells/2);
-            const int *glob_cell = grid->c_grid()->global_cell;
-            for (int cell = 0; cell < num_cells; ++cell) {
-                const int* cd = grid->c_grid()->cartdims;
-                const int gc = glob_cell == 0 ? cell : glob_cell[cell];
-                bool left = (gc % cd[0]) < cd[0]/2;
-                if (left) {
-                    left_cells.push_back(cell);
-                }
-            }
-            state.setWaterSat(left_cells, *props, ReservoirState::MaxSat);
-            break;
-        }
-    case 3:
-        {
-            std::cout << "==== Scenario 3: gravity segregation.\n";
-            if (!use_gravity) {
-                std::cout << "**** Warning: running gravity segregation scenario, but gravity is zero." << std::endl;
-            }
-            if (use_deck) {
-                std::cout << "**** Warning: running gravity segregation scenario, which expects a cartesian grid."
-                          << std::endl;
-            }
-            if (grid->c_grid()->cartdims[2] <= 1) {
-                std::cout << "**** Warning: running gravity segregation scenario, which expects nz > 1." << std::endl;
-            }
-            std::vector<int> top_cells;
-            const int *glob_cell = grid->c_grid()->global_cell;
-            // Water on top
-            for (int cell = 0; cell < num_cells; ++cell) {
-                const int* cd = grid->c_grid()->cartdims;
-                const int gc = glob_cell == 0 ? cell : glob_cell[cell];
-                bool top = (gc / cd[0] / cd[1]) < cd[2]/2;
-                if (top) {
-                    top_cells.push_back(cell);
-                }
-            }
-            state.setWaterSat(top_cells, *props, ReservoirState::MaxSat);
-            double flow_per_sec = 0.0*tot_porevol/Opm::unit::day;
-            if (param.has("injection_rate_per_day")) {
-                flow_per_sec = param.get<double>("injection_rate_per_day")/Opm::unit::day;
-            }
-            src[0] = flow_per_sec;
-            src[num_cells - 1] = -flow_per_sec;
-            break;
-        }
-    case 4:
-        {
-            std::cout << "==== Scenario 4: water-oil contact and simple wells or sources\n";
-            if (!use_gravity) {
-                std::cout << "**** Warning: initializing segregated water and oil zones, but gravity is zero." << std::endl;
-            }
-            state.initWaterOilContact(*grid->c_grid(), *props, water_oil_contact);
-            if (wells->c_wells()) {
-                Opm::wellsToSrc(*wells->c_wells(), num_cells, src);
-            } else {
-                double flow_per_sec = 0.01*tot_porevol/Opm::unit::day;
-                src[0] = flow_per_sec;
-                src[grid->c_grid()->number_of_cells - 1] = -flow_per_sec;
-            }
-            break;
-        }
-    default:
-        {
-            THROW("==== Scenario " << scenario << " is unknown.");
-        }
+
+    // Initialising src
+    if (wells->c_wells()) {
+        Opm::wellsToSrc(*wells->c_wells(), num_cells, src);
+    } else {
+        const double default_injection = use_gravity ? 0.0 : 0.1;
+        const double flow_per_sec = param.getDefault<double>("injected_porevolumes_per_day", default_injection)
+            *tot_porevol_init/Opm::unit::day;
+        src[0] = flow_per_sec;
+        src[num_cells - 1] = -flow_per_sec;
     }
+
     TransportSource* tsrc = create_transport_source(2, 2);
     double ssrc[]   = { 1.0, 0.0 };
     double ssink[]  = { 0.0, 1.0 };
@@ -806,15 +551,59 @@ main(int argc, char** argv)
             append_transport_source(cell, 2, 0, src[cell], ssink, zdummy, tsrc);
         }
     }
-
     std::vector<double> reorder_src = src;
 
-    // Dirichlet boundary conditions.
+    // Boundary conditions.
+    Opm::FlowBCManager bcs;
     if (param.getDefault("use_pside", false)) {
         int pside = param.get<int>("pside");
         double pside_pressure = param.get<double>("pside_pressure");
         bcs.pressureSide(*grid->c_grid(), Opm::FlowBCManager::Side(pside), pside_pressure);
     }
+
+    // Solvers init.
+    // Pressure solver.
+#ifdef EXPERIMENT_ISTL
+    Opm::LinearSolverIstl linsolver(param);
+#else
+    Opm::LinearSolverUmfpack linsolver;
+#endif // EXPERIMENT_ISTL
+    const double *grav = use_gravity ? &gravity[0] : 0;
+    Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), grav, linsolver);
+    // Reordering solver.
+    const double nl_tolerance = param.getDefault("nl_tolerance", 1e-9);
+    const int nl_maxiter = param.getDefault("nl_maxiter", 30);
+    Opm::TransportModelPolymer::SingleCellMethod method;
+    std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
+    if (method_string == "Bracketing") {
+        method = Opm::TransportModelPolymer::Bracketing;
+    } else if (method_string == "Newton") {
+        method = Opm::TransportModelPolymer::Newton;
+    } else {
+        THROW("Unknown method: " << method_string);
+    }
+
+    Opm::TransportModelPolymer reorder_model(*grid->c_grid(), props->porosity(), &porevol[0], *props, polyprop,
+                                             method, nl_tolerance, nl_maxiter);
+
+    if (use_gauss_seidel_gravity) {
+        THROW("use_gauss_seidel_gravity option not yet implemented for polymer case.");
+        // reorder_model.initGravity(grav);
+    }
+    // Non-reordering solver.
+    NewtonPolymerTransportModel  model  (fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
+    if (use_gravity) {
+        model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
+    }
+    TransportSolver tsolver(model);
+    // Column-based gravity segregation solver.
+    typedef std::pair<std::vector<int>, std::vector<std::vector<int> > > ColMap;
+    ColMap columns;
+    if (use_column_solver) {
+        Opm::extractColumn(*grid->c_grid(), columns);
+    }
+
+    Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nl_tolerance, nl_maxiter);
 
 
     // // // Not implemented for polymer.
@@ -871,8 +660,8 @@ main(int argc, char** argv)
     double tot_polyinj = 0.0;
     double tot_polyprod = 0.0;
     Opm::computeSaturatedVol(porevol, state.saturation(), init_satvol);
-    std::cout << "\nInitial saturations are    " << init_satvol[0]/tot_porevol
-              << "    " << init_satvol[1]/tot_porevol << std::endl;
+    std::cout << "\nInitial saturations are    " << init_satvol[0]/tot_porevol_init
+              << "    " << init_satvol[1]/tot_porevol_init << std::endl;
     Opm::Watercut watercut;
     watercut.push(0.0, 0.0, 0.0);
     for (; !simtimer.done(); ++simtimer) {
@@ -921,7 +710,7 @@ main(int argc, char** argv)
         }
         const double inflow_c = inflowc0;
 
-        // Solve transport using reorder.
+        // Solve transport.
         transport_timer.start();
         if (use_reorder) {
             Opm::toWaterSat(state.saturation(), reorder_sat);
@@ -932,7 +721,7 @@ main(int argc, char** argv)
             if (use_segregation_split) {
                 if (use_column_solver) {
                     if (use_gauss_seidel_gravity) {
-                        // // Not implemented for polymer
+                        THROW("use_gauss_seidel_gravity option not implemented for polymer.");
                         // reorder_model.solveGravity(columns, simtimer.currentStepLength(), reorder_sat);
                         // Opm::toBothSat(reorder_sat, state.saturation());
                     } else {
@@ -940,7 +729,7 @@ main(int argc, char** argv)
                                         state.maxconcentration());
                     }
                 } else {
-                    // // Not implemented for polymer
+                    THROW("use_segregation_split option for polymer is only implemented in the use_column_solver case.");
                     // std::vector<double> fluxes = state.faceflux();
                     // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
                     // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
@@ -949,7 +738,7 @@ main(int argc, char** argv)
                 }
             }
         } else {
-            // // Not implemented for polymer
+            THROW("Non-reordering transport solver not implemented for polymer.");
             // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
             // std::cout << rpt;
             // Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
@@ -978,43 +767,43 @@ main(int argc, char** argv)
         std::cout << "\nVolume and polymer mass balance: "
             "   water(pv)           oil(pv)       polymer(kg)\n";
         std::cout << "    Saturated volumes:     "
-                  << std::setw(width) << satvol[0]/tot_porevol
-                  << std::setw(width) << satvol[1]/tot_porevol
+                  << std::setw(width) << satvol[0]/tot_porevol_init
+                  << std::setw(width) << satvol[1]/tot_porevol_init
                   << std::setw(width) << polymass << std::endl;
         std::cout << "    Adsorbed volumes:      "
                   << std::setw(width) << 0.0
                   << std::setw(width) << 0.0
                   << std::setw(width) << polymass_adsorbed << std::endl;
         std::cout << "    Injected volumes:      "
-                  << std::setw(width) << injected[0]/tot_porevol
-                  << std::setw(width) << injected[1]/tot_porevol
+                  << std::setw(width) << injected[0]/tot_porevol_init
+                  << std::setw(width) << injected[1]/tot_porevol_init
                   << std::setw(width) << polyinj << std::endl;
         std::cout << "    Produced volumes:      "
-                  << std::setw(width) << produced[0]/tot_porevol
-                  << std::setw(width) << produced[1]/tot_porevol
+                  << std::setw(width) << produced[0]/tot_porevol_init
+                  << std::setw(width) << produced[1]/tot_porevol_init
                   << std::setw(width) << polyprod << std::endl;
         std::cout << "    Total inj volumes:     "
-                  << std::setw(width) << tot_injected[0]/tot_porevol
-                  << std::setw(width) << tot_injected[1]/tot_porevol
+                  << std::setw(width) << tot_injected[0]/tot_porevol_init
+                  << std::setw(width) << tot_injected[1]/tot_porevol_init
                   << std::setw(width) << tot_polyinj << std::endl;
         std::cout << "    Total prod volumes:    "
-                  << std::setw(width) << tot_produced[0]/tot_porevol
-                  << std::setw(width) << tot_produced[1]/tot_porevol
+                  << std::setw(width) << tot_produced[0]/tot_porevol_init
+                  << std::setw(width) << tot_produced[1]/tot_porevol_init
                   << std::setw(width) << tot_polyprod << std::endl;
         std::cout << "    In-place + prod - inj: "
-                  << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol
-                  << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol
+                  << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol_init
+                  << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol_init
                   << std::setw(width) << (polymass + tot_polyprod - tot_polyinj + polymass_adsorbed) << std::endl;
         std::cout << "    Init - now - pr + inj: "
-                  << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol
-                  << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol
+                  << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol_init
+                  << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol_init
                   << std::setw(width) << (init_polymass - polymass - tot_polyprod + tot_polyinj - polymass_adsorbed)
                   << std::endl;
         std::cout.precision(8);
 
         watercut.push(simtimer.currentTime() + simtimer.currentStepLength(),
                       produced[0]/(produced[0] + produced[1]),
-                      tot_produced[0]/tot_porevol);
+                      tot_produced[0]/tot_porevol_init);
     }
     total_timer.stop();
 
@@ -1027,4 +816,6 @@ main(int argc, char** argv)
         outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
         outputWaterCut(watercut, output_dir);
     }
+
+    destroy_transport_source(tsrc);
 }
