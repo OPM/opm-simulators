@@ -41,18 +41,38 @@ namespace Dumux
  *        multi-phase, multi-component fluid system assuming
  *        thermodynamic equilibrium.
  */
+template <class Scalar, class FluidSystem, bool storeEnthalpy=true>
+class ImmiscibleFluidState;
+
+// specialization for the enthalpy enabled case
 template <class Scalar, class FluidSystem>
-class ImmiscibleFluidState
+class ImmiscibleFluidState<Scalar, FluidSystem, true>
     : public ModularFluidState<Scalar,
                                FluidSystem,
-                               FluidStateExplicitPressureModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateImmiscibleCompositionModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateImmiscibleFugacityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitDensityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitEnthalpyModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem> > >                            
+                               FluidStateExplicitPressureModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitCompositionModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitFugacityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitDensityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitEnthalpyModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, true> > >
+{
+};
+
+// specialization for the enthalpy disabled case
+template <class Scalar, class FluidSystem>
+class ImmiscibleFluidState<Scalar, FluidSystem, false>
+    : public ModularFluidState<Scalar,
+                               FluidSystem,
+                               FluidStateExplicitPressureModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitCompositionModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitFugacityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitDensityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateNullEnthalpyModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> > >
 {
 };
 } // end namespace

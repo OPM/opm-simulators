@@ -41,18 +41,39 @@ namespace Dumux
  *        multi-phase, multi-component fluid system assuming
  *        thermodynamic equilibrium.
  */
+template <class Scalar, class FluidSystem, bool storeEnthalpy=true>
+class CompositionalFluidState;
+
+
+// specialization for the enthalpy enabled case
 template <class Scalar, class FluidSystem>
-class CompositionalFluidState
+class CompositionalFluidState<Scalar, FluidSystem, true>
     : public ModularFluidState<Scalar,
                                FluidSystem,
-                               FluidStateExplicitPressureModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitCompositionModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitFugacityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitDensityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> >,
-                               FluidStateExplicitEnthalpyModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem> > >                            
+                               FluidStateExplicitPressureModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitCompositionModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitFugacityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitDensityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> >,
+                               FluidStateExplicitEnthalpyModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, true> > >
+{
+};
+
+// specialization for the enthalpy disabled case
+template <class Scalar, class FluidSystem>
+class CompositionalFluidState<Scalar, FluidSystem, false>
+    : public ModularFluidState<Scalar,
+                               FluidSystem,
+                               FluidStateExplicitPressureModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateEquilibriumTemperatureModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitCompositionModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitFugacityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitSaturationModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitDensityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateExplicitViscosityModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> >,
+                               FluidStateNullEnthalpyModule<Scalar, FluidSystem, CompositionalFluidState<Scalar, FluidSystem, false> > >
 {
 };
 

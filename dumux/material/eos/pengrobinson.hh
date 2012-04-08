@@ -160,6 +160,11 @@ public:
         Scalar a = params.a(phaseIdx); // "attractive factor"
         Scalar b = params.b(phaseIdx); // "co-volume"
 
+        if (!std::isfinite(a) || a == 0)
+            DUNE_THROW(NumericalProblem, "Peng-Robinson: The 'a' coefficient must finite and not be zero. It is " << a);
+        if (!std::isfinite(b) || b <= 0)
+            DUNE_THROW(NumericalProblem, "Peng-Robinson: The 'b' coefficient must positive. It is " << b);
+
         Scalar RT= R*T;
         Scalar Astar = a*p/(RT*RT);
         Scalar Bstar = b*p/RT;
@@ -215,6 +220,9 @@ public:
         }
 
         Valgrind::CheckDefined(Vm);
+        if (Vm <= 0) {
+            std::cout << "Vm: " << Vm << "\n"; 
+        }
         assert(std::isfinite(Vm) && Vm > 0);
         return Vm;
     }
