@@ -143,60 +143,6 @@ namespace Opm
                 std::fill(m, m + np*np, 0.0);
             }
         }
-#if 0
-	// This is copied from BlackoilPropertiesFromDeck.
-        const int np = numPhases();
-        B_.resize(n*np);
-        R_.resize(n*np);
-        if (dAdp) {
-            dB_.resize(n*np);
-            dR_.resize(n*np);
-            pvt_.dBdp(n, p, z, &B_[0], &dB_[0]);
-            pvt_.dRdp(n, p, z, &R_[0], &dR_[0]);
-        } else {
-            pvt_.B(n, p, z, &B_[0]);
-            pvt_.R(n, p, z, &R_[0]);
-        }
-        const int* phase_pos = pvt_.phasePosition();
-        bool oil_and_gas = pvt_.phaseUsed()[BlackoilPhases::Liquid] &&
-            pvt_.phaseUsed()[BlackoilPhases::Vapour];
-        const int o = phase_pos[BlackoilPhases::Liquid];
-        const int g = phase_pos[BlackoilPhases::Vapour];
-
-        // Compute A matrix
-#pragma omp parallel for
-        for (int i = 0; i < n; ++i) {
-            double* m = A + i*np*np;
-            std::fill(m, m + np*np, 0.0);
-            // Diagonal entries.
-            for (int phase = 0; phase < np; ++phase) {
-                m[phase + phase*np] = 1.0/B_[i*np + phase];
-            }
-            // Off-diagonal entries.
-            if (oil_and_gas) {
-                m[o + g*np] = R_[i*np + g]/B_[i*np + g];
-                m[g + o*np] = R_[i*np + o]/B_[i*np + o];
-            }
-        }
-
-        // Derivative of A matrix.
-        if (dAdp) {
-#pragma omp parallel for
-            for (int i = 0; i < n; ++i) {
-                double* m = dAdp + i*np*np;
-                std::fill(m, m + np*np, 0.0);
-                // Diagonal entries.
-                for (int phase = 0; phase < np; ++phase) {
-                    m[phase + phase*np] = -dB_[i*np + phase]/B_[i*np + phase]*B_[i*np + phase];
-                }
-                // Off-diagonal entries.
-                if (oil_and_gas) {
-                    m[o + g*np] = m[g + g*np]*R_[i*np + g] + dR_[i*np + g]/B_[i*np + g];
-                    m[g + o*np] = m[o + o*np]*R_[i*np + o] + dR_[i*np + o]/B_[i*np + o];
-                }
-            }
-        }
-#endif
     }
 
     /// \param[in]  n      Number of data points.
