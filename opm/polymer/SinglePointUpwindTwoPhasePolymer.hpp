@@ -297,10 +297,10 @@ namespace Opm {
             double mc, dmcdc;
             upwindMobility(dflux, gflux, n, pix, m, dmds, dmobwatdc, mc, dmcdc);
 
-            assert (! ((m[0] < 0) || (m[1] < 0)));
+            assert ((m[0] >= 0.0) && (m[1] >= 0.0));
 
             double mt = m[0] + m[1];
-            assert (mt > 0);
+            assert (mt >= 0.0);
 
             double sgn  = 2.0*(n[0] == cell) - 1.0;
             dflux      *= sgn;
