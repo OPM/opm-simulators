@@ -107,11 +107,12 @@ namespace Opm
 
             // We assume NTSFUN=1
             const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
+            ASSERT(plyrock.size() == 5);
             dead_pore_vol_ = plyrock[0];
-            res_factor_ = plyrock[2];
-            rock_density_ = plyrock[3];
-            ads_index_ = static_cast<AdsorptionBehaviour>(plyrock[4]);
-            c_max_ads_ = plyrock[5];
+            res_factor_ = plyrock[1];
+            rock_density_ = plyrock[2];
+            ads_index_ = static_cast<AdsorptionBehaviour>(plyrock[3]);
+            c_max_ads_ = plyrock[4];
 
             // We assume NTPVT=1
             const PLYVISC& plyvisc = gridparser.getPLYVISC();
