@@ -38,14 +38,18 @@ namespace Opm
     ///                          and N == g.number_of_cells.
     /// \param[in] gravity       Gravity vector. If nonzero, the array should
     ///                          have D elements.
+    /// \param[in] wells         The wells argument. Will be used in solution, 
+    ///                          is ignored if NULL
     IncompTpfa::IncompTpfa(const UnstructuredGrid& g,
 			   const double* permeability,
 			   const double* gravity,
-                           const LinearSolverInterface& linsolver)
+                           const LinearSolverInterface& linsolver,
+                           const struct Wells* wells)
 	: grid_(g),
           linsolver_(linsolver),
 	  htrans_(g.cell_facepos[ g.number_of_cells ]),
-	  trans_ (g.number_of_faces)
+	  trans_ (g.number_of_faces),
+          wells_(wells)
     {
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
 	tpfa_htrans_compute(gg, permeability, &htrans_[0]);
@@ -110,7 +114,7 @@ namespace Opm
 	    }
 	}
 
-        ifs_tpfa_forces F = { NULL, NULL, NULL, NULL, NULL };
+        ifs_tpfa_forces F = { NULL, NULL, wells_, NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
 
@@ -172,7 +176,7 @@ namespace Opm
 	    }
 	}
 
-        ifs_tpfa_forces F = { NULL, NULL, NULL, NULL, NULL };
+        ifs_tpfa_forces F = { NULL, NULL, wells_, NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
 

@@ -38,9 +38,14 @@ namespace Opm
         void addChild(std::string child, std::string parent,
                 const EclipseGridParser& deck);
         
+        const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
     private:
         // To account for the possibility of a forest
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > roots_;
+        
+        // This will be used to traverse the bottom nodes.
+        std::vector<std::tr1::shared_ptr<WellsGroupInterface> > leaf_nodes_;
+        
         WellsGroupInterface* findNode(std::string name);
     };
 

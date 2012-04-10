@@ -25,6 +25,7 @@
 
 struct UnstructuredGrid;
 struct ifs_tpfa_data;
+struct Wells;
 struct FlowBoundaryConditions;
 
 namespace Opm
@@ -47,10 +48,13 @@ namespace Opm
 	///                          and N == g.number_of_cells.
 	/// \param[in] gravity       Gravity vector. If nonzero, the array should
 	///                          have D elements.
+        /// \param[in] wells         The wells argument. Will be used in solution, 
+        ///                          is ignored if NULL
 	IncompTpfa(const UnstructuredGrid& g,
 		   const double* permeability,
 		   const double* gravity,
-                   const LinearSolverInterface& linsolver);
+                   const LinearSolverInterface& linsolver,
+                   const struct Wells* wells = 0);
 
 	/// Destructor.
 	~IncompTpfa();
@@ -113,7 +117,8 @@ namespace Opm
 	::std::vector<double> trans_ ;
 	::std::vector<double> gpress_;
 	::std::vector<double> gpress_omegaweighted_;
-
+        
+        const struct Wells* wells_;
 	struct ifs_tpfa_data* h_;
     };
 

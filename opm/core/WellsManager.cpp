@@ -505,22 +505,22 @@ namespace Opm
 	    }
 	}
         
-        WellCollection well_collection;
+        WellCollection wells_;
         if (deck.hasField("GRUPTREE")) {
             std::cout << "Found gruptree" << std::endl;
             const GRUPTREE& gruptree = deck.getGRUPTREE();
             
             std::map<std::string, std::string>::const_iterator it = gruptree.tree.begin();
             for( ; it != gruptree.tree.end(); ++it) {
-                well_collection.addChild(it->first, it->second, deck);
+                wells_.addChild(it->first, it->second, deck);
             }
         }
         
         if(deck.hasField("WELSPECS")) {
             WELSPECS welspecs = deck.getWELSPECS();
-            for(int i = 0; i < welspecs.welspecs.size(); ++i) {
+            for(size_t i = 0; i < welspecs.welspecs.size(); ++i) {
                 WelspecsLine line = welspecs.welspecs[i];
-                well_collection.addChild(line.name_, line.group_, deck);
+                wells_.addChild(line.name_, line.group_, deck);
             }
         }
         
