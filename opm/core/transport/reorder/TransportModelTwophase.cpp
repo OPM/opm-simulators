@@ -154,7 +154,7 @@ namespace Opm
 	}
 	double operator()(double s) const
 	{
-	    return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx) + dtpv*s*comp_term;
+	    return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx + s*comp_term);
 	}
     };
 
@@ -167,7 +167,8 @@ namespace Opm
 	//     return;
 	// }
 	int iters_used;
-	saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+	// saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+	saturation_[cell] = modifiedRegulaFalsi(res, saturation_[cell], 0.0, 1.0, maxit_, tol_, iters_used);
 	fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
     }
 

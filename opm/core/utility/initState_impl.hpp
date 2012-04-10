@@ -159,7 +159,14 @@ namespace Opm
         if (state.numPhases() != 2) {
             THROW("initStateTwophaseFromDeck(): state must have two phases.");
         }
+        state.init(grid);
         const int num_cells = props.numCells();
+        // By default: initialise water saturation to minimum everywhere.
+        std::vector<int> all_cells(num_cells);
+        for (int i = 0; i < num_cells; ++i) {
+            all_cells[i] = i;
+        }
+        state.setWaterSat(all_cells, props, State::MinSat);
         const bool convection_testcase = param.getDefault("convection_testcase", false);
         const bool segregation_testcase = param.getDefault("segregation_testcase", false);
         if (convection_testcase) {
@@ -179,6 +186,13 @@ namespace Opm
             const double init_p = param.getDefault("ref_pressure", 100)*unit::barsa;
             std::fill(state.pressure().begin(), state.pressure().end(), init_p);
         } else if (segregation_testcase) {
+            // Warn against error-prone usage.
+            if (gravity == 0.0) {
+                std::cout << "**** Warning: running gravity segregation scenario, but gravity is zero." << std::endl;
+            }
+            if (grid.cartdims[2] <= 1) {
+                std::cout << "**** Warning: running gravity segregation scenario, which expects nz > 1." << std::endl;
+            }
             // Initialise water saturation to max *above* water-oil contact.
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterAbove, state);
@@ -187,6 +201,13 @@ namespace Opm
             double dens[2] = { props.density()[1], props.density()[0] };
             initHydrostaticPressure(grid, dens, woc, gravity, woc, ref_p, state);
         } else if (param.has("water_oil_contact")) {
+            // Warn against error-prone usage.
+            if (gravity == 0.0) {
+                std::cout << "**** Warning: running gravity convection scenario, but gravity is zero." << std::endl;
+            }
+            if (grid.cartdims[2] <= 1) {
+                std::cout << "**** Warning: running gravity convection scenario, which expects nz > 1." << std::endl;
+            }
             // Initialise water saturation to max below water-oil contact.
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterBelow, state);
@@ -207,12 +228,7 @@ namespace Opm
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
             initHydrostaticPressure(grid, dens, ref_z, gravity, ref_z, ref_p, state);
         } else {
-            // By default: initialise water saturation to minimum everywhere.
-            std::vector<int> all_cells(num_cells);
-            for (int i = 0; i < num_cells; ++i) {
-                all_cells[i] = i;
-            }
-            state.setWaterSat(all_cells, props, State::MinSat);
+            // Use default: water saturation is minimum everywhere.
             // Initialise pressure to hydrostatic state.
             const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
             const double rho =  props.density()[1];
@@ -240,6 +256,7 @@ namespace Opm
         if (state.numPhases() != 2) {
             THROW("initStateTwophaseFromDeck(): state must have two phases.");
         }
+        state.init(grid);
         if (deck.hasField("EQUIL")) {
             // Set saturations depending on oil-water contact.
             const EQUIL& equil= deck.getEQUIL();
