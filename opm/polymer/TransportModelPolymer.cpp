@@ -794,8 +794,8 @@ namespace Opm
 	    cmax0[i] = cmax_[i];
 	}
 	do {
-	    int max_s_change_cell = -1;
-	    int max_c_change_cell = -1;
+	    // int max_s_change_cell = -1;
+	    // int max_c_change_cell = -1;
 	    max_s_change = 0.0;
 	    max_c_change = 0.0;
 	    for (int i = 0; i < num_cells; ++i) {
@@ -807,12 +807,12 @@ namespace Opm
 		cmax_[cell] = cmax0[i];
 		solveSingleCell(cell);
 		// std::cout << "cell = " << cell << "    delta s = " << saturation_[cell] - old_s << std::endl;
-		if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
-		    max_s_change_cell = cell;
-		}
-		if (max_c_change < std::fabs(concentration_[cell] - old_c)) {
-		    max_c_change_cell = cell;
-		}
+		// if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
+		//     max_s_change_cell = cell;
+		// }
+		// if (max_c_change < std::fabs(concentration_[cell] - old_c)) {
+		//     max_c_change_cell = cell;
+		// }
 		max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
 		max_c_change = std::max(max_c_change, std::fabs(concentration_[cell] - old_c));
 	    }
