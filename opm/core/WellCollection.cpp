@@ -41,11 +41,11 @@ namespace Opm
         }
         std::tr1::shared_ptr<WellsGroupInterface> child;
 
-        for (int i = 0; i < roots_.size(); ++i) {
+        for (size_t i = 0; i < roots_.size(); ++i) {
             if (roots_[i]->name() == child_name) {
                 child = roots_[i];
                 // We've found a new parent to the previously thought root, need to remove it
-                for(int j = i; j < roots_.size() - 1; ++j) {
+                for(size_t j = i; j < roots_.size() - 1; ++j) {
                     roots_[j] = roots_[j+1];
                 }
                 
@@ -75,7 +75,7 @@ namespace Opm
     WellsGroupInterface* WellCollection::findNode(std::string name)
     {
 
-        for (int i = 0; i < roots_.size(); i++) {
+        for (size_t i = 0; i < roots_.size(); i++) {
             WellsGroupInterface* result = roots_[i]->findGroup(name);
             if (result) {
                 return result;

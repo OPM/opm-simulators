@@ -518,7 +518,7 @@ namespace Opm
         
         if(deck.hasField("WELSPECS")) {
             WELSPECS welspecs = deck.getWELSPECS();
-            for(int i = 0; i < welspecs.welspecs.size(); ++i) {
+            for(size_t i = 0; i < welspecs.welspecs.size(); ++i) {
                 WelspecsLine line = welspecs.welspecs[i];
                 wells_.addChild(line.name_, line.group_, deck);
             }

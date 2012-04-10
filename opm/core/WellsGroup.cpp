@@ -41,7 +41,7 @@ namespace Opm
         if (name() == name_of_node) {
             return this;
         } else {
-            for (int i = 0; i < children_.size(); i++) {
+            for (size_t i = 0; i < children_.size(); i++) {
                 WellsGroupInterface* result = children_[i]->findGroup(name_of_node);
                 if (result) {
                     return result;
@@ -179,7 +179,7 @@ namespace Opm
         bool isWell = false;
         if (deck.hasField("WELSPECS")) {
             WELSPECS wspecs = deck.getWELSPECS();
-            for (int i = 0; i < wspecs.welspecs.size(); i++) {
+            for (size_t i = 0; i < wspecs.welspecs.size(); i++) {
                 if (wspecs.welspecs[i].name_ == name) {
                     isWell = true;
                     break;
@@ -193,7 +193,7 @@ namespace Opm
             InjectionSpecification injection_specification;
             if (deck.hasField("WCONINJE")) {
                 WCONINJE wconinje = deck.getWCONINJE();
-                for (int i = 0; i < wconinje.wconinje.size(); i++) {
+                for (size_t i = 0; i < wconinje.wconinje.size(); i++) {
                     if (wconinje.wconinje[i].well_ == name) {
                         WconinjeLine line = wconinje.wconinje[i];
                         injection_specification.BHP_limit_ = line.BHP_limit_;
@@ -207,7 +207,7 @@ namespace Opm
             ProductionSpecification production_specification;
             if (deck.hasField("WCONPROD")) {
                 WCONPROD wconprod = deck.getWCONPROD();
-                for (int i = 0; i < wconprod.wconprod.size(); i++) {
+                for (size_t i = 0; i < wconprod.wconprod.size(); i++) {
                     if (wconprod.wconprod[i].well_ == name) {
                         WconprodLine line = wconprod.wconprod[i];
                         production_specification.BHP_limit_ = line.BHP_limit_;
@@ -224,7 +224,7 @@ namespace Opm
             InjectionSpecification injection_specification;
             if (deck.hasField("GCONINJE")) {
                 GCONINJE gconinje = deck.getGCONINJE();
-                for (int i = 0; i < gconinje.gconinje.size(); i++) {
+                for (size_t i = 0; i < gconinje.gconinje.size(); i++) {
                     if (gconinje.gconinje[i].group_ == name) {
                         GconinjeLine line = gconinje.gconinje[i];
                         injection_specification.injector_type_ = toSurfaceComponent(line.injector_type_);
@@ -237,7 +237,7 @@ namespace Opm
             ProductionSpecification production_specification;
             if (deck.hasField("GCONPROD")) {
                 GCONPROD gconprod = deck.getGCONPROD();
-                for (int i = 0; i < gconprod.gconprod.size(); i++) {
+                for (size_t i = 0; i < gconprod.gconprod.size(); i++) {
                     if (gconprod.gconprod[i].group_ == name) {
                         GconprodLine line = gconprod.gconprod[i];
                         production_specification.oil_max_rate_ = line.oil_max_rate_;
