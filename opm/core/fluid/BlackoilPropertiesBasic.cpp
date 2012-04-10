@@ -125,7 +125,7 @@ namespace Opm
 	double B[2]; // Must be enough since component classes do not handle more than 2.
 	pvt_.B(1, 0, 0, B);
         // Compute A matrix
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int i = 0; i < n; ++i) {
             double* m = A + i*np*np;
             std::fill(m, m + np*np, 0.0);
@@ -137,7 +137,7 @@ namespace Opm
 
         // Derivative of A matrix.
         if (dAdp) {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 double* m = dAdp + i*np*np;
                 std::fill(m, m + np*np, 0.0);
@@ -157,7 +157,7 @@ namespace Opm
     {
         const int np = numPhases();
         const double* sdens = pvt_.surfaceDensities();
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int i = 0; i < n; ++i) {
             for (int phase = 0; phase < np; ++phase) {
                 rho[np*i + phase] = 0.0;

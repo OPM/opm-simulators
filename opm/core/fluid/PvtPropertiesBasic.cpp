@@ -79,7 +79,7 @@ namespace Opm
     {
 	const int np = numPhases();
         for (int phase = 0; phase < np; ++phase) {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 output_mu[np*i + phase] = viscosity_[phase];
             }
@@ -93,7 +93,7 @@ namespace Opm
     {
 	const int np = numPhases();
         for (int phase = 0; phase < np; ++phase) {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 output_B[np*i + phase] = formation_volume_factor_[phase];
             }
@@ -108,7 +108,7 @@ namespace Opm
     {
 	const int np = numPhases();
         for (int phase = 0; phase < np; ++phase) {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 output_B[np*i + phase] = formation_volume_factor_[phase];
                 output_dBdp[np*i + phase] = 0.0;

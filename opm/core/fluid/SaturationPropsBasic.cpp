@@ -71,13 +71,13 @@ namespace Opm
 					  const double* s, double* kr, double* dkrds, Fun fun)
 	{
 	    if (dkrds == 0) {
-#pragma omp parallel for
+// #pragma omp parallel for
 		for (int i = 0; i < n*np; ++i) {
 		    kr[i] = fun.kr(s[i]);
 		}
 		return;
 	    }
-#pragma omp parallel for
+// #pragma omp parallel for
 	    for (int i = 0; i < n; ++i) {
 		std::fill(dkrds + i*np*np, dkrds + (i+1)*np*np, 0.0);
 		for (int phase = 0; phase < np; ++phase) {
