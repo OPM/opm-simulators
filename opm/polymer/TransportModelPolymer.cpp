@@ -570,7 +570,7 @@ namespace Opm
     {
 	ResidualC res(*this, cell);
 	const double a = 0.0;
-	const double b = polyprops_.cMax();
+	const double b = polyprops_.cMax()*1.1; // Add 10% to account for possible non-monotonicity of hyperbolic system.
 	int iters_used;
 
 	// Check if current state is an acceptable solution.
