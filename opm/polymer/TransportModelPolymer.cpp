@@ -204,6 +204,7 @@ namespace Opm
 	const double cmax0_;
 	const double influx_;  // sum_j min(v_ij, 0)*f(s_j)
 	const double outflux_; // sum_j max(v_ij, 0)
+        const double comp_term_; // q - sum_j v_ij
 	const double dtpv_;    // dt/pv(i)
 	const double c_;
 	explicit ResidualS(const TransportModelPolymer& tmodel,
@@ -212,6 +213,7 @@ namespace Opm
 			   const double cmax0,
 			   const double influx,
 			   const double outflux,
+                           const double comp_term,
 			   const double dtpv,
 			   const double c)
 	    : tm_(tmodel),
@@ -220,13 +222,14 @@ namespace Opm
 	      cmax0_(cmax0),
 	      influx_(influx),
 	      outflux_(outflux),
+              comp_term_(comp_term),
 	      dtpv_(dtpv),
 	      c_(c)
 	{
 	}
 	double operator()(double s) const
 	{
-	    return s - s0_ +  dtpv_*(outflux_*tm_.fracFlow(s, c_, cell_) + influx_);
+	    return s - s0_ +  dtpv_*(outflux_*tm_.fracFlow(s, c_, cell_) + influx_ + s*comp_term_);
 	}
     };
 
@@ -246,6 +249,7 @@ namespace Opm
 	double influx;  // sum_j min(v_ij, 0)*f(s_j)
 	double influx_polymer;  // sum_j min(v_ij, 0)*f(s_j)*mc(c_j)
 	double outflux; // sum_j max(v_ij, 0)
+        double comp_term; // q - sum_j v_ij
 	double porosity;
 	double dtpv;    // dt/pv(i)
 	mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
@@ -262,6 +266,7 @@ namespace Opm
 	    influx  =  src_is_inflow ? dflux : 0.0;
 	    influx_polymer = src_is_inflow ? dflux*tm.computeMc(tm.inflow_c_) : 0.0;
 	    outflux = !src_is_inflow ? dflux : 0.0;
+            comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
 	    dtpv    = tm.dt_/tm.porevolume_[cell];
 	    porosity = tm.porosity_[cell];
 	    s = -1e100;
@@ -286,6 +291,7 @@ namespace Opm
 		    } else {
 			outflux += flux;
 		    }
+                    comp_term -= flux;
 		}
 	    }
 	}
@@ -298,20 +304,23 @@ namespace Opm
 	    double rhor = tm.polyprops_.rockDensity();
 	    double ads0 = tm.polyprops_.adsorption(c0, cmax0);
 	    double ads = tm.polyprops_.adsorption(c_arg, cmax0);
-	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx);
+	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
 	    res_c = s_arg*(1 - dps)*c_arg - (s0 - dps)*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer);
+		+ dtpv*(outflux*ff*mc + influx_polymer)
+                + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*ads)*comp_term;
 
 	}
 
 	double operator()(double c) const
 	{
 	    double dps = tm.polyprops_.deadPoreVol();
-	    ResidualS res_s(tm, cell, s0, cmax0, influx, outflux, dtpv, c);
+	    ResidualS res_s(tm, cell, s0, cmax0, influx, outflux, comp_term, dtpv, c);
 	    int iters_used;
 	    // Solve for s first.
-	    s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
+	    // s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
+	    //     		    tm.maxit_, tm.tol_, iters_used);
+	    s = modifiedRegulaFalsi(res_s, s0, 0.0, 1.0,
 				    tm.maxit_, tm.tol_, iters_used);
 	    double ff = tm.fracFlow(s, c, cell);
 	    double mc = tm.computeMc(c);
@@ -320,7 +329,8 @@ namespace Opm
 	    double ads = tm.polyprops_.adsorption(c, cmax0);
 	    double res = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer);
+		+ dtpv*(outflux*ff*mc + influx_polymer)
+                + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
 #ifdef EXTRA_DEBUG_OUTPUT
 	    std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
 #endif
