@@ -13,8 +13,9 @@ namespace Opm
     class WellsGroupInterface
     {
     public:
-        WellsGroupInterface(const std::string& name, ProductionSpecification prod_spec,
-                InjectionSpecification inj_spec);
+        WellsGroupInterface(const std::string& name,
+                            ProductionSpecification prod_spec,
+                            InjectionSpecification inj_spec);
         virtual ~WellsGroupInterface();
 
         /// The unique identifier for the well or well group.
@@ -38,35 +39,39 @@ namespace Opm
         InjectionSpecification injection_specification_;
     };
 
+
+
     class WellsGroup : public WellsGroupInterface
     {
     public:
-        WellsGroup(const std::string& name, ProductionSpecification prod_spec,
-                InjectionSpecification inj_spec);
+        WellsGroup(const std::string& name,
+                   ProductionSpecification prod_spec,
+                   InjectionSpecification inj_spec);
 
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
 
         void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
-
     };
+
+
 
     class WellNode : public WellsGroupInterface
     {
     public:
-        WellNode(const std::string& name, ProductionSpecification prod_spec,
+        WellNode(const std::string& name,
+                 ProductionSpecification prod_spec,
                 InjectionSpecification inj_spec);
 
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
         
         virtual bool isLeafNode() const;
-
     };
 
-    
+    /// Doc me!
     std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(std::string name, 
-                                const EclipseGridParser& deck);
+                                                               const EclipseGridParser& deck);
 
 
 }
