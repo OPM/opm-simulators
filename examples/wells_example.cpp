@@ -1,14 +1,23 @@
 #include <iostream>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+
+
+#include "opm/core/utility/initState.hpp"
 #include <opm/core/WellsManager.hpp>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
-#include "opm/core/newwells.h"
-#include "opm/core/grid.h"
+#include <opm/core/newwells.h>
+#include <opm/core/grid.h>
+#include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/TwophaseState.hpp>
+#include <opm/core/pressure/FlowBCManager.hpp>
 
+#ifdef EXPERIMENT_ISTL
+#include <opm/core/linalg/LinearSolverIstl.hpp>
+#endif
 int main(int argc, char** argv) {
 
     using namespace Opm::parameter;
@@ -27,16 +36,38 @@ int main(int argc, char** argv) {
     
     std::vector<int> global_cells(grid.c_grid()->global_cell, grid.c_grid()->global_cell + grid.c_grid()->number_of_cells);
 
-    std::cout << "ahoi" << std::endl;
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     IncompPropertiesFromDeck incomp_properties(parser, global_cells);
-        std::cout << "there" << std::endl;
 
-    LinearSolverUmfpack umfpack_solver;
-    std::cout << "here" << std::endl;
+#ifdef EXPERIMENT_ISTL
+    Opm::LinearSolverIstl linsolver(parameters);
+#else
+    Opm::LinearSolverUmfpack linsolver;
+#endif // EXPERIMENT_ISTL
     IncompTpfa pressure_solver(*grid.c_grid(), incomp_properties.permeability(), 
-                               gravity, umfpack_solver,  wells.c_wells());
+                               gravity, linsolver,  wells.c_wells());
     
+    
+    std::vector<int> all_cells;
+    for(int i = 0; i < grid.c_grid()->number_of_cells; i++) {
+        all_cells.push_back(i);
+    }
+            
+    Opm::TwophaseState state;
+    
+    initStateTwophaseFromDeck(*grid.c_grid(), incomp_properties, parser, gravity[2], state);
+    
+    // Compute total mobility and omega
+    std::vector<double> totmob;
+    std::vector<double> omega;
+    computeTotalMobilityOmega(incomp_properties, all_cells, state.saturation(), totmob, omega);
+    
+    std::vector<double> src;
+    Opm::FlowBCManager bcs;
+
+    std::vector<double> pressure;
+    std::vector<double> face_flux;
+    pressure_solver.solve(totmob, omega, src, bcs.c_bcs(), pressure, face_flux);
     return 0;
 }
 
