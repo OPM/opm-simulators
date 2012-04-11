@@ -10,10 +10,10 @@
 namespace Opm
 {
 
-    WellsGroupInterface::WellsGroupInterface(const std::string& name,
+    WellsGroupInterface::WellsGroupInterface(const std::string& myname,
                                              ProductionSpecification prod_spec,
                                              InjectionSpecification inje_spec)
-        : name_(name),
+        : name_(myname),
           production_specification_(prod_spec),
           injection_specification_(inje_spec)
     {
@@ -28,10 +28,10 @@ namespace Opm
         return name_;
     }
 
-    WellsGroup::WellsGroup(const std::string& name,
+    WellsGroup::WellsGroup(const std::string& myname,
                            ProductionSpecification prod_spec,
                            InjectionSpecification inj_spec)
-        : WellsGroupInterface(name, prod_spec, inj_spec)
+        : WellsGroupInterface(myname, prod_spec, inj_spec)
     {
     }
     
@@ -62,10 +62,10 @@ namespace Opm
         children_.push_back(child);
     }
 
-    WellNode::WellNode(const std::string& name,
+    WellNode::WellNode(const std::string& myname,
                        ProductionSpecification prod_spec,
                        InjectionSpecification inj_spec)
-        : WellsGroupInterface(name, prod_spec, inj_spec)
+        : WellsGroupInterface(myname, prod_spec, inj_spec)
     {
     }
 
@@ -84,99 +84,103 @@ namespace Opm
         return true;
     }
 
-    surface_component toSurfaceComponent(std::string type)
+    namespace
     {
-        if (type == "OIL") {
-            return OIL;
-        }
-        if (type == "WATER") {
-            return WATER;
-        }
-        if (type == "GAS") {
-            return GAS;
-        }
-        THROW("Unknown type " << type << ", could not convert to surface_component");
-    }
 
-    InjectionSpecification::ControlMode toInjectionControlMode(std::string type)
-    {
-        if (type == "NONE") {
-            return InjectionSpecification::NONE;
+        surface_component toSurfaceComponent(std::string type)
+        {
+            if (type == "OIL") {
+                return OIL;
+            }
+            if (type == "WATER") {
+                return WATER;
+            }
+            if (type == "GAS") {
+                return GAS;
+            }
+            THROW("Unknown type " << type << ", could not convert to surface_component");
         }
 
-        if (type == "ORAT") {
-            return InjectionSpecification::ORAT;
-        }
-        if (type == "REIN") {
-            return InjectionSpecification::REIN;
-        }
-        if (type == "RESV") {
-            return InjectionSpecification::RESV;
-        }
-        if (type == "VREP") {
-            return InjectionSpecification::VREP;
-        }
-        if (type == "WGRA") {
-            return InjectionSpecification::WGRA;
-        }
-        if (type == "FLD") {
-            return InjectionSpecification::FLD;
-        }
-        if (type == "GRUP") {
-            return InjectionSpecification::GRUP;
-        }
+        InjectionSpecification::ControlMode toInjectionControlMode(std::string type)
+        {
+            if (type == "NONE") {
+                return InjectionSpecification::NONE;
+            }
+
+            if (type == "ORAT") {
+                return InjectionSpecification::ORAT;
+            }
+            if (type == "REIN") {
+                return InjectionSpecification::REIN;
+            }
+            if (type == "RESV") {
+                return InjectionSpecification::RESV;
+            }
+            if (type == "VREP") {
+                return InjectionSpecification::VREP;
+            }
+            if (type == "WGRA") {
+                return InjectionSpecification::WGRA;
+            }
+            if (type == "FLD") {
+                return InjectionSpecification::FLD;
+            }
+            if (type == "GRUP") {
+                return InjectionSpecification::GRUP;
+            }
 
 
-        THROW("Unknown type " << type << ", could not convert to ControlMode.");
-    }
-
-    ProductionSpecification::ControlMode toProductionControlMode(std::string type)
-    {
-        if (type == "NONE") {
-            return ProductionSpecification::NONE_CM;
-        }
-        if (type == "ORAT") {
-                        return ProductionSpecification::ORAT;
-
-        }
-        if (type == "REIN") {
-            return ProductionSpecification::REIN;
-        }
-        if (type == "RESV") {
-            return ProductionSpecification::RESV;
-        }
-        if (type == "VREP") {
-            return ProductionSpecification::VREP;
-        }
-        if (type == "WGRA") {
-            return ProductionSpecification::WGRA;
-        }
-        if (type == "FLD") {
-            return ProductionSpecification::FLD;
-        }
-        if (type == "GRUP") {
-            return ProductionSpecification::GRUP;
+            THROW("Unknown type " << type << ", could not convert to ControlMode.");
         }
 
-        THROW("Unknown type " << type << ", could not convert to ControlMode.");
-    }
+        ProductionSpecification::ControlMode toProductionControlMode(std::string type)
+        {
+            if (type == "NONE") {
+                return ProductionSpecification::NONE_CM;
+            }
+            if (type == "ORAT") {
+                return ProductionSpecification::ORAT;
+
+            }
+            if (type == "REIN") {
+                return ProductionSpecification::REIN;
+            }
+            if (type == "RESV") {
+                return ProductionSpecification::RESV;
+            }
+            if (type == "VREP") {
+                return ProductionSpecification::VREP;
+            }
+            if (type == "WGRA") {
+                return ProductionSpecification::WGRA;
+            }
+            if (type == "FLD") {
+                return ProductionSpecification::FLD;
+            }
+            if (type == "GRUP") {
+                return ProductionSpecification::GRUP;
+            }
+
+            THROW("Unknown type " << type << ", could not convert to ControlMode.");
+        }
     
     
-    ProductionSpecification::Procedure toProductionProcedure(std::string type)
-    {
-        if (type == "NONE") {
-            return ProductionSpecification::NONE_P;
-        }
-        if (type == "RATE") {
-            return ProductionSpecification::RATE;
-        }
-        if (type == "WELL") {
-            return ProductionSpecification::WELL;
-        }
+        ProductionSpecification::Procedure toProductionProcedure(std::string type)
+        {
+            if (type == "NONE") {
+                return ProductionSpecification::NONE_P;
+            }
+            if (type == "RATE") {
+                return ProductionSpecification::RATE;
+            }
+            if (type == "WELL") {
+                return ProductionSpecification::WELL;
+            }
         
 
-        THROW("Unknown type " << type << ", could not convert to ControlMode.");
-    }
+            THROW("Unknown type " << type << ", could not convert to ControlMode.");
+        }
+    } // anonymous namespace
 
     std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(std::string name, const EclipseGridParser& deck)
     {
