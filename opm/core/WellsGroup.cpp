@@ -10,10 +10,12 @@
 namespace Opm
 {
 
-    WellsGroupInterface::WellsGroupInterface(const std::string& name, ProductionSpecification prod_spec,
-            InjectionSpecification inje_spec)
-    : name_(name), production_specification_(prod_spec),
-    injection_specification_(inje_spec)
+    WellsGroupInterface::WellsGroupInterface(const std::string& name,
+                                             ProductionSpecification prod_spec,
+                                             InjectionSpecification inje_spec)
+        : name_(name),
+          production_specification_(prod_spec),
+          injection_specification_(inje_spec)
     {
     }
 
@@ -26,13 +28,15 @@ namespace Opm
         return name_;
     }
 
-    WellsGroup::WellsGroup(const std::string& name, ProductionSpecification prod_spec,
-            InjectionSpecification inj_spec)
-    : WellsGroupInterface(name, prod_spec, inj_spec)
+    WellsGroup::WellsGroup(const std::string& name,
+                           ProductionSpecification prod_spec,
+                           InjectionSpecification inj_spec)
+        : WellsGroupInterface(name, prod_spec, inj_spec)
     {
     }
     
-    bool WellsGroupInterface::isLeafNode() const {
+    bool WellsGroupInterface::isLeafNode() const
+    {
         return false;
     }
 
@@ -53,13 +57,15 @@ namespace Opm
         }
     }
     
-    void WellsGroup::addChild(std::tr1::shared_ptr<WellsGroupInterface> child) {
+    void WellsGroup::addChild(std::tr1::shared_ptr<WellsGroupInterface> child)
+    {
         children_.push_back(child);
     }
 
-    WellNode::WellNode(const std::string& name, ProductionSpecification prod_spec,
-            InjectionSpecification inj_spec)
-    : WellsGroupInterface(name, prod_spec, inj_spec)
+    WellNode::WellNode(const std::string& name,
+                       ProductionSpecification prod_spec,
+                       InjectionSpecification inj_spec)
+        : WellsGroupInterface(name, prod_spec, inj_spec)
     {
     }
 
@@ -73,7 +79,8 @@ namespace Opm
 
     }
     
-    bool WellNode::isLeafNode() const {
+    bool WellNode::isLeafNode() const
+    {
         return true;
     }
 
@@ -252,8 +259,7 @@ namespace Opm
             
             return_value.reset(new WellsGroup(name, production_specification, injection_specification));
         }
-        
+
         return return_value;
-        
     }
 }
