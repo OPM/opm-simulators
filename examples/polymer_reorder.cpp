@@ -40,6 +40,7 @@
 
 #include <opm/polymer/IncompPropertiesDefaultPolymer.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
+#include <opm/core/fluid/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 // #define EXPERIMENT_ISTL
@@ -132,6 +133,7 @@ static void outputWaterCut(const Opm::Watercut& watercut,
     }
     watercut.write(os);
 }
+
 
 
 // --------------- Types needed to define transport solver ---------------
@@ -302,7 +304,6 @@ main(int argc, char** argv)
 
     // Reading various control parameters.
     const bool guess_old_solution = param.getDefault("guess_old_solution", false);
-    const bool use_reorder = param.getDefault("use_reorder", true);
     const bool output = param.getDefault("output", true);
     std::string output_dir;
     int output_interval = 1;
@@ -320,6 +321,7 @@ main(int argc, char** argv)
     boost::scoped_ptr<Opm::GridManager> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
     boost::scoped_ptr<Opm::WellsManager> wells;
+    boost::scoped_ptr<Opm::RockCompressibility> rock_comp;
     Opm::SimulatorTimer simtimer;
     Opm::PolymerState state;
     Opm::PolymerProperties polyprop;
@@ -341,6 +343,8 @@ main(int argc, char** argv)
         } else {
             simtimer.init(param);
         }
+        // Rock compressibility.
+        rock_comp.reset(new Opm::RockCompressibility(deck));
         // Gravity.
         gravity[2] = deck.hasField("NOGRAV") ? 0.0 : Opm::unit::gravity;
         // Init state variables (saturation and pressure).
@@ -363,6 +367,8 @@ main(int argc, char** argv)
         wells.reset(new Opm::WellsManager());
         // Timer init.
         simtimer.init(param);
+        // Rock compressibility.
+        rock_comp.reset(new Opm::RockCompressibility(param));
         // Gravity.
         gravity[2] = param.getDefault("gravity", 0.0);
         // Init state variables (saturation and pressure).
@@ -416,7 +422,7 @@ main(int argc, char** argv)
     bool use_segregation_split = false;
     bool use_column_solver = false;
     bool use_gauss_seidel_gravity = false;
-    if (use_gravity && use_reorder) {
+    if (use_gravity) {
         use_segregation_split = param.getDefault("use_segregation_split", use_segregation_split);
         if (use_segregation_split) {
             use_column_solver = param.getDefault("use_column_solver", use_column_solver);
@@ -427,13 +433,27 @@ main(int argc, char** argv)
         }
     }
 
+    // Check that rock compressibility is not used with solvers that do not handle it.
+    int nl_pressure_maxiter = 0;
+    double nl_pressure_tolerance = 0.0;
+    if (rock_comp->isActive()) {
+        nl_pressure_maxiter = param.getDefault("nl_pressure_maxiter", 10);
+        nl_pressure_tolerance = param.getDefault("nl_pressure_tolerance", 1.0); // in Pascal
+    }
+
     // Source-related variables init.
     int num_cells = grid->c_grid()->number_of_cells;
     std::vector<double> totmob;
     std::vector<double> omega; // Will remain empty if no gravity.
+    std::vector<double> rc; // Will remain empty if no rock compressibility.
+
     // Extra rock init.
     std::vector<double> porevol;
-    computePorevolume(*grid->c_grid(), *props, porevol);
+    if (rock_comp->isActive()) {
+        computePorevolume(*grid->c_grid(), *props, *rock_comp, state.pressure(), porevol);
+    } else {
+        computePorevolume(*grid->c_grid(), *props, porevol);
+    }
     double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
 
     // We need a separate reorder_sat, because the reorder
@@ -592,7 +612,31 @@ main(int argc, char** argv)
                                  totmob);
         }
         pressure_timer.start();
-        psolver.solve(totmob, omega, src, bcs.c_bcs(), state.pressure(), state.faceflux());
+        if (rock_comp->isActive()) {
+            rc.resize(num_cells);
+            std::vector<double> initial_pressure = state.pressure();
+            std::vector<double> prev_pressure;
+            for (int iter = 0; iter < nl_pressure_maxiter; ++iter) {
+                prev_pressure = state.pressure();
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    rc[cell] = rock_comp->rockComp(state.pressure()[cell]);
+                }
+                state.pressure() = initial_pressure;
+                psolver.solve(totmob, omega, src, bcs.c_bcs(), porevol, rc, simtimer.currentStepLength(),
+                              state.pressure(), state.faceflux());
+                double max_change = 0.0;
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    max_change = std::max(max_change, std::fabs(state.pressure()[cell] - prev_pressure[cell]));
+                }
+                std::cout << "Pressure iter " << iter << "   max change = " << max_change << std::endl;
+                if (max_change < nl_pressure_tolerance) {
+                    break;
+                }
+            }
+            computePorevolume(*grid->c_grid(), *props, *rock_comp, state.pressure(), porevol);
+        } else {
+            psolver.solve(totmob, omega, src, bcs.c_bcs(), state.pressure(), state.faceflux());
+        }
         pressure_timer.stop();
         double pt = pressure_timer.secsSinceStart();
         std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
@@ -629,36 +673,24 @@ main(int argc, char** argv)
             std::cout << "Making " << num_transport_substeps << " transport substeps." << std::endl;
         }
         for (int tr_substep = 0; tr_substep < num_transport_substeps; ++tr_substep) {
-            if (use_reorder) {
-                Opm::toWaterSat(state.saturation(), reorder_sat);
-                reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
-                                    &reorder_sat[0], &state.concentration()[0], &state.maxconcentration()[0]);
-                Opm::toBothSat(reorder_sat, state.saturation());
-                Opm::computeInjectedProduced(*props, state.saturation(), src, stepsize, injected, produced);
-                if (use_segregation_split) {
-                    if (use_column_solver) {
-                        if (use_gauss_seidel_gravity) {
-                            THROW("use_gauss_seidel_gravity option not implemented for polymer.");
-                            // reorder_model.solveGravity(columns, stepsize, reorder_sat);
-                            // Opm::toBothSat(reorder_sat, state.saturation());
-                        } else {
-                            colsolver.solve(columns, stepsize, state.saturation(), state.concentration(),
-                                            state.maxconcentration());
-                        }
+            Opm::toWaterSat(state.saturation(), reorder_sat);
+            reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
+                                &reorder_sat[0], &state.concentration()[0], &state.maxconcentration()[0]);
+            Opm::toBothSat(reorder_sat, state.saturation());
+            Opm::computeInjectedProduced(*props, state.saturation(), src, stepsize, injected, produced);
+            if (use_segregation_split) {
+                if (use_column_solver) {
+                    if (use_gauss_seidel_gravity) {
+                        THROW("use_gauss_seidel_gravity option not implemented for polymer.");
+                        // reorder_model.solveGravity(columns, stepsize, reorder_sat);
+                        // Opm::toBothSat(reorder_sat, state.saturation());
                     } else {
-                        THROW("use_segregation_split option for polymer is only implemented in the use_column_solver case.");
-                        // std::vector<double> fluxes = state.faceflux();
-                        // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
-                        // tsolver.solve(*grid->c_grid(), tsrc, stepsize, ctrl, state, linsolve, rpt);
-                        // std::cout << rpt;
-                        // state.faceflux() = fluxes;
+                        colsolver.solve(columns, stepsize, state.saturation(), state.concentration(),
+                                        state.maxconcentration());
                     }
+                } else {
+                    THROW("use_segregation_split option for polymer is only implemented in the use_column_solver case.");
                 }
-            } else {
-                THROW("Non-reordering transport solver not implemented for polymer.");
-                // tsolver.solve(*grid->c_grid(), tsrc, stepsize, ctrl, state, linsolve, rpt);
-                // std::cout << rpt;
-                // Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
             }
         }
         transport_timer.stop();
