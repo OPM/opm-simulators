@@ -38,7 +38,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/fluid/IncompPropertiesBasic.hpp>
+#include <opm/polymer/IncompPropertiesDefaultPolymer.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
@@ -84,90 +84,54 @@
 
 
 
-class AdHocProps : public Opm::IncompPropertiesBasic
+
+static void outputState(const UnstructuredGrid& grid,
+                        const Opm::PolymerState& state,
+                        const int step,
+                        const std::string& output_dir)
 {
-public:
-    AdHocProps(const Opm::parameter::ParameterGroup& param, int dim, int num_cells)
-        : Opm::IncompPropertiesBasic(param, dim, num_cells)
-    {
-        ASSERT(numPhases() == 2);
-        sw_.resize(3);
-        sw_[0] = 0.2;
-        sw_[1] = 0.7;
-        sw_[2] = 1.0;
-        krw_.resize(3);
-        krw_[0] = 0.0;
-        krw_[1] = 0.7;
-        krw_[2] = 1.0;
-        so_.resize(2);
-        so_[0] = 0.3;
-        so_[1] = 0.8;
-        kro_.resize(2);
-        kro_[0] = 0.0;
-        kro_[1] = 1.0;
+    // Write data in VTK format.
+    std::ostringstream vtkfilename;
+    vtkfilename << output_dir << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
+    std::ofstream vtkfile(vtkfilename.str().c_str());
+    if (!vtkfile) {
+        THROW("Failed to open " << vtkfilename.str());
     }
+    Opm::DataMap dm;
+    dm["saturation"] = &state.saturation();
+    dm["pressure"] = &state.pressure();
+    dm["concentration"] = &state.concentration();
+    dm["cmax"] = &state.maxconcentration();
+    std::vector<double> cell_velocity;
+    Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+    dm["velocity"] = &cell_velocity;
+    Opm::writeVtkData(grid, dm, vtkfile);
 
-    virtual void relperm(const int n,
-                         const double* s,
-                         const int* /*cells*/,
-                         double* kr,
-                         double* dkrds) const
-    {
-        // ASSERT(dkrds == 0);
-        // We assume two phases flow
-        for (int i = 0; i < n; ++i) {
-            kr[2*i] = krw(s[2*i]);
-            kr[2*i+1] = kro(s[2*i+1]);
-            if (dkrds != 0) {
-                dkrds[2*i] = krw_dsw(s[2*i]);
-                dkrds[2*i+3] = kro_dso(s[2*i+1]);
-                dkrds[2*i+1] = -dkrds[2*i+3];
-                dkrds[2*i+2] = -dkrds[2*i];
-            }
+    // Write data (not grid) in Matlab format
+    for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+        std::ostringstream fname;
+        fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+        std::ofstream file(fname.str().c_str());
+        if (!file) {
+            THROW("Failed to open " << fname.str());
         }
+        const std::vector<double>& d = *(it->second);
+        std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
     }
+}
 
-    virtual void satRange(const int n,
-                          const int* /*cells*/,
-                          double* smin,
-                          double* smax) const
-    {
-        const int np = 2;
-        for (int i = 0; i < n; ++i) {
-            smin[np*i + 0] = sw_[0];
-            smax[np*i + 0] = sw_.back();
-            smin[np*i + 1] = 1.0 - sw_[0];
-            smax[np*i + 1] = 1.0 - sw_.back();
-        }
+
+static void outputWaterCut(const Opm::Watercut& watercut,
+                           const std::string& output_dir)
+{
+    // Write water cut curve.
+    std::string fname = output_dir  + "/watercut.txt";
+    std::ofstream os(fname.c_str());
+    if (!os) {
+        THROW("Failed to open " << fname);
     }
-
-private:
-    double krw(double s) const
-    {
-        return Opm::linearInterpolation(sw_, krw_, s);
-    }
-
-    double krw_dsw(double s) const
-    {
-        return Opm::linearInterpolationDerivative(sw_, krw_, s);
-    }
-
-
-    double kro(double s) const
-    {
-        return Opm::linearInterpolation(so_, kro_, s);
-    }
-
-    double kro_dso(double s) const
-    {
-        return Opm::linearInterpolationDerivative(so_, kro_, s);
-    }
-
-    std::vector<double> sw_;
-    std::vector<double> krw_;
-    std::vector<double> so_;
-    std::vector<double> kro_;
-};
+    watercut.write(os);
+}
 
 
 // --------------- Types needed to define transport solver ---------------
@@ -301,42 +265,6 @@ typedef Opm::ImplicitTransport<NewtonPolymerTransportModel,
 
 
 
-static void outputState(const UnstructuredGrid& grid,
-                        const Opm::PolymerState& state,
-                        const int step,
-                        const std::string& output_dir)
-{
-    // Write data in VTK format.
-    std::ostringstream vtkfilename;
-    vtkfilename << output_dir << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
-    std::ofstream vtkfile(vtkfilename.str().c_str());
-    if (!vtkfile) {
-        THROW("Failed to open " << vtkfilename.str());
-    }
-    Opm::DataMap dm;
-    dm["saturation"] = &state.saturation();
-    dm["pressure"] = &state.pressure();
-    dm["concentration"] = &state.concentration();
-    dm["cmax"] = &state.maxconcentration();
-    std::vector<double> cell_velocity;
-    Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
-    dm["velocity"] = &cell_velocity;
-    Opm::writeVtkData(grid, dm, vtkfile);
-
-    // Write data (not grid) in Matlab format
-    for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-        std::ostringstream fname;
-        fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
-        std::ofstream file(fname.str().c_str());
-        if (!file) {
-            THROW("Failed to open " << fname.str());
-        }
-        const std::vector<double>& d = *(it->second);
-        std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-    }
-}
-
-
 
 
 class PolymerInflow
@@ -362,19 +290,6 @@ private:
     double amount_;
 };
 
-
-
-static void outputWaterCut(const Opm::Watercut& watercut,
-                           const std::string& output_dir)
-{
-    // Write water cut curve.
-    std::string fname = output_dir  + "/watercut.txt";
-    std::ofstream os(fname.c_str());
-    if (!os) {
-        THROW("Failed to open " << fname);
-    }
-    watercut.write(os);
-}
 
 
 // ----------------- Main program -----------------
@@ -418,7 +333,6 @@ main(int argc, char** argv)
         const int* gc = grid->c_grid()->global_cell;
         std::vector<int> global_cell(gc, gc + grid->c_grid()->number_of_cells);
         props.reset(new Opm::IncompPropertiesFromDeck(deck, global_cell));
-        // props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
         // Wells init.
         wells.reset(new Opm::WellsManager(deck, *grid->c_grid(), props->permeability()));
         // Timer init.
@@ -444,7 +358,7 @@ main(int argc, char** argv)
         grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
         // Rock and fluid init.
         // props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        props.reset(new AdHocProps(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+        props.reset(new Opm::IncompPropertiesDefaultPolymer(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
         // Wells init.
         wells.reset(new Opm::WellsManager());
         // Timer init.
