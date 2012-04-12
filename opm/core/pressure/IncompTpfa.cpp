@@ -94,8 +94,9 @@ namespace Opm
     /// \param[out] faceflux   Will contain F signed face flux values.
     /// \param[out] well_bhp   Will contain bhp values for each well passed
     ///                        in the constructor.
-    /// \param[out] well_rate  Will contain rate values for each well passed
-    ///                        in the constructor.
+    /// \param[out] well_rate  Will contain rate values for each
+    ///                        connection in all wells passed in the
+    ///                        constructor
     void IncompTpfa::solve(const std::vector<double>& totmob,
 			   const std::vector<double>& omega,
 			   const std::vector<double>& src,
@@ -139,7 +140,7 @@ namespace Opm
 
         if(wells_ != NULL) {
             well_bhp.resize(wells_->number_of_wells);
-            well_rate.resize(wells_->number_of_wells);
+            well_rate.resize(wells_->well_connpos[ wells_->number_of_wells ]);
             soln.well_flux = &well_rate[0];
             soln.well_press = &well_bhp[0];
         }
@@ -167,8 +168,9 @@ namespace Opm
     /// \param[out] faceflux   Will contain F signed face flux values.
     /// \param[out] well_bhp   Will contain bhp values for each well passed
     ///                        in the constructor
-    /// \param[out] well_rate  Will contain rate values for each well passed
-    ///                        in the constructor
+    /// \param[out] well_rate  Will contain rate values for each
+    ///                        connection in all wells passed in the
+    ///                        constructor
     void IncompTpfa::solve(const std::vector<double>& totmob,
                            const std::vector<double>& omega,
                            const std::vector<double>& src,
@@ -235,7 +237,7 @@ namespace Opm
 
         if(wells_ != NULL) {
             well_bhp.resize(wells_->number_of_wells);
-            well_rate.resize(wells_->number_of_wells);
+            well_rate.resize(wells_->well_connpos[ wells_->number_of_wells ]);
             soln.well_flux = &well_rate[0];
             soln.well_press = &well_bhp[0];
         }
