@@ -68,6 +68,8 @@ namespace Opm
         }
     }
     
+    
+    
     const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& WellCollection::getLeafNodes() const {
         return leaf_nodes_;
     }
@@ -83,4 +85,16 @@ namespace Opm
         }
         return NULL;
     }
+    
+    bool WellCollection::conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) const {
+        for(size_t i = 0; i < roots_.size(); i++) {
+            if(! roots_[i]->conditionsMet(pressure, grid) ) {
+                return false;
+            }
+        }
+        
+        return true;
+        
+    }
+
 }

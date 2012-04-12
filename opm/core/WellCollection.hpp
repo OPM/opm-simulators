@@ -24,6 +24,7 @@ along with OpenRS.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <vector>
 #include <opm/core/WellsGroup.hpp>
+#include <opm/core/grid.h>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
 namespace Opm
@@ -37,6 +38,8 @@ namespace Opm
 
         void addChild(std::string child, std::string parent,
                 const EclipseGridParser& deck);
+        
+        bool conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) const;
         
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
     private:

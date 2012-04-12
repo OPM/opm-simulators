@@ -4,6 +4,7 @@
 #include <opm/core/InjectionSpecification.hpp>
 #include <opm/core/ProductionSpecification.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/grid.h>
 #include <string>
 
 
@@ -29,6 +30,8 @@ namespace Opm
         
         /// \returns true if the object is a leaf node (WellNode), false otherwise.
         virtual bool isLeafNode() const;
+        
+        virtual bool conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) = 0;
 
         /// \returns the pointer to the WellsGroupInterface with the given name. NULL if 
         ///          the name is not found.a
@@ -51,6 +54,8 @@ namespace Opm
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
 
         void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
+        
+        virtual bool conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid);
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -65,8 +70,14 @@ namespace Opm
                 InjectionSpecification inj_spec);
 
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
-        
+        virtual bool conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid);
         virtual bool isLeafNode() const;
+        
+        void setWellsPointer(const struct Wells* wells, int self_index);
+        
+    private:
+        const struct Wells* wells_;
+        int self_index_;
     };
 
     /// Doc me!

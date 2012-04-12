@@ -40,6 +40,7 @@ namespace Opm
         return false;
     }
 
+    
     WellsGroupInterface* WellsGroup::findGroup(std::string name_of_node)
     {
         if (name() == name_of_node) {
@@ -56,6 +57,12 @@ namespace Opm
             return NULL;
         }
     }
+
+    
+    bool WellsGroup::conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid)
+    {
+        return true;
+    }
     
     void WellsGroup::addChild(std::tr1::shared_ptr<WellsGroupInterface> child)
     {
@@ -67,6 +74,11 @@ namespace Opm
                        InjectionSpecification inj_spec)
         : WellsGroupInterface(myname, prod_spec, inj_spec)
     {
+    }
+    
+    bool WellNode::conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) 
+    {
+        return true;
     }
 
     WellsGroupInterface* WellNode::findGroup(std::string name_of_node)
@@ -83,7 +95,12 @@ namespace Opm
     {
         return true;
     }
-
+    
+    void WellNode::setWellsPointer(const struct Wells* wells, int self_index) {
+        wells_ = wells;
+        self_index_ = self_index;
+    }
+    
     namespace
     {
 

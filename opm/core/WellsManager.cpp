@@ -520,6 +520,13 @@ namespace Opm
             WelspecsLine line = welspecs.welspecs[i];
             wells_.addChild(line.name_, line.group_, deck);
         }
+        
+        for(size_t i = 0; i < wells_.getLeafNodes().size(); i++) {
+            WellNode* node = static_cast<WellNode*>(wells_.getLeafNodes()[i].get());
+            
+            // We know that getLeafNodes() is ordered the same way as they're indexed in w_
+            node->setWellsPointer(w_, i);
+        }
     }
 
 
@@ -541,6 +548,10 @@ namespace Opm
 	return w_;
     }
 
+    const WellCollection& WellsManager::wellCollection() const
+    {
+        return well_collection_;
+    }
 
 
 

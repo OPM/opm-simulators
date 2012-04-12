@@ -54,6 +54,8 @@ namespace Opm
 	/// The method is named similarly to c_str() in std::string,
 	/// to make it clear that we are returning a C-compatible struct.
 	const Wells* c_wells() const;
+        
+        const WellCollection& wellCollection() const;
 
     private:
 	// Disable copying and assignment.
