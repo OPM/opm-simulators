@@ -123,10 +123,16 @@ int main()
     /// \endcode
 
     /// \page tutorial2
-    /// We declare the pressure and face flux vectors we are going to compute
+    /// We declare the solution vectors, i.e., the pressure and face
+    /// flux vectors we are going to compute.  The well solution
+    /// vectors are needed for interface compatibility with the
+    /// <CODE>solve()</CODE> method of class
+    /// <CODE>Opm::IncompTPFA</CODE>.
     /// \code
     std::vector<double> pressure(num_cells);
     std::vector<double> faceflux(num_faces);
+    std::vector<double> well_bhp;
+    std::vector<double> well_flux;
     /// \endcode 
     /// \page tutorial2
     /// \details
@@ -139,7 +145,8 @@ int main()
     /// \page tutorial2
     /// We call the pressure solver.
     /// \code
-    psolver.solve(mob, omega, src, bcs.c_bcs(), pressure, faceflux);
+    psolver.solve(mob, omega, src, bcs.c_bcs(),
+                  pressure, faceflux, well_bhp, well_flux);
     /// \endcode
 
     /// \page tutorial2
