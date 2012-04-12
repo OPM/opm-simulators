@@ -124,6 +124,7 @@ namespace Opm
         ifs_tpfa_forces F = { NULL, NULL, wells_, NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
+        F.totmob = &totmob[0];
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
@@ -199,7 +200,7 @@ namespace Opm
         ifs_tpfa_forces F = { NULL, NULL, wells_, NULL, NULL };
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
-
+        F.totmob = &totmob[0];
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
         // TODO: this is a hack, it would be better to handle this in a

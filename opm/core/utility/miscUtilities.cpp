@@ -403,6 +403,31 @@ namespace Opm
                << data_[3*i+2] << '\n';
         }
     }
+    
+    
+    void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
+            const std::vector<double> densities, std::vector<double>& wdp) 
+    {
+        // Simple for now:
+        for(int i = 0; i < wells.number_of_wells; i++) {
+            double depth_ref = wells.depth_ref[i];
+            for(int j = wells.well_connpos[i]; j < wells.well_connpos[i+1]; j++) {
+                int cell = wells.well_cells[j];
+                
+                // Is this correct wrt. depth_ref?
+                double cell_depth = grid.cell_centroids[3*cell+2];
+                
+                double density = 0.0;
+                for(size_t i = 0; i < densities.size(); i++) {
+                    // Is this a smart way of doing it?
+                    density += saturations[densities.size()*cell+i]*densities[i];
+                }
+                
+                // Is the sign correct?
+                wdp.push_back(density*(cell_depth-depth_ref));
+            }
+        }
+    }
 
 
 } // namespace Opm

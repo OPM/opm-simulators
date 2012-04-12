@@ -175,7 +175,11 @@ namespace Opm
     /// For this to be valid, the wells must be all rate-controlled and
     /// single-perforation.
     void wellsToSrc(const Wells& wells, const int num_cells, std::vector<double>& src);
+    
 
+    void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
+                    const std::vector<double>& densities, std::vector<double>& wdp);
+    
     /// Encapsulates the watercut curves.
     class Watercut
     {
