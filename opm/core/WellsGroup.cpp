@@ -13,10 +13,10 @@ namespace Opm
     WellsGroupInterface::WellsGroupInterface(const std::string& myname,
                                              ProductionSpecification prod_spec,
                                              InjectionSpecification inje_spec)
-        : name_(myname),
+        : parent_(NULL),
+          name_(myname),
           production_specification_(prod_spec),
-          injection_specification_(inje_spec),
-            parent_(NULL)
+          injection_specification_(inje_spec)
     {
     }
 
