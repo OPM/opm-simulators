@@ -62,6 +62,10 @@ int main(int argc, char** argv) {
     std::vector<double> omega;
     computeTotalMobilityOmega(incomp_properties, all_cells, state.saturation(), totmob, omega);
     
+    std::vector<double> wdp;
+    std::vector<double> densities(incomp_properties.density(), incomp_properties.density() + incomp_properties.numPhases());
+    computeWDP(*wells.c_wells(), *grid.c_grid(), state.saturation(), densities, wdp);
+    
     std::vector<double> src;
     Opm::FlowBCManager bcs;
 
@@ -70,7 +74,7 @@ int main(int argc, char** argv) {
 
     std::vector<double> well_bhp;
     std::vector<double> well_rate;
-    pressure_solver.solve(totmob, omega, src, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate);
+    pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate);
     std::cout << "Solved" << std::endl;
     if(wells.wellCollection().conditionsMet(well_bhp, well_rate)) {
         std::cout << "Conditions met for wells!" << std::endl;
