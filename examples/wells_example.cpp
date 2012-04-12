@@ -68,8 +68,10 @@ int main(int argc, char** argv) {
     std::vector<double> pressure;
     std::vector<double> face_flux;
 
-    //pressure_solver.solve(totmob, omega, src, bcs.c_bcs(), pressure, face_flux);
-    if(wells.wellCollection().conditionsMet(pressure, *grid.c_grid())) {
+    std::vector<double> well_bhp;
+    std::vector<double> well_rate;
+    //pressure_solver.solve(totmob, omega, src, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate);
+    if(wells.wellCollection().conditionsMet(well_bhp, well_rate)) {
         std::cout << "Conditions met for wells!" << std::endl;
     }
     else
