@@ -406,7 +406,7 @@ namespace Opm
     
     
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-            const std::vector<double> densities, std::vector<double>& wdp) 
+            const std::vector<double>& densities, std::vector<double>& wdp) 
     {
         // Simple for now:
         for(int i = 0; i < wells.number_of_wells; i++) {
