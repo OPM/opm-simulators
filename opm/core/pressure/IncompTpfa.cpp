@@ -65,7 +65,7 @@ namespace Opm
 	// gpress_omegaweighted_ is sent to assembler always, and it dislikes
 	// getting a zero pointer.
 	gpress_omegaweighted_.resize(g.cell_facepos[ g.number_of_cells ], 0.0);
-	h_ = ifs_tpfa_construct(gg, 0);
+	h_ = ifs_tpfa_construct(gg, const_cast<struct Wells*>(wells_));
     }
 
 
@@ -99,6 +99,7 @@ namespace Opm
     void IncompTpfa::solve(const std::vector<double>& totmob,
 			   const std::vector<double>& omega,
 			   const std::vector<double>& src,
+                           const std::vector<double>& wdp,
 			   const FlowBoundaryConditions* bcs,
 			   std::vector<double>& pressure,
 			   std::vector<double>& faceflux,
@@ -125,7 +126,8 @@ namespace Opm
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
         F.totmob = &totmob[0];
-
+        F.wdp = &wdp[0];
+        
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
 	linsolver_.solve(h_->A, h_->b, h_->x);
@@ -172,6 +174,7 @@ namespace Opm
     void IncompTpfa::solve(const std::vector<double>& totmob,
                            const std::vector<double>& omega,
                            const std::vector<double>& src,
+                           const std::vector<double>& wdp,
                            const FlowBoundaryConditions* bcs,
                            const std::vector<double>& porevol,
                            const std::vector<double>& rock_comp,
@@ -201,6 +204,8 @@ namespace Opm
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
         F.totmob = &totmob[0];
+        F.wdp = &wdp[0];
+        
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 
         // TODO: this is a hack, it would be better to handle this in a
