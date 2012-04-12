@@ -38,8 +38,9 @@ namespace Opm
 
         void addChild(std::string child, std::string parent,
                 const EclipseGridParser& deck);
+
         
-        bool conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) const;
+        bool conditionsMet(const std::vector<double>& pressure, const UnstructuredGrid& grid) const;
         
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
     private:

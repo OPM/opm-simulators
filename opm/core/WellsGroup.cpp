@@ -15,7 +15,8 @@ namespace Opm
                                              InjectionSpecification inje_spec)
         : name_(myname),
           production_specification_(prod_spec),
-          injection_specification_(inje_spec)
+          injection_specification_(inje_spec),
+            parent_(NULL)
     {
     }
 
@@ -40,6 +41,10 @@ namespace Opm
         return false;
     }
 
+    void WellsGroupInterface::setParent(WellsGroupInterface* parent) 
+    {
+        parent_ = parent;
+    }
     
     WellsGroupInterface* WellsGroup::findGroup(std::string name_of_node)
     {
@@ -59,8 +64,15 @@ namespace Opm
     }
 
     
-    bool WellsGroup::conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid)
+    bool WellsGroup::conditionsMet(const std::vector<double>& pressure, 
+            const UnstructuredGrid& grid, const struct Wells* wells, int index_of_well)
     {
+        if(parent_ != NULL) {
+            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(pressure, grid, wells, index_of_well);
+            if(!parent_ok) {
+                return false;
+            }
+        }
         return true;
     }
     
@@ -76,9 +88,18 @@ namespace Opm
     {
     }
     
-    bool WellNode::conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) 
+    bool WellNode::conditionsMet(const std::vector<double>& pressure, const UnstructuredGrid& grid) 
     {
-        return true;
+        if(parent_ != NULL) {
+            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(pressure, grid, wells_, self_index_);
+            if(!parent_ok) {
+                return false;
+            }
+        }
+        
+        
+        
+        
     }
 
     WellsGroupInterface* WellNode::findGroup(std::string name_of_node)

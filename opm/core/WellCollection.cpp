@@ -66,6 +66,8 @@ namespace Opm
         if(child->isLeafNode()) {
             leaf_nodes_.push_back(child);
         }
+        
+        child->setParent(parent);
     }
     
     
@@ -86,9 +88,9 @@ namespace Opm
         return NULL;
     }
     
-    bool WellCollection::conditionsMet(const std::vector<double> pressure, const UnstructuredGrid& grid) const {
-        for(size_t i = 0; i < roots_.size(); i++) {
-            if(! roots_[i]->conditionsMet(pressure, grid) ) {
+    bool WellCollection::conditionsMet(const std::vector<double>& pressure, const UnstructuredGrid& grid) const {
+        for(size_t i = 0; i < leaf_nodes_.size(); i++) {
+            if(! static_cast<WellNode*>(leaf_nodes_[i].get())->conditionsMet(pressure, grid) ) {
                 return false;
             }
         }
