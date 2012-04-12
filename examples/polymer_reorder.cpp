@@ -176,10 +176,10 @@ class PolymerFluid2pWrappingProps
 {
 public:
     PolymerFluid2pWrappingProps(const Opm::IncompPropertiesInterface& props, const Opm::PolymerProperties& polyprops)
-    : props_(props),
-      polyprops_(polyprops),
-      smin_(props.numCells()*props.numPhases()),
-      smax_(props.numCells()*props.numPhases())
+        : props_(props),
+          polyprops_(polyprops),
+          smin_(props.numCells()*props.numPhases()),
+          smax_(props.numCells()*props.numPhases())
     {
         if (props.numPhases() != 2) {
             THROW("PolymerFluid2pWrapper requires 2 phases.");
@@ -201,21 +201,18 @@ public:
               class CAds,
               class DCAdsDc>
 
-    void adsorption(const PolyC& c, const PolyC& cmax, CAds& cads, DCAdsDc& dcadsdc) {
+    void adsorption(const PolyC& c, const PolyC& cmax, CAds& cads, DCAdsDc& dcadsdc)
+    {
         cads = polyprops_.adsorptionWithDer(c, cmax, &dcadsdc);
     }
 
-    const std::vector<double> porosity() const {
-        const int num_cells = props_.numCells();
-        std::vector<double> porosity(num_cells, 0.);
-        const double* poro = props_.porosity();
-        for (std::vector<double>::iterator it = porosity.begin(); it != porosity.end(); ++it, ++poro) {
-            *it = poro[0];
-        }
-        return porosity;
+    const double* porosity() const
+    {
+        return props_.porosity();
     }
 
-    double rockdensity() const {
+    double rockdensity() const
+    {
         return polyprops_.rockDensity();
     }
 
@@ -239,15 +236,15 @@ public:
     class DPcap>
     void pc(int c, const Sat& s, Pcap& pcap, DPcap& dpcap) const
     {
-        double pc[2];
-        double dpc[4];
-        props_.capPress(1, &s[0], &c, pc, dpc);
-        pcap = pc[0];
-        ASSERT(pc[1] == 0.0);
-        dpcap = dpc[0];
-        ASSERT(dpc[1] == 0.0);
-        ASSERT(dpc[2] == 0.0);
-        ASSERT(dpc[3] == 0.0);
+        double pcow[2];
+        double dpcow[4];
+        props_.capPress(1, &s[0], &c, pcow, dpcow);
+        pcap = pcow[0];
+        ASSERT(pcow[1] == 0.0);
+        dpcap = dpcow[0];
+        ASSERT(dpcow[1] == 0.0);
+        ASSERT(dpcow[2] == 0.0);
+        ASSERT(dpcow[3] == 0.0);
     }
 
     double s_min(int c) const
@@ -264,10 +261,10 @@ public:
     template <class PolyC,
               class Mc,
               class DMcDc>
-    void mc(const PolyC& c,  Mc& mc,
-            DMcDc& dmcdc) const
+    void mc(const PolyC& c,  Mc& mcval,
+            DMcDc& dmcdcval) const
     {
-        polyprops_.computeMc(c, mc, dmcdc);
+        polyprops_.computeMc(c, mcval, dmcdcval);
     }
 
 private:

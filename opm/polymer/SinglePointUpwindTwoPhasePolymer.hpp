@@ -212,8 +212,8 @@ namespace Opm {
             }
 
             std::copy(porevol.begin(), porevol.end(), store_.porevol());
-            const std::vector<double> porosity = fluid.porosity();
-            std::copy(porosity.begin(), porosity.end(), store_.porosity());
+            const double* poro = fluid.porosity();
+            std::copy(poro, poro + g.number_of_cells, store_.porosity());
             store_.rockdensity() = fluid.rockdensity();
         }
 
