@@ -64,11 +64,11 @@ namespace Opm
     }
 
     
-    bool WellsGroup::conditionsMet(const std::vector<double>& pressure, 
-            const UnstructuredGrid& grid, const struct Wells* wells, int index_of_well)
+    bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate,
+                                   const struct Wells* wells, int index_of_well)
     {
         if(parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(pressure, grid, wells, index_of_well);
+            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(well_bhp, well_rate, wells, index_of_well);
             if(!parent_ok) {
                 return false;
             }
@@ -88,10 +88,10 @@ namespace Opm
     {
     }
     
-    bool WellNode::conditionsMet(const std::vector<double>& pressure, const UnstructuredGrid& grid) 
+    bool WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate) 
     {
         if(parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(pressure, grid, wells_, self_index_);
+            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(well_bhp, well_rate, wells_, self_index_);
             if(!parent_ok) {
                 return false;
             }

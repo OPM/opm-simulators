@@ -58,7 +58,7 @@ namespace Opm
 
         void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
         
-        bool conditionsMet(const std::vector<double>& pressure, const UnstructuredGrid& grid, const struct Wells* wells,
+        bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, const struct Wells* wells,
                                    int index_of_well);
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
@@ -74,7 +74,7 @@ namespace Opm
                 InjectionSpecification inj_spec);
 
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
-        virtual bool conditionsMet(const std::vector<double>& pressure, const UnstructuredGrid& grid);
+        virtual bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate);
         virtual bool isLeafNode() const;
         
         void setWellsPointer(const struct Wells* wells, int self_index);
