@@ -25,6 +25,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/newwells.h>
 
 namespace Opm
 {
@@ -135,6 +136,13 @@ namespace Opm
         soln.cell_press = &pressure[0];
         soln.face_flux  = &faceflux[0];
 
+        if(wells_ != NULL) {
+            well_bhp.resize(wells_->number_of_wells);
+            well_rate.resize(wells_->number_of_wells);
+            soln.well_flux = &well_rate[0];
+            soln.well_press = &well_bhp[0];
+        }
+        
         ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
     }
 
@@ -224,6 +232,12 @@ namespace Opm
         soln.cell_press = &pressure[0];
         soln.face_flux  = &faceflux[0];
 
+        if(wells_ != NULL) {
+            well_bhp.resize(wells_->number_of_wells);
+            well_rate.resize(wells_->number_of_wells);
+            soln.well_flux = &well_rate[0];
+            soln.well_press = &well_bhp[0];
+        }
         ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
     }
 
