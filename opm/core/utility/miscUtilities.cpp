@@ -408,6 +408,8 @@ namespace Opm
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
             const std::vector<double>& densities, std::vector<double>& wdp) 
     {
+        const size_t np = densities.size();
+
         // Simple for now:
         for(int i = 0; i < wells.number_of_wells; i++) {
             double depth_ref = wells.depth_ref[i];
@@ -418,9 +420,9 @@ namespace Opm
                 double cell_depth = grid.cell_centroids[3*cell+2];
                 
                 double density = 0.0;
-                for(size_t i = 0; i < densities.size(); i++) {
+                for(size_t p = 0; p < np; p++) {
                     // Is this a smart way of doing it?
-                    density += saturations[densities.size()*cell+i]*densities[i];
+                    density += saturations[np*cell + p] * densities[p];
                 }
                 
                 // Is the sign correct?
