@@ -472,17 +472,6 @@ main(int argc, char** argv)
         src[num_cells - 1] = -flow_per_sec;
     }
 
-    TransportSource* tsrc = create_transport_source(2, 2);
-    double ssrc[]   = { 1.0, 0.0 };
-    double ssink[]  = { 0.0, 1.0 };
-    double zdummy[] = { 0.0, 0.0 };
-    for (int cell = 0; cell < num_cells; ++cell) {
-        if (src[cell] > 0.0) {
-            append_transport_source(cell, 2, 0, src[cell], ssrc, zdummy, tsrc);
-        } else if (src[cell] < 0.0) {
-            append_transport_source(cell, 2, 0, src[cell], ssink, zdummy, tsrc);
-        }
-    }
     std::vector<double> reorder_src = src;
 
     // Boundary conditions.
@@ -643,18 +632,7 @@ main(int argc, char** argv)
         ptime += pt;
 
         // Process transport sources (to include bdy terms).
-        if (use_reorder) {
-            Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0, reorder_src);
-        } else {
-            clear_transport_source(tsrc);
-            for (int cell = 0; cell < num_cells; ++cell) {
-                if (src[cell] > 0.0) {
-                    append_transport_source(cell, 2, 0, src[cell], ssrc, zdummy, tsrc);
-                } else if (src[cell] < 0.0) {
-                    append_transport_source(cell, 2, 0, src[cell], ssink, zdummy, tsrc);
-                }
-            }
-        }
+        Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0, reorder_src);
 
         // Find inflow rate.
         const double current_time = simtimer.currentTime();
@@ -765,6 +743,4 @@ main(int argc, char** argv)
         outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
         outputWaterCut(watercut, output_dir);
     }
-
-    destroy_transport_source(tsrc);
 }
