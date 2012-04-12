@@ -397,9 +397,9 @@ namespace Opm
 	double c = x[1];
 	double ff = tm.fracFlow(s, c, cell);
 	double mc = tm.computeMc(c);
-	double dps = tm.polyprops_.deadPoreVol();
-	double rhor = tm.polyprops_.rockDensity();
-	double ads0 = tm.polyprops_.adsorption(c0, cmax0);
+	// double dps = tm.polyprops_.deadPoreVol();
+	// double rhor = tm.polyprops_.rockDensity();
+	// double ads0 = tm.polyprops_.adsorption(c0, cmax0);
 	double ads = tm.polyprops_.adsorption(c, cmax0);
 	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
 	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
@@ -413,9 +413,9 @@ namespace Opm
 	double c = x[1];
 	ff = tm.fracFlow(s, c, cell);
 	mc = tm.computeMc(c);
-	double dps = tm.polyprops_.deadPoreVol();
-	double rhor = tm.polyprops_.rockDensity();
-	double ads0 = tm.polyprops_.adsorption(c0, cmax0);
+	// double dps = tm.polyprops_.deadPoreVol();
+	// double rhor = tm.polyprops_.rockDensity();
+	// double ads0 = tm.polyprops_.adsorption(c0, cmax0);
 	double ads = tm.polyprops_.adsorption(c, cmax0);
 	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
 	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
@@ -503,9 +503,9 @@ namespace Opm
 	    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
 	    double mc_dc;
 	    double mc = tm.computeMcWithDer(c, &mc_dc);
-	    double dps = tm.polyprops_.deadPoreVol();
-	    double rhor = tm.polyprops_.rockDensity();
-	    double ads0 = tm.polyprops_.adsorption(c0, cmax0);
+	    // double dps = tm.polyprops_.deadPoreVol();
+	    // double rhor = tm.polyprops_.rockDensity();
+	    // double ads0 = tm.polyprops_.adsorption(c0, cmax0);
 	    double ads_dc;
             double ads = tm.polyprops_.adsorptionWithDer(c, cmax0, &ads_dc);
 	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
