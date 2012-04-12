@@ -398,6 +398,7 @@ main(int argc, char** argv)
         create_directories(fpath);
         output_interval = param.getDefault("output_interval", output_interval);
     }
+    const int num_transport_substeps = param.getDefault("num_transport_substeps", 1);
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
@@ -699,7 +700,7 @@ main(int argc, char** argv)
 
         // Find inflow rate.
         const double current_time = simtimer.currentTime();
-        const double stepsize = simtimer.currentStepLength();
+        double stepsize = simtimer.currentStepLength();
         const double inflowc0 = poly_inflow(current_time + 1e-5*stepsize);
         const double inflowc1 = poly_inflow(current_time + (1.0 - 1e-5)*stepsize);
         if (inflowc0 != inflowc1) {
@@ -709,38 +710,43 @@ main(int argc, char** argv)
 
         // Solve transport.
         transport_timer.start();
-        if (use_reorder) {
-            Opm::toWaterSat(state.saturation(), reorder_sat);
-            reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
-                     &reorder_sat[0], &state.concentration()[0], &state.maxconcentration()[0]);
-            Opm::toBothSat(reorder_sat, state.saturation());
-            Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
-            if (use_segregation_split) {
-                if (use_column_solver) {
-                    if (use_gauss_seidel_gravity) {
-                        THROW("use_gauss_seidel_gravity option not implemented for polymer.");
-                        // reorder_model.solveGravity(columns, simtimer.currentStepLength(), reorder_sat);
-                        // Opm::toBothSat(reorder_sat, state.saturation());
-                    } else {
-                        colsolver.solve(columns, simtimer.currentStepLength(), state.saturation(), state.concentration(),
-                                        state.maxconcentration());
-                    }
-                } else {
-                    THROW("use_segregation_split option for polymer is only implemented in the use_column_solver case.");
-                    // std::vector<double> fluxes = state.faceflux();
-                    // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
-                    // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
-                    // std::cout << rpt;
-                    // state.faceflux() = fluxes;
-                }
-            }
-        } else {
-            THROW("Non-reordering transport solver not implemented for polymer.");
-            // tsolver.solve(*grid->c_grid(), tsrc, simtimer.currentStepLength(), ctrl, state, linsolve, rpt);
-            // std::cout << rpt;
-            // Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
+        if (num_transport_substeps != 1) {
+            stepsize /= double(num_transport_substeps);
+            std::cout << "Making " << num_transport_substeps << " transport substeps." << std::endl;
         }
-
+        for (int tr_substep = 0; tr_substep < num_transport_substeps; ++tr_substep) {
+            if (use_reorder) {
+                Opm::toWaterSat(state.saturation(), reorder_sat);
+                reorder_model.solve(&state.faceflux()[0], &reorder_src[0], stepsize, inflow_c,
+                                    &reorder_sat[0], &state.concentration()[0], &state.maxconcentration()[0]);
+                Opm::toBothSat(reorder_sat, state.saturation());
+                Opm::computeInjectedProduced(*props, state.saturation(), src, stepsize, injected, produced);
+                if (use_segregation_split) {
+                    if (use_column_solver) {
+                        if (use_gauss_seidel_gravity) {
+                            THROW("use_gauss_seidel_gravity option not implemented for polymer.");
+                            // reorder_model.solveGravity(columns, stepsize, reorder_sat);
+                            // Opm::toBothSat(reorder_sat, state.saturation());
+                        } else {
+                            colsolver.solve(columns, stepsize, state.saturation(), state.concentration(),
+                                            state.maxconcentration());
+                        }
+                    } else {
+                        THROW("use_segregation_split option for polymer is only implemented in the use_column_solver case.");
+                        // std::vector<double> fluxes = state.faceflux();
+                        // std::fill(state.faceflux().begin(), state.faceflux().end(), 0.0);
+                        // tsolver.solve(*grid->c_grid(), tsrc, stepsize, ctrl, state, linsolve, rpt);
+                        // std::cout << rpt;
+                        // state.faceflux() = fluxes;
+                    }
+                }
+            } else {
+                THROW("Non-reordering transport solver not implemented for polymer.");
+                // tsolver.solve(*grid->c_grid(), tsrc, stepsize, ctrl, state, linsolve, rpt);
+                // std::cout << rpt;
+                // Opm::computeInjectedProduced(*props, state.saturation(), src, simtimer.currentStepLength(), injected, produced);
+            }
+        }
         transport_timer.stop();
         double tt = transport_timer.secsSinceStart();
         std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
