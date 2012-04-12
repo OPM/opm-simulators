@@ -97,9 +97,7 @@ namespace Opm
             }
         }
         
-        
-        
-        
+        return true;
     }
 
     WellsGroupInterface* WellNode::findGroup(std::string name_of_node)

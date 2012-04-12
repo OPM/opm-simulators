@@ -91,12 +91,18 @@ namespace Opm
     ///                        If null, noflow conditions are assumed.
     /// \param[out] pressure   Will contain N cell-pressure values.
     /// \param[out] faceflux   Will contain F signed face flux values.
+    /// \param[out] well_bhp   Will contain bhp values for each well passed
+    ///                        in the constructor.
+    /// \param[out] well_rate  Will contain rate values for each well passed
+    ///                        in the constructor.
     void IncompTpfa::solve(const std::vector<double>& totmob,
 			   const std::vector<double>& omega,
 			   const std::vector<double>& src,
 			   const FlowBoundaryConditions* bcs,
 			   std::vector<double>& pressure,
-			   std::vector<double>& faceflux)
+			   std::vector<double>& faceflux,
+                           std::vector<double>& well_bhp,
+                           std::vector<double>& well_rate)
     {
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
 	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
@@ -150,6 +156,10 @@ namespace Opm
     /// \param[in]  dt         Timestep.
     /// \param[out] pressure   Will contain N cell-pressure values.
     /// \param[out] faceflux   Will contain F signed face flux values.
+    /// \param[out] well_bhp   Will contain bhp values for each well passed
+    ///                        in the constructor
+    /// \param[out] well_rate  Will contain rate values for each well passed
+    ///                        in the constructor
     void IncompTpfa::solve(const std::vector<double>& totmob,
                            const std::vector<double>& omega,
                            const std::vector<double>& src,
@@ -158,7 +168,9 @@ namespace Opm
                            const std::vector<double>& rock_comp,
                            const double dt,
                            std::vector<double>& pressure,
-                           std::vector<double>& faceflux)
+                           std::vector<double>& faceflux,
+                           std::vector<double>& well_bhp,
+                           std::vector<double>& well_rate)
     {
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
 	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);

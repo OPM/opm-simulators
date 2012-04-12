@@ -527,6 +527,11 @@ namespace Opm
             // We know that getLeafNodes() is ordered the same way as they're indexed in w_
             node->setWellsPointer(w_, i);
         }
+        
+        // Set the guide rates:
+        if(deck.hasField("WCONPROD")) {
+            WCONPROD wconprod = deck.getWCONPROD();
+        }
     }
 
 

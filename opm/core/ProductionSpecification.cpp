@@ -10,7 +10,8 @@ namespace Opm
       oil_max_rate_(-1.0),
       water_production_target_(-1.0),
       fluid_volume_max_rate_(-1.0),
-      BHP_limit_(-1.0)
+      BHP_limit_(-1.0),
+            guide_rate_(-1.0)
     {
     }
 

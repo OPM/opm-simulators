@@ -18,6 +18,11 @@ namespace Opm
         {
             NONE_P, RATE, WELL
         };
+        
+        enum GuideRateType
+        {
+            OIL, RAT
+        };
 
         ProductionSpecification();
  
@@ -30,6 +35,8 @@ namespace Opm
         double BHP_limit_;
         double gas_max_rate_;
         double liquid_max_rate_;
+        double guide_rate_;
+        GuideRateType guide_rate_type_;
 
     };
 }
