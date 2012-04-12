@@ -26,7 +26,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-/// \page tutorial1 Generation of a simple carthesian grid
+/// \page tutorial1 A simple carthesian grid
 /// This tutorial explains how to construct a simple carthesian grid.\n\n
 /// We construct a 2x2 two dimensional carthesian grid with 4 blocks of equal size.
 
@@ -50,8 +50,8 @@ int main()
     /// \page tutorial1
     /// By setting <code>nz = 1</code>, we make the grid two dimensional
     /// \code
-    int nx = 2;
-    int ny = 2;
+    int nx = 3;
+    int ny = 3;
     int nz = 1;
     /// \endcode
     /// The size of each block is 1x1x1. We use standard units (SI)
@@ -84,10 +84,10 @@ int main()
 }
 /// \endcode
 /// \page tutorial1
-/// One can visualize the output using paraview and obtain the following image
+/// We read the the vtu output file in \a Paraview and obtain the following grid.
 /// \image html tutorial1.png
 
 /// \page tutorial1 
-/// \section sourcecode Complete source code.
+/// \section sourcecode Source code.
 /// \include tutorial1.cpp 
 
