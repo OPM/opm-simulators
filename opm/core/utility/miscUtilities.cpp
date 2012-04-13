@@ -420,8 +420,8 @@ namespace Opm
                 double cell_depth = grid.cell_centroids[3*cell+2];
 
                 double saturation_sum = 0.0;
-                for(size_t i = 0; i < densities.size(); i++) {
-                    saturation_sum += saturations[densities.size()*cell + i];
+                for(size_t p = 0; p < np; p++) {
+                    saturation_sum += saturations[np*cell + p];
                 }
                 if(saturation_sum == 0) {
                     saturation_sum = 1.0;
@@ -429,7 +429,7 @@ namespace Opm
                 double density = 0.0;
                 for(size_t p = 0; p < np; p++) {
                     // Is this a smart way of doing it?
-                    density += saturations[np*cell + p] * densities[p];
+                    density += saturations[np*cell + p] * densities[p] / saturation_sum;
                 }
                 
                 // Is the sign correct?
