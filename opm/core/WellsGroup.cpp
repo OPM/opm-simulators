@@ -151,15 +151,25 @@ namespace Opm
                 return false;
             }
         }
-        
+
         std::cout << "checking here" << std::endl;
         // Check for self:
-        if(well_rate[self_index_] - prodSpec().BHP_limit_ > epsilon) {
-            return false;
-        }
-        
-        if(well_rate[self_index_] - prodSpec().fluid_volume_max_rate_  > epsilon) {
-            return false;
+        if (wells_->type[self_index_] == PRODUCER) {
+            if (well_rate[self_index_] - prodSpec().BHP_limit_ > epsilon) {
+                return false;
+            }
+
+            if (well_rate[self_index_] - prodSpec().fluid_volume_max_rate_ > epsilon) {
+                return false;
+            }
+        } else {
+            if (well_rate[self_index_] - injSpec().BHP_limit_ > epsilon) {
+                return false;
+            }
+
+            if (well_rate[self_index_] - injSpec().surface_flow_max_rate_ > epsilon) {
+                return false;
+            }
         }
         return true;
     }
