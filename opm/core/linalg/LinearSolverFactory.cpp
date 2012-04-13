@@ -24,11 +24,11 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #if HAVE_SUITESPARSE_UMFPACK_H
-#include <opm/core/linalg/LinearSolverIstl.hpp>
+#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #endif
 
 #if HAVE_DUNE_ISTL
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
+#include <opm/core/linalg/LinearSolverIstl.hpp>
 #endif
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
