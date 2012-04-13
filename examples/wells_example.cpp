@@ -73,9 +73,12 @@ int main(int argc, char** argv) {
     std::vector<double> face_flux;
 
     std::vector<double> well_bhp;
-    std::vector<double> well_rate;
-    pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate);
+    std::vector<double> well_rate_per_cell;
+    pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
     std::cout << "Solved" << std::endl;
+    
+    std::vector<double> well_rate;
+    computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
     if(wells.wellCollection().conditionsMet(well_bhp, well_rate, *grid.c_grid(), state.saturation() )) {
         std::cout << "Conditions met for wells!" << std::endl;
     }
