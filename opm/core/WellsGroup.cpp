@@ -6,6 +6,7 @@
  */
 
 #include <opm/core/WellsGroup.hpp>
+#include <cmath>
 
 namespace Opm
 {
@@ -152,24 +153,38 @@ namespace Opm
             }
         }
 
-        std::cout << "checking here" << std::endl;
         // Check for self:
         if (wells_->type[self_index_] == PRODUCER) {
-            if (well_rate[self_index_] - prodSpec().BHP_limit_ > epsilon) {
-                return false;
+            double bhp_diff = well_bhp[self_index_] - prodSpec().BHP_limit_;
+            double rate_diff = well_rate[self_index_] - prodSpec().fluid_volume_max_rate_;
+            
+            switch(*wells_->ctrls[self_index_]->type) {
+            case BHP:
+                bhp_diff = std::abs(bhp_diff);
+                break;
+            case RATE:
+                rate_diff = std::abs(rate_diff);
+                break;
             }
-
-            if (well_rate[self_index_] - prodSpec().fluid_volume_max_rate_ > epsilon) {
+            if(bhp_diff > epsilon || rate_diff > epsilon) {
                 return false;
             }
         } else {
-            if (well_rate[self_index_] - injSpec().BHP_limit_ > epsilon) {
+            double bhp_diff = well_bhp[self_index_] - injSpec().BHP_limit_;
+            double flow_diff = well_rate[self_index_] - injSpec().fluid_volume_max_rate_;
+            switch(*wells_->ctrls[self_index_]->type) {
+            case BHP:
+                bhp_diff = std::abs(bhp_diff);
+                break;
+            case RATE:
+                flow_diff = std::abs(flow_diff);
+                break;
+            }
+            
+           if(bhp_diff > epsilon || flow_diff > epsilon) {
                 return false;
             }
-
-            if (well_rate[self_index_] - injSpec().surface_flow_max_rate_ > epsilon) {
-                return false;
-            }
+            
         }
         return true;
     }
@@ -326,6 +341,7 @@ namespace Opm
                         injection_specification.injector_type_ = toSurfaceComponent(line.injector_type_);
                         injection_specification.control_mode_ = toInjectionControlMode(line.control_mode_);
                         injection_specification.surface_flow_max_rate_ = line.surface_flow_max_rate_;
+                        injection_specification.fluid_volume_max_rate_ = line.fluid_volume_max_rate_;
                     }
                 }
             }

@@ -19,6 +19,7 @@ namespace Opm
         ControlMode control_mode_;
         double surface_flow_max_rate_;
         double reinjection_fraction_target_;
+        double fluid_volume_max_rate_;
         double BHP_limit_;
     };
 }

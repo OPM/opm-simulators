@@ -34,6 +34,7 @@ namespace Opm
         /// Injection specifications for the well or well group.
         InjectionSpecification& injSpec();
         
+        
         /// \returns true if the object is a leaf node (WellNode), false otherwise.
         virtual bool isLeafNode() const;
         
