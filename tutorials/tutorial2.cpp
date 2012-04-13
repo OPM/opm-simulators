@@ -141,11 +141,19 @@ int main()
     /// \code
     std::vector<double> omega; 
     /// \endcode
+    
+    /// \page tutorial2
+    /// \details
+    /// We declare the wdp term which is required by the pressure solver (see
+    /// Opm::IncompTpfa.solve()). In the absence of wells, an empty vector is required.
+    /// \code
+    std::vector<double> wdp; 
+    /// \endcode
 
     /// \page tutorial2
     /// We call the pressure solver.
     /// \code
-    psolver.solve(mob, omega, src, bcs.c_bcs(),
+    psolver.solve(mob, omega, src, wdp, bcs.c_bcs(),
                   pressure, faceflux, well_bhp, well_flux);
     /// \endcode
 
