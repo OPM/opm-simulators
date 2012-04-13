@@ -28,6 +28,12 @@ namespace Opm
         /// Injection specifications for the well or well group.
         const InjectionSpecification& injSpec() const;
         
+        /// Production specifications for the well or well group.
+        ProductionSpecification& prodSpec();
+        
+        /// Injection specifications for the well or well group.
+        InjectionSpecification& injSpec();
+        
         /// \returns true if the object is a leaf node (WellNode), false otherwise.
         virtual bool isLeafNode() const;
         
@@ -36,6 +42,8 @@ namespace Opm
         virtual WellsGroupInterface* findGroup(std::string name_of_node) = 0;
         
         void setParent(WellsGroupInterface* parent);
+        
+        virtual void calculateGuideRates() = 0;
     protected:
            WellsGroupInterface* parent_;
 
@@ -60,6 +68,8 @@ namespace Opm
         
         bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, const struct Wells* wells,
                                    int index_of_well);
+        
+        virtual void calculateGuideRates();
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -79,6 +89,7 @@ namespace Opm
         
         void setWellsPointer(const struct Wells* wells, int self_index);
         
+        virtual void calculateGuideRates();
     private:
         const struct Wells* wells_;
         int self_index_;

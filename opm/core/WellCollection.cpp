@@ -99,4 +99,10 @@ namespace Opm
         
     }
 
+    void WellCollection::calculateGuideRates()
+    {
+        for(size_t i = 0; i < roots_.size(); i++) {
+            roots_[i]->calculateGuideRates();
+        }
+    }
 }

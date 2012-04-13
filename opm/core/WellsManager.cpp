@@ -207,6 +207,9 @@ namespace Opm
 	std::vector<std::string> well_names;
         std::vector<WellData> well_data;
 	std::vector<std::vector<PerfData> > wellperf_data;
+        
+        // For easy lookup:
+        std::map<std::string, int> well_names_to_index;
 
 	// Get WELSPECS data
 	const WELSPECS& welspecs = deck.getWELSPECS();
@@ -218,6 +221,7 @@ namespace Opm
 	    well_names.push_back(welspecs.welspecs[w].name_);
 	    WellData wd;
 	    well_data.push_back(wd);
+            well_names_to_index[welspecs.welspecs[w].name_] = w;
             well_data.back().reference_bhp_depth = welspecs.welspecs[w].datum_depth_BHP_;
             if (welspecs.welspecs[w].datum_depth_BHP_ < 0.0) {
                 // Set refdepth to a marker value, will be changed
@@ -505,32 +509,44 @@ namespace Opm
 	    }
 	}
         
-        WellCollection wells_;
         if (deck.hasField("GRUPTREE")) {
             std::cout << "Found gruptree" << std::endl;
             const GRUPTREE& gruptree = deck.getGRUPTREE();
             
             std::map<std::string, std::string>::const_iterator it = gruptree.tree.begin();
             for( ; it != gruptree.tree.end(); ++it) {
-                wells_.addChild(it->first, it->second, deck);
+                well_collection_.addChild(it->first, it->second, deck);
             }
         }
         
         for (size_t i = 0; i < welspecs.welspecs.size(); ++i) {
             WelspecsLine line = welspecs.welspecs[i];
-            wells_.addChild(line.name_, line.group_, deck);
+            well_collection_.addChild(line.name_, line.group_, deck);
         }
         
-        for(size_t i = 0; i < wells_.getLeafNodes().size(); i++) {
-            WellNode* node = static_cast<WellNode*>(wells_.getLeafNodes()[i].get());
+        for(size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
+            WellNode* node = static_cast<WellNode*>(well_collection_.getLeafNodes()[i].get());
             
             // We know that getLeafNodes() is ordered the same way as they're indexed in w_
             node->setWellsPointer(w_, i);
         }
         
         // Set the guide rates:
-        if(deck.hasField("WCONPROD")) {
-            WCONPROD wconprod = deck.getWCONPROD();
+        if(deck.hasField("WGRUPCON")) {
+            std::cout << "Found Wgrupcon" << std::endl;
+            WGRUPCON wgrupcon = deck.getWGRUPCON();
+            const std::vector<WgrupconLine>& lines = wgrupcon.wgrupcon;
+            std::cout << well_collection_.getLeafNodes().size() << std::endl;
+            for(size_t i = 0; i < lines.size(); i++) {
+                std::string name = lines[i].well_;
+                int index = well_names_to_index[name];
+                ASSERT(well_collection_.getLeafNodes()[index]->name() == name);
+                well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_ = lines[i].guide_rate_;
+                well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_type_ 
+                        = lines[i].phase_ == "OIL" ? ProductionSpecification::OIL : ProductionSpecification::RAT;
+            }
+            
+            well_collection_.calculateGuideRates();
         }
     }
 

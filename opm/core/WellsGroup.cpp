@@ -11,12 +11,12 @@ namespace Opm
 {
 
     WellsGroupInterface::WellsGroupInterface(const std::string& myname,
-                                             ProductionSpecification prod_spec,
-                                             InjectionSpecification inje_spec)
-        : parent_(NULL),
-          name_(myname),
-          production_specification_(prod_spec),
-          injection_specification_(inje_spec)
+            ProductionSpecification prod_spec,
+            InjectionSpecification inje_spec)
+    : parent_(NULL),
+    name_(myname),
+    production_specification_(prod_spec),
+    injection_specification_(inje_spec)
     {
     }
 
@@ -30,22 +30,48 @@ namespace Opm
     }
 
     WellsGroup::WellsGroup(const std::string& myname,
-                           ProductionSpecification prod_spec,
-                           InjectionSpecification inj_spec)
-        : WellsGroupInterface(myname, prod_spec, inj_spec)
+            ProductionSpecification prod_spec,
+            InjectionSpecification inj_spec)
+    : WellsGroupInterface(myname, prod_spec, inj_spec)
     {
     }
-    
+
     bool WellsGroupInterface::isLeafNode() const
     {
         return false;
     }
 
-    void WellsGroupInterface::setParent(WellsGroupInterface* parent) 
+    void WellsGroupInterface::setParent(WellsGroupInterface* parent)
     {
         parent_ = parent;
     }
-    
+
+    const ProductionSpecification& WellsGroupInterface::prodSpec() const
+    {
+        return production_specification_;
+    }
+
+    /// Injection specifications for the well or well group.
+
+    const InjectionSpecification& WellsGroupInterface::injSpec() const
+    {
+        return injection_specification_;
+    }
+
+    /// Production specifications for the well or well group.
+
+    ProductionSpecification& WellsGroupInterface::prodSpec()
+    {
+        return production_specification_;
+    }
+
+    /// Injection specifications for the well or well group.
+
+    InjectionSpecification& WellsGroupInterface::injSpec()
+    {
+        return injection_specification_;
+    }
+
     WellsGroupInterface* WellsGroup::findGroup(std::string name_of_node)
     {
         if (name() == name_of_node) {
@@ -64,39 +90,59 @@ namespace Opm
     }
 
     
-    bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate,
-                                   const struct Wells* wells, int index_of_well)
+    void WellsGroup::calculateGuideRates()
     {
-        if(parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(well_bhp, well_rate, wells, index_of_well);
-            if(!parent_ok) {
+        double guide_rate_sum = 0.0;
+        for(size_t i = 0; i < children_.size(); i++) {
+            if(children_[i]->isLeafNode()) {
+                guide_rate_sum += children_[i]->prodSpec().guide_rate_;
+            }
+            else
+            {
+                children_[i]->calculateGuideRates();
+            }
+        }
+        if(guide_rate_sum != 0.0) {
+            for(size_t i = 0; i < children_.size(); i++) {
+                children_[i]->prodSpec().guide_rate_ /= guide_rate_sum;
+            }
+        }
+    }
+    
+    
+    bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate,
+            const struct Wells* wells, int index_of_well)
+    {
+        if (parent_ != NULL) {
+            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, well_rate, wells, index_of_well);
+            if (!parent_ok) {
                 return false;
             }
         }
         return true;
     }
-    
+
     void WellsGroup::addChild(std::tr1::shared_ptr<WellsGroupInterface> child)
     {
         children_.push_back(child);
     }
 
     WellNode::WellNode(const std::string& myname,
-                       ProductionSpecification prod_spec,
-                       InjectionSpecification inj_spec)
-        : WellsGroupInterface(myname, prod_spec, inj_spec)
+            ProductionSpecification prod_spec,
+            InjectionSpecification inj_spec)
+    : WellsGroupInterface(myname, prod_spec, inj_spec)
     {
     }
-    
-    bool WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate) 
+
+    bool WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate)
     {
-        if(parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*>(parent_))->conditionsMet(well_bhp, well_rate, wells_, self_index_);
-            if(!parent_ok) {
+        if (parent_ != NULL) {
+            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, well_rate, wells_, self_index_);
+            if (!parent_ok) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -109,17 +155,23 @@ namespace Opm
         }
 
     }
-    
+
     bool WellNode::isLeafNode() const
     {
         return true;
     }
-    
-    void WellNode::setWellsPointer(const struct Wells* wells, int self_index) {
+
+    void WellNode::setWellsPointer(const struct Wells* wells, int self_index)
+    {
         wells_ = wells;
         self_index_ = self_index;
     }
     
+    void WellNode::calculateGuideRates()
+    {
+        // Empty
+    }
+
     namespace
     {
 
@@ -199,8 +251,7 @@ namespace Opm
 
             THROW("Unknown type " << type << ", could not convert to ControlMode.");
         }
-    
-    
+
         ProductionSpecification::Procedure toProductionProcedure(std::string type)
         {
             if (type == "NONE") {
@@ -212,7 +263,7 @@ namespace Opm
             if (type == "WELL") {
                 return ProductionSpecification::WELL;
             }
-        
+
 
             THROW("Unknown type " << type << ", could not convert to ControlMode.");
         }
@@ -220,7 +271,7 @@ namespace Opm
 
     std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(std::string name, const EclipseGridParser& deck)
     {
-        
+
         std::tr1::shared_ptr<WellsGroupInterface> return_value;
         // First we need to determine whether it's a group or just a well:
         bool isWell = false;
@@ -265,7 +316,7 @@ namespace Opm
                     }
                 }
             }
-            
+
             return_value.reset(new WellNode(name, production_specification, injection_specification));
         } else {
             InjectionSpecification injection_specification;
@@ -296,7 +347,7 @@ namespace Opm
                     }
                 }
             }
-            
+
             return_value.reset(new WellsGroup(name, production_specification, injection_specification));
         }
 

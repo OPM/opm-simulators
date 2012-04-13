@@ -43,6 +43,8 @@ namespace Opm
         bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate) const;
         
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
+        
+        void calculateGuideRates();
     private:
         // To account for the possibility of a forest
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > roots_;
