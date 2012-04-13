@@ -180,6 +180,9 @@ namespace Opm
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
                     const std::vector<double>& densities, std::vector<double>& wdp);
     
+    void computeFlowRatePerWell(const Wells& wells, const std::vector<double>& flow_rates_per_cell,
+                                std::vector<double>& flow_rates_per_well);
+    
     /// Encapsulates the watercut curves.
     class Watercut
     {

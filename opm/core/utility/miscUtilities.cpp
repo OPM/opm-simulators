@@ -437,6 +437,20 @@ namespace Opm
             }
         }
     }
+    
+    void computeFlowRatePerWell(const Wells& wells, const std::vector<double>& flow_rates_per_cell,
+                                std::vector<double>& flow_rates_per_well)
+    {
+        int index_in_flow_rates = 0;
+        for(int w = 0; w < wells.number_of_wells; w++) {
+            int number_of_cells = wells.well_connpos[w+1]-wells.well_connpos[w];
+            double flow_sum = 0.0;
+            for(int i = 0; i < number_of_cells; i++) {
+                flow_sum += flow_rates_per_cell[index_in_flow_rates++];
+            }
+            flow_rates_per_well.push_back(flow_sum);
+        }
+    }
 
 
 } // namespace Opm
