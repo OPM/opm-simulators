@@ -42,6 +42,7 @@ namespace Opm
         virtual WellsGroupInterface* findGroup(std::string name_of_node) = 0;
         
         void setParent(WellsGroupInterface* parent);
+        const WellsGroupInterface* getParent() const;
         
         virtual void calculateGuideRates() = 0;
     protected:

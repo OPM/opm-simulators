@@ -24,6 +24,10 @@ namespace Opm
     {
     }
 
+    const WellsGroupInterface* WellsGroupInterface::getParent() const
+    {
+        return parent_;
+    }
     const std::string& WellsGroupInterface::name()
     {
         return name_;
@@ -305,6 +309,7 @@ namespace Opm
             ProductionSpecification production_specification;
             if (deck.hasField("WCONPROD")) {
                 WCONPROD wconprod = deck.getWCONPROD();
+                std::cout << wconprod.wconprod.size() << std::endl;
                 for (size_t i = 0; i < wconprod.wconprod.size(); i++) {
                     if (wconprod.wconprod[i].well_ == name) {
                         WconprodLine line = wconprod.wconprod[i];
@@ -316,7 +321,6 @@ namespace Opm
                     }
                 }
             }
-
             return_value.reset(new WellNode(name, production_specification, injection_specification));
         } else {
             InjectionSpecification injection_specification;
