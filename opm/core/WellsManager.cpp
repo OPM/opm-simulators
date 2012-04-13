@@ -496,49 +496,50 @@ namespace Opm
         }
         
 
-        
+
         // Set the guide rates:
-        if(deck.hasField("WGRUPCON")) {
+        if (deck.hasField("WGRUPCON")) {
             std::cout << "Found Wgrupcon" << std::endl;
             WGRUPCON wgrupcon = deck.getWGRUPCON();
             const std::vector<WgrupconLine>& lines = wgrupcon.wgrupcon;
             std::cout << well_collection_.getLeafNodes().size() << std::endl;
-            for(size_t i = 0; i < lines.size(); i++) {
+            for (size_t i = 0; i < lines.size(); i++) {
                 std::string name = lines[i].well_;
                 int index = well_names_to_index[name];
                 ASSERT(well_collection_.getLeafNodes()[index]->name() == name);
                 well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_ = lines[i].guide_rate_;
-                well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_type_ 
+                well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_type_
                         = lines[i].phase_ == "OIL" ? ProductionSpecification::OIL : ProductionSpecification::RAT;
             }
-            
+
             well_collection_.calculateGuideRates();
-        }
-        
-        // Apply guide rates:
-        for(size_t i = 0; i < well_data.size(); i++) {
-            if(well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) 
-            {
+            
+#if 0
+            // Apply guide rates:
+            for (size_t i = 0; i < well_data.size(); i++) {
+                std::cout << "hello" << std::endl;
+                if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+                    std::cout << "hello" << std::endl;
+                    if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::OIL) {
+                        well_data[i].control = RATE;
 
-                if(well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::OIL) {
-                    well_data[i].control = RATE;
+                        double parent_oil_rate = well_collection_.getLeafNodes()[i]->getParent()->prodSpec().oil_max_rate_;
+                        double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                        well_data[i].target = guide_rate * parent_oil_rate;
+                    }
+                }
 
-                    double parent_oil_rate =  well_collection_.getLeafNodes()[i]->getParent()->prodSpec().oil_max_rate_;
-                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                    well_data[i].target = guide_rate * parent_oil_rate;
+                if (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP) {
+                    if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
+                        well_data[i].control = RATE;
+                        well_data[i].type = INJECTOR;
+                        double parent_surface_rate = well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
+                        double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                        well_data[i].target = guide_rate * parent_surface_rate;
+                    }
                 }
             }
-            else if(well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP) 
-            {
-                if(well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
-
-                    well_data[i].control = RATE;
-                    well_data[i].type = INJECTOR;
-                    double parent_surface_rate =  well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
-                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                    well_data[i].target = guide_rate * parent_surface_rate;
-                }
-            }
+#endif
             
         }
         

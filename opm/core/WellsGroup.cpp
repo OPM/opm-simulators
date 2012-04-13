@@ -114,11 +114,14 @@ namespace Opm
     }
     
     
-    bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate,
-            const struct Wells* wells, int index_of_well)
+    bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
+                           const UnstructuredGrid& grid, const std::vector<double>& saturations,
+                                const struct Wells* wells, int index_of_well, double epsilon)
     {
         if (parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, well_rate, wells, index_of_well);
+            bool parent_ok = 
+                (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, 
+                    well_rate,grid, saturations, wells, index_of_well, epsilon);
             if (!parent_ok) {
                 return false;
             }
@@ -138,15 +141,26 @@ namespace Opm
     {
     }
 
-    bool WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate)
+    bool WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
+                           const UnstructuredGrid& grid, const std::vector<double>& saturations, double epsilon)
     {
+        
         if (parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, well_rate, wells_, self_index_);
+            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, well_rate, grid, saturations, wells_, self_index_, epsilon);
             if (!parent_ok) {
                 return false;
             }
         }
-
+        
+        std::cout << "checking here" << std::endl;
+        // Check for self:
+        if(well_rate[self_index_] - prodSpec().BHP_limit_ > epsilon) {
+            return false;
+        }
+        
+        if(well_rate[self_index_] - prodSpec().fluid_volume_max_rate_  > epsilon) {
+            return false;
+        }
         return true;
     }
 

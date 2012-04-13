@@ -40,7 +40,8 @@ namespace Opm
                 const EclipseGridParser& deck);
 
         
-        bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate) const;
+        bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
+                           const UnstructuredGrid& grid, const std::vector<double>& saturations, double epsilon=1e-8) const;
         
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
         
