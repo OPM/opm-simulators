@@ -24,9 +24,13 @@
 
 #include <opm/core/linalg/LinearSolverIstl.hpp>
 
+// Work around the fact that istl headers expect
+// HAVE_BOOST to be 1, and not just defined.
+#undef HAVE_BOOST
+#define HAVE_BOOST 1
 
 // TODO: clean up includes.
-#define DUNE_DEPRECATED
+#include <dune/common/deprecated.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/operators.hh>
