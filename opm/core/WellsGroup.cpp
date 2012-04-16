@@ -156,7 +156,6 @@ namespace Opm
         if(well_rate[index_of_well] - rate_target > epsilon) {
             std::cout << "well_rate not met" << std::endl;
             std::cout << "target = " << rate_target << ", well_rate[index_of_well] = " << well_rate[index_of_well] << std::endl;
-            std::cout << injSpec().fluid_volume_max_rate_ << std::endl;
             std::cout << "Group name = " << name() << std::endl;
             return false;
         }
@@ -212,7 +211,17 @@ namespace Opm
                 rate_diff = std::abs(rate_diff);
                 break;
             }
-            if(bhp_diff > epsilon || rate_diff > epsilon) {
+            if(bhp_diff > epsilon) {
+                
+                std::cout << "BHP exceeded, bhp_diff = " << bhp_diff << std::endl;
+                std::cout << "BHP_limit = " << prodSpec().BHP_limit_ << std::endl;
+                std::cout << "BHP = " << well_bhp[self_index_] << std::endl; 
+
+                return false;
+            }
+            
+            if(rate_diff > epsilon) {
+                std::cout << "Rate exceeded, rate_diff = " << rate_diff << std::endl;
                 return false;
             }
         } else {
@@ -227,7 +236,12 @@ namespace Opm
                 break;
             }
             
-           if(bhp_diff > epsilon || flow_diff > epsilon) {
+           if(bhp_diff > epsilon) {
+               std::cout << "BHP exceeded, bhp_diff = " << bhp_diff<<std::endl;
+               return false;
+           }
+            if(flow_diff > epsilon) {
+                std::cout << "Flow diff exceeded, flow_diff = " << flow_diff << std::endl;
                 return false;
             }
             

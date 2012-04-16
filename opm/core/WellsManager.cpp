@@ -512,12 +512,13 @@ namespace Opm
                 well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_type_
                         = lines[i].phase_ == "OIL" ? ProductionSpecification::OIL : ProductionSpecification::RAT;
             }
-
+        }
             well_collection_.calculateGuideRates();
             
             // Apply guide rates:
             for (size_t i = 0; i < well_data.size(); i++) {
                 if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+                    std::cout << "hello" << std::endl;
                     if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::OIL) {
                         well_data[i].control = RATE;
 
@@ -538,7 +539,7 @@ namespace Opm
                 }
             }
             
-        }
+        
         
 	// Set up the Wells struct.
 	w_ = wells_create(num_wells, num_perfs);
