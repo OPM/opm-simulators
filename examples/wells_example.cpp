@@ -8,16 +8,12 @@
 #include <opm/core/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/newwells.h>
 #include <opm/core/grid.h>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/TwophaseState.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
-
-#ifdef EXPERIMENT_ISTL
-#include <opm/core/linalg/LinearSolverIstl.hpp>
-#endif
+#include <opm/core/linalg/LinearSolverFactory.hpp>
 int main(int argc, char** argv) {
 
     using namespace Opm::parameter;
@@ -39,11 +35,9 @@ int main(int argc, char** argv) {
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     IncompPropertiesFromDeck incomp_properties(parser, global_cells);
 
-#ifdef EXPERIMENT_ISTL
-    Opm::LinearSolverIstl linsolver(parameters);
-#else
-    Opm::LinearSolverUmfpack linsolver;
-#endif // EXPERIMENT_ISTL
+    Opm::LinearSolverFactory linsolver(parameters);
+
+    // EXPERIMENT_ISTL
     IncompTpfa pressure_solver(*grid.c_grid(), incomp_properties.permeability(), 
                                gravity, linsolver,  wells.c_wells());
     
