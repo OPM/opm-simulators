@@ -18,14 +18,14 @@
 */
 
 
-/// \page tutorial2 Flow Solver for a single phase 
+/// \page tutorial2 Flow Solver for a single phase
 /// \details The flow equations consist of the mass conservation equation
 /// \f[\nabla\cdot u=q\f] and the Darcy law \f[u=-\frac{1}{\mu}K\nabla p.\f] Here,
 /// \f$u\f$ denotes the velocity and \f$p\f$ the pressure. The permeability tensor is
-/// given by \f$K\f$ and \f$\mu\f$ denotes the viscosity. 
-/// 
-/// We solve the flow equations for a carthesian grid and we set the source term
-/// \f$q\f$ be zero except at the left-lower and right-upper corner, where it is equal 
+/// given by \f$K\f$ and \f$\mu\f$ denotes the viscosity.
+///
+/// We solve the flow equations for a cartesian grid and we set the source term
+/// \f$q\f$ be zero except at the left-lower and right-upper corner, where it is equal
 /// with opposite sign (inflow equal to outflow).
 
 
@@ -36,16 +36,14 @@
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/utility/writeVtkData.hpp>
-#include <cassert>
-#include <cstddef>
 #include <iostream>
-#include <iomanip>
 #include <fstream>
 #include <vector>
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/Units.hpp>
 
 /// \page tutorial2
 /// \section commentedcode Commented code:
@@ -54,7 +52,7 @@ int main()
 {
     /// \endcode
     /// \page tutorial2
-    /// We construct a carthesian grid
+    /// We construct a cartesian grid
     /// \code
     int dim = 3;
     int nx = 40;
@@ -71,19 +69,25 @@ int main()
     int num_faces = grid.c_grid()->number_of_faces;
     /// \endcode
     /// \page tutorial2
-    /// We define the viscosity (unit: cP).
+    /// \details
+    /// We define a fluid viscosity equal to \f$1\,cP\f$. We use
+    /// the namespaces Opm::unit
+    /// and Opm::prefix to deal with the units.
     /// \code
-    double mu = 1.0;
+    using namespace Opm::unit;
+    using namespace Opm::prefix;
+    double mu = 1.0*centi*Poise;
     /// \endcode
     /// \page tutorial2
-    /// We define the permeability (unit: mD).
+    /// \details
+    /// We define a permeability equal to \f$100\,mD\f$.
     /// \code
-    double k = 100.0;
+    double k = 100.0*milli*darcy;
     /// \endcode
     /// \page tutorial2
     /// \details
     /// We set up the permeability tensor and compute the mobility for each cell.
-    /// The permeability tensor is flattened in a vector.
+    /// The resulting permeability matrix is flattened in a vector.
     /// \code
     std::vector<double> permeability(num_cells*dim*dim, 0.);
     std::vector<double> mob(num_cells);
@@ -96,7 +100,8 @@ int main()
     /// \endcode
 
     /// \page tutorial2
-    /// We choose the UMFPACK linear solver for the pressure solver.
+    /// \details
+    /// We take UMFPACK as the linear solver for the pressure solver (This library has therefore to be installed.)
     /// \code
     Opm::LinearSolverUmfpack linsolver;
     /// \endcode
@@ -115,7 +120,7 @@ int main()
     src[num_cells-1] = -100.;
     /// \endcode
     /// \page tutorial2
-    /// \details We set up the boundary conditions. We do not modify them. 
+    /// \details We set up the boundary conditions. We do not modify them.
     /// By default, we obtain no outflow boundary conditions.
     /// \code
     /// \code
@@ -133,21 +138,21 @@ int main()
     std::vector<double> faceflux(num_faces);
     std::vector<double> well_bhp;
     std::vector<double> well_flux;
-    /// \endcode 
+    /// \endcode
     /// \page tutorial2
     /// \details
     /// We declare the gravity term which is required by the pressure solver (see
     /// Opm::IncompTpfa.solve()). In the absence of gravity, an empty vector is required.
     /// \code
-    std::vector<double> omega; 
+    std::vector<double> omega;
     /// \endcode
-    
+
     /// \page tutorial2
     /// \details
     /// We declare the wdp term which is required by the pressure solver (see
     /// Opm::IncompTpfa.solve()). In the absence of wells, an empty vector is required.
     /// \code
-    std::vector<double> wdp; 
+    std::vector<double> wdp;
     /// \endcode
 
     /// \page tutorial2
@@ -170,10 +175,10 @@ int main()
 }
 /// \endcode
 /// \page tutorial2
-/// We read the the vtu output file in \a Paraview and obtain the following pressure
+/// We read the vtu output file in \a Paraview and obtain the following pressure
 /// distribution. \image html tutorial2.png
 
 
 /// \page tutorial2
 /// \section sourcecode Complete source code.
-/// \include tutorial2.cpp 
+/// \include tutorial2.cpp
