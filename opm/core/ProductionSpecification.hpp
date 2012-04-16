@@ -11,7 +11,7 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE_CM, ORAT, WRAT, REIN, RESV, VREP, WGRA, FLD, GRUP
+            NONE_CM, ORAT, WRAT, LRAT, REIN, RESV, VREP, WGRA, FLD, GRUP
         };
 
         enum Procedure
@@ -21,7 +21,7 @@ namespace Opm
         
         enum GuideRateType
         {
-            OIL, RAT
+            OIL, RAT, NONE_GRT
         };
 
         ProductionSpecification();

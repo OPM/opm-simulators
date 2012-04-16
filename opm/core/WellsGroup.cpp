@@ -151,6 +151,8 @@ namespace Opm
         
         if (well_bhp[index_of_well] - bhp_target > epsilon) {
             std::cout << "BHP not met" << std::endl;
+            std::cout << "BHP limit was " << bhp_target << std::endl;
+            std::cout << "Actual bhp was " << well_bhp[index_of_well] << std::endl; 
             return false;
         }
         if(well_rate[index_of_well] - rate_target > epsilon) {
@@ -338,6 +340,9 @@ namespace Opm
                 return ProductionSpecification::ORAT;
 
             }
+            if (type == "LRAT") {
+                return ProductionSpecification::LRAT;
+            }
             if (type == "REIN") {
                 return ProductionSpecification::REIN;
             }
@@ -444,11 +449,14 @@ namespace Opm
 
             ProductionSpecification production_specification;
             if (deck.hasField("GCONPROD")) {
+                std::cout << "Searching in gconprod " << std::endl;
+                std::cout << "name= " << name << std::endl;
                 GCONPROD gconprod = deck.getGCONPROD();
                 for (size_t i = 0; i < gconprod.gconprod.size(); i++) {
                     if (gconprod.gconprod[i].group_ == name) {
                         GconprodLine line = gconprod.gconprod[i];
                         production_specification.oil_max_rate_ = line.oil_max_rate_;
+                        std::cout << "control_mode = " << line.control_mode_ << std::endl;
                         production_specification.control_mode_ = toProductionControlMode(line.control_mode_);
                         production_specification.water_production_target_ = line.water_max_rate_;
                         production_specification.gas_max_rate_ = line.gas_max_rate_;

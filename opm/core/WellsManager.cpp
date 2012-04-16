@@ -513,33 +513,35 @@ namespace Opm
                         = lines[i].phase_ == "OIL" ? ProductionSpecification::OIL : ProductionSpecification::RAT;
             }
         }
-            well_collection_.calculateGuideRates();
-            
-            // Apply guide rates:
-            for (size_t i = 0; i < well_data.size(); i++) {
-                if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
-                    std::cout << "hello" << std::endl;
-                    if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::OIL) {
-                        well_data[i].control = RATE;
+        well_collection_.calculateGuideRates();
 
-                        double parent_oil_rate = well_collection_.getLeafNodes()[i]->getParent()->prodSpec().oil_max_rate_;
-                        double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                        well_data[i].target = guide_rate * parent_oil_rate;
-                    }
+        // Apply guide rates:
+        for (size_t i = 0; i < well_data.size(); i++) {
+            if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+                switch (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ ) {
+                case ProductionSpecification::OIL:
+                {
+                    well_data[i].control = RATE;
+                    double parent_oil_rate = well_collection_.getLeafNodes()[i]->getParent()->prodSpec().oil_max_rate_;
+                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                    well_data[i].target = guide_rate * parent_oil_rate;
+                    break;
                 }
-
-                if (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP) {
-                    if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
-                        well_data[i].control = RATE;
-                        well_data[i].type = INJECTOR;
-                        double parent_surface_rate = well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
-                        double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                        well_data[i].target = guide_rate * parent_surface_rate;
-                    }
                 }
             }
-            
-        
+
+            if (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP) {
+                if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
+                    well_data[i].control = RATE;
+                    well_data[i].type = INJECTOR;
+                    double parent_surface_rate = well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
+                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                    well_data[i].target = guide_rate * parent_surface_rate;
+                }
+            }
+        }
+
+
         
 	// Set up the Wells struct.
 	w_ = wells_create(num_wells, num_perfs);
