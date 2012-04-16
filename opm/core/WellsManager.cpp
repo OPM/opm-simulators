@@ -376,6 +376,7 @@ namespace Opm
         if (deck.hasField("WCONPROD")) {
             const WCONPROD& wconprods = deck.getWCONPROD();
             const int num_wconprods   = wconprods.wconprod.size();
+            std::cout << "num_wconprods = " <<num_wconprods << std::endl;
             for (int kw = 0; kw < num_wconprods; ++kw) {
                 std::string name = wconprods.wconprod[kw].well_;
                 std::string::size_type len = name.find('*');
@@ -514,7 +515,6 @@ namespace Opm
 
             well_collection_.calculateGuideRates();
             
-#if 0
             // Apply guide rates:
             for (size_t i = 0; i < well_data.size(); i++) {
                 std::cout << "hello" << std::endl;
@@ -539,7 +539,6 @@ namespace Opm
                     }
                 }
             }
-#endif
             
         }
         
@@ -560,7 +559,8 @@ namespace Opm
 		wi[perf] = wellperf_data[w][perf].well_index;
 	    }
 	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
-	    int ok = wells_add(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
+
+            int ok = wells_add(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
 			       zfrac, &cells[0], &wi[0], w_);
 	    if (!ok) {
 		THROW("Failed to add a well.");
