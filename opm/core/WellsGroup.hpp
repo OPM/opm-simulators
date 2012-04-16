@@ -45,7 +45,13 @@ namespace Opm
         void setParent(WellsGroupInterface* parent);
         const WellsGroupInterface* getParent() const;
         
+        /// Recursively calculate the guide rate for each member of the well group.
+        /// This should be called after the guide rates are set to the non-normalized values.
         virtual void calculateGuideRates() = 0;
+        
+        /// Calculates the number of leaf nodes in the given group. 
+        /// A leaf node is defined to have one leaf node in its group.
+        virtual int numberOfLeafNodes() = 0;
     protected:
            WellsGroupInterface* parent_;
 
@@ -73,6 +79,9 @@ namespace Opm
                                    int index_of_well, double epsilon = 1e-8);
         
         virtual void calculateGuideRates();
+        
+
+        virtual int numberOfLeafNodes();
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -94,6 +103,7 @@ namespace Opm
         void setWellsPointer(const struct Wells* wells, int self_index);
         
         virtual void calculateGuideRates();
+        virtual int numberOfLeafNodes();
     private:
         const struct Wells* wells_;
         int self_index_;

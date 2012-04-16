@@ -113,7 +113,7 @@ namespace Opm
             }
         }
     }
-    
+
     
     bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
                            const UnstructuredGrid& grid, const std::vector<double>& saturations,
@@ -127,6 +127,38 @@ namespace Opm
                 return false;
             }
         }
+        
+        int number_of_leaf_nodes = 1;//numberOfLeafNodes();
+
+        double bhp_target = 1e100;
+        double rate_target = 1e100;
+        switch(wells->type[index_of_well]) {
+        case INJECTOR:
+        {
+            const InjectionSpecification& inje_spec = injSpec();
+            bhp_target = inje_spec.BHP_limit_ / number_of_leaf_nodes;
+            rate_target = inje_spec.fluid_volume_max_rate_ / number_of_leaf_nodes;
+            break;
+        }
+        case PRODUCER:
+        {
+            const ProductionSpecification& prod_spec = prodSpec();
+            bhp_target = prod_spec.BHP_limit_ / number_of_leaf_nodes;
+            rate_target = prod_spec.fluid_volume_max_rate_ / number_of_leaf_nodes;
+            break;
+        }
+        }
+        
+        if (well_bhp[index_of_well] - bhp_target > epsilon) {
+            std::cout << "BHP not met" << std::endl;
+            return false;
+        }
+        if(well_rate[index_of_well] - rate_target > epsilon) {
+            std::cout << wells->type[index_of_well] << std::endl;
+            std::cout << "well_rate not met" << std::endl;
+            std::cout << "target = " << rate_target << ", well_rate[index_of_well] = " << well_rate[index_of_well] << std::endl;
+            return false;
+        }
         return true;
     }
 
@@ -135,6 +167,19 @@ namespace Opm
         children_.push_back(child);
     }
 
+    
+    int WellsGroup::numberOfLeafNodes() {
+        // This could probably use some caching, but seeing as how the number of 
+        // wells is relatively small, we'll do without for now.
+        int sum = 0;
+        
+        for(size_t i = 0; i < children_.size(); i++) {
+            sum += children_[i]->numberOfLeafNodes();
+        }
+        
+        return sum;
+    }
+    
     WellNode::WellNode(const std::string& myname,
             ProductionSpecification prod_spec,
             InjectionSpecification inj_spec)
@@ -213,6 +258,11 @@ namespace Opm
     void WellNode::calculateGuideRates()
     {
         // Empty
+    }
+    
+    int WellNode::numberOfLeafNodes() 
+    {
+        return 1;
     }
 
     namespace

@@ -517,9 +517,7 @@ namespace Opm
             
             // Apply guide rates:
             for (size_t i = 0; i < well_data.size(); i++) {
-                std::cout << "hello" << std::endl;
                 if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
-                    std::cout << "hello" << std::endl;
                     if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::OIL) {
                         well_data[i].control = RATE;
 
