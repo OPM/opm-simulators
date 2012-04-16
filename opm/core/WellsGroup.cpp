@@ -205,14 +205,6 @@ namespace Opm
             double bhp_diff = well_bhp[self_index_] - prodSpec().BHP_limit_;
             double rate_diff = well_rate[self_index_] - prodSpec().fluid_volume_max_rate_;
             
-            switch(*wells_->ctrls[self_index_]->type) {
-            case BHP:
-                bhp_diff = std::abs(bhp_diff);
-                break;
-            case RATE:
-                rate_diff = std::abs(rate_diff);
-                break;
-            }
             if(bhp_diff > epsilon) {
                 
                 std::cout << "BHP exceeded, bhp_diff = " << bhp_diff << std::endl;
@@ -229,14 +221,7 @@ namespace Opm
         } else {
             double bhp_diff = well_bhp[self_index_] - injSpec().BHP_limit_;
             double flow_diff = well_rate[self_index_] - injSpec().fluid_volume_max_rate_;
-            switch(*wells_->ctrls[self_index_]->type) {
-            case BHP:
-                bhp_diff = std::abs(bhp_diff);
-                break;
-            case RATE:
-                flow_diff = std::abs(flow_diff);
-                break;
-            }
+            
             
            if(bhp_diff > epsilon) {
                std::cout << "BHP exceeded, bhp_diff = " << bhp_diff<<std::endl;

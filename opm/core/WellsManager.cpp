@@ -525,8 +525,23 @@ namespace Opm
                     double parent_oil_rate = well_collection_.getLeafNodes()[i]->getParent()->prodSpec().oil_max_rate_;
                     double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
                     well_data[i].target = guide_rate * parent_oil_rate;
+                    std::cout << "Applying guide rate" << std::endl;
                     break;
                 }
+                case ProductionSpecification::NONE_GRT:
+                {
+                    // Will use the group control type:
+                    const ProductionSpecification& parent_prod_spec = 
+                        well_collection_.getLeafNodes()[i]->getParent()->prodSpec();
+                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                    switch(parent_prod_spec.control_mode_) {
+                    case ProductionSpecification::LRAT:
+                        well_data[i].target = guide_rate * parent_prod_spec.liquid_max_rate_;
+                        well_data[i].control = RATE;
+                        break;
+                    }
+                    
+                }   
                 }
             }
 
@@ -537,6 +552,7 @@ namespace Opm
                     double parent_surface_rate = well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
                     double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
                     well_data[i].target = guide_rate * parent_surface_rate;
+                    std::cout << "Applying guide rate" << std::endl;
                 }
             }
         }
