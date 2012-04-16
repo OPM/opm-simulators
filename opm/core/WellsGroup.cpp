@@ -128,7 +128,7 @@ namespace Opm
             }
         }
         
-        int number_of_leaf_nodes = 1;//numberOfLeafNodes();
+        int number_of_leaf_nodes = numberOfLeafNodes();
 
         double bhp_target = 1e100;
         double rate_target = 1e100;
@@ -154,9 +154,10 @@ namespace Opm
             return false;
         }
         if(well_rate[index_of_well] - rate_target > epsilon) {
-            std::cout << wells->type[index_of_well] << std::endl;
             std::cout << "well_rate not met" << std::endl;
             std::cout << "target = " << rate_target << ", well_rate[index_of_well] = " << well_rate[index_of_well] << std::endl;
+            std::cout << injSpec().fluid_volume_max_rate_ << std::endl;
+            std::cout << "Group name = " << name() << std::endl;
             return false;
         }
         return true;
@@ -422,6 +423,7 @@ namespace Opm
                         injection_specification.injector_type_ = toSurfaceComponent(line.injector_type_);
                         injection_specification.control_mode_ = toInjectionControlMode(line.control_mode_);
                         injection_specification.surface_flow_max_rate_ = line.surface_flow_max_rate_;
+                        injection_specification.fluid_volume_max_rate_ = line.resv_flow_max_rate_;
                     }
                 }
             }
