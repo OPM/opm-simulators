@@ -175,11 +175,24 @@ namespace Opm
     /// For this to be valid, the wells must be all rate-controlled and
     /// single-perforation.
     void wellsToSrc(const Wells& wells, const int num_cells, std::vector<double>& src);
-    
-
+     
+    /// Computes the WDP for each well.
+    /// \param[in] wells        Wells that need their wdp calculated.
+    /// \param[in] grid         The associated grid to make cell lookups.
+    /// \param[in] saturations  A vector of weights for each cell for each phase 
+    ///                         in the grid. So for cell i, 
+    ///                         saturations[i*densities.size() + p] should give the weight
+    ///                         of phase p in cell i.
+    /// \param[in] densities    Density for each phase.
+    /// \param[out] wdp         Will contain, for each well, the wdp of the well.
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
                     const std::vector<double>& densities, std::vector<double>& wdp);
     
+    /// Computes (sums) the flow rate for each well. 
+    /// \param[in] wells                The wells for which the flow rate should be computed.
+    /// \param[in] flow_rates_per_cell  Flow rates per well cells. Should ordered the same way as 
+    ///                                 wells.
+    /// \param[out] flow_rates_per_well Will contain the summed up flow_rates for each well.
     void computeFlowRatePerWell(const Wells& wells, const std::vector<double>& flow_rates_per_cell,
                                 std::vector<double>& flow_rates_per_well);
     
