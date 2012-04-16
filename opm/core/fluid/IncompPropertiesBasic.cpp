@@ -46,6 +46,26 @@ namespace Opm
 	pvt_.mu(1, 0, 0, &viscosity_[0]);
     }
 
+    IncompPropertiesBasic::IncompPropertiesBasic(const int num_phases,
+                                                 const  SaturationPropsBasic::RelPermFunc& relpermfunc,
+                                                 const std::vector<double>&  rho,
+                                                 const std::vector<double>& mu,
+                                                 const double porosity,
+                                                 const double permeability,
+                                                 const int dim,
+                                                 const int num_cells)
+    {
+        rock_.init(dim, num_cells, porosity, permeability);
+	pvt_.init(num_phases, rho, mu);
+        satprops_.init(num_phases, relpermfunc);
+	if (pvt_.numPhases() != satprops_.numPhases()) {
+	    THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
+		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+	}
+	viscosity_.resize(pvt_.numPhases());
+	pvt_.mu(1, 0, 0, &viscosity_[0]);
+    }
+
     IncompPropertiesBasic::~IncompPropertiesBasic()
     {
     }

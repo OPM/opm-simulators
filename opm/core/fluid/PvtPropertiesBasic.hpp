@@ -44,6 +44,11 @@ namespace Opm
 	///    mu1 [mu2, mu3]     (1.0)        Viscosity in cP
 	void init(const parameter::ParameterGroup& param);
 
+        /// Initialize from argument Basic  multi phase fluid pvt properties.
+        void init(const int num_phases,
+                  const std::vector<double> rho,
+                  const std::vector<double> mu);
+
         /// Number of active phases.
         int numPhases() const;
 
