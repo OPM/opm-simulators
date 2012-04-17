@@ -180,13 +180,15 @@ namespace Opm
     /// \param[in] wells        Wells that need their wdp calculated.
     /// \param[in] grid         The associated grid to make cell lookups.
     /// \param[in] saturations  A vector of weights for each cell for each phase 
-    ///                         in the grid. So for cell i, 
+    ///                         in the grid (or well, see per_grid_cell parameter). So for cell i, 
     ///                         saturations[i*densities.size() + p] should give the weight
     ///                         of phase p in cell i.
     /// \param[in] densities    Density for each phase.
     /// \param[out] wdp         Will contain, for each well, the wdp of the well.
+    /// \param[in] per_grid_cell Whether or not the saturations are per grid cell or per 
+    ///                          well cell.
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-                    const std::vector<double>& densities, std::vector<double>& wdp);
+                    const std::vector<double>& densities, std::vector<double>& wdp, bool per_grid_cell = true);
     
     /// Computes (sums) the flow rate for each well. 
     /// \param[in] wells                The wells for which the flow rate should be computed.

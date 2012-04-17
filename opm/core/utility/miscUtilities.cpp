@@ -406,12 +406,12 @@ namespace Opm
     
     
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-            const std::vector<double>& densities, std::vector<double>& wdp) 
+            const std::vector<double>& densities, std::vector<double>& wdp, bool per_grid_cell) 
     {
         const size_t np = densities.size();
-
+        const int nw = wells.number_of_wells;
         // Simple for now:
-        for(int i = 0; i < wells.number_of_wells; i++) {
+        for(int i = 0; i < nw; i++) {
             double depth_ref = wells.depth_ref[i];
             for(int j = wells.well_connpos[i]; j < wells.well_connpos[i+1]; j++) {
                 int cell = wells.well_cells[j];
@@ -421,15 +421,25 @@ namespace Opm
 
                 double saturation_sum = 0.0;
                 for(size_t p = 0; p < np; p++) {
-                    saturation_sum += saturations[np*cell + p];
+                    if(per_grid_cell) {
+                        saturation_sum += saturations[i*nw*np + j*np + p];
+                    }
+                    else {
+                        saturation_sum += saturations[np*cell + p];
+                    }
                 }
                 if(saturation_sum == 0) {
                     saturation_sum = 1.0;
                 }
                 double density = 0.0;
                 for(size_t p = 0; p < np; p++) {
-                    // Is this a smart way of doing it?
-                    density += saturations[np*cell + p] * densities[p] / saturation_sum;
+                    if(per_grid_cell) {
+                        density += saturations[i*nw*np + j*np + p] * densities[p] / saturation_sum;
+                    }
+                    else {
+                        // Is this a smart way of doing it?
+                        density += saturations[np*cell + p] * densities[p] / saturation_sum;
+                    }
                 }
                 
                 // Is the sign correct?

@@ -7,6 +7,7 @@
 
 #include <opm/core/WellsGroup.hpp>
 #include <cmath>
+#include <opm/core/newwells.h>
 
 namespace Opm
 {
@@ -146,7 +147,7 @@ namespace Opm
             const ProductionSpecification& prod_spec = prodSpec();
             bhp_target = prod_spec.BHP_limit_ / number_of_leaf_nodes;
             rate_target = prod_spec.fluid_volume_max_rate_ / number_of_leaf_nodes;
-            shut_down_on_exceed = prodSpec().procedure_ == ProductionSpecification::Well;
+            shut_down_on_exceed = prodSpec().procedure_ == ProductionSpecification::WELL;
             break;
         }
         }
@@ -158,7 +159,9 @@ namespace Opm
             
             if(shut_down_on_exceed) {
                 // Shut down well
-                wells->ctrls->target = 0.0;
+                // Dirty hack for now
+                struct Wells* non_const_wells = const_cast<struct Wells*>(wells);
+                non_const_wells->ctrls[index_of_well]->target[0] = 0.0;
             }
             return false;
         }
@@ -169,7 +172,9 @@ namespace Opm
             
             if(shut_down_on_exceed) {
                 // Shut down well
-                wells->ctrls->target = 0.0;
+                // Dirty hack for now
+                struct Wells* non_const_wells = const_cast<struct Wells*>(wells);
+                non_const_wells->ctrls[index_of_well]->target[0] = 0.0;
             }
             return false;
         }
