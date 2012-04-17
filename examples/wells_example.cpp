@@ -77,7 +77,8 @@ int main(int argc, char** argv) {
     std::vector<double> well_rate;
     
     computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
-    if(wells.wellCollection().conditionsMet(well_bhp, well_rate, *grid.c_grid(), state.saturation() )) {
+    WellControlResult well_control_results;
+    if(wells.wellCollection().conditionsMet(well_bhp, well_rate, *grid.c_grid(), state.saturation(), well_control_results )) {
         std::cout << "Conditions met for wells!" << std::endl;
     }
     else
