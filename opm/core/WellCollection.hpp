@@ -41,7 +41,9 @@ namespace Opm
 
         
         bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                           const UnstructuredGrid& grid, const std::vector<double>& saturations, double epsilon=1e-8) const;
+                           const UnstructuredGrid& grid, const std::vector<double>& saturations, 
+                           WellControlResult& result, 
+                           double epsilon=1e-8) const;
         
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
         

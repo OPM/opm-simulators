@@ -117,13 +117,14 @@ namespace Opm
 
     
     bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                           const UnstructuredGrid& grid, const std::vector<double>& saturations,
-                                const struct Wells* wells, int index_of_well, double epsilon)
+                                   const UnstructuredGrid& grid, const std::vector<double>& saturations,
+                                   const struct Wells* wells, int index_of_well, WellControlResult& result,
+                                   double epsilon)
     {
         if (parent_ != NULL) {
             bool parent_ok = 
                 (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, 
-                    well_rate,grid, saturations, wells, index_of_well, epsilon);
+                    well_rate,grid, saturations, wells, index_of_well, result, epsilon);
             if (!parent_ok) {
                 return false;
             }
@@ -207,11 +208,19 @@ namespace Opm
     }
 
     bool WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                           const UnstructuredGrid& grid, const std::vector<double>& saturations, double epsilon)
+                                 const UnstructuredGrid& grid, const std::vector<double>& saturations,
+                                 WellControlResult& result, double epsilon)
     {
         
         if (parent_ != NULL) {
-            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, well_rate, grid, saturations, wells_, self_index_, epsilon);
+            bool parent_ok = (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, 
+                                                                                 well_rate, 
+                                                                                 grid, 
+                                                                                 saturations, 
+                                                                                 wells_,
+                                                                                 self_index_,
+                                                                                 result, 
+                                                                                 epsilon);
             if (!parent_ok) {
                 return false;
             }
