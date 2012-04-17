@@ -39,6 +39,7 @@
 // ----------------- Main program -----------------
 
 /// \page tutorial1
+/// \section commentedsource1 Commented source code:
 /// \code
 int main()
 {
@@ -85,6 +86,6 @@ int main()
 /// \image html tutorial1.png
 
 /// \page tutorial1
-/// \section sourcecode Source code.
+/// \section completecode1 Complete source code:
 /// \include tutorial1.cpp
 

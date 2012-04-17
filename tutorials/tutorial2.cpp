@@ -46,7 +46,7 @@
 #include <opm/core/utility/Units.hpp>
 
 /// \page tutorial2
-/// \section commentedcode Commented code:
+/// \section commentedcode2 Commented code:
 /// \code
 int main()
 {
@@ -180,5 +180,5 @@ int main()
 
 
 /// \page tutorial2
-/// \section sourcecode Complete source code.
+/// \section completecode2 Complete source code:
 /// \include tutorial2.cpp
