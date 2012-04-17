@@ -7,6 +7,7 @@
 
 #include <opm/core/WellsGroup.hpp>
 #include <cmath>
+#include <opm/core/newwells.h>
 
 namespace Opm
 {
@@ -130,6 +131,7 @@ namespace Opm
         
         int number_of_leaf_nodes = numberOfLeafNodes();
 
+        bool shut_down_on_exceed = false;
         double bhp_target = 1e100;
         double rate_target = 1e100;
         switch(wells->type[index_of_well]) {
@@ -145,6 +147,7 @@ namespace Opm
             const ProductionSpecification& prod_spec = prodSpec();
             bhp_target = prod_spec.BHP_limit_ / number_of_leaf_nodes;
             rate_target = prod_spec.fluid_volume_max_rate_ / number_of_leaf_nodes;
+            shut_down_on_exceed = prodSpec().procedure_ == ProductionSpecification::WELL;
             break;
         }
         }
@@ -153,12 +156,26 @@ namespace Opm
             std::cout << "BHP not met" << std::endl;
             std::cout << "BHP limit was " << bhp_target << std::endl;
             std::cout << "Actual bhp was " << well_bhp[index_of_well] << std::endl; 
+            
+            if(shut_down_on_exceed) {
+                // Shut down well
+                // Dirty hack for now
+                struct Wells* non_const_wells = const_cast<struct Wells*>(wells);
+                non_const_wells->ctrls[index_of_well]->target[0] = 0.0;
+            }
             return false;
         }
         if(well_rate[index_of_well] - rate_target > epsilon) {
             std::cout << "well_rate not met" << std::endl;
             std::cout << "target = " << rate_target << ", well_rate[index_of_well] = " << well_rate[index_of_well] << std::endl;
             std::cout << "Group name = " << name() << std::endl;
+            
+            if(shut_down_on_exceed) {
+                // Shut down well
+                // Dirty hack for now
+                struct Wells* non_const_wells = const_cast<struct Wells*>(wells);
+                non_const_wells->ctrls[index_of_well]->target[0] = 0.0;
+            }
             return false;
         }
         return true;
