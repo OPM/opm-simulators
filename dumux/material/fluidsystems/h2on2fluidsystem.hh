@@ -344,6 +344,7 @@ public:
         Scalar sumMoleFrac = 0;
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoleFrac += fluidState.moleFraction(phaseIdx, compIdx);
+        Valgrind::CheckDefined(sumMoleFrac);
 
         // liquid phase
         if (phaseIdx == lPhaseIdx) {
