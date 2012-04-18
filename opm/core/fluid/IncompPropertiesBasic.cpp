@@ -50,12 +50,12 @@ namespace Opm
                                                  const  SaturationPropsBasic::RelPermFunc& relpermfunc,
                                                  const std::vector<double>&  rho,
                                                  const std::vector<double>& mu,
-                                                 const double porosity,
-                                                 const double permeability,
+                                                 const double por, //porosity
+                                                 const double perm,
                                                  const int dim,
                                                  const int num_cells)
     {
-        rock_.init(dim, num_cells, porosity, permeability);
+        rock_.init(dim, num_cells, por, perm);
 	pvt_.init(num_phases, rho, mu);
         satprops_.init(num_phases, relpermfunc);
 	if (pvt_.numPhases() != satprops_.numPhases()) {
