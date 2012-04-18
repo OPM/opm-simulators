@@ -82,7 +82,6 @@ public:
 
     //! Index of the liquid phase
     static constexpr int lPhaseIdx = 0;
-    static constexpr int wPhaseIdx = lPhaseIdx;
 
     /*!
      * \brief Return the human readable name of a fluid phase.
