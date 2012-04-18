@@ -102,28 +102,18 @@ public:
     void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
     {
         Valgrind::CheckDefined(value);
-        Valgrind::SetDefined(sumMoleFractions_[phaseIdx]);
-        Valgrind::SetDefined(averageMolarMass_[phaseIdx]);
-        Valgrind::SetDefined(moleFraction_[phaseIdx][compIdx]);
+        Valgrind::SetUndefined(sumMoleFractions_[phaseIdx]);
+        Valgrind::SetUndefined(averageMolarMass_[phaseIdx]);
+        Valgrind::SetUndefined(moleFraction_[phaseIdx][compIdx]);
 
-        if (std::isfinite(averageMolarMass_[phaseIdx])) {
-            Scalar delta = value - moleFraction_[phaseIdx][compIdx];
-
-            moleFraction_[phaseIdx][compIdx] = value;
-
-            sumMoleFractions_[phaseIdx] += delta;
-            averageMolarMass_[phaseIdx] += delta*FluidSystem::molarMass(compIdx);
-        }
-        else {
-            moleFraction_[phaseIdx][compIdx] = value;
-
-            // re-calculate the mean molar mass
-            sumMoleFractions_[phaseIdx] = 0.0;
-            averageMolarMass_[phaseIdx] = 0.0;
-            for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
-                sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compJIdx];
-                averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compJIdx]*FluidSystem::molarMass(compJIdx);
-            }
+        moleFraction_[phaseIdx][compIdx] = value;
+        
+        // re-calculate the mean molar mass
+        sumMoleFractions_[phaseIdx] = 0.0;
+        averageMolarMass_[phaseIdx] = 0.0;
+        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
+            sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compJIdx];
+            averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compJIdx]*FluidSystem::molarMass(compJIdx);
         }
     }
 
