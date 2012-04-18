@@ -47,7 +47,7 @@ int main()
     /// \page tutorial1
     /// We set the number of blocks in each direction.
     /// \code
-    int nx = 3;
+    int nx = 4;
     int ny = 3;
     int nz = 2;
     /// \endcode
@@ -82,7 +82,7 @@ int main()
 }
 /// \endcode
 /// \page tutorial1
-/// We read the the vtu output file in \a Paraview and obtain the following grid.
+/// We read the vtu output file in \a Paraview and obtain the following grid.
 /// \image html tutorial1.png
 
 /// \page tutorial1
