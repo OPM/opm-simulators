@@ -220,7 +220,6 @@ int main ()
     using namespace Opm;
     GridManager grid(nx, ny, nz, dx, dy, dz);
     int num_cells = grid.c_grid()->number_of_cells;
-    int num_faces = grid.c_grid()->number_of_faces;
     /// \endcode
 
     /// \page tutorial3
@@ -479,7 +478,7 @@ void TwophaseFluid::mobility(int c, const Sat& s, Mob& mob, DMob& dmob) const
 template <class Sat,
           class Pcap,
           class DPcap>
-void TwophaseFluid::pc(int c, const Sat& s, Pcap& pcap, DPcap& dpcap) const
+void TwophaseFluid::pc(int /*c */, const Sat& /* s*/, Pcap& pcap, DPcap& dpcap) const
 {
     pcap = 0.;
     dpcap = 0.;
@@ -514,7 +513,9 @@ double TwophaseFluid::s_max(int c) const
 /// </TR>
 /// </TABLE>
 
+
 /// \page tutorial3
 /// \details
 /// \section completecode3 Complete source code:
 /// \include tutorial3.cpp 
+/// \include generate_doc_figures.py 
