@@ -204,7 +204,9 @@ namespace Opm
         const double* poro = props.porosity();
         double abs_mass = 0.0;
 	for (int cell = 0; cell < num_cells; ++cell) {
-            abs_mass += polyprops.simpleAdsorption(cmax[cell])*pv[cell]*((1.0 - poro[cell])/poro[cell])*rhor;
+            double c_ads;
+            polyprops.simpleAdsorption(cmax[cell], c_ads);
+            abs_mass += c_ads*pv[cell]*((1.0 - poro[cell])/poro[cell])*rhor;
 	}
         return abs_mass;
     }

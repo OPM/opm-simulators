@@ -97,10 +97,13 @@ namespace Opm
 	struct ResidualS;
 
 
-	double fracFlow(double s, double c, int cell) const;
-	double fracFlowWithDer(double s, double c, int cell, double* der) const;
-	double computeMc(double c) const;
-	double computeMcWithDer(double c, double* der) const;
+	void fracFlow(double s, double c, double cmax, int cell, double& ff) const;
+	void fracFlowWithDer(double s, double cmax, double c, int cell, double& ff,
+                               std::vector<double>& dff_dsdc) const;
+	void fracFlowBoth(double s, double c, double cmax, int cell, double& ff,
+                          std::vector<double>& dff_dsdc, bool if_with_der) const;
+	void computeMc(double c, double& mc) const;
+	void computeMcWithDer(double c, double& mc, double& dmc_dc) const;
     };
 
 } // namespace Opm

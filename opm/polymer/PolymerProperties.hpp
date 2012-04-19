@@ -23,7 +23,6 @@
 
 #include <cmath>
 #include <vector>
-#include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
 
@@ -126,152 +125,87 @@ namespace Opm
 
         }
 
-        double cMax() const
-        {
-            return c_max_;
-        }
+        double cMax() const;
 
-        double mixParam() const
-        {
-            return mix_param_;
-        }
+        double mixParam() const;
 
-        double rockDensity() const
-        {
-            return rock_density_;
-        };
+        double rockDensity() const;
 
-        double deadPoreVol() const
-        {
-            return dead_pore_vol_;
-        }
+        double deadPoreVol() const;
 
-        double resFactor() const
-        {
-            return res_factor_;
-        }
+        double resFactor() const;
 
-        double cMaxAds() const
-        {
-            return c_max_ads_;
-        }
+        double cMaxAds() const;
 
-        int adsIndex() const
-        {
-            return ads_index_;
-        }
+        int adsIndex() const;
 
-        double viscMult(double c) const
-        {
-            return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
-        }
+        double viscMult(double c) const;
 
-        double viscMultWithDer(double c, double* der) const
-        {
-            *der = Opm::linearInterpolationDerivative(c_vals_visc_, visc_mult_vals_, c);
-            return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);
-        }
+        double viscMultWithDer(double c, double* der) const;
 
-        double simpleAdsorption(double c) const
-        {
-            return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
-        }
+        void simpleAdsorption(double c, double& c_ads) const;
 
-        double simpleAdsorptionWithDer(double c, double* der) const
-        {
-            *der = Opm::linearInterpolationDerivative(c_vals_ads_, ads_vals_, c);
-            return Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);
-        }
+        void simpleAdsorptionWithDer(double c, double& c_ads, 
+                                     double& dc_ads_dc) const;
 
-        double adsorption(double c, double cmax) const
-        {
-            if (ads_index_ == Desorption) {
-                return simpleAdsorption(c);
-            } else if (ads_index_ == NoDesorption) {
-                return simpleAdsorption(std::max(c, cmax));
-            } else {
-                THROW("Invalid Adsoption index");
-            }
-        }
+        void adsorption(double c, double cmax, double& c_ads) const;
 
-        double adsorptionWithDer(double c, double cmax, double* der) const
-        {
-            if (ads_index_ == Desorption) {
-                return simpleAdsorptionWithDer(c, der);
-            } else if (ads_index_ == NoDesorption) {
-                if (c < cmax) {
-                    *der = 0;
-                    return simpleAdsorption(cmax);
-                } else {
-                    return simpleAdsorptionWithDer(c, der);
-                }
-            } else {
-                THROW("Invalid Adsoption index");
-            }
-        }
+        void adsorptionWithDer(double c, double cmax, 
+                               double& c_ads, double& dc_ads_dc) const;
 
+	void effectiveVisc(const double c, const double* visc, double* visc_eff) const;
 
-	void effectiveInvVisc(const double c, const double* visc, double* inv_visc_eff) const
-	{
-	    double cbar = c/c_max_;
-	    double mu_w = visc[0];
-	    double mu_m = viscMult(c)*mu_w;
-	    double mu_p = viscMult(c_max_)*mu_w;
-	    double mu_m_omega = std::pow(mu_m, mix_param_);
-	    double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - mix_param_);
-	    double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - mix_param_);
-	    double inv_mu_w_eff = (1.0 - cbar)/mu_w_e + cbar/mu_p_eff;
-	    inv_visc_eff[0] = inv_mu_w_eff;
-	    inv_visc_eff[1] = 1.0/visc[1];
-	}
-        
+        void effectiveInvVisc(const double c, const double* visc, 
+                              double* inv_visc_eff) const;
+
+	void effectiveViscWithDer(const double c, const double* visc, 
+                                  double* visc_eff, double* dvisc_eff_dc) const;
+
+        void effectiveRelperm(const double c,
+                              const double cmax,
+                              const double* relperm,
+                              double& eff_relperm_wat) const;
+
+        void effectiveRelpermWithDer (const double c,
+                                      const double cmax,
+                                      const double* relperm,
+                                      const double* drelperm_ds,
+                                      double& eff_relperm_wat,
+                                      double& deff_relperm_wat_ds,
+                                      double& deff_relperm_wat_dc) const;
+
         void effectiveMobilities(const double c,
+                                 const double cmax,
                                  const double* visc,
                                  const double* relperm,
-                                 const double* drelpermds,
-                                 std::vector<double>& mob, 
-                                 std::vector<double>& dmobds,
-                                 double& dmobwatdc) const 
-        {
-            double cbar = c/c_max_;
-            double mu_w = visc[0];
-            double mu_m_dc; // derivative of mu_m with respect to c
-            double mu_m = viscMultWithDer(c, &mu_m_dc)*mu_w;
-            mu_m_dc *= mu_w;
-            double mu_p = viscMult(c_max_)*mu_w;
-            double omega = mix_param_;
-            double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
-            double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
-            double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
-            double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
-            double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
-            double mu_w_eff_dc = -1./c_max_*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e)
-                + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc
-                + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
-            double visc_eff[2] = { mu_w_eff, visc[1] };
+                                 std::vector<double>& mob) const;
 
-            dmobwatdc = - mob[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff);
+        void effectiveMobilitiesWithDer(const double c,
+                                        const double cmax,
+                                        const double* visc,
+                                        const double* relperm,
+                                        const double* drelpermds,
+                                        std::vector<double>& mob, 
+                                        std::vector<double>& dmobds,
+                                        double& dmobwatdc) const; 
 
-            mob[0] = relperm[0]/visc_eff[0];
-            mob[1] = relperm[1]/visc_eff[1];
+        void effectiveMobilitiesBoth(const double c,
+                                     const double cmax,
+                                     const double* visc,
+                                     const double* relperm,
+                                     const double* drelperm_ds,
+                                     std::vector<double>& mob, 
+                                     std::vector<double>& dmob_ds,
+                                     double& dmobwat_dc,
+                                     bool if_with_der) const;
 
-            dmobds[0*2 + 0] = drelpermds[0*2 + 0]/visc_eff[0];
-            dmobds[0*2 + 1] = drelpermds[0*2 + 1]/visc_eff[1];
-            dmobds[1*2 + 0] = drelpermds[1*2 + 0]/visc_eff[0];
-            dmobds[1*2 + 1] = drelpermds[1*2 + 1]/visc_eff[1];
-        }
+        void computeMcWithDer(const double& c, double& mc) const;
 
-        void computeMc(const double& c,  
-                       double& mc,
-                       double& dmcdc) const 
-        {
-            double cbar = c/c_max_;
-            double omega = mix_param_;
-            double r = std::pow(viscMult(c_max_), 1 - omega); // viscMult(c_max_)=mu_p/mu_w
-            mc = c/(cbar + (1 - cbar)*r);
-            dmcdc = r/std::pow(cbar + (1 - cbar)*r, 2);
-        }
+        void computeMcWithDer(const double& c, double& mc,
+                              double& dmc_dc) const;
 
+        void computeMcBoth(const double& c, double& mc, 
+                           double& dmc_dc, bool if_with_der) const;
 
     private:
         double c_max_;
@@ -285,6 +219,21 @@ namespace Opm
         std::vector<double> visc_mult_vals_;
         std::vector<double> c_vals_ads_;
         std::vector<double> ads_vals_;
+        void simpleAdsorptionBoth(double c, double& c_ads, 
+                                  double& dc_ads_dc, bool if_with_der) const;
+        void adsorptionBoth(double c, double cmax, 
+                            double& c_ads, double& dc_ads_dc, 
+                            bool if_with_der) const;
+        void effectiveViscBoth(const double c, const double* visc, double* visc_eff,
+                               double* dvisc_eff_dc, bool if_with_der) const;
+        void effectiveRelpermBoth(const double c,
+                                  const double cmax,
+                                  const double* relperm,
+                                  const double* drelperm_ds,
+                                  double& eff_relperm_wat,
+                                  double& deff_relperm_wat_ds,
+                                  double& deff_relperm_wat_dc,
+                                  bool if_with_der) const;
     };
 
 } // namespace Opm

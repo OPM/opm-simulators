@@ -169,7 +169,7 @@ public:
 
     void adsorption(const PolyC& c, const PolyC& cmax, CAds& cads, DCAdsDc& dcadsdc)
     {
-        cads = polyprops_.adsorptionWithDer(c, cmax, &dcadsdc);
+        polyprops_.adsorptionWithDer(c, cmax, cads, dcadsdc);
     }
 
     const double* porosity() const
@@ -187,14 +187,14 @@ public:
               class Mob,
               class DMobDs,
               class DMobWatDc>
-    void mobility(int cell, const Sat& s, const PolyC& c,
+    void mobility(int cell, const Sat& s, const PolyC& c, const PolyC& cmax,
                   Mob& mob, DMobDs& dmobds, DMobWatDc& dmobwatdc) const
     {
         const double* visc = props_.viscosity();
         double relperm[2];
         double drelpermds[4];
 	props_.relperm(1, &s[0], &cell, relperm, drelpermds);
-        polyprops_.effectiveMobilities(c, visc, relperm, drelpermds, mob, dmobds, dmobwatdc);
+        polyprops_.effectiveMobilitiesWithDer(c, cmax, visc, relperm, drelpermds, mob, dmobds, dmobwatdc);
     }
 
     template <class Sat,
@@ -227,10 +227,10 @@ public:
     template <class PolyC,
               class Mc,
               class DMcDc>
-    void mc(const PolyC& c,  Mc& mcval,
-            DMcDc& dmcdcval) const
+    void computeMc(const PolyC& c, Mc& mc,
+            DMcDc& dmcdc) const
     {
-        polyprops_.computeMc(c, mcval, dmcdcval);
+        polyprops_.computeMcWithDer(c, mc, dmcdc);
     }
 
 private:
@@ -512,7 +512,7 @@ main(int argc, char** argv)
         // reorder_model.initGravity(grav);
     }
     // Non-reordering solver.
-    NewtonPolymerTransportModel  model  (fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
+    NewtonPolymerTransportModel  model(fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
     if (use_gravity) {
         model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
     }
@@ -525,7 +525,6 @@ main(int argc, char** argv)
     }
 
     Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nl_tolerance, nl_maxiter);
-
 
     // // // Not implemented for polymer.
     // // Control init.

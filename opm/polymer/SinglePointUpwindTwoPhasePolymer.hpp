@@ -48,9 +48,11 @@ namespace Opm {
         class ModelParameterStorage {
         public:
             ModelParameterStorage(int nc, int totconn)
-                : drho_(0.0), deadporespace_(0.0), rockdensity_(0.0), mob_(0), dmobds_(0), dmobwatdc_(0), mc_(0),
-                  dmcdc_(0), porevol_(0), porosity_(0), dg_(0), sw_(0), c_(0),
-                  ds_(0), dsc_(0), dcads_(0), dcadsdc_(0), pc_(0), dpc_(0), trans_(0), data_()
+                : drho_(0.0), deadporespace_(0.0), rockdensity_(0.0), mob_(0), 
+                  dmobds_(0), dmobwatdc_(0), mc_(0),
+                  dmcdc_(0), porevol_(0), porosity_(0), dg_(0), sw_(0), c_(0), cmax_(0),
+                  ds_(0), dsc_(0), dcads_(0), dcadsdc_(0), pc_(0), dpc_(0), 
+                  trans_(0), data_()
             {
                 size_t alloc_sz;
 
@@ -65,6 +67,7 @@ namespace Opm {
                 alloc_sz += 1 * totconn;   // dg_
                 alloc_sz += 1 * nc;        // sw_
                 alloc_sz += 1 * nc;        // c_
+                alloc_sz += 1 * nc;        // cmax_
                 alloc_sz += 1 * nc;        // dc_
                 alloc_sz += 1 * nc;        // dsc_
                 alloc_sz += 1 * nc;        // dcads_
@@ -84,7 +87,8 @@ namespace Opm {
                 dg_            = porosity_       + (1 * nc     );
                 sw_            = dg_             + (1 * totconn);
                 c_             = sw_             + (1 * nc     );
-                ds_            = c_              + (1 * nc     );
+                cmax_          = c_              + (1 * nc     );
+                ds_            = cmax_           + (1 * nc     );
                 dsc_           = ds_             + (1 * nc     );
                 dcads_         = dsc_            + (1 * nc     );
                 dcadsdc_       = dcads_          + (1 * nc     );
@@ -133,6 +137,9 @@ namespace Opm {
             double&       c(int cell)            { return c_[cell]        ; }
             double        c(int cell)      const { return c_[cell]        ; }
 
+            double&       cmax(int cell)            { return cmax_[cell]        ; }
+            double        cmax(int cell)      const { return cmax_[cell]        ; }
+
             double&       ds(int cell)            { return ds_[cell]        ; }
             double        ds(int cell)      const { return ds_[cell]        ; }
 
@@ -168,6 +175,7 @@ namespace Opm {
             double *dg_          ;
             double *sw_          ;
             double *c_           ;
+            double *cmax_           ;
             double *ds_          ;
             double *dsc_         ;
             double *dcads_       ; // difference of cads to compute residual
@@ -495,7 +503,7 @@ namespace Opm {
             std::vector<double> mob(2, 0.);
             std::vector<double> dmobds(4, 0.);
             double dmobwatdc;
-            double c;
+            double c, cmax;
             double mc, dmcdc;
             double pc, dpc;
 
@@ -503,7 +511,7 @@ namespace Opm {
                 sys.vector().solution();
             const ::std::vector<double>& sat = state.saturation();
             const ::std::vector<double>& cpoly = state.concentration();
-            const ::std::vector<double>& cmax = state.maxconcentration();
+            const ::std::vector<double>& cmaxpoly = state.maxconcentration();
 
             bool in_range = true;
             for (int cell = 0; cell < g.number_of_cells; ++cell) {
@@ -511,14 +519,16 @@ namespace Opm {
                 store_.ds(cell) = x[2*cell + 0];
                 s[0] = sat[cell*2 + 0] + x[2*cell + 0];
                 c = cpoly[cell] + x[2*cell + 1];
+                cmax = std::max(cpoly[cell] + x[2*cell + 1], cmaxpoly[cell]);
                 store_.sw(cell) = s[0];
                 store_.c(cell) = c;
+                store_.cmax(cell) = cmax;
                 store_.dsc(cell) = s[0]*c - sat[cell*2 + 0]*cpoly[cell];
                 double dcadsdc;
                 double cads;
-                fluid_.adsorption(cpoly[cell], cmax[cell], cads, dcadsdc);
+                fluid_.adsorption(cpoly[cell], cmax, cads, dcadsdc);
                 store_.dcads(cell) =  -cads;
-                fluid_.adsorption(c, cmax[cell], cads, dcadsdc);
+                fluid_.adsorption(c, cmax, cads, dcadsdc);
                 store_.dcads(cell) +=  cads;
                 store_.dcadsdc(cell) = dcadsdc;
                 double s_min = fluid_.s_min(cell);
@@ -537,8 +547,8 @@ namespace Opm {
                 s[0] = std::min(s_max, s[0]);
                 s[1] = 1 - s[0];
 
-                fluid_.mobility(cell, s, c, mob, dmobds, dmobwatdc);
-                fluid_.mc(c, mc, dmcdc);
+                fluid_.mobility(cell, s, c, cmax, mob, dmobds, dmobwatdc);
+                fluid_.computeMc(c, mc, dmcdc);
                 fluid_.pc(cell, s, pc, dpc);
 
                 store_.mob (cell)[0]   =  mob [0];

@@ -52,8 +52,13 @@ public:
     double computeResidualC(const double* x) const;
     void computeGradientResS(const double* x, double* res, double* gradient) const;
     void computeGradientResC(const double* x, double* res, double* gradient) const;
-    void computeJacobiRes(const double* x, double* res_s_ds_dc, double* res_c_ds_dc) const;
-
+    void computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const;
+    
+private: 
+    void computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
+                             const bool if_dres_s_dsdc, const bool if_dres_c_dsdc,
+                             double* res, double* dres_s_dsdc, 
+                             double* dres_c_dsdc, double& mc, double& ff) const;
 };
 
 
@@ -229,7 +234,9 @@ namespace Opm
 	}
 	double operator()(double s) const
 	{
-	    return s - s0_ +  dtpv_*(outflux_*tm_.fracFlow(s, c_, cell_) + influx_ + s*comp_term_);
+            double ff;
+            tm_.fracFlow(s, c_, cmax0_, cell_, ff);
+	    return s - s0_ +  dtpv_*(outflux_*ff + influx_ + s*comp_term_);
 	}
     };
 
@@ -264,7 +271,9 @@ namespace Opm
             double dflux       = -tm.source_[cell];
             bool src_is_inflow = dflux < 0.0;
 	    influx  =  src_is_inflow ? dflux : 0.0;
-	    influx_polymer = src_is_inflow ? dflux*tm.computeMc(tm.inflow_c_) : 0.0;
+            double mc;
+            tm.computeMc(tm.inflow_c_, mc);
+	    influx_polymer = src_is_inflow ? dflux*mc : 0.0;
 	    outflux = !src_is_inflow ? dflux : 0.0;
             comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
 	    dtpv    = tm.dt_/tm.porevolume_[cell];
@@ -299,16 +308,18 @@ namespace Opm
 	void computeBothResiduals(const double s_arg, const double c_arg, double& res_s, double& res_c, double& mc, double& ff) const
 	{
 	    double dps = tm.polyprops_.deadPoreVol();
-	    ff = tm.fracFlow(s_arg, c_arg, cell);
-	    mc = tm.computeMc(c_arg);
+	    tm.fracFlow(s_arg, c_arg, cmax0, cell, ff);
+	    tm.computeMc(c_arg, mc);
 	    double rhor = tm.polyprops_.rockDensity();
-	    double ads0 = tm.polyprops_.adsorption(c0, cmax0);
-	    double ads = tm.polyprops_.adsorption(c_arg, cmax0);
+	    double c_ads0;
+            tm.polyprops_.adsorption(c0, cmax0, c_ads0);
+	    double c_ads;
+            tm.polyprops_.adsorption(c_arg, cmax0, c_ads);
 	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
 	    res_c = s_arg*(1 - dps)*c_arg - (s0 - dps)*c0
-		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
-                + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*ads)*comp_term;
+                + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*c_ads)*comp_term;
 
 	}
 
@@ -322,15 +333,19 @@ namespace Opm
 	    //     		    tm.maxit_, tm.tol_, iters_used);
 	    s = modifiedRegulaFalsi(res_s, s0, 0.0, 1.0,
 				    tm.maxit_, tm.tol_, iters_used);
-	    double ff = tm.fracFlow(s, c, cell);
-	    double mc = tm.computeMc(c);
+	    double ff;
+            tm.fracFlow(s, c, cmax0, cell, ff);
+	    double mc;
+            tm.computeMc(c, mc);
 	    double rhor = tm.polyprops_.rockDensity();
-	    double ads0 = tm.polyprops_.adsorption(c0, cmax0);
-	    double ads = tm.polyprops_.adsorption(c, cmax0);
+	    double c_ads0;
+            tm.polyprops_.adsorption(c0, cmax0, c_ads0);
+	    double c_ads;
+            tm.polyprops_.adsorption(c, cmax0, c_ads);
 	    double res = (1 - dps)*s*c - (1 - dps)*s0*c0
-		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
-                + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
+                + dtpv*(s*c*(1.0 - dps) - rhor*c_ads)*comp_term;
 #ifdef EXTRA_DEBUG_OUTPUT
 	    std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
 #endif
@@ -357,13 +372,15 @@ namespace Opm
 	cmax0   = tm.cmax_[cell];
 	dps = tm.polyprops_.deadPoreVol();
 	rhor = tm.polyprops_.rockDensity();
-	ads0 = tm.polyprops_.adsorption(c0, cmax0);
+        tm.polyprops_.adsorption(c0, cmax0, ads0);
 	res_factor = tm.polyprops_.resFactor();
 	c_max_ads = tm.polyprops_.cMaxAds();
 	double dflux       = -tm.source_[cell];
 	bool src_is_inflow = dflux < 0.0;
 	influx  =  src_is_inflow ? dflux : 0.0;
-	influx_polymer = src_is_inflow ? dflux*tm.computeMc(tm.inflow_c_) : 0.0;
+        double mc;
+        tm.computeMc(tm.inflow_c_, mc);
+	influx_polymer = src_is_inflow ? dflux*mc : 0.0;
 	outflux = !src_is_inflow ? dflux : 0.0;
 	dtpv    = tm.dt_/tm.porevolume_[cell];
 	porosity = tm.porosity_[cell];
@@ -391,175 +408,140 @@ namespace Opm
 	}
     }
 
+
     void TransportModelPolymer::ResidualEquation::computeResidual(const double* x, double* res) const
     {
-	double s = x[0];
-	double c = x[1];
-	double ff = tm.fracFlow(s, c, cell);
-	double mc = tm.computeMc(c);
-	// double dps = tm.polyprops_.deadPoreVol();
-	// double rhor = tm.polyprops_.rockDensity();
-	// double ads0 = tm.polyprops_.adsorption(c0, cmax0);
-	double ads = tm.polyprops_.adsorption(c, cmax0);
-	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
-	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-	    + dtpv*(outflux*ff*mc + influx_polymer);
+        double dummy;
+        computeResAndJacobi(x, true, true, false, false, res, 0, 0, dummy, dummy);
     }
 
     void TransportModelPolymer::ResidualEquation::computeResidual(const double* x, double* res, double& mc, double& ff) const
     {
-	double s = x[0];
-	double c = x[1];
-	ff = tm.fracFlow(s, c, cell);
-	mc = tm.computeMc(c);
-	// double dps = tm.polyprops_.deadPoreVol();
-	// double rhor = tm.polyprops_.rockDensity();
-	// double ads0 = tm.polyprops_.adsorption(c0, cmax0);
-	double ads = tm.polyprops_.adsorption(c, cmax0);
-	res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
-	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-	    + dtpv*(outflux*ff*mc + influx_polymer);
+        computeResAndJacobi(x, true, true, false, false, res, 0, 0, mc, ff);
     }
 
 
     double TransportModelPolymer::ResidualEquation::computeResidualS(const double* x) const
     {
-	double s = x[0];
-	double c = x[1];
-	double ff = tm.fracFlow(s, c, cell);
-	return s - s0 +  dtpv*(outflux*ff + influx);
+        double res[2];
+        double dummy;
+        computeResAndJacobi(x, true, false, false, false, res, 0, 0, dummy, dummy);
+        return res[0];
     }
 
     double TransportModelPolymer::ResidualEquation::computeResidualC(const double* x) const
     {
-	double s = x[0];
-	double c = x[1];
-	double ff = tm.fracFlow(s, c, cell);
-	double mc = tm.computeMc(c);
-	double ads = tm.polyprops_.adsorption(c, cmax0);
-	return (1 - dps)*s*c - (1 - dps)*s0*c0
-	    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-	    + dtpv*(outflux*ff*mc + influx_polymer);
+        double res[2];
+        double dummy;
+        computeResAndJacobi(x, false, true, false, false, res, 0, 0, dummy, dummy);
+        return res[1];
     }
 
     void TransportModelPolymer::ResidualEquation::computeGradientResS(const double* x, double* res, double* gradient) const
     // If gradient_method == FinDif, use finite difference
     // If gradient_method == Analytic, use analytic expresions
     {
-	if (gradient_method == FinDif) {
-	    double epsi = 1e-8;
-	    double res_epsi[2];
-	    double x_epsi[2];
-	    computeResidual(x, res);
-	    x_epsi[0] = x[0] + epsi;
-	    x_epsi[1] = x[1];
-	    computeResidual(x_epsi, res_epsi);
-	    gradient[0] =  (res_epsi[0] - res[0])/epsi;
-	    x_epsi[0] = x[0];
-	    x_epsi[1] = x[1] + epsi;
-	    computeResidual(x_epsi, res_epsi);
-	    gradient[1] = (res_epsi[0] - res[0])/epsi;
-	} else if (gradient_method == Analytic)  {
-	    double s = x[0];
-	    double c = x[1];
-	    double ff_ds_dc[2];
-	    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
-	    double mc_dc;
-	    double mc = tm.computeMcWithDer(c, &mc_dc);
-	    double ads_dc;
-            double ads = tm.polyprops_.adsorptionWithDer(c, cmax0, &ads_dc);
-	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	    res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
-		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer);
-	    gradient[0] = 1 + dtpv*outflux*ff_ds_dc[0];
-	    gradient[1] = dtpv*outflux*ff_ds_dc[1];
-	}
+        double dummy;
+        computeResAndJacobi(x, true, true, true, false, res, gradient, 0, dummy, dummy);
     }
 
     void TransportModelPolymer::ResidualEquation::computeGradientResC(const double* x, double* res, double* gradient) const
     // If gradient_method == FinDif, use finite difference
     // If gradient_method == Analytic, use analytic expresions
     {
-	if (gradient_method == FinDif) {
-	    double epsi = 1e-8;
-	    double res_epsi[2];
-	    double x_epsi[2];
-	    computeResidual(x, res);
-	    x_epsi[0] = x[0] + epsi;
-	    x_epsi[1] = x[1];
-	    computeResidual(x_epsi, res_epsi);
-	    gradient[0] =  (res_epsi[1] - res[1])/epsi;
-	    x_epsi[0] = x[0];
-	    x_epsi[1] = x[1] + epsi;
-	    computeResidual(x_epsi, res_epsi);
-	    gradient[1] = (res_epsi[1] - res[1])/epsi;
-	} else if (gradient_method == Analytic)  {
-	    double s = x[0];
-	    double c = x[1];
-	    double ff_ds_dc[2];
-	    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
-	    double mc_dc;
-	    double mc = tm.computeMcWithDer(c, &mc_dc);
-	    // double dps = tm.polyprops_.deadPoreVol();
-	    // double rhor = tm.polyprops_.rockDensity();
-	    // double ads0 = tm.polyprops_.adsorption(c0, cmax0);
-	    double ads_dc;
-            double ads = tm.polyprops_.adsorptionWithDer(c, cmax0, &ads_dc);
-	    res[0] = s - s0 +  dtpv*(outflux*ff + influx);
-	    res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
-		+ rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer);
-	    gradient[0] = (1 - dps)*c + dtpv*outflux*(ff_ds_dc[0])*mc;
-	    gradient[1] = (1 - dps)*s + rhor*((1.0 - porosity)/porosity)*ads_dc
-		+ dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
-	}
+        double dummy;
+        computeResAndJacobi(x, true, true, false, true, res, 0, gradient, dummy, dummy);
     }
 
     // Compute the Jacobian of the residual equations.
-    void TransportModelPolymer::ResidualEquation::computeJacobiRes(const double* x, double* res_s_ds_dc, double* res_c_ds_dc) const
+    void TransportModelPolymer::ResidualEquation::computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const
     {
-	if (gradient_method == FinDif) {
+        double dummy;
+        computeResAndJacobi(x, false, false, true, true, 0, dres_s_dsdc, dres_c_dsdc, dummy, dummy);
+    }
+
+    void TransportModelPolymer::ResidualEquation::computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
+                             const bool if_dres_s_dsdc, const bool if_dres_c_dsdc,
+                             double* res, double* dres_s_dsdc, 
+                             double* dres_c_dsdc, double& mc, double& ff) const 
+    {
+        if ((if_dres_s_dsdc || if_dres_c_dsdc) && gradient_method == Analytic) {
+            double s = x[0];
+            double c = x[1];
+            std::vector<double>  dff_dsdc(2);
+            double mc_dc;
+            double ads_dc;
+            double ads;
+            tm.fracFlowWithDer(s, c, cmax0, cell, ff, dff_dsdc);
+            if (if_dres_c_dsdc) {
+                tm.polyprops_.adsorptionWithDer(c, cmax0, ads, ads_dc);
+                tm.computeMcWithDer(c, mc, mc_dc);
+            } else {
+                tm.polyprops_.adsorption(c, cmax0, ads);
+                tm.computeMc(c, mc);
+            }
+            if (if_res_s) {
+                res[0] = s - s0 +  dtpv*(outflux*ff + influx);
+            }
+            if (if_res_c) {
+                res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
+                    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+                    + dtpv*(outflux*ff*mc + influx_polymer);
+            }
+            if (if_dres_s_dsdc) {
+                dres_s_dsdc[0] = 1 + dtpv*outflux*dff_dsdc[0];
+                dres_s_dsdc[1] = dtpv*outflux*dff_dsdc[1];
+            }
+            if (if_dres_c_dsdc) {
+                dres_c_dsdc[0] = (1 - dps)*c + dtpv*outflux*(dff_dsdc[0])*mc;
+                dres_c_dsdc[1] = (1 - dps)*s + rhor*((1.0 - porosity)/porosity)*ads_dc
+                    + dtpv*outflux*(dff_dsdc[1]*mc + ff*mc_dc);
+            }
+
+        } else if (if_res_c || if_res_s) { 
+            double s = x[0];
+            double c = x[1];
+            tm.fracFlow(s, c, cmax0, cell, ff);
+            tm.computeMc(c, mc);
+            double ads;
+            tm.polyprops_.adsorption(c, cmax0, ads);
+            if (if_res_s) {
+                res[0] = s - s0 +  dtpv*(outflux*ff + influx);
+            }
+            if (if_res_c) {
+                res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
+                    + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
+                    + dtpv*(outflux*ff*mc + influx_polymer);
+            }
+        }
+        
+	if ((if_dres_c_dsdc || if_dres_s_dsdc) && gradient_method == FinDif) {
 	    double epsi = 1e-8;
-	    double res[2];
 	    double res_epsi[2];
 	    double x_epsi[2];
 	    computeResidual(x, res);
-	    x_epsi[0] = x[0] + epsi;
-	    x_epsi[1] = x[1];
-	    computeResidual(x_epsi, res_epsi);
-	    res_s_ds_dc[0] =  (res_epsi[0] - res[0])/epsi;
-	    x_epsi[0] = x[0];
-	    x_epsi[1] = x[1] + epsi;
-	    computeResidual(x_epsi, res_epsi);
-	    res_s_ds_dc[1] = (res_epsi[0] - res[0])/epsi;
-	    x_epsi[0] = x[0] + epsi;
-	    x_epsi[1] = x[1];
-	    computeResidual(x_epsi, res_epsi);
-	    res_c_ds_dc[0] =  (res_epsi[1] - res[1])/epsi;
-	    x_epsi[0] = x[0];
-	    x_epsi[1] = x[1] + epsi;
-	    computeResidual(x_epsi, res_epsi);
-	    res_c_ds_dc[1] = (res_epsi[1] - res[1])/epsi;
-	} else if (gradient_method == Analytic)  {
-	    double s = x[0];
-	    double c = x[1];
-	    double ff_ds_dc[2];
-	    double ff = tm.fracFlowWithDer(s, c, cell, ff_ds_dc);
-	    double mc_dc;
-	    double mc = tm.computeMcWithDer(c, &mc_dc);
-	    double ads_dc;
-            tm.polyprops_.adsorptionWithDer(c, cmax0, &ads_dc);
-	    res_s_ds_dc[0] = 1 + dtpv*outflux*ff_ds_dc[0];
-	    res_s_ds_dc[1] = dtpv*outflux*ff_ds_dc[1];
-	    res_c_ds_dc[0] = (1 - dps)*c + dtpv*outflux*(ff_ds_dc[0])*mc;
-	    res_c_ds_dc[1] = (1 - dps)*s + rhor*((1.0 - porosity)/porosity)*ads_dc
-		+ dtpv*outflux*(ff_ds_dc[1]*mc + ff*mc_dc);
-	}
+            if (if_dres_s_dsdc) {
+                x_epsi[0] = x[0] + epsi;
+                x_epsi[1] = x[1];
+                computeResidual(x_epsi, res_epsi);
+                dres_s_dsdc[0] =  (res_epsi[0] - res[0])/epsi;
+                x_epsi[0] = x[0];
+                x_epsi[1] = x[1] + epsi;
+                computeResidual(x_epsi, res_epsi);
+                dres_s_dsdc[1] = (res_epsi[0] - res[0])/epsi;
+            }
+            if (if_dres_c_dsdc) {
+                x_epsi[0] = x[0] + epsi;
+                x_epsi[1] = x[1];
+                computeResidual(x_epsi, res_epsi);
+                dres_c_dsdc[0] =  (res_epsi[1] - res[1])/epsi;
+                x_epsi[0] = x[0];
+                x_epsi[1] = x[1] + epsi;
+                computeResidual(x_epsi, res_epsi);
+                dres_c_dsdc[1] = (res_epsi[1] - res[1])/epsi;
+            }
+        }
     }
-
 
     void TransportModelPolymer::solveSingleCell(const int cell)
     {
@@ -596,8 +578,9 @@ namespace Opm
 	concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
 	cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
 	saturation_[cell] = res.lastSaturation();
-	fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
-	mc_[cell] = computeMc(concentration_[cell]);
+	fracFlow(saturation_[cell], concentration_[cell], cmax_[cell], cell, 
+                 fractionalflow_[cell]);
+	computeMc(concentration_[cell], mc_[cell]);
     }
 
 
@@ -797,8 +780,9 @@ namespace Opm
 	// Must set initial fractional flows etc. before we start.
 	for (int i = 0; i < num_cells; ++i) {
 	    const int cell = cells[i];
-	    fractionalflow_[cell] = fracFlow(saturation_[cell], concentration_[cell], cell);
-	    mc_[cell] = computeMc(concentration_[cell]);
+	    fracFlow(saturation_[cell], concentration_[cell], cmax_[cell],
+                     cell, fractionalflow_[cell]);
+            computeMc(concentration_[cell], mc_[cell]);
 	    s0[i] = saturation_[cell];
 	    c0[i] = concentration_[cell];
 	    cmax0[i] = cmax_[i];
@@ -842,115 +826,55 @@ namespace Opm
     }
 
 
-
-
-    double TransportModelPolymer::fracFlow(double s, double c, int cell) const
+    void TransportModelPolymer::fracFlow(double s, double c, double cmax,
+                                         int cell, double& ff) const
     {
-	double c_max_limit = polyprops_.cMax();
-	double cbar = c/c_max_limit;
-	double c_ads = polyprops_.adsorption(c, cmax_[cell]);
-	double c_max_ads = polyprops_.cMaxAds();
-        double res_factor = polyprops_.resFactor();
-        double res_k = 1 + (res_factor - 1)*c_ads/c_max_ads;
-	double mu_w = visc_[0];
-	double mu_m = polyprops_.viscMult(c)*mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
-	double omega = polyprops_.mixParam();
-	double mu_m_omega = std::pow(mu_m, omega);
-	double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - omega);
-	double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - omega);
-	double inv_mu_w_eff = (1.0 - cbar)/mu_w_e + cbar/mu_p_eff;
-	double inv_visc_eff[2] = { inv_mu_w_eff, 1.0/visc_[1] };
-	double sat[2] = { s, 1.0 - s };
-	double mob[2];
-	props_.relperm(1, sat, &cell, mob, 0);
-	mob[0] *= inv_visc_eff[0]/res_k;
-	mob[1] *= inv_visc_eff[1];
-	return mob[0]/(mob[0] + mob[1]);
+        std::vector<double> dummy;
+        fracFlowBoth(s, c, cmax, cell, ff,  dummy, false);
+    }
+    
+    void TransportModelPolymer::fracFlowWithDer(double s, double c, double cmax, 
+                                                int cell, double& ff, 
+                                                std::vector<double>& dff_dsdc) const
+    {
+        fracFlowBoth(s, c, cmax, cell, ff, dff_dsdc, true);
     }
 
-    double TransportModelPolymer::fracFlowWithDer(double s, double c, int cell, double* der) const
+    void TransportModelPolymer::fracFlowBoth(double s, double c, double cmax, int cell, 
+                                             double& ff, std::vector<double>& dff_dsdc,
+                                             bool if_with_der) const
     {
-	double c_max_limit = polyprops_.cMax();
-	double cbar = c/c_max_limit;
-        double c_ads_dc;
-        double c_max = cmax_[cell];
-        double c_ads = polyprops_.adsorptionWithDer(c, c_max, &c_ads_dc);
-	double c_max_ads = polyprops_.cMaxAds();
-        double res_factor = polyprops_.resFactor();
-        double res_k = 1 + (res_factor - 1)*c_ads/c_max_ads;
-        double res_k_dc = (res_factor - 1)*c_ads_dc/c_max_ads;
-	double mu_w = visc_[0];
-	double mu_m_dc; // derivative of mu_m with respect to c
-	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
-	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(c_max_limit)*mu_w;
-	double omega = polyprops_.mixParam();
- 	double mu_w_e   = std::pow(mu_m, omega)*std::pow(mu_w, 1 - omega);
-	double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
-	double mu_p_eff = std::pow(mu_m, omega)*std::pow(mu_p, 1 - omega);
-	double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
-	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
-	double mu_w_eff_dc = -1./c_max_limit*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e)
-	    + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc
-	    + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
-	double visc_eff[2] = { mu_w_eff, visc_[1] };
-	double sat[2] = { s, 1.0 - s };
-	double mob[2];
-	double mob_ds[2];
-	double mob_dc[2];
-	double perm[2];
-	double perm_ds[4];
-	props_.relperm(1, sat, &cell, perm, perm_ds);
-	mob[0] = perm[0]/visc_eff[0]/res_k;
-	mob[1] = perm[1]/visc_eff[1];
-	mob_ds[0] = perm_ds[0]/visc_eff[0]/res_k;
-	mob_ds[1] = perm_ds[1]/visc_eff[1];
-	mob_dc[0] = - perm[0]*(mu_w_eff_dc/(mu_w_eff*mu_w_eff*res_k) + res_k_dc/(res_k*res_k*mu_w_eff));
-	mob_dc[1] = 0.;
-	der[0] = (mob_ds[0]*mob[1] - mob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
-	der[1] = (mob_dc[0]*mob[1] - mob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
- 	return mob[0]/(mob[0] + mob[1]);
+	double relperm[2];
+	double drelperm_ds[4];
+        double sat[2] = {s, 1 - s};
+	props_.relperm(1, sat, &cell, relperm, drelperm_ds);
+        std::vector<double> mob(2);
+        std::vector<double> dmob_ds(2);
+        std::vector<double> dmob_dc(2);
+	double dmobwat_dc;
+        polyprops_.effectiveMobilitiesBoth(c, cmax, visc_, relperm, drelperm_ds,
+                                           mob, dmob_ds, dmobwat_dc, if_with_der);
+	dmob_dc[0] = dmobwat_dc;
+	dmob_dc[1] = 0.;
+ 	ff = mob[0]/(mob[0] + mob[1]);
+        if (if_with_der) {
+            dff_dsdc[0] = (dmob_ds[0]*mob[1] - dmob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
+            dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
+        } else {
+            dff_dsdc.clear();
+        }
     }
 
-    double TransportModelPolymer::computeMc(double c) const
+    void TransportModelPolymer::computeMc(double c, double& mc) const
     {
-	double c_max_limit = polyprops_.cMax();
-	double cbar = c/c_max_limit;
-	double mu_w = visc_[0];
-	double mu_m = polyprops_.viscMult(c)*mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
-	double omega = polyprops_.mixParam();
-	double mu_m_omega = std::pow(mu_m, omega);
-	double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - omega);
-	double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - omega);
-	double inv_mu_w_eff = (1.0 - cbar)/mu_w_e + cbar/mu_p_eff;
-	return c/(inv_mu_w_eff*mu_p_eff);
+        double dummy;
+        polyprops_.computeMcBoth(c, mc, dummy, false);
     }
 
-    double TransportModelPolymer::computeMcWithDer(double c, double* der) const
+    void TransportModelPolymer::computeMcWithDer(double c, double& mc, 
+                                                   double &dmc_dc) const
     {
-	double c_max_limit = polyprops_.cMax();
-	double cbar = c/c_max_limit;
-	double mu_w = visc_[0];
-	double mu_m_dc; // derivative of mu_m with respect to c
-	double mu_m = polyprops_.viscMultWithDer(c, &mu_m_dc)*mu_w;
-	mu_m_dc *= mu_w;
-	double mu_p = polyprops_.viscMult(polyprops_.cMax())*mu_w;
-	double omega = polyprops_.mixParam();
-	double mu_m_omega = std::pow(mu_m, omega);
-	double mu_m_omega_minus1 = std::pow(mu_m, omega-1);
-	double mu_w_omega = std::pow(mu_w, 1.0 - omega);
-	double mu_w_e   = mu_m_omega*mu_w_omega;
-	double mu_w_e_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_w_omega;
-	double mu_p_omega = std::pow(mu_p, 1.0 - omega);
-	double mu_p_eff = mu_m_omega*mu_p_omega;
-	double mu_p_eff_dc = omega*mu_m_dc*mu_m_omega_minus1*mu_p_omega;
-	double mu_w_eff = 1./((1 - cbar)/mu_w_e + cbar/mu_p_eff);
-	double inv_mu_w_eff_dc = -mu_w_e_dc/(mu_w_e*mu_w_e)*(1. - cbar) - mu_p_eff_dc/(mu_p_eff*mu_p_eff)*cbar + (1./mu_p_eff - 1./mu_w_e);
-	double mu_w_eff_dc = -mu_w_eff*mu_w_eff*inv_mu_w_eff_dc;
-	*der = mu_w_eff/mu_p_eff + c*mu_w_eff_dc/mu_p_eff - c*mu_p_eff_dc*mu_w_eff/(mu_p_eff*mu_p_eff);
-	return c*mu_w_eff/mu_p_eff;
+        polyprops_.computeMcBoth(c, mc, dmc_dc, true);
     }
 
 } // namespace Opm
@@ -1084,17 +1008,17 @@ namespace
     bool solveNewtonStep(const double* x, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
 			 const double* res, double* x_new) {
 
-    	double res_s_ds_dc[2];
-    	double res_c_ds_dc[2];
+    	double dres_s_dsdc[2];
+    	double dres_c_dsdc[2];
 
-	res_eq.computeJacobiRes(x, res_s_ds_dc, res_c_ds_dc);
+	res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
 
-    	double det = res_s_ds_dc[0]*res_c_ds_dc[1] - res_c_ds_dc[0]*res_s_ds_dc[1];
+    	double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
     	if (std::abs(det) < 1e-8) {
     	    return false;
     	} else {
-    	    x_new[0] = x[0] - (res[0]*res_c_ds_dc[1] - res[1]*res_s_ds_dc[1])/det;
-    	    x_new[1] = x[1] - (res[1]*res_s_ds_dc[0] - res[0]*res_c_ds_dc[0])/det;
+    	    x_new[0] = x[0] - (res[0]*dres_c_dsdc[1] - res[1]*dres_s_dsdc[1])/det;
+    	    x_new[1] = x[1] - (res[1]*dres_s_dsdc[0] - res[0]*dres_c_dsdc[0])/det;
 	    return true;
 	}
     }
