@@ -539,9 +539,22 @@ namespace Opm
                         well_data[i].target = guide_rate * parent_prod_spec.liquid_max_rate_;
                         well_data[i].control = RATE;
                         break;
+                    case ProductionSpecification::NONE_CM:
+                    case ProductionSpecification::ORAT:
+                    case ProductionSpecification::WRAT:
+                    case ProductionSpecification::REIN:
+                    case ProductionSpecification::RESV:
+                    case ProductionSpecification::VREP:
+                    case ProductionSpecification::WGRA:
+                    case ProductionSpecification::FLD:
+                    case ProductionSpecification::GRUP:
+                        THROW("Unhandled production specification control mode " << parent_prod_spec.control_mode_);
+                        break;
                     }
-                    
-                }   
+                }
+                case ProductionSpecification::RAT:
+                    THROW("Unhandled production specification guide rate type " << ProductionSpecification::RAT);
+                    break;
                 }
             }
 
