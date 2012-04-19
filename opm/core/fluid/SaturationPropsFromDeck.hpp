@@ -23,6 +23,7 @@
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
+#include <vector>
 
 namespace Opm
 {
@@ -50,6 +51,7 @@ namespace Opm
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
         void relperm(const int n,
                      const double* s,
+                     const int* cells,
                      double* kr,
                      double* dkrds) const;
 
@@ -64,6 +66,7 @@ namespace Opm
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
         void capPress(const int n,
                       const double* s,
+                      const int* cells,
                       double* pc,
                       double* dpcds) const;
 
@@ -72,25 +75,36 @@ namespace Opm
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
 	void satRange(const int n,
+                      const int* cells,
 		      double* smin,
 		      double* smax) const;
-    private:
-        void evalKr(const double* s, double* kr) const;
-        void evalKrDeriv(const double* s, double* kr, double* dkrds) const;
-        void evalPc(const double* s, double* pc) const;
-        void evalPcDeriv(const double* s, double* pc, double* dpcds) const;
 
     private:
         PhaseUsage phase_usage_;
-        utils::UniformTableLinear<double> krw_;
-        utils::UniformTableLinear<double> krow_;
-        utils::UniformTableLinear<double> pcow_;
-        utils::UniformTableLinear<double> krg_;
-        utils::UniformTableLinear<double> krog_;
-        utils::UniformTableLinear<double> pcog_;
-        double krocw_; // = krow_(s_wc)
-	double smin_[PhaseUsage::MaxNumPhases];
-	double smax_[PhaseUsage::MaxNumPhases];
+        class SatFuncSet
+        {
+        public:
+            void init(const EclipseGridParser& deck, const int table_num, PhaseUsage phase_usg);
+            void evalKr(const double* s, double* kr) const;
+            void evalKrDeriv(const double* s, double* kr, double* dkrds) const;
+            void evalPc(const double* s, double* pc) const;
+            void evalPcDeriv(const double* s, double* pc, double* dpcds) const;
+            double smin_[PhaseUsage::MaxNumPhases];
+            double smax_[PhaseUsage::MaxNumPhases];
+        private:
+            PhaseUsage phase_usage; // A copy of the outer class' phase_usage_.
+            UniformTableLinear<double> krw_;
+            UniformTableLinear<double> krow_;
+            UniformTableLinear<double> pcow_;
+            UniformTableLinear<double> krg_;
+            UniformTableLinear<double> krog_;
+            UniformTableLinear<double> pcog_;
+            double krocw_; // = krow_(s_wc)
+        };
+        std::vector<SatFuncSet> satfuncset_;
+        std::vector<int> cell_to_func_; // = SATNUM - 1
+
+        const SatFuncSet& funcForCell(const int cell) const;
     };
 
 

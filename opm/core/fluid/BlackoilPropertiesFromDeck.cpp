@@ -199,11 +199,11 @@ namespace Opm
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void BlackoilPropertiesFromDeck::relperm(const int n,
                                              const double* s,
-                                             const int* /*cells*/,
+                                             const int* cells,
                                              double* kr,
                                              double* dkrds) const
     {
-        satprops_.relperm(n, s, kr, dkrds);
+        satprops_.relperm(n, s, cells, kr, dkrds);
     }
 
 
@@ -218,11 +218,11 @@ namespace Opm
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void BlackoilPropertiesFromDeck::capPress(const int n,
                                               const double* s,
-                                              const int* /*cells*/,
+                                              const int* cells,
                                               double* pc,
                                               double* dpcds) const
     {
-        satprops_.capPress(n, s, pc, dpcds);
+        satprops_.capPress(n, s, cells, pc, dpcds);
     }
 
 
