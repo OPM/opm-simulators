@@ -35,7 +35,9 @@ namespace Opm
         SaturationPropsFromDeck();
 
         /// Initialize from deck.
-        void init(const EclipseGridParser& deck);
+        /// global_cell maps from grid cells to their original logical Cartesian indices.
+        void init(const EclipseGridParser& deck,
+                  const std::vector<int>& global_cell);
 
         /// \return   P, the number of phases.
         int numPhases() const;
