@@ -549,7 +549,7 @@ namespace Opm
 
 
 
-    void TransportModelTwophase::solveGravityColumn(const std::vector<int>& cells)
+    int TransportModelTwophase::solveGravityColumn(const std::vector<int>& cells)
     {
         // Set up column gravflux.
         const int nc = cells.size();
@@ -597,7 +597,7 @@ namespace Opm
 	    THROW("In solveGravityColumn(), we did not converge after "
 	    	  << num_iters << " iterations. Delta s = " << max_s_change);
 	}
-        // Repeat if necessary.
+        return num_iters + 1;
     }
 
 
@@ -629,11 +629,13 @@ namespace Opm
         saturation_ = &saturation[0];
 
         // Solve on all columns.
-
+        int num_iters = 0;
         for (std::vector<std::vector<int> >::size_type i = 0; i < columns.second.size(); i++) {
             // std::cout << "==== new column" << std::endl;
-            solveGravityColumn(columns.second[i]);
+            num_iters += solveGravityColumn(columns.second[i]);
         }
+        std::cout << "Gauss-Seidel column solver average iterations: "
+                  << double(num_iters)/double(columns.second.size()) << std::endl;
     }
 
 } // namespace Opm
