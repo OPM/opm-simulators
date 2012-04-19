@@ -60,8 +60,8 @@ namespace Opm
     }
 
     void PvtPropertiesBasic::init(const int num_phases,
-                                  const std::vector<double> rho,
-                                  const std::vector<double> mu)
+                                  const std::vector<double>& rho,
+                                  const std::vector<double>& visc)
     {
 	if (num_phases > 3 || num_phases < 1) {
 	    THROW("PvtPropertiesBasic::init() illegal num_phases: " << num_phases);
@@ -70,7 +70,7 @@ namespace Opm
 	formation_volume_factor_.clear();
 	formation_volume_factor_.resize(num_phases, 1.0);
         density_ = rho;
-        viscosity_ = mu;
+        viscosity_ = visc;
     }
 
     const double* PvtPropertiesBasic::surfaceDensities() const
