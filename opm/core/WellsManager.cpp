@@ -598,6 +598,7 @@ namespace Opm
 	    // We only append a single control at this point.
 	    // TODO: Handle multiple controls.
 	    ok = well_controls_append(well_data[w].control, well_data[w].target, w_->ctrls[w]);
+            w_->ctrls[w]->current = 0;
 	    if (!ok) {
 		THROW("Failed to add well controls.");
 	    }

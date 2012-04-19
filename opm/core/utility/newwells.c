@@ -407,9 +407,6 @@ well_controls_append(enum control_type    type  ,
         ctrl->target[ctrl->num] = target;
 
         ctrl->num += 1;
-        
-        /* TODO: Review this: */
-        ctrl->current = 0;
     }
 
     return ok;
