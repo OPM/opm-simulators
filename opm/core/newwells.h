@@ -97,7 +97,7 @@ struct Wells
  *  sizes are, respectively,
  *
  *     gpot       n*NP
- *     A          n²*NP (matrix in row-major (i.e., Fortran) order).
+ *     A          n²*NP (matrix in column-major (i.e., Fortran) order).
  *     phasemob   n*NP
  *
  *  in which "n" denotes the number of active fluid phases (and
