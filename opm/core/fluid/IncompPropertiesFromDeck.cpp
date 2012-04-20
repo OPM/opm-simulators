@@ -87,7 +87,7 @@ namespace Opm
     /// \return Array of P density values.
     const double* IncompPropertiesFromDeck::density() const
     {
-	return pvt_.surfaceDensities();
+	return pvt_.reservoirDensities();
     }
 
     /// \param[in]  n      Number of data points.
