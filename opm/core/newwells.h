@@ -35,7 +35,7 @@ extern "C" {
 
 /** Well type indicates desired/expected well behaviour. */
 enum WellType         { INJECTOR, PRODUCER };
-/** Type of well control equation or inequality.
+/** Type of well control equation or inequality constraint.
  *  BHP  -> bottom hole pressure is specified.
  *  RATE -> flow rate is specified.
  */
