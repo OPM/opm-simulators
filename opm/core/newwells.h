@@ -20,6 +20,15 @@
 #ifndef OPM_NEWWELLS_H_INCLUDED
 #define OPM_NEWWELLS_H_INCLUDED
 
+
+/**
+ * \file
+ *
+ * Main OPM-Core well data structure along with functions
+ * to create, populate and destroy it.
+ */
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
