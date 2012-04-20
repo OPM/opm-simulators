@@ -245,7 +245,7 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
 
 /* ---------------------------------------------------------------------- */
 struct Wells *
-wells_create(int nwells, int nperf)
+create_wells(int nwells_reserve_cap, int nperf_reserve_cap)
 /* ---------------------------------------------------------------------- */
 {
     int           ok;
@@ -272,13 +272,13 @@ wells_create(int nwells, int nperf)
         if (ok) {
             W->well_connpos[0] = 0;
 
-            if ((nwells > 0) || (nperf > 0)) {
-                ok = wells_reserve(nwells, nperf, W);
+            if ((nwells_reserve_cap > 0) || (nperf_reserve_cap > 0)) {
+                ok = wells_reserve(nwells_reserve_cap, nperf_reserve_cap, W);
             }
         }
 
         if (! ok) {
-            wells_destroy(W);
+            destroy_wells(W);
             W = NULL;
         }
     }
@@ -289,7 +289,7 @@ wells_create(int nwells, int nperf)
 
 /* ---------------------------------------------------------------------- */
 void
-wells_destroy(struct Wells *W)
+destroy_wells(struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
     int w;
@@ -331,7 +331,7 @@ alloc_size(int n, int a, int cpty)
 
 /* ---------------------------------------------------------------------- */
 int
-wells_add(enum well_type type     ,
+add_wells(enum WellType  type     ,
           double         depth_ref,
           int            nperf    ,
           const double  *zfrac    , /* Injection fraction or NULL */
@@ -386,7 +386,7 @@ wells_add(enum well_type type     ,
 
 /* ---------------------------------------------------------------------- */
 int
-well_controls_append(enum control_type    type  ,
+append_well_controls(enum WellControlType type  ,
                      double               target,
                      struct WellControls *ctrl  )
 /* ---------------------------------------------------------------------- */
@@ -415,7 +415,7 @@ well_controls_append(enum control_type    type  ,
 
 /* ---------------------------------------------------------------------- */
 void
-well_controls_clear(struct WellControls *ctrl)
+clear_well_controls(struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
     if (ctrl != NULL) {

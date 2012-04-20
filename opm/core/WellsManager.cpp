@@ -36,11 +36,11 @@ namespace
 
     struct WellData
     {
-	well_type type;
-	control_type control;
+	WellType type;
+	WellControlType control;
 	double target;
 	double reference_bhp_depth;
-	surface_component injected_phase;
+	SurfaceComponent injected_phase;
     };
 
 
@@ -573,7 +573,7 @@ namespace Opm
 
         
 	// Set up the Wells struct.
-	w_ = wells_create(num_wells, num_perfs);
+	w_ = create_wells(num_wells, num_perfs);
 	if (!w_) {
 	    THROW("Failed creating Wells struct.");
 	}
@@ -590,28 +590,26 @@ namespace Opm
 	    }
 	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
 
-            int ok = wells_add(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
+            int ok = add_wells(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
 			       zfrac, &cells[0], &wi[0], w_);
 	    if (!ok) {
 		THROW("Failed to add a well.");
 	    }
 	    // We only append a single control at this point.
 	    // TODO: Handle multiple controls.
-	    ok = well_controls_append(well_data[w].control, well_data[w].target, w_->ctrls[w]);
+	    ok = append_well_controls(well_data[w].control, well_data[w].target, w_->ctrls[w]);
             w_->ctrls[w]->current = 0;
 	    if (!ok) {
 		THROW("Failed to add well controls.");
 	    }
 	}
-        
-        for(size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
+
+        // \TODO comment this.
+        for (size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
             WellNode* node = static_cast<WellNode*>(well_collection_.getLeafNodes()[i].get());
-            
             // We know that getLeafNodes() is ordered the same way as they're indexed in w_
             node->setWellsPointer(w_, i);
         }
-        
-       
     }
 
 
@@ -619,7 +617,7 @@ namespace Opm
     /// Destructor.
     WellsManager::~WellsManager()
     {
-	wells_destroy(w_);
+	destroy_wells(w_);
     }
 
 

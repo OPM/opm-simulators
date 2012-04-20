@@ -287,7 +287,7 @@ namespace Opm
     namespace
     {
 
-        surface_component toSurfaceComponent(std::string type)
+        SurfaceComponent toSurfaceComponent(std::string type)
         {
             if (type == "OIL") {
                 return OIL;
@@ -298,7 +298,7 @@ namespace Opm
             if (type == "GAS") {
                 return GAS;
             }
-            THROW("Unknown type " << type << ", could not convert to surface_component");
+            THROW("Unknown type " << type << ", could not convert to SurfaceComponent");
         }
 
         InjectionSpecification::ControlMode toInjectionControlMode(std::string type)

@@ -24,48 +24,92 @@
 extern "C" {
 #endif
 
-enum well_type         { INJECTOR, PRODUCER };
-enum control_type      { BHP     , RATE     };
-enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
+/** Well type indicates desired/expected well behaviour. */
+enum WellType         { INJECTOR, PRODUCER };
+/** Type of well control equation or inequality. 
+ *  BHP  -> bottom hole pressure is specified.
+ *  RATE -> flow rate is specified.
+ */
+enum WellControlType  { BHP     , RATE     };
+/** Canonical component names and ordering. */
+enum SurfaceComponent { WATER = 0, OIL = 1, GAS = 2 };
 
 
-/* Control for single well */
-struct WellControls {
-    int                  num;
-    int                  cpty;
-    enum control_type   *type;
-    double              *target;
-    int                  current;
+/** Controls for a single well.
+ *  Each control specifies a well rate or bottom hole pressure. Only
+ *  one control can be active at a time, indicated by current. The
+ *  meaning of each control's target value depends on the control
+ *  type, for BHP controls it is a pressure in Pascal, for RATE
+ *  controls it is a volumetric rate in cubic(meter)/second. The
+ *  active control should be interpreted as an equation, whereas the
+ *  non-active controls should be interpreted as inequalities
+ *  specifying constraints on the solution, where BHP controls yield
+ *  minimum pressures, and RATE controls yield maximum rates.
+ */
+struct WellControls
+{
+    int                     num;     /** Number of controls. */
+    int                     cpty;    /** Allocated capacity, for internal use only. */
+    enum WellControlType   *type;    /** Array of control types. */
+    double                 *target;  /** Array of control targets. */
+    int                     current; /** Index of current active control. */
 };
 
-struct Wells {
-    int                  number_of_wells;
-    int                  well_cpty;
-    int                  perf_cpty;
 
-    enum well_type      *type;
-    double              *depth_ref;
-    double              *zfrac;        /* Surface volume fraction
-                                        * (3*number_of_wells) */
 
-    int                 *well_connpos;
-    int                 *well_cells;
-    double              *WI;           /* Well index */
-
-    struct WellControls **ctrls;       /* One struct for each well */
+/** Struct encapsulating static information about all wells in a scenario. */
+struct Wells
+{
+    int                  number_of_wells; /** Number of wells. */
+    int                  well_cpty;       /** Allocated well capacity, for internal use only. */
+    int                  perf_cpty;       /** Allocated perforation capacity, for internal use only. */
+    enum WellType       *type;            /** Array of well types. */
+    double              *depth_ref;       /** Array of well bhp reference depths. */
+    double              *zfrac;           /** Component volume fractions for each well, size is (3*number_of_wells).
+                                           *  This is intended to be used for injection wells. For production wells
+                                           *  the component fractions will vary and cannot be specified a priori.
+                                           */
+    int                 *well_connpos;    /** Array of indices into well_cells (and WI).
+                                          *  For a well w, well_connpos[w] and well_connpos[w+1] yield
+                                          *  start and one-beyond-end indices into the well_cells array
+                                          *  for accessing w's perforation cell indices.
+                                          */
+    int                 *well_cells;      /** Array of perforation cell indices.
+                                           *  Size is number of perforations (== well_connpos[number_of_wells]).
+                                           */
+    double              *WI;              /** Well productivity index, same size and structure as well_cells. */
+    struct WellControls **ctrls;          /** Well controls, one struct for each well. */
 };
 
-struct CompletionData {
-    double *gpot;               /* Gravity potential */
-    double *A;                  /* RB^{-1} */
-    double *phasemob;           /* Phase mobility */
+
+/** Struct encapsulating dynamic information about all wells in a scenario.
+ *  All arrays in this struct contain data for each perforation, ordered
+ *  the same as Wells::well_cells and Wells:WI. Letting NP be the number
+ *  of perforations, the array sizes are:
+ *     gpot       3*NP
+ *     A          9*NP (matrix in Fortran order).
+ *     phasemob   3*NP
+ * \TODO: Verify that the sizes are correct, check if we should refactor to handle two phases better.
+ */
+struct CompletionData
+{
+    double *gpot;     /** Gravity potentials. */
+    double *A;        /** Volumes to surface-components matrix, A = RB^{-1}. */
+    double *phasemob; /** Phase mobilities. */
 };
 
+/** Contruction function initializing a Wells object.
+ *  The arguments may be used to indicate expected capacity needed,
+ *  they will be used internally for pre-allocation.
+ *  \return NULL upon failure, otherwise a valid Wells object with 0 wells.
+ */
 struct Wells *
-wells_create(int nwells, int nperf);
+create_wells(int nwells_reserve_cap, int nperf_reserve_cap);
 
+
+/** */
 int
-wells_add(enum well_type type     ,
+add_wells(enum WellType  type     ,
           double         depth_ref,
           int            nperf    ,
           const double  *zfrac    , /* Injection fraction or NULL */
@@ -74,15 +118,15 @@ wells_add(enum well_type type     ,
           struct Wells  *W        );
 
 void
-wells_destroy(struct Wells *W);
+destroy_wells(struct Wells *W);
 
 int
-well_controls_append(enum control_type    type  ,
+append_well_controls(enum WellControlType type  ,
                      double               target,
                      struct WellControls *ctrl  );
 
 void
-well_controls_clear(struct WellControls *ctrl);
+clear_well_controls(struct WellControls *ctrl);
 
 #ifdef __cplusplus
 }
