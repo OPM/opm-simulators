@@ -92,13 +92,17 @@ struct Wells
 
 
 /** Struct encapsulating dynamic information about all wells in a scenario.
- *  All arrays in this struct contain data for each perforation, ordered
- *  the same as Wells::well_cells and Wells:WI. Letting NP be the number
- *  of perforations, the array sizes are:
- *     gpot       3*NP
- *     A          9*NP (matrix in Fortran order).
- *     phasemob   3*NP
- * \TODO: Verify that the sizes are correct, check if we should refactor to handle two phases better.
+ *  All arrays in this struct contain data for each perforation,
+ *  ordered the same as Wells::well_cells and Wells:WI.  The array
+ *  sizes are, respectively,
+ *
+ *     gpot       n*NP
+ *     A          n²*NP (matrix in row-major (i.e., Fortran) order).
+ *     phasemob   n*NP
+ *
+ *  in which "n" denotes the number of active fluid phases (and
+ *  constituent components) and "NP" is the total number of
+ *  perforations, <CODE>well_connpos[ number_of_wells ]</CODE>.
  */
 struct CompletionData
 {
