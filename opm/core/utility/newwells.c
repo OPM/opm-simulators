@@ -331,13 +331,13 @@ alloc_size(int n, int a, int cpty)
 
 /* ---------------------------------------------------------------------- */
 int
-add_wells(enum WellType  type     ,
-          double         depth_ref,
-          int            nperf    ,
-          const double  *zfrac    , /* Injection fraction or NULL */
-          const int     *cells    ,
-          const double  *WI       , /* Well index per perf (or NULL) */
-          struct Wells  *W        )
+add_well(enum WellType  type     ,
+         double         depth_ref,
+         int            nperf    ,
+         const double  *zfrac    , /* Injection fraction or NULL */
+         const int     *cells    ,
+         const double  *WI       , /* Well index per perf (or NULL) */
+         struct Wells  *W        )
 /* ---------------------------------------------------------------------- */
 {
     int ok, nw, nperf_tot, off;

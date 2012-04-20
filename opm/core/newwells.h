@@ -102,31 +102,64 @@ struct CompletionData
  *  The arguments may be used to indicate expected capacity needed,
  *  they will be used internally for pre-allocation.
  *  \return NULL upon failure, otherwise a valid Wells object with 0 wells.
+ *  Call add_well() to populate the Wells object.
+ *  Call destroy_wells() to deallocate and clean up the Wells object.
  */
 struct Wells *
 create_wells(int nwells_reserve_cap, int nperf_reserve_cap);
 
 
-/** */
+/** Append a well to a Wells struct.
+ *  If successful, W->number_of_wells is incremented by 1.
+ *  The newly added well will have no controls associated with it, add
+ *  controls using append_well_controls(). The current control index is set
+ *  to -1 (invalid).
+ *  \param[in] type       Type of well.
+ *  \param[in] depth_ref  Reference depth for bhp.
+ *  \param[in] nperf      Number of perforations.
+ *  \param[in] zfrac      Injection fraction (three components) or NULL.
+ *  \param[in] cells      Perforation cell indices.
+ *  \param[in] WI         Well production index per perforation, or NULL.
+ *  \param[inout] W       The Wells object to be modified.
+ *  \return 1 if successful, 0 if failed.
+ */
 int
-add_wells(enum WellType  type     ,
-          double         depth_ref,
-          int            nperf    ,
-          const double  *zfrac    , /* Injection fraction or NULL */
-          const int     *cells    ,
-          const double  *WI       , /* Well index per perf (or NULL) */
-          struct Wells  *W        );
+add_well(enum WellType  type     ,
+         double         depth_ref,
+         int            nperf    ,
+         const double  *zfrac    ,
+         const int     *cells    ,
+         const double  *WI       ,
+         struct Wells  *W        );
 
-void
-destroy_wells(struct Wells *W);
 
+/** Append a control to a well.
+ *  If successful, ctrl->num is incremented by 1.
+ *  Note that this function does not change ctrl->current.
+ *  To append a control to a well with index w, pass its
+ *  controls to this function via wellsptr->ctrls[w].
+ *  \param[in] type     Control type.
+ *  \param[in] target   Target value for the control.
+ *  \param[inout] ctrl  The WellControls object to be modified.
+ *  \return 1 if successful, 0 if failed.
+ */
 int
 append_well_controls(enum WellControlType type  ,
                      double               target,
                      struct WellControls *ctrl  );
 
+/** Clear all controls from a well. */
 void
 clear_well_controls(struct WellControls *ctrl);
+
+
+/** Destruction function for Wells objects.
+ *  Assumes that create_wells() and add_wells() have been used to
+ *  build the object.
+ */
+void
+destroy_wells(struct Wells *W);
+
 
 #ifdef __cplusplus
 }

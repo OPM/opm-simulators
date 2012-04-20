@@ -590,8 +590,8 @@ namespace Opm
 	    }
 	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
 
-            int ok = add_wells(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
-			       zfrac, &cells[0], &wi[0], w_);
+            int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
+                              zfrac, &cells[0], &wi[0], w_);
 	    if (!ok) {
 		THROW("Failed to add a well.");
 	    }
