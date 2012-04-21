@@ -72,8 +72,7 @@ struct WellControls
 struct Wells
 {
     int                  number_of_wells; /** Number of wells. */
-    int                  well_cpty;       /** Allocated well capacity, for internal use only. */
-    int                  perf_cpty;       /** Allocated perforation capacity, for internal use only. */
+
     enum WellType       *type;            /** Array of well types. */
     double              *depth_ref;       /** Array of well bhp reference depths. */
     double              *zfrac;           /** Component volume fractions for each well, size is (3*number_of_wells).
@@ -90,6 +89,9 @@ struct Wells
                                            */
     double              *WI;              /** Well productivity index, same size and structure as well_cells. */
     struct WellControls **ctrls;          /** Well controls, one struct for each well. */
+
+
+    void               *data;             /** Internal management structure. */
 };
 
 

@@ -45,6 +45,11 @@ struct WellControlMgmt {
     int cpty;
 };
 
+struct WellMgmt {
+    int well_cpty;
+    int perf_cpty;
+};
+
 
 static void
 destroy_ctrl_mgmt(struct WellControlMgmt *m)
@@ -62,6 +67,29 @@ create_ctrl_mgmt(void)
 
     if (m != NULL) {
         m->cpty = 0;
+    }
+
+    return m;
+}
+
+
+static void
+destroy_well_mgmt(struct WellMgmt *m)
+{
+    free(m);
+}
+
+
+static struct WellMgmt *
+create_well_mgmt(void)
+{
+    struct WellMgmt *m;
+
+    m = malloc(1 * sizeof *m);
+
+    if (m != NULL) {
+        m->well_cpty = 0;
+        m->perf_cpty = 0;
     }
 
     return m;
@@ -197,7 +225,11 @@ initialise_new_wells(int nwells, struct Wells *W)
 {
     int ok, w;
 
-    for (w = W->well_cpty; w < nwells; w++) {
+    struct WellMgmt *m;
+
+    m = W->data;
+
+    for (w = m->well_cpty; w < nwells; w++) {
         W->type     [w]        = PRODUCER;
         W->depth_ref[w]        = -1.0;
 
@@ -208,7 +240,7 @@ initialise_new_wells(int nwells, struct Wells *W)
         W->well_connpos[w + 1] = W->well_connpos[w];
     }
 
-    for (w = W->well_cpty, ok = 1; ok && (w < nwells); w++) {
+    for (w = m->well_cpty, ok = 1; ok && (w < nwells); w++) {
         W->ctrls[w] = well_controls_create();
 
         ok = W->ctrls[w] != NULL;
@@ -231,7 +263,11 @@ initialise_new_perfs(int nperf, struct Wells *W)
 {
     int k;
 
-    for (k = W->perf_cpty; k < nperf; k++) {
+    struct WellMgmt *m;
+
+    m = W->data;
+
+    for (k = m->perf_cpty; k < nperf; k++) {
         W->well_cells[k] = -1 ;
         W->WI        [k] = 0.0;
     }
@@ -245,12 +281,16 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
 {
     int ok;
 
-    assert (nwells >= W->well_cpty);
-    assert (nperf  >= W->perf_cpty);
+    struct WellMgmt *m;
+
+    m = W->data;
+
+    assert (nwells >= m->well_cpty);
+    assert (nperf  >= m->perf_cpty);
 
     ok = 1;
 
-    if (nwells > W->well_cpty) {
+    if (nwells > m->well_cpty) {
         ok = wells_allocate(nwells, W);
 
         if (ok) {
@@ -258,16 +298,16 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
         }
 
         if (ok) {
-            W->well_cpty = nwells;
+            m->well_cpty = nwells;
         }
     }
 
-    if (ok && (nperf > W->perf_cpty)) {
+    if (ok && (nperf > m->perf_cpty)) {
         ok = perfs_allocate(nperf, W);
 
         if (ok) {
             initialise_new_perfs(nperf, W);
-            W->perf_cpty = nperf;
+            m->perf_cpty = nperf;
         }
     }
 
@@ -292,8 +332,6 @@ create_wells(int nwells_reserve_cap, int nperf_reserve_cap)
 
     if (W != NULL) {
         W->number_of_wells = 0;
-        W->well_cpty       = 0;
-        W->perf_cpty       = 0;
 
         W->type            = NULL;
         W->depth_ref       = NULL;
@@ -305,7 +343,9 @@ create_wells(int nwells_reserve_cap, int nperf_reserve_cap)
 
         W->ctrls           = NULL;
 
-        ok = W->well_connpos != NULL;
+        W->data            = create_well_mgmt();
+
+        ok = (W->well_connpos != NULL) && (W->data != NULL);
         if (ok) {
             W->well_connpos[0] = 0;
 
@@ -331,10 +371,16 @@ destroy_wells(struct Wells *W)
 {
     int w;
 
+    struct WellMgmt *m;
+
     if (W != NULL) {
-        for (w = 0; w < W->well_cpty; w++) {
+        m = W->data;
+
+        for (w = 0; w < m->well_cpty; w++) {
             well_controls_destroy(W->ctrls[w]);
         }
+
+        destroy_well_mgmt(m);
 
         free(W->ctrls);
         free(W->WI);
@@ -380,14 +426,18 @@ add_well(enum WellType  type     ,
     int ok, nw, nperf_tot, off;
     int nwalloc, nperfalloc;
 
+    struct WellMgmt *m;
+
     nw        = W->number_of_wells;
     nperf_tot = W->well_connpos[nw];
 
-    ok = (nw < W->well_cpty) && (nperf_tot + nperf <= W->perf_cpty);
+    m = W->data;
+
+    ok = (nw < m->well_cpty) && (nperf_tot + nperf <= m->perf_cpty);
 
     if (! ok) {
-        nwalloc    = alloc_size(nw       , 1    , W->well_cpty);
-        nperfalloc = alloc_size(nperf_tot, nperf, W->perf_cpty);
+        nwalloc    = alloc_size(nw       , 1    , m->well_cpty);
+        nperfalloc = alloc_size(nperf_tot, nperf, m->perf_cpty);
 
         ok = wells_reserve(nwalloc, nperfalloc, W);
     }
