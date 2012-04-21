@@ -68,7 +68,7 @@ struct WellControls
 
 
 
-/** Struct encapsulating static information about all wells in a scenario. */
+/** Data structure aggregating static information about all wells in a scenario. */
 struct Wells
 {
     int                  number_of_wells; /** Number of wells. */
@@ -88,15 +88,15 @@ struct Wells
                                            *  Size is number of perforations (== well_connpos[number_of_wells]).
                                            */
     double              *WI;              /** Well productivity index, same size and structure as well_cells. */
-    struct WellControls **ctrls;          /** Well controls, one struct for each well. */
+    struct WellControls **ctrls;          /** Well controls, one set of controls for each well. */
 
 
     void               *data;             /** Internal management structure. */
 };
 
 
-/** Struct encapsulating dynamic information about all wells in a scenario.
- *  All arrays in this struct contain data for each perforation,
+/** Data structure aggregating dynamic information about all wells in a scenario.
+ *  All arrays in this structure contain data for each perforation,
  *  ordered the same as Wells::well_cells and Wells:WI.  The array
  *  sizes are, respectively,
  *
@@ -126,7 +126,7 @@ struct Wells *
 create_wells(int nwells_reserve_cap, int nperf_reserve_cap);
 
 
-/** Append a well to a Wells struct.
+/** Append a new well to an existing Wells object.
  *  If successful, W->number_of_wells is incremented by 1.
  *  The newly added well will have no controls associated with it, add
  *  controls using append_well_controls(). The current control index is set
