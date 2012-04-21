@@ -41,14 +41,42 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct WellControlMgmt {
+    int cpty;
+};
+
+
+static void
+destroy_ctrl_mgmt(struct WellControlMgmt *m)
+{
+    free(m);
+}
+
+
+static struct WellControlMgmt *
+create_ctrl_mgmt(void)
+{
+    struct WellControlMgmt *m;
+
+    m = malloc(1 * sizeof *m);
+
+    if (m != NULL) {
+        m->cpty = 0;
+    }
+
+    return m;
+}
+
+
 /* ---------------------------------------------------------------------- */
 static void
 well_controls_destroy(struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
     if (ctrl != NULL) {
-        free(ctrl->target);
-        free(ctrl->type);
+        destroy_ctrl_mgmt(ctrl->data);
+        free             (ctrl->target);
+        free             (ctrl->type);
     }
 
     free(ctrl);
@@ -67,10 +95,16 @@ well_controls_create(void)
     if (ctrl != NULL) {
         /* Initialise empty control set */
         ctrl->num     = 0;
-        ctrl->cpty    = 0;
         ctrl->type    = NULL;
         ctrl->target  = NULL;
         ctrl->current = -1;
+
+        ctrl->data    = create_ctrl_mgmt();
+
+        if (ctrl->data == NULL) {
+            well_controls_destroy(ctrl);
+            ctrl = NULL;
+        }
     }
 
     return ctrl;
@@ -85,6 +119,8 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     int   c, ok;
     void *type, *target;
 
+    struct WellControlMgmt *m;
+
     type   = realloc(ctrl->type  , nctrl * sizeof *ctrl->type  );
     target = realloc(ctrl->target, nctrl * sizeof *ctrl->target);
 
@@ -93,12 +129,13 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     if (target != NULL) { ctrl->target = target; ok++; }
 
     if (ok == 2) {
-        for (c = ctrl->cpty; c < nctrl; c++) {
+        m = ctrl->data;
+        for (c = m->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
             ctrl->target[c] = -1.0;
         }
 
-        ctrl->cpty = nctrl;
+        m->cpty = nctrl;
     }
 
     return ok == 2;
@@ -393,12 +430,15 @@ append_well_controls(enum WellControlType type  ,
 {
     int ok, alloc;
 
+    struct WellControlMgmt *m;
+
     assert (ctrl != NULL);
 
-    ok = ctrl->num < ctrl->cpty;
+    m  = ctrl->data;
+    ok = ctrl->num < m->cpty;
 
     if (! ok) {
-        alloc = alloc_size(ctrl->num, 1, ctrl->cpty);
+        alloc = alloc_size(ctrl->num, 1, m->cpty);
         ok    = well_controls_reserve(alloc, ctrl);
     }
 

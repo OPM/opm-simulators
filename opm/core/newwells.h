@@ -59,10 +59,11 @@ enum SurfaceComponent { WATER = 0, OIL = 1, GAS = 2 };
 struct WellControls
 {
     int                     num;     /** Number of controls. */
-    int                     cpty;    /** Allocated capacity, for internal use only. */
     enum WellControlType   *type;    /** Array of control types. */
     double                 *target;  /** Array of control targets. */
     int                     current; /** Index of current active control. */
+
+    void                   *data;    /** Internal management structure. */
 };
 
 
