@@ -190,9 +190,13 @@ void
 clear_well_controls(struct WellControls *ctrl);
 
 
-/** Destruction function for Wells objects.
- *  Assumes that create_wells() and add_wells() have been used to
- *  build the object.
+/**
+ * Wells object destructor.
+ *
+ * Disposes of all resources managed by the Wells object.
+ *
+ * The Wells object must be built using function create_wells() and
+ * subsequently populated using function add_well().
  */
 void
 destroy_wells(struct Wells *W);
