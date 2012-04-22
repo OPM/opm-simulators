@@ -126,19 +126,22 @@ struct Wells *
 create_wells(int nwells_reserve_cap, int nperf_reserve_cap);
 
 
-/** Append a new well to an existing Wells object.
- *  If successful, W->number_of_wells is incremented by 1.
- *  The newly added well will have no controls associated with it, add
- *  controls using append_well_controls(). The current control index is set
- *  to -1 (invalid).
- *  \param[in] type       Type of well.
- *  \param[in] depth_ref  Reference depth for bhp.
- *  \param[in] nperf      Number of perforations.
- *  \param[in] zfrac      Injection fraction (three components) or NULL.
- *  \param[in] cells      Perforation cell indices.
- *  \param[in] WI         Well production index per perforation, or NULL.
- *  \param[inout] W       The Wells object to be modified.
- *  \return 1 if successful, 0 if failed.
+/**
+ * Append a new well to an existing Wells object.
+ *
+ * Increments W->number_of_wells by one if successful.  The new well
+ * does not include operational constraints.  Such information is
+ * specified using function append_well_controls().  The current
+ * control index is set to -1 (invalid).
+ *
+ * \param[in] type       Type of well.
+ * \param[in] depth_ref  Reference depth for bhp.
+ * \param[in] nperf      Number of perforations.
+ * \param[in] zfrac      Injection fraction (three components) or NULL.
+ * \param[in] cells      Perforation cell indices.
+ * \param[in] WI         Well production index per perforation, or NULL.
+ * \param[inout] W       The Wells object to be modified.
+ * \return Non-zero (true) if successful and zero otherwise.
  */
 int
 add_well(enum WellType  type     ,
