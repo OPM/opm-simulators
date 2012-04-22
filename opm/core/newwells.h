@@ -168,15 +168,17 @@ add_well(enum WellType  type     ,
          struct Wells  *W        );
 
 
-/** Append a control to a well.
- *  If successful, ctrl->num is incremented by 1.
- *  Note that this function does not change ctrl->current.
- *  To append a control to a well with index w, pass its
- *  controls to this function via wellsptr->ctrls[w].
- *  \param[in] type     Control type.
- *  \param[in] target   Target value for the control.
- *  \param[inout] ctrl  The WellControls object to be modified.
- *  \return 1 if successful, 0 if failed.
+/**
+ * Append operational constraint to an existing well.
+ *
+ * Increments ctrl->num by one if successful.  Introducing a new
+ * operational constraint does not affect the well's notion of the
+ * currently active constraint represented by ctrl->current.
+ *
+ * \param[in] type     Control type.
+ * \param[in] target   Target value for the control.
+ * \param[inout] ctrl  Existing set of well controls.
+ * \return Non-zero (true) if successful and zero (false) otherwise.
  */
 int
 append_well_controls(enum WellControlType type  ,
