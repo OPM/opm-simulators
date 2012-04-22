@@ -115,15 +115,30 @@ struct CompletionData
     double *phasemob; /** Phase mobilities. */
 };
 
-/** Contruction function initializing a Wells object.
- *  The arguments may be used to indicate expected capacity needed,
- *  they will be used internally for pre-allocation.
- *  \return NULL upon failure, otherwise a valid Wells object with 0 wells.
- *  Call add_well() to populate the Wells object.
- *  Call destroy_wells() to deallocate and clean up the Wells object.
+/**
+ * Construct a Wells object initially capable of managing a given
+ * number of wells and total number of well connections
+ * (perforations).
+ *
+ * Function add_well() is used to populate the Wells object.  No
+ * reallocation occurrs in function add_well() as long as the
+ * initially indicated capacites are sufficient.  Call function
+ * destroy_wells() to dispose of the Wells object and its allocated
+ * memory resources.
+ *
+ * \param[in] nwells Expected number of wells in simulation scenario.
+ *                   Pass zero if the total number of wells is unknown.
+ *
+ * \param[in] nperf  Expected total number of well connections
+ *                   (perforations) for all wells in simulation
+ *                   scenario.  Pass zero if the total number of well
+ *                   connections is unknown.
+ *
+ * \return A valid Wells object with no wells if successful, and NULL
+ * otherwise.
  */
 struct Wells *
-create_wells(int nwells_reserve_cap, int nperf_reserve_cap);
+create_wells(int nwells, int nperf);
 
 
 /**

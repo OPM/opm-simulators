@@ -322,7 +322,7 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
 
 /* ---------------------------------------------------------------------- */
 struct Wells *
-create_wells(int nwells_reserve_cap, int nperf_reserve_cap)
+create_wells(int nwells, int nperf)
 /* ---------------------------------------------------------------------- */
 {
     int           ok;
@@ -349,8 +349,8 @@ create_wells(int nwells_reserve_cap, int nperf_reserve_cap)
         if (ok) {
             W->well_connpos[0] = 0;
 
-            if ((nwells_reserve_cap > 0) || (nperf_reserve_cap > 0)) {
-                ok = wells_reserve(nwells_reserve_cap, nperf_reserve_cap, W);
+            if ((nwells > 0) || (nperf > 0)) {
+                ok = wells_reserve(nwells, nperf, W);
             }
         }
 
