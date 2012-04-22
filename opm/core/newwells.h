@@ -150,12 +150,15 @@ create_wells(int nwells, int nperf);
  * control index is set to -1 (invalid).
  *
  * \param[in] type       Type of well.
- * \param[in] depth_ref  Reference depth for bhp.
+ * \param[in] depth_ref  Reference depth for well's BHP.
  * \param[in] nperf      Number of perforations.
  * \param[in] zfrac      Injection fraction (three components) or NULL.
- * \param[in] cells      Perforation cell indices.
+ * \param[in] cells      Grid cells in which well is perforated.  Should
+ *                       ideally be track ordered.
  * \param[in] WI         Well production index per perforation, or NULL.
- * \param[inout] W       The Wells object to be modified.
+ * \param[in,out] W      Existing set of wells to which new well will
+ *                       be added.
+ * 
  * \return Non-zero (true) if successful and zero otherwise.
  */
 int
