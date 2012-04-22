@@ -185,7 +185,10 @@ append_well_controls(enum WellControlType type  ,
                      double               target,
                      struct WellControls *ctrl  );
 
-/** Clear all controls from a well. */
+/**
+ * Clear all controls from a well.
+ *
+ * Does not affect the control set capacity. */
 void
 clear_well_controls(struct WellControls *ctrl);
 
