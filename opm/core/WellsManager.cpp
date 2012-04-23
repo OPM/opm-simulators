@@ -519,15 +519,7 @@ namespace Opm
         for (size_t i = 0; i < well_data.size(); i++) {
             if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
                 switch (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ ) {
-                case ProductionSpecification::OIL:
-                {
-                    well_data[i].control = RATE;
-                    double parent_oil_rate = well_collection_.getLeafNodes()[i]->getParent()->prodSpec().oil_max_rate_;
-                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                    well_data[i].target = guide_rate * parent_oil_rate;
-                    std::cout << "Applying guide rate" << std::endl;
-                    break;
-                }
+                
                 case ProductionSpecification::NONE_GRT:
                 {
                     // Will use the group control type:
@@ -539,14 +531,20 @@ namespace Opm
                         well_data[i].target = guide_rate * parent_prod_spec.liquid_max_rate_;
                         well_data[i].control = RATE;
                         break;
+                    default:
+                        THROW("Unhandled group control mode " << parent_prod_spec.control_mode_);
+                        break;
                     }
                     
-                }   
+                }
+                default:
+                    break;
                 }
             }
 
             if (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP) {
                 if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
+                    well_data[i].injected_phase = WATER; // Default for now.
                     well_data[i].control = RATE;
                     well_data[i].type = INJECTOR;
                     double parent_surface_rate = well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
@@ -558,7 +556,7 @@ namespace Opm
         }
 
 
-        
+        std::cout << "Making well structs" << std::endl;
 	// Set up the Wells struct.
 	w_ = wells_create(num_wells, num_perfs);
 	if (!w_) {
@@ -576,6 +574,11 @@ namespace Opm
 		wi[perf] = wellperf_data[w][perf].well_index;
 	    }
 	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
+            
+            // DIRTY DIRTY HACK
+            if(well_data[w].type == INJECTOR && well_data[w].injected_phase < 0 || well_data[w].injected_phase > 2){
+                zfrac = fracs[WATER];
+            }
 
             int ok = wells_add(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
 			       zfrac, &cells[0], &wi[0], w_);
@@ -590,6 +593,7 @@ namespace Opm
 	    }
 	}
         
+        std::cout << "Made well struct" << std::endl;
         for(size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
             WellNode* node = static_cast<WellNode*>(well_collection_.getLeafNodes()[i].get());
             
@@ -624,6 +628,120 @@ namespace Opm
         return well_collection_;
     }
 
+    
+    /// Apply control results
+    /// \param[in] result The result of a run to conditionsMet on WellCollection
+    /// \param[in] wellCollection The WellCollection on which the control is to be issued on
+    void WellsManager::applyControl(const WellControlResult& result) 
+    {
+        // Check oil
+        std::map<std::string, std::vector<ExceedInformation> > oil_exceed;
+        for(size_t i = 0; i < result.oil_rate_.size(); i++) {
+            oil_exceed[result.oil_rate_[i].group_name_].push_back(result.oil_rate_[i]);
+        }
+        
+        applyControl(oil_exceed, ProductionSpecification::ORAT);
+        
+        
+         // Check fluid
+        std::map<std::string, std::vector<ExceedInformation> > fluid_exceed;
+        for(size_t i = 0; i < result.fluid_rate_.size(); i++) {
+            fluid_exceed[result.oil_rate_[i].group_name_].push_back(result.fluid_rate_[i]);
+        }
+        
+        applyControl(fluid_exceed, ProductionSpecification::LRAT);
+        
+        // Check BHP
+        std::map<std::string, std::vector<ExceedInformation> > bhp_exceed;
+        for(size_t i = 0; i < result.bhp_.size(); i++) {
+            bhp_exceed[result.oil_rate_[i].group_name_].push_back(result.bhp_[i]);
+        }
+        
+        applyControl(fluid_exceed, ProductionSpecification::BHP); 
+        
+        
+        // Apply guide rates:
+        for (int i = 0; i < w_->number_of_wells; i++) {
+            if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+                switch (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_) {
+                case ProductionSpecification::OIL:
+                {
+                    // Not handled at the moment
+                }
+                case ProductionSpecification::NONE_GRT:
+                {
+                    // Will use the group control type:
+                    const ProductionSpecification& parent_prod_spec =
+                            well_collection_.getLeafNodes()[i]->getParent()->prodSpec();
+                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                    if (parent_prod_spec.control_mode_ == ProductionSpecification::LRAT) {
+                        w_->ctrls[i]->target[0] = guide_rate * parent_prod_spec.liquid_max_rate_;
+                        w_->ctrls[i]->type[0] = RATE;
+                    } else {
+                        THROW("Unhandled group control mode " << parent_prod_spec.control_mode_);
+                    }
 
+                }
+                default:
+                    // Do nothing
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Apply control results for a specific target (OIL, WATER, etc)
+    /// \param[in] exceed_info will for each group name contain all the 
+    ///                        exceed informations for the given mode.
+    /// \param[in] well_collection The associated well_collection.
+    /// \param[in] mode The ControlMode to which the violations apply.
+    void WellsManager::applyControl(const std::map<std::string, std::vector<ExceedInformation> >& exceed_info,
+                                    ProductionSpecification::ControlMode mode) 
+    {
+        std::map<std::string, std::vector<ExceedInformation> >::const_iterator it;
+        
+        for(it = exceed_info.begin(); it != exceed_info.end(); ++it) {
+
+            
+            std::string group_name = it->first;
+            
+            WellsGroupInterface* group = well_collection_.findNode(group_name);
+            if(group->isLeafNode()) {
+                // Just shut the well
+                int well_index = it->second[0].well_index_;
+                w_->ctrls[well_index]->target[0] = 0.0;
+            }
+            else {
+                switch(group->prodSpec().procedure_) {
+                case ProductionSpecification::WELL:
+                {
+                    // Shut the worst offending well
+                    double max_exceed = 0.0;
+                    int exceed_index = -1;
+                    for(size_t i = 0; i < it->second.size(); i++) {
+                        if(max_exceed <= it->second[i].surplus_) {
+                            exceed_index = it->second[i].well_index_;
+                            max_exceed = it->second[i].surplus_;
+                        }
+                    }
+                    
+                    w_->ctrls[exceed_index]->target[0] = 0.0;
+                    break;
+                }
+                
+                case ProductionSpecification::RATE:
+                {
+                    // Now we need to set the group control mode to the active one
+                    group->prodSpec().control_mode_ = mode;
+                    break;
+                }
+                
+                default:
+                    // Do nothing for now
+                    break;
+                }
+            }
+        }
+    }
 
 } // namespace Opm

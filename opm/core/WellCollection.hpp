@@ -40,7 +40,7 @@ namespace Opm
                 const EclipseGridParser& deck);
 
         
-        bool conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
+        void conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
                            const UnstructuredGrid& grid, const std::vector<double>& saturations, 
                            WellControlResult& result, 
                            double epsilon=1e-8) const;
@@ -48,6 +48,9 @@ namespace Opm
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
         
         void calculateGuideRates();
+        
+        WellsGroupInterface* findNode(std::string name);
+        const WellsGroupInterface* findNode(std::string name) const;
     private:
         // To account for the possibility of a forest
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > roots_;
@@ -55,7 +58,7 @@ namespace Opm
         // This will be used to traverse the bottom nodes.
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > leaf_nodes_;
         
-        WellsGroupInterface* findNode(std::string name);
+        
     };
 
 } // namespace Opm

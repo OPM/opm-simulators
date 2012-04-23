@@ -20,6 +20,7 @@
 #ifndef OPM_WELLSMANAGER_HEADER_INCLUDED
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
 #include <opm/core/WellCollection.hpp>
+#include <opm/core/WellsGroup.hpp>
 struct Wells;
 struct UnstructuredGrid;
 
@@ -49,6 +50,18 @@ namespace Opm
 
 	/// Destructor.
 	~WellsManager();
+        
+        /// Apply control results
+        /// \param[in] result The result of a run to conditionsMet on WellCollection
+        void applyControl(const WellControlResult& result);
+        
+        /// Apply control results for a specific target (OIL, WATER, etc)
+        /// \param[in] exceed_info will for each group name contain all the 
+        ///                        exceed informations for the given mode.
+        /// \param[in] well_collection The associated well_collection.
+        /// \param[in] mode The ControlMode to which the violations apply.
+        void applyControl(const std::map<std::string, std::vector<ExceedInformation> >& exceed_info,
+                          ProductionSpecification::ControlMode mode);
 
 	/// Access the managed Wells.
 	/// The method is named similarly to c_str() in std::string,

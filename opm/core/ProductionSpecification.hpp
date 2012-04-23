@@ -11,7 +11,7 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE_CM, ORAT, WRAT, LRAT, REIN, RESV, VREP, WGRA, FLD, GRUP
+            NONE_CM, ORAT, WRAT, LRAT, REIN, RESV, VREP, WGRA, FLD, GRUP, BHP
         };
 
         enum Procedure
