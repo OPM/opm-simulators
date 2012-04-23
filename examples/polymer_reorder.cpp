@@ -42,11 +42,7 @@
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
 
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
-// #define EXPERIMENT_ISTL
-#ifdef EXPERIMENT_ISTL
-#include <opm/core/linalg/LinearSolverIstl.hpp>
-#endif
+#include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include <opm/core/transport/transport_source.h>
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
@@ -483,12 +479,9 @@ main(int argc, char** argv)
     }
 
     // Solvers init.
+    // Linear solver.
+    Opm::LinearSolverFactory linsolver(param);
     // Pressure solver.
-#ifdef EXPERIMENT_ISTL
-    Opm::LinearSolverIstl linsolver(param);
-#else
-    Opm::LinearSolverUmfpack linsolver;
-#endif // EXPERIMENT_ISTL
     const double *grav = use_gravity ? &gravity[0] : 0;
     Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), grav, linsolver);
     // Reordering solver.
