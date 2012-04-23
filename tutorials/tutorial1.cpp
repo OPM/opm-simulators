@@ -18,17 +18,19 @@
 */
 
 
-
-
-
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
 /// \page tutorial1 A simple cartesian grid
-/// This tutorial explains how to construct a simple cartesian grid.
+/// This tutorial explains how to construct a simple cartesian grid,
+/// and we will take a look at some output facilities.
 
+/// \page tutorial1
+/// \section commentedsource1 Program walkthrough.
+/// All headers from opm-core are found in the opm/core/ directory.
+/// Some important headers are at the root, other headers are found
+/// in subdirectories.
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/utility/writeVtkData.hpp>
@@ -36,14 +38,21 @@
 #include <fstream>
 #include <vector>
 
+/**
+\code
+#include <opm/core/grid.h>
+#include <opm/core/GridManager.hpp>
+#include <opm/core/utility/writeVtkData.hpp>
+#include <iostream>
+#include <fstream>
+#include <vector>
+\endcode
+*/
+
 // ----------------- Main program -----------------
 
-/// \page tutorial1
-/// \section commentedsource1 Commented source code:
-/// \code
 int main()
 {
-    /// \endcode
     /// \page tutorial1
     /// We set the number of blocks in each direction.
     /// \code
@@ -51,7 +60,7 @@ int main()
     int ny = 3;
     int nz = 2;
     /// \endcode
-    /// The size of each block is 1x1x1. The default units are allways the
+    /// The size of each block is 1m x 1m x 1m. The default units are always the
     /// standard units (SI). But other units can easily be dealt with, see Opm::unit.
     /// \code
     double dx = 1.0;
@@ -59,24 +68,31 @@ int main()
     double dz = 1.0;
     /// \endcode
     /// \page tutorial1
-    /// One of the constructors of the class Opm::GridManager takes <code>nx,ny,nz,dx,dy,dz</code>
+    /// In opm-core, grid information is accessed via the UnstructuredGrid data structure.
+    /// This data structure has a pure C API, including helper functions to construct and
+    /// destroy the data structure. In this tutorial however, we will use Opm::GridManager,
+    /// which is a C++ class that wraps the UnstructuredGrid and takes care of
+    /// object lifetime issues.
+    /// One of the constructors of the class Opm::GridManager takes <code>nx, ny, nz, dx, dy, dz</code>
     /// and construct the corresponding cartesian grid.
     /// \code
     Opm::GridManager grid(nx, ny, nz, dx, dy, dz);
     /// \endcode
     /// \page tutorial1
-    /// We open a file to write down the output
+    /// We open an output file stream for the output
     /// \code
     std::ofstream vtkfile("tutorial1.vtu");
     /// \endcode
     /// \page tutorial1
-    /// The Opm::writeVtkData() function writes output data. Here, we just want to visualize the
-    /// grid. We construct an empty Opm::DataMap object, which we send to Opm::writeVtkData() together with the grid
+    /// The Opm::writeVtkData() function writes a grid together with
+    /// data to a stream. Here, we just want to visualize the grid. We
+    /// construct an empty Opm::DataMap object, which we send to
+    /// Opm::writeVtkData() together with the grid
     /// \code
     Opm::DataMap dm;
     /// \endcode
     /// \page tutorial1
-    /// The function Opm::writeVtkData() writes down the output.
+    /// Call Opm::writeVtkData() to write the output file.
     /// \code
     Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
 }
