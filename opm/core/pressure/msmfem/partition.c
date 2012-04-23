@@ -138,6 +138,7 @@ partition_compress(int n, int *p)
     int ret, i, max, *compr;
 
     max = -1;
+    assert(n > 0);
     for (i = 0; i < n; i++) {
         assert (0 <= p[i]);     /* Only non-neg partitions (for now?). */
         max = MAX(max, p[i]);
@@ -312,6 +313,9 @@ partition_create_c2c(int nc, int nneigh, const int *neigh,
 /* ---------------------------------------------------------------------- */
 {
     int i, ret, c1, c2;
+
+    assert(nc > 0);
+    assert(nneigh > 0);
 
     *pc2c = malloc((nc + 1) * sizeof **pc2c);
 
