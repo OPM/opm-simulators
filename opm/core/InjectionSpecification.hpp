@@ -15,7 +15,7 @@ namespace Opm
 
         InjectionSpecification();
 
-        surface_component injector_type_;
+        SurfaceComponent injector_type_;
         ControlMode control_mode_;
         double surface_flow_max_rate_;
         double reinjection_fraction_target_;

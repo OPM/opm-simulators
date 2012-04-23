@@ -36,11 +36,11 @@ namespace
 
     struct WellData
     {
-	well_type type;
-	control_type control;
+	WellType type;
+	WellControlType control;
 	double target;
 	double reference_bhp_depth;
-	surface_component injected_phase;
+	SurfaceComponent injected_phase;
     };
 
 
@@ -517,9 +517,19 @@ namespace Opm
 
         // Apply guide rates:
         for (size_t i = 0; i < well_data.size(); i++) {
-            if (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+            if (well_data[i].type == PRODUCER && (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP)) {
                 switch (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ ) {
-                
+                case ProductionSpecification::OIL:
+                {
+                    const ProductionSpecification& parent_prod_spec = 
+                        well_collection_.getLeafNodes()[i]->getParent()->prodSpec();
+                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                    well_data[i].target = guide_rate*parent_prod_spec.oil_max_rate_;
+                    well_data[i].control = RATE;
+                    well_data[i].type = PRODUCER;
+                    std::cout << "WARNING: Converting oil control to rate control!" << std::endl;
+                    break;
+                }
                 case ProductionSpecification::NONE_GRT:
                 {
                     // Will use the group control type:
@@ -532,17 +542,18 @@ namespace Opm
                         well_data[i].control = RATE;
                         break;
                     default:
-                        THROW("Unhandled group control mode " << parent_prod_spec.control_mode_);
+                        THROW("Unhandled production specification control mode " << parent_prod_spec.control_mode_);
                         break;
                     }
-                    
                 }
                 default:
+                    THROW("Unhandled production specification guide rate type " 
+                            << well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_);
                     break;
                 }
             }
 
-            if (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP) {
+            if (well_data[i].type == INJECTOR && (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP)) {
                 if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
                     well_data[i].injected_phase = WATER; // Default for now.
                     well_data[i].control = RATE;
@@ -558,7 +569,7 @@ namespace Opm
 
         std::cout << "Making well structs" << std::endl;
 	// Set up the Wells struct.
-	w_ = wells_create(num_wells, num_perfs);
+	w_ = create_wells(num_wells, num_perfs);
 	if (!w_) {
 	    THROW("Failed creating Wells struct.");
 	}
@@ -576,32 +587,31 @@ namespace Opm
 	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
             
             // DIRTY DIRTY HACK
-            if(well_data[w].type == INJECTOR && well_data[w].injected_phase < 0 || well_data[w].injected_phase > 2){
+            if(well_data[w].type == INJECTOR && (well_data[w].injected_phase < 0 || well_data[w].injected_phase > 2)){
                 zfrac = fracs[WATER];
             }
 
-            int ok = wells_add(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
+            int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
 			       zfrac, &cells[0], &wi[0], w_);
 	    if (!ok) {
 		THROW("Failed to add a well.");
 	    }
 	    // We only append a single control at this point.
 	    // TODO: Handle multiple controls.
-	    ok = well_controls_append(well_data[w].control, well_data[w].target, w_->ctrls[w]);
+	    ok = append_well_controls(well_data[w].control, well_data[w].target, w_->ctrls[w]);
+            w_->ctrls[w]->current = 0;
 	    if (!ok) {
 		THROW("Failed to add well controls.");
 	    }
 	}
-        
+
         std::cout << "Made well struct" << std::endl;
-        for(size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
+        // \TODO comment this.
+        for (size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
             WellNode* node = static_cast<WellNode*>(well_collection_.getLeafNodes()[i].get());
-            
             // We know that getLeafNodes() is ordered the same way as they're indexed in w_
             node->setWellsPointer(w_, i);
         }
-        
-       
     }
 
 
@@ -609,7 +619,7 @@ namespace Opm
     /// Destructor.
     WellsManager::~WellsManager()
     {
-	wells_destroy(w_);
+	destroy_wells(w_);
     }
 
 

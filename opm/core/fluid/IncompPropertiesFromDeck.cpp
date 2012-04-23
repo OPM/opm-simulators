@@ -31,7 +31,7 @@ namespace Opm
     {
         rock_.init(deck, global_cell);
 	pvt_.init(deck);
-        satprops_.init(deck);
+        satprops_.init(deck, global_cell);
 	if (pvt_.numPhases() != satprops_.numPhases()) {
 	    THROW("IncompPropertiesFromDeck::IncompPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
 		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
@@ -87,7 +87,7 @@ namespace Opm
     /// \return Array of P density values.
     const double* IncompPropertiesFromDeck::density() const
     {
-	return pvt_.surfaceDensities();
+	return pvt_.reservoirDensities();
     }
 
     /// \param[in]  n      Number of data points.
@@ -101,11 +101,11 @@ namespace Opm
     ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
     void IncompPropertiesFromDeck::relperm(const int n,
 					   const double* s,
-					   const int* /*cells*/,
+					   const int* cells,
 					   double* kr,
 					   double* dkrds) const
     {
-        satprops_.relperm(n, s, kr, dkrds);
+        satprops_.relperm(n, s, cells, kr, dkrds);
     }
 
 
@@ -120,11 +120,11 @@ namespace Opm
     ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
     void IncompPropertiesFromDeck::capPress(const int n,
 					    const double* s,
-					    const int* /*cells*/,
+					    const int* cells,
 					    double* pc,
 					    double* dpcds) const
     {
-        satprops_.capPress(n, s, pc, dpcds);
+        satprops_.capPress(n, s, cells, pc, dpcds);
     }
 
 
@@ -136,11 +136,11 @@ namespace Opm
     /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
     /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
     void IncompPropertiesFromDeck::satRange(const int n,
-					    const int* /*cells*/,
+					    const int* cells,
 					    double* smin,
 					    double* smax) const
     {
-	satprops_.satRange(n, smin, smax);
+	satprops_.satRange(n, cells, smin, smax);
     }
 
 } // namespace Opm

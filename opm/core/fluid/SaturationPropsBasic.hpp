@@ -45,6 +45,16 @@ namespace Opm
 	///    relperm_func ("Linear")   Must be "Constant", "Linear" or "Quadratic".
         void init(const parameter::ParameterGroup& param);
 
+	enum RelPermFunc { Constant, Linear, Quadratic };
+
+        /// Initialize from arguments a basic Saturation property.
+        void init(const int num_phases,
+                  const RelPermFunc& relperm_func) 
+        {
+            num_phases_ = num_phases;
+            relperm_func_ = relperm_func;
+        }
+
         /// \return   P, the number of phases.
         int numPhases() const;
 
@@ -83,8 +93,9 @@ namespace Opm
 	void satRange(const int n,
 		      double* smin,
 		      double* smax) const;
+
+
     private:
-	enum RelPermFunc { Constant, Linear, Quadratic };
 	int num_phases_;
 	RelPermFunc relperm_func_;
     };

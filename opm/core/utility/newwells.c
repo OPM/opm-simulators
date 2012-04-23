@@ -41,14 +41,70 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct WellControlMgmt {
+    int cpty;
+};
+
+struct WellMgmt {
+    int well_cpty;
+    int perf_cpty;
+};
+
+
+static void
+destroy_ctrl_mgmt(struct WellControlMgmt *m)
+{
+    free(m);
+}
+
+
+static struct WellControlMgmt *
+create_ctrl_mgmt(void)
+{
+    struct WellControlMgmt *m;
+
+    m = malloc(1 * sizeof *m);
+
+    if (m != NULL) {
+        m->cpty = 0;
+    }
+
+    return m;
+}
+
+
+static void
+destroy_well_mgmt(struct WellMgmt *m)
+{
+    free(m);
+}
+
+
+static struct WellMgmt *
+create_well_mgmt(void)
+{
+    struct WellMgmt *m;
+
+    m = malloc(1 * sizeof *m);
+
+    if (m != NULL) {
+        m->well_cpty = 0;
+        m->perf_cpty = 0;
+    }
+
+    return m;
+}
+
+
 /* ---------------------------------------------------------------------- */
 static void
 well_controls_destroy(struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
     if (ctrl != NULL) {
-        free(ctrl->target);
-        free(ctrl->type);
+        destroy_ctrl_mgmt(ctrl->data);
+        free             (ctrl->target);
+        free             (ctrl->type);
     }
 
     free(ctrl);
@@ -67,10 +123,16 @@ well_controls_create(void)
     if (ctrl != NULL) {
         /* Initialise empty control set */
         ctrl->num     = 0;
-        ctrl->cpty    = 0;
         ctrl->type    = NULL;
         ctrl->target  = NULL;
         ctrl->current = -1;
+
+        ctrl->data    = create_ctrl_mgmt();
+
+        if (ctrl->data == NULL) {
+            well_controls_destroy(ctrl);
+            ctrl = NULL;
+        }
     }
 
     return ctrl;
@@ -85,6 +147,8 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     int   c, ok;
     void *type, *target;
 
+    struct WellControlMgmt *m;
+
     type   = realloc(ctrl->type  , nctrl * sizeof *ctrl->type  );
     target = realloc(ctrl->target, nctrl * sizeof *ctrl->target);
 
@@ -93,12 +157,13 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     if (target != NULL) { ctrl->target = target; ok++; }
 
     if (ok == 2) {
-        for (c = ctrl->cpty; c < nctrl; c++) {
+        m = ctrl->data;
+        for (c = m->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
             ctrl->target[c] = -1.0;
         }
 
-        ctrl->cpty = nctrl;
+        m->cpty = nctrl;
     }
 
     return ok == 2;
@@ -160,7 +225,11 @@ initialise_new_wells(int nwells, struct Wells *W)
 {
     int ok, w;
 
-    for (w = W->well_cpty; w < nwells; w++) {
+    struct WellMgmt *m;
+
+    m = W->data;
+
+    for (w = m->well_cpty; w < nwells; w++) {
         W->type     [w]        = PRODUCER;
         W->depth_ref[w]        = -1.0;
 
@@ -171,7 +240,7 @@ initialise_new_wells(int nwells, struct Wells *W)
         W->well_connpos[w + 1] = W->well_connpos[w];
     }
 
-    for (w = W->well_cpty, ok = 1; ok && (w < nwells); w++) {
+    for (w = m->well_cpty, ok = 1; ok && (w < nwells); w++) {
         W->ctrls[w] = well_controls_create();
 
         ok = W->ctrls[w] != NULL;
@@ -194,7 +263,11 @@ initialise_new_perfs(int nperf, struct Wells *W)
 {
     int k;
 
-    for (k = W->perf_cpty; k < nperf; k++) {
+    struct WellMgmt *m;
+
+    m = W->data;
+
+    for (k = m->perf_cpty; k < nperf; k++) {
         W->well_cells[k] = -1 ;
         W->WI        [k] = 0.0;
     }
@@ -208,12 +281,16 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
 {
     int ok;
 
-    assert (nwells >= W->well_cpty);
-    assert (nperf  >= W->perf_cpty);
+    struct WellMgmt *m;
+
+    m = W->data;
+
+    assert (nwells >= m->well_cpty);
+    assert (nperf  >= m->perf_cpty);
 
     ok = 1;
 
-    if (nwells > W->well_cpty) {
+    if (nwells > m->well_cpty) {
         ok = wells_allocate(nwells, W);
 
         if (ok) {
@@ -221,16 +298,16 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
         }
 
         if (ok) {
-            W->well_cpty = nwells;
+            m->well_cpty = nwells;
         }
     }
 
-    if (ok && (nperf > W->perf_cpty)) {
+    if (ok && (nperf > m->perf_cpty)) {
         ok = perfs_allocate(nperf, W);
 
         if (ok) {
             initialise_new_perfs(nperf, W);
-            W->perf_cpty = nperf;
+            m->perf_cpty = nperf;
         }
     }
 
@@ -245,7 +322,7 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
 
 /* ---------------------------------------------------------------------- */
 struct Wells *
-wells_create(int nwells, int nperf)
+create_wells(int nwells, int nperf)
 /* ---------------------------------------------------------------------- */
 {
     int           ok;
@@ -255,8 +332,6 @@ wells_create(int nwells, int nperf)
 
     if (W != NULL) {
         W->number_of_wells = 0;
-        W->well_cpty       = 0;
-        W->perf_cpty       = 0;
 
         W->type            = NULL;
         W->depth_ref       = NULL;
@@ -268,7 +343,9 @@ wells_create(int nwells, int nperf)
 
         W->ctrls           = NULL;
 
-        ok = W->well_connpos != NULL;
+        W->data            = create_well_mgmt();
+
+        ok = (W->well_connpos != NULL) && (W->data != NULL);
         if (ok) {
             W->well_connpos[0] = 0;
 
@@ -278,7 +355,7 @@ wells_create(int nwells, int nperf)
         }
 
         if (! ok) {
-            wells_destroy(W);
+            destroy_wells(W);
             W = NULL;
         }
     }
@@ -289,15 +366,21 @@ wells_create(int nwells, int nperf)
 
 /* ---------------------------------------------------------------------- */
 void
-wells_destroy(struct Wells *W)
+destroy_wells(struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
     int w;
 
+    struct WellMgmt *m;
+
     if (W != NULL) {
-        for (w = 0; w < W->well_cpty; w++) {
+        m = W->data;
+
+        for (w = 0; w < m->well_cpty; w++) {
             well_controls_destroy(W->ctrls[w]);
         }
+
+        destroy_well_mgmt(m);
 
         free(W->ctrls);
         free(W->WI);
@@ -331,26 +414,30 @@ alloc_size(int n, int a, int cpty)
 
 /* ---------------------------------------------------------------------- */
 int
-wells_add(enum well_type type     ,
-          double         depth_ref,
-          int            nperf    ,
-          const double  *zfrac    , /* Injection fraction or NULL */
-          const int     *cells    ,
-          const double  *WI       , /* Well index per perf (or NULL) */
-          struct Wells  *W        )
+add_well(enum WellType  type     ,
+         double         depth_ref,
+         int            nperf    ,
+         const double  *zfrac    , /* Injection fraction or NULL */
+         const int     *cells    ,
+         const double  *WI       , /* Well index per perf (or NULL) */
+         struct Wells  *W        )
 /* ---------------------------------------------------------------------- */
 {
     int ok, nw, nperf_tot, off;
     int nwalloc, nperfalloc;
 
+    struct WellMgmt *m;
+
     nw        = W->number_of_wells;
     nperf_tot = W->well_connpos[nw];
 
-    ok = (nw < W->well_cpty) && (nperf_tot + nperf <= W->perf_cpty);
+    m = W->data;
+
+    ok = (nw < m->well_cpty) && (nperf_tot + nperf <= m->perf_cpty);
 
     if (! ok) {
-        nwalloc    = alloc_size(nw       , 1    , W->well_cpty);
-        nperfalloc = alloc_size(nperf_tot, nperf, W->perf_cpty);
+        nwalloc    = alloc_size(nw       , 1    , m->well_cpty);
+        nperfalloc = alloc_size(nperf_tot, nperf, m->perf_cpty);
 
         ok = wells_reserve(nwalloc, nperfalloc, W);
     }
@@ -386,19 +473,22 @@ wells_add(enum well_type type     ,
 
 /* ---------------------------------------------------------------------- */
 int
-well_controls_append(enum control_type    type  ,
+append_well_controls(enum WellControlType type  ,
                      double               target,
                      struct WellControls *ctrl  )
 /* ---------------------------------------------------------------------- */
 {
     int ok, alloc;
 
+    struct WellControlMgmt *m;
+
     assert (ctrl != NULL);
 
-    ok = ctrl->num < ctrl->cpty;
+    m  = ctrl->data;
+    ok = ctrl->num < m->cpty;
 
     if (! ok) {
-        alloc = alloc_size(ctrl->num, 1, ctrl->cpty);
+        alloc = alloc_size(ctrl->num, 1, m->cpty);
         ok    = well_controls_reserve(alloc, ctrl);
     }
 
@@ -407,9 +497,6 @@ well_controls_append(enum control_type    type  ,
         ctrl->target[ctrl->num] = target;
 
         ctrl->num += 1;
-        
-        /* TODO: Review this: */
-        ctrl->current = 0;
     }
 
     return ok;
@@ -418,7 +505,7 @@ well_controls_append(enum control_type    type  ,
 
 /* ---------------------------------------------------------------------- */
 void
-well_controls_clear(struct WellControls *ctrl)
+clear_well_controls(struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
     if (ctrl != NULL) {

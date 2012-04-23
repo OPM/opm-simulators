@@ -31,9 +31,6 @@ namespace Opm
     /// eclipse input (keywords DENSITY, PVTW, PVCDO).
     ///
     /// All phases are incompressible and have constant viscosities.
-    /// For all the methods, the following apply: p and z are unused.
-    /// Output arrays shall be of size n*numPhases(), and must be valid
-    /// before calling the method.
     /// NOTE: This class is intentionally similar to BlackoilPvtProperties.
     class PvtPropertiesIncompFromDeck
     {
@@ -51,11 +48,24 @@ namespace Opm
         /// \return  Array of size numPhases().
 	const double* surfaceDensities() const;
 
+        /// Densities of stock components at reservoir conditions.
+        /// Note: a reasonable question to ask is why there can be
+        /// different densities at surface and reservoir conditions,
+        /// when the phases are assumed incompressible. The answer is
+        /// that even if we approximate the phases as being
+        /// incompressible during simulation, the density difference
+        /// between surface and reservoir may be larger. For accurate
+        /// reporting and using data given in terms of surface values,
+        /// we need to handle this difference.
+        /// \return  Array of size numPhases().
+	const double* reservoirDensities() const;
+
         /// Viscosities.
         const double* viscosity() const;
 
     private:
-	std::tr1::array<double, 2> density_;
+	std::tr1::array<double, 2> surface_density_;
+	std::tr1::array<double, 2> reservoir_density_;
 	std::tr1::array<double, 2> viscosity_;
     };
 

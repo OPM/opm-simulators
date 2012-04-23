@@ -51,11 +51,15 @@ namespace Opm
 	if (deck.hasField("DENSITY")) {
 	    const std::vector<double>& d = deck.getDENSITY().densities_[region_number];
 	    enum { ECL_oil = 0, ECL_water = 1, ECL_gas = 2 };
-	    density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = d[ECL_water];
-	    density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = d[ECL_oil];
+	    surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = d[ECL_water];
+	    surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = d[ECL_oil];
 	} else {
 	    THROW("Input is missing DENSITY\n");
 	}
+
+        // Make reservoir densities the same as surface densities initially.
+        // We will modify them with formation volume factors if found.
+        reservoir_density_ = surface_density_;
 
         // Water viscosity.
 	if (deck.hasField("PVTW")) {
@@ -63,6 +67,7 @@ namespace Opm
 	    if (pvtw[2] != 0.0 || pvtw[4] != 0.0) {
 		MESSAGE("Compressibility effects in PVTW are ignored.");
 	    }
+            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Aqua]] /= pvtw[1];
 	    viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = pvtw[3];
 	} else {
 	    // Eclipse 100 default.
@@ -76,6 +81,7 @@ namespace Opm
 	    if (pvcdo[2] != 0.0 || pvcdo[4] != 0.0) {
 		MESSAGE("Compressibility effects in PVCDO are ignored.");
 	    }
+            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] /= pvcdo[1];
 	    viscosity_[phase_usage.phase_pos[PhaseUsage::Liquid]] = pvcdo[3];
 	} else {
 	    THROW("Input is missing PVCDO\n");
@@ -84,7 +90,13 @@ namespace Opm
 
     const double* PvtPropertiesIncompFromDeck::surfaceDensities() const
     {
-        return density_.data();
+        return surface_density_.data();
+    }
+
+
+    const double* PvtPropertiesIncompFromDeck::reservoirDensities() const
+    {
+        return reservoir_density_.data();
     }
 
 
