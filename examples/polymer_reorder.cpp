@@ -307,7 +307,12 @@ main(int argc, char** argv)
         output_dir = param.getDefault("output_dir", std::string("output"));
         // Ensure that output dir exists
         boost::filesystem::path fpath(output_dir);
-        create_directories(fpath);
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            THROW("Creating directories failed: " << fpath);
+        }
         output_interval = param.getDefault("output_interval", output_interval);
     }
     const int num_transport_substeps = param.getDefault("num_transport_substeps", 1);
