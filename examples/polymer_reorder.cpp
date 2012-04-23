@@ -42,11 +42,7 @@
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
 
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
-// #define EXPERIMENT_ISTL
-#ifdef EXPERIMENT_ISTL
-#include <opm/core/linalg/LinearSolverIstl.hpp>
-#endif
+#include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include <opm/core/transport/transport_source.h>
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
@@ -311,7 +307,12 @@ main(int argc, char** argv)
         output_dir = param.getDefault("output_dir", std::string("output"));
         // Ensure that output dir exists
         boost::filesystem::path fpath(output_dir);
-        create_directories(fpath);
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            THROW("Creating directories failed: " << fpath);
+        }
         output_interval = param.getDefault("output_interval", output_interval);
     }
     const int num_transport_substeps = param.getDefault("num_transport_substeps", 1);
@@ -483,12 +484,9 @@ main(int argc, char** argv)
     }
 
     // Solvers init.
+    // Linear solver.
+    Opm::LinearSolverFactory linsolver(param);
     // Pressure solver.
-#ifdef EXPERIMENT_ISTL
-    Opm::LinearSolverIstl linsolver(param);
-#else
-    Opm::LinearSolverUmfpack linsolver;
-#endif // EXPERIMENT_ISTL
     const double *grav = use_gravity ? &gravity[0] : 0;
     Opm::IncompTpfa psolver(*grid->c_grid(), props->permeability(), grav, linsolver);
     // Reordering solver.
