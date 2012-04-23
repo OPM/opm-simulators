@@ -122,7 +122,7 @@ struct CompletionData
  *
  * Function add_well() is used to populate the Wells object.  No
  * reallocation occurs in function add_well() as long as the
- * initially indicated capacites are sufficient.  Call function
+ * initially indicated capacities are sufficient.  Call function
  * destroy_wells() to dispose of the Wells object and its allocated
  * memory resources.
  *
