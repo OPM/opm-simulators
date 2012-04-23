@@ -194,6 +194,9 @@ protected:
                                                           phaseIdx,
                                                           i);
             Scalar gamma = phi * fluidState.pressure(phaseIdx);
+            Valgrind::CheckDefined(phi);
+            Valgrind::CheckDefined(gamma);
+            Valgrind::CheckDefined(fugacities[i]);
             fluidState.setFugacityCoefficient(phaseIdx, i, phi);
             fluidState.setMoleFraction(phaseIdx, i, fugacities[i]/gamma);
         };

@@ -70,8 +70,8 @@ public:
 
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
-    //typedef TabulatedH2O H2O;
-    typedef IapwsH2O H2O;
+    typedef TabulatedH2O H2O;
+    //typedef IapwsH2O H2O;
     
     static const int numPhases = 3;
     static const int numComponents = 3;
@@ -420,6 +420,8 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
+        Valgrind::CheckDefined(T);
+        Valgrind::CheckDefined(p);
 
         if (phaseIdx == wPhaseIdx) {
             if (compIdx == H2OIdx)
@@ -435,7 +437,7 @@ public:
         // component to the NAPL phase is much higher than for the
         // other components, i.e. the fugacity cofficient is much
         // smaller.
-        if (phaseIdx == nPhaseIdx) {
+        else if (phaseIdx == nPhaseIdx) {
             Scalar phiNapl = NAPL::vaporPressure(T)/p;
             if (compIdx == NAPLIdx)
                 return phiNapl;
