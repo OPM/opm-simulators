@@ -199,7 +199,7 @@ namespace Opm
                                      double& dmobwat_dc,
                                      bool if_with_der) const;
 
-        void computeMcWithDer(const double& c, double& mc) const;
+        void computeMc(const double& c, double& mc) const;
 
         void computeMcWithDer(const double& c, double& mc,
                               double& dmc_dc) const;
