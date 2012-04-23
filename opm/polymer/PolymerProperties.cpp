@@ -76,13 +76,13 @@ namespace Opm
         simpleAdsorptionBoth(c, c_ads, dummy, false);
     }
 
-    void PolymerProperties::simpleAdsorptionWithDer(double c, double& c_ads, 
+    void PolymerProperties::simpleAdsorptionWithDer(double c, double& c_ads,
                                                     double& dc_ads_dc) const
     {
         simpleAdsorptionBoth(c, c_ads, dc_ads_dc, true);
     }
 
-    void PolymerProperties::simpleAdsorptionBoth(double c, double& c_ads, 
+    void PolymerProperties::simpleAdsorptionBoth(double c, double& c_ads,
                                                  double& dc_ads_dc, bool if_with_der) const
     {
         c_ads = Opm::linearInterpolation(c_vals_ads_, ads_vals_, c);;
@@ -99,14 +99,14 @@ namespace Opm
         adsorptionBoth(c, cmax, c_ads, dummy, false);
     }
 
-    void PolymerProperties::adsorptionWithDer(double c, double cmax, 
+    void PolymerProperties::adsorptionWithDer(double c, double cmax,
                                               double& c_ads, double& dc_ads_dc) const
     {
         adsorptionBoth(c, cmax, c_ads, dc_ads_dc, true);
     }
 
-    void PolymerProperties::adsorptionBoth(double c, double cmax, 
-                                           double& c_ads, double& dc_ads_dc, 
+    void PolymerProperties::adsorptionBoth(double c, double cmax,
+                                           double& c_ads, double& dc_ads_dc,
                                            bool if_with_der) const
     {
         if (ads_index_ == Desorption) {
@@ -147,11 +147,11 @@ namespace Opm
         double mu_w = visc[0];
         double mu_m;
         double omega = mix_param_;
-        double mu_m_dc;
+        double dmu_m_dc;
         if (if_with_der) {
-            mu_m = viscMultWithDer(c, &mu_m_dc)*mu_w;
-            mu_m_dc *= mu_w;
-        } else { 
+            mu_m = viscMultWithDer(c, &dmu_m_dc)*mu_w;
+            dmu_m_dc *= mu_w;
+        } else {
             mu_m = viscMult(c)*mu_w;
         }
         double mu_p = viscMult(c_max_)*mu_w;
@@ -162,15 +162,15 @@ namespace Opm
         visc_eff[0] = mu_w_eff;
         visc_eff[1] = visc[1];
         if (if_with_der) {
-            double mu_w_e_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
-            double mu_p_eff_dc = omega*mu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
-            dvisc_eff_dc[0] = -1./c_max_*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e) + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*mu_w_e_dc + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*mu_p_eff_dc;
+            double dmu_w_e_dc = omega*dmu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
+            double dmu_p_eff_dc = omega*dmu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
+            dvisc_eff_dc[0] = -1./c_max_*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e) + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*dmu_w_e_dc + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*dmu_p_eff_dc;
             dvisc_eff_dc[1] = 0.;
         } else {
             dvisc_eff_dc = 0;
         }
     }
-        
+
     void PolymerProperties::effectiveRelperm(const double c,
                                              const double cmax,
                                              const double* relperm,
@@ -219,8 +219,8 @@ namespace Opm
                                                 const double cmax,
                                                 const double* visc,
                                                 const double* relperm,
-                                                std::vector<double>& mob) const 
-    { 
+                                                std::vector<double>& mob) const
+    {
         double dummy1;
         double dummy2[2];
         std::vector<double> dummy3;
@@ -233,9 +233,9 @@ namespace Opm
                                                        const double* visc,
                                                        const double* relperm,
                                                        const double* drelpermds,
-                                                       std::vector<double>& mob, 
+                                                       std::vector<double>& mob,
                                                        std::vector<double>& dmobds,
-                                                       double& dmobwatdc) const 
+                                                       double& dmobwatdc) const
     {
         effectiveMobilitiesBoth(c, cmax, visc,
                                 relperm, drelpermds, mob,dmobds,
@@ -247,16 +247,16 @@ namespace Opm
                                                     const double* visc,
                                                     const double* relperm,
                                                     const double* drelperm_ds,
-                                                    std::vector<double>& mob, 
+                                                    std::vector<double>& mob,
                                                     std::vector<double>& dmob_ds,
                                                     double& dmobwat_dc,
-                                                    bool if_with_der) const 
+                                                    bool if_with_der) const
     {
         double visc_eff[2];
         double dvisc_eff_dc[2];
         effectiveViscBoth(c, visc, visc_eff, dvisc_eff_dc, if_with_der);
         double mu_w_eff = visc_eff[0];
-        double mu_w_eff_dc = dvisc_eff_dc[0];
+        double dmu_w_eff_dc = dvisc_eff_dc[0];
         double eff_relperm_wat;
         double deff_relperm_wat_ds;
         double deff_relperm_wat_dc;
@@ -266,34 +266,33 @@ namespace Opm
                              if_with_der);
         mob[0] = eff_relperm_wat/visc_eff[0];
         mob[1] = relperm[1]/visc_eff[1];
-            
+
         if (if_with_der) {
-            dmobwat_dc = - mob[0]*mu_w_eff_dc/(mu_w_eff*mu_w_eff) 
+            dmobwat_dc = - eff_relperm_wat*dmu_w_eff_dc/(mu_w_eff*mu_w_eff)
                 + deff_relperm_wat_dc/mu_w_eff;
             dmob_ds[0*2 + 0] = deff_relperm_wat_ds/visc_eff[0];
             dmob_ds[0*2 + 1] = -dmob_ds[0*2 + 0];
             dmob_ds[1*2 + 0] = drelperm_ds[1*2 + 0]/visc_eff[1];
             dmob_ds[1*2 + 1] = drelperm_ds[1*2 + 1]/visc_eff[1];
         } else {
-            mob.clear();
             dmob_ds.clear();
         }
     }
-        
-    void PolymerProperties::computeMcWithDer(const double& c, double& mc) const 
+
+    void PolymerProperties::computeMc(const double& c, double& mc) const
     {
         double dummy;
         computeMcBoth(c, mc, dummy, false);
     }
 
     void PolymerProperties::computeMcWithDer(const double& c, double& mc,
-                                          double& dmc_dc) const 
+                                          double& dmc_dc) const
     {
         computeMcBoth(c, mc, dmc_dc, true);
     }
 
     void PolymerProperties::computeMcBoth(const double& c, double& mc,
-                                          double& dmc_dc, bool if_with_der) const 
+                                          double& dmc_dc, bool if_with_der) const
     {
         double cbar = c/c_max_;
         double omega = mix_param_;

@@ -858,8 +858,8 @@ namespace Opm
 	dmob_dc[1] = 0.;
  	ff = mob[0]/(mob[0] + mob[1]);
         if (if_with_der) {
-            dff_dsdc[0] = (dmob_ds[0]*mob[1] - dmob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
-            dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1]));
+            dff_dsdc[0] = (dmob_ds[0]*mob[1] - dmob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
+            dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
         } else {
             dff_dsdc.clear();
         }
@@ -867,14 +867,13 @@ namespace Opm
 
     void TransportModelPolymer::computeMc(double c, double& mc) const
     {
-        double dummy;
-        polyprops_.computeMcBoth(c, mc, dummy, false);
+        polyprops_.computeMc(c, mc);
     }
 
     void TransportModelPolymer::computeMcWithDer(double c, double& mc, 
                                                    double &dmc_dc) const
     {
-        polyprops_.computeMcBoth(c, mc, dmc_dc, true);
+        polyprops_.computeMcWithDer(c, mc, dmc_dc);
     }
 
 } // namespace Opm
