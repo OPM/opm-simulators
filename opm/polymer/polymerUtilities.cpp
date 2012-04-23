@@ -34,22 +34,18 @@ namespace Opm
 			      const std::vector<int>& cells,
 			      const std::vector<double>& s,
 			      const std::vector<double>& c,
+			      const std::vector<double>& cmax,
 			      std::vector<double>& totmob)
     {
 	int num_cells = cells.size();
-	int num_phases = props.numPhases();
 	totmob.resize(num_cells);
-	ASSERT(int(s.size()) == num_cells*num_phases);
-	std::vector<double> kr(num_cells*num_phases);
+	std::vector<double> kr(2*num_cells);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
-	const double* mu = props.viscosity();
-	double inv_mu_eff[2] = { 0.0 };
+        const double* visc = props.viscosity();
 	for (int cell = 0; cell < num_cells; ++cell) {
-	    totmob[cell] = 0;
-	    polyprops.effectiveInvVisc(c[cell], mu, inv_mu_eff);
-	    for (int phase = 0; phase < num_phases; ++phase) {	
-		totmob[cell] += kr[num_phases*cell + phase]*inv_mu_eff[phase];
-	    }
+            double*  kr_cell = &kr[2*cell];
+            polyprops.effectiveTotalMobility(c[cell], cmax[cell], visc, kr_cell,
+                                             totmob[cell]);
 	}
     }
 
@@ -70,6 +66,7 @@ namespace Opm
 				   const std::vector<int>& cells,
 				   const std::vector<double>& s,
 				   const std::vector<double>& c,
+                                   const std::vector<double>& cmax,
 				   std::vector<double>& totmob,
 				   std::vector<double>& omega)
     {
@@ -80,21 +77,16 @@ namespace Opm
 	ASSERT(int(s.size()) == num_cells*num_phases);
 	std::vector<double> kr(num_cells*num_phases);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
-	const double* mu = props.viscosity();
-	double inv_mu_eff[2] = { 0.0 };
+	const double* visc = props.viscosity();
 	const double* rho = props.density();
+        std::vector<double> mob(num_phases); // here we assume num_phases=2
 	for (int cell = 0; cell < num_cells; ++cell) {
-	    totmob[cell] = 0.0;
-	    omega[cell] = 0.0;
-	    polyprops.effectiveInvVisc(c[cell], mu, inv_mu_eff);
-	    for (int phase = 0; phase < num_phases; ++phase) {	
-		totmob[cell] += kr[num_phases*cell + phase]*inv_mu_eff[phase];
-	    }
-	    // Must finish computing totmob before we can use it.
-	    for (int phase = 0; phase < num_phases; ++phase) {	
-		omega[cell] += rho[phase]*(kr[num_phases*cell + phase]*inv_mu_eff[phase])/totmob[cell];
-	    }
-	}
+            double*  kr_cell = &kr[2*cell];
+            polyprops.effectiveMobilities(c[cell], cmax[cell], visc, kr_cell,
+                                          mob);
+            totmob[cell] = mob[0] + mob[1];
+            omega[cell] = rho[0]*mob[0]/totmob[cell] + rho[1]*mob[1]/totmob[cell];
+        }
     }
 
 
@@ -120,6 +112,7 @@ namespace Opm
                                  const Opm::PolymerProperties& polyprops,
 				 const std::vector<double>& s,
 				 const std::vector<double>& c,
+				 const std::vector<double>& cmax,
 				 const std::vector<double>& src,
 				 const double dt,
                                  const double inj_c,
@@ -137,8 +130,8 @@ namespace Opm
         std::fill(produced, produced + np, 0.0);
         polyinj = 0.0;
         polyprod = 0.0;
-        std::vector<double> inv_eff_visc(np);
         const double* visc = props.viscosity();
+        std::vector<double> kr_cell(np);
         std::vector<double> mob(np);
         for (int cell = 0; cell < num_cells; ++cell) {
             if (src[cell] > 0.0) {
@@ -147,13 +140,10 @@ namespace Opm
             } else if (src[cell] < 0.0) {
                 const double flux = -src[cell]*dt;
                 const double* sat = &s[np*cell];
-                props.relperm(1, sat, &cell, &mob[0], 0);
-                polyprops.effectiveInvVisc(c[cell], visc, &inv_eff_visc[0]);
-                double totmob = 0.0;
-                for (int p = 0; p < np; ++p) {
-                    mob[p] *= inv_eff_visc[p];
-                    totmob += mob[p];
-                }
+                props.relperm(1, sat, &cell, &kr_cell[0], 0);
+                polyprops.effectiveMobilities(c[cell], cmax[cell], visc,
+                                              &kr_cell[0], mob);
+                double totmob = mob[0] + mob[1];
                 for (int p = 0; p < np; ++p) {
                     produced[p] += (mob[p]/totmob)*flux;
                 }

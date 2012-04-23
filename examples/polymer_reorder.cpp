@@ -593,10 +593,10 @@ main(int argc, char** argv)
 
         // Solve pressure.
         if (use_gravity) {
-            computeTotalMobilityOmega(*props, polyprop, allcells, state.saturation(), state.concentration(),
+            computeTotalMobilityOmega(*props, polyprop, allcells, state.saturation(), state.concentration(), state.maxconcentration(),
                                       totmob, omega);
         } else {
-            computeTotalMobility(*props, polyprop, allcells, state.saturation(), state.concentration(),
+            computeTotalMobility(*props, polyprop, allcells, state.saturation(), state.concentration(), state.maxconcentration(),
                                  totmob);
         }
         std::vector<double> empty_vector_for_wells;
@@ -681,7 +681,7 @@ main(int argc, char** argv)
         Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
         polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), polyprop.deadPoreVol());
         polymass_adsorbed = Opm::computePolymerAdsorbed(*props, polyprop, porevol, state.maxconcentration());
-        Opm::computeInjectedProduced(*props, polyprop, state.saturation(), state.concentration(),
+        Opm::computeInjectedProduced(*props, polyprop, state.saturation(), state.concentration(), state.maxconcentration(),
                                      src, simtimer.currentStepLength(), inflow_c,
                                      injected, produced, polyinj, polyprod);
         tot_injected[0] += injected[0];

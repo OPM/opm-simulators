@@ -145,20 +145,20 @@ namespace Opm
 
         void simpleAdsorption(double c, double& c_ads) const;
 
-        void simpleAdsorptionWithDer(double c, double& c_ads, 
+        void simpleAdsorptionWithDer(double c, double& c_ads,
                                      double& dc_ads_dc) const;
 
         void adsorption(double c, double cmax, double& c_ads) const;
 
-        void adsorptionWithDer(double c, double cmax, 
+        void adsorptionWithDer(double c, double cmax,
                                double& c_ads, double& dc_ads_dc) const;
 
 	void effectiveVisc(const double c, const double* visc, double* visc_eff) const;
 
-        void effectiveInvVisc(const double c, const double* visc, 
+        void effectiveInvVisc(const double c, const double* visc,
                               double* inv_visc_eff) const;
 
-	void effectiveViscWithDer(const double c, const double* visc, 
+	void effectiveViscWithDer(const double c, const double* visc,
                                   double* visc_eff, double* dvisc_eff_dc) const;
 
         void effectiveRelperm(const double c,
@@ -185,26 +185,49 @@ namespace Opm
                                         const double* visc,
                                         const double* relperm,
                                         const double* drelpermds,
-                                        std::vector<double>& mob, 
-                                        std::vector<double>& dmobds,
-                                        double& dmobwatdc) const; 
+                                        std::vector<double>& mob,
+                                        std::vector<double>& dmob_ds,
+                                        double& dmobwatdc) const;
 
         void effectiveMobilitiesBoth(const double c,
                                      const double cmax,
                                      const double* visc,
                                      const double* relperm,
                                      const double* drelperm_ds,
-                                     std::vector<double>& mob, 
+                                     std::vector<double>& mob,
                                      std::vector<double>& dmob_ds,
                                      double& dmobwat_dc,
                                      bool if_with_der) const;
+
+        void effectiveTotalMobility(const double c,
+                                    const double cmax,
+                                    const double* visc,
+                                    const double* relperm,
+                                    double& totmob) const;
+
+        void effectiveTotalMobilityWithDer(const double c,
+                                           const double cmax,
+                                           const double* visc,
+                                           const double* relperm,
+                                           const double* drelpermds,
+                                           double& totmob,
+                                           std::vector<double>& dtotmob_dsdc) const;
+
+        void effectiveTotalMobilityBoth(const double c,
+                                        const double cmax,
+                                        const double* visc,
+                                        const double* relperm,
+                                        const double* drelperm_ds,
+                                        double& totmob,
+                                        std::vector<double>& dtotmob_dsdc,
+                                        bool if_with_der) const;
 
         void computeMc(const double& c, double& mc) const;
 
         void computeMcWithDer(const double& c, double& mc,
                               double& dmc_dc) const;
 
-        void computeMcBoth(const double& c, double& mc, 
+        void computeMcBoth(const double& c, double& mc,
                            double& dmc_dc, bool if_with_der) const;
 
     private:
@@ -219,10 +242,10 @@ namespace Opm
         std::vector<double> visc_mult_vals_;
         std::vector<double> c_vals_ads_;
         std::vector<double> ads_vals_;
-        void simpleAdsorptionBoth(double c, double& c_ads, 
+        void simpleAdsorptionBoth(double c, double& c_ads,
                                   double& dc_ads_dc, bool if_with_der) const;
-        void adsorptionBoth(double c, double cmax, 
-                            double& c_ads, double& dc_ads_dc, 
+        void adsorptionBoth(double c, double cmax,
+                            double& c_ads, double& dc_ads_dc,
                             bool if_with_der) const;
         void effectiveViscBoth(const double c, const double* visc, double* visc_eff,
                                double* dvisc_eff_dc, bool if_with_der) const;

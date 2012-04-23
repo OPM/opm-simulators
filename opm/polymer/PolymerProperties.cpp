@@ -279,6 +279,53 @@ namespace Opm
         }
     }
 
+    void PolymerProperties::effectiveTotalMobility(const double c,
+                                                   const double cmax,
+                                                   const double* visc,
+                                                   const double* relperm,
+                                                   double& totmob) const
+    {
+        std::vector<double> dummy(2);
+        double dummy2[4];
+        effectiveTotalMobilityBoth(c, cmax, visc, relperm, dummy2,
+                                   totmob, dummy, false);
+    }
+
+    void PolymerProperties::effectiveTotalMobilityWithDer(const double c,
+                                                          const double cmax,
+                                                          const double* visc,
+                                                          const double* relperm,
+                                                          const double* drelperm_ds,
+                                                          double& totmob,
+                                                          std::vector<double>& dtotmob_dsdc) const
+    {
+        effectiveTotalMobilityBoth(c, cmax, visc, relperm, drelperm_ds,
+                                   totmob, dtotmob_dsdc, true);
+    }
+
+    void PolymerProperties::effectiveTotalMobilityBoth(const double c,
+                                                       const double cmax,
+                                                       const double* visc,
+                                                       const double* relperm,
+                                                       const double* drelperm_ds,
+                                                       double& totmob,
+                                                       std::vector<double>& dtotmob_dsdc,
+                                                       bool if_with_der) const
+    {
+        std::vector<double> mob(2);
+        std::vector<double> dmob_ds(2);
+        double dmobwat_dc;
+        effectiveMobilitiesBoth(c, cmax, visc, relperm, drelperm_ds,
+                                mob, dmob_ds, dmobwat_dc, if_with_der);
+        totmob = mob[0] + mob[1];
+        if (if_with_der) {
+            dtotmob_dsdc[0] = dmob_ds[0] + dmob_ds[2]; //derivative with respect to s
+            dtotmob_dsdc[1] = dmobwat_dc; //derivative with respect to c
+        } else {
+            dtotmob_dsdc.clear();
+        }
+    }
+
     void PolymerProperties::computeMc(const double& c, double& mc) const
     {
         double dummy;

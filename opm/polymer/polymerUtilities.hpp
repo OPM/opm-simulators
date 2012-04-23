@@ -42,6 +42,7 @@ namespace Opm
 			      const std::vector<int>& cells,
 			      const std::vector<double>& s,
 			      const std::vector<double>& c,
+			      const std::vector<double>& cmax,
 			      std::vector<double>& totmob);
 
     /// @brief Computes total mobility and omega for a set of s/c values.
@@ -58,6 +59,7 @@ namespace Opm
 				   const std::vector<int>& cells,
 				   const std::vector<double>& s,
 				   const std::vector<double>& c,
+                                   const std::vector<double>& cmax,
 				   std::vector<double>& totmob,
 				   std::vector<double>& omega);
 
@@ -83,6 +85,7 @@ namespace Opm
                                  const Opm::PolymerProperties& polyprops,
 				 const std::vector<double>& s,
 				 const std::vector<double>& c,
+                                 const std::vector<double>& cmax,
 				 const std::vector<double>& src,
 				 const double dt,
                                  const double inj_c,
