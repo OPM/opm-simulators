@@ -158,7 +158,7 @@ create_wells(int nwells, int nperf);
  * \param[in] WI         Well production index per perforation, or NULL.
  * \param[in,out] W      Existing set of wells to which new well will
  *                       be added.
- * 
+ *
  * \return Non-zero (true) if successful and zero otherwise.
  */
 int
