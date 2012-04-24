@@ -139,10 +139,12 @@ namespace Opm
     ///                           (+) positive  total inflow (positive velocity divergence)
     ///                           (-) negative  total outflow
     /// \param[in]  faceflux      Signed face fluxes, typically the result from a flow solver.
-    /// \param[in]  inflow_frac   Fraction of inflow that consists of first phase.
+    /// \param[in]  inflow_frac   Fraction of inflow (boundary and source terms) that consists of first phase.
     ///                           Example: if only water is injected, inflow_frac == 1.0.
     ///                           Note: it is not possible (with this method) to use different fractions
     ///                           for different inflow sources, be they source terms of boundary flows.
+    /// \param[in]  wells         Wells data structure, or null if no wells.
+    /// \param[in]  well_perfrates  Volumetric flow rates per well perforation.
     /// \param[out] transport_src The transport source terms. They are to be interpreted depending on sign:
     ///                           (+) positive  inflow of first phase (water)
     ///                           (-) negative  total outflow of both phases
@@ -150,6 +152,8 @@ namespace Opm
 				const std::vector<double>& src,
 				const std::vector<double>& faceflux,
 				const double inflow_frac,
+                                const Wells* wells,
+                                const std::vector<double>& well_perfrates,
 				std::vector<double>& transport_src);
 
 

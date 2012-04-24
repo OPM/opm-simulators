@@ -26,6 +26,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <functional>
+#include <cmath>
 
 namespace Opm
 {
@@ -277,10 +278,12 @@ namespace Opm
     ///                           (+) positive  total inflow (positive velocity divergence)
     ///                           (-) negative  total outflow
     /// \param[in]  faceflux      Signed face fluxes, typically the result from a flow solver.
-    /// \param[in]  inflow_frac   Fraction of inflow that consists of first phase.
+    /// \param[in]  inflow_frac   Fraction of inflow (boundary and source terms) that consists of first phase.
     ///                           Example: if only water is injected, inflow_frac == 1.0.
     ///                           Note: it is not possible (with this method) to use different fractions
     ///                           for different inflow sources, be they source terms of boundary flows.
+    /// \param[in]  wells         Wells data structure.
+    /// \param[in]  well_perfrates  Volumetric flow rates per well perforation.
     /// \param[out] transport_src The transport source terms. They are to be interpreted depending on sign:
     ///                           (+) positive  inflow of first phase (water)
     ///                           (-) negative  total outflow of both phases
@@ -288,10 +291,13 @@ namespace Opm
 				const std::vector<double>& src,
 				const std::vector<double>& faceflux,
 				const double inflow_frac,
+                                const Wells* wells,
+                                const std::vector<double>& well_perfrates,
 				std::vector<double>& transport_src)
     {
 	int nc = grid.number_of_cells;
 	transport_src.resize(nc);
+        // Source term and boundary contributions.
 	for (int c = 0; c < nc; ++c) {
 	    transport_src[c] = 0.0;
 	    transport_src[c] += src[c] > 0.0 ? inflow_frac*src[c] : src[c];
@@ -309,6 +315,27 @@ namespace Opm
 		}
 	    }
 	}
+
+        // Well contributions.
+        if (wells) {
+            const int nw = wells->number_of_wells;
+            for (int w = 0; w < nw; ++w) {
+                const double* zfrac = wells->zfrac + 3*w;
+                for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
+                    const int perf_cell = wells->well_cells[perf];
+                    double perf_rate = well_perfrates[perf];
+                    if (perf_rate > 0.0) {
+                        // perf_rate is a total inflow rate, we want a water rate.
+                        if (wells->type[w] != INJECTOR) {
+                            std::cout << "**** Warning: crossflow in well with index " << w << std::endl;
+                        }
+                        ASSERT(std::fabs(zfrac[WATER] + zfrac[OIL] - 1.0) < 1e-6);
+                        perf_rate *= zfrac[WATER];
+                    }
+                    transport_src[perf_cell] += perf_rate;
+                }
+            }
+        }
     }
 
     /// @brief Estimates a scalar cell velocity from face fluxes.
