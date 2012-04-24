@@ -57,8 +57,7 @@ int main(int argc, char** argv) {
     computeTotalMobilityOmega(incomp_properties, all_cells, state.saturation(), totmob, omega);
     
     std::vector<double> wdp;
-    std::vector<double> densities(incomp_properties.density(), incomp_properties.density() + incomp_properties.numPhases());
-    computeWDP(*wells.c_wells(), *grid.c_grid(), state.saturation(), densities, wdp);
+    computeWDP(*wells.c_wells(), *grid.c_grid(), state.saturation(), incomp_properties.density(), wdp, true);
     
     std::vector<double> src;
     Opm::FlowBCManager bcs;
