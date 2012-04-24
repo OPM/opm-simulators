@@ -327,10 +327,12 @@ namespace Opm
                     if (perf_rate > 0.0) {
                         // perf_rate is a total inflow rate, we want a water rate.
                         if (wells->type[w] != INJECTOR) {
-                            std::cout << "**** Warning: crossflow in well with index " << w << std::endl;
+                            std::cout << "**** Warning: crossflow in well with index " << w << " ignored." << std::endl;
+                            perf_rate = 0.0;
+                        } else {
+                            ASSERT(std::fabs(zfrac[WATER] + zfrac[OIL] - 1.0) < 1e-6);
+                            perf_rate *= zfrac[WATER];
                         }
-                        ASSERT(std::fabs(zfrac[WATER] + zfrac[OIL] - 1.0) < 1e-6);
-                        perf_rate *= zfrac[WATER];
                     }
                     transport_src[perf_cell] += perf_rate;
                 }
