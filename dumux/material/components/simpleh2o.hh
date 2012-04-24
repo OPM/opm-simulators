@@ -192,7 +192,7 @@ public:
      */
     static const Scalar liquidThermalConductivity(Scalar temperature,
                                                   Scalar pressure)
-    { return 0.028224; } // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+    { return 0.578078; } // conductivity of liquid water [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
 
     /*!
      * \brief Specific heat conductivity of steam \f$\mathrm{[W/(m K)]}\f$.
@@ -202,7 +202,7 @@ public:
      */
     static const Scalar gasThermalConductivity(Scalar temperature,
                                                   Scalar pressure)
-    { return 0.578078; } // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+    { return 0.028224; } // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
