@@ -396,66 +396,63 @@ namespace Opm
 
     void Watercut::write(std::ostream& os) const
     {
-        int sz = data_.size()/3;
+        int sz = data_.size() / 3;
         for (int i = 0; i < sz; ++i) {
-            os << data_[3*i]/Opm::unit::day << "   "
-               << data_[3*i+1] << "   "
-               << data_[3*i+2] << '\n';
+            os << data_[3 * i] / Opm::unit::day << "   "
+                    << data_[3 * i + 1] << "   "
+                    << data_[3 * i + 2] << '\n';
         }
     }
-    
-    
+
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-            const std::vector<double>& densities, std::vector<double>& wdp, bool per_grid_cell) 
+            const std::vector<double>& densities, std::vector<double>& wdp, bool per_grid_cell)
     {
         const size_t np = densities.size();
         const int nw = wells.number_of_wells;
         // Simple for now:
-        for(int i = 0; i < nw; i++) {
+        for (int i = 0; i < nw; i++) {
             double depth_ref = wells.depth_ref[i];
-            for(int j = wells.well_connpos[i]; j < wells.well_connpos[i+1]; j++) {
+            for (int j = wells.well_connpos[i]; j < wells.well_connpos[i + 1]; j++) {
                 int cell = wells.well_cells[j];
-                
+
                 // Is this correct wrt. depth_ref?
-                double cell_depth = grid.cell_centroids[3*cell+2];
+                double cell_depth = grid.cell_centroids[3 * cell + 2];
 
                 double saturation_sum = 0.0;
-                for(size_t p = 0; p < np; p++) {
-                    if(per_grid_cell) {
-                        saturation_sum += saturations[i*nw*np + j*np + p];
-                    }
-                    else {
-                        saturation_sum += saturations[np*cell + p];
+                for (size_t p = 0; p < np; p++) {
+                    if (!per_grid_cell) {
+                        saturation_sum += saturations[i * nw * np + j * np + p];
+                    } else {
+                        saturation_sum += saturations[np * cell + p];
                     }
                 }
-                if(saturation_sum == 0) {
+                if (saturation_sum == 0) {
                     saturation_sum = 1.0;
                 }
                 double density = 0.0;
-                for(size_t p = 0; p < np; p++) {
-                    if(per_grid_cell) {
-                        density += saturations[i*nw*np + j*np + p] * densities[p] / saturation_sum;
-                    }
-                    else {
+                for (size_t p = 0; p < np; p++) {
+                    if (!per_grid_cell) {
+                        density += saturations[i * nw * np + j * np + p] * densities[p] / saturation_sum;
+                    } else {
                         // Is this a smart way of doing it?
-                        density += saturations[np*cell + p] * densities[p] / saturation_sum;
+                        density += saturations[np * cell + p] * densities[p] / saturation_sum;
                     }
                 }
-                
+
                 // Is the sign correct?
-                wdp.push_back(density*(cell_depth-depth_ref));
+                wdp.push_back(density * (cell_depth - depth_ref));
             }
         }
     }
     
     void computeFlowRatePerWell(const Wells& wells, const std::vector<double>& flow_rates_per_cell,
-                                std::vector<double>& flow_rates_per_well)
+            std::vector<double>& flow_rates_per_well)
     {
         int index_in_flow_rates = 0;
-        for(int w = 0; w < wells.number_of_wells; w++) {
-            int number_of_cells = wells.well_connpos[w+1]-wells.well_connpos[w];
+        for (int w = 0; w < wells.number_of_wells; w++) {
+            int number_of_cells = wells.well_connpos[w + 1] - wells.well_connpos[w];
             double flow_sum = 0.0;
-            for(int i = 0; i < number_of_cells; i++) {
+            for (int i = 0; i < number_of_cells; i++) {
                 flow_sum += flow_rates_per_cell[index_in_flow_rates++];
             }
             flow_rates_per_well.push_back(flow_sum);
