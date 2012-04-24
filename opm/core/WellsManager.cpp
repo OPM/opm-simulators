@@ -598,6 +598,10 @@ namespace Opm
 	    }
 	    // We only append a single control at this point.
 	    // TODO: Handle multiple controls.
+            if (well_data[w].type == PRODUCER && well_data[w].control == RATE) {
+                // Convention is that well rates for producers are negative.
+                well_data[w].target = -well_data[w].target;
+            }
 	    ok = append_well_controls(well_data[w].control, well_data[w].target, w_->ctrls[w]);
             w_->ctrls[w]->current = 0;
 	    if (!ok) {
