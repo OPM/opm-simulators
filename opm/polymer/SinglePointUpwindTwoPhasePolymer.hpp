@@ -519,14 +519,14 @@ namespace Opm {
                 store_.ds(cell) = x[2*cell + 0];
                 s[0] = sat[cell*2 + 0] + x[2*cell + 0];
                 c = cpoly[cell] + x[2*cell + 1];
-                cmax = std::max(cpoly[cell] + x[2*cell + 1], cmaxpoly[cell]);
                 store_.sw(cell) = s[0];
                 store_.c(cell) = c;
+                cmax = std::max(c, cmaxpoly[cell]);
                 store_.cmax(cell) = cmax;
                 store_.dsc(cell) = s[0]*c - sat[cell*2 + 0]*cpoly[cell];
                 double dcadsdc;
                 double cads;
-                fluid_.adsorption(cpoly[cell], cmax, cads, dcadsdc);
+                fluid_.adsorption(cpoly[cell], cmaxpoly[cell], cads, dcadsdc);
                 store_.dcads(cell) =  -cads;
                 fluid_.adsorption(c, cmax, cads, dcadsdc);
                 store_.dcads(cell) +=  cads;

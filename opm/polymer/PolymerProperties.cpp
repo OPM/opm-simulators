@@ -238,7 +238,7 @@ namespace Opm
                                                        double& dmobwatdc) const
     {
         effectiveMobilitiesBoth(c, cmax, visc,
-                                relperm, drelpermds, mob,dmobds,
+                                relperm, drelpermds, mob, dmobds,
                                 dmobwatdc, true);
     }
 
@@ -271,8 +271,8 @@ namespace Opm
             dmobwat_dc = - eff_relperm_wat*dmu_w_eff_dc/(mu_w_eff*mu_w_eff)
                 + deff_relperm_wat_dc/mu_w_eff;
             dmob_ds[0*2 + 0] = deff_relperm_wat_ds/visc_eff[0];
-            dmob_ds[0*2 + 1] = -dmob_ds[0*2 + 0];
-            dmob_ds[1*2 + 0] = drelperm_ds[1*2 + 0]/visc_eff[1];
+            dmob_ds[0*2 + 1] = drelperm_ds[0*2 + 1]/visc_eff[1];
+            dmob_ds[1*2 + 0] = drelperm_ds[1*2 + 0]/visc_eff[0];
             dmob_ds[1*2 + 1] = drelperm_ds[1*2 + 1]/visc_eff[1];
         } else {
             dmob_ds.clear();
