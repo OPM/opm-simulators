@@ -20,8 +20,8 @@
 
 /// \page tutorial2 Flow Solver for a single phase
 /// \details The flow equations consist of the mass conservation equation
-/// \f[\nabla\cdot u=q\f] and the Darcy law \f[u=-\frac{1}{\mu}K\nabla p.\f] Here,
-/// \f$u\f$ denotes the velocity and \f$p\f$ the pressure. The permeability tensor is
+/// \f[\nabla\cdot {\bf u}=q\f] and the Darcy law \f[{\bf u} =- \frac{1}{\mu}K\nabla p.\f] Here,
+/// \f${\bf u}\f$ denotes the velocity and \f$p\f$ the pressure. The permeability tensor is
 /// given by \f$K\f$ and \f$\mu\f$ denotes the viscosity.
 ///
 /// We solve the flow equations for a cartesian grid and we set the source term
@@ -46,7 +46,7 @@
 #include <opm/core/utility/Units.hpp>
 
 /// \page tutorial2
-/// \section commentedcode2 Commented code:
+/// \section commentedcode2 Program walkthrough.
 /// \code
 int main()
 {
@@ -62,17 +62,18 @@ int main()
     /// \endcode
     /// \page tutorial2
     /// \details We access the unstructured grid  through
-    /// the pointer given by \c grid.c_grid(). For more  details on unstructured
-    /// grid, see  grid.h.
+    /// the pointer given by \c grid.c_grid(). For more  details on the
+    /// UnstructuredGrid data structure, see  grid.h.
     /// \code
     int num_cells = grid.c_grid()->number_of_cells;
     int num_faces = grid.c_grid()->number_of_faces;
     /// \endcode
     /// \page tutorial2
     /// \details
-    /// We define a fluid viscosity equal to \f$1\,cP\f$. We use
-    /// the namespaces Opm::unit
-    /// and Opm::prefix to deal with the units.
+    /// We define a fluid viscosity equal to 1 cP. 
+    /// The <opm/core/utility/Units.hpp> header contains support
+    /// for common units and prefixes, in the namespaces Opm::unit
+    /// and Opm::prefix.
     /// \code
     using namespace Opm::unit;
     using namespace Opm::prefix;
@@ -80,13 +81,13 @@ int main()
     /// \endcode
     /// \page tutorial2
     /// \details
-    /// We define a permeability equal to \f$100\,mD\f$.
+    /// We define a permeability equal to 100 mD.
     /// \code
     double k = 100.0*milli*darcy;
     /// \endcode
     /// \page tutorial2
     /// \details
-    /// We set up the permeability tensor and compute the mobility for each cell.
+    /// We set up a diagonal permeability tensor and compute the mobility for each cell.
     /// The resulting permeability matrix is flattened in a vector.
     /// \code
     std::vector<double> permeability(num_cells*dim*dim, 0.);
@@ -101,12 +102,14 @@ int main()
 
     /// \page tutorial2
     /// \details
-    /// We take UMFPACK as the linear solver for the pressure solver (This library has therefore to be installed.)
+    /// We take UMFPACK as the linear solver for the pressure solver
+    /// (this library has therefore to be installed).
     /// \code
     Opm::LinearSolverUmfpack linsolver;
     /// \endcode
     /// \page tutorial2
-    /// We set up the pressure solver
+    /// We set up a pressure solver for the incompressible problem,
+    /// using the two-point flux approximation discretization.
     /// The third argument which corresponds to gravity is set to
     /// zero (no gravity).
     /// \code
@@ -120,8 +123,8 @@ int main()
     src[num_cells-1] = -100.;
     /// \endcode
     /// \page tutorial2
-    /// \details We set up the boundary conditions. We do not modify them.
-    /// By default, we obtain no outflow boundary conditions.
+    /// \details We set up the boundary conditions.
+    /// By default, we obtain no-flow boundary conditions.
     /// \code
     /// \code
     Opm::FlowBCManager bcs;
@@ -163,7 +166,10 @@ int main()
     /// \endcode
 
     /// \page tutorial2
-    /// We write the results in a file in VTK format.
+    /// We write the results to a file in VTK format.
+    /// The data vectors added to the Opm::DataMap must
+    /// contain cell data. They may be a scalar per cell
+    /// (pressure) or a vector per cell (cell_velocity).
     /// \code
     std::ofstream vtkfile("tutorial2.vtu");
     Opm::DataMap dm;
