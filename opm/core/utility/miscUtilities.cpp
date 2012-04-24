@@ -421,7 +421,7 @@ namespace Opm
                 double saturation_sum = 0.0;
                 for (size_t p = 0; p < np; p++) {
                     if (!per_grid_cell) {
-                        saturation_sum += saturations[i * nw * np + j * np + p];
+                        saturation_sum += saturations[j * np + p];
                     } else {
                         saturation_sum += saturations[np * cell + p];
                     }
@@ -432,7 +432,7 @@ namespace Opm
                 double density = 0.0;
                 for (size_t p = 0; p < np; p++) {
                     if (!per_grid_cell) {
-                        density += saturations[i * nw * np + j * np + p] * densities[p] / saturation_sum;
+                        density += saturations[j * np + p] * densities[p] / saturation_sum;
                     } else {
                         // Is this a smart way of doing it?
                         density += saturations[np * cell + p] * densities[p] / saturation_sum;
