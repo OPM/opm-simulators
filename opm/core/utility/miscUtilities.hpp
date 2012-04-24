@@ -188,7 +188,7 @@ namespace Opm
     /// \param[in] per_grid_cell Whether or not the saturations are per grid cell or per 
     ///                          well cell.
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-                    const std::vector<double>& densities, std::vector<double>& wdp, bool per_grid_cell = true);
+                    const double* densities, std::vector<double>& wdp, bool per_grid_cell);
     
     /// Computes (sums) the flow rate for each well. 
     /// \param[in] wells                The wells for which the flow rate should be computed.

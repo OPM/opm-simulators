@@ -405,10 +405,12 @@ namespace Opm
     }
 
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-            const std::vector<double>& densities, std::vector<double>& wdp, bool per_grid_cell)
+                    const double* densities, std::vector<double>& wdp, bool per_grid_cell)
     {
-        const size_t np = densities.size();
         const int nw = wells.number_of_wells;
+        const size_t np = per_grid_cell ?
+            saturations.size()/grid.number_of_cells
+            : saturations.size()/wells.well_connpos[nw];
         // Simple for now:
         for (int i = 0; i < nw; i++) {
             double depth_ref = wells.depth_ref[i];
