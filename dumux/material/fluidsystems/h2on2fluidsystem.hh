@@ -610,10 +610,10 @@ public:
         Scalar temperature = fluidState.temperature(phaseIdx) ;
         Scalar pressure = fluidState.pressure(phaseIdx);
 
-        if (phaseIdx == lPhaseIdx){// liquid phase
+        if (phaseIdx == lPhaseIdx) { // liquid phase
             return H2O::liquidThermalConductivity(temperature, pressure);
         }
-        else{// gas phase
+        else { // gas phase
             Scalar lambdaDryN2 = N2::gasThermalConductivity(temperature, pressure);
 
             if (useComplexRelations){

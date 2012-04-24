@@ -2,7 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
  *   Copyright (C) 2011-2012 by Holger Class                                 *
- *   Copyright (C) 2009-2010 by Andreas Lauser                               *
+ *   Copyright (C) 2009-2012 by Andreas Lauser                               *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -34,12 +34,14 @@
 #include "nullparametercache.hh"
 
 #include <dumux/material/idealgas.hh>
+#include <dumux/material/components/n2.hh>
 #include <dumux/material/components/air.hh>
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/simpleh2o.hh>
 #include <dumux/material/components/mesitylene.hh>
 #include <dumux/material/components/tabulatedcomponent.hh>
 #include <dumux/material/binarycoefficients/h2o_air.hh>
+#include <dumux/material/binarycoefficients/h2o_n2.hh>
 #include <dumux/material/binarycoefficients/h2o_mesitylene.hh>
 #include <dumux/material/binarycoefficients/air_mesitylene.hh>
 
@@ -62,6 +64,7 @@ class H2OAirMesitylene
     typedef H2OAirMesitylene<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
+    typedef Dumux::SimpleH2O<Scalar> SimpleH2O;
     typedef Dumux::H2O<Scalar> IapwsH2O;
     typedef Dumux::TabulatedComponent<Scalar, IapwsH2O, /*alongVaporPressure=*/false> TabulatedH2O;
 
@@ -70,6 +73,7 @@ public:
 
     typedef Dumux::Mesitylene<Scalar> NAPL;
     typedef Dumux::Air<Scalar> Air;
+    //typedef SimpleH2O H2O;
     typedef TabulatedH2O H2O;
     //typedef IapwsH2O H2O;
     
@@ -237,10 +241,13 @@ public:
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
+        Scalar T = fluidState.temperature(phaseIdx) ;
+        Scalar p = fluidState.pressure(phaseIdx);
+
         if (phaseIdx == wPhaseIdx) {
             // See: Ochs 2008
             // \todo: proper citation
-            Scalar rholH2O = H2O::liquidDensity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
+            Scalar rholH2O = H2O::liquidDensity(T, p);
             Scalar clH2O = rholH2O/H2O::molarMass();
 
             // this assumes each dissolved molecule displaces exactly one
@@ -254,11 +261,12 @@ public:
         }
         else if (phaseIdx == nPhaseIdx) {
             // assume pure NAPL for the NAPL phase
-            Scalar pressure = NAPL::liquidIsCompressible()?fluidState.pressure(phaseIdx):1e100;
-            return NAPL::liquidDensity(fluidState.temperature(phaseIdx), pressure);
+            Scalar p = NAPL::liquidIsCompressible()?fluidState.pressure(phaseIdx):1e100;
+            return NAPL::liquidDensity(T, p);
         }
 
         assert (phaseIdx == gPhaseIdx);
+
         Scalar pH2O =
             fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
             fluidState.pressure(gPhaseIdx);
@@ -269,9 +277,9 @@ public:
             fluidState.moleFraction(gPhaseIdx, NAPLIdx)  *
             fluidState.pressure(gPhaseIdx);
         return
-            H2O::gasDensity(fluidState.temperature(phaseIdx), pH2O) +
-            Air::gasDensity(fluidState.temperature(phaseIdx), pAir) +
-            NAPL::gasDensity(fluidState.temperature(phaseIdx), pNAPL);
+            H2O::gasDensity(T, pH2O) +
+            Air::gasDensity(T, pAir) +
+            NAPL::gasDensity(T, pNAPL);
     }
 
     /*!
@@ -282,18 +290,22 @@ public:
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
+        Scalar T = fluidState.temperature(phaseIdx);
+        Scalar p = fluidState.pressure(phaseIdx);
+
         if (phaseIdx == wPhaseIdx) {
             // assume pure water viscosity
-            return H2O::liquidViscosity(fluidState.temperature(phaseIdx),
-                                        fluidState.pressure(phaseIdx));
+
+            return H2O::liquidViscosity(T,
+                                        p);
         }
         else if (phaseIdx == nPhaseIdx) {
             // assume pure NAPL viscosity
-            return NAPL::liquidViscosity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
+            return NAPL::liquidViscosity(T, p);
         }
 
         assert (phaseIdx == gPhaseIdx);
-
+        
         /* Wilke method. See:
          *
          * See: R. Reid, et al.: The Properties of Gases and Liquids,
@@ -307,9 +319,9 @@ public:
          */
         Scalar muResult;
         const Scalar mu[numComponents] = {
-            H2O::gasViscosity(fluidState.temperature(phaseIdx), H2O::vaporPressure(fluidState.temperature(phaseIdx))),
-            Air::simpleGasViscosity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx)),
-            NAPL::gasViscosity(fluidState.temperature(phaseIdx), NAPL::vaporPressure(fluidState.temperature(phaseIdx)))
+            H2O::gasViscosity(T, H2O::vaporPressure(T)),
+            Air::gasViscosity(T, p),
+            NAPL::gasViscosity(T, NAPL::vaporPressure(T))
         };
         // molar masses
         const Scalar M[numComponents] = {
@@ -353,23 +365,26 @@ public:
                                        int phaseIdx,
                                        int compIdx)
     {
+        Scalar T = fluidState.temperature(phaseIdx) ;
+        Scalar p = fluidState.pressure(phaseIdx);
         Scalar diffCont;
 
         if (phaseIdx==gPhaseIdx) {
-            Scalar diffAC = Dumux::BinaryCoeff::Air_Mesitylene::gasDiffCoeff(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
-            Scalar diffWC = Dumux::BinaryCoeff::H2O_Mesitylene::gasDiffCoeff(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
-            Scalar diffAW = Dumux::BinaryCoeff::H2O_Air::gasDiffCoeff(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
+            Scalar diffAC = Dumux::BinaryCoeff::Air_Mesitylene::gasDiffCoeff(T, p);
+            Scalar diffWC = Dumux::BinaryCoeff::H2O_Mesitylene::gasDiffCoeff(T, p);
+            Scalar diffAW = Dumux::BinaryCoeff::H2O_Air::gasDiffCoeff(T, p);
 
             const Scalar xga = fluidState.moleFraction(gPhaseIdx, airIdx);
             const Scalar xgw = fluidState.moleFraction(gPhaseIdx, H2OIdx);
             const Scalar xgc = fluidState.moleFraction(gPhaseIdx, NAPLIdx);
 
-            if (compIdx==NAPLIdx) return (1.- xgw)/(xga/diffAW + xgc/diffWC);
-            else if (compIdx==H2OIdx) return (1.- xgc)/(xgw/diffWC + xga/diffAC);
+            if (compIdx==NAPLIdx) return (1 - xgw)/(xga/diffAW + xgc/diffWC);
+            else if (compIdx==H2OIdx) return (1 - xgc)/(xgw/diffWC + xga/diffAC);
             else if (compIdx==airIdx) DUNE_THROW(Dune::InvalidStateException,
                                                  "Diffusivity of air in the gas phase "
                                                  "is constraint by sum of diffusive fluxes = 0 !\n");
-        } else if (phaseIdx==wPhaseIdx){
+        }
+        else if (phaseIdx==wPhaseIdx){
             Scalar diffACl = 1.e-9; // BinaryCoeff::Air_Mesitylene::liquidDiffCoeff(temperature, pressure);
             Scalar diffWCl = 1.e-9; // BinaryCoeff::H2O_Mesitylene::liquidDiffCoeff(temperature, pressure);
             Scalar diffAWl = 1.e-9; // BinaryCoeff::H2O_Air::liquidDiffCoeff(temperature, pressure);
@@ -390,8 +405,8 @@ public:
                            "Diffusivity of water in the water phase "
                            "is constraint by sum of diffusive fluxes = 0 !\n");
             };
-        } else if (phaseIdx==nPhaseIdx) {
-
+        }
+        else if (phaseIdx==nPhaseIdx) {
             DUNE_THROW(Dune::InvalidStateException,
                        "Diffusion coefficients of "
                        "substances in liquid phase are undefined!\n");
@@ -427,11 +442,11 @@ public:
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
             else if (compIdx == airIdx)
-                return Dumux::BinaryCoeff::H2O_Air::henry(T)/p;
+                return Dumux::BinaryCoeff::H2O_N2::henry(T)/p;
             else if (compIdx == NAPLIdx)
                 return Dumux::BinaryCoeff::H2O_Mesitylene::henry(T)/p;
+            assert(false);
         }
-
         // for the NAPL phase, we assume currently that nothing is
         // dissolved. this means that the affinity of the NAPL
         // component to the NAPL phase is much higher than for the
@@ -445,6 +460,7 @@ public:
                 return 1e6*phiNapl;
             else if (compIdx == H2OIdx)
                 return 1e6*phiNapl;
+            assert(false);
         }
 
         // for the gas phase, assume an ideal gas when it comes to
@@ -457,38 +473,77 @@ public:
     /*!
      * \brief Given all mole fractions in a phase, return the specific
      *        phase enthalpy [J/kg].
-     */
-    /*!
-     *  \todo This system neglects the contribution of gas-molecules in the liquid phase.
-     *        This contribution is probably not big. Somebody would have to find out the enthalpy of solution for this system. ...
+     *
+     * \todo This system neglects the contribution of gas-molecules in
+     *       the liquid phase.  This contribution is probably not
+     *       big. Somebody would have to find out the enthalpy of
+     *       solution for this system. ...
      */
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
                            const ParameterCache &paramCache,
                            int phaseIdx)
     {
+        Scalar T = fluidState.temperature(phaseIdx) ;
+        Scalar p = fluidState.pressure(phaseIdx);
+
         if (phaseIdx == wPhaseIdx) {
-            return H2O::liquidEnthalpy(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
+            return H2O::liquidEnthalpy(T, p);
         }
         else if (phaseIdx == nPhaseIdx) {
-            return NAPL::liquidEnthalpy(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
+            return NAPL::liquidEnthalpy(T, p);
         }
-        else if (phaseIdx == gPhaseIdx) {  // gas phase enthalpy depends strongly on composition
-            Scalar hgc = NAPL::gasEnthalpy(fluidState.temperature(phaseIdx),
-                                           fluidState.pressure(phaseIdx));
-            Scalar hgw = H2O::gasEnthalpy(fluidState.temperature(phaseIdx),
-                                          fluidState.pressure(phaseIdx));
-            Scalar hga = Air::gasEnthalpy(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx)); // pressure is only a dummy here (not dependent on pressure, just temperature)
-
+        else if (phaseIdx == gPhaseIdx) {
+            // gas phase enthalpy depends strongly on composition
             Scalar result = 0;
-            result += hgw * fluidState.massFraction(gPhaseIdx, H2OIdx);
-            result += hga * fluidState.massFraction(gPhaseIdx, airIdx);
-            result += hgc * fluidState.massFraction(gPhaseIdx, NAPLIdx);
+            result += H2O::gasEnthalpy(T, p) * fluidState.massFraction(gPhaseIdx, H2OIdx);
+            result += NAPL::gasEnthalpy(T, p) * fluidState.massFraction(gPhaseIdx, airIdx);
+            result += Air::gasEnthalpy(T, p) * fluidState.massFraction(gPhaseIdx, NAPLIdx);
 
             return result;
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
+    
+    /*!
+     * \brief Thermal conductivity of a fluid phase [W/(m K)].
+     *
+     * Use the conductivity of air and water as a approximation.
+     *
+     * \param fluidState An abitrary fluid state
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    template <class FluidState>
+    static Scalar thermalConductivity(const FluidState &fluidState,
+                                      const ParameterCache &paramCache,
+                                      int phaseIdx)
+    {
+        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+
+        Scalar T = fluidState.temperature(phaseIdx) ;
+        Scalar p = fluidState.pressure(phaseIdx);
+
+        if (phaseIdx == wPhaseIdx){ // water phase
+            return H2O::liquidThermalConductivity(T, p);
+        }
+        else if (phaseIdx == gPhaseIdx) { // gas phase
+            Scalar lambdaDryAir = Air::gasThermalConductivity(T, p);
+            return lambdaDryAir;
+        }
+        else { // NAPL phase
+            // Taken from: 
+            //
+            // D. K. H. Briggs: "Thermal Conductivity of Liquids",
+            // Ind. Eng. Chem., 1957, 49 (3), pp 418–421
+            //
+            // Convertion to SI units: 
+            // 344e-6 cal/(s cm K) = 0.0143964 J/(s m K)
+            return 0.0143964;
+        }
+
+        assert(0);
+    }
+
 
 private:
     static Scalar waterPhaseDensity_(Scalar T, Scalar pw, Scalar xww, Scalar xwa, Scalar xwc)
