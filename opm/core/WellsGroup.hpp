@@ -10,17 +10,13 @@
 
 namespace Opm
 {
-
-    struct ExceedInformation {
-        std::string group_name_;
-        int well_index_;
-        double surplus_;
-    };
-    
-    struct WellControlResult {
-        std::vector<ExceedInformation> oil_rate_;
-        std::vector<ExceedInformation> fluid_rate_;
-        std::vector<ExceedInformation> bhp_;
+    class WellNode;
+    struct WellPhasesSummed {
+        WellPhasesSummed();
+        double bhp_sum;
+        double rate_sum;
+        
+        void operator+=(const WellPhasesSummed& other);
     };
 
     class WellsGroupInterface
@@ -64,6 +60,17 @@ namespace Opm
         /// Calculates the number of leaf nodes in the given group. 
         /// A leaf node is defined to have one leaf node in its group.
         virtual int numberOfLeafNodes() = 0;
+
+        /// Fills the WellControlResult parameter with all exceed information
+        virtual bool conditionsMet(const std::vector<double>& well_bhp,
+                                   const std::vector<double>& well_rate,
+                                   WellPhasesSummed& summed_phases,
+                                   const double epsilon = 1e-8) = 0;
+        
+        virtual void applyControl(const WellControlType type) = 0;
+        
+        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values) = 0;
+        
     protected:
            WellsGroupInterface* parent_;
 
@@ -86,17 +93,18 @@ namespace Opm
 
         void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
         
-        void conditionsMet(const std::vector<double>& well_bhp,
-                           const std::vector<double>& well_rate,
-                           const UnstructuredGrid& grid,
-                           const struct Wells* wells,
-                           int index_of_well,
-                           WellControlResult& result,
-                           double epsilon = 1e-8);
+        virtual bool conditionsMet(const std::vector<double>& well_bhp,
+                                   const std::vector<double>& well_rate,
+                                   WellPhasesSummed& summed_phases,
+                                   const double epsilon = 1e-8);
+        
         
         virtual void calculateGuideRates();
 
         virtual int numberOfLeafNodes();
+        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values);
+        virtual void applyControl(const WellControlType type);
+
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -111,19 +119,25 @@ namespace Opm
                 InjectionSpecification inj_spec);
 
         virtual WellsGroupInterface* findGroup(std::string name_of_node);
-        virtual void conditionsMet(const std::vector<double>& well_bhp,
-                                   const std::vector<double>& well_rate, 
-                                   const UnstructuredGrid& grid,
-                                   WellControlResult& result,
-                                   double epsilon=1e-8);
+        virtual bool conditionsMet(const std::vector<double>& well_bhp,
+                                   const std::vector<double>& well_rate,
+                                   WellPhasesSummed& summed_phases,
+                                   const double epsilon = 1e-8);
+        
         virtual bool isLeafNode() const;
         
-        void setWellsPointer(const struct Wells* wells, int self_index);
+        void setWellsPointer(Wells* wells, int self_index);
         
         virtual void calculateGuideRates();
         virtual int numberOfLeafNodes();
+        
+        void shutWell();
+        
+        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values);
+        virtual void applyControl(const WellControlType type);
+        
     private:
-        const struct Wells* wells_;
+        Wells* wells_;
         int self_index_;
     };
 

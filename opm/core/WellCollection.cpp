@@ -93,15 +93,17 @@ namespace Opm
         return NULL;
     }
     
-    void WellCollection::conditionsMet(const std::vector<double>& well_bhp,
+    bool WellCollection::conditionsMet(const std::vector<double>& well_bhp,
                                        const std::vector<double>& well_rate, 
-                                       const UnstructuredGrid& grid,
-                                       WellControlResult& result,
-                                       double epsilon) const
+                                       double epsilon)
     {
-        for (size_t i = 0; i < leaf_nodes_.size(); i++) {
-            leaf_nodes_[i]->conditionsMet(well_bhp, well_rate, grid, result, epsilon);
-        }        
+        for (size_t i = 0; i < roots_.size(); i++) {
+            WellPhasesSummed phases;
+            if(!roots_[i]->conditionsMet(well_bhp, well_rate, phases, epsilon)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     void WellCollection::calculateGuideRates()
@@ -111,7 +113,7 @@ namespace Opm
         }
     }
     
-    void WellCollection::setWellsPointer(const Wells* wells) {
+    void WellCollection::setWellsPointer(Wells* wells) {
         for(size_t i = 0; i < leaf_nodes_.size(); i++) {
             leaf_nodes_[i]->setWellsPointer(wells, i);
         }

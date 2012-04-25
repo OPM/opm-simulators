@@ -43,14 +43,12 @@ namespace Opm
                       const std::string& parent,
                       const EclipseGridParser& deck);
 
-        /// Builds the WellControlResult object for the current well group hierachy. 
-        void conditionsMet(const std::vector<double>& well_bhp,
+        bool conditionsMet(const std::vector<double>& well_bhp,
                            const std::vector<double>& well_rate, 
-                           const UnstructuredGrid& grid,
-                           WellControlResult& result, 
-                           const double epsilon=1e-8) const;
+                           const double epsilon=1e-8);
+        
         /// Adds the well pointer to each leaf node (does not take ownership).
-        void setWellsPointer(const Wells* wells);
+        void setWellsPointer(Wells* wells);
         
         const std::vector<WellNode*>& getLeafNodes() const;
         

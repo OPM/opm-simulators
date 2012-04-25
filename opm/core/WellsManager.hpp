@@ -51,9 +51,6 @@ namespace Opm
 	/// Destructor.
 	~WellsManager();
         
-        /// Apply control results
-        /// \param[in] result The result of a run to conditionsMet on WellCollection
-        void applyControl(const WellControlResult& result);
         
 	/// Access the managed Wells.
 	/// The method is named similarly to c_str() in std::string,
@@ -62,6 +59,9 @@ namespace Opm
 
         /// Access the well group hierarchy.
         const WellCollection& wellCollection() const;
+        
+        bool conditionsMet(const std::vector<double>& well_bhp, 
+                           const std::vector<double>& well_rate);
 
     private:
 	// Disable copying and assignment.
@@ -72,13 +72,7 @@ namespace Opm
 	Wells* w_;
         WellCollection well_collection_;
 
-        /// Apply control results for a specific target (OIL, WATER, etc)
-        /// \param[in] exceed_info will for each group name contain all the 
-        ///                        exceed informations for the given mode.
-        /// \param[in] well_collection The associated well_collection.
-        /// \param[in] mode The ControlMode to which the violations apply.
-        void applyControl(const std::map<std::string, std::vector<ExceedInformation> >& exceed_info,
-                          ProductionSpecification::ControlMode mode);
+       
 
 
     };

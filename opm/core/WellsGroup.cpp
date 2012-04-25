@@ -12,6 +12,18 @@
 namespace Opm
 {
 
+    WellPhasesSummed::WellPhasesSummed() 
+    : bhp_sum(0.0), rate_sum(0.0)
+    {
+        
+    }
+    
+    void WellPhasesSummed::operator+=(const WellPhasesSummed& other) 
+    {
+        rate_sum += other.rate_sum;
+        bhp_sum += other.bhp_sum;
+    }
+    
     WellsGroupInterface::WellsGroupInterface(const std::string& myname,
             ProductionSpecification prod_spec,
             InjectionSpecification inje_spec)
@@ -114,65 +126,80 @@ namespace Opm
             }
         }
     }
+    
+    void WellsGroup::applyControl(const WellControlType type) 
+    {
+        for (size_t i = 0; i < children_.size(); ++i) {
+            children_[i]->applyControl(type);
+        }
+    }
 
     
-    void WellsGroup::conditionsMet(const std::vector<double>& well_bhp,
+    bool WellsGroup::conditionsMet(const std::vector<double>& well_bhp, 
                                    const std::vector<double>& well_rate, 
-                                   const UnstructuredGrid& grid,
-                                   const struct Wells* wells,
-                                   int index_of_well,
-                                   WellControlResult& result,
+                                   WellPhasesSummed& summed_phases, 
                                    const double epsilon)
     {
-        if (parent_ != NULL) {
-            (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, 
-                    well_rate,grid, wells, index_of_well, result, epsilon);
+        WellPhasesSummed child_phases_summed;
+        for(size_t i = 0; i < children_.size(); ++i) {
+            WellPhasesSummed current_child_phases_summed;
+            if(!children_[i]->conditionsMet(well_bhp, well_rate, 
+                                            current_child_phases_summed, epsilon)) {
+                return false;
+            }
+            child_phases_summed += current_child_phases_summed;
         }
         
-        int number_of_leaf_nodes = numberOfLeafNodes();
 
-        double bhp_target = 1e100;
-        double rate_target = 1e100;
-        switch(wells->type[index_of_well]) {
-        case INJECTOR:
-        {
-            const InjectionSpecification& inje_spec = injSpec();
-            bhp_target = inje_spec.BHP_limit_ / number_of_leaf_nodes;
-            rate_target = inje_spec.fluid_volume_max_rate_ / number_of_leaf_nodes;
-            break;
-        }
-        case PRODUCER:
-        {
-            const ProductionSpecification& prod_spec = prodSpec();
-            bhp_target = prod_spec.BHP_limit_ / number_of_leaf_nodes;
-            rate_target = prod_spec.fluid_volume_max_rate_ / number_of_leaf_nodes;
-            break;
-        }
-        }
+        double bhp_target = std::min(injSpec().BHP_limit_, prodSpec().BHP_limit_);
+        double rate_target = std::min(injSpec().fluid_volume_max_rate_, 
+                                      prodSpec().fluid_volume_max_rate_);
         
-        if (well_bhp[index_of_well] - bhp_target > epsilon) {
+        double bhp_sum = child_phases_summed.bhp_sum;
+        double rate_sum = child_phases_summed.rate_sum;
+        if (bhp_sum - bhp_target > epsilon) {
             std::cout << "BHP not met" << std::endl;
             std::cout << "BHP limit was " << bhp_target << std::endl;
-            std::cout << "Actual bhp was " << well_bhp[index_of_well] << std::endl;
-            ExceedInformation info;
-            info.group_name_ = name();
-            info.surplus_ = well_bhp[index_of_well] - bhp_target;
-            info.well_index_ = index_of_well;
-            result.bhp_.push_back(info);
+            std::cout << "Actual bhp was " << bhp_sum << std::endl;
             
+            switch(prodSpec().procedure_) {
+            case ProductionSpecification::WELL:
+                getWorstOffending(well_bhp).first->shutWell();
+                return false;
+                break;
+            case ProductionSpecification::RATE:
+                applyControl(BHP);
+                return false;
+                break;
+            default:
+                // Nothing do to;
+                break;
+            }
         }
-        if(well_rate[index_of_well] - rate_target > epsilon) {
+        if(rate_sum - rate_target > epsilon) {
             std::cout << "well_rate not met" << std::endl;
-            std::cout << "target = " << rate_target << ", well_rate[index_of_well] = " << well_rate[index_of_well] << std::endl;
+            std::cout << "target = " << rate_target 
+                      << ", well_rate[index_of_well] = " 
+                      << rate_sum << std::endl;
             std::cout << "Group name = " << name() << std::endl;
             
-            ExceedInformation info;
-            info.group_name_ = name();
-            info.surplus_ = well_rate[index_of_well] - rate_target;
-            info.well_index_ = index_of_well;
-            result.fluid_rate_.push_back(info);
+            switch(prodSpec().procedure_) {
+            case ProductionSpecification::WELL:
+                getWorstOffending(well_rate).first->shutWell();
+                return false;
+                break;
+            case ProductionSpecification::RATE:
+                applyControl(RATE);
+                return false;
+                break;
+            default:
+                // Nothing do to;
+                break;
+            }
         }
-
+        
+        summed_phases += child_phases_summed;
+        return true;
     }
 
     void WellsGroup::addChild(std::tr1::shared_ptr<WellsGroupInterface> child)
@@ -193,6 +220,18 @@ namespace Opm
         return sum;
     }
     
+    std::pair<WellNode*, double> WellsGroup::getWorstOffending(const std::vector<double>& values) 
+    {
+        std::pair<WellNode*, double> max;
+        for (size_t i = 0; i < children_.size(); i++) {
+            std::pair<WellNode*, double> child_max = children_[i]->getWorstOffending(values);
+            if (i == 0 || max.second < child_max.second) {
+                max = child_max;
+            }
+        }
+        return max;
+    }
+    
     WellNode::WellNode(const std::string& myname,
             ProductionSpecification prod_spec,
             InjectionSpecification inj_spec)
@@ -200,19 +239,13 @@ namespace Opm
     {
     }
 
-    void WellNode::conditionsMet(const std::vector<double>& well_bhp,
+    bool WellNode::conditionsMet(const std::vector<double>& well_bhp, 
                                  const std::vector<double>& well_rate, 
-                                 const UnstructuredGrid& grid,
-                                 WellControlResult& result,
+                                 WellPhasesSummed& summed_phases, 
                                  const double epsilon)
     {
         
-        if (parent_ != NULL) {
-            (static_cast<WellsGroup*> (parent_))
-                ->conditionsMet(well_bhp, well_rate, grid, wells_,
-                                self_index_, result, epsilon);
-        }
-
+        
         // Check for self:
         if (wells_->type[self_index_] == PRODUCER) {
             double bhp_diff = well_bhp[self_index_] - prodSpec().BHP_limit_;
@@ -223,21 +256,14 @@ namespace Opm
                 std::cout << "BHP exceeded, bhp_diff = " << bhp_diff << std::endl;
                 std::cout << "BHP_limit = " << prodSpec().BHP_limit_ << std::endl;
                 std::cout << "BHP = " << well_bhp[self_index_] << std::endl; 
-
-                ExceedInformation info;
-                info.group_name_ = name();
-                info.surplus_ = bhp_diff;
-                info.well_index_ = self_index_;
-                result.bhp_.push_back(info);
+                shutWell();
+                return false;
             }
             
             if (rate_diff > epsilon) {
-                ExceedInformation info;
-                info.group_name_ = name();
-                info.surplus_ = rate_diff;
-                info.well_index_ = self_index_;
-                result.fluid_rate_.push_back(info);
                 std::cout << "Rate exceeded, rate_diff = " << rate_diff << std::endl;
+                shutWell();
+                return false;
             }
         } else {
             double bhp_diff = well_bhp[self_index_] - injSpec().BHP_limit_;
@@ -246,22 +272,20 @@ namespace Opm
             
            if (bhp_diff > epsilon) {
                std::cout << "BHP exceeded, bhp_diff = " << bhp_diff<<std::endl;
-               ExceedInformation info;
-               info.group_name_ = name();
-               info.surplus_ = bhp_diff;
-               info.well_index_ = self_index_;
-               result.bhp_.push_back(info);
+               shutWell();
+               return false;
            }
            if (rate_diff > epsilon) {
                std::cout << "Flow diff exceeded, flow_diff = " << rate_diff << std::endl;
-               ExceedInformation info;
-               info.group_name_ = name();
-               info.surplus_ = rate_diff;
-               info.well_index_ = self_index_;
-               result.fluid_rate_.push_back(info);
+               shutWell();
+               return false;
            }
             
         }
+        
+        summed_phases.bhp_sum = well_bhp[self_index_];
+        summed_phases.rate_sum = well_rate[self_index_];
+        return true;
     }
 
     WellsGroupInterface* WellNode::findGroup(std::string name_of_node)
@@ -279,7 +303,7 @@ namespace Opm
         return true;
     }
 
-    void WellNode::setWellsPointer(const struct Wells* wells, int self_index)
+    void WellNode::setWellsPointer(Wells* wells, int self_index)
     {
         wells_ = wells;
         self_index_ = self_index;
@@ -293,6 +317,40 @@ namespace Opm
     int WellNode::numberOfLeafNodes() 
     {
         return 1;
+    }
+    
+    void WellNode::shutWell() 
+    {
+        wells_->ctrls[self_index_]->target[0] = 0.0;
+    }
+    
+    std::pair<WellNode*, double> WellNode::getWorstOffending(const std::vector<double>& values) {
+        return std::make_pair<WellNode*, double>(this, values[self_index_]);
+    }
+    
+    void WellNode::applyControl(const WellControlType type)
+    {
+        wells_->ctrls[self_index_]->type[0] = type;
+        double target = 0.0;
+        switch(type) {
+        case BHP:
+            if(wells_->type[self_index_] == INJECTOR) {
+                target = injSpec().BHP_limit_;
+            }
+            else {
+                target = prodSpec().BHP_limit_;
+            }
+            break;
+        case RATE:
+            if(wells_->type[self_index_] == INJECTOR) {
+                target = injSpec().fluid_volume_max_rate_;
+            }
+            else {
+                target = prodSpec().fluid_volume_max_rate_;
+            }
+            break;
+        }
+        wells_->ctrls[self_index_]->target[0] = target;
     }
 
     namespace
