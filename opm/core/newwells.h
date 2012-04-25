@@ -45,16 +45,20 @@ enum SurfaceComponent { WATER = 0, OIL = 1, GAS = 2 };
 
 
 /** Controls for a single well.
+
  *  Each control specifies a well rate or bottom-hole pressure. Only
  *  one control can be active at a time, indicated by current. The
  *  meaning of each control's target value depends on the control
  *  type, for BHP controls it is a pressure in Pascal, for RATE
- *  controls it is a volumetric rate in cubic(meter)/second. The
- *  active control as an equality constraint, whereas the
+ *  controls it is a volumetric rate in cubic(meter)/second. The sign
+ *  convention for RATE targets is as follows:
+ *    (+) Fluid flowing into reservoir, i.e. injecting.
+ *    (-) Fluid flowing out of reservoir, i.e. producing.
+ *  The active control as an equality constraint, whereas the
  *  non-active controls should be interpreted as inequality
- *  constraints (upper or lower bounds).  For instance, a PRODUCER's BHP
- *  constraint defines a minimum acceptable bottom-hole pressure value
- *  for the well.
+ *  constraints (upper or lower bounds).  For instance, a PRODUCER's
+ *  BHP constraint defines a minimum acceptable bottom-hole pressure
+ *  value for the well.
  */
 struct WellControls
 {
