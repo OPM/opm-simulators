@@ -313,7 +313,7 @@ namespace Opm
                                                        bool if_with_der) const
     {
         double mob[2];
-        double dmob_ds[2];
+        double dmob_ds[4];
         double dmobwat_dc;
         effectiveMobilitiesBoth(c, cmax, visc, relperm, drelperm_ds,
                                 mob, dmob_ds, dmobwat_dc, if_with_der);
