@@ -828,7 +828,7 @@ namespace Opm
     void TransportModelPolymer::fracFlow(double s, double c, double cmax,
                                          int cell, double& ff) const
     {
-        double* dummy;
+        double dummy[2];
         fracFlowBoth(s, c, cmax, cell, ff,  dummy, false);
     }
 
