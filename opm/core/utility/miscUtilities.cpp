@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <functional>
 #include <cmath>
+#include <iterator>
 
 namespace Opm
 {
@@ -491,6 +492,62 @@ namespace Opm
             os << data_[3 * i] / Opm::unit::day << "   "
                     << data_[3 * i + 1] << "   "
                     << data_[3 * i + 2] << '\n';
+        }
+    }
+
+
+    void WellReport::push(const IncompPropertiesInterface& props,
+                          const Wells& wells,
+                          const std::vector<double>& saturation,
+                          const double time,
+                          const std::vector<double>& well_bhp,
+                          const std::vector<double>& well_perfrates)
+    {
+        int nw = well_bhp.size();
+        ASSERT(nw == wells.number_of_wells);
+        if (props.numPhases() != 2) {
+            THROW("WellReport for now assumes two phase flow.");
+        }
+        const double* visc = props.viscosity();
+        std::vector<double> data_now;
+        data_now.reserve(1 + 2*nw);
+        data_now.push_back(time);
+        for (int w = 0; w < nw; ++w) {
+            data_now.push_back(well_bhp[w]);
+            double well_rate_total = 0.0;
+            double well_rate_water = 0.0;
+            for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
+                const double perf_rate = well_perfrates[perf];
+                well_rate_total += perf_rate;
+                if (perf_rate > 0.0) {
+                    // Injection.
+                    well_rate_water += perf_rate*wells.zfrac[3*w + WATER];
+                } else {
+                    // Production.
+                    const int cell = wells.well_cells[perf];
+                    double mob[2];
+                    props.relperm(1, &saturation[2*cell], &cell, mob, 0);
+                    mob[0] /= visc[0];
+                    mob[1] /= visc[1];
+                    const double fracflow = mob[0]/(mob[0] + mob[1]);
+                    well_rate_water += perf_rate*fracflow;
+                }
+            }
+            data_now.push_back(well_rate_total);
+            data_now.push_back(well_rate_water/well_rate_total);
+        }
+        data_.push_back(data_now);
+    }
+
+
+
+
+    void WellReport::write(std::ostream& os) const
+    {
+        const int sz = data_.size();
+        for (int i = 0; i < sz; ++i) {
+            std::copy(data_[i].begin(), data_[i].end(), std::ostream_iterator<double>(os, "\t"));
+            os << '\n';
         }
     }
 

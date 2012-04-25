@@ -212,6 +212,23 @@ namespace Opm
         std::vector<double> data_;
     };
 
+    /// Well reporting utility.
+    class WellReport
+    {
+    public:
+        /// Add a report point.
+        void push(const IncompPropertiesInterface& props,
+                  const Wells& wells,
+                  const std::vector<double>& saturation,
+                  const double time,
+                  const std::vector<double>& well_bhp,
+                  const std::vector<double>& well_perfrates);
+        /// Write report to a stream.
+        void write(std::ostream& os) const;
+    private:
+        std::vector<std::vector<double> > data_;
+    };
+
 } // namespace Opm
 
 #endif // OPM_MISCUTILITIES_HEADER_INCLUDED
