@@ -43,6 +43,24 @@ namespace Opm
                       const std::string& parent,
                       const EclipseGridParser& deck);
 
+        /// Checks if each condition is met, applies well controls where needed
+        /// (that is, it either changes the active control of violating wells, or shuts
+        /// down wells). Only one change is applied per invocation. Typical use will be
+        /// \code
+        /// solve_pressure();
+        /// while(!collection.conditionsMet(well_bhp, well_rate, summed_phases)) {
+        ///     solve_pressure();
+        /// }
+        /// \endcode
+        ///
+        /// \note It's highly recommended to use the conditionsMet found in WellsManager.
+        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
+        ///                         to be ordered the same way as the related Wells-struct.
+        /// \param[in]    well_rate A vector containing the rate for each well. Is assumed 
+        ///                         to be ordered the same way as the related Wells-struct.
+        /// \param[in]    epsilon   The error tolerated for each inequality. Formally, it will accept
+        ///                         (a - b <= epsilon) as (a <= b).
+        /// \return true if no violations were found, false otherwise (false also implies a change).
         bool conditionsMet(const std::vector<double>& well_bhp,
                            const std::vector<double>& well_rate, 
                            const double epsilon=1e-8);
@@ -50,11 +68,22 @@ namespace Opm
         /// Adds the well pointer to each leaf node (does not take ownership).
         void setWellsPointer(Wells* wells);
         
+        /// \return A set of pointers to every well in the collection
         const std::vector<WellNode*>& getLeafNodes() const;
         
+        /// This will, for each group \f$G\f$ for each well \f$w\in G\f$ calculate 
+        /// the new guide rate \f$\tilde{g}_w\f$ for each well as
+        /// \f[ \tilde{g}_w := \frac{g_w}{\sum_{w'\in G} g_{w'}}\f]
         void calculateGuideRates();
         
+        /// Finds the group with the given name.
+        /// \param[in] the name of the group
+        /// \return the pointer to the group if found, NULL otherwise
         WellsGroupInterface* findNode(std::string name);
+        
+        /// Finds the group with the given name.
+        /// \param[in] the name of the group
+        /// \return the pointer to the group if found, NULL otherwise
         const WellsGroupInterface* findNode(std::string name) const;
         
     private:

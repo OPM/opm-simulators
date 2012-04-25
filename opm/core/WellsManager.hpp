@@ -60,6 +60,21 @@ namespace Opm
         /// Access the well group hierarchy.
         const WellCollection& wellCollection() const;
         
+        /// Checks if each condition is met, applies well controls where needed
+        /// (that is, it either changes the active control of violating wells, or shuts
+        /// down wells). Only one change is applied per invocation. Typical use will be
+        /// \code
+        /// solve_pressure();
+        /// while(!wells.conditionsMet(well_bhp, well_rate)) {
+        ///     solve_pressure();
+        /// }
+        /// \endcode
+        ///
+        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
+        ///                         to be ordered the same way as the related Wells-struct.
+        /// \param[in]    well_rate A vector containing the rate for each well. Is assumed 
+        ///                         to be ordered the same way as the related Wells-struct.
+        /// \return true if no violations were found, false otherwise (false also implies a change).
         bool conditionsMet(const std::vector<double>& well_bhp, 
                            const std::vector<double>& well_rate);
 
