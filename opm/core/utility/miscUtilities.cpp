@@ -413,7 +413,7 @@ namespace Opm
 	    }
 	    const double flow = wells.ctrls[w]->target[0];
 	    const double cell = wells.well_cells[wells.well_connpos[w]];
-	    src[cell] = (wells.type[w] == INJECTOR) ? flow : -flow;
+	    src[cell] = flow;
 	}
     }
 
