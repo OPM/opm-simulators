@@ -54,7 +54,7 @@ namespace Opm
         
         /// \returns the pointer to the WellsGroupInterface with the given name. NULL if 
         ///          the name is not found.a
-        virtual WellsGroupInterface* findGroup(std::string name_of_node) = 0;
+        virtual WellsGroupInterface* findGroup(const std::string& name_of_node) = 0;
 
         /// Sets the parent
         /// \param[in] parent the pointer to the parent
@@ -125,7 +125,7 @@ namespace Opm
                    ProductionSpecification prod_spec,
                    InjectionSpecification inj_spec);
 
-        virtual WellsGroupInterface* findGroup(std::string name_of_node);
+        virtual WellsGroupInterface* findGroup(const std::string& name_of_node);
 
         void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
         
@@ -154,7 +154,7 @@ namespace Opm
                  ProductionSpecification prod_spec,
                 InjectionSpecification inj_spec);
 
-        virtual WellsGroupInterface* findGroup(std::string name_of_node);
+        virtual WellsGroupInterface* findGroup(const std::string& name_of_node);
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
                                    const std::vector<double>& well_rate,
                                    WellPhasesSummed& summed_phases,

@@ -69,7 +69,7 @@ namespace Opm
         return leaf_nodes_;
     }
 
-    WellsGroupInterface* WellCollection::findNode(std::string name)
+    WellsGroupInterface* WellCollection::findNode(const std::string& name)
     {
 
         for (size_t i = 0; i < roots_.size(); i++) {
@@ -81,7 +81,7 @@ namespace Opm
         return NULL;
     }
     
-    const WellsGroupInterface* WellCollection::findNode(std::string name) const
+    const WellsGroupInterface* WellCollection::findNode(const std::string& name) const
     {
 
         for (size_t i = 0; i < roots_.size(); i++) {

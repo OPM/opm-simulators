@@ -90,7 +90,7 @@ namespace Opm
         return injection_specification_;
     }
 
-    WellsGroupInterface* WellsGroup::findGroup(std::string name_of_node)
+    WellsGroupInterface* WellsGroup::findGroup(const std::string& name_of_node)
     {
         if (name() == name_of_node) {
             return this;
@@ -288,7 +288,7 @@ namespace Opm
         return true;
     }
 
-    WellsGroupInterface* WellNode::findGroup(std::string name_of_node)
+    WellsGroupInterface* WellNode::findGroup(const std::string& name_of_node)
     {
         if (name() == name_of_node) {
             return this;

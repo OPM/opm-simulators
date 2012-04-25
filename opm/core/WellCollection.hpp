@@ -79,12 +79,12 @@ namespace Opm
         /// Finds the group with the given name.
         /// \param[in] the name of the group
         /// \return the pointer to the group if found, NULL otherwise
-        WellsGroupInterface* findNode(std::string name);
+        WellsGroupInterface* findNode(const std::string& name);
         
         /// Finds the group with the given name.
         /// \param[in] the name of the group
         /// \return the pointer to the group if found, NULL otherwise
-        const WellsGroupInterface* findNode(std::string name) const;
+        const WellsGroupInterface* findNode(const std::string& name) const;
         
     private:
         // To account for the possibility of a forest
