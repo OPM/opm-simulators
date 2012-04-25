@@ -148,10 +148,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    {
-        return molarLiquidDensity_(temperature)*molarMass(); // [kg/m^3]
-
-    }
+    { return molarLiquidDensity_(temperature)*molarMass(); }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
@@ -226,11 +223,16 @@ protected:
         temperature = std::min(temperature, 500.0); // regularization
         temperature = std::max(temperature, 250.0);
 
-        const Scalar Z_RA = 0.2556; // from equation
+        const Scalar Z_RA = 0.2556;
         const Scalar expo = 1.0 + std::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
-        Scalar V = Constants::R*criticalTemperature()/criticalPressure()*std::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
+        // liquid molar volume [cm^3/mol]
+        Scalar V = 
+            Constants::R
+            * criticalTemperature()
+            / criticalPressure()
+            * std::pow(Z_RA, expo);
 
-        return 1.0/V; // molar density [mol/m^3]
+        return 1.0/V; // convert to molar density [mol/m^3]
     }
 
     /*!
@@ -251,7 +253,7 @@ protected:
         const Scalar n = 0.375;
         const Scalar DH_vap = DH_v_b * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
 
-        return (DH_vap/0.120); // we need [J/kg]
+        return DH_vap/molarMass(); // convert to [J/kg]
     }
 
     /*!
@@ -266,7 +268,7 @@ protected:
         /* linear interpolation between table values [J/(mol K)]*/
         Scalar H, CH3, C6H5;
         if(temperature<298.) {
-            // extrapolation for Temperature<273 */
+            // extrapolation for temperature < 273K
             H = 13.4+1.2*(temperature-273.0)/25.;
             CH3 = 40.0+1.6*(temperature-273.0)/25.;
             C6H5 = 113.0+4.2*(temperature-273.0)/25.;
@@ -284,8 +286,8 @@ protected:
         else {
             assert(temperature>=348.0);
 
-            /* take care: extrapolation for Temperature>373 */
-            H = 16.7+2.1*(temperature-348.0)/25.;          /* leads probably to underestimates    */
+            // extrapolation for temperature > 373K
+            H = 16.7+2.1*(temperature-348.0)/25.; // probably  leads to underestimates
             CH3 = 45.8+2.5*(temperature-348.0)/25.;
             C6H5 = 129.7+6.3*(temperature-348.0)/25.;
         }
