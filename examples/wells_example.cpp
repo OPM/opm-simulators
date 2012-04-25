@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     
     computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
     WellControlResult well_control_results;
-    wells.wellCollection().conditionsMet(well_bhp, well_rate, *grid.c_grid(), state.saturation(), well_control_results );
+    wells.wellCollection().conditionsMet(well_bhp, well_rate, *grid.c_grid(), well_control_results );
     wells.applyControl(well_control_results);
 
 #if 0
