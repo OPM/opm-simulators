@@ -57,7 +57,7 @@ namespace Opm
         parent_as_group->addChild(child);
 
         if(child->isLeafNode()) {
-            leaf_nodes_.push_back(child);
+            leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
         }
         
         child->setParent(parent);
@@ -65,7 +65,7 @@ namespace Opm
     
     
     
-    const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& WellCollection::getLeafNodes() const {
+    const std::vector<WellNode*>& WellCollection::getLeafNodes() const {
         return leaf_nodes_;
     }
 
@@ -100,7 +100,7 @@ namespace Opm
                                        double epsilon) const
     {
         for (size_t i = 0; i < leaf_nodes_.size(); i++) {
-            static_cast<WellNode*>(leaf_nodes_[i].get())->conditionsMet(well_bhp, well_rate, grid, result, epsilon);
+            leaf_nodes_[i]->conditionsMet(well_bhp, well_rate, grid, result, epsilon);
         }        
     }
 
@@ -108,6 +108,12 @@ namespace Opm
     {
         for(size_t i = 0; i < roots_.size(); i++) {
             roots_[i]->calculateGuideRates();
+        }
+    }
+    
+    void WellCollection::setWellsPointer(const Wells* wells) {
+        for(size_t i = 0; i < leaf_nodes_.size(); i++) {
+            leaf_nodes_[i]->setWellsPointer(wells, i);
         }
     }
 }

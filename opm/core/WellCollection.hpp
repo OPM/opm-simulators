@@ -49,19 +49,22 @@ namespace Opm
                            const UnstructuredGrid& grid,
                            WellControlResult& result, 
                            const double epsilon=1e-8) const;
+        /// Adds the well pointer to each leaf node (does not take ownership).
+        void setWellsPointer(const Wells* wells);
         
-        const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
+        const std::vector<WellNode*>& getLeafNodes() const;
         
         void calculateGuideRates();
         
         WellsGroupInterface* findNode(std::string name);
         const WellsGroupInterface* findNode(std::string name) const;
+        
     private:
         // To account for the possibility of a forest
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > roots_;
         
         // This will be used to traverse the bottom nodes.
-        std::vector<std::tr1::shared_ptr<WellsGroupInterface> > leaf_nodes_;
+        std::vector<WellNode*> leaf_nodes_;
         
         
     };

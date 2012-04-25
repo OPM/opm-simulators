@@ -610,12 +610,7 @@ namespace Opm
 	}
 
         std::cout << "Made well struct" << std::endl;
-        // \TODO comment this.
-        for (size_t i = 0; i < well_collection_.getLeafNodes().size(); i++) {
-            WellNode* node = static_cast<WellNode*>(well_collection_.getLeafNodes()[i].get());
-            // We know that getLeafNodes() is ordered the same way as they're indexed in w_
-            node->setWellsPointer(w_, i);
-        }
+        well_collection_.setWellsPointer(w_);
     }
 
 
