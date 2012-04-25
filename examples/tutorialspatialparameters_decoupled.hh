@@ -48,7 +48,7 @@ namespace Properties
 NEW_TYPE_TAG(TutorialSpatialParametersDecoupled);
 
 // Set the spatial parameters
-SET_TYPE_PROP(TutorialSpatialParametersDecoupled, SpatialParameters,
+SET_TYPE_PROP(TutorialSpatialParametersDecoupled, SpatialParams,
         Dumux::TutorialSpatialParametersDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
 
 // Set the material law
