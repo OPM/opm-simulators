@@ -456,7 +456,7 @@ namespace Opm
         }
     } // anonymous namespace
 
-    std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(std::string name, const EclipseGridParser& deck)
+    std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name, const EclipseGridParser& deck)
     {
 
         std::tr1::shared_ptr<WellsGroupInterface> return_value;

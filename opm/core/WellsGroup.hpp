@@ -178,8 +178,10 @@ namespace Opm
         int self_index_;
     };
 
-    /// Doc me!
-    std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(std::string name, 
+    /// Creates the WellsGroupInterface for the given name
+    /// \param[in] name the name of the wells group.
+    /// \param[in] deck the deck from which to fetch information.
+    std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name, 
                                                                const EclipseGridParser& deck);
 
 
