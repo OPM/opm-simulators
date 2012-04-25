@@ -419,7 +419,8 @@ namespace Opm
 
 
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
-                    const double* densities, std::vector<double>& wdp, bool per_grid_cell)
+                    const double* densities, const double gravity, const bool per_grid_cell,
+                    std::vector<double>& wdp)
     {
         const int nw = wells.number_of_wells;
         const size_t np = per_grid_cell ?
@@ -456,7 +457,7 @@ namespace Opm
                 }
 
                 // Is the sign correct?
-                wdp.push_back(density * (cell_depth - depth_ref));
+                wdp.push_back(density * (cell_depth - depth_ref) * gravity);
             }
         }
     }
@@ -510,14 +511,14 @@ namespace Opm
         }
         const double* visc = props.viscosity();
         std::vector<double> data_now;
-        data_now.reserve(1 + 2*nw);
-        data_now.push_back(time);
+        data_now.reserve(1 + 3*nw);
+        data_now.push_back(time/unit::day);
         for (int w = 0; w < nw; ++w) {
-            data_now.push_back(well_bhp[w]);
+            data_now.push_back(well_bhp[w]/(unit::barsa));
             double well_rate_total = 0.0;
             double well_rate_water = 0.0;
             for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
-                const double perf_rate = well_perfrates[perf];
+                const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
                 well_rate_total += perf_rate;
                 if (perf_rate > 0.0) {
                     // Injection.
@@ -534,7 +535,11 @@ namespace Opm
                 }
             }
             data_now.push_back(well_rate_total);
-            data_now.push_back(well_rate_water/well_rate_total);
+            if (well_rate_total == 0.0) {
+                data_now.push_back(0.0);
+            } else {
+                data_now.push_back(well_rate_water/well_rate_total);
+            }
         }
         data_.push_back(data_now);
     }
