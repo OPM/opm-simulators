@@ -631,7 +631,7 @@ main(int argc, char** argv)
         ptime += pt;
 
         // Process transport sources (to include bdy terms).
-        Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0, reorder_src);
+        Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0, NULL, empty_vector_for_wells, reorder_src);
 
         // Find inflow rate.
         const double current_time = simtimer.currentTime();
