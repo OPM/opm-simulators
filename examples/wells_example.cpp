@@ -76,9 +76,17 @@ int main(int argc, char** argv) {
     std::vector<double> well_rate;
     
     computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
-    WellControlResult well_control_results;
-    wells.wellCollection().conditionsMet(well_bhp, well_rate, *grid.c_grid(), well_control_results );
-    wells.applyControl(well_control_results);
+
+    while (!wells.conditionsMet(well_bhp, well_rate)) {
+        std::cout << "Conditions not met for well, trying again" << std::endl;
+        pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
+        std::cout << "Solved" << std::endl;
+
+        for (size_t i = 0; i < well_rate_per_cell.size(); i++) {
+            std::cout << well_rate_per_cell[i] << std::endl;
+        }
+        computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
+    }
 
 #if 0
     std::vector<double> porevol;
