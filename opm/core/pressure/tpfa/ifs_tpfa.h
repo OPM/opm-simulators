@@ -69,6 +69,16 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   struct ifs_tpfa_data         *h     );
 
 void
+ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
+                           const struct ifs_tpfa_forces *F        ,
+                           const double                 *trans    ,
+                           const double                 *gpress   ,
+                           const double                 *porevol  ,
+                           const double                 *rock_comp,
+                           const double                  dt       ,
+                           const double                 *pressure ,
+                           struct ifs_tpfa_data         *h        );
+void
 ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
                     const struct ifs_tpfa_forces *F    ,
                     const double                 *trans,

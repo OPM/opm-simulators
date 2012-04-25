@@ -474,48 +474,15 @@ well_solution(const struct UnstructuredGrid *G   ,
 }
 
 
-/* ======================================================================
- * Public interface below separator.
- * ====================================================================== */
-
-/* ---------------------------------------------------------------------- */
-struct ifs_tpfa_data *
-ifs_tpfa_construct(struct UnstructuredGrid *G,
-                   struct Wells            *W)
-/* ---------------------------------------------------------------------- */
-{
-    struct ifs_tpfa_data *new;
-
-    new = malloc(1 * sizeof *new);
-
-    if (new != NULL) {
-        new->pimpl = impl_allocate(G, W);
-        new->A     = ifs_tpfa_construct_matrix(G, W);
-
-        if ((new->pimpl == NULL) || (new->A == NULL)) {
-            ifs_tpfa_destroy(new);
-            new = NULL;
-        }
-    }
-
-    if (new != NULL) {
-        new->b = new->pimpl->ddata;
-        new->x = new->b             + new->A->m;
-
-        new->pimpl->fgrav = new->x  + new->A->m;
-    }
-
-    return new;
-}
 
 
 /* ---------------------------------------------------------------------- */
-void
-ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
-                  const struct ifs_tpfa_forces *F     ,
-                  const double                 *trans ,
-                  const double                 *gpress,
-                  struct ifs_tpfa_data         *h     )
+static int
+assemble_incompressible(struct UnstructuredGrid      *G     ,
+                        const struct ifs_tpfa_forces *F     ,
+                        const double                 *trans ,
+                        const double                 *gpress,
+                        struct ifs_tpfa_data         *h     )
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, c, i, f, j1, j2;
@@ -582,9 +549,96 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
         }
     }
 
-    if (res_is_neumann && wells_are_rate) {
+    return res_is_neumann && wells_are_rate;
+}
+
+/* ======================================================================
+ * Public interface below separator.
+ * ====================================================================== */
+
+/* ---------------------------------------------------------------------- */
+struct ifs_tpfa_data *
+ifs_tpfa_construct(struct UnstructuredGrid *G,
+                   struct Wells            *W)
+/* ---------------------------------------------------------------------- */
+{
+    struct ifs_tpfa_data *new;
+
+    new = malloc(1 * sizeof *new);
+
+    if (new != NULL) {
+        new->pimpl = impl_allocate(G, W);
+        new->A     = ifs_tpfa_construct_matrix(G, W);
+
+        if ((new->pimpl == NULL) || (new->A == NULL)) {
+            ifs_tpfa_destroy(new);
+            new = NULL;
+        }
+    }
+
+    if (new != NULL) {
+        new->b = new->pimpl->ddata;
+        new->x = new->b             + new->A->m;
+
+        new->pimpl->fgrav = new->x  + new->A->m;
+    }
+
+    return new;
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
+                  const struct ifs_tpfa_forces *F     ,
+                  const double                 *trans ,
+                  const double                 *gpress,
+                  struct ifs_tpfa_data         *h     )
+/* ---------------------------------------------------------------------- */
+{
+    int system_singular;
+
+    system_singular = assemble_incompressible(G, F, trans, gpress, h);
+
+    if (system_singular) {
         /* Remove zero eigenvalue associated to constant pressure */
-        h->A->sa[0] *= 2;
+        h->A->sa[0] *= 2.0;
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
+                           const struct ifs_tpfa_forces *F        ,
+                           const double                 *trans    ,
+                           const double                 *gpress   ,
+                           const double                 *porevol  ,
+                           const double                 *rock_comp,
+                           const double                  dt       ,
+                           const double                 *pressure ,
+                           struct ifs_tpfa_data         *h        )
+/* ---------------------------------------------------------------------- */
+{
+    int c;
+    size_t j;
+    double d;
+
+    /* We don't need the return value, since the matrix always is nonsingular. */
+    assemble_incompressible(G, F, trans, gpress, h);
+
+    /*
+     * The extra term of the equation is
+     *
+     *     porevol*rock_comp*(p - p0)/dt.
+     *
+     * The p part goes on the diagonal, the p0 on the rhs.
+     */
+    for (c = 0; c < G->number_of_cells; ++c) {
+        j = csrmatrix_elm_index(c, c, h->A);
+        d = porevol[c] * rock_comp[c] / dt;
+        h->A->sa[j] += d;
+        h->b[c]     += d * pressure[c];
     }
 }
 

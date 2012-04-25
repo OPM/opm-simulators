@@ -208,27 +208,11 @@ namespace Opm
         F.totmob = &totmob[0];
         F.wdp = &wdp[0];
         
-	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
-
-        // TODO: this is a hack, it would be better to handle this in a
-        // (variant of) ifs_tpfa_assemble().
-        if (!rock_comp.empty()) {
-            // We must compensate for adjustment made in ifs_tpfa_assemble()
-            // to make the system nonsingular.
-            h_->A->sa[0] *= 0.5;
-
-            // The extra term of the equation is
-            //
-            //     porevol*rock_comp*(p - p0)/dt.
-            //
-            // The p part goes on the diagonal, the p0 on the rhs.
-            for (int c = 0; c < gg->number_of_cells; ++c) {
-                // Find diagonal
-                size_t j = csrmatrix_elm_index(c, c, h_->A);
-                double d = porevol[c] * rock_comp[c] / dt;
-                h_->A->sa[j] += d;
-                h_->b[c]     += d * pressure[c];
-            }
+        if (rock_comp.empty()) {
+            ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+        } else {
+            ifs_tpfa_assemble_comprock(gg, &F, &trans_[0], &gpress_omegaweighted_[0],
+                                       &porevol[0], &rock_comp[0], dt, &pressure[0], h_);
         }
 
 	linsolver_.solve(h_->A, h_->b, h_->x);
