@@ -416,22 +416,6 @@ namespace Opm
 	}
     }
 
-    void Watercut::push(double time, double fraction, double produced)
-    {
-        data_.push_back(time);
-        data_.push_back(fraction);
-        data_.push_back(produced);
-    }
-
-    void Watercut::write(std::ostream& os) const
-    {
-        int sz = data_.size() / 3;
-        for (int i = 0; i < sz; ++i) {
-            os << data_[3 * i] / Opm::unit::day << "   "
-                    << data_[3 * i + 1] << "   "
-                    << data_[3 * i + 2] << '\n';
-        }
-    }
 
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
                     const double* densities, std::vector<double>& wdp, bool per_grid_cell)
@@ -475,7 +459,8 @@ namespace Opm
             }
         }
     }
-    
+
+
     void computeFlowRatePerWell(const Wells& wells, const std::vector<double>& flow_rates_per_cell,
             std::vector<double>& flow_rates_per_well)
     {
@@ -489,6 +474,26 @@ namespace Opm
             flow_rates_per_well.push_back(flow_sum);
         }
     }
+
+
+
+    void Watercut::push(double time, double fraction, double produced)
+    {
+        data_.push_back(time);
+        data_.push_back(fraction);
+        data_.push_back(produced);
+    }
+
+    void Watercut::write(std::ostream& os) const
+    {
+        int sz = data_.size() / 3;
+        for (int i = 0; i < sz; ++i) {
+            os << data_[3 * i] / Opm::unit::day << "   "
+                    << data_[3 * i + 1] << "   "
+                    << data_[3 * i + 2] << '\n';
+        }
+    }
+
 
 
 } // namespace Opm
