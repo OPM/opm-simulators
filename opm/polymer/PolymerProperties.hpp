@@ -178,15 +178,15 @@ namespace Opm
                                  const double cmax,
                                  const double* visc,
                                  const double* relperm,
-                                 std::vector<double>& mob) const;
+                                 double* mob) const;
 
         void effectiveMobilitiesWithDer(const double c,
                                         const double cmax,
                                         const double* visc,
                                         const double* relperm,
                                         const double* drelpermds,
-                                        std::vector<double>& mob,
-                                        std::vector<double>& dmob_ds,
+                                        double* mob,
+                                        double*  dmob_ds,
                                         double& dmobwatdc) const;
 
         void effectiveMobilitiesBoth(const double c,
@@ -194,8 +194,8 @@ namespace Opm
                                      const double* visc,
                                      const double* relperm,
                                      const double* drelperm_ds,
-                                     std::vector<double>& mob,
-                                     std::vector<double>& dmob_ds,
+                                     double* mob,
+                                     double* dmob_ds,
                                      double& dmobwat_dc,
                                      bool if_with_der) const;
 
@@ -211,7 +211,7 @@ namespace Opm
                                            const double* relperm,
                                            const double* drelpermds,
                                            double& totmob,
-                                           std::vector<double>& dtotmob_dsdc) const;
+                                           double* dtotmob_dsdc) const;
 
         void effectiveTotalMobilityBoth(const double c,
                                         const double cmax,
@@ -219,7 +219,7 @@ namespace Opm
                                         const double* relperm,
                                         const double* drelperm_ds,
                                         double& totmob,
-                                        std::vector<double>& dtotmob_dsdc,
+                                        double* dtotmob_dsdc,
                                         bool if_with_der) const;
 
         void computeMc(const double& c, double& mc) const;

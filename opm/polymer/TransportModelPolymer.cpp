@@ -53,11 +53,11 @@ public:
     void computeGradientResS(const double* x, double* res, double* gradient) const;
     void computeGradientResC(const double* x, double* res, double* gradient) const;
     void computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const;
-    
-private: 
+
+private:
     void computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
                              const bool if_dres_s_dsdc, const bool if_dres_c_dsdc,
-                             double* res, double* dres_s_dsdc, 
+                             double* res, double* dres_s_dsdc,
                              double* dres_c_dsdc, double& mc, double& ff) const;
 };
 
@@ -349,7 +349,7 @@ namespace Opm
 #ifdef EXTRA_DEBUG_OUTPUT
 	    std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
 #endif
-	    return res;
+ 	    return res;
 	}
 
 	double lastSaturation() const
@@ -461,14 +461,14 @@ namespace Opm
     }
 
     void TransportModelPolymer::ResidualEquation::computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
-                             const bool if_dres_s_dsdc, const bool if_dres_c_dsdc,
-                             double* res, double* dres_s_dsdc, 
-                             double* dres_c_dsdc, double& mc, double& ff) const 
+                                                                      const bool if_dres_s_dsdc, const bool if_dres_c_dsdc,
+                                                                      double* res, double* dres_s_dsdc,
+                                                                      double* dres_c_dsdc, double& mc, double& ff) const
     {
         if ((if_dres_s_dsdc || if_dres_c_dsdc) && gradient_method == Analytic) {
             double s = x[0];
             double c = x[1];
-            std::vector<double>  dff_dsdc(2);
+            double  dff_dsdc[2];
             double mc_dc;
             double ads_dc;
             double ads;
@@ -498,7 +498,7 @@ namespace Opm
                     + dtpv*outflux*(dff_dsdc[1]*mc + ff*mc_dc);
             }
 
-        } else if (if_res_c || if_res_s) { 
+        } else if (if_res_c || if_res_s) {
             double s = x[0];
             double c = x[1];
             tm.fracFlow(s, c, cmax0, cell, ff);
@@ -514,7 +514,7 @@ namespace Opm
                     + dtpv*(outflux*ff*mc + influx_polymer);
             }
         }
-        
+
 	if ((if_dres_c_dsdc || if_dres_s_dsdc) && gradient_method == FinDif) {
 	    double epsi = 1e-8;
 	    double res_epsi[2];
@@ -578,7 +578,7 @@ namespace Opm
 	concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
 	cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
 	saturation_[cell] = res.lastSaturation();
-	fracFlow(saturation_[cell], concentration_[cell], cmax_[cell], cell, 
+	fracFlow(saturation_[cell], concentration_[cell], cmax_[cell], cell,
                  fractionalflow_[cell]);
 	computeMc(concentration_[cell], mc_[cell]);
     }
@@ -825,43 +825,44 @@ namespace Opm
 		  << num_iters << " iterations." << std::endl;
     }
 
-
     void TransportModelPolymer::fracFlow(double s, double c, double cmax,
                                          int cell, double& ff) const
     {
-        std::vector<double> dummy;
+        double* dummy;
         fracFlowBoth(s, c, cmax, cell, ff,  dummy, false);
     }
-    
-    void TransportModelPolymer::fracFlowWithDer(double s, double c, double cmax, 
-                                                int cell, double& ff, 
-                                                std::vector<double>& dff_dsdc) const
+
+    void TransportModelPolymer::fracFlowWithDer(double s, double c, double cmax,
+                                                int cell, double& ff,
+                                                double* dff_dsdc) const
     {
         fracFlowBoth(s, c, cmax, cell, ff, dff_dsdc, true);
     }
 
-    void TransportModelPolymer::fracFlowBoth(double s, double c, double cmax, int cell, 
-                                             double& ff, std::vector<double>& dff_dsdc,
+    void TransportModelPolymer::fracFlowBoth(double s, double c, double cmax, int cell,
+                                             double& ff, double* dff_dsdc,
                                              bool if_with_der) const
     {
 	double relperm[2];
 	double drelperm_ds[4];
         double sat[2] = {s, 1 - s};
-	props_.relperm(1, sat, &cell, relperm, drelperm_ds);
-        std::vector<double> mob(2);
-        std::vector<double> dmob_ds(2);
-        std::vector<double> dmob_dc(2);
+        if (if_with_der) {
+            props_.relperm(1, sat, &cell, relperm, drelperm_ds);
+        } else {
+            props_.relperm(1, sat, &cell, relperm, 0);
+        }
+        double mob[2];
+        double dmob_ds[2];
+        double dmob_dc[2];
 	double dmobwat_dc;
         polyprops_.effectiveMobilitiesBoth(c, cmax, visc_, relperm, drelperm_ds,
                                            mob, dmob_ds, dmobwat_dc, if_with_der);
-	dmob_dc[0] = dmobwat_dc;
-	dmob_dc[1] = 0.;
  	ff = mob[0]/(mob[0] + mob[1]);
         if (if_with_der) {
+            dmob_dc[0] = dmobwat_dc;
+            dmob_dc[1] = 0.;
             dff_dsdc[0] = (dmob_ds[0]*mob[1] - dmob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
             dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
-        } else {
-            dff_dsdc.clear();
         }
     }
 
@@ -870,8 +871,8 @@ namespace Opm
         polyprops_.computeMc(c, mc);
     }
 
-    void TransportModelPolymer::computeMcWithDer(double c, double& mc, 
-                                                   double &dmc_dc) const
+    void TransportModelPolymer::computeMcWithDer(double c, double& mc,
+                                                 double &dmc_dc) const
     {
         polyprops_.computeMcWithDer(c, mc, dmc_dc);
     }
@@ -902,16 +903,16 @@ namespace
 
 
     CurveInSCPlane::CurveInSCPlane()
-	{
-	}
+    {
+    }
 
     // Setup the curve (see comment above).
     // The curve is parametrized by t in [0, t_max], t_out is equal to t when the curve hits the bounding
     // rectangle. x_out=(s_out, c_out) denotes the values of s and c at that point.
     void CurveInSCPlane::setup(const double* x, const double* direction,
-		   const double* end_point, const double* x_min,
-		   const double* x_max, double& t_max_out,
-		   double& t_out_out)
+                               const double* end_point, const double* x_min,
+                               const double* x_max, double& t_max_out,
+                               double& t_out_out)
     {
 	x_[0] = x[0];
 	x_[1] = x[1];
@@ -972,7 +973,7 @@ namespace
     void CurveInSCPlane::computeXOfT(double* x_of_t, const double t) const {
 	if (t <= t_out_) {
 	    x_of_t[0] = x_[0] + t*direction_[0];
-		x_of_t[1] = x_[1] + t*direction_[1];
+            x_of_t[1] = x_[1] + t*direction_[1];
 	} else {
 	    x_of_t[0] = 1/(t_max_-t_out_)*((t_max_ - t)*x_out_[0] + end_point_[0]*(t - t_out_));
 	    x_of_t[1] = 1/(t_max_-t_out_)*((t_max_ - t)*x_out_[1] + end_point_[1]*(t - t_out_));

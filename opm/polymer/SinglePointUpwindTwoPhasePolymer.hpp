@@ -499,9 +499,9 @@ namespace Opm {
                       const Grid&           g    ,
                       JacobianSystem&       sys) {
 
-            std::vector<double> s(2, 0.);
-            std::vector<double> mob(2, 0.);
-            std::vector<double> dmobds(4, 0.);
+            double s[2];
+            double mob[2];
+            double dmobds[4];
             double dmobwatdc;
             double c, cmax;
             double mc, dmcdc;

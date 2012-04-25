@@ -79,7 +79,7 @@ namespace Opm
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
 	const double* visc = props.viscosity();
 	const double* rho = props.density();
-        std::vector<double> mob(num_phases); // here we assume num_phases=2
+        double mob[num_phases]; // here we assume num_phases=2
 	for (int cell = 0; cell < num_cells; ++cell) {
             double*  kr_cell = &kr[2*cell];
             polyprops.effectiveMobilities(c[cell], cmax[cell], visc, kr_cell,
@@ -132,7 +132,7 @@ namespace Opm
         polyprod = 0.0;
         const double* visc = props.viscosity();
         std::vector<double> kr_cell(np);
-        std::vector<double> mob(np);
+        double mob[np];
         for (int cell = 0; cell < num_cells; ++cell) {
             if (src[cell] > 0.0) {
                 injected[0] += src[cell]*dt;
