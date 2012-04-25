@@ -33,17 +33,22 @@ namespace Opm
     class WellCollection
     {
     public:
-        WellCollection();
-        virtual ~WellCollection();
+        /// Adds and creates if necessary the child to the collection
+        /// and appends it to parent's children. Also adds and creates the parent
+        /// if necessary.
+        /// \param[in] child   name of child node
+        /// \param[in] parent  name of parent node
+        /// \param[in] deck    deck from which we will extract group control data
+        void addChild(const std::string& child,
+                      const std::string& parent,
+                      const EclipseGridParser& deck);
 
-        void addChild(std::string child, std::string parent,
-                const EclipseGridParser& deck);
-
-        
-        void conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                           const UnstructuredGrid& grid, const std::vector<double>& saturations, 
+        /// Builds the WellControlResult object for the current well group hierachy. 
+        void conditionsMet(const std::vector<double>& well_bhp,
+                           const std::vector<double>& well_rate, 
+                           const UnstructuredGrid& grid,
                            WellControlResult& result, 
-                           double epsilon=1e-8) const;
+                           const double epsilon=1e-8) const;
         
         const std::vector<std::tr1::shared_ptr<WellsGroupInterface> >& getLeafNodes() const;
         

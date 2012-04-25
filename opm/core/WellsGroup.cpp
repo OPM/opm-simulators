@@ -116,14 +116,17 @@ namespace Opm
     }
 
     
-    void WellsGroup::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                                   const UnstructuredGrid& grid, const std::vector<double>& saturations,
-                                   const struct Wells* wells, int index_of_well, WellControlResult& result,
-                                   double epsilon)
+    void WellsGroup::conditionsMet(const std::vector<double>& well_bhp,
+                                   const std::vector<double>& well_rate, 
+                                   const UnstructuredGrid& grid,
+                                   const struct Wells* wells,
+                                   int index_of_well,
+                                   WellControlResult& result,
+                                   const double epsilon)
     {
         if (parent_ != NULL) {
             (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, 
-                    well_rate,grid, saturations, wells, index_of_well, result, epsilon);
+                    well_rate,grid, wells, index_of_well, result, epsilon);
         }
         
         int number_of_leaf_nodes = numberOfLeafNodes();
@@ -197,20 +200,17 @@ namespace Opm
     {
     }
 
-    void WellNode::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                                 const UnstructuredGrid& grid, const std::vector<double>& saturations,
-                                 WellControlResult& result, double epsilon)
+    void WellNode::conditionsMet(const std::vector<double>& well_bhp,
+                                 const std::vector<double>& well_rate, 
+                                 const UnstructuredGrid& grid,
+                                 WellControlResult& result,
+                                 const double epsilon)
     {
         
         if (parent_ != NULL) {
-         (static_cast<WellsGroup*> (parent_))->conditionsMet(well_bhp, 
-                                                             well_rate, 
-                                                             grid, 
-                                                             saturations, 
-                                                             wells_,
-                                                             self_index_,
-                                                             result, 
-                                                             epsilon);
+            (static_cast<WellsGroup*> (parent_))
+                ->conditionsMet(well_bhp, well_rate, grid, wells_,
+                                self_index_, result, epsilon);
         }
 
         // Check for self:
@@ -218,7 +218,7 @@ namespace Opm
             double bhp_diff = well_bhp[self_index_] - prodSpec().BHP_limit_;
             double rate_diff = well_rate[self_index_] - prodSpec().fluid_volume_max_rate_;
             
-            if(bhp_diff > epsilon) {
+            if (bhp_diff > epsilon) {
                 
                 std::cout << "BHP exceeded, bhp_diff = " << bhp_diff << std::endl;
                 std::cout << "BHP_limit = " << prodSpec().BHP_limit_ << std::endl;
@@ -231,7 +231,7 @@ namespace Opm
                 result.bhp_.push_back(info);
             }
             
-            if(rate_diff > epsilon) {
+            if (rate_diff > epsilon) {
                 ExceedInformation info;
                 info.group_name_ = name();
                 info.surplus_ = rate_diff;
@@ -244,7 +244,7 @@ namespace Opm
             double rate_diff = well_rate[self_index_] - injSpec().fluid_volume_max_rate_;
             
             
-           if(bhp_diff > epsilon) {
+           if (bhp_diff > epsilon) {
                std::cout << "BHP exceeded, bhp_diff = " << bhp_diff<<std::endl;
                ExceedInformation info;
                info.group_name_ = name();
@@ -252,14 +252,14 @@ namespace Opm
                info.well_index_ = self_index_;
                result.bhp_.push_back(info);
            }
-            if(rate_diff > epsilon) {
-                std::cout << "Flow diff exceeded, flow_diff = " << rate_diff << std::endl;
-                ExceedInformation info;
-                info.group_name_ = name();
-                info.surplus_ = rate_diff;
-                info.well_index_ = self_index_;
-                result.fluid_rate_.push_back(info);
-            }
+           if (rate_diff > epsilon) {
+               std::cout << "Flow diff exceeded, flow_diff = " << rate_diff << std::endl;
+               ExceedInformation info;
+               info.group_name_ = name();
+               info.surplus_ = rate_diff;
+               info.well_index_ = self_index_;
+               result.fluid_rate_.push_back(info);
+           }
             
         }
     }

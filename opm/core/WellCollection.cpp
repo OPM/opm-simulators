@@ -23,16 +23,9 @@ along with OpenRS.  If not, see <http://www.gnu.org/licenses/>.
 namespace Opm
 {
 
-    WellCollection::WellCollection()
-    {
-    }
-
-    WellCollection::~WellCollection()
-    {
-    }
-
-    void WellCollection::addChild(std::string child_name, std::string parent_name,
-            const EclipseGridParser& deck)
+    void WellCollection::addChild(const std::string& child_name,
+                                  const std::string& parent_name,
+                                  const EclipseGridParser& deck)
     {   
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
@@ -100,11 +93,14 @@ namespace Opm
         return NULL;
     }
     
-    void WellCollection::conditionsMet(const std::vector<double>& well_bhp, const std::vector<double>& well_rate, 
-                           const UnstructuredGrid& grid, const std::vector<double>& saturations, 
-                           WellControlResult& result, double epsilon) const {
-        for(size_t i = 0; i < leaf_nodes_.size(); i++) {
-            static_cast<WellNode*>(leaf_nodes_[i].get())->conditionsMet(well_bhp, well_rate, grid, saturations, result, epsilon);
+    void WellCollection::conditionsMet(const std::vector<double>& well_bhp,
+                                       const std::vector<double>& well_rate, 
+                                       const UnstructuredGrid& grid,
+                                       WellControlResult& result,
+                                       double epsilon) const
+    {
+        for (size_t i = 0; i < leaf_nodes_.size(); i++) {
+            static_cast<WellNode*>(leaf_nodes_[i].get())->conditionsMet(well_bhp, well_rate, grid, result, epsilon);
         }        
     }
 

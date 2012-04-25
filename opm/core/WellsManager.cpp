@@ -586,7 +586,7 @@ namespace Opm
 	    }
 	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
             
-            // DIRTY DIRTY HACK
+            // DIRTY DIRTY HACK to temporarily make things work in spite of bugs in the deck reader.
             if(well_data[w].type == INJECTOR && (well_data[w].injected_phase < 0 || well_data[w].injected_phase > 2)){
                 zfrac = fracs[WATER];
             }
