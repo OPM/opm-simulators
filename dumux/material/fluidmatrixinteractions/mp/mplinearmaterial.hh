@@ -69,8 +69,16 @@ public:
                                    const Params &params,
                                    const FluidState &state)
     {
+        Scalar sumResidSat = 0;
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            sumResidSat += params.residSat(phaseIdx);
+
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            Scalar S = state.saturation(phaseIdx);
+            Scalar Sabs = state.saturation(phaseIdx);
+            Scalar S = 
+                (Sabs - params.residSat(phaseIdx))
+                / (1.0 - sumResidSat + params.residSat(phaseIdx));
+
             values[phaseIdx] =
                 S*params.pcMaxSat(phaseIdx) +
                 (1.0 - S)*params.pcMinSat(phaseIdx);
@@ -96,8 +104,17 @@ public:
                                        const Params &params,
                                        const FluidState &state)
     {
+        Scalar sumResidSat = 0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            values[phaseIdx] = std::max(std::min(state.saturation(phaseIdx),1.0),0.0);
+            sumResidSat += params.residSat(phaseIdx);
+
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            Scalar Sabs = state.saturation(phaseIdx);
+            Scalar S = (Sabs - params.residSat(phaseIdx))
+                / (1.0 - sumResidSat + params.residSat(phaseIdx));
+            
+            values[phaseIdx] = std::max(std::min(S,1.0),0.0);
+        }
     }
 };
 }

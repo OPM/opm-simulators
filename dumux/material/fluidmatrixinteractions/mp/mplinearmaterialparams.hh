@@ -47,17 +47,9 @@ public:
         for (int i = 0; i < numPhases; ++i) {
             setPcMinSat(i, 0.0);
             setPcMaxSat(i, 0.0);
+            setResidSat(i, 0.0);
         }
     }
-
-    /*!
-     * \brief Return the threshold saturation at which the relative
-     *        permeability starts to get regularized.
-     *
-     * This is simply 10%
-     */
-    Scalar Sreg(int phaseIdx) const
-    { return 0.10; }
 
     /*!
      * \brief Return the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=0\f$.
@@ -84,26 +76,19 @@ public:
     { pcMaxSat_[phaseIdx] = val; }
 
     /*!
-     * \brief Return the threshold saturation respective phase below
-     *        which the relative permeability gets regularized.
-     *
-     * This is just 5%. If you need a different value, write your own
-     * parameter class.
+     * \brief Return the residual saturation for a phase \f$\alpha\f$.
      */
-    Scalar krLowS(int phaseIdx) const
-    { return 0.05; }
+    Scalar residSat(int phaseIdx) const
+    { return residSat_[phaseIdx]; }
 
     /*!
-     * \brief Return the threshold saturation of the respective phase
-     *        above which the relative permeability gets regularized.
-     *
-     * This is just 95%. If you need a different value, write your own
-     * parameter class.
+     * \brief Set the residual saturation for a phase \f$\alpha\f$.
      */
-    Scalar krHighS(int phaseIdx) const
-    { return 0.95; }
+    void setResidSat(int phaseIdx, Scalar val)
+    { residSat_[phaseIdx] = val; }
 
 private:
+    Scalar residSat_[numPhases];
     Scalar pcMaxSat_[numPhases];
     Scalar pcMinSat_[numPhases];
 };
