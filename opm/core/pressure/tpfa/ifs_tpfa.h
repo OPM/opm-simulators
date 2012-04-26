@@ -61,14 +61,14 @@ struct ifs_tpfa_data *
 ifs_tpfa_construct(struct UnstructuredGrid *G,
                    struct Wells            *W);
 
-void
+int
 ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   const struct ifs_tpfa_forces *F     ,
                   const double                 *trans ,
                   const double                 *gpress,
                   struct ifs_tpfa_data         *h     );
 
-void
+int
 ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
                            const struct ifs_tpfa_forces *F        ,
                            const double                 *trans    ,

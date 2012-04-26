@@ -129,7 +129,10 @@ namespace Opm
         F.totmob = &totmob[0];
         F.wdp = &wdp[0];
         
-	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+	int ok = ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+        if (!ok) {
+            THROW("Failed assembling pressure system.");
+        }
 
 	linsolver_.solve(h_->A, h_->b, h_->x);
 

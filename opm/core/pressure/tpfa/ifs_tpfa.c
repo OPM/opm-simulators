@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -275,12 +276,14 @@ assemble_rate_well(int nc, int w,
 
 
 /* ---------------------------------------------------------------------- */
-static int
+static void
 assemble_well_contrib(int                   nc ,
                       const struct Wells   *W  ,
                       const double         *mt ,
                       const double         *wdp,
-                      struct ifs_tpfa_data *h  )
+                      struct ifs_tpfa_data *h   ,
+                      int                  *all_rate,
+                      int                  *ok)
 /* ---------------------------------------------------------------------- */
 {
     int w;
@@ -288,7 +291,8 @@ assemble_well_contrib(int                   nc ,
 
     struct WellControls *ctrls;
 
-    are_rate = 1;
+    *all_rate = 1;
+    *ok = 1;
 
     for (w = 0; w < W->number_of_wells; w++) {
         ctrls = W->ctrls[ w ];
@@ -298,17 +302,25 @@ assemble_well_contrib(int                   nc ,
 
         switch (ctrls->type[ ctrls->current ]) {
         case BHP:
-            are_rate = 0;
+            *all_rate = 0;
             assemble_bhp_well (nc, w, W, mt, wdp, h);
             break;
 
-        case RATE:
+        case RESERVOIR_RATE:
             assemble_rate_well(nc, w, W, mt, wdp, h);
+            break;
+
+        case SURFACE_RATE:
+            /* We cannot handle this case, since we do
+             * not have access to formation volume factors,
+             * needed to convert between reservoir and
+             * surface rates 
+             */
+            fprintf(stderr, "ifs_tpfa cannot handle SURFACE_RATE well controls.\n");
+            *ok = 0;
             break;
         }
     }
-
-    return are_rate;
 }
 
 
@@ -477,12 +489,14 @@ well_solution(const struct UnstructuredGrid *G   ,
 
 
 /* ---------------------------------------------------------------------- */
-static int
+static void
 assemble_incompressible(struct UnstructuredGrid      *G     ,
                         const struct ifs_tpfa_forces *F     ,
                         const double                 *trans ,
                         const double                 *gpress,
-                        struct ifs_tpfa_data         *h     )
+                        struct ifs_tpfa_data         *h     ,
+                        int                          *singular,
+                        int                          *ok    )
 /* ---------------------------------------------------------------------- */
 {
     int c1, c2, c, i, f, j1, j2;
@@ -532,8 +546,9 @@ assemble_incompressible(struct UnstructuredGrid      *G     ,
                     (size_t) G->number_of_cells +
                     (size_t) F->W->number_of_wells);
 
-            wells_are_rate = assemble_well_contrib(G->number_of_cells, F->W,
-                                                   F->totmob, F->wdp, h);
+            assemble_well_contrib(G->number_of_cells, F->W,
+                                  F->totmob, F->wdp, h,
+                                  &wells_are_rate, ok);
         }
 
         if (F->bc != NULL) {
@@ -549,7 +564,7 @@ assemble_incompressible(struct UnstructuredGrid      *G     ,
         }
     }
 
-    return res_is_neumann && wells_are_rate;
+    *singular = res_is_neumann && wells_are_rate;
 }
 
 /* ======================================================================
@@ -588,7 +603,7 @@ ifs_tpfa_construct(struct UnstructuredGrid *G,
 
 
 /* ---------------------------------------------------------------------- */
-void
+int
 ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   const struct ifs_tpfa_forces *F     ,
                   const double                 *trans ,
@@ -596,19 +611,20 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   struct ifs_tpfa_data         *h     )
 /* ---------------------------------------------------------------------- */
 {
-    int system_singular;
+    int system_singular, ok;
 
-    system_singular = assemble_incompressible(G, F, trans, gpress, h);
+    assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
-    if (system_singular) {
+    if (ok && system_singular) {
         /* Remove zero eigenvalue associated to constant pressure */
         h->A->sa[0] *= 2.0;
     }
+    return ok;
 }
 
 
 /* ---------------------------------------------------------------------- */
-void
+int
 ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
                            const struct ifs_tpfa_forces *F        ,
                            const double                 *trans    ,
@@ -623,9 +639,9 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
     int c;
     size_t j;
     double d;
+    int system_singular, ok;
 
-    /* We don't need the return value, since the matrix always is nonsingular. */
-    assemble_incompressible(G, F, trans, gpress, h);
+    assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
     /*
      * The extra term of the equation is
@@ -633,13 +649,19 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
      *     porevol*rock_comp*(p - p0)/dt.
      *
      * The p part goes on the diagonal, the p0 on the rhs.
+     * We don't care if the system was singular before this modification,
+     * after it will always be nonsingular.
      */
-    for (c = 0; c < G->number_of_cells; ++c) {
-        j = csrmatrix_elm_index(c, c, h->A);
-        d = porevol[c] * rock_comp[c] / dt;
-        h->A->sa[j] += d;
-        h->b[c]     += d * pressure[c];
+    if (ok) {
+        for (c = 0; c < G->number_of_cells; ++c) {
+            j = csrmatrix_elm_index(c, c, h->A);
+            d = porevol[c] * rock_comp[c] / dt;
+            h->A->sa[j] += d;
+            h->b[c]     += d * pressure[c];
+        }
     }
+
+    return ok;
 }
 
 
