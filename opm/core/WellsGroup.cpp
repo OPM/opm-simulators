@@ -151,13 +151,13 @@ namespace Opm
         }
         
 
-        double bhp_target = std::min(injSpec().BHP_limit_, prodSpec().BHP_limit_);
-        double rate_target = std::min(injSpec().fluid_volume_max_rate_, 
+        double bhp_target = std::min(std::abs(injSpec().BHP_limit_), prodSpec().BHP_limit_);
+        double rate_target = std::min(std::abs(injSpec().fluid_volume_max_rate_), 
                                       prodSpec().fluid_volume_max_rate_);
         
         double bhp_sum = child_phases_summed.bhp_sum;
         double rate_sum = child_phases_summed.rate_sum;
-        if (bhp_sum - bhp_target > epsilon) {
+        if (std::abs(bhp_sum) - std::abs(bhp_target) > epsilon) {
             std::cout << "BHP not met" << std::endl;
             std::cout << "BHP limit was " << bhp_target << std::endl;
             std::cout << "Actual bhp was " << bhp_sum << std::endl;
@@ -176,7 +176,7 @@ namespace Opm
                 break;
             }
         }
-        if(rate_sum - rate_target > epsilon) {
+        if(std::abs(rate_sum) - std::abs(rate_target) > epsilon) {
             std::cout << "well_rate not met" << std::endl;
             std::cout << "target = " << rate_target 
                       << ", well_rate[index_of_well] = " 
@@ -266,8 +266,8 @@ namespace Opm
                 return false;
             }
         } else {
-            double bhp_diff = well_bhp[self_index_] - injSpec().BHP_limit_;
-            double rate_diff = well_rate[self_index_] - injSpec().fluid_volume_max_rate_;
+            double bhp_diff = std::abs(well_bhp[self_index_]) - std::abs(injSpec().BHP_limit_);
+            double rate_diff = std::abs(well_rate[self_index_]) - std::abs(injSpec().fluid_volume_max_rate_);
             
             
            if (bhp_diff > epsilon) {
