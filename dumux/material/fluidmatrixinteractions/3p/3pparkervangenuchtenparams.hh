@@ -27,8 +27,8 @@
  * \brief Specification of the material params for the three-phase van
  *        Genuchten capillary pressure model.
  */
-#ifndef PARKERVANGEN_PARAMS_3P_HH
-#define PARKERVANGEN_PARAMS_3P_HH
+#ifndef DUMUX_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
+#define DUMUX_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
 
 #include <dune/common/fvector.hh>
 

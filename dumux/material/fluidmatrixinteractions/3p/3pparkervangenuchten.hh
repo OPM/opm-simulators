@@ -27,16 +27,14 @@
  * \brief Implementation of the three-phase van Genuchten's capillary
  *        pressure <-> saturation relation
  */
-#ifndef PARKERVANGEN_3P_HH
-#define PARKERVANGEN_3P_HH
+#ifndef DUMUX_3P_PARKER_VAN_GENUCHTEN_HH
+#define DUMUX_3P_PARKER_VAN_GENUCHTEN_HH
 
-#include "parkerVanGen3pparams.hh"
+#include "3pparkervangenuchtenparams.hh"
 
 #include <algorithm>
 
-
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  *
@@ -46,7 +44,7 @@ namespace Dumux
  * \sa VanGenuchten, VanGenuchtenThreephase
  */
 template <class ScalarT, class ParamsT = ParkerVanGen3PParams<ScalarT> >
-class ParkerVanGen3P
+class ThreePParkerVanGenuchten
 {
 
 public:
@@ -64,26 +62,26 @@ public:
 
     static Scalar pCGW(const Params &params, Scalar Sw)
     {
-    /*
-         Sw = wetting phase saturation, or,
-              sum of wetting phase saturations
-         alpha : VanGenuchten-alpha
-    this function is just copied from MUFTE/pml/constrel3p3cni.c
-    that is why variable names do not yet fulfill Dumux rules, TODO Change */
+        /*
+          Sw = wetting phase saturation, or,
+          sum of wetting phase saturations
+          alpha : VanGenuchten-alpha
+          this function is just copied from MUFTE/pml/constrel3p3cni.c
+          that is why variable names do not yet fulfill Dumux rules, TODO Change */
 
-    Scalar r,Se,x,vg_m;
-    Scalar pc,pc_prime,Se_regu;
-    Scalar PC_VG_REG = 0.01;
+        Scalar r,Se,x,vg_m;
+        Scalar pc,pc_prime,Se_regu;
+        Scalar PC_VG_REG = 0.01;
 
-    Se   = (Sw-params.Swr())/(1.-params.Sgr());
+        Se   = (Sw-params.Swr())/(1.-params.Sgr());
 
-    /* Snr  = 0.0;   test version   */
+        /* Snr  = 0.0;   test version   */
 
-    /* regularization */
-    if (Se<0.0) Se=0.0;
-    if (Se>1.0) Se=1.0;
-    vg_m = 1.-1./params.vgN();
-
+        /* regularization */
+        if (Se<0.0) Se=0.0;
+        if (Se>1.0) Se=1.0;
+        vg_m = 1.-1./params.vgN();
+    
         if (Se>PC_VG_REG && Se<1-PC_VG_REG)
         {
             r = std::pow(Se,-1/vg_m);
@@ -99,7 +97,7 @@ public:
             if (Se<=PC_VG_REG) Se_regu = PC_VG_REG; else Se_regu = 1-PC_VG_REG;
             pc       = std::pow(std::pow(Se_regu,-1/vg_m)-1,1/params.vgN())/params.vgAlpha();
             pc_prime = std::pow(std::pow(Se_regu,-1/vg_m)-1,1/params.vgN()-1)*std::pow(Se_regu,-1/vg_m-1)*(-1/vg_m)/params.vgAlpha()/(1-params.Sgr()-params.Swr())/params.vgN();
-
+        
             /* evaluate tangential */
             r        = (Se-Se_regu)*pc_prime+pc;
             return(r);
@@ -108,25 +106,25 @@ public:
 
     static Scalar pCNW(const Params &params, Scalar Sw)
     {
-    /*
-         Sw = wetting phase saturation, or,
-              sum of wetting phase saturations
-         alpha : VanGenuchten-alpha
-    this function is just copied from MUFTE/pml/constrel3p3cni.c
-    that is why variable names do not yet fulfill Dumux rules, TODO Change */
+        /*
+          Sw = wetting phase saturation, or,
+          sum of wetting phase saturations
+          alpha : VanGenuchten-alpha
+          this function is just copied from MUFTE/pml/constrel3p3cni.c
+          that is why variable names do not yet fulfill Dumux rules, TODO Change */
 
-    Scalar r,Se,x,vg_m;
-    Scalar pc,pc_prime,Se_regu;
-    Scalar PC_VG_REG = 0.01;
+        Scalar r,Se,x,vg_m;
+        Scalar pc,pc_prime,Se_regu;
+        Scalar PC_VG_REG = 0.01;
 
-    Se   = (Sw-params.Swr())/(1.-params.Snr());
+        Se   = (Sw-params.Swr())/(1.-params.Snr());
 
-    /* Snr  = 0.0;   test version   */
+        /* Snr  = 0.0;   test version   */
 
-    /* regularization */
-    if (Se<0.0) Se=0.0;
-    if (Se>1.0) Se=1.0;
-    vg_m = 1.-1./params.vgN();
+        /* regularization */
+        if (Se<0.0) Se=0.0;
+        if (Se>1.0) Se=1.0;
+        vg_m = 1.-1./params.vgN();
 
         if (Se>PC_VG_REG && Se<1-PC_VG_REG)
         {
@@ -152,24 +150,24 @@ public:
 
     static Scalar pCGN(const Params &params, Scalar St)
     {
-    /*
-         St = sum of wetting (liquid) phase saturations
-         alpha : VanGenuchten-alpha
-    this function is just copied from MUFTE/pml/constrel3p3cni.c
-    that is why variable names do not yet fulfill Dumux rules, TODO Change */
+        /*
+          St = sum of wetting (liquid) phase saturations
+          alpha : VanGenuchten-alpha
+          this function is just copied from MUFTE/pml/constrel3p3cni.c
+          that is why variable names do not yet fulfill Dumux rules, TODO Change */
 
-    Scalar r,Se,x,vg_m;
-    Scalar pc,pc_prime,Se_regu;
-    Scalar PC_VG_REG = 0.01;
+        Scalar r,Se,x,vg_m;
+        Scalar pc,pc_prime,Se_regu;
+        Scalar PC_VG_REG = 0.01;
 
-    Se   = (St-params.Swrx())/(1.-params.Swrx());
+        Se   = (St-params.Swrx())/(1.-params.Swrx());
 
-    /* Snr  = 0.0;   test version   */
+        /* Snr  = 0.0;   test version   */
 
-    /* regularization */
-    if (Se<0.0) Se=0.0;
-    if (Se>1.0) Se=1.0;
-    vg_m = 1.-1./params.vgN();
+        /* regularization */
+        if (Se<0.0) Se=0.0;
+        if (Se>1.0) Se=1.0;
+        vg_m = 1.-1./params.vgN();
 
         if (Se>PC_VG_REG && Se<1-PC_VG_REG)
         {
@@ -206,8 +204,8 @@ public:
         if (Sne>params.Snr()) alpha = 1.0;
         else
         {
-         if (params.Snr()>=0.001) alpha = Sne/params.Snr();
-         else          alpha = 0.0;
+            if (params.Snr()>=0.001) alpha = Sne/params.Snr();
+            else          alpha = 0.0;
         }
         return(alpha);
     }
@@ -225,7 +223,7 @@ public:
      * \brief Returns the partial derivative of the capillary
      *        pressure to the effective saturation.
      *
-    */
+     */
     static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
         DUNE_THROW(Dune::NotImplemented, "dpC/dSw for three phases not implemented! Do it yourself!");
@@ -342,8 +340,8 @@ public:
         Scalar scalFact = 1.;
         if (saturation<=0.1)
         {
-          scalFact = (saturation - params.Sgr())/(0.1 - params.Sgr());
-          if (scalFact < 0.) scalFact = 0.;
+            scalFact = (saturation - params.Sgr())/(0.1 - params.Sgr());
+            if (scalFact < 0.) scalFact = 0.;
         }
 
         Scalar result = scalFact * std::pow(1 - Se, 1.0/3.) * std::pow(1 - std::pow(Se, 1/params.vgM()), 2*params.vgM());
