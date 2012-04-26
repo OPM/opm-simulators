@@ -35,26 +35,29 @@ extern "C" {
 
 /** Well type indicates desired/expected well behaviour. */
 enum WellType         { INJECTOR, PRODUCER };
-/** Type of well control equation or inequality constraint.
- *  BHP  -> Well constrained by bottom-hole pressure target.
- *  RATE -> Well constrained by total reservoir volume flow rate.
- */
-enum WellControlType  { BHP     , RATE     };
-/** Canonical component names and ordering. */
-enum SurfaceComponent { WATER = 0, OIL = 1, GAS = 2 };
 
+/** Type of well control equation or inequality constraint.
+ *  BHP            -> Well constrained by bottom-hole pressure target.
+ *  RESERVOIR_RATE -> Well constrained by reservoir volume flow rates.
+ *  SURFACE_RATE   -> Well constrained by surface volume flow rates.
+ */
+enum WellControlType  { BHP, RESERVOIR_RATE, SURFACE_RATE };
 
 /** Controls for a single well.
-
  *  Each control specifies a well rate or bottom-hole pressure. Only
  *  one control can be active at a time, indicated by current. The
- *  meaning of each control's target value depends on the control
- *  type, for BHP controls it is a pressure in Pascal, for RATE
- *  controls it is a volumetric rate in cubic(meter)/second. The sign
- *  convention for RATE targets is as follows:
+ *  meaning of each control's target value depends on the control type:
+ *  BHP            -> target pressure in Pascal.
+ *  RESERVOIR_RATE -> target reservoir volume rate in cubic(meter)/second
+ *  SURFACE_RATE   -> target surface volume rate in cubic(meter)/second
+ *  The sign convention for RATE targets is as follows:
  *    (+) Fluid flowing into reservoir, i.e. injecting.
  *    (-) Fluid flowing out of reservoir, i.e. producing.
- *  The active control as an equality constraint, whereas the
+ *  For *_RATE controls, the distribution of phases used for the control
+ *  is also needed. For example, a total rate control should have 1.0
+ *  for each phase, whereas a control on oil rate should have 1.0 for
+ *  the oil phase and 0.0 for the rest. For BHP controls, this is unused.
+ *  The active control acts as an equality constraint, whereas the
  *  non-active controls should be interpreted as inequality
  *  constraints (upper or lower bounds).  For instance, a PRODUCER's
  *  BHP constraint defines a minimum acceptable bottom-hole pressure
@@ -63,8 +66,10 @@ enum SurfaceComponent { WATER = 0, OIL = 1, GAS = 2 };
 struct WellControls
 {
     int                     num;     /** Number of controls. */
-    enum WellControlType   *type;    /** Array of control types. */
-    double                 *target;  /** Array of control targets. */
+    enum WellControlType   *type;    /** Array of control types.*/
+    double                 *target;  /** Array of control targets */
+    double                 *distr;   /** Array of rate control distributions,
+                                         Wells::number_of_phases numbers per well */
     int                     current; /** Index of current active control. */
 
     void                   *data;    /** Internal management structure. */
@@ -75,19 +80,20 @@ struct WellControls
 /** Data structure aggregating static information about all wells in a scenario. */
 struct Wells
 {
-    int                  number_of_wells; /** Number of wells. */
+    int                  number_of_wells;  /** Number of wells. */
+    int                  number_of_phases; /** Number of phases. */
 
     enum WellType       *type;            /** Array of well types. */
     double              *depth_ref;       /** Array of well bhp reference depths. */
-    double              *zfrac;           /** Component volume fractions for each well, size is (3*number_of_wells).
+    double              *comp_frac;       /** Component fractions for each well, size is (number_of_wells*number_of_phases).
                                            *  This is intended to be used for injection wells. For production wells
                                            *  the component fractions will vary and cannot be specified a priori.
                                            */
     int                 *well_connpos;    /** Array of indices into well_cells (and WI).
-                                          *  For a well w, well_connpos[w] and well_connpos[w+1] yield
-                                          *  start and one-beyond-end indices into the well_cells array
-                                          *  for accessing w's perforation cell indices.
-                                          */
+                                           *  For a well w, well_connpos[w] and well_connpos[w+1] yield
+                                           *  start and one-beyond-end indices into the well_cells array
+                                           *  for accessing w's perforation cell indices.
+                                           */
     int                 *well_cells;      /** Array of perforation cell indices.
                                            *  Size is number of perforations (== well_connpos[number_of_wells]).
                                            */
@@ -130,19 +136,21 @@ struct CompletionData
  * destroy_wells() to dispose of the Wells object and its allocated
  * memory resources.
  *
- * \param[in] nwells Expected number of wells in simulation scenario.
- *                   Pass zero if the total number of wells is unknown.
+ * \param[in] nphases Number of active phases in simulation scenario.
  *
- * \param[in] nperf  Expected total number of well connections
- *                   (perforations) for all wells in simulation
- *                   scenario.  Pass zero if the total number of well
- *                   connections is unknown.
+ * \param[in] nwells  Expected number of wells in simulation scenario.
+ *                    Pass zero if the total number of wells is unknown.
+ *
+ * \param[in] nperf   Expected total number of well connections
+ *                    (perforations) for all wells in simulation
+ *                    scenario.  Pass zero if the total number of well
+ *                    connections is unknown.
  *
  * \return A valid Wells object with no wells if successful, and NULL
  * otherwise.
  */
 struct Wells *
-create_wells(int nwells, int nperf);
+create_wells(int nphases, int nwells, int nperf);
 
 
 /**
@@ -156,7 +164,7 @@ create_wells(int nwells, int nperf);
  * \param[in] type       Type of well.
  * \param[in] depth_ref  Reference depth for well's BHP.
  * \param[in] nperf      Number of perforations.
- * \param[in] zfrac      Injection fraction (three components) or NULL.
+ * \param[in] comp_frac  Injection fraction array (size equal to W->number_of_phases) or NULL.
  * \param[in] cells      Grid cells in which well is perforated.  Should
  *                       ideally be track ordered.
  * \param[in] WI         Well production index per perforation, or NULL.
@@ -169,7 +177,7 @@ int
 add_well(enum WellType  type     ,
          double         depth_ref,
          int            nperf    ,
-         const double  *zfrac    ,
+         const double  *comp_frac,
          const int     *cells    ,
          const double  *WI       ,
          struct Wells  *W        );
@@ -181,23 +189,35 @@ add_well(enum WellType  type     ,
  * Increments ctrl->num by one if successful.  Introducing a new
  * operational constraint does not affect the well's notion of the
  * currently active constraint represented by ctrl->current.
+ * Note that *_RATE controls now require a phase distribution array
+ * to be associated with the control, see WellControls.
  *
- * \param[in] type     Control type.
- * \param[in] target   Target value for the control.
- * \param[inout] ctrl  Existing set of well controls.
+ * \param[in] type       Control type.
+ * \param[in] target     Target value for the control.
+ * \param[in] distr      Array of size W->number_of_phases or NULL.
+ * \param[in] well_index Index of well to receive additional control.
+ * \param[in,out] W  Existing set of well controls.
  * \return Non-zero (true) if successful and zero (false) otherwise.
  */
 int
 append_well_controls(enum WellControlType type  ,
                      double               target,
-                     struct WellControls *ctrl  );
+                     const double        *distr,
+                     int                  well_index,
+                     struct Wells        *W);
 
 /**
- * Clear all controls from a well.
+ * Set the current control for a single well.
+ */
+void
+set_current_control(int well_index, int current_control, struct Wells *W);
+
+/**
+ * Clear all controls from a single well.
  *
  * Does not affect the control set capacity. */
 void
-clear_well_controls(struct WellControls *ctrl);
+clear_well_controls(int well_index, struct Wells *W);
 
 
 /**

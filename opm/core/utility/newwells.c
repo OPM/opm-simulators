@@ -103,6 +103,7 @@ well_controls_destroy(struct WellControls *ctrl)
 {
     if (ctrl != NULL) {
         destroy_ctrl_mgmt(ctrl->data);
+        free             (ctrl->distr);
         free             (ctrl->target);
         free             (ctrl->type);
     }
@@ -125,6 +126,7 @@ well_controls_create(void)
         ctrl->num     = 0;
         ctrl->type    = NULL;
         ctrl->target  = NULL;
+        ctrl->distr   = NULL;
         ctrl->current = -1;
 
         ctrl->data    = create_ctrl_mgmt();
@@ -141,26 +143,31 @@ well_controls_create(void)
 
 /* ---------------------------------------------------------------------- */
 static int
-well_controls_reserve(int nctrl, struct WellControls *ctrl)
+well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
-    int   c, ok;
-    void *type, *target;
+    int   c, p, ok;
+    void *type, *target, *distr;
 
     struct WellControlMgmt *m;
 
     type   = realloc(ctrl->type  , nctrl * sizeof *ctrl->type  );
     target = realloc(ctrl->target, nctrl * sizeof *ctrl->target);
+    distr  = realloc(ctrl->distr , nphases * nctrl * sizeof *ctrl->distr );
 
     ok = 0;
     if (type   != NULL) { ctrl->type   = type  ; ok++; }
     if (target != NULL) { ctrl->target = target; ok++; }
+    if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
 
     if (ok == 2) {
         m = ctrl->data;
         for (c = m->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
             ctrl->target[c] = -1.0;
+            for (p = 0; p < nphases; ++p) {
+                ctrl->distr [nphases*c + p] = 0.0;
+            }
         }
 
         m->cpty = nctrl;
@@ -175,15 +182,17 @@ static int
 wells_allocate(int nwells, struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    int   ok;
-    void *type, *depth_ref, *zfrac;
+    int   ok, np;
+    void *type, *depth_ref, *comp_frac;
     void *well_connpos;
     void *ctrls;
 
-    type      = realloc(W->type     , 1 * nwells * sizeof *W->type);
-    depth_ref = realloc(W->depth_ref, 1 * nwells * sizeof *W->depth_ref);
-    zfrac     = realloc(W->zfrac    , 3 * nwells * sizeof *W->zfrac);
-    ctrls     = realloc(W->ctrls    , 1 * nwells * sizeof *W->ctrls);
+    np = W->number_of_phases;
+
+    type      = realloc(W->type     ,  1 * nwells * sizeof *W->type);
+    depth_ref = realloc(W->depth_ref,  1 * nwells * sizeof *W->depth_ref);
+    comp_frac = realloc(W->comp_frac, np * nwells * sizeof *W->comp_frac);
+    ctrls     = realloc(W->ctrls    ,  1 * nwells * sizeof *W->ctrls);
 
     well_connpos = realloc(W->well_connpos,
                            (nwells + 1) * sizeof *W->well_connpos);
@@ -191,7 +200,7 @@ wells_allocate(int nwells, struct Wells *W)
     ok = 0;
     if (type         != NULL) { W->type         = type        ; ok++; }
     if (depth_ref    != NULL) { W->depth_ref    = depth_ref   ; ok++; }
-    if (zfrac        != NULL) { W->zfrac        = zfrac       ; ok++; }
+    if (comp_frac    != NULL) { W->comp_frac    = comp_frac   ; ok++; }
     if (well_connpos != NULL) { W->well_connpos = well_connpos; ok++; }
     if (ctrls        != NULL) { W->ctrls        = ctrls       ; ok++; }
 
@@ -223,7 +232,7 @@ static int
 initialise_new_wells(int nwells, struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    int ok, w;
+    int ok, w, p;
 
     struct WellMgmt *m;
 
@@ -233,9 +242,9 @@ initialise_new_wells(int nwells, struct Wells *W)
         W->type     [w]        = PRODUCER;
         W->depth_ref[w]        = -1.0;
 
-        W->zfrac[3*w + WATER]  = 0.0;
-        W->zfrac[3*w + OIL  ]  = 0.0;
-        W->zfrac[3*w + GAS  ]  = 0.0;
+        for (p = 0; p < W->number_of_phases; ++p) {
+            W->comp_frac[W->number_of_phases*w + p] = 0.0;
+        }
 
         W->well_connpos[w + 1] = W->well_connpos[w];
     }
@@ -322,7 +331,7 @@ wells_reserve(int nwells, int nperf, struct Wells *W)
 
 /* ---------------------------------------------------------------------- */
 struct Wells *
-create_wells(int nwells, int nperf)
+create_wells(int nphases, int nwells, int nperf)
 /* ---------------------------------------------------------------------- */
 {
     int           ok;
@@ -332,10 +341,11 @@ create_wells(int nwells, int nperf)
 
     if (W != NULL) {
         W->number_of_wells = 0;
+        W->number_of_phases = nphases;
 
         W->type            = NULL;
         W->depth_ref       = NULL;
-        W->zfrac           = NULL;
+        W->comp_frac       = NULL;
 
         W->well_connpos    = malloc(1 * sizeof *W->well_connpos);
         W->well_cells      = NULL;
@@ -386,7 +396,7 @@ destroy_wells(struct Wells *W)
         free(W->WI);
         free(W->well_cells);
         free(W->well_connpos);
-        free(W->zfrac);
+        free(W->comp_frac);
         free(W->depth_ref);
         free(W->type);
     }
@@ -417,13 +427,13 @@ int
 add_well(enum WellType  type     ,
          double         depth_ref,
          int            nperf    ,
-         const double  *zfrac    , /* Injection fraction or NULL */
+         const double  *comp_frac, /* Injection fraction or NULL */
          const int     *cells    ,
          const double  *WI       , /* Well index per perf (or NULL) */
          struct Wells  *W        )
 /* ---------------------------------------------------------------------- */
 {
-    int ok, nw, nperf_tot, off;
+    int ok, nw, np, nperf_tot, off;
     int nwalloc, nperfalloc;
 
     struct WellMgmt *m;
@@ -459,8 +469,9 @@ add_well(enum WellType  type     ,
         W->type     [nw] = type     ;
         W->depth_ref[nw] = depth_ref;
 
-        if (zfrac != NULL) {
-            memcpy(W->zfrac + 3*nw, zfrac, 3 * sizeof *W->zfrac);
+        np = W->number_of_phases;
+        if (comp_frac != NULL) {
+            memcpy(W->comp_frac + np*nw, comp_frac, np * sizeof *W->comp_frac);
         }
 
         W->well_connpos[nw + 1]  = off + nperf;
@@ -473,14 +484,21 @@ add_well(enum WellType  type     ,
 
 /* ---------------------------------------------------------------------- */
 int
-append_well_controls(enum WellControlType type  ,
+append_well_controls(enum WellControlType type,
                      double               target,
-                     struct WellControls *ctrl  )
+                     const double        *distr,
+                     int                  well_index,
+                     struct Wells        *W)
 /* ---------------------------------------------------------------------- */
 {
-    int ok, alloc;
-
+    int ok, alloc, p, np;
+    struct WellControls    *ctrl;
     struct WellControlMgmt *m;
+
+    assert (W != NULL);
+
+    ctrl = W->ctrls[well_index];
+    np = W->number_of_phases;
 
     assert (ctrl != NULL);
 
@@ -489,13 +507,17 @@ append_well_controls(enum WellControlType type  ,
 
     if (! ok) {
         alloc = alloc_size(ctrl->num, 1, m->cpty);
-        ok    = well_controls_reserve(alloc, ctrl);
+        ok    = well_controls_reserve(alloc, np, ctrl);
     }
 
     if (ok) {
         ctrl->type  [ctrl->num] = type  ;
         ctrl->target[ctrl->num] = target;
-
+        if (distr != NULL) {
+            for (p = 0; p < np; ++p) {
+                ctrl->distr[ctrl->num * np + p] = distr[p];
+            }
+        }
         ctrl->num += 1;
     }
 
@@ -505,10 +527,21 @@ append_well_controls(enum WellControlType type  ,
 
 /* ---------------------------------------------------------------------- */
 void
-clear_well_controls(struct WellControls *ctrl)
+set_current_control(int well_index, int current_control, struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    if (ctrl != NULL) {
-        ctrl->num = 0;
+    assert (W->ctrls[well_index] != NULL);
+
+    W->ctrls[well_index]->current = current_control;
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
+clear_well_controls(int well_index, struct Wells *W)
+/* ---------------------------------------------------------------------- */
+{
+    if (W->ctrls[well_index] != NULL) {
+        W->ctrls[well_index]->num = 0;
     }
 }
