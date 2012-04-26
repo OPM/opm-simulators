@@ -125,16 +125,17 @@ class TutorialProblemCoupled
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
     // Grid dimension
-    enum { dim = GridView::dimension };
+    enum { dimWorld = GridView::dimensionworld };
 
-    typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dim, dim> Tensor;
+    typedef typename GridView::ctype CoordScalar;
+    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> Tensor;
 
     // Dumux specific types
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryTypes) BoundaryTypes;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
     
@@ -143,9 +144,14 @@ class TutorialProblemCoupled
     // determine type of the parameter objects depening on selected material law
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
+    // phase indices
+    enum { numPhases = FluidSystem::numPhases };
+    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
+
     // indices of the conservation equations
-    enum { contiWEqIdx = Indices::conti0EqIdx + FluidSystem::wPhaseIdx };
-    enum { contiNEqIdx = Indices::conti0EqIdx + FluidSystem::nPhaseIdx };
+    enum { contiWEqIdx = Indices::conti0EqIdx + wPhaseIdx };
+    enum { contiNEqIdx = Indices::conti0EqIdx + nPhaseIdx };
 
     // indices of the primary variables
     enum { pwIdx = Indices::pwIdx };
@@ -156,11 +162,9 @@ public:
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
         , eps_(3e-6)
     {
-        //set main diagonal entries of the permeability tensor to a value
-        //setting to one value means: isotropic, homogeneous
-        K_ = 0;
-        for (int i = 0; i < dim; i++)
-            K_[i][i] = 1e-7;
+        // set main diagonal entries of the permeability tensor to a value
+        // setting to a single value means: isotropic, homogeneous
+        K_ = this->toTensor_(1e-7);
 
         //set residual saturations
         materialParams_.setSwr(0.0);                /*@\label{tutorial-coupled:setLawParams}@*/
@@ -183,10 +187,9 @@ public:
     //! Returns true if the current solution should be written to disk
     //! as a VTK file
     bool shouldWriteOutput() const /*@\label{tutorial-coupled:output}@*/
-    {
-        return
-            this->timeManager().timeStepIndex() > 0 &&
-            (this->timeManager().timeStepIndex() % 1 == 0);
+    { 
+        return (this->timeManager().timeStepIndex() % 5 == 0) ||
+            this->timeManager().willBeFinished() ;
     }
 
     //! Returns the temperature within a finite volume. We use constant
@@ -237,45 +240,41 @@ public:
                                                int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
+    /*!
+     * \brief Evaluate the boundary conditions.
+     */
     template <class Context>
-    void boundaryTypes(BoundaryTypes &bcTypes, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
-        if (pos[0] < eps_) // Dirichlet conditions on left boundary
-           bcTypes.setAllDirichlet();
-        else // neuman for the remaining boundaries
-           bcTypes.setAllNeumann();
+        if (pos[0] < eps_) {
+            // Free-flow conditions on left boundary
+            const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
+            
+            Scalar Sw = 1.0;
+            ImmiscibleFluidState<Scalar, FluidSystem> fs;
+            fs.setSaturation(wPhaseIdx, Sw);
+            fs.setSaturation(nPhaseIdx, 1.0 - Sw);
+            fs.setTemperature(temperature(context, spaceIdx, timeIdx));
+            
+            Scalar pC[numPhases];
+            MaterialLaw::capillaryPressures(pC, materialParams, fs);
+            fs.setPressure(wPhaseIdx, 200e3);
+            fs.setPressure(nPhaseIdx, 200e3 + pC[nPhaseIdx] - pC[nPhaseIdx]);
 
-    }
-
-    //! Evaluates the Dirichlet boundary conditions for a finite volume
-    //! on the grid boundary. Here, the 'values' parameter stores
-    //! primary variables.
-    template <class Context>
-    void dirichlet(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
-    {
-        values[Indices::pwIdx] = 200.0e3; // 200 kPa = 2 bar
-        values[Indices::SnIdx] = 0.0; // 0 % oil saturation on left boundary
-    }
-
-    //! Evaluates the boundary conditions for a Neumann boundary
-    //! segment. Here, the 'values' parameter stores the mass flux in
-    //! [kg/(m^2 * s)] in normal direction of each phase. Negative
-    template <class Context>
-    void neumann(RateVector &values, const Context &context, int spaceIdx, int timeIdx) const
-    {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
-        Scalar right = this->bboxMax()[0];
-        // extraction of oil on the right boundary for approx. 1.e6 seconds
-        if (pos[0] > right - eps_) {
-            // oil outflux of 30 g/(m * s) on the right boundary.
-            values[contiWEqIdx] = 0;
-            values[contiNEqIdx] = 3e-2;
-        } else {
-            // no-flow on the remaining Neumann-boundaries.
-            values[contiWEqIdx] = 0;
-            values[contiNEqIdx] = 0;
+            values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
+        else if (pos[0] > this->bboxMax()[0] - eps_) {
+            // forced outflow at the right boundary
+            RateVector massRate(0.0);
+
+            massRate[contiWEqIdx] = 0.0; // [kg / (s m^2)]
+            massRate[contiNEqIdx] = 3e-2; // [kg / (s m^2)]
+
+            values.setMassRate(massRate);
+        }
+        else // no flow at the remaining boundaries
+            values.setNoFlow();
     }
 
     //! Evaluates the source term for all phases within a given
