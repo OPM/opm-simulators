@@ -286,10 +286,12 @@ assemble_well_contrib(int                   nc ,
                       int                  *ok)
 /* ---------------------------------------------------------------------- */
 {
-    int w;
+    int w, p, np;
     int are_rate;
 
     struct WellControls *ctrls;
+
+    np = W->number_of_phases;
 
     *all_rate = 1;
     *ok = 1;
@@ -307,7 +309,15 @@ assemble_well_contrib(int                   nc ,
             break;
 
         case RESERVOIR_RATE:
-            assemble_rate_well(nc, w, W, mt, wdp, h);
+            for (p = 0; p < np; ++p) {
+                if (ctrls->distr[np * ctrls->current + p] != 1.0) {
+                    *ok = 0;
+                    break;
+                }
+            }
+            if (*ok) {
+                assemble_rate_well(nc, w, W, mt, wdp, h);
+            }
             break;
 
         case SURFACE_RATE:
