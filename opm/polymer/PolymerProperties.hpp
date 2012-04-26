@@ -153,14 +153,20 @@ namespace Opm
         void adsorptionWithDer(double c, double cmax,
                                double& c_ads, double& dc_ads_dc) const;
 
-	void effectiveVisc(const double c, const double* visc, double* visc_eff) const;
+        void effectiveVisc(const double c, const double* visc,
+                                              double& mu_w_eff) const;
+
+        void effectiveViscWithDer(const double c, const double* visc
+                                                     , double& mu_w_eff
+                                                     , double dmu_w_eff_dc) const;
 
         void effectiveInvVisc(const double c, const double* visc,
-                              double* inv_visc_eff) const;
+                                                 double& inv_mu_w_eff) const;
 
-	void effectiveViscWithDer(const double c, const double* visc,
-                                  double* visc_eff, double* dvisc_eff_dc) const;
-
+        void effectiveInvViscWithDer(const double c,
+                                                        const double* visc,
+                                                        double& inv_mu_w_eff,
+                                                        double& dinv_mu_w_eff_dc) const;
         void effectiveRelperm(const double c,
                               const double cmax,
                               const double* relperm,
@@ -247,8 +253,9 @@ namespace Opm
         void adsorptionBoth(double c, double cmax,
                             double& c_ads, double& dc_ads_dc,
                             bool if_with_der) const;
-        void effectiveViscBoth(const double c, const double* visc, double* visc_eff,
-                               double* dvisc_eff_dc, bool if_with_der) const;
+        void effectiveInvViscBoth(const double c, const double* visc,
+                                  double& inv_mu_w_eff,
+                                  double& dinv_mu_w_eff_dc, bool if_with_der) const;
         void effectiveRelpermBoth(const double c,
                                   const double cmax,
                                   const double* relperm,

@@ -124,25 +124,33 @@ namespace Opm
     }
 
 
-    void PolymerProperties::effectiveVisc(const double c, const double* visc, double* visc_eff) const {
-        effectiveViscBoth(c, visc, visc_eff, 0, false);
+    void PolymerProperties::effectiveVisc(const double c, const double* visc, double& mu_w_eff) const {
+        effectiveInvVisc(c, visc, mu_w_eff);
+        mu_w_eff = 1./mu_w_eff;
     }
 
-    void PolymerProperties::effectiveInvVisc(const double c, const double* visc, double* inv_visc_eff) const
+    void PolymerProperties::effectiveViscWithDer(const double c, const double* visc, double& mu_w_eff, double dmu_w_eff_dc) const {
+        effectiveInvViscWithDer(c, visc, mu_w_eff, dmu_w_eff_dc);
+        mu_w_eff = 1./mu_w_eff;
+        dmu_w_eff_dc = -dmu_w_eff_dc*mu_w_eff*mu_w_eff;
+    }
+
+    void PolymerProperties::effectiveInvVisc(const double c, const double* visc, double& inv_mu_w_eff) const
     {
-        effectiveViscBoth(c, visc, inv_visc_eff, 0, false);
-        inv_visc_eff[0] = 1./inv_visc_eff[0];
-        inv_visc_eff[1] = 1./inv_visc_eff[1];
+        double dummy;
+        effectiveInvViscBoth(c, visc, inv_mu_w_eff, dummy, false);
     }
 
-    void PolymerProperties::effectiveViscWithDer(const double c, const double* visc, double* visc_eff,
-                                                 double* dvisc_eff_dc) const {
-        effectiveViscBoth(c, visc, visc_eff, dvisc_eff_dc, true);
+    void PolymerProperties::effectiveInvViscWithDer(const double c, const double* visc,
+                                                 double& inv_mu_w_eff,
+                                                 double& dinv_mu_w_eff_dc) const {
+        effectiveInvViscBoth(c, visc, inv_mu_w_eff, dinv_mu_w_eff_dc, true);
     }
 
-    void PolymerProperties::effectiveViscBoth(const double c, const double* visc, double* visc_eff,
-                                              double* dvisc_eff_dc, bool if_with_der) const
-    {
+    void PolymerProperties::effectiveInvViscBoth(const double c, const double* visc,
+                                                 double& inv_mu_w_eff,
+                                                 double& dinv_mu_w_eff_dc,
+                                                 bool if_with_der) const {
         double cbar = c/c_max_;
         double mu_w = visc[0];
         double mu_m;
@@ -155,19 +163,15 @@ namespace Opm
             mu_m = viscMult(c)*mu_w;
         }
         double mu_p = viscMult(c_max_)*mu_w;
-        double mu_m_omega = std::pow(mu_m, mix_param_);
-        double mu_w_e   = mu_m_omega*std::pow(mu_w, 1.0 - mix_param_);
-        double mu_p_eff = mu_m_omega*std::pow(mu_p, 1.0 - mix_param_);
-        double mu_w_eff = 1./((1.0 - cbar)/mu_w_e + cbar/mu_p_eff);
-        visc_eff[0] = mu_w_eff;
-        visc_eff[1] = visc[1];
+        double inv_mu_m_omega = std::pow(mu_m, -omega);
+        double inv_mu_w_e   = inv_mu_m_omega*std::pow(mu_w, omega - 1.);
+        double inv_mu_p_eff = inv_mu_m_omega*std::pow(mu_p, omega - 1.);
+        inv_mu_w_eff = (1.0 - cbar)*inv_mu_w_e + cbar*inv_mu_p_eff;
         if (if_with_der) {
-            double dmu_w_e_dc = omega*dmu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_w, 1 - omega);
-            double dmu_p_eff_dc = omega*dmu_m_dc*std::pow(mu_m, omega - 1)*std::pow(mu_p, 1 - omega);
-            dvisc_eff_dc[0] = -1./c_max_*mu_w_eff*mu_w_eff*(1./mu_p_eff - 1./mu_w_e) + (1-cbar)*(mu_w_eff*mu_w_eff/(mu_w_e*mu_w_e))*dmu_w_e_dc + cbar*(mu_w_eff*mu_w_eff/(mu_p_eff*mu_p_eff))*dmu_p_eff_dc;
-            dvisc_eff_dc[1] = 0.;
-        } else {
-            dvisc_eff_dc = 0;
+            double dinv_mu_w_e_dc = -omega*dmu_m_dc*std::pow(mu_m, -omega - 1)*std::pow(mu_w, omega - 1);
+            double dinv_mu_p_eff_dc = -omega*dmu_m_dc*std::pow(mu_m, -omega - 1)*std::pow(mu_p, omega - 1);
+            dinv_mu_w_eff_dc = (1 - cbar)*dinv_mu_w_e_dc + cbar*dinv_mu_p_eff_dc +
+                1/c_max_*(inv_mu_p_eff - inv_mu_w_e);
         }
     }
 
@@ -252,11 +256,9 @@ namespace Opm
                                                     double& dmobwat_dc,
                                                     bool if_with_der) const
     {
-        double visc_eff[2];
-        double dvisc_eff_dc[2];
-        effectiveViscBoth(c, visc, visc_eff, dvisc_eff_dc, if_with_der);
-        double mu_w_eff = visc_eff[0];
-        double dmu_w_eff_dc = dvisc_eff_dc[0];
+        double inv_mu_w_eff;
+        double dinv_mu_w_eff_dc;
+        effectiveInvViscBoth(c, visc, inv_mu_w_eff, dinv_mu_w_eff_dc, if_with_der);
         double eff_relperm_wat;
         double deff_relperm_wat_ds;
         double deff_relperm_wat_dc;
@@ -266,16 +268,16 @@ namespace Opm
                              deff_relperm_wat_ds, deff_relperm_wat_dc,
                              if_with_der);
 
-        mob[0] = eff_relperm_wat/visc_eff[0];
-        mob[1] = relperm[1]/visc_eff[1];
+        mob[0] = eff_relperm_wat*inv_mu_w_eff;
+        mob[1] = relperm[1]/visc[1];
 
         if (if_with_der) {
-            dmobwat_dc = - eff_relperm_wat*dmu_w_eff_dc/(mu_w_eff*mu_w_eff)
-                + deff_relperm_wat_dc/mu_w_eff;
-            dmob_ds[0*2 + 0] = deff_relperm_wat_ds/visc_eff[0];
-            dmob_ds[0*2 + 1] = drelperm_ds[0*2 + 1]/visc_eff[1];
-            dmob_ds[1*2 + 0] = drelperm_ds[1*2 + 0]/visc_eff[0];
-            dmob_ds[1*2 + 1] = drelperm_ds[1*2 + 1]/visc_eff[1];
+            dmobwat_dc = eff_relperm_wat*dinv_mu_w_eff_dc
+                + deff_relperm_wat_dc*inv_mu_w_eff;
+            dmob_ds[0*2 + 0] = deff_relperm_wat_ds*inv_mu_w_eff;
+            dmob_ds[0*2 + 1] = drelperm_ds[0*2 + 1]/visc[1];
+            dmob_ds[1*2 + 0] = drelperm_ds[1*2 + 0]*inv_mu_w_eff;
+            dmob_ds[1*2 + 1] = drelperm_ds[1*2 + 1]/visc[1];
         }
     }
 
