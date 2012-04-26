@@ -84,8 +84,8 @@ namespace
 	CurveInSCPlane();
 	void setup(const double* x, const double* direction,
 		   const double* end_point, const double* x_min,
-		   const double* x_max, double& t_max_out,
-		   double& t_out_out);
+		   const double* x_max, const bool adjust_dir,
+                   double& t_max_out, double& t_out_out);
 	void computeXOfT(double*, const double) const;
 
     private:
@@ -411,29 +411,40 @@ namespace Opm
 
     void TransportModelPolymer::ResidualEquation::computeResidual(const double* x, double* res) const
     {
-        double dummy;
-        computeResAndJacobi(x, true, true, false, false, res, 0, 0, dummy, dummy);
+        double dres_s_dsdc[2];
+        double dres_c_dsdc[2];
+        double mc;
+        double ff;
+        computeResAndJacobi(x, true, true, false, false, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
     }
 
     void TransportModelPolymer::ResidualEquation::computeResidual(const double* x, double* res, double& mc, double& ff) const
     {
-        computeResAndJacobi(x, true, true, false, false, res, 0, 0, mc, ff);
+        double dres_s_dsdc[2];
+        double dres_c_dsdc[2];
+        computeResAndJacobi(x, true, true, false, false, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
     }
 
 
     double TransportModelPolymer::ResidualEquation::computeResidualS(const double* x) const
     {
         double res[2];
-        double dummy;
-        computeResAndJacobi(x, true, false, false, false, res, 0, 0, dummy, dummy);
+        double dres_s_dsdc[2];
+        double dres_c_dsdc[2];
+        double mc;
+        double ff;
+        computeResAndJacobi(x, true, false, false, false, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
         return res[0];
     }
 
     double TransportModelPolymer::ResidualEquation::computeResidualC(const double* x) const
     {
         double res[2];
-        double dummy;
-        computeResAndJacobi(x, false, true, false, false, res, 0, 0, dummy, dummy);
+        double dres_s_dsdc[2];
+        double dres_c_dsdc[2];
+        double mc;
+        double ff;
+        computeResAndJacobi(x, false, true, false, false, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
         return res[1];
     }
 
@@ -441,23 +452,29 @@ namespace Opm
     // If gradient_method == FinDif, use finite difference
     // If gradient_method == Analytic, use analytic expresions
     {
-        double dummy;
-        computeResAndJacobi(x, true, true, true, false, res, gradient, 0, dummy, dummy);
+        double dres_c_dsdc[2];
+        double mc;
+        double ff;
+        computeResAndJacobi(x, true, true, true, false, res, gradient, dres_c_dsdc, mc, ff);
     }
 
     void TransportModelPolymer::ResidualEquation::computeGradientResC(const double* x, double* res, double* gradient) const
     // If gradient_method == FinDif, use finite difference
     // If gradient_method == Analytic, use analytic expresions
     {
-        double dummy;
-        computeResAndJacobi(x, true, true, false, true, res, 0, gradient, dummy, dummy);
+        double dres_s_dsdc[2];
+        double mc;
+        double ff;
+        computeResAndJacobi(x, true, true, false, true, res, dres_s_dsdc, gradient, mc, ff);
     }
 
     // Compute the Jacobian of the residual equations.
     void TransportModelPolymer::ResidualEquation::computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const
     {
-        double dummy;
-        computeResAndJacobi(x, false, false, true, true, 0, dres_s_dsdc, dres_c_dsdc, dummy, dummy);
+        double res[2];
+        double mc;
+        double ff;
+        computeResAndJacobi(x, false, false, true, true, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
     }
 
     void TransportModelPolymer::ResidualEquation::computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
@@ -502,13 +519,13 @@ namespace Opm
             double s = x[0];
             double c = x[1];
             tm.fracFlow(s, c, cmax0, cell, ff);
-            tm.computeMc(c, mc);
-            double ads;
-            tm.polyprops_.adsorption(c, cmax0, ads);
             if (if_res_s) {
                 res[0] = s - s0 +  dtpv*(outflux*ff + influx);
             }
             if (if_res_c) {
+                tm.computeMc(c, mc);
+                double ads;
+                tm.polyprops_.adsorption(c, cmax0, ads);
                 res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
                     + dtpv*(outflux*ff*mc + influx_polymer);
@@ -518,27 +535,28 @@ namespace Opm
 	if ((if_dres_c_dsdc || if_dres_s_dsdc) && gradient_method == FinDif) {
 	    double epsi = 1e-8;
 	    double res_epsi[2];
+            double res_0[2];
 	    double x_epsi[2];
-	    computeResidual(x, res);
+	    computeResidual(x, res_0);
             if (if_dres_s_dsdc) {
                 x_epsi[0] = x[0] + epsi;
                 x_epsi[1] = x[1];
                 computeResidual(x_epsi, res_epsi);
-                dres_s_dsdc[0] =  (res_epsi[0] - res[0])/epsi;
+                dres_s_dsdc[0] =  (res_epsi[0] - res_0[0])/epsi;
                 x_epsi[0] = x[0];
                 x_epsi[1] = x[1] + epsi;
                 computeResidual(x_epsi, res_epsi);
-                dres_s_dsdc[1] = (res_epsi[0] - res[0])/epsi;
+                dres_s_dsdc[1] = (res_epsi[0] - res_0[0])/epsi;
             }
             if (if_dres_c_dsdc) {
                 x_epsi[0] = x[0] + epsi;
                 x_epsi[1] = x[1];
                 computeResidual(x_epsi, res_epsi);
-                dres_c_dsdc[0] =  (res_epsi[1] - res[1])/epsi;
+                dres_c_dsdc[0] =  (res_epsi[1] - res_0[1])/epsi;
                 x_epsi[0] = x[0];
                 x_epsi[1] = x[1] + epsi;
                 computeResidual(x_epsi, res_epsi);
-                dres_c_dsdc[1] = (res_epsi[1] - res[1])/epsi;
+                dres_c_dsdc[1] = (res_epsi[1] - res_0[1])/epsi;
             }
         }
     }
@@ -617,7 +635,7 @@ namespace Opm
 
 	falsi_tol =  std::max(reduc_factor_falsi_tol*norm(res), tol_);
 	double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
-	double x_max[2] = { 1.0, polyprops_.cMax() };
+	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
 	double t;
 	double t_max;
 	double t_out;
@@ -677,20 +695,24 @@ namespace Opm
 		// and which can therefore be used by a 1d solver.
 
 		// We start with the zero curve of the s and r residual we are closest to.
+                bool adjust_dir = true;
 		if (std::abs(res[0]) < std::abs(res[1])) {
 		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol_);
 		    if (res[0] < -falsi_tol) {
 			direction[0] = x_max[0] - x[0];
 			direction[1] = x_min[1] - x[1];
+                        adjust_dir = true;
 			if_res_s = true;
 		    } else if (res[0] > falsi_tol) {
 			direction[0] = x_min[0] - x[0];
 			direction[1] = x_max[1] - x[1];
+                        adjust_dir = true;
 			if_res_s = true;
 		    } else {
 			res_eq.computeGradientResS(x, res, gradient);
 			direction[0] = -gradient[1];
 			direction[1] = gradient[0];
+                        adjust_dir = false;
 			if_res_s = false;
 		    }
 		} else {
@@ -698,15 +720,18 @@ namespace Opm
 		    if (res[1] < -falsi_tol) {
 			direction[0] = x_max[0] - x[0];
 			direction[1] = x_max[1] - x[1];
+                        adjust_dir = true;
 			if_res_s = false;
 		    } else if (res[1] > falsi_tol) {
 			direction[0] = x_min[0] - x[0];
 			direction[1] = x_min[1] - x[1];
+                        adjust_dir = true;
 			if_res_s = false;
 		    } else {
 			res_eq.computeGradientResC(x, res, gradient);
 			direction[0] = -gradient[1];
 			direction[1] = gradient[0];
+                        adjust_dir = false;
 			if_res_s = true;
 		    }
 		}
@@ -714,14 +739,14 @@ namespace Opm
 		    if (res[0] < 0) {
 			end_point[0] = x_max[0];
 			end_point[1] = x_min[1];
-			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
 			if (res_s_on_curve(t_out) >= 0) {
 			    t_max = t_out;
 			}
 		    } else {
 			end_point[0] = x_min[0];
 			end_point[1] = x_max[1];
-			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
 			if (res_s_on_curve(t_out) <= 0) {
 			    t_max = t_out;
 			}
@@ -733,14 +758,14 @@ namespace Opm
 		    if (res[1] < 0) {
 			end_point[0] = x_max[0];
 			end_point[1] = x_max[1];
-			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
 			if (res_c_on_curve(t_out) >= 0) {
 			    t_max = t_out;
 			}
 		    } else {
 			end_point[0] = x_min[0];
 			end_point[1] = x_min[1];
-			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, t_max, t_out);
+			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
 			if (res_c_on_curve(t_out) <= 0) {
 			    t_max = t_out;
 			}
@@ -911,8 +936,8 @@ namespace
     // rectangle. x_out=(s_out, c_out) denotes the values of s and c at that point.
     void CurveInSCPlane::setup(const double* x, const double* direction,
                                const double* end_point, const double* x_min,
-                               const double* x_max, double& t_max_out,
-                               double& t_out_out)
+                               const double* x_max, const bool adjust_dir,
+                               double& t_max_out, double& t_out_out)
     {
 	x_[0] = x[0];
 	x_[1] = x[1];
@@ -924,10 +949,12 @@ namespace
 	direction_[1] = direction[1];
 	end_point_[0] = end_point[0];
 	end_point_[1] = end_point[1];
-	if ((end_point_[0]-x_[0])*direction_[0] + (end_point_[1]-x_[1])*direction_[1] < 0) {
-	    direction_[0] *= -1.0;
-	    direction_[1] *= -1.0;
-	}
+        if (adjust_dir) {
+            if ((end_point_[0]-x_[0])*direction_[0] + (end_point_[1]-x_[1])*direction_[1] < 0) {
+                direction_[0] *= -1.0;
+                direction_[1] *= -1.0;
+            }
+        }
 	if ((std::abs(direction_[0]) + std::abs(direction_[0])) == 0) {
 	    direction_[0] = end_point_[0]-x_[0];
 	    direction_[1] = end_point_[1]-x_[1];
