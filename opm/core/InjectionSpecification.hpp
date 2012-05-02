@@ -11,7 +11,7 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE, ORAT, REIN, RESV, VREP, WGRA, FLD, GRUP
+            NONE, RATE, RESV, BHP, THP, REIN, VREP, GRUP, FLD
         };
 
         enum InjectorType
@@ -19,14 +19,21 @@ namespace Opm
             WATER, OIL, GAS
         };
 
+        enum GuideRateType
+        {
+            RAT, NONE_GRT
+        };
+
         InjectionSpecification();
 
         InjectorType injector_type_;
         ControlMode control_mode_;
         double surface_flow_max_rate_;
-        double reinjection_fraction_target_;
-        double fluid_volume_max_rate_;
+        double reservoir_flow_max_rate_;
         double BHP_limit_;
+        double reinjection_fraction_target_;
+        double guide_rate_;
+        GuideRateType guide_rate_type_;
     };
 
 }
