@@ -75,11 +75,6 @@ namespace Opm
         /// \return A set of pointers to every well in the collection
         const std::vector<WellNode*>& getLeafNodes() const;
         
-        /// This will, for each group \f$G\f$ for each well \f$w\in G\f$ calculate 
-        /// the new guide rate \f$\tilde{g}_w\f$ for each well as
-        /// \f[ \tilde{g}_w := \frac{g_w}{\sum_{w'\in G} g_{w'}}\f]
-        void calculateGuideRates();
-        
         /// Finds the group with the given name.
         /// \param[in] the name of the group
         /// \return the pointer to the group if found, NULL otherwise

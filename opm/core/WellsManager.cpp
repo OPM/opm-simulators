@@ -620,7 +620,6 @@ namespace Opm
                 }
             }
         }
-        well_collection_.calculateGuideRates();
         well_collection_.setWellsPointer(w_);
         well_collection_.applyGroupControls();
     }

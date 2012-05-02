@@ -247,22 +247,6 @@ namespace Opm
     {
     }
 
-
-    void WellsGroup::calculateGuideRates()
-    {
-        double inj_guide_rate_sum = 0.0;
-        double prod_guide_rate_sum = 0.0;
-        for (size_t i = 0; i < children_.size(); i++) {
-            children_[i]->calculateGuideRates();
-            inj_guide_rate_sum += children_[i]->injSpec().guide_rate_;
-            prod_guide_rate_sum += children_[i]->prodSpec().guide_rate_;
-        }
-        injSpec().guide_rate_ = inj_guide_rate_sum;
-        prodSpec().guide_rate_ = prod_guide_rate_sum;
-    }
-    
-
-
     /// Sets the current active control to the provided one for all injectors within the group.
     /// After this call, the combined rate (which rate depending on control_mode) of the group
     /// shall be equal to target.
@@ -272,9 +256,11 @@ namespace Opm
                                           const double target, 
                                           const bool forced)
     {
-        if (forced || injSpec().control_mode_ == InjectionSpecification::FLD) {
+        if (forced || injSpec().control_mode_ == InjectionSpecification::FLD 
+            || injSpec().control_mode_ == InjectionSpecification::NONE) {
+            const double my_guide_rate = injectionGuideRate(!forced);
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->injSpec().guide_rate_ / injSpec().guide_rate_;
+                const double child_target = target * children_[i]->injectionGuideRate(!forced) / my_guide_rate;
                 children_[i]->applyInjGroupControl(control_mode, child_target, true);
             }
             injSpec().control_mode_ = InjectionSpecification::FLD;
@@ -290,10 +276,11 @@ namespace Opm
                                            const double target,
                                            const bool forced)
     {
-        if (forced
-            || (prodSpec().control_mode_ == ProductionSpecification::FLD || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
+        if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD 
+                       || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
+            const double my_guide_rate =  productionGuideRate(!forced);
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->prodSpec().guide_rate_ / prodSpec().guide_rate_;
+                const double child_target = target * children_[i]->productionGuideRate(!forced) / my_guide_rate;
                 children_[i]->applyProdGroupControl(control_mode, child_target, true);
             }
             prodSpec().control_mode_ = ProductionSpecification::FLD;
@@ -443,12 +430,12 @@ namespace Opm
         case ProductionSpecification::LRAT:
         case ProductionSpecification::RESV:
         {
-            const double my_guide_rate = prodSpec().guide_rate_;
+            const double my_guide_rate = productionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i ) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->prodSpec().guide_rate_;
+                const double children_guide_rate = productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, 
                                                     (my_guide_rate / children_guide_rate) * getTarget(prod_mode), 
                                                     false);
@@ -474,12 +461,12 @@ namespace Opm
         case InjectionSpecification::RATE:
         case InjectionSpecification::RESV:
         {
-            const double my_guide_rate = injSpec().guide_rate_;
+            const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i ) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->injSpec().guide_rate_;
+                const double children_guide_rate = children_[i]->injectionGuideRate(true);
                 children_[i]->applyInjGroupControl(inj_mode, 
                                                     (my_guide_rate / children_guide_rate) * getTarget(inj_mode), 
                                                     false);
@@ -496,6 +483,30 @@ namespace Opm
         default:
             THROW("Unhandled group injection control mode " << inj_mode);
         }
+    }
+    
+    /// Calculates the production guide rate for the group.
+    /// \param[in] only_group If true, will only accumelate guide rates for 
+    ///                       wells under group control
+    double WellsGroup::productionGuideRate(bool only_group) 
+    {
+        double sum = 0.0;
+        for (size_t i = 0; i < children_.size(); ++i) {
+            sum += children_[i]->productionGuideRate(only_group);
+        }
+        return sum;
+    }
+
+    /// Calculates the injection guide rate for the group.
+    /// \param[in] only_group If true, will only accumelate guide rates for 
+    ///                       wells under group control
+    double WellsGroup::injectionGuideRate(bool only_group)
+    {
+        double sum = 0.0;
+        for (size_t i = 0; i < children_.size(); ++i) {
+            sum += children_[i]->injectionGuideRate(only_group);
+        }
+        return sum;
     }
 
 
@@ -612,11 +623,6 @@ namespace Opm
     {
         wells_ = wells;
         self_index_ = self_index;
-    }
-
-    void WellNode::calculateGuideRates()
-    {
-        // Empty
     }
     
     int WellNode::numberOfLeafNodes() 
@@ -787,6 +793,29 @@ namespace Opm
     {
         // Empty
     }
+    
+     /// Calculates the production guide rate for the group.
+    /// \param[in] only_group If true, will only accumelate guide rates for 
+    ///                       wells under group control
+    double WellNode::productionGuideRate(bool only_group) 
+    {
+        if (only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+            return prodSpec().guide_rate_;
+        }
+        return 0.0;
+    }
+
+    /// Calculates the injection guide rate for the group.
+    /// \param[in] only_group If true, will only accumelate guide rates for 
+    ///                       wells under group control
+    double WellNode::injectionGuideRate(bool only_group)
+    {
+        if (only_group || injSpec().control_mode_ == InjectionSpecification::GRUP) {
+            return injSpec().guide_rate_;
+        }
+        return 0.0;
+    }
+    
     
     namespace
     {

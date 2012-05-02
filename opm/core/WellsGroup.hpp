@@ -89,10 +89,6 @@ namespace Opm
         /// Gets the parent of the group, NULL if no parent.
         const WellsGroupInterface* getParent() const;
         
-        /// Recursively calculate the guide rate for each member of the well group.
-        /// This should be called after the guide rates are set to the non-normalized values.
-        virtual void calculateGuideRates() = 0;
-        
         /// Calculates the number of leaf nodes in the given group. 
         /// A leaf node is defined to have one leaf node in its group.
         virtual int numberOfLeafNodes() = 0;
@@ -173,6 +169,16 @@ namespace Opm
         /// If no group control is set, this is called recursively to the children.
         virtual void applyInjGroupControls() = 0;
         
+        /// Calculates the production guide rate for the group.
+        /// \param[in] only_group If true, will only accumelate guide rates for 
+        ///                       wells under group control
+        virtual double productionGuideRate(bool only_group) = 0;
+        
+        /// Calculates the injection guide rate for the group.
+        /// \param[in] only_group If true, will only accumelate guide rates for 
+        ///                       wells under group control
+        virtual double injectionGuideRate(bool only_group) = 0;
+        
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
         double rateByMode(const double* res_rates, 
@@ -212,9 +218,6 @@ namespace Opm
                                    const std::vector<double>& well_surfacerates_phase,
                                    WellPhasesSummed& summed_phases);
         
-        
-        virtual void calculateGuideRates();
-
         virtual int numberOfLeafNodes();
         virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                                const std::vector<double>& well_surfacerates_phase,
@@ -245,6 +248,16 @@ namespace Opm
         /// Applies any injection group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyInjGroupControls();
+        
+        /// Calculates the production guide rate for the group.
+        /// \param[in] only_group If true, will only accumelate guide rates for 
+        ///                       wells under group control
+        virtual double productionGuideRate(bool only_group);
+        
+        /// Calculates the injection guide rate for the group.
+        /// \param[in] only_group If true, will only accumelate guide rates for 
+        ///                       wells under group control
+        virtual double injectionGuideRate(bool only_group);
 
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
@@ -270,7 +283,6 @@ namespace Opm
         
         void setWellsPointer(Wells* wells, int self_index);
         
-        virtual void calculateGuideRates();
         virtual int numberOfLeafNodes();
         
         // Shuts the well (in the well struct)
@@ -306,6 +318,15 @@ namespace Opm
         /// If no group control is set, this is called recursively to the children.
         virtual void applyInjGroupControls();
         
+        /// Calculates the production guide rate for the group.
+        /// \param[in] only_group If true, will only accumelate guide rates for 
+        ///                       wells under group control
+        virtual double productionGuideRate(bool only_group);
+        
+        /// Calculates the injection guide rate for the group.
+        /// \param[in] only_group If true, will only accumelate guide rates for 
+        ///                       wells under group control
+        virtual double injectionGuideRate(bool only_group);
 
     private:
         Wells* wells_;

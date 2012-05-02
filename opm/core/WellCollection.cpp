@@ -108,13 +108,6 @@ namespace Opm
         }
         return true;
     }
-
-    void WellCollection::calculateGuideRates()
-    {
-        for(size_t i = 0; i < roots_.size(); i++) {
-            roots_[i]->calculateGuideRates();
-        }
-    }
     
     void WellCollection::setWellsPointer(Wells* wells) {
         for(size_t i = 0; i < leaf_nodes_.size(); i++) {
