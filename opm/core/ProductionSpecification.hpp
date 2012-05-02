@@ -11,7 +11,7 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE_CM, ORAT, WRAT, LRAT, REIN, RESV, VREP, WGRA, FLD, GRUP, BHP
+            NONE, ORAT, WRAT, GRAT, LRAT, CRAT, RESV, PRBL, BHP, THP, GRUP, FLD
         };
 
         enum Procedure
@@ -21,7 +21,7 @@ namespace Opm
         
         enum GuideRateType
         {
-            OIL, RAT, NONE_GRT
+            OIL, NONE_GRT
         };
 
         ProductionSpecification();
@@ -30,11 +30,11 @@ namespace Opm
         Procedure procedure_;
 
         double oil_max_rate_;
-        double water_production_target_;
-        double fluid_volume_max_rate_;
-        double BHP_limit_;
+        double water_max_rate_;
         double gas_max_rate_;
         double liquid_max_rate_;
+        double reservoir_flow_max_rate_;
+        double BHP_limit_;
         double guide_rate_;
         GuideRateType guide_rate_type_;
 
