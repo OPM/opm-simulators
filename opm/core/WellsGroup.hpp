@@ -1,3 +1,22 @@
+/*
+  Copyright 2012 SINTEF ICT, Applied Mathematics.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef OPM_WELLSGROUP_HPP
 #define	OPM_WELLSGROUP_HPP
 
@@ -5,6 +24,7 @@
 #include <opm/core/ProductionSpecification.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 #include <string>
 
 
@@ -16,11 +36,14 @@ namespace Opm
     
     /// Basic information needed for group control (each group should typically
     /// not exceed the sum of its leaf nodes)
-    struct WellPhasesSummed {
+    struct WellPhasesSummed
+    {
         WellPhasesSummed();
-        double bhp_sum;
-        double rate_sum;
-        
+        double res_inj_rates[3];
+        double res_prod_rates[3];
+        double surf_inj_rates[3];
+        double surf_prod_rates[3];
+
         /// Sums each component
         void operator+=(const WellPhasesSummed& other);
     };
@@ -29,8 +52,9 @@ namespace Opm
     {
     public:
         WellsGroupInterface(const std::string& name,
-                            ProductionSpecification prod_spec,
-                            InjectionSpecification inj_spec);
+                            const ProductionSpecification& prod_spec,
+                            const InjectionSpecification& inj_spec,
+                            const PhaseUsage& phase_usage);
         virtual ~WellsGroupInterface();
 
         /// The unique identifier for the well or well group.
@@ -47,7 +71,9 @@ namespace Opm
         
         /// Injection specifications for the well or well group.
         InjectionSpecification& injSpec();
-        
+
+        /// Phase usage information.
+        const PhaseUsage& phaseUsage() const;
         
         /// \returns true if the object is a leaf node (WellNode), false otherwise.
         virtual bool isLeafNode() const;
@@ -76,7 +102,7 @@ namespace Opm
         /// down wells). Only one change is applied per invocation. Typical use will be
         /// \code
         /// solve_pressure();
-        /// while(!group.conditionsMet(well_bhp, well_rate, summed_phases)) {
+        /// while(!group.conditionsMet(...)) {
         ///     solve_pressure();
         /// }
         /// \endcode
@@ -84,23 +110,33 @@ namespace Opm
         /// \note It's highly recommended to use the conditionsMet found in WellsManager.
         /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
         ///                         to be ordered the same way as the related Wells-struct.
-        /// \param[in]    well_rate A vector containing the rate for each well. Is assumed 
-        ///                         to be ordered the same way as the related Wells-struct.
-        /// \param[out]   summed_phases Will at end of invocation contain the summed phases
-        ///                             (bhp, rate ,etc.) for the group.
-        /// \param[in]    epsilon   The error tolerated for each inequality. Formally, it will accept
-        ///                         (a - b <= epsilon) as (a <= b).
+        /// \param[in]    well_reservoirrates_phase
+        ///                         A vector containing reservoir rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
+        /// \param[in]    well_surfacerates_phase
+        ///                         A vector containing surface rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
+        /// \param[out]   summed_phases Will at end of invocation contain the summed phase rates
+        ///                             (rate ,etc.) for the group.
         /// \return true if no violations were found, false otherwise (false also implies a change).
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
-                                   const std::vector<double>& well_rate,
-                                   WellPhasesSummed& summed_phases,
-                                   const double epsilon = 1e-8) = 0;
+                                   const std::vector<double>& well_reservoirrates_phase,
+                                   const std::vector<double>& well_surfacerates_phase,
+                                   WellPhasesSummed& summed_phases);
         
-        /// Sets the current active control to the provided one for all wells within the group
-        /// \note Also changes the target based on type.
-        /// \param[in] type the type to change to which the control is changed.
-        virtual void applyControl(const WellControlType type) = 0;
-        
+        /// Sets the current active control to the provided one for all injectors within the group.
+        /// After this call, the combined rate (which rate depending on control_mode) of the group
+        /// shall be equal to target.
+        virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const double target) = 0;
+        /// Sets the current active control to the provided one for all producers within the group.
+        /// After this call, the combined rate (which rate depending on control_mode) of the group
+        /// shall be equal to target.
+        virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
+                                           const double target) = 0;
+
         /// Gets the worst offending well based on the input
         /// \param values A vector of a values for each well. This is assumed to be ordered the same way as the 
         ///               relevant Wells struct.
@@ -108,12 +144,23 @@ namespace Opm
         virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values) = 0;
         
     protected:
-           WellsGroupInterface* parent_;
+        /// Calculates the correct rate for the given ProductionSpecification::ControlMode
+        double rateByMode(const double* res_rates, 
+                          const double* surf_rates,
+                          const ProductionSpecification::ControlMode mode);
+
+        /// Calculates the correct rate for the given InjectionSpecification::ControlMode
+        double rateByMode(const double* res_rates, 
+                          const double* surf_rates,
+                          const InjectionSpecification::ControlMode mode);
+
+        WellsGroupInterface* parent_;
 
     private:
         std::string name_;
         ProductionSpecification production_specification_;
         InjectionSpecification injection_specification_;
+        PhaseUsage phase_usage_;
     };
 
 
@@ -122,24 +169,36 @@ namespace Opm
     {
     public:
         WellsGroup(const std::string& name,
-                   ProductionSpecification prod_spec,
-                   InjectionSpecification inj_spec);
+                   const ProductionSpecification& prod_spec,
+                   const InjectionSpecification& inj_spec,
+                   const PhaseUsage& phase_usage);
 
         virtual WellsGroupInterface* findGroup(const std::string& name_of_node);
 
         void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
         
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
-                                   const std::vector<double>& well_rate,
-                                   WellPhasesSummed& summed_phases,
-                                   const double epsilon = 1e-8);
+                                   const std::vector<double>& well_reservoirrates_phase,
+                                   const std::vector<double>& well_surfacerates_phase,
+                                   WellPhasesSummed& summed_phases);
         
         
         virtual void calculateGuideRates();
 
         virtual int numberOfLeafNodes();
         virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values);
-        virtual void applyControl(const WellControlType type);
+
+        /// Sets the current active control to the provided one for all injectors within the group.
+        /// After this call, the combined rate (which rate depending on control_mode) of the group
+        /// shall be equal to target.
+        virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const double target);
+
+        /// Sets the current active control to the provided one for all producers within the group.
+        /// After this call, the combined rate (which rate depending on control_mode) of the group
+        /// shall be equal to target.
+        virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
+                                           const double target);
 
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
@@ -151,14 +210,15 @@ namespace Opm
     {
     public:
         WellNode(const std::string& name,
-                 ProductionSpecification prod_spec,
-                InjectionSpecification inj_spec);
+                 const ProductionSpecification& prod_spec,
+                 const InjectionSpecification& inj_spec,
+                 const PhaseUsage& phase_usage);
 
         virtual WellsGroupInterface* findGroup(const std::string& name_of_node);
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
-                                   const std::vector<double>& well_rate,
-                                   WellPhasesSummed& summed_phases,
-                                   const double epsilon = 1e-8);
+                                   const std::vector<double>& well_reservoirrates_phase,
+                                   const std::vector<double>& well_surfacerates_phase,
+                                   WellPhasesSummed& summed_phases);
         
         virtual bool isLeafNode() const;
         
@@ -171,11 +231,23 @@ namespace Opm
         void shutWell();
         
         virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values);
-        virtual void applyControl(const WellControlType type);
-        
+
+        /// Sets the current active control to the provided one for all injectors within the group.
+        /// After this call, the combined rate (which rate depending on control_mode) of the group
+        /// shall be equal to target.
+        virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const double target);
+
+        /// Sets the current active control to the provided one for all producers within the group.
+        /// After this call, the combined rate (which rate depending on control_mode) of the group
+        /// shall be equal to target.
+        virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
+                                           const double target);
+
     private:
         Wells* wells_;
         int self_index_;
+        int group_control_index_;
     };
 
     /// Creates the WellsGroupInterface for the given name
