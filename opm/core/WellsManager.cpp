@@ -25,6 +25,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/WellCollection.hpp>
+#include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
 
 #include <tr1/array>
 #include <cmath>
@@ -36,84 +37,94 @@ namespace
 
     struct WellData
     {
-	WellType type;
-	WellControlType control;
-	double target;
-	double reference_bhp_depth;
-	SurfaceComponent injected_phase;
+        WellType type;
+        // WellControlType control;
+        // double target;
+        double reference_bhp_depth;
+        // Opm::InjectionSpecification::InjectorType injected_phase;
     };
 
 
     struct PerfData
     {
-	int cell;
-	double well_index;
+        int cell;
+        double well_index;
     };
 
-
-    int prod_control_mode(const std::string& control)
+    namespace ProductionControl
     {
-	const int num_prod_control_modes = 8;
-	static std::string prod_control_modes[num_prod_control_modes] =
-	    {std::string("ORAT"), std::string("WRAT"), std::string("GRAT"),
-	     std::string("LRAT"), std::string("RESV"), std::string("BHP"),
-	     std::string("THP"), std::string("GRUP") };
-	int m = -1;
-	for (int i=0; i<num_prod_control_modes; ++i) {
-	    if (control == prod_control_modes[i]) {
-		m = i;
-		break;
-	    }
-	}
-	if (m >= 0) {
-	    return m;
-	} else {
-	    THROW("Unknown well control mode = " << control << " in input file");
-	}
-    }
+        enum Mode { ORAT, WRAT, GRAT,
+                    LRAT, CRAT, RESV,
+                    BHP, THP, GRUP };
+        Mode mode(const std::string& control)
+        {
+            const int num_prod_control_modes = 9;
+            static std::string prod_control_modes[num_prod_control_modes] =
+                {std::string("ORAT"), std::string("WRAT"), std::string("GRAT"),
+                 std::string("LRAT"), std::string("CRAT"), std::string("RESV"),
+                 std::string("BHP"), std::string("THP"), std::string("GRUP") };
+            int m = -1;
+            for (int i=0; i<num_prod_control_modes; ++i) {
+                if (control == prod_control_modes[i]) {
+                    m = i;
+                    break;
+                }
+            }
+            if (m >= 0) {
+                return static_cast<Mode>(m);
+            } else {
+                THROW("Unknown well control mode = " << control << " in input file");
+            }
+        }
+    } // namespace ProductionControl
 
 
-    int inje_control_mode(const std::string& control)
+    namespace InjectionControl
     {
-	const int num_inje_control_modes = 5;
-	static std::string inje_control_modes[num_inje_control_modes] =
-	    {std::string("RATE"), std::string("RESV"), std::string("BHP"),
-	     std::string("THP"), std::string("GRUP") };
-	int m = -1;
-	for (int i=0; i<num_inje_control_modes; ++i) {
-	    if (control == inje_control_modes[i]) {
-		m = i;
-		break;
-	    }
-	}
- 
-	if (m >= 0) {
-	    return m;
-	} else {
-	    THROW("Unknown well control mode = " << control << " in input file");
-	}
-    }
+        enum Mode { RATE, RESV, BHP,
+                    THP, GRUP };
+        Mode mode(const std::string& control)
+        {
+            const int num_inje_control_modes = 5;
+            static std::string inje_control_modes[num_inje_control_modes] =
+                {std::string("RATE"), std::string("RESV"), std::string("BHP"),
+                 std::string("THP"), std::string("GRUP") };
+            int m = -1;
+            for (int i=0; i<num_inje_control_modes; ++i) {
+                if (control == inje_control_modes[i]) {
+                    m = i;
+                    break;
+                }
+            }
+
+            if (m >= 0) {
+                return static_cast<Mode>(m);
+            } else {
+                THROW("Unknown well control mode = " << control << " in input file");
+            }
+        }
+    } // namespace InjectionControl
 
 
     std::tr1::array<double, 3> getCubeDim(const UnstructuredGrid& grid, int cell)
     {
-	using namespace std;
-	tr1::array<double, 3> cube;
-	int num_local_faces = grid.cell_facepos[cell + 1] - grid.cell_facepos[cell];
-	vector<double> x(num_local_faces);
-	vector<double> y(num_local_faces);
-	vector<double> z(num_local_faces);
-	for (int lf=0; lf<num_local_faces; ++ lf) {
-	    int face = grid.cell_faces[grid.cell_facepos[cell] + lf];
-	    const double* centroid = &grid.face_centroids[grid.dimensions*face];
-	    x[lf] = centroid[0];
-	    y[lf] = centroid[1];
-	    z[lf] = centroid[2];
-	}
-	cube[0] = *max_element(x.begin(), x.end()) - *min_element(x.begin(), x.end());
-	cube[1] = *max_element(y.begin(), y.end()) - *min_element(y.begin(), y.end());
-	cube[2] = *max_element(z.begin(), z.end()) - *min_element(z.begin(), z.end());
-	return cube;
+        using namespace std;
+        tr1::array<double, 3> cube;
+        int num_local_faces = grid.cell_facepos[cell + 1] - grid.cell_facepos[cell];
+        vector<double> x(num_local_faces);
+        vector<double> y(num_local_faces);
+        vector<double> z(num_local_faces);
+        for (int lf=0; lf<num_local_faces; ++ lf) {
+            int face = grid.cell_faces[grid.cell_facepos[cell] + lf];
+            const double* centroid = &grid.face_centroids[grid.dimensions*face];
+            x[lf] = centroid[0];
+            y[lf] = centroid[1];
+            z[lf] = centroid[2];
+        }
+        cube[0] = *max_element(x.begin(), x.end()) - *min_element(x.begin(), x.end());
+        cube[1] = *max_element(y.begin(), y.end()) - *min_element(y.begin(), y.end());
+        cube[2] = *max_element(z.begin(), z.end()) - *min_element(z.begin(), z.end());
+        return cube;
     }
 
     // Use the Peaceman well model to compute well indices.
@@ -123,43 +134,43 @@ namespace
     // cell_permeability is the permeability tensor of the given cell.
     // returns the well index of the cell.
     double computeWellIndex(const double radius,
-			    const std::tr1::array<double, 3>& cubical,
-			    const double* cell_permeability,
-			    const double skin_factor)
+                            const std::tr1::array<double, 3>& cubical,
+                            const double* cell_permeability,
+                            const double skin_factor)
     {
-	using namespace std;
-	// sse: Using the Peaceman model.
-	// NOTE: The formula is valid for cartesian grids, so the result can be a bit
-	// (in worst case: there is no upper bound for the error) off the mark.
-	const double permx = cell_permeability[0];
-	const double permy = cell_permeability[3*1 + 1];
-	double effective_perm = sqrt(permx*permy);
-	// sse: The formula for r_0 can be found on page 39 of
-	// "Well Models for Mimetic Finite Differerence Methods and Improved Representation
-	//  of Wells in Multiscale Methods" by Ingeborg Skjelkvåle Ligaarden.
-	assert(permx > 0.0);
-	assert(permy > 0.0);
-	double kxoy = permx / permy;
-	double kyox = permy / permx;
-	double r0_denominator = pow(kyox, 0.25) + pow(kxoy, 0.25);
-	double r0_numerator = sqrt((sqrt(kyox)*cubical[0]*cubical[0]) +
-				   (sqrt(kxoy)*cubical[1]*cubical[1]));
-	assert(r0_denominator > 0.0);
-	double r0 = 0.28 * r0_numerator / r0_denominator;
-	assert(radius > 0.0);
-	assert(r0 > 0.0);
-	if (r0 < radius) {
-	    std::cout << "ERROR: Too big well radius detected.";
-	    std::cout << "Specified well radius is " << radius
-		      << " while r0 is " << r0 << ".\n";
-	}
+        using namespace std;
+        // sse: Using the Peaceman model.
+        // NOTE: The formula is valid for cartesian grids, so the result can be a bit
+        // (in worst case: there is no upper bound for the error) off the mark.
+        const double permx = cell_permeability[0];
+        const double permy = cell_permeability[3*1 + 1];
+        double effective_perm = sqrt(permx*permy);
+        // sse: The formula for r_0 can be found on page 39 of
+        // "Well Models for Mimetic Finite Differerence Methods and Improved Representation
+        //  of Wells in Multiscale Methods" by Ingeborg Skjelkvåle Ligaarden.
+        assert(permx > 0.0);
+        assert(permy > 0.0);
+        double kxoy = permx / permy;
+        double kyox = permy / permx;
+        double r0_denominator = pow(kyox, 0.25) + pow(kxoy, 0.25);
+        double r0_numerator = sqrt((sqrt(kyox)*cubical[0]*cubical[0]) +
+                                   (sqrt(kxoy)*cubical[1]*cubical[1]));
+        assert(r0_denominator > 0.0);
+        double r0 = 0.28 * r0_numerator / r0_denominator;
+        assert(radius > 0.0);
+        assert(r0 > 0.0);
+        if (r0 < radius) {
+            std::cout << "ERROR: Too big well radius detected.";
+            std::cout << "Specified well radius is " << radius
+                      << " while r0 is " << r0 << ".\n";
+        }
         const long double two_pi = 6.2831853071795864769252867665590057683943387987502116419498;
-	double wi_denominator = log(r0 / radius) + skin_factor;
-	double wi_numerator = two_pi * cubical[2];
-	assert(wi_denominator > 0.0);
-	double wi = effective_perm * wi_numerator / wi_denominator;
-	assert(wi > 0.0);
-	return wi;
+        double wi_denominator = log(r0 / radius) + skin_factor;
+        double wi_numerator = two_pi * cubical[2];
+        assert(wi_denominator > 0.0);
+        double wi = effective_perm * wi_numerator / wi_denominator;
+        assert(wi > 0.0);
+        return wi;
     }
 
 } // anonymous namespace
@@ -174,7 +185,7 @@ namespace Opm
 
     /// Default constructor.
     WellsManager::WellsManager()
-	: w_(0)
+        : w_(0)
     {
     }
 
@@ -182,45 +193,48 @@ namespace Opm
 
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseGridParser& deck,
-			       const UnstructuredGrid& grid,
-			       const double* permeability)
-	: w_(0)
+                               const UnstructuredGrid& grid,
+                               const double* permeability)
+        : w_(0)
     {
-	if (grid.dimensions != 3) {
-	    THROW("We cannot initialize wells from a deck unless the corresponding grid is 3-dimensional.");
-	}
-	// NOTE: Implementation copied and modified from dune-porsol's class BlackoilWells.
-	std::vector<std::string> keywords;
-	keywords.push_back("WELSPECS");
-	keywords.push_back("COMPDAT");
-// 	keywords.push_back("WELTARG");
-	if (!deck.hasFields(keywords)) {
-	    MESSAGE("Missing well keywords in deck, initializing no wells.");
+        if (grid.dimensions != 3) {
+            THROW("We cannot initialize wells from a deck unless the corresponding grid is 3-dimensional.");
+        }
+        // NOTE: Implementation copied and modified from dune-porsol's class BlackoilWells.
+        std::vector<std::string> keywords;
+        keywords.push_back("WELSPECS");
+        keywords.push_back("COMPDAT");
+//      keywords.push_back("WELTARG");
+        if (!deck.hasFields(keywords)) {
+            MESSAGE("Missing well keywords in deck, initializing no wells.");
             return;
-	}
-	if (!(deck.hasField("WCONINJE") || deck.hasField("WCONPROD")) ) {
-	    THROW("Needed field is missing in file");
-	}
+        }
+        if (!(deck.hasField("WCONINJE") || deck.hasField("WCONPROD")) ) {
+            THROW("Needed field is missing in file");
+        }
 
-	// These data structures will be filled in this constructor,
-	// then used to initialize the Wells struct.
-	std::vector<std::string> well_names;
+        // Obtain phase usage data.
+        PhaseUsage pu = phaseUsageFromDeck(deck);
+
+        // These data structures will be filled in this constructor,
+        // then used to initialize the Wells struct.
+        std::vector<std::string> well_names;
         std::vector<WellData> well_data;
-	std::vector<std::vector<PerfData> > wellperf_data;
-        
+        std::vector<std::vector<PerfData> > wellperf_data;
+
         // For easy lookup:
         std::map<std::string, int> well_names_to_index;
 
-	// Get WELSPECS data
-	const WELSPECS& welspecs = deck.getWELSPECS();
-	const int num_wells = welspecs.welspecs.size();
-	well_names.reserve(num_wells);
-	well_data.reserve(num_wells);
-	wellperf_data.resize(num_wells);
-	for (int w = 0; w < num_wells; ++w) {
-	    well_names.push_back(welspecs.welspecs[w].name_);
-	    WellData wd;
-	    well_data.push_back(wd);
+        // Get WELSPECS data
+        const WELSPECS& welspecs = deck.getWELSPECS();
+        const int num_wells = welspecs.welspecs.size();
+        well_names.reserve(num_wells);
+        well_data.reserve(num_wells);
+        wellperf_data.resize(num_wells);
+        for (int w = 0; w < num_wells; ++w) {
+            well_names.push_back(welspecs.welspecs[w].name_);
+            WellData wd;
+            well_data.push_back(wd);
             well_names_to_index[welspecs.welspecs[w].name_] = w;
             well_data.back().reference_bhp_depth = welspecs.welspecs[w].datum_depth_BHP_;
             if (welspecs.welspecs[w].datum_depth_BHP_ < 0.0) {
@@ -228,41 +242,41 @@ namespace Opm
                 // after getting perforation data to the centroid of
                 // the cell of the top well perforation.
                 well_data.back().reference_bhp_depth = -1e100;
-	    }
+            }
         }
 
-	// global_cell is a map from compressed cells to Cartesian grid cells.
-	// We must make the inverse lookup.
-	const int* global_cell = grid.global_cell;
-	const int* cpgdim = grid.cartdims;
-	std::map<int,int> cartesian_to_compressed;
-	for (int i = 0; i < grid.number_of_cells; ++i) {
-	    cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
-	}
+        // global_cell is a map from compressed cells to Cartesian grid cells.
+        // We must make the inverse lookup.
+        const int* global_cell = grid.global_cell;
+        const int* cpgdim = grid.cartdims;
+        std::map<int,int> cartesian_to_compressed;
+        for (int i = 0; i < grid.number_of_cells; ++i) {
+            cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+        }
 
-	// Get COMPDAT data   
-	const COMPDAT& compdat = deck.getCOMPDAT();
-	const int num_compdat  = compdat.compdat.size();
-	for (int kw = 0; kw < num_compdat; ++kw) {
-	    // Extract well name, or the part of the well name that
-	    // comes before the '*'.
-	    std::string name = compdat.compdat[kw].well_;
-	    std::string::size_type len = name.find('*');
-	    if (len != std::string::npos) {
-		name = name.substr(0, len);
-	    }
-	    // Look for well with matching name.
-	    bool found = false;
-	    for (int wix = 0; wix < num_wells; ++wix) {
-		if (well_names[wix].compare(0,len, name) == 0) { // equal
-		    // We have a matching name.
-		    int ix = compdat.compdat[kw].grid_ind_[0] - 1;
-		    int jy = compdat.compdat[kw].grid_ind_[1] - 1;
-		    int kz1 = compdat.compdat[kw].grid_ind_[2] - 1;
+        // Get COMPDAT data
+        const COMPDAT& compdat = deck.getCOMPDAT();
+        const int num_compdat  = compdat.compdat.size();
+        for (int kw = 0; kw < num_compdat; ++kw) {
+            // Extract well name, or the part of the well name that
+            // comes before the '*'.
+            std::string name = compdat.compdat[kw].well_;
+            std::string::size_type len = name.find('*');
+            if (len != std::string::npos) {
+                name = name.substr(0, len);
+            }
+            // Look for well with matching name.
+            bool found = false;
+            for (int wix = 0; wix < num_wells; ++wix) {
+                if (well_names[wix].compare(0,len, name) == 0) { // equal
+                    // We have a matching name.
+                    int ix = compdat.compdat[kw].grid_ind_[0] - 1;
+                    int jy = compdat.compdat[kw].grid_ind_[1] - 1;
+                    int kz1 = compdat.compdat[kw].grid_ind_[2] - 1;
                     int kz2 = compdat.compdat[kw].grid_ind_[3] - 1;
                     for (int kz = kz1; kz <= kz2; ++kz) {
                         int cart_grid_indx = ix + cpgdim[0]*(jy + cpgdim[1]*kz);
-                        std::map<int, int>::const_iterator cgit = 
+                        std::map<int, int>::const_iterator cgit =
                             cartesian_to_compressed.find(cart_grid_indx);
                         if (cgit == cartesian_to_compressed.end()) {
                             THROW("Cell with i,j,k indices " << ix << ' ' << jy << ' '
@@ -279,8 +293,8 @@ namespace Opm
                                 radius = 0.5*unit::feet;
                                 MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                             }
-			    std::tr1::array<double, 3> cubical = getCubeDim(grid, cell);
-                            const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];  
+                            std::tr1::array<double, 3> cubical = getCubeDim(grid, cell);
+                            const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
                             pd.well_index = computeWellIndex(radius, cubical, cell_perm,
                                                              compdat.compdat[kw].skin_factor_);
                         }
@@ -290,16 +304,17 @@ namespace Opm
                     break;
                 }
             }
-	    if (!found) {
-		THROW("Undefined well name: " << compdat.compdat[kw].well_
-		      << " in COMPDAT");
-	    }
-	}
+            if (!found) {
+                THROW("Undefined well name: " << compdat.compdat[kw].well_
+                      << " in COMPDAT");
+            }
+        }
 
-	// Set up reference depths that were defaulted. Count perfs.
-	int num_perfs = 0;
+        // Set up reference depths that were defaulted. Count perfs.
+        int num_perfs = 0;
+        ASSERT(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
-	    num_perfs += wellperf_data[w].size();
+            num_perfs += wellperf_data[w].size();
             if (well_data[w].reference_bhp_depth == -1e100) {
                 // It was defaulted. Set reference depth to minimum perforation depth.
                 double min_depth = 1e100;
@@ -311,15 +326,38 @@ namespace Opm
                 well_data[w].reference_bhp_depth = min_depth;
             }
         }
- 
-	// Get WCONINJE data
+
+        // Create the well data structures.
+        w_ = create_wells(pu.num_phases, num_wells, num_perfs);
+        if (!w_) {
+            THROW("Failed creating Wells struct.");
+        }
+
+        // Add wells.
+        for (int w = 0; w < num_wells; ++w) {
+            const int w_num_perf = wellperf_data[w].size();
+            std::vector<int> perf_cells(w_num_perf);
+            std::vector<double> perf_prodind(w_num_perf);
+            for (int perf = 0; perf < w_num_perf; ++perf) {
+                perf_cells[0] = wellperf_data[w][perf].cell;
+                perf_prodind[0] = wellperf_data[w][perf].well_index;
+            }
+            const double* comp_frac = NULL;
+            // We initialize all wells with a null component fraction,
+            // and must (for injection wells) overwrite it later.
+            add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
+                     comp_frac, &perf_cells[0], &perf_prodind[0], w_);
+        }
+
+        // Get WCONINJE data, add injection controls to wells.
         if (deck.hasField("WCONINJE")) {
             const WCONINJE& wconinjes = deck.getWCONINJE();
             const int num_wconinjes = wconinjes.wconinje.size();
             for (int kw = 0; kw < num_wconinjes; ++kw) {
-		// Extract well name, or the part of the well name that
-		// comes before the '*'.
-                std::string name = wconinjes.wconinje[kw].well_;
+                const WconinjeLine& wci_line = wconinjes.wconinje[kw];
+                // Extract well name, or the part of the well name that
+                // comes before the '*'.
+                std::string name = wci_line.well_;
                 std::string::size_type len = name.find('*');
                 if (len != std::string::npos) {
                     name = name.substr(0, len);
@@ -328,118 +366,168 @@ namespace Opm
                 for (int wix = 0; wix < num_wells; ++wix) {
                     if (well_names[wix].compare(0,len, name) == 0) { //equal
                         well_found = true;
-                        well_data[wix].type = INJECTOR;
-                        int m = inje_control_mode(wconinjes.wconinje[kw].control_mode_);
-                        switch(m) {
-                        case 0:  // RATE
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconinjes.wconinje[kw].surface_flow_max_rate_;
-                            break;
-                        case 1:  // RESV
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconinjes.wconinje[kw].fluid_volume_max_rate_;
-                            break;
-                        case 2:  // BHP
-                            well_data[wix].control = BHP;
-                            well_data[wix].target = wconinjes.wconinje[kw].BHP_limit_;
-                            break;
-                        case 3:  // THP
-                            well_data[wix].control = BHP;
-                            well_data[wix].target = wconinjes.wconinje[kw].THP_limit_;
-                            break;
-                        case 4:
-                            break;
-                        default:
-                            THROW("Unknown well control mode; WCONIJE  = "
-                                  << wconinjes.wconinje[kw].control_mode_
-                                  << " in input file");
+                        ASSERT(well_data[wix].type == w_->type[wix]);
+                        if (well_data[wix].type != INJECTOR) {
+                            THROW("Found WCONINJE entry for a non-injector well: " << well_names[wix]);
                         }
-                        if (wconinjes.wconinje[kw].injector_type_ == "WATER") {
-                            well_data[wix].injected_phase = WATER;
-                        } else if (wconinjes.wconinje[kw].injector_type_ == "OIL") {
-                            well_data[wix].injected_phase = OIL;
-                        } else if (wconinjes.wconinje[kw].injector_type_ == "GAS") {
-                            well_data[wix].injected_phase = GAS;
-                        } else {
-			    THROW("Error in injector specification, found no known fluid type.");
-			}
-		    }
-		}
+
+                        // Add all controls that are present in well.
+                        int control_pos[5] = { -1, -1, -1, -1, -1 };
+                        if (wci_line.surface_flow_max_rate_ > 0.0) {
+                            control_pos[InjectionControl::RATE] = w_->ctrls[wix]->num;
+                            const double distr[3] = { 1.0, 1.0, 1.0 };
+                            append_well_controls(SURFACE_RATE, wci_line.surface_flow_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wci_line.reservoir_flow_max_rate_ > 0.0) {
+                            control_pos[InjectionControl::RESV] = w_->ctrls[wix]->num;
+                            const double distr[3] = { 1.0, 1.0, 1.0 };
+                            append_well_controls(RESERVOIR_RATE, wci_line.reservoir_flow_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wci_line.BHP_limit_ > 0.0) {
+                            control_pos[InjectionControl::BHP] = w_->ctrls[wix]->num;
+                            append_well_controls(BHP, wci_line.BHP_limit_,
+                                                 NULL, wix, w_);
+                        }
+                        if (wci_line.THP_limit_ > 0.0) {
+                            THROW("We cannot handle THP limit for well " << well_names[wix]);
+                        }
+                        InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
+                        const int cpos = control_pos[mode];
+                        if (cpos == -1 && mode != InjectionControl::GRUP) {
+                            THROW("Control mode type " << mode << " not present in well " << well_names[wix]);
+                        }
+                        set_current_control(wix, cpos, w_);
+
+                        // Set well component fraction.
+                        double cf[3] = { 0.0, 0.0, 0.0 };
+                        if (wci_line.injector_type_ == "WATER") {
+                            if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                                THROW("Water phase not used, yet found water-injecting well.");
+                            }
+                            cf[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                        } else if (wci_line.injector_type_ == "OIL") {
+                            if (!pu.phase_used[BlackoilPhases::Liquid]) {
+                                THROW("Oil phase not used, yet found oil-injecting well.");
+                            }
+                            cf[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                        } else if (wci_line.injector_type_ == "GAS") {
+                            if (!pu.phase_used[BlackoilPhases::Vapour]) {
+                                THROW("Water phase not used, yet found water-injecting well.");
+                            }
+                            cf[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                        }
+                        std::copy(cf, cf + pu.num_phases, w_->comp_frac + wix*pu.num_phases);
+                    }
+                }
                 if (!well_found) {
-                    THROW("Undefined well name: " << wconinjes.wconinje[kw].well_
+                    THROW("Undefined well name: " << wci_line.well_
                           << " in WCONINJE");
                 }
             }
         }
 
-	// Get WCONPROD data
+        // Get WCONPROD data
         if (deck.hasField("WCONPROD")) {
             const WCONPROD& wconprods = deck.getWCONPROD();
             const int num_wconprods   = wconprods.wconprod.size();
-            std::cout << "num_wconprods = " <<num_wconprods << std::endl;
             for (int kw = 0; kw < num_wconprods; ++kw) {
-                std::string name = wconprods.wconprod[kw].well_;
+                const WconprodLine& wcp_line = wconprods.wconprod[kw];
+                std::string name = wcp_line.well_;
                 std::string::size_type len = name.find('*');
                 if (len != std::string::npos) {
                     name = name.substr(0, len);
                 }
-
                 bool well_found = false;
                 for (int wix = 0; wix < num_wells; ++wix) {
                     if (well_names[wix].compare(0,len, name) == 0) { //equal
                         well_found = true;
-                        well_data[wix].type = PRODUCER;
-                        int m = prod_control_mode(wconprods.wconprod[kw].control_mode_);
-                        switch(m) {
-                        case 0:  // ORAT
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconprods.wconprod[kw].oil_max_rate_;
-                            break;
-                        case 1:  // WRAT
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconprods.wconprod[kw].water_max_rate_;
-                            break;
-                        case 2:  // GRAT
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconprods.wconprod[kw].gas_max_rate_;
-                            break;
-                        case 3:  // LRAT
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconprods.wconprod[kw].liquid_max_rate_;
-                            break;
-                        case 4:  // RESV 
-                            well_data[wix].control = RATE;
-                            well_data[wix].target = wconprods.wconprod[kw].fluid_volume_max_rate_;
-                            break;
-                        case 5:  // BHP
-                            well_data[wix].control = BHP; 
-                            well_data[wix].target = wconprods.wconprod[kw].BHP_limit_;
-                            break;
-                        case 6:  // THP 
-                            well_data[wix].control = BHP;
-                            well_data[wix].target = wconprods.wconprod[kw].THP_limit_;
-                            break;
-                        case 7:
-                            // Handle group here.
-                            break;
-                        default:
-                            THROW("Unknown well control mode; WCONPROD  = "
-                                  << wconprods.wconprod[kw].control_mode_
-                                  << " in input file");
+                        ASSERT(well_data[wix].type == w_->type[wix]);
+                        if (well_data[wix].type != PRODUCER) {
+                            THROW("Found WCONPROD entry for a non-producer well: " << well_names[wix]);
                         }
+                        // Add all controls that are present in well.
+                        int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+                        if (wcp_line.oil_max_rate_ > 0.0) {
+                            if (!pu.phase_used[BlackoilPhases::Liquid]) {
+                                THROW("Oil phase not active and ORAT control specified.");
+                            }
+                            control_pos[ProductionControl::ORAT] = w_->ctrls[wix]->num;
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                            append_well_controls(SURFACE_RATE, wcp_line.oil_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wcp_line.water_max_rate_ > 0.0) {
+                            if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                                THROW("Water phase not active and WRAT control specified.");
+                            }
+                            control_pos[ProductionControl::WRAT] = w_->ctrls[wix]->num;
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                            append_well_controls(SURFACE_RATE, wcp_line.water_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wcp_line.gas_max_rate_ > 0.0) {
+                            if (!pu.phase_used[BlackoilPhases::Vapour]) {
+                                THROW("Gas phase not active and GRAT control specified.");
+                            }
+                            control_pos[ProductionControl::GRAT] = w_->ctrls[wix]->num;
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                            append_well_controls(SURFACE_RATE, wcp_line.gas_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wcp_line.liquid_max_rate_ > 0.0) {
+                            if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                                THROW("Water phase not active and LRAT control specified.");
+                            }
+                            if (!pu.phase_used[BlackoilPhases::Liquid]) {
+                                THROW("Oil phase not active and LRAT control specified.");
+                            }
+                            control_pos[ProductionControl::LRAT] = w_->ctrls[wix]->num;
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                            distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                            append_well_controls(SURFACE_RATE, wcp_line.liquid_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wcp_line.reservoir_flow_max_rate_ > 0.0) {
+                            control_pos[ProductionControl::RESV] = w_->ctrls[wix]->num;
+                            double distr[3] = { 1.0, 1.0, 1.0 };
+                            append_well_controls(RESERVOIR_RATE, wcp_line.reservoir_flow_max_rate_,
+                                                 distr, wix, w_);
+                        }
+                        if (wcp_line.BHP_limit_ > 0.0) {
+                            control_pos[ProductionControl::BHP] = w_->ctrls[wix]->num;
+                            append_well_controls(BHP, wcp_line.BHP_limit_,
+                                                 NULL, wix, w_);
+                        }
+                        if (wcp_line.THP_limit_ > 0.0) {
+                            THROW("We cannot handle THP limit for well " << well_names[wix]);
+                        }
+                        ProductionControl::Mode mode = ProductionControl::mode(wcp_line.control_mode_);
+                        const int cpos = control_pos[mode];
+                        if (cpos == -1 && mode != ProductionControl::GRUP) {
+                            THROW("Control mode type " << mode << " not present in well " << well_names[wix]);
+                        }
+                        set_current_control(wix, cpos, w_);
                     }
                 }
                 if (!well_found) {
-                    THROW("Undefined well name: " << wconprods.wconprod[kw].well_
+                    THROW("Undefined well name: " << wcp_line.well_
                           << " in WCONPROD");
                 }
             }
         }
 
-	// Get WELTARG data
+        // Get WELTARG data
         if (deck.hasField("WELTARG")) {
+            THROW("We currently do not handle WELTARG.");
+            /*
             const WELTARG& weltargs = deck.getWELTARG();
-            const int num_weltargs  = weltargs.weltarg.size();	
+            const int num_weltargs  = weltargs.weltarg.size();
             for (int kw = 0; kw < num_weltargs; ++kw) {
                 std::string name = weltargs.weltarg[kw].well_;
                 std::string::size_type len = name.find('*');
@@ -459,43 +547,45 @@ namespace Opm
                           << " in WELTARG");
                 }
             }
+            */
         }
 
         // Debug output.
 #define EXTRA_OUTPUT
 #ifdef EXTRA_OUTPUT
-	std::cout << "\t WELL DATA" << std::endl;
-	for(int i = 0; i< num_wells; ++i) {
-	    std::cout << i << ": " << well_data[i].type << "  "
-		      << well_data[i].control << "  " << well_data[i].target
-		      << std::endl;
-	}
+        /*
+        std::cout << "\t WELL DATA" << std::endl;
+        for(int i = 0; i< num_wells; ++i) {
+            std::cout << i << ": " << well_data[i].type << "  "
+                      << well_data[i].control << "  " << well_data[i].target
+                      << std::endl;
+        }
 
-	std::cout << "\n\t PERF DATA" << std::endl;
-	for(int i=0; i< int(wellperf_data.size()); ++i) {
-	    for(int j=0; j< int(wellperf_data[i].size()); ++j) {
-		std::cout << i << ": " << wellperf_data[i][j].cell << "  "
-			  << wellperf_data[i][j].well_index << std::endl;
-	    }
-	}
+        std::cout << "\n\t PERF DATA" << std::endl;
+        for(int i=0; i< int(wellperf_data.size()); ++i) {
+            for(int j=0; j< int(wellperf_data[i].size()); ++j) {
+                std::cout << i << ": " << wellperf_data[i][j].cell << "  "
+                          << wellperf_data[i][j].well_index << std::endl;
+            }
+        }
+        */
 #endif
 
-        
-         if (deck.hasField("GRUPTREE")) {
+
+        // Build the well_collection_ well group hierarchy.
+        if (deck.hasField("GRUPTREE")) {
             std::cout << "Found gruptree" << std::endl;
             const GRUPTREE& gruptree = deck.getGRUPTREE();
-            
             std::map<std::string, std::string>::const_iterator it = gruptree.tree.begin();
             for( ; it != gruptree.tree.end(); ++it) {
                 well_collection_.addChild(it->first, it->second, deck);
             }
         }
-        
         for (size_t i = 0; i < welspecs.welspecs.size(); ++i) {
             WelspecsLine line = welspecs.welspecs[i];
             well_collection_.addChild(line.name_, line.group_, deck);
         }
-        
+
 
 
         // Set the guide rates:
@@ -506,110 +596,92 @@ namespace Opm
             std::cout << well_collection_.getLeafNodes().size() << std::endl;
             for (size_t i = 0; i < lines.size(); i++) {
                 std::string name = lines[i].well_;
-                int index = well_names_to_index[name];
-                ASSERT(well_collection_.getLeafNodes()[index]->name() == name);
-                well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_ = lines[i].guide_rate_;
-                well_collection_.getLeafNodes()[index]->prodSpec().guide_rate_type_
-                        = lines[i].phase_ == "OIL" ? ProductionSpecification::OIL : ProductionSpecification::RAT;
+                const int wix = well_names_to_index[name];
+                WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
+                ASSERT(wellnode.name() == name);
+                if (well_data[wix].type == PRODUCER) {
+                    wellnode.prodSpec().guide_rate_ = lines[i].guide_rate_;
+                    if (lines[i].phase_ == "OIL") {
+                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
+                    } else {
+                        THROW("Guide rate type " << lines[i].phase_ << " specified for producer "
+                              << name << " in WGRUPCON, cannot handle.");
+                    }
+                } else if (well_data[wix].type == INJECTOR) {
+                    wellnode.injSpec().guide_rate_ = lines[i].guide_rate_;
+                    if (lines[i].phase_ == "RAT") {
+                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                    } else {
+                        THROW("Guide rate type " << lines[i].phase_ << " specified for injector "
+                              << name << " in WGRUPCON, cannot handle.");
+                    }
+                } else {
+                    THROW("Unknown well type " << well_data[wix].type << " for well " << name);
+                }
             }
         }
         well_collection_.calculateGuideRates();
 
         // Apply guide rates:
-        for (size_t i = 0; i < well_data.size(); i++) {
-            if (well_data[i].type == PRODUCER && (well_collection_.getLeafNodes()[i]->prodSpec().control_mode_ == ProductionSpecification::GRUP)) {
-                switch (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ ) {
+        for (size_t wix = 0; wix < well_data.size(); wix++) {
+            const WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
+            if (well_data[wix].type == PRODUCER && (wellnode.prodSpec().control_mode_ == ProductionSpecification::GRUP)) {
+                ASSERT(w_->ctrls[wix]->current == -1);
+                switch (wellnode.prodSpec().guide_rate_type_ ) {
                 case ProductionSpecification::OIL:
                 {
-                    const ProductionSpecification& parent_prod_spec = 
-                        well_collection_.getLeafNodes()[i]->getParent()->prodSpec();
-                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                    well_data[i].target = guide_rate*parent_prod_spec.oil_max_rate_;
-                    well_data[i].control = RATE;
-                    well_data[i].type = PRODUCER;
-                    std::cout << "WARNING: Converting oil control to rate control!" << std::endl;
-                    break;
+                    const ProductionSpecification& parent_prod_spec =
+                        wellnode.getParent()->prodSpec();
+                    const double guide_rate = wellnode.prodSpec().guide_rate_;
+                    const double oil_target = guide_rate * parent_prod_spec.oil_max_rate_;
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    const int control_index = w_->ctrls[wix]->num;
+                    append_well_controls(SURFACE_RATE, oil_target, distr, wix, w_);
+                    set_current_control(wix, control_index, w_);
                 }
                 case ProductionSpecification::NONE_GRT:
                 {
                     // Will use the group control type:
-                    const ProductionSpecification& parent_prod_spec = 
-                        well_collection_.getLeafNodes()[i]->getParent()->prodSpec();
-                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
+                    const ProductionSpecification& parent_prod_spec =
+                        wellnode.getParent()->prodSpec();
+                    const double guide_rate = wellnode.prodSpec().guide_rate_;
                     switch(parent_prod_spec.control_mode_) {
                     case ProductionSpecification::LRAT:
-                        well_data[i].target = guide_rate * parent_prod_spec.liquid_max_rate_;
-                        well_data[i].control = RATE;
-                        break;
+                        {
+                            const double liq_target = guide_rate * parent_prod_spec.liquid_max_rate_;
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                            distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                            append_well_controls(SURFACE_RATE, liq_target, distr, wix, w_);
+                            break;
+                        }
                     default:
-                        THROW("Unhandled production specification control mode " << parent_prod_spec.control_mode_);
+                        THROW("Unhandled parent production specification control mode " << parent_prod_spec.control_mode_);
                         break;
                     }
                 }
                 default:
-                    THROW("Unhandled production specification guide rate type " 
-                            << well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_);
+                    THROW("Unhandled production specification guide rate type "
+                            << wellnode.prodSpec().guide_rate_type_);
                     break;
                 }
             }
 
-            if (well_data[i].type == INJECTOR && (well_collection_.getLeafNodes()[i]->injSpec().control_mode_ == InjectionSpecification::GRUP)) {
-                if (well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_type_ == ProductionSpecification::RAT) {
-                    well_data[i].injected_phase = WATER; // Default for now.
-                    well_data[i].control = RATE;
-                    well_data[i].type = INJECTOR;
-                    double parent_surface_rate = well_collection_.getLeafNodes()[i]->getParent()->injSpec().surface_flow_max_rate_;
-                    double guide_rate = well_collection_.getLeafNodes()[i]->prodSpec().guide_rate_;
-                    well_data[i].target = guide_rate * parent_surface_rate;
-                    std::cout << "Applying guide rate" << std::endl;
+            if (well_data[wix].type == INJECTOR && (wellnode.injSpec().control_mode_ == InjectionSpecification::GRUP)) {
+                ASSERT(w_->ctrls[wix]->current == -1);
+                if (wellnode.injSpec().guide_rate_type_ == InjectionSpecification::RAT) {
+                    const double parent_surface_rate = wellnode.getParent()->injSpec().surface_flow_max_rate_;
+                    const double guide_rate = wellnode.prodSpec().guide_rate_;
+                    const double target = guide_rate * parent_surface_rate;
+                    const double distr[3] = { 1.0, 1.0, 1.0 };
+                    append_well_controls(SURFACE_RATE, target, distr, wix, w_);
+                } else {
+                    THROW("Unhandled injection specification guide rate type "
+                          << wellnode.injSpec().guide_rate_type_);
                 }
             }
         }
-
-
-        std::cout << "Making well structs" << std::endl;
-	// Set up the Wells struct.
-	w_ = create_wells(num_wells, num_perfs);
-	if (!w_) {
-	    THROW("Failed creating Wells struct.");
-	}
-	double fracs[3][3] = { { 1.0, 0.0, 0.0 },
-			       { 0.0, 1.0, 0.0 },
-			       { 0.0, 0.0, 1.0 } };
-	for (int w = 0; w < num_wells; ++w) {
-	    int nperf = wellperf_data[w].size();
-	    std::vector<int> cells(nperf);
-	    std::vector<double> wi(nperf);
-	    for (int perf = 0; perf < nperf; ++perf) {
-		cells[perf] = wellperf_data[w][perf].cell;
-		wi[perf] = wellperf_data[w][perf].well_index;
-	    }
-	    const double* zfrac = (well_data[w].type == INJECTOR) ? fracs[well_data[w].injected_phase] : 0;
-            
-            // DIRTY DIRTY HACK to temporarily make things work in spite of bugs in the deck reader.
-            if(well_data[w].type == INJECTOR && (well_data[w].injected_phase < 0 || well_data[w].injected_phase > 2)){
-                zfrac = fracs[WATER];
-            }
-
-            int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, nperf,
-			       zfrac, &cells[0], &wi[0], w_);
-	    if (!ok) {
-		THROW("Failed to add a well.");
-	    }
-	    // We only append a single control at this point.
-	    // TODO: Handle multiple controls.
-            if (well_data[w].type == PRODUCER && well_data[w].control == RATE) {
-                // Convention is that well rates for producers are negative.
-                well_data[w].target = -well_data[w].target;
-            }
-	    ok = append_well_controls(well_data[w].control, well_data[w].target, w_->ctrls[w]);
-            w_->ctrls[w]->current = 0;
-	    if (!ok) {
-		THROW("Failed to add well controls.");
-	    }
-	}
-
-        std::cout << "Made well struct" << std::endl;
         well_collection_.setWellsPointer(w_);
     }
 
@@ -618,7 +690,7 @@ namespace Opm
     /// Destructor.
     WellsManager::~WellsManager()
     {
-	destroy_wells(w_);
+        destroy_wells(w_);
     }
 
 
@@ -629,7 +701,7 @@ namespace Opm
     /// to make it clear that we are returning a C-compatible struct.
     const Wells* WellsManager::c_wells() const
     {
-	return w_;
+        return w_;
     }
 
     const WellCollection& WellsManager::wellCollection() const
@@ -637,8 +709,8 @@ namespace Opm
         return well_collection_;
     }
 
-    bool WellsManager::conditionsMet(const std::vector<double>& well_bhp, 
-                                     const std::vector<double>& well_rate) 
+    bool WellsManager::conditionsMet(const std::vector<double>& well_bhp,
+                                     const std::vector<double>& well_rate)
     {
         return well_collection_.conditionsMet(well_bhp, well_rate);
     }
