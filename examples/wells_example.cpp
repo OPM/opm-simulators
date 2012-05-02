@@ -77,6 +77,7 @@ int main(int argc, char** argv) {
     
     computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
 
+    #if 0
     while (!wells.conditionsMet(well_bhp, well_rate)) {
         std::cout << "Conditions not met for well, trying again" << std::endl;
         pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
@@ -88,7 +89,7 @@ int main(int argc, char** argv) {
         computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
     }
 
-#if 0
+
     std::vector<double> porevol;
     computePorevolume(*grid->c_grid(), incomp_properties, porevol);
     
