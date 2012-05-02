@@ -19,8 +19,11 @@
 
 #ifndef OPM_WELLSMANAGER_HEADER_INCLUDED
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
+
+
 #include <opm/core/WellCollection.hpp>
 #include <opm/core/WellsGroup.hpp>
+
 struct Wells;
 struct UnstructuredGrid;
 
@@ -83,7 +86,7 @@ namespace Opm
 	WellsManager(const WellsManager& other);
 	WellsManager& operator=(const WellsManager& other);
 
-	// The managed Wells.
+	// Data
 	Wells* w_;
         WellCollection well_collection_;
 
