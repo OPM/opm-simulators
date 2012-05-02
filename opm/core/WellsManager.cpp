@@ -333,6 +333,33 @@ namespace Opm
             THROW("Failed creating Wells struct.");
         }
 
+        // Classify wells
+        if (deck.hasField("WCONINJE")) {
+            const std::vector<WconinjeLine>& lines = deck.getWCONINJE().wconinje;
+            for (size_t i = 0 ; i < lines.size(); ++i) {
+                const std::map<std::string, int>::const_iterator it = well_names_to_index.find(lines[i].well_);
+                if (it != well_names_to_index.end()) {
+                    const int well_index = it->second;
+                    well_data[well_index].type = INJECTOR;
+                }
+                else {
+                    THROW("Unseen well name: " << lines[i].well_ << " first seen in WCONINJE");
+                }
+            }
+        }
+        if (deck.hasField("WCONPROD")) {
+            const std::vector<WconprodLine>& lines = deck.getWCONPROD().wconprod;
+            for (size_t i = 0; i < lines.size(); ++i) {
+                const std::map<std::string, int>::const_iterator it = well_names_to_index.find(lines[i].well_);
+                if (it != well_names_to_index.end()) {
+                    const int well_index = it->second;
+                } else {
+                    THROW("Unseen well name: " << lines[i].well_ << " first seen in WCONPROD");
+                }
+                
+            }
+        }
+        
         // Add wells.
         for (int w = 0; w < num_wells; ++w) {
             const int w_num_perf = wellperf_data[w].size();
