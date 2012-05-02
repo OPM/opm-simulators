@@ -56,14 +56,18 @@ namespace Opm
         /// \note It's highly recommended to use the conditionsMet found in WellsManager.
         /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
         ///                         to be ordered the same way as the related Wells-struct.
-        /// \param[in]    well_rate A vector containing the rate for each well. Is assumed 
-        ///                         to be ordered the same way as the related Wells-struct.
-        /// \param[in]    epsilon   The error tolerated for each inequality. Formally, it will accept
-        ///                         (a - b <= epsilon) as (a <= b).
+        /// \param[in]    well_reservoirrates_phase
+        ///                         A vector containing reservoir rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
+        /// \param[in]    well_surfacerates_phase
+        ///                         A vector containing surface rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
         /// \return true if no violations were found, false otherwise (false also implies a change).
         bool conditionsMet(const std::vector<double>& well_bhp,
-                           const std::vector<double>& well_rate, 
-                           const double epsilon=1e-8);
+                           const std::vector<double>& well_reservoirrates_phase,
+                           const std::vector<double>& well_surfacerates_phase);
         
         /// Adds the well pointer to each leaf node (does not take ownership).
         void setWellsPointer(Wells* wells);
@@ -85,6 +89,9 @@ namespace Opm
         /// \param[in] the name of the group
         /// \return the pointer to the group if found, NULL otherwise
         const WellsGroupInterface* findNode(const std::string& name) const;
+        
+        /// Applies all group controls (injection and production)
+        void applyGroupControls();
         
     private:
         // To account for the possibility of a forest

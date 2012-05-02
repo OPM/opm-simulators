@@ -68,18 +68,24 @@ namespace Opm
         /// down wells). Only one change is applied per invocation. Typical use will be
         /// \code
         /// solve_pressure();
-        /// while(!wells.conditionsMet(well_bhp, well_rate)) {
+        /// while(!wells.conditionsMet(...)) {
         ///     solve_pressure();
         /// }
         /// \endcode
-        ///
         /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
         ///                         to be ordered the same way as the related Wells-struct.
-        /// \param[in]    well_rate A vector containing the rate for each well. Is assumed 
-        ///                         to be ordered the same way as the related Wells-struct.
+        /// \param[in]    well_reservoirrates_phase
+        ///                         A vector containing reservoir rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
+        /// \param[in]    well_surfacerates_phase
+        ///                         A vector containing surface rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
         /// \return true if no violations were found, false otherwise (false also implies a change).
-        bool conditionsMet(const std::vector<double>& well_bhp, 
-                           const std::vector<double>& well_rate);
+        bool conditionsMet(const std::vector<double>& well_bhp,
+                           const std::vector<double>& well_reservoirrates_phase,
+                           const std::vector<double>& well_surfacerates_phase);
 
     private:
 	// Disable copying and assignment.

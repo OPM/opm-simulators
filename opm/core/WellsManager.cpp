@@ -621,68 +621,8 @@ namespace Opm
             }
         }
         well_collection_.calculateGuideRates();
-
-        // Apply guide rates:
-        for (size_t wix = 0; wix < well_data.size(); wix++) {
-            const WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
-            if (well_data[wix].type == PRODUCER && (wellnode.prodSpec().control_mode_ == ProductionSpecification::GRUP)) {
-                ASSERT(w_->ctrls[wix]->current == -1);
-                switch (wellnode.prodSpec().guide_rate_type_ ) {
-                case ProductionSpecification::OIL:
-                {
-                    const ProductionSpecification& parent_prod_spec =
-                        wellnode.getParent()->prodSpec();
-                    const double guide_rate = wellnode.prodSpec().guide_rate_;
-                    const double oil_target = guide_rate * parent_prod_spec.oil_max_rate_;
-                    double distr[3] = { 0.0, 0.0, 0.0 };
-                    distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                    const int control_index = w_->ctrls[wix]->num;
-                    append_well_controls(SURFACE_RATE, oil_target, distr, wix, w_);
-                    set_current_control(wix, control_index, w_);
-                }
-                case ProductionSpecification::NONE_GRT:
-                {
-                    // Will use the group control type:
-                    const ProductionSpecification& parent_prod_spec =
-                        wellnode.getParent()->prodSpec();
-                    const double guide_rate = wellnode.prodSpec().guide_rate_;
-                    switch(parent_prod_spec.control_mode_) {
-                    case ProductionSpecification::LRAT:
-                        {
-                            const double liq_target = guide_rate * parent_prod_spec.liquid_max_rate_;
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            append_well_controls(SURFACE_RATE, liq_target, distr, wix, w_);
-                            break;
-                        }
-                    default:
-                        THROW("Unhandled parent production specification control mode " << parent_prod_spec.control_mode_);
-                        break;
-                    }
-                }
-                default:
-                    THROW("Unhandled production specification guide rate type "
-                            << wellnode.prodSpec().guide_rate_type_);
-                    break;
-                }
-            }
-
-            if (well_data[wix].type == INJECTOR && (wellnode.injSpec().control_mode_ == InjectionSpecification::GRUP)) {
-                ASSERT(w_->ctrls[wix]->current == -1);
-                if (wellnode.injSpec().guide_rate_type_ == InjectionSpecification::RAT) {
-                    const double parent_surface_rate = wellnode.getParent()->injSpec().surface_flow_max_rate_;
-                    const double guide_rate = wellnode.prodSpec().guide_rate_;
-                    const double target = guide_rate * parent_surface_rate;
-                    const double distr[3] = { 1.0, 1.0, 1.0 };
-                    append_well_controls(SURFACE_RATE, target, distr, wix, w_);
-                } else {
-                    THROW("Unhandled injection specification guide rate type "
-                          << wellnode.injSpec().guide_rate_type_);
-                }
-            }
-        }
         well_collection_.setWellsPointer(w_);
+        well_collection_.applyGroupControls();
     }
 
 
@@ -710,9 +650,12 @@ namespace Opm
     }
 
     bool WellsManager::conditionsMet(const std::vector<double>& well_bhp,
-                                     const std::vector<double>& well_rate)
+                                     const std::vector<double>& well_reservoirrates_phase,
+                                     const std::vector<double>& well_surfacerates_phase)
     {
-        return well_collection_.conditionsMet(well_bhp, well_rate);
+        return well_collection_.conditionsMet(well_bhp,
+                                              well_reservoirrates_phase,
+                                              well_surfacerates_phase);
     }
 
 } // namespace Opm

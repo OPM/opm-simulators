@@ -124,24 +124,54 @@ namespace Opm
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
                                    const std::vector<double>& well_reservoirrates_phase,
                                    const std::vector<double>& well_surfacerates_phase,
-                                   WellPhasesSummed& summed_phases);
+                                   WellPhasesSummed& summed_phases) = 0;
         
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
+        /// \param[in] forced if true, all children will be set under group control, otherwise
+        ///                   only children that are under group control will be changed.
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
-                                          const double target) = 0;
+                                          const double target,
+                                          const bool forced) = 0;
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
+        /// \param[in] forced if true, all children will be set under group control, otherwise
+        ///                   only children that are under group control will be changed.
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
-                                           const double target) = 0;
+                                           const double target,
+                                           const bool forced) = 0;
 
         /// Gets the worst offending well based on the input
-        /// \param values A vector of a values for each well. This is assumed to be ordered the same way as the 
-        ///               relevant Wells struct.
+        /// \param[in]    well_reservoirrates_phase
+        ///                         A vector containing reservoir rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
+        /// \param[in]    well_surfacerates_phase
+        ///                         A vector containing surface rates by phase for each well.
+        ///                         Is assumed to be ordered the same way as the related Wells-struct,
+        ///                         with all phase rates of a single well adjacent in the array.
+        /// \param[in]   mode
+        ///                         The relevant control mode to find the maximum over.
         /// \return first will be a pointer to the worst offending well, second will be the obtained value at that well.
-        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values) = 0;
+        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
+                                                               const std::vector<double>& well_surfacerates_phase,
+                                                               ProductionSpecification::ControlMode mode) = 0;
+        
+        /// Gets the target rate for the given mode.
+        double getTarget(ProductionSpecification::ControlMode mode);
+        
+        /// Gets the target rate for the given mode.
+        double getTarget(InjectionSpecification::ControlMode mode);
+        
+        /// Applies any production group control relevant to all children nodes.
+        /// If no group control is set, this is called recursively to the children.
+        virtual void applyProdGroupControls() = 0;
+        
+        /// Applies any injection group control relevant to all children nodes.
+        /// If no group control is set, this is called recursively to the children.
+        virtual void applyInjGroupControls() = 0;
         
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
@@ -186,19 +216,35 @@ namespace Opm
         virtual void calculateGuideRates();
 
         virtual int numberOfLeafNodes();
-        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values);
+        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
+                                                               const std::vector<double>& well_surfacerates_phase,
+                                                               ProductionSpecification::ControlMode mode);
 
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
+        /// \param[in] forced if true, all children will be set under group control, otherwise
+        ///                   only children that are under group control will be changed.
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
-                                          const double target);
+                                          const double target,
+                                          bool forced);
 
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
+        /// \param[in] forced if true, all children will be set under group control, otherwise
+        ///                   only children that are under group control will be changed.
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
-                                           const double target);
+                                           const double target,
+                                           bool forced);
+        
+        /// Applies any production group control relevant to all children nodes.
+        /// If no group control is set, this is called recursively to the children.
+        virtual void applyProdGroupControls();
+        
+        /// Applies any injection group control relevant to all children nodes.
+        /// If no group control is set, this is called recursively to the children.
+        virtual void applyInjGroupControls();
 
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
@@ -230,24 +276,42 @@ namespace Opm
         // Shuts the well (in the well struct)
         void shutWell();
         
-        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& values);
+       virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
+                                                               const std::vector<double>& well_surfacerates_phase,
+                                                               ProductionSpecification::ControlMode mode);
 
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
+       /// \param[in] forced if true, all children will be set under group control, otherwise
+        ///                   only children that are under group control will be changed.
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
-                                          const double target);
+                                          const double target,
+                                          bool forced);
 
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
+        /// \param[in] forced if true, all children will be set under group control, otherwise
+        ///                   only children that are under group control will be changed.
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
-                                           const double target);
+                                           const double target,
+                                           bool forced);
+        
+        /// Applies any production group control relevant to all children nodes.
+        /// If no group control is set, this is called recursively to the children.
+        virtual void applyProdGroupControls();
+        
+        /// Applies any injection group control relevant to all children nodes.
+        /// If no group control is set, this is called recursively to the children.
+        virtual void applyInjGroupControls();
+        
 
     private:
         Wells* wells_;
         int self_index_;
         int group_control_index_;
+        bool shut_well_;
     };
 
     /// Creates the WellsGroupInterface for the given name

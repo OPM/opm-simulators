@@ -94,12 +94,15 @@ namespace Opm
     }
     
     bool WellCollection::conditionsMet(const std::vector<double>& well_bhp,
-                                       const std::vector<double>& well_rate, 
-                                       double epsilon)
+                                       const std::vector<double>& well_reservoirrates_phase,
+                                       const std::vector<double>& well_surfacerates_phase)
     {
         for (size_t i = 0; i < roots_.size(); i++) {
             WellPhasesSummed phases;
-            if(!roots_[i]->conditionsMet(well_bhp, well_rate, phases, epsilon)) {
+            if (!roots_[i]->conditionsMet(well_bhp,
+                                          well_reservoirrates_phase,
+                                          well_surfacerates_phase,
+                                          phases)) {
                 return false;
             }
         }
@@ -116,6 +119,14 @@ namespace Opm
     void WellCollection::setWellsPointer(Wells* wells) {
         for(size_t i = 0; i < leaf_nodes_.size(); i++) {
             leaf_nodes_[i]->setWellsPointer(wells, i);
+        }
+    }
+    
+    void WellCollection::applyGroupControls()
+    {
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            roots_[i]->applyProdGroupControls();
+            roots_[i]->applyInjGroupControls();
         }
     }
 }
