@@ -482,6 +482,9 @@ namespace Opm
             }
             break;
         }
+        case InjectionSpecification::REIN:
+            std::cout << "WARNING: Ignoring control type REIN" << std::endl;
+            break;
         case InjectionSpecification::FLD:
         case InjectionSpecification::NONE:
             // Call all children
