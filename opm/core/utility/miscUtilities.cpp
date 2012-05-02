@@ -320,8 +320,12 @@ namespace Opm
         // Well contributions.
         if (wells) {
             const int nw = wells->number_of_wells;
+            const int np = wells->number_of_phases;
+            if (np != 2) {
+                THROW("computeTransportSource() requires a 2 phase case.");
+            }
             for (int w = 0; w < nw; ++w) {
-                const double* zfrac = wells->zfrac + 3*w;
+                const double* comp_frac = wells->comp_frac + np*w;
                 for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
                     const int perf_cell = wells->well_cells[perf];
                     double perf_rate = well_perfrates[perf];
@@ -331,8 +335,8 @@ namespace Opm
                             std::cout << "**** Warning: crossflow in well with index " << w << " ignored." << std::endl;
                             perf_rate = 0.0;
                         } else {
-                            ASSERT(std::fabs(zfrac[WATER] + zfrac[OIL] - 1.0) < 1e-6);
-                            perf_rate *= zfrac[WATER];
+                            ASSERT(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
+                            perf_rate *= comp_frac[0];
                         }
                     }
                     transport_src[perf_cell] += perf_rate;
@@ -400,18 +404,22 @@ namespace Opm
     /// single-perforation.
     void wellsToSrc(const Wells& wells, const int num_cells, std::vector<double>& src)
     {
+        const int np = wells.number_of_phases;
+        if (np != 2) {
+            THROW("wellsToSrc() requires a 2 phase case.");
+        }
 	src.resize(num_cells);
 	for (int w = 0; w < wells.number_of_wells; ++w) {
 	    if (wells.ctrls[w]->num != 1) {
 		THROW("In wellsToSrc(): well has more than one control.");
 	    }
-	    if (wells.ctrls[w]->type[0] != RATE) {
-		THROW("In wellsToSrc(): well is BHP, not RATE.");
+	    if (wells.ctrls[w]->type[0] != RESERVOIR_RATE) {
+		THROW("In wellsToSrc(): well is something other than RESERVOIR_RATE.");
 	    }
 	    if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
 		THROW("In wellsToSrc(): well has multiple perforations.");
 	    }
-	    const double flow = wells.ctrls[w]->target[0];
+	    const double flow = wells.ctrls[w]->target[0] * wells.ctrls[w]->distr[0];
 	    const double cell = wells.well_cells[wells.well_connpos[w]];
 	    src[cell] = flow;
 	}
@@ -522,7 +530,7 @@ namespace Opm
                 well_rate_total += perf_rate;
                 if (perf_rate > 0.0) {
                     // Injection.
-                    well_rate_water += perf_rate*wells.zfrac[3*w + WATER];
+                    well_rate_water += perf_rate*wells.comp_frac[0];
                 } else {
                     // Production.
                     const int cell = wells.well_cells[perf];
