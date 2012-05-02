@@ -353,6 +353,7 @@ namespace Opm
                 const std::map<std::string, int>::const_iterator it = well_names_to_index.find(lines[i].well_);
                 if (it != well_names_to_index.end()) {
                     const int well_index = it->second;
+                    well_data[well_index].type = PRODUCER;
                 } else {
                     THROW("Unseen well name: " << lines[i].well_ << " first seen in WCONPROD");
                 }

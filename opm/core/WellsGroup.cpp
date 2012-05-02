@@ -259,6 +259,10 @@ namespace Opm
         if (forced || injSpec().control_mode_ == InjectionSpecification::FLD 
             || injSpec().control_mode_ == InjectionSpecification::NONE) {
             const double my_guide_rate = injectionGuideRate(!forced);
+            if (my_guide_rate == 0.0) {
+                // Nothing to do here
+                return;
+            }
             for (size_t i = 0; i < children_.size(); ++i) {
                 const double child_target = target * children_[i]->injectionGuideRate(!forced) / my_guide_rate;
                 children_[i]->applyInjGroupControl(control_mode, child_target, true);
@@ -279,6 +283,10 @@ namespace Opm
         if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD 
                        || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
             const double my_guide_rate =  productionGuideRate(!forced);
+            if (my_guide_rate == 0.0) {
+                // Nothing to do here
+                return;
+            }
             for (size_t i = 0; i < children_.size(); ++i) {
                 const double child_target = target * children_[i]->productionGuideRate(!forced) / my_guide_rate;
                 children_[i]->applyProdGroupControl(control_mode, child_target, true);
@@ -431,13 +439,14 @@ namespace Opm
         case ProductionSpecification::RESV:
         {
             const double my_guide_rate = productionGuideRate(true);
+            ASSERT(my_guide_rate != 0.0);
             for (size_t i = 0; i < children_.size(); ++i ) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = productionGuideRate(true);
+                const double children_guide_rate = children_[i]->productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, 
-                                                    (my_guide_rate / children_guide_rate) * getTarget(prod_mode), 
+                                                    (children_guide_rate / my_guide_rate) * getTarget(prod_mode), 
                                                     false);
             }
             break;
@@ -468,7 +477,7 @@ namespace Opm
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
                 children_[i]->applyInjGroupControl(inj_mode, 
-                                                    (my_guide_rate / children_guide_rate) * getTarget(inj_mode), 
+                                                    (children_guide_rate / my_guide_rate) * getTarget(inj_mode), 
                                                     false);
             }
             break;
@@ -915,7 +924,7 @@ namespace Opm
         // For now, assume that if it isn't a well, it's a group
 
         if (isWell) {
-
+            ProductionSpecification production_specification;
             InjectionSpecification injection_specification;
             if (deck.hasField("WCONINJE")) {
                 WCONINJE wconinje = deck.getWCONINJE();
@@ -927,13 +936,11 @@ namespace Opm
                         injection_specification.control_mode_ = toInjectionControlMode(line.control_mode_);
                         injection_specification.surface_flow_max_rate_ = line.surface_flow_max_rate_;
                         injection_specification.reservoir_flow_max_rate_ = line.reservoir_flow_max_rate_;
+                        production_specification.guide_rate_ = 0.0; // We know we're not a producer
                     }
                 }
-            } else {
-                injection_specification.guide_rate_ = 0.0;
             }
 
-            ProductionSpecification production_specification;
             if (deck.hasField("WCONPROD")) {
                 WCONPROD wconprod = deck.getWCONPROD();
                 std::cout << wconprod.wconprod.size() << std::endl;
@@ -945,10 +952,9 @@ namespace Opm
                         production_specification.oil_max_rate_ = line.oil_max_rate_;
                         production_specification.control_mode_ = toProductionControlMode(line.control_mode_);
                         production_specification.water_max_rate_ = line.water_max_rate_;
+                        injection_specification.guide_rate_ = 0.0; // we know we're not an injector
                     }
                 }
-            } else {
-                production_specification.guide_rate_ = 0.0;
             }
             return_value.reset(new WellNode(name, production_specification, injection_specification, phase_usage));
         } else {
