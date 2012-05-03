@@ -160,7 +160,7 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
     if (target != NULL) { ctrl->target = target; ok++; }
     if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
 
-    if (ok == 2) {
+    if (ok == 3) {
         m = ctrl->data;
         for (c = m->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
@@ -173,7 +173,7 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
         m->cpty = nctrl;
     }
 
-    return ok == 2;
+    return ok == 3;
 }
 
 
