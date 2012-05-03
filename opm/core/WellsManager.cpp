@@ -492,7 +492,7 @@ namespace Opm
                             control_pos[ProductionControl::ORAT] = w_->ctrls[wix]->num;
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, wcp_line.oil_max_rate_,
+                            ok = append_well_controls(SURFACE_RATE, -wcp_line.oil_max_rate_,
                                                       distr, wix, w_);
                         }
                         if (ok && wcp_line.water_max_rate_ > 0.0) {
@@ -502,7 +502,7 @@ namespace Opm
                             control_pos[ProductionControl::WRAT] = w_->ctrls[wix]->num;
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, wcp_line.water_max_rate_,
+                            ok = append_well_controls(SURFACE_RATE, -wcp_line.water_max_rate_,
                                                       distr, wix, w_);
                         }
                         if (ok && wcp_line.gas_max_rate_ > 0.0) {
@@ -512,7 +512,7 @@ namespace Opm
                             control_pos[ProductionControl::GRAT] = w_->ctrls[wix]->num;
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, wcp_line.gas_max_rate_,
+                            ok = append_well_controls(SURFACE_RATE, -wcp_line.gas_max_rate_,
                                                       distr, wix, w_);
                         }
                         if (ok && wcp_line.liquid_max_rate_ > 0.0) {
@@ -526,13 +526,13 @@ namespace Opm
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
                             distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, wcp_line.liquid_max_rate_,
+                            ok = append_well_controls(SURFACE_RATE, -wcp_line.liquid_max_rate_,
                                                       distr, wix, w_);
                         }
                         if (ok && wcp_line.reservoir_flow_max_rate_ > 0.0) {
                             control_pos[ProductionControl::RESV] = w_->ctrls[wix]->num;
                             double distr[3] = { 1.0, 1.0, 1.0 };
-                            ok = append_well_controls(RESERVOIR_RATE, wcp_line.reservoir_flow_max_rate_,
+                            ok = append_well_controls(RESERVOIR_RATE, -wcp_line.reservoir_flow_max_rate_,
                                                  distr, wix, w_);
                         }
                         if (ok && wcp_line.BHP_limit_ > 0.0) {

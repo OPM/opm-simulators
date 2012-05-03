@@ -410,16 +410,25 @@ namespace Opm
         }
 	src.resize(num_cells);
 	for (int w = 0; w < wells.number_of_wells; ++w) {
+            const int cur = wells.ctrls[w]->current;
 	    if (wells.ctrls[w]->num != 1) {
-		THROW("In wellsToSrc(): well has more than one control.");
+		MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
 	    }
-	    if (wells.ctrls[w]->type[0] != RESERVOIR_RATE) {
+	    if (wells.ctrls[w]->type[cur] != RESERVOIR_RATE) {
 		THROW("In wellsToSrc(): well is something other than RESERVOIR_RATE.");
 	    }
 	    if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
 		THROW("In wellsToSrc(): well has multiple perforations.");
 	    }
-	    const double flow = wells.ctrls[w]->target[0] * wells.ctrls[w]->distr[0];
+            for (int p = 0; p < np; ++p) {
+                if (wells.ctrls[w]->distr[np*cur + p] != 1.0) {
+                    THROW("In wellsToSrc(): well not controlled on total rate.");
+                }
+            }
+	    double flow = wells.ctrls[w]->target[cur];
+            if (wells.type[w] == INJECTOR) {
+                flow *= wells.comp_frac[np*w + 0]; // Obtaining water rate for inflow source.
+            }
 	    const double cell = wells.well_cells[wells.well_connpos[w]];
 	    src[cell] = flow;
 	}

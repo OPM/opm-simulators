@@ -214,16 +214,16 @@ namespace Opm
             // Initialise pressure to hydrostatic state.
             const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
             initHydrostaticPressure(grid, props.density(), woc, gravity, woc, ref_p, state);
-        } else if (param.has("init_sat")) {
-            // Initialise water saturation to init_sat parameter.
-            const double init_sat = param.get<double>("init_sat");
+        } else if (param.has("init_saturation")) {
+            // Initialise water saturation to init_saturation parameter.
+            const double init_saturation = param.get<double>("init_saturation");
             for (int cell = 0; cell < num_cells; ++cell) {
-                state.saturation()[2*cell] = init_sat;
-                state.saturation()[2*cell + 1] = 1.0 - init_sat;
+                state.saturation()[2*cell] = init_saturation;
+                state.saturation()[2*cell + 1] = 1.0 - init_saturation;
             }
             // Initialise pressure to hydrostatic state.
             const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
-            const double rho =  props.density()[0]*init_sat + props.density()[1]*(1.0 - init_sat);
+            const double rho =  props.density()[0]*init_saturation + props.density()[1]*(1.0 - init_saturation);
             const double dens[2] = { rho, rho };
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
             initHydrostaticPressure(grid, dens, ref_z, gravity, ref_z, ref_p, state);
