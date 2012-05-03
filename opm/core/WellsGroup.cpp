@@ -174,6 +174,9 @@ namespace Opm
         case ProductionSpecification::GRAT:
             target = prodSpec().gas_max_rate_;
             break;
+        case ProductionSpecification::WRAT:
+            target = prodSpec().water_max_rate_;
+            break;
         case ProductionSpecification::ORAT:
             target = prodSpec().oil_max_rate_;
             break;
@@ -285,6 +288,7 @@ namespace Opm
             const double my_guide_rate =  productionGuideRate(!forced);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
+                std::cout << "returning" << std::endl;
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
@@ -381,6 +385,7 @@ namespace Opm
                                   production_mode_violated).first->shutWell();
                 return false;
             case ProductionSpecification::RATE:
+                std::cout << "Applying group control" << std::endl;
                 applyProdGroupControl(production_mode_violated, 
                                       getTarget(production_mode_violated),
                                       true);
@@ -439,7 +444,9 @@ namespace Opm
         case ProductionSpecification::RESV:
         {
             const double my_guide_rate = productionGuideRate(true);
-            ASSERT(my_guide_rate != 0.0);
+            if (my_guide_rate == 0) {
+                THROW("Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
+            }
             for (size_t i = 0; i < children_.size(); ++i ) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
@@ -471,27 +478,27 @@ namespace Opm
         case InjectionSpecification::RESV:
         {
             const double my_guide_rate = injectionGuideRate(true);
-            for (size_t i = 0; i < children_.size(); ++i ) {
+            for (size_t i = 0; i < children_.size(); ++i) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
-                children_[i]->applyInjGroupControl(inj_mode, 
-                                                    (children_guide_rate / my_guide_rate) * getTarget(inj_mode), 
-                                                    false);
+                children_[i]->applyInjGroupControl(inj_mode,
+                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode),
+                        false);
             }
-            break;
+            return;
         }
         case InjectionSpecification::REIN:
             std::cout << "WARNING: Ignoring control type REIN" << std::endl;
-            break;
+            return;
         case InjectionSpecification::FLD:
         case InjectionSpecification::NONE:
             // Call all children
             for (size_t i = 0; i < children_.size(); ++i ) {
                 children_[i]->applyInjGroupControls();
             }
-            break;
+            return;
         default:
             THROW("Unhandled group injection control mode " << inj_mode);
         }
@@ -811,7 +818,8 @@ namespace Opm
     ///                       wells under group control
     double WellNode::productionGuideRate(bool only_group) 
     {
-        if (only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+        if (!only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+            std::cout << prodSpec().guide_rate_ << std::endl;
             return prodSpec().guide_rate_;
         }
         return 0.0;
@@ -822,7 +830,7 @@ namespace Opm
     ///                       wells under group control
     double WellNode::injectionGuideRate(bool only_group)
     {
-        if (only_group || injSpec().control_mode_ == InjectionSpecification::GRUP) {
+        if (!only_group || injSpec().control_mode_ == InjectionSpecification::GRUP) {
             return injSpec().guide_rate_;
         }
         return 0.0;
