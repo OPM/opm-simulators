@@ -595,8 +595,8 @@ namespace Opm
                 ctrl_violated = std::fabs(my_rate) > std::fabs(my_rate_target);
                 if (ctrl_violated) {
                     std::cout << "RESERVOIR_RATE limit violated for well " << name() << ":\n";
-                    std::cout << "rate limit = " << my_rate_target;
-                    std::cout << "rate       = " << my_rate;
+                    std::cout << "rate limit = " << my_rate_target << std::endl;
+                    std::cout << "rate       = " << my_rate << std::endl;
                 }
                 break;
             }
@@ -609,8 +609,8 @@ namespace Opm
                 ctrl_violated = std::fabs(my_rate) > std::fabs(my_rate_target);
                 if (ctrl_violated) {
                     std::cout << "SURFACE_RATE limit violated for well " << name() << ":\n";
-                    std::cout << "rate limit = " << my_rate_target;
-                    std::cout << "rate       = " << my_rate;
+                    std::cout << "rate limit = " << my_rate_target << std::endl;
+                    std::cout << "rate       = " << my_rate << std::endl;
                 }
                 break;
             }
@@ -741,7 +741,9 @@ namespace Opm
             ASSERT(target == 0.0);
             return;
         }
-
+        // We're a producer, so we need to negate the input
+        double ntarget = target;
+        
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;
         const int* phase_used = phaseUsage().phase_used;
@@ -784,19 +786,19 @@ namespace Opm
             wct = RESERVOIR_RATE;
             break;
         default:
-            THROW("Group injection control mode not handled: " << control_mode);
+            THROW("Group production control mode not handled: " << control_mode);
         }
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, target, distr, self_index_, wells_);
+            append_well_controls(wct, ntarget, distr, self_index_, wells_);
             group_control_index_ = wells_->ctrls[self_index_]->num - 1;
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
             const int np = wells_->number_of_phases;
             wells_->ctrls[self_index_]->type[group_control_index_] = wct;
-            wells_->ctrls[self_index_]->target[group_control_index_] = target;
+            wells_->ctrls[self_index_]->target[group_control_index_] = ntarget;
             std::copy(distr, distr + np, wells_->ctrls[self_index_]->distr + np*group_control_index_);
         }
         set_current_control(self_index_, group_control_index_, wells_);
