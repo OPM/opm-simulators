@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
     }
 
     // We approximate (for _testing_ that resflows = surfaceflows)
-    while (!wells.conditionsMet(well_bhp, well_resflows, well_resflows)) {
+    for (int iter = 0; iter < 10 && !wells.conditionsMet(well_bhp, well_resflows, well_resflows); ++iter) {
         std::cout << "Conditions not met for well, trying again" << std::endl;
         pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
         std::cout << "Solved" << std::endl;
