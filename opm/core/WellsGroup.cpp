@@ -592,7 +592,7 @@ namespace Opm
                     my_rate += ctrls.distr[np*ctrl_index + phase]*well_reservoirrates_phase[np*self_index_ + phase];
                 }
                 const double my_rate_target = ctrls.target[ctrl_index];
-                ctrl_violated = std::fabs(my_rate) > std::fabs(my_rate_target);
+                ctrl_violated = std::fabs(my_rate) - std::fabs(my_rate_target)> std::max(std::abs(my_rate), std::abs(my_rate_target))*1e-6;
                 if (ctrl_violated) {
                     std::cout << "RESERVOIR_RATE limit violated for well " << name() << ":\n";
                     std::cout << "rate limit = " << my_rate_target << std::endl;
