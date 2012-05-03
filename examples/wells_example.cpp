@@ -51,6 +51,9 @@ int main(int argc, char** argv) {
     
     initStateTwophaseFromDeck(*grid.c_grid(), incomp_properties, parser, gravity[2], state);
     
+    // Compute phase mobilities
+    std::vector<double> phase_mob;
+    computePhaseMobilities(incomp_properties, all_cells, state.saturation(), phase_mob);
     // Compute total mobility and omega
     std::vector<double> totmob;
     std::vector<double> omega;
@@ -75,21 +78,55 @@ int main(int argc, char** argv) {
     }
     std::vector<double> well_rate;
     
+    // This will be refactored into a separate function once done.
+    const int np = incomp_properties.numPhases();
+    std::vector<double> fractional_flows(grid.c_grid()->number_of_cells*np, 0.0);
+    for (int cell = 0; cell < grid.c_grid()->number_of_cells; ++cell) {
+        double phase_sum = 0.0;
+        for (int phase = 0; phase < np; ++phase) {
+            phase_sum += phase_mob[cell*np + phase];
+        }
+        for (int phase = 0; phase < np; ++phase) {
+            fractional_flows[cell*np + phase] = phase_mob[cell*np + phase] / phase_sum;
+        }
+    }
+    // End stuff that needs to be refactored into a seperated function
+    
     computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
+    
+    // This will be refactored into a separate function once done
+    std::vector<double> well_resflows(wells.c_wells()->number_of_wells*np, 0.0);
+    for ( int wix = 0; wix < wells.c_wells()->number_of_wells; ++wix) {
+        for (int i = wells.c_wells()->well_connpos[wix]; i < wells.c_wells()->well_connpos[wix+1]; ++i) {
+            const int cell = wells.c_wells()->well_cells[i];
+            for (int phase = 0; phase < np; ++phase) {
+                well_resflows[wix*np + phase] += well_rate_per_cell[i]*fractional_flows[cell*np + phase];
+            }
+        }
+    }
 
-    #if 0
-    while (!wells.conditionsMet(well_bhp, well_rate)) {
+    // We approximate (for _testing_ that resflows = surfaceflows)
+    while (!wells.conditionsMet(well_bhp, well_resflows, well_resflows)) {
         std::cout << "Conditions not met for well, trying again" << std::endl;
         pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
         std::cout << "Solved" << std::endl;
 
-        for (size_t i = 0; i < well_rate_per_cell.size(); i++) {
-            std::cout << well_rate_per_cell[i] << std::endl;
+
+        for (int wix = 0; wix < wells.c_wells()->number_of_wells; ++wix) {
+            for (int phase = 0; phase < np; ++phase) {
+                // Reset
+                well_resflows[wix * np + phase] = 0.0;
+            }
+            for (int i = wells.c_wells()->well_connpos[wix]; i < wells.c_wells()->well_connpos[wix + 1]; ++i) {
+                const int cell = wells.c_wells()->well_cells[i];
+                for (int phase = 0; phase < np; ++phase) {
+                    well_resflows[wix * np + phase] += well_rate_per_cell[i] * fractional_flows[cell * np + phase];
+                }
+            }
         }
-        computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
     }
 
-
+#if 0
     std::vector<double> porevol;
     computePorevolume(*grid->c_grid(), incomp_properties, porevol);
     
