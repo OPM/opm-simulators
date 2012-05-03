@@ -287,7 +287,6 @@ assemble_well_contrib(int                   nc ,
 /* ---------------------------------------------------------------------- */
 {
     int w, p, np;
-    int are_rate;
 
     struct WellControls *ctrls;
 
