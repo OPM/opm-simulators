@@ -367,14 +367,17 @@ namespace Opm
             std::vector<int> perf_cells(w_num_perf);
             std::vector<double> perf_prodind(w_num_perf);
             for (int perf = 0; perf < w_num_perf; ++perf) {
-                perf_cells[0] = wellperf_data[w][perf].cell;
-                perf_prodind[0] = wellperf_data[w][perf].well_index;
+                perf_cells[perf] = wellperf_data[w][perf].cell;
+                perf_prodind[perf] = wellperf_data[w][perf].well_index;
             }
             const double* comp_frac = NULL;
             // We initialize all wells with a null component fraction,
             // and must (for injection wells) overwrite it later.
-            add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
-                     comp_frac, &perf_cells[0], &perf_prodind[0], w_);
+            int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
+                              comp_frac, &perf_cells[0], &perf_prodind[0], w_);
+            if (!ok) {
+                THROW("Failed adding well " << well_names[w] << " to Wells data structure.");
+            }
         }
 
         // Get WCONINJE data, add injection controls to wells.
@@ -400,26 +403,30 @@ namespace Opm
                         }
 
                         // Add all controls that are present in well.
+                        int ok = 1;
                         int control_pos[5] = { -1, -1, -1, -1, -1 };
-                        if (wci_line.surface_flow_max_rate_ > 0.0) {
+                        if (ok && wci_line.surface_flow_max_rate_ > 0.0) {
                             control_pos[InjectionControl::RATE] = w_->ctrls[wix]->num;
                             const double distr[3] = { 1.0, 1.0, 1.0 };
-                            append_well_controls(SURFACE_RATE, wci_line.surface_flow_max_rate_,
-                                                 distr, wix, w_);
+                            ok = append_well_controls(SURFACE_RATE, wci_line.surface_flow_max_rate_,
+                                                      distr, wix, w_);
                         }
-                        if (wci_line.reservoir_flow_max_rate_ > 0.0) {
+                        if (ok && wci_line.reservoir_flow_max_rate_ > 0.0) {
                             control_pos[InjectionControl::RESV] = w_->ctrls[wix]->num;
                             const double distr[3] = { 1.0, 1.0, 1.0 };
-                            append_well_controls(RESERVOIR_RATE, wci_line.reservoir_flow_max_rate_,
-                                                 distr, wix, w_);
+                            ok = append_well_controls(RESERVOIR_RATE, wci_line.reservoir_flow_max_rate_,
+                                                      distr, wix, w_);
                         }
-                        if (wci_line.BHP_limit_ > 0.0) {
+                        if (ok && wci_line.BHP_limit_ > 0.0) {
                             control_pos[InjectionControl::BHP] = w_->ctrls[wix]->num;
-                            append_well_controls(BHP, wci_line.BHP_limit_,
-                                                 NULL, wix, w_);
+                            ok = append_well_controls(BHP, wci_line.BHP_limit_,
+                                                      NULL, wix, w_);
                         }
-                        if (wci_line.THP_limit_ > 0.0) {
+                        if (ok && wci_line.THP_limit_ > 0.0) {
                             THROW("We cannot handle THP limit for well " << well_names[wix]);
+                        }
+                        if (!ok) {
+                            THROW("Failure occured appending controls for well " << well_names[wix]);
                         }
                         InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
                         const int cpos = control_pos[mode];
@@ -477,37 +484,38 @@ namespace Opm
                         }
                         // Add all controls that are present in well.
                         int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
-                        if (wcp_line.oil_max_rate_ > 0.0) {
+                        int ok = 1;
+                        if (ok && wcp_line.oil_max_rate_ > 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Liquid]) {
                                 THROW("Oil phase not active and ORAT control specified.");
                             }
                             control_pos[ProductionControl::ORAT] = w_->ctrls[wix]->num;
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            append_well_controls(SURFACE_RATE, wcp_line.oil_max_rate_,
-                                                 distr, wix, w_);
+                            ok = append_well_controls(SURFACE_RATE, wcp_line.oil_max_rate_,
+                                                      distr, wix, w_);
                         }
-                        if (wcp_line.water_max_rate_ > 0.0) {
+                        if (ok && wcp_line.water_max_rate_ > 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Aqua]) {
                                 THROW("Water phase not active and WRAT control specified.");
                             }
                             control_pos[ProductionControl::WRAT] = w_->ctrls[wix]->num;
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            append_well_controls(SURFACE_RATE, wcp_line.water_max_rate_,
-                                                 distr, wix, w_);
+                            ok = append_well_controls(SURFACE_RATE, wcp_line.water_max_rate_,
+                                                      distr, wix, w_);
                         }
-                        if (wcp_line.gas_max_rate_ > 0.0) {
+                        if (ok && wcp_line.gas_max_rate_ > 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Vapour]) {
                                 THROW("Gas phase not active and GRAT control specified.");
                             }
                             control_pos[ProductionControl::GRAT] = w_->ctrls[wix]->num;
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                            append_well_controls(SURFACE_RATE, wcp_line.gas_max_rate_,
-                                                 distr, wix, w_);
+                            ok = append_well_controls(SURFACE_RATE, wcp_line.gas_max_rate_,
+                                                      distr, wix, w_);
                         }
-                        if (wcp_line.liquid_max_rate_ > 0.0) {
+                        if (ok && wcp_line.liquid_max_rate_ > 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Aqua]) {
                                 THROW("Water phase not active and LRAT control specified.");
                             }
@@ -518,22 +526,25 @@ namespace Opm
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
                             distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            append_well_controls(SURFACE_RATE, wcp_line.liquid_max_rate_,
-                                                 distr, wix, w_);
+                            ok = append_well_controls(SURFACE_RATE, wcp_line.liquid_max_rate_,
+                                                      distr, wix, w_);
                         }
-                        if (wcp_line.reservoir_flow_max_rate_ > 0.0) {
+                        if (ok && wcp_line.reservoir_flow_max_rate_ > 0.0) {
                             control_pos[ProductionControl::RESV] = w_->ctrls[wix]->num;
                             double distr[3] = { 1.0, 1.0, 1.0 };
-                            append_well_controls(RESERVOIR_RATE, wcp_line.reservoir_flow_max_rate_,
+                            ok = append_well_controls(RESERVOIR_RATE, wcp_line.reservoir_flow_max_rate_,
                                                  distr, wix, w_);
                         }
-                        if (wcp_line.BHP_limit_ > 0.0) {
+                        if (ok && wcp_line.BHP_limit_ > 0.0) {
                             control_pos[ProductionControl::BHP] = w_->ctrls[wix]->num;
-                            append_well_controls(BHP, wcp_line.BHP_limit_,
+                            ok = append_well_controls(BHP, wcp_line.BHP_limit_,
                                                  NULL, wix, w_);
                         }
-                        if (wcp_line.THP_limit_ > 0.0) {
+                        if (ok && wcp_line.THP_limit_ > 0.0) {
                             THROW("We cannot handle THP limit for well " << well_names[wix]);
+                        }
+                        if (!ok) {
+                            THROW("Failure occured appending controls for well " << well_names[wix]);
                         }
                         ProductionControl::Mode mode = ProductionControl::mode(wcp_line.control_mode_);
                         const int cpos = control_pos[mode];
