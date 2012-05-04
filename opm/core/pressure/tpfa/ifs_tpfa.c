@@ -277,6 +277,47 @@ assemble_rate_well(int nc, int w,
 
 /* ---------------------------------------------------------------------- */
 static void
+assemble_shut_well(int nc, int w,
+                   const struct Wells   *W  ,
+                   const double         *mt ,
+                   struct ifs_tpfa_data *h  )
+/* ---------------------------------------------------------------------- */
+{
+    int    c, i, wdof;
+    size_t jw;
+    double trans;
+
+    /* The equation added for a shut well w is 
+     *   \sum_{c~w} T_{w,c} * mt_c p_w = 0.0
+     * where c~w indicates the cell perforated by w, T are production
+     * indices, mt is total mobility and p_w is the bottom-hole
+     * pressure.
+     * Note: post-processing in ifs_tpfa_press_flux() may change the
+     * well bhp away from zero, the equation used here is intended
+     * just to
+     *    1) give the same solution as if the well was not there for
+     *       all other degrees of freedom,
+     *    2) not disturb the conditioning of the matrix.
+     */
+
+    wdof  = nc + w;
+
+    jw    = csrmatrix_elm_index(wdof, wdof, h->A);
+
+    for (i = W->well_connpos[w]; i < W->well_connpos[w + 1]; i++) {
+
+        c     = W->well_cells  [ i ];
+        trans = mt[ c ] * W->WI[ i ];
+
+        /* w<->w diagonal contribution from well, trivial eqn. */
+        h->A->sa[ jw ] += trans;
+    }
+    h->b[ wdof ] = 0.0;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
 assemble_well_contrib(int                   nc ,
                       const struct Wells   *W  ,
                       const double         *mt ,
@@ -298,36 +339,44 @@ assemble_well_contrib(int                   nc ,
     for (w = 0; w < W->number_of_wells; w++) {
         ctrls = W->ctrls[ w ];
 
-        assert (ctrls->current >= 0         );
-        assert (ctrls->current <  ctrls->num);
+        if (ctrls->current < 0) {
 
-        switch (ctrls->type[ ctrls->current ]) {
-        case BHP:
-            *all_rate = 0;
-            assemble_bhp_well (nc, w, W, mt, wdp, h);
-            break;
+            /* Threat this well as a shut well, isolated from the domain. */
 
-        case RESERVOIR_RATE:
-            for (p = 0; p < np; ++p) {
-                if (ctrls->distr[np * ctrls->current + p] != 1.0) {
-                    *ok = 0;
-                    break;
+            assemble_shut_well(nc, w, W, mt, h);
+
+        } else {
+
+            assert (ctrls->current <  ctrls->num);
+
+            switch (ctrls->type[ ctrls->current ]) {
+            case BHP:
+                *all_rate = 0;
+                assemble_bhp_well (nc, w, W, mt, wdp, h);
+                break;
+
+            case RESERVOIR_RATE:
+                for (p = 0; p < np; ++p) {
+                    if (ctrls->distr[np * ctrls->current + p] != 1.0) {
+                        *ok = 0;
+                        break;
+                    }
                 }
-            }
-            if (*ok) {
-                assemble_rate_well(nc, w, W, mt, wdp, h);
-            }
-            break;
+                if (*ok) {
+                    assemble_rate_well(nc, w, W, mt, wdp, h);
+                }
+                break;
 
-        case SURFACE_RATE:
-            /* We cannot handle this case, since we do
-             * not have access to formation volume factors,
-             * needed to convert between reservoir and
-             * surface rates 
-             */
-            fprintf(stderr, "ifs_tpfa cannot handle SURFACE_RATE well controls.\n");
-            *ok = 0;
-            break;
+            case SURFACE_RATE:
+                /* We cannot handle this case, since we do
+                 * not have access to formation volume factors,
+                 * needed to convert between reservoir and
+                 * surface rates 
+                 */
+                fprintf(stderr, "ifs_tpfa cannot handle SURFACE_RATE well controls.\n");
+                *ok = 0;
+                break;
+            }
         }
     }
 }
@@ -462,15 +511,17 @@ well_solution(const struct UnstructuredGrid *G   ,
               struct ifs_tpfa_solution      *soln)
 /* ---------------------------------------------------------------------- */
 {
-    int           c, w, i;
+    int           c, w, i, shut;
     double        bhp, dp, trans;
     const double *mt, *WI, *wdp;
 
-
     if (soln->well_press != NULL) {
-        /* Extract BHP directly from solution vector */
-        memcpy(soln->well_press, h->x + G->number_of_cells,
-               F->W->number_of_wells * sizeof *soln->well_press);
+        /* Extract BHP directly from solution vector for non-shut wells */
+        for (w = 0; w < F->W->number_of_wells; ++w) {
+            if (F->W->ctrls[w]->current >= 0) {
+                soln->well_press[w] = h->x[G->number_of_cells + w];
+            }
+        }
     }
 
     if (soln->well_flux != NULL) {
@@ -480,6 +531,7 @@ well_solution(const struct UnstructuredGrid *G   ,
 
         for (w = i = 0; w < F->W->number_of_wells; w++) {
             bhp = h->x[G->number_of_cells + w];
+            shut = (F->W->ctrls[w]->current < 0);
 
             for (; i < F->W->well_connpos[ w + 1 ]; i++) {
 
@@ -488,7 +540,7 @@ well_solution(const struct UnstructuredGrid *G   ,
                 trans = mt[ c ] * WI[ i ];
                 dp    = bhp + wdp[ i ] - soln->cell_press[ c ];
 
-                soln->well_flux[i] = trans * dp;
+                soln->well_flux[i] = shut ? 0.0 : trans * dp;
             }
         }
     }
