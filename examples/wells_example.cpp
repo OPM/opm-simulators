@@ -4,6 +4,7 @@
 
 
 #include "opm/core/utility/initState.hpp"
+#include "opm/core/utility/SimulatorTimer.hpp"
 #include <opm/core/WellsManager.hpp>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
@@ -14,12 +15,16 @@
 #include <opm/core/TwophaseState.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
+#include <opm/core/fluid/RockCompressibility.hpp>
 int main(int argc, char** argv) {
 
     using namespace Opm::parameter;
     using namespace Opm;
     ParameterGroup parameters( argc, argv, false );
     std::string file_name = parameters.getDefault<std::string>("inputdeck", "data.data");
+
+    SimulatorTimer simtimer;
+    simtimer.init(parameters);
 
     // Read input file
     EclipseGridParser parser(file_name);
@@ -34,6 +39,8 @@ int main(int argc, char** argv) {
 
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     IncompPropertiesFromDeck incomp_properties(parser, global_cells);
+
+    RockCompressibility rock_comp(parser);
 
     Opm::LinearSolverFactory linsolver(parameters);
 
@@ -70,13 +77,43 @@ int main(int argc, char** argv) {
 
     std::vector<double> well_bhp;
     std::vector<double> well_rate_per_cell;
-    pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
-    std::cout << "Solved" << std::endl;
+    std::vector<double> rc;
+    rc.resize(grid.c_grid()->number_of_cells);
     
-    for(size_t i = 0; i < well_rate_per_cell.size(); i++) {
-        std::cout << well_rate_per_cell[i] << std::endl;
+    const int nl_pressure_maxiter = 100;
+    const double nl_pressure_tolerance = 1e-8;
+    const int num_cells = grid.c_grid()->number_of_cells;
+    std::vector<double> porevol;
+    if (rock_comp.isActive()) {
+        computePorevolume(*grid.c_grid(), incomp_properties, rock_comp, state.pressure(), porevol);
+    } else {
+        computePorevolume(*grid.c_grid(), incomp_properties, porevol);
     }
-    std::vector<double> well_rate;
+    if (rock_comp.isActive()) {
+            std::vector<double> initial_pressure = state.pressure();
+            std::vector<double> prev_pressure;
+            for (int iter = 0; iter < nl_pressure_maxiter; ++iter) {
+                prev_pressure = state.pressure();
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    rc[cell] = rock_comp.rockComp(state.pressure()[cell]);
+                }
+                state.pressure() = initial_pressure;
+                pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), porevol, rc, simtimer.currentStepLength(),
+                              state.pressure(), state.faceflux(), well_bhp, well_rate_per_cell);
+                double max_change = 0.0;
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    max_change = std::max(max_change, std::fabs(state.pressure()[cell] - prev_pressure[cell]));
+                }
+                std::cout << "Pressure iter " << iter << "   max change = " << max_change << std::endl;
+                if (max_change < nl_pressure_tolerance) {
+                    break;
+                }
+            }
+            computePorevolume(*grid.c_grid(), incomp_properties, rock_comp, state.pressure(), porevol);
+        } else {
+            pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), state.pressure(), state.faceflux(),
+                                        well_bhp, well_rate_per_cell);
+        }
     
     // This will be refactored into a separate function once done.
     const int np = incomp_properties.numPhases();
@@ -92,7 +129,6 @@ int main(int argc, char** argv) {
     }
     // End stuff that needs to be refactored into a seperated function
     
-    computeFlowRatePerWell(*wells.c_wells(), well_rate_per_cell, well_rate);
     
     // This will be refactored into a separate function once done
     std::vector<double> well_resflows(wells.c_wells()->number_of_wells*np, 0.0);
@@ -106,9 +142,33 @@ int main(int argc, char** argv) {
     }
 
     // We approximate (for _testing_ that resflows = surfaceflows)
-    for (int iter = 0; iter < 10 && !wells.conditionsMet(well_bhp, well_resflows, well_resflows); ++iter) {
+    for (int wc_iter = 0; wc_iter < 10 && !wells.conditionsMet(well_bhp, well_resflows, well_resflows); ++wc_iter) {
         std::cout << "Conditions not met for well, trying again" << std::endl;
-        pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), pressure, face_flux, well_bhp, well_rate_per_cell);
+        if (rock_comp.isActive()) {
+            std::vector<double> initial_pressure = state.pressure();
+            std::vector<double> prev_pressure;
+            for (int iter = 0; iter < nl_pressure_maxiter; ++iter) {
+                prev_pressure = state.pressure();
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    rc[cell] = rock_comp.rockComp(state.pressure()[cell]);
+                }
+                state.pressure() = initial_pressure;
+                pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), porevol, rc, simtimer.currentStepLength(),
+                              state.pressure(), state.faceflux(), well_bhp, well_rate_per_cell);
+                double max_change = 0.0;
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    max_change = std::max(max_change, std::fabs(state.pressure()[cell] - prev_pressure[cell]));
+                }
+                std::cout << "Pressure iter " << iter << "   max change = " << max_change << std::endl;
+                if (max_change < nl_pressure_tolerance) {
+                    break;
+                }
+            }
+            computePorevolume(*grid.c_grid(), incomp_properties, rock_comp, state.pressure(), porevol);
+        } else {
+            pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), state.pressure(), state.faceflux(),
+                                        well_bhp, well_rate_per_cell);
+        }
         std::cout << "Solved" << std::endl;
 
 
