@@ -270,7 +270,7 @@ namespace Opm
             }
         }
     }
-    
+
     /// Computes the fractional flow for each cell in the cells argument
     /// @param[in] props                rock and fluid properties
     /// @param[in] cells                cells with which the saturation values are associated
@@ -520,7 +520,7 @@ namespace Opm
         }
     }
 
-    
+
         /// Computes the phase flow rate per well
     /// \param[in] wells The wells for which the flow rate should be computed
     /// \param[in] flow_rates_per_cell The total flow rate for each cell (ordered the same
