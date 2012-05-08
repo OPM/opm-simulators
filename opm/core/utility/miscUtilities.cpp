@@ -521,17 +521,16 @@ namespace Opm
     }
 
     
-        /// Computes the phase flow rate per well
-    /// \param[in] wells The wells for which the flow rate should be computed
-    /// \param[in] flow_rates_per_cell The total flow rate for each cell (ordered the same
-    ///                                 way as the wells struct
-    /// \param[in] fractional_flows    the fractional flow for each cell in each well
-    /// \param[out] phase_flow_per_well Will contain the phase flow per well
-
+    /// Computes the phase flow rate per well
+    /// \param[in] wells                        The wells for which the flow rate should be computed
+    /// \param[in] flow_rates_per_well_cell     The total flow rate for each cell (ordered the same
+    ///                                         way as the wells struct
+    /// \param[in] fractional_flows             the fractional flow for each cell in each well
+    /// \param[out] phase_flow_per_well         Will contain the phase flow per well
     void computePhaseFlowRatesPerWell(const Wells& wells,
-                                      const std::vector<double>& flow_rates_per_cell,
+                                      const std::vector<double>& flow_rates_per_well_cell,
                                       const std::vector<double>& fractional_flows,
-                                      std::vector<double> phase_flow_per_well)
+                                      std::vector<double>& phase_flow_per_well)
     {
         const int np = wells.number_of_phases;
         const int nw = wells.number_of_wells;
@@ -542,8 +541,9 @@ namespace Opm
                 phase_flow_per_well[wix + np*phase] = 0.0;
             }
             for (int i = wells.well_connpos[wix]; i < wells.well_connpos[wix + 1]; ++i) {
+                const int cell = wells.well_cells[i];
                 for (int phase = 0; phase < np; ++phase) {
-                    phase_flow_per_well[wix * np + phase] += flow_rates_per_cell[i] * fractional_flows[i * np + phase];
+                    phase_flow_per_well[wix * np + phase] += flow_rates_per_well_cell[i] * fractional_flows[cell * np + phase];
                 }
             }
         }

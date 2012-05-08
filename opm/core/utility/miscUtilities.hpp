@@ -216,14 +216,14 @@ namespace Opm
     
     /// Computes the phase flow rate per well
     /// \param[in] wells The wells for which the flow rate should be computed
-    /// \param[in] flow_rates_per_cell The total flow rate for each cell (ordered the same
+    /// \param[in] flow_rates_per_well_cell The total flow rate for each cell (ordered the same
     ///                                 way as the wells struct
     /// \param[in] fractional_flows    the fractional flow for each cell in each well
     /// \param[out] phase_flow_per_well Will contain the phase flow per well
     void computePhaseFlowRatesPerWell(const Wells& wells, 
-                                      const std::vector<double>& flow_rates_per_cell,
+                                      const std::vector<double>& flow_rates_per_well_cell,
                                       const std::vector<double>& fractional_flows,
-                                      std::vector<double> phase_flow_per_well);
+                                      std::vector<double>& phase_flow_per_well);
  
     
     /// Encapsulates the watercut curves.
