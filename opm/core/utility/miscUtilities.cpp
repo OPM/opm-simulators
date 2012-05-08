@@ -270,7 +270,7 @@ namespace Opm
             }
         }
     }
-    
+
     /// Computes the fractional flow for each cell in the cells argument
     /// @param[in] props                rock and fluid properties
     /// @param[in] cells                cells with which the saturation values are associated
@@ -520,7 +520,7 @@ namespace Opm
         }
     }
 
-    
+
     /// Computes the phase flow rate per well
     /// \param[in] wells                        The wells for which the flow rate should be computed
     /// \param[in] flow_rates_per_well_cell     The total flow rate for each cell (ordered the same
@@ -538,7 +538,7 @@ namespace Opm
         for (int wix = 0; wix < nw; ++wix) {
             for (int phase = 0; phase < np; ++phase) {
                 // Reset vector
-                phase_flow_per_well[wix + np*phase] = 0.0;
+                phase_flow_per_well[wix*np + phase] = 0.0;
             }
             for (int i = wells.well_connpos[wix]; i < wells.well_connpos[wix + 1]; ++i) {
                 const int cell = wells.well_cells[i];
