@@ -81,9 +81,14 @@ int main(int argc, char** argv)
     std::vector<double> well_rate_per_cell;
     std::vector<double> rc;
     rc.resize(grid.c_grid()->number_of_cells);
+    
+    int nl_pressure_maxiter = 100;
+    double nl_pressure_tolerance = 0.0;
+    if (rock_comp.isActive()) {
+        nl_pressure_maxiter = parameters.getDefault("nl_pressure_maxiter", 10);
+        nl_pressure_tolerance = parameters.getDefault("nl_pressure_tolerance", 1.0); // in Pascal
+    }
 
-    const int nl_pressure_maxiter = 100;
-    const double nl_pressure_tolerance = 1e-8;
     const int num_cells = grid.c_grid()->number_of_cells;
     std::vector<double> porevol;
     if (rock_comp.isActive()) {
@@ -117,10 +122,9 @@ int main(int argc, char** argv)
                 well_bhp, well_rate_per_cell);
     }
 
-    // This will be refactored into a separate function once done.
     const int np = incomp_properties.numPhases();
     std::vector<double> fractional_flows(grid.c_grid()->number_of_cells*np, 0.0);
-    //computeFractionalFlow(incomp_properties, all_cells, state.saturation(), fractional_flows);
+    computeFractionalFlow(incomp_properties, all_cells, state.saturation(), fractional_flows);
 
     // This will be refactored into a separate function once done
     std::vector<double> well_resflows(wells.c_wells()->number_of_wells*np, 0.0);
