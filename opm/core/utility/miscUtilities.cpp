@@ -539,7 +539,7 @@ namespace Opm
         for (int wix = 0; wix < nw; ++wix) {
             for (int phase = 0; phase < np; ++phase) {
                 // Reset vector
-                phase_flow_per_well[wix + np*phase] = 0.0;
+                phase_flow_per_well[wix*np + phase] = 0.0;
             }
             for (int i = wells.well_connpos[wix]; i < wells.well_connpos[wix + 1]; ++i) {
                 for (int phase = 0; phase < np; ++phase) {
