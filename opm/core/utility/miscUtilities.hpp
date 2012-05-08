@@ -129,6 +129,17 @@ namespace Opm
                                 const std::vector<int>&               cells,
                                 const std::vector<double>&            s    ,
                                 std::vector<double>&                  pmobc);
+    
+
+    /// Computes the fractional flow for each cell in the cells argument
+    /// @param[in] props                rock and fluid properties
+    /// @param[in] cells                cells with which the saturation values are associated
+    /// @param[in] saturations          saturation values (for all phases)
+    /// @param[out] fractional_flow     the fractional flow for each phase for each cell.
+    void computeFractionalFlow(const Opm::IncompPropertiesInterface& props,
+                               const std::vector<int>& cells,
+                               const std::vector<double>& saturations,
+                               std::vector<double>& fractional_flows);
 
 
     /// Compute two-phase transport source terms from face fluxes,
@@ -202,6 +213,18 @@ namespace Opm
     /// \param[out] flow_rates_per_well Will contain the summed up flow_rates for each well.
     void computeFlowRatePerWell(const Wells& wells, const std::vector<double>& flow_rates_per_cell,
                                 std::vector<double>& flow_rates_per_well);
+    
+    /// Computes the phase flow rate per well
+    /// \param[in] wells The wells for which the flow rate should be computed
+    /// \param[in] flow_rates_per_cell The total flow rate for each cell (ordered the same
+    ///                                 way as the wells struct
+    /// \param[in] fractional_flows    the fractional flow for each cell in each well
+    /// \param[out] phase_flow_per_well Will contain the phase flow per well
+    void computePhaseFlowRatesPerWell(const Wells& wells, 
+                                      const std::vector<double>& flow_rates_per_cell,
+                                      const std::vector<double>& fractional_flows,
+                                      std::vector<double> phase_flow_per_well);
+ 
     
     /// Encapsulates the watercut curves.
     class Watercut
