@@ -120,29 +120,11 @@ int main(int argc, char** argv)
     // This will be refactored into a separate function once done.
     const int np = incomp_properties.numPhases();
     std::vector<double> fractional_flows(grid.c_grid()->number_of_cells*np, 0.0);
-    for (int cell = 0; cell < grid.c_grid()->number_of_cells; ++cell) {
-        double phase_sum = 0.0;
-        for (int phase = 0; phase < np; ++phase) {
-            phase_sum += phase_mob[cell * np + phase];
-        }
-        for (int phase = 0; phase < np; ++phase) {
-            fractional_flows[cell * np + phase] = phase_mob[cell * np + phase] / phase_sum;
-        }
-    }
-    // End stuff that needs to be refactored into a seperated function
-
+    //computeFractionalFlow(incomp_properties, all_cells, state.saturation(), fractional_flows);
 
     // This will be refactored into a separate function once done
     std::vector<double> well_resflows(wells.c_wells()->number_of_wells*np, 0.0);
-    for (int wix = 0; wix < wells.c_wells()->number_of_wells; ++wix) {
-        for (int i = wells.c_wells()->well_connpos[wix]; i < wells.c_wells()->well_connpos[wix + 1]; ++i) {
-            const int cell = wells.c_wells()->well_cells[i];
-            for (int phase = 0; phase < np; ++phase) {
-                well_resflows[wix * np + phase] += well_rate_per_cell[i] * fractional_flows[cell * np + phase];
-            }
-        }
-    }
-
+    computePhaseFlowRatesPerWell(*wells.c_wells(), well_rate_per_cell, fractional_flows, well_resflows);
     // We approximate (for _testing_ that resflows = surfaceflows)
     for (int wc_iter = 0; wc_iter < 10 && !wells.conditionsMet(well_bhp, well_resflows, well_resflows); ++wc_iter) {
         std::cout << "Conditions not met for well, trying again" << std::endl;
@@ -173,19 +155,7 @@ int main(int argc, char** argv)
         }
         std::cout << "Solved" << std::endl;
 
-
-        for (int wix = 0; wix < wells.c_wells()->number_of_wells; ++wix) {
-            for (int phase = 0; phase < np; ++phase) {
-                // Reset
-                well_resflows[wix * np + phase] = 0.0;
-            }
-            for (int i = wells.c_wells()->well_connpos[wix]; i < wells.c_wells()->well_connpos[wix + 1]; ++i) {
-                const int cell = wells.c_wells()->well_cells[i];
-                for (int phase = 0; phase < np; ++phase) {
-                    well_resflows[wix * np + phase] += well_rate_per_cell[i] * fractional_flows[cell * np + phase];
-                }
-            }
-        }
+        computePhaseFlowRatesPerWell(*wells.c_wells(), well_rate_per_cell, fractional_flows, well_resflows);
     }
 
 #if 0
