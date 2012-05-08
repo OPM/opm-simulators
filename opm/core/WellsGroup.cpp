@@ -1000,6 +1000,7 @@ namespace Opm
                         production_specification.gas_max_rate_ = line.gas_max_rate_;
                         production_specification.liquid_max_rate_ = line.liquid_max_rate_;
                         production_specification.procedure_ = toProductionProcedure(line.procedure_);
+                        production_specification.reservoir_flow_max_rate_ = line.resv_max_rate_;
                     }
                 }
             }

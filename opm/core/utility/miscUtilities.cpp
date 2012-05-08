@@ -271,6 +271,32 @@ namespace Opm
         }
     }
 
+    /// Computes the fractional flow for each cell in the cells argument
+    /// @param[in] props                rock and fluid properties
+    /// @param[in] cells                cells with which the saturation values are associated
+    /// @param[in] saturations          saturation values (for all phases)
+    /// @param[out] fractional_flow     the fractional flow for each phase for each cell.
+
+    void computeFractionalFlow(const Opm::IncompPropertiesInterface& props,
+                               const std::vector<int>& cells,
+                               const std::vector<double>& saturations,
+                               std::vector<double>& fractional_flows)
+    {
+        const int num_phases = props.numPhases();
+        std::vector<double> pc_mobs(cells.size() * num_phases);
+        computePhaseMobilities(props, cells, saturations, pc_mobs);
+        fractional_flows.resize(cells.size() * num_phases);
+        for (size_t i = 0; i < cells.size(); ++i) {
+            double phase_sum = 0.0;
+            for (int phase = 0; phase < num_phases; ++phase) {
+                phase_sum += pc_mobs[i * num_phases + phase];
+            }
+            for (int phase = 0; phase < num_phases; ++phase) {
+                fractional_flows[i * num_phases + phase] = pc_mobs[i * num_phases + phase] / phase_sum;
+            }
+        }
+    }
+
     /// Compute two-phase transport source terms from face fluxes,
     /// and pressure equation source terms. This puts boundary flows
     /// into the source terms for the transport equation.
@@ -494,6 +520,34 @@ namespace Opm
         }
     }
 
+
+    /// Computes the phase flow rate per well
+    /// \param[in] wells                        The wells for which the flow rate should be computed
+    /// \param[in] flow_rates_per_well_cell     The total flow rate for each cell (ordered the same
+    ///                                         way as the wells struct
+    /// \param[in] fractional_flows             the fractional flow for each cell in each well
+    /// \param[out] phase_flow_per_well         Will contain the phase flow per well
+    void computePhaseFlowRatesPerWell(const Wells& wells,
+                                      const std::vector<double>& flow_rates_per_well_cell,
+                                      const std::vector<double>& fractional_flows,
+                                      std::vector<double>& phase_flow_per_well)
+    {
+        const int np = wells.number_of_phases;
+        const int nw = wells.number_of_wells;
+        phase_flow_per_well.resize(nw * np);
+        for (int wix = 0; wix < nw; ++wix) {
+            for (int phase = 0; phase < np; ++phase) {
+                // Reset vector
+                phase_flow_per_well[wix*np + phase] = 0.0;
+            }
+            for (int i = wells.well_connpos[wix]; i < wells.well_connpos[wix + 1]; ++i) {
+                const int cell = wells.well_cells[i];
+                for (int phase = 0; phase < np; ++phase) {
+                    phase_flow_per_well[wix * np + phase] += flow_rates_per_well_cell[i] * fractional_flows[cell * np + phase];
+                }
+            }
+        }
+    }
 
 
     void Watercut::push(double time, double fraction, double produced)
