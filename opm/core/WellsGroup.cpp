@@ -453,7 +453,7 @@ namespace Opm
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, 
-                                                    (children_guide_rate / my_guide_rate) * getTarget(prod_mode), 
+                                                   (children_guide_rate / my_guide_rate) * getTarget(prod_mode), 
                                                     false);
             }
             break;
@@ -691,7 +691,7 @@ namespace Opm
     {
         // Not changing if we're not forced to change
         if (!forced 
-             && (injSpec().control_mode_ != InjectionSpecification::GRUP || injSpec().control_mode_ != InjectionSpecification::NONE)) {
+             && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
             return;
         }
         if (!wells_->type[self_index_] == INJECTOR) {
@@ -734,7 +734,8 @@ namespace Opm
     {
         // Not changing if we're not forced to change
         if (!forced && (prodSpec().control_mode_ != ProductionSpecification::GRUP
-                        || prodSpec().control_mode_ != ProductionSpecification::NONE)) {
+                        && prodSpec().control_mode_ != ProductionSpecification::NONE)) {
+            std::cout << "Returning" << std::endl;
             return;
         }
         if (!wells_->type[self_index_] == PRODUCER) {
@@ -771,6 +772,7 @@ namespace Opm
             distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
             break;
         case ProductionSpecification::LRAT:
+            std::cout << "applying rate" << std::endl;  
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Liquid]) {
                 THROW("Oil phase not active and LRAT control specified.");
