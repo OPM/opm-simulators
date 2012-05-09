@@ -489,8 +489,9 @@ namespace Opm
             }
             return;
         }
+        case InjectionSpecification::VREP:
         case InjectionSpecification::REIN:
-            std::cout << "WARNING: Ignoring control type REIN" << std::endl;
+            std::cout << "Replacement keywords found, remember to call applyExplicitReinjectionControls." << std::endl;
             return;
         case InjectionSpecification::FLD:
         case InjectionSpecification::NONE:
