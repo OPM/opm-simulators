@@ -606,7 +606,7 @@ namespace Opm
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().reinjection_fraction_target_,
+                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().voidage_replacment_fraction_,
                         false);
             }
             
