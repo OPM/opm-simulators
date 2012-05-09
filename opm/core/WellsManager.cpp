@@ -269,11 +269,33 @@ namespace Opm
             bool found = false;
             for (int wix = 0; wix < num_wells; ++wix) {
                 if (well_names[wix].compare(0,len, name) == 0) { // equal
+                    // Extract corresponding WELSPECS defintion for
+                    // purpose of default location specification.
+                    const WelspecsLine& wspec = welspecs.welspecs[wix];
+
                     // We have a matching name.
                     int ix = compdat.compdat[kw].grid_ind_[0] - 1;
                     int jy = compdat.compdat[kw].grid_ind_[1] - 1;
                     int kz1 = compdat.compdat[kw].grid_ind_[2] - 1;
                     int kz2 = compdat.compdat[kw].grid_ind_[3] - 1;
+
+                    if (ix < 0) {
+                        // Defaulted I location.  Extract from WELSPECS.
+                        ix = wspec.I_ - 1;
+                    }
+                    if (jy < 0) {
+                        // Defaulted I location.  Extract from WELSPECS.
+                        jy = wspec.J_ - 1;
+                    }
+                    if (kz1 < 0) {
+                        // Defaulted KZ1.  Use top layer.
+                        kz1 = 0;
+                    }
+                    if (kz2 < 0) {
+                        // Defaulted KZ2.  Use bottom layer.
+                        kz2 = cpgdim[2] - 1;
+                    }
+                    
                     for (int kz = kz1; kz <= kz2; ++kz) {
                         int cart_grid_indx = ix + cpgdim[0]*(jy + cpgdim[1]*kz);
                         std::map<int, int>::const_iterator cgit =
