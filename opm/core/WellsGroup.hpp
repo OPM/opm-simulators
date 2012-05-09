@@ -179,6 +179,15 @@ namespace Opm
         ///                       wells under group control
         virtual double injectionGuideRate(bool only_group) = 0;
         
+        /// Gets the total production flow of the given phase. 
+        /// \param[in] phase_flows      A vector containing rates by phase for each well.
+        ///                             Is assumed to be ordered the same way as the related Wells-struct,
+        ///                             with all phase rates of a single well adjacent in the array.
+        /// \param[in] phase            The phase for which to sum up.
+        virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
+                                              const BlackoilPhases::PhaseIndex phase) = 0;
+        
+        
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
         double rateByMode(const double* res_rates, 
@@ -258,6 +267,14 @@ namespace Opm
         /// \param[in] only_group If true, will only accumelate guide rates for 
         ///                       wells under group control
         virtual double injectionGuideRate(bool only_group);
+        
+        /// Gets the total production flow of the given phase. 
+        /// \param[in] phase_flows      A vector containing rates by phase for each well.
+        ///                             Is assumed to be ordered the same way as the related Wells-struct,
+        ///                             with all phase rates of a single well adjacent in the array.
+        /// \param[in] phase            The phase for which to sum up.
+        virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
+                                              const BlackoilPhases::PhaseIndex phase);
 
     private:
         std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
@@ -327,6 +344,17 @@ namespace Opm
         /// \param[in] only_group If true, will only accumelate guide rates for 
         ///                       wells under group control
         virtual double injectionGuideRate(bool only_group);
+        
+        /// Gets the total production flow of the given phase. 
+        /// \param[in] phase_flows      A vector containing rates by phase for each well.
+        ///                             Is assumed to be ordered the same way as the related Wells-struct,
+        ///                             with all phase rates of a single well adjacent in the array.
+        /// \param[in] phase            The phase for which to sum up.
+        virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
+                                              const BlackoilPhases::PhaseIndex phase);
+
+        /// Returns the type of the well.
+        WellType type() const;
 
     private:
         Wells* wells_;

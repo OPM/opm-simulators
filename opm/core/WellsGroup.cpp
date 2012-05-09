@@ -528,7 +528,21 @@ namespace Opm
         return sum;
     }
 
+    /// Gets the total production flow of the given phase. 
+    /// \param[in] phase_flows      A vector containing rates by phase for each well.
+    ///                             Is assumed to be ordered the same way as the related Wells-struct,
+    ///                             with all phase rates of a single well adjacent in the array.
+    /// \param[in] phase            The phase for which to sum up.
 
+    double WellsGroup::getTotalProductionFlow(const std::vector<double>& phase_flows,
+                                             const BlackoilPhases::PhaseIndex phase)
+    {
+        double sum = 0.0;
+        for (size_t i = 0; i < children_.size(); ++i) {
+            sum += children_[i]->getTotalProductionFlow(phase_flows, phase);
+        }
+        return sum;
+    }
 
     // ==============    WellNode members   ============
 
@@ -727,6 +741,25 @@ namespace Opm
         set_current_control(self_index_, group_control_index_, wells_);
     }
 
+
+    /// Gets the total production flow of the given phase. 
+    /// \param[in] phase_flows      A vector containing rates by phase for each well.
+    ///                             Is assumed to be ordered the same way as the related Wells-struct,
+    ///                             with all phase rates of a single well adjacent in the array.
+    /// \param[in] phase            The phase for which to sum up.
+
+    double WellNode::getTotalProductionFlow(const std::vector<double>& phase_flows,
+                                            const BlackoilPhases::PhaseIndex phase)
+    {
+        if (type() == INJECTOR) {
+            return 0.0;
+        }
+        return phase_flows[self_index_*phaseUsage().num_phases + phaseUsage().phase_pos[phase]];
+    }
+    
+    WellType WellNode::type() const {
+        return wells_->type[self_index_];
+    }
 
     void WellNode::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                          const double target,
