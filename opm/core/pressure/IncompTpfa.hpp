@@ -121,6 +121,28 @@ namespace Opm
                    std::vector<double>& well_bhp,
                    std::vector<double>& well_rate);
 
+        void solveIncrement(const std::vector<double>& totmob,
+			    const std::vector<double>& omega,
+			    const std::vector<double>& src,
+			    const std::vector<double>& wdp,
+			    const FlowBoundaryConditions* bcs,
+			    const std::vector<double>& porevol,
+			    const std::vector<double>& rock_comp,
+			    const std::vector<double>& prev_pressure,
+			    const std::vector<double>& initial_porevol,
+			    const double dt,
+			    std::vector<double>& pressure_increment);
+
+	void computeFaceFlux(const std::vector<double>& totmob,
+					 const std::vector<double>& omega,
+					 const std::vector<double>& src,
+					 const std::vector<double>& wdp,
+					 const FlowBoundaryConditions* bcs,
+					 std::vector<double>& pressure,
+					 std::vector<double>& faceflux,
+					 std::vector<double>& well_bhp,
+					 std::vector<double>& well_rate);
+
         /// Expose read-only reference to internal half-transmissibility.
         const ::std::vector<double>& getHalfTrans() const { return htrans_; }
 

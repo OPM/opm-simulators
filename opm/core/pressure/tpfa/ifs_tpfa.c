@@ -11,6 +11,16 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
 
+void mult_csr_matrix(const struct CSRMatrix* A, const double* u, double* v) {
+    size_t i,j;
+    for (j = 0; j < A->m; ++j) {
+	v[j] = 0;
+	for (i = (size_t) (A->ia[j]); i < (size_t) (A->ia[j+1]); ++i) {
+	    v[j] += A->sa[i]*u[A->ja[i]];
+	}
+    }
+}
+
 struct ifs_tpfa_impl {
     double *fgrav;              /* Accumulated grav contrib/face */
 
@@ -721,6 +731,49 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
             h->b[c]     += d * pressure[c];
         }
     }
+
+    return ok;
+}
+
+/* ---------------------------------------------------------------------- */
+int
+ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
+				     const struct ifs_tpfa_forces *F        ,
+				     const double                 *trans    ,
+				     const double                 *gpress   ,
+				     const double                 *porevol  ,
+				     const double                 *rock_comp,
+				     const double                  dt       ,
+				     const double                 *prev_pressure,
+				     const double                 *initial_porevolume,
+				     struct ifs_tpfa_data         *h        )
+/* ---------------------------------------------------------------------- */
+{
+    int c;
+    size_t j;
+    int system_singular, ok;
+    double *v;
+
+    assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
+
+    v = malloc(h->A->m * sizeof *v);
+
+    mult_csr_matrix(h->A, prev_pressure, v);
+
+    /* We want to solve a Newton step for the residual
+     * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_imcompressible 
+     *
+     */
+
+    if (ok) {
+	for (c = 0; c < G->number_of_cells; ++c) {
+            j = csrmatrix_elm_index(c, c, h->A);
+	    h->A->sa[j] += porevol[c] * rock_comp[c] / dt;
+            h->b[c]     += -(porevol[c] - initial_porevolume[c])/dt - v[c];
+        }
+    }
+
+    free(v);
 
     return ok;
 }

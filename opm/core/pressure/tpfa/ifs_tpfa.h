@@ -61,6 +61,10 @@ struct ifs_tpfa_data *
 ifs_tpfa_construct(struct UnstructuredGrid *G,
                    struct Wells            *W);
 
+
+void mult_csr_matrix(const struct CSRMatrix* A, const double* u, double* v);
+
+
 int
 ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   const struct ifs_tpfa_forces *F     ,
@@ -78,6 +82,19 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
                            const double                  dt       ,
                            const double                 *pressure ,
                            struct ifs_tpfa_data         *h        );
+int
+ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
+				     const struct ifs_tpfa_forces *F        ,
+				     const double                 *trans    ,
+				     const double                 *gpress   ,
+				     const double                 *porevol  ,
+				     const double                 *rock_comp,
+				     const double                  dt       ,
+				     const double                 *prev_pressure ,
+				     const double                 *initial_porevolume,
+				     struct ifs_tpfa_data         *h        );
+
+
 void
 ifs_tpfa_press_flux(struct UnstructuredGrid      *G    ,
                     const struct ifs_tpfa_forces *F    ,
