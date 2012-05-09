@@ -295,7 +295,7 @@ namespace Opm
                         // Defaulted KZ2.  Use bottom layer.
                         kz2 = cpgdim[2] - 1;
                     }
-                    
+
                     for (int kz = kz1; kz <= kz2; ++kz) {
                         int cart_grid_indx = ix + cpgdim[0]*(jy + cpgdim[1]*kz);
                         std::map<int, int>::const_iterator cgit =
