@@ -544,6 +544,45 @@ namespace Opm
         return sum;
     }
 
+    /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
+    /// \param[in]    well_reservoirrates_phase
+    ///                         A vector containing reservoir rates by phase for each well.
+    ///                         Is assumed to be ordered the same way as the related Wells-struct,
+    ///                         with all phase rates of a single well adjacent in the array.
+    /// \param[in]    well_surfacerates_phase
+    ///                         A vector containing surface rates by phase for each well.
+    ///                         Is assumed to be ordered the same way as the related Wells-struct,
+    ///                         with all phase rates of a single well adjacent in the array.
+    void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>&,
+                                                      const std::vector<double>& well_surfacerates_phase)
+    {
+        if (injSpec().control_mode_ == InjectionSpecification::REIN) {
+            BlackoilPhases::PhaseIndex phase;
+            switch (injSpec().injector_type_) {
+            case InjectionSpecification::WATER:
+                phase = BlackoilPhases::Aqua;
+                break;
+            case InjectionSpecification::GAS:
+                phase = BlackoilPhases::Vapour;
+                break;
+            case InjectionSpecification::OIL:
+                phase = BlackoilPhases::Liquid;
+                break;
+            }
+            const double total_produced = getTotalProductionFlow(well_surfacerates_phase, phase);
+            const double my_guide_rate = injectionGuideRate(true);
+            for (size_t i = 0; i < children_.size(); ++i) {
+                // Apply for all children. 
+                // Note, we do _not_ want to call the applyProdGroupControl in this object,
+                // as that would check if we're under group control, something we're not.
+                const double children_guide_rate = children_[i]->injectionGuideRate(true);
+                children_[i]->applyInjGroupControl(InjectionSpecification::RATE,
+                        (children_guide_rate / my_guide_rate) * total_produced,
+                        false);
+            }
+        }
+    }
+
     // ==============    WellNode members   ============
 
 
@@ -761,6 +800,20 @@ namespace Opm
         return wells_->type[self_index_];
     }
 
+    /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
+    /// \param[in]    well_reservoirrates_phase
+    ///                         A vector containing reservoir rates by phase for each well.
+    ///                         Is assumed to be ordered the same way as the related Wells-struct,
+    ///                         with all phase rates of a single well adjacent in the array.
+    /// \param[in]    well_surfacerates_phase
+    ///                         A vector containing surface rates by phase for each well.
+    ///                         Is assumed to be ordered the same way as the related Wells-struct,
+    ///                         with all phase rates of a single well adjacent in the array.
+    void WellNode::applyExplicitReinjectionControls(const std::vector<double>&,
+                                                    const std::vector<double>&)
+    {
+        // Do nothing at well level.
+    }
     void WellNode::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                          const double target,
                                          const bool forced)
