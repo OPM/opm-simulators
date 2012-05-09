@@ -151,9 +151,9 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
 
     struct WellControlMgmt *m;
 
-    type   = realloc(ctrl->type  , nctrl * sizeof *ctrl->type  );
-    target = realloc(ctrl->target, nctrl * sizeof *ctrl->target);
-    distr  = realloc(ctrl->distr , nphases * nctrl * sizeof *ctrl->distr );
+    type   = realloc(ctrl->type  , nctrl * 1       * sizeof *ctrl->type  );
+    target = realloc(ctrl->target, nctrl * 1       * sizeof *ctrl->target);
+    distr  = realloc(ctrl->distr , nctrl * nphases * sizeof *ctrl->distr );
 
     ok = 0;
     if (type   != NULL) { ctrl->type   = type  ; ok++; }
@@ -165,9 +165,10 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
         for (c = m->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
             ctrl->target[c] = -1.0;
-            for (p = 0; p < nphases; ++p) {
-                ctrl->distr [nphases*c + p] = 0.0;
-            }
+        }
+
+        for (p = m->cpty * nphases; p < nctrl * nphases; ++p) {
+            ctrl->distr[ p ] = 0.0;
         }
 
         m->cpty = nctrl;
@@ -513,11 +514,12 @@ append_well_controls(enum WellControlType type,
     if (ok) {
         ctrl->type  [ctrl->num] = type  ;
         ctrl->target[ctrl->num] = target;
+
         if (distr != NULL) {
-            for (p = 0; p < np; ++p) {
-                ctrl->distr[ctrl->num * np + p] = distr[p];
-            }
+            memcpy(ctrl->distr + (ctrl->num * np), distr,
+                   np * sizeof *ctrl->distr);
         }
+
         ctrl->num += 1;
     }
 
