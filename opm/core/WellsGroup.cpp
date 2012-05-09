@@ -553,7 +553,7 @@ namespace Opm
     ///                         A vector containing surface rates by phase for each well.
     ///                         Is assumed to be ordered the same way as the related Wells-struct,
     ///                         with all phase rates of a single well adjacent in the array.
-    void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>&,
+    void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>& /*well_reservoirrates_phase*/,
                                                       const std::vector<double>& well_surfacerates_phase)
     {
         if (injSpec().control_mode_ == InjectionSpecification::REIN) {
