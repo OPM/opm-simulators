@@ -745,6 +745,7 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
     return ok;
 }
 
+
 /* ---------------------------------------------------------------------- */
 int
 ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
