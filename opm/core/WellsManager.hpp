@@ -53,7 +53,9 @@ namespace Opm
 
 	/// Destructor.
 	~WellsManager();
-        
+
+        /// Does the "deck" define any wells?
+        bool empty() const;
         
 	/// Access the managed Wells.
 	/// The method is named similarly to c_str() in std::string,

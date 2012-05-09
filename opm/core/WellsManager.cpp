@@ -672,6 +672,12 @@ namespace Opm
     }
 
 
+    /// Does the "deck" define any wells?
+    bool WellsManager::empty() const
+    {
+        return (w_ == 0) || (w_->number_of_wells == 0);
+    }
+
 
 
     /// Access the managed Wells.
