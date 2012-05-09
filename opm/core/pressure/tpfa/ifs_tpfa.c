@@ -569,8 +569,6 @@ well_solution(const struct UnstructuredGrid *G   ,
 }
 
 
-
-
 /* ---------------------------------------------------------------------- */
 static void
 assemble_incompressible(struct UnstructuredGrid      *G     ,
@@ -720,10 +718,9 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
                            struct ifs_tpfa_data         *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int c;
+    int    c, system_singular, ok;
     size_t j;
     double d;
-    int system_singular, ok;
 
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
@@ -762,9 +759,8 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
                                      struct ifs_tpfa_data         *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int c;
-    size_t j;
-    int system_singular, ok;
+    int     c, system_singular, ok;
+    size_t  j;
     double *v;
 
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
