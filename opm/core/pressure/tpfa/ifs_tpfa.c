@@ -11,19 +11,25 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
 
+/* ---------------------------------------------------------------------- */
 static void
-mult_csr_matrix(const struct CSRMatrix* A,
-                const double*           u,
-                double*                 v)
+mult_csr_matrix(const struct CSRMatrix *A,
+                const double           *u,
+                double                 *v)
+/* ---------------------------------------------------------------------- */
 {
-    size_t i, j;
-    for (j = 0; j < A->m; ++j) {
-        v[j] = 0;
-        for (i = (size_t) (A->ia[j]); i < (size_t) (A->ia[j+1]); ++i) {
-            v[j] += A->sa[i]*u[A->ja[i]];
+    int    j;
+    size_t i;
+
+    for (i = 0, j = 0; i < A->m; i++) {
+        v[i] = 0.0;
+
+        for (; j < A->ia[i + 1]; j++) {
+            v[i] += A->sa[j] * u[ A->ja[j] ];
         }
     }
 }
+
 
 struct ifs_tpfa_impl {
     double *fgrav;              /* Accumulated grav contrib/face */
