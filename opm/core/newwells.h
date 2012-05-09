@@ -69,7 +69,7 @@ struct WellControls
     enum WellControlType   *type;    /** Array of control types.*/
     double                 *target;  /** Array of control targets */
     double                 *distr;   /** Array of rate control distributions,
-                                         Wells::number_of_phases numbers per well */
+                                         Wells::number_of_phases numbers per control */
     int                     current; /** Index of current active control. */
 
     void                   *data;    /** Internal management structure. */
