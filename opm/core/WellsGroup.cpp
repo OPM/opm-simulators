@@ -553,7 +553,7 @@ namespace Opm
     ///                         A vector containing surface rates by phase for each well.
     ///                         Is assumed to be ordered the same way as the related Wells-struct,
     ///                         with all phase rates of a single well adjacent in the array.
-    void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>& /*well_reservoirrates_phase*/,
+    void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase)
     {
         if (injSpec().control_mode_ == InjectionSpecification::REIN) {
@@ -586,6 +586,30 @@ namespace Opm
                         false);
 #endif
             }
+        }
+        else if (injSpec().control_mode_ == InjectionSpecification::VREP) {
+            double total_produced = 0.0;
+            if (phaseUsage().phase_used[BlackoilPhases::Aqua]) {
+                total_produced += getTotalProductionFlow(well_reservoirrates_phase, BlackoilPhases::Aqua);
+            }
+            if (phaseUsage().phase_used[BlackoilPhases::Liquid]) {
+                total_produced += getTotalProductionFlow(well_reservoirrates_phase, BlackoilPhases::Liquid);
+            }
+            if (phaseUsage().phase_used[BlackoilPhases::Vapour]) {
+                total_produced += getTotalProductionFlow(well_reservoirrates_phase, BlackoilPhases::Vapour);
+            }
+            
+                  const double my_guide_rate = injectionGuideRate(true);
+            for (size_t i = 0; i < children_.size(); ++i) {
+                // Apply for all children. 
+                // Note, we do _not_ want to call the applyProdGroupControl in this object,
+                // as that would check if we're under group control, something we're not.
+                const double children_guide_rate = children_[i]->injectionGuideRate(true);
+                children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
+                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().reinjection_fraction_target_,
+                        false);
+            }
+            
         }
     }
 
