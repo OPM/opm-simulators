@@ -11,6 +11,16 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
 
+void mult_csr_matrix(const struct CSRMatrix* A, const double* u, double* v) {
+    size_t i,j;
+    for (j = 0; j < A->m; ++j) {
+        v[j] = 0;
+        for (i = (size_t) (A->ia[j]); i < (size_t) (A->ia[j+1]); ++i) {
+            v[j] += A->sa[i]*u[A->ja[i]];
+        }
+    }
+}
+
 struct ifs_tpfa_impl {
     double *fgrav;              /* Accumulated grav contrib/face */
 
@@ -287,7 +297,7 @@ assemble_shut_well(int nc, int w,
     size_t jw;
     double trans;
 
-    /* The equation added for a shut well w is 
+    /* The equation added for a shut well w is
      *   \sum_{c~w} T_{w,c} * mt_c p_w = 0.0
      * where c~w indicates the cell perforated by w, T are production
      * indices, mt is total mobility and p_w is the bottom-hole
@@ -371,7 +381,7 @@ assemble_well_contrib(int                   nc ,
                 /* We cannot handle this case, since we do
                  * not have access to formation volume factors,
                  * needed to convert between reservoir and
-                 * surface rates 
+                 * surface rates
                  */
                 fprintf(stderr, "ifs_tpfa cannot handle SURFACE_RATE well controls.\n");
                 *ok = 0;
@@ -721,6 +731,49 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
             h->b[c]     += d * pressure[c];
         }
     }
+
+    return ok;
+}
+
+/* ---------------------------------------------------------------------- */
+int
+ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
+                                     const struct ifs_tpfa_forces *F        ,
+                                     const double                 *trans    ,
+                                     const double                 *gpress   ,
+                                     const double                 *porevol  ,
+                                     const double                 *rock_comp,
+                                     const double                  dt       ,
+                                     const double                 *prev_pressure,
+                                     const double                 *initial_porevolume,
+                                     struct ifs_tpfa_data         *h        )
+/* ---------------------------------------------------------------------- */
+{
+    int c;
+    size_t j;
+    int system_singular, ok;
+    double *v;
+
+    assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
+
+    v = malloc(h->A->m * sizeof *v);
+
+    mult_csr_matrix(h->A, prev_pressure, v);
+
+    /* We want to solve a Newton step for the residual
+     * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_imcompressible 
+     *
+     */
+
+    if (ok) {
+        for (c = 0; c < G->number_of_cells; ++c) {
+            j = csrmatrix_elm_index(c, c, h->A);
+            h->A->sa[j] += porevol[c] * rock_comp[c] / dt;
+            h->b[c]     += -(porevol[c] - initial_porevolume[c])/dt - v[c];
+        }
+    }
+
+    free(v);
 
     return ok;
 }

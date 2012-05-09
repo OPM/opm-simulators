@@ -11,7 +11,7 @@ namespace Opm
 
         enum ControlMode
         {
-            NONE, ORAT, WRAT, GRAT, LRAT, CRAT, RESV, PRBL, BHP, THP, GRUP, FLD
+            NONE = 0, ORAT = 1, WRAT=2, GRAT=3, LRAT=4, CRAT=5, RESV=6, PRBL=7, BHP=8, THP=9, GRUP=10, FLD=11
         };
 
         enum Procedure

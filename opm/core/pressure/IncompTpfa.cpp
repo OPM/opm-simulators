@@ -26,6 +26,7 @@
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/newwells.h>
+#include <string.h>
 
 namespace Opm
 {
@@ -210,12 +211,15 @@ namespace Opm
         F.bc = bcs;
         F.totmob = &totmob[0];
         F.wdp = &wdp[0];
-        
+        int ok = true;
         if (rock_comp.empty()) {
-            ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+            ok = ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
         } else {
-            ifs_tpfa_assemble_comprock(gg, &F, &trans_[0], &gpress_omegaweighted_[0],
+            ok = ifs_tpfa_assemble_comprock(gg, &F, &trans_[0], &gpress_omegaweighted_[0],
                                        &porevol[0], &rock_comp[0], dt, &pressure[0], h_);
+        }
+        if (!ok) {
+            THROW("Failed assembling pressure system.");
         }
 
 	linsolver_.solve(h_->A, h_->b, h_->x);
@@ -233,9 +237,108 @@ namespace Opm
             soln.well_flux = &well_rate[0];
             soln.well_press = &well_bhp[0];
         }
+
         ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
     }
 
+    
+    void IncompTpfa::solveIncrement(const std::vector<double>& totmob,
+				    const std::vector<double>& omega,
+				    const std::vector<double>& src,
+				    const std::vector<double>& wdp,
+				    const FlowBoundaryConditions* bcs,
+				    const std::vector<double>& porevol,
+				    const std::vector<double>& rock_comp,
+				    const std::vector<double>& prev_pressure,
+				    const std::vector<double>& initial_porevol,
+				    const double dt,
+				    std::vector<double>& pressure_increment)
 
+    {
+	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
+
+	if (!omega.empty()) {
+	    if (gpress_.empty()) {
+		THROW("Nozero omega argument given, but gravity was null in constructor.");
+	    }
+	    mim_ip_density_update(gg->number_of_cells, gg->cell_facepos,
+				  &omega[0],
+				  &gpress_[0], &gpress_omegaweighted_[0]);
+	} else {
+	    if (!gpress_.empty()) {
+		THROW("Empty omega argument given, but gravity was non-null in constructor.");
+	    }
+	}
+
+        ifs_tpfa_forces F = { NULL, NULL, wells_, NULL, NULL };
+        if (! src.empty()) { F.src = &src[0]; }
+        F.bc = bcs;
+        F.totmob = &totmob[0];
+        F.wdp = &wdp[0];
+        
+        if (rock_comp.empty()) {
+            ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+        } else {
+            ifs_tpfa_assemble_comprock_increment(gg, &F, &trans_[0], &gpress_omegaweighted_[0],
+                                       &porevol[0], &rock_comp[0], dt, &prev_pressure[0], 
+				       &initial_porevol[0], h_);
+        }
+
+	linsolver_.solve(h_->A, h_->b, &pressure_increment[0]);
+
+    }
+
+    void IncompTpfa::computeFaceFlux(const std::vector<double>& totmob,
+				     const std::vector<double>& omega,
+				     const std::vector<double>& src,
+				     const std::vector<double>& wdp,
+				     const FlowBoundaryConditions* bcs,
+				     std::vector<double>& pressure,
+				     std::vector<double>& faceflux,
+				     std::vector<double>& well_bhp,
+				     std::vector<double>& well_rate) {
+
+	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+	tpfa_eff_trans_compute(gg, &totmob[0], &htrans_[0], &trans_[0]);
+
+	if (!omega.empty()) {
+	    if (gpress_.empty()) {
+		THROW("Nozero omega argument given, but gravity was null in constructor.");
+	    }
+	    mim_ip_density_update(gg->number_of_cells, gg->cell_facepos,
+				  &omega[0],
+				  &gpress_[0], &gpress_omegaweighted_[0]);
+	} else {
+	    if (!gpress_.empty()) {
+		THROW("Empty omega argument given, but gravity was non-null in constructor.");
+	    }
+	}
+
+        ifs_tpfa_forces F = { NULL, NULL, wells_, NULL, NULL };
+        if (! src.empty()) { F.src = &src[0]; }
+        F.bc = bcs;
+        F.totmob = &totmob[0];
+        F.wdp = &wdp[0];
+
+	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+	
+	faceflux.resize(grid_.number_of_faces);
+
+        ifs_tpfa_solution soln = { NULL, NULL, NULL, NULL };
+        soln.cell_press = &pressure[0];
+        soln.face_flux  = &faceflux[0];
+
+        if(wells_ != NULL) {
+            well_bhp.resize(wells_->number_of_wells);
+            well_rate.resize(wells_->well_connpos[ wells_->number_of_wells ]);
+            soln.well_flux = &well_rate[0];
+            soln.well_press = &well_bhp[0];
+        }
+
+	memcpy(h_->x, &pressure[0], grid_.number_of_cells * sizeof *(h_->x));
+
+        ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
+    }
 
 } // namespace Opm

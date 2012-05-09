@@ -122,4 +122,22 @@ namespace Opm
             roots_[i]->applyInjGroupControls();
         }
     }
+
+    /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
+    /// \param[in]    well_reservoirrates_phase
+    ///                         A vector containing reservoir rates by phase for each well.
+    ///                         Is assumed to be ordered the same way as the related Wells-struct,
+    ///                         with all phase rates of a single well adjacent in the array.
+    /// \param[in]    well_surfacerates_phase
+    ///                         A vector containing surface rates by phase for each well.
+    ///                         Is assumed to be ordered the same way as the related Wells-struct,
+    ///                         with all phase rates of a single well adjacent in the array.
+
+    void WellCollection::applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
+                                                          const std::vector<double>& well_surfacerates_phase)
+    {
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            roots_[i]->applyExplicitReinjectionControls(well_reservoirrates_phase, well_surfacerates_phase);
+        }
+    }
 }
