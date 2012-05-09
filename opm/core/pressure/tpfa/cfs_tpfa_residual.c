@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <opm/core/well.h>
+#include <opm/core/newwells.h>
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/linalg/sparse_sys.h>
 
@@ -128,10 +128,10 @@ impl_deallocate(struct cfs_tpfa_res_impl *pimpl)
 
 /* ---------------------------------------------------------------------- */
 static struct cfs_tpfa_res_impl *
-impl_allocate(struct UnstructuredGrid                 *G       ,
-              struct WellCompletions *wconn   ,
-              size_t                  max_conn,
-              int                     np      )
+impl_allocate(struct UnstructuredGrid   *G       ,
+              struct cfs_tpfa_res_wells *wells   ,
+              size_t                     max_conn,
+              int                        np      )
 /* ---------------------------------------------------------------------- */
 {
     size_t                nnu, nwperf;
@@ -142,9 +142,9 @@ impl_allocate(struct UnstructuredGrid                 *G       ,
     nnu    = G->number_of_cells;
     nwperf = 0;
 
-    if (wconn != NULL) {
-        nnu    += wconn->number_of_wells;
-        nwperf  = wconn->well_connpos[ wconn->number_of_wells ];
+    if (wells != NULL) {                    assert (wells->W != NULL);
+        nnu    += wells->W->number_of_wells;
+        nwperf  = wells->W->well_connpos[ wells->W->number_of_wells ];
     }
 
     /* Linear system */
@@ -180,7 +180,8 @@ impl_allocate(struct UnstructuredGrid                 *G       ,
 
 /* ---------------------------------------------------------------------- */
 static struct CSRMatrix *
-construct_matrix(struct UnstructuredGrid *G, struct WellCompletions *wconn)
+construct_matrix(struct UnstructuredGrid   *G    ,
+                 struct cfs_tpfa_res_wells *wells)
 /* ---------------------------------------------------------------------- */
 {
     int    f, c1, c2, w, i, nc, nnu;
@@ -189,8 +190,9 @@ construct_matrix(struct UnstructuredGrid *G, struct WellCompletions *wconn)
     struct CSRMatrix *A;
 
     nc = nnu = G->number_of_cells;
-    if (wconn != NULL) {
-        nnu += wconn->number_of_wells;
+    if (wells != NULL) {
+        assert (wells->W != NULL);
+        nnu += wells->W->number_of_wells;
     }
 
     A = csrmatrix_new_count_nnz(nnu);
@@ -212,11 +214,13 @@ construct_matrix(struct UnstructuredGrid *G, struct WellCompletions *wconn)
             }
         }
 
-        if (wconn != NULL) {
+        if (wells != NULL) {
             /* Well <-> cell connections */
-            for (w = i = 0; w < wconn->number_of_wells; w++) {
-                for (; i < wconn->well_connpos[w + 1]; i++) {
-                    c1 = wconn->well_cells[i];
+            struct Wells *W = wells->W;
+
+            for (w = i = 0; w < W->number_of_wells; w++) {
+                for (; i < W->well_connpos[w + 1]; i++) {
+                    c1 = W->well_cells[i];
 
                     A->ia[ 0  + c1 + 1 ] += 1; /* c -> w */
                     A->ia[ nc + w  + 1 ] += 1; /* w -> c */
@@ -248,11 +252,13 @@ construct_matrix(struct UnstructuredGrid *G, struct WellCompletions *wconn)
             }
         }
 
-        if (wconn != NULL) {
+        if (wells != NULL) {
             /* Fill well <-> cell connections */
-            for (w = i = 0; w < wconn->number_of_wells; w++) {
-                for (; i < wconn->well_connpos[w + 1]; i++) {
-                    c1 = wconn->well_cells[i];
+            struct Wells *W = wells->W;
+
+            for (w = i = 0; w < W->number_of_wells; w++) {
+                for (; i < W->well_connpos[w + 1]; i++) {
+                    c1 = W->well_cells[i];
 
                     A->ja[ A->ia[ 0  + c1 + 1 ] ++ ] = nc + w;
                     A->ja[ A->ia[ nc + w  + 1 ] ++ ] = c1    ;
@@ -406,7 +412,7 @@ compute_compflux_and_deriv(struct UnstructuredGrid               *G     ,
 
 
 static void
-compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *W     ,
+compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *wells ,
                                 int                        np    ,
                                 const double              *cpress,
                                 const double              *wpress,
@@ -418,28 +424,33 @@ compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *W     ,
 
     double *pflux, *dpflux;
 
-    assert (W->conn != NULL);
-    assert (W->ctrl != NULL);
-    assert (W->data != NULL);
+    struct Wells *W;
 
-    WI     = W->data->WI;
-    gpot   = W->data->gpot;
-    Ap     = W->data->A;
-    pmobp  = W->data->phasemob;
+    assert (wells->W != NULL);
+
+    W = wells->W;
+
+    assert (W->ctrls != NULL);
+    assert (W->data  != NULL);
+
+    WI     = W->WI;
+    gpot   = wells->data->gpot;
+    Ap     = wells->data->A;
+    pmobp  = wells->data->phasemob;
 
     np2    = np * np;
 
     pflux  = pimpl->compflux_p;
     dpflux = pimpl->compflux_deriv_p;
 
-    for (w = i = 0; w < W->conn->number_of_wells; w++) {
+    for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[w];
 
-        for (; i < W->conn->well_connpos[w + 1]; i++,
+        for (; i < W->well_connpos[w + 1]; i++,
                  gpot  += np, Ap += np2, pmobp += np,
                  pflux += np, dpflux += 2 * np) {
 
-            c  = W->conn->well_cells[i];
+            c  = W->well_cells[i];
             dp = pw - cpress[c];
 
             compute_darcyflux_and_deriv(np, WI[i], dp, pmobp, gpot,
@@ -754,23 +765,28 @@ welleq_coeff_bhp(int np, double dp, struct cfs_tpfa_res_data *h,
 /* ---------------------------------------------------------------------- */
 static void
 welleq_coeff_resv(int np, struct cfs_tpfa_res_data *h,
+                  struct WellControls *ctrl,
                   double *res, double *w2c, double *w2w)
 /* ---------------------------------------------------------------------- */
 {
     int           p;
-    const double *pflux, *dpflux_w, *dpflux_c;
+    double        f;
+    const double *pflux, *dpflux_w, *dpflux_c, *distr;
 
      /* Sum reservoir phase flux and its derivatives set by
       * compute_darcyflux_and_deriv(). */
     pflux    = h->pimpl->flux_work;
-    dpflux_w = pflux    + (1 * np);
-    dpflux_c = dpflux_w + (1 * np);
+    dpflux_w = pflux       + (1             * np);
+    dpflux_c = dpflux_w    + (1             * np);
+    distr    = ctrl->distr + (ctrl->current * np);
 
     *res = *w2c = *w2w = 0.0;
     for (p = 0; p < np; p++) {
-        *res += pflux   [ p ];
-        *w2w += dpflux_w[ p ];
-        *w2c += dpflux_c[ p ];
+        f = distr[ p ];
+
+        *res += f * pflux   [ p ];
+        *w2w += f * dpflux_w[ p ];
+        *w2c += f * dpflux_c[ p ];
     }
 }
 
@@ -779,23 +795,40 @@ welleq_coeff_resv(int np, struct cfs_tpfa_res_data *h,
 static void
 assemble_completion_to_well(int w, int c, int nc, int np,
                             double pw, double dt,
-                            struct cfs_tpfa_res_wells *W,
-                            struct cfs_tpfa_res_data  *h)
+                            struct cfs_tpfa_res_wells *wells,
+                            struct cfs_tpfa_res_data  *h    )
 /* ---------------------------------------------------------------------- */
 {
     int    wdof;
     size_t jc, jw;
     double res = 0.0, w2c = 0.0, w2w = 0.0;
 
-    switch (W->ctrl->ctrl[w]) {
+    struct Wells        *W;
+    struct WellControls *ctrl;
+
+    assert (wells    != NULL);
+    assert (wells->W != NULL);
+
+    W    = wells->W;
+    ctrl = W->ctrls[ w ];
+
+    if (ctrl->current < 0) {
+        assert (0);             /* Shut wells currently not supported */
+    }
+
+    switch (ctrl->type[ ctrl->current ]) {
     case BHP :
-        welleq_coeff_bhp(np, pw - W->ctrl->target[w],
+        welleq_coeff_bhp(np, pw - ctrl->target[ ctrl->current ],
                          h, &res, &w2c, &w2w);
         break;
 
-    case RATE:
-        /* Interpret RATE as RESV */
-        welleq_coeff_resv(np, h, &res, &w2c, &w2w);
+    case RESERVOIR_RATE:
+        assert (W->number_of_phases == np);
+        welleq_coeff_resv(np, h, ctrl, &res, &w2c, &w2w);
+        break;
+
+    case SURFACE_RATE:
+        assert (0);             /* Surface rate currently not supported */
         break;
     }
 
@@ -811,7 +844,7 @@ assemble_completion_to_well(int w, int c, int nc, int np,
 
 
 static int
-assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
+assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
                       struct compr_quantities_gen *cq    ,
                       double                       dt    ,
                       const double                *cpress,
@@ -824,23 +857,28 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
     double       *WI, *gpot, *pmobp;
     const double *Ac, *dAc;
 
-    nc  = ((int) h->J->m) - W->conn->number_of_wells;
+    struct Wells        *W;
+    struct WellControls *ctrl;
+
+    nc  = ((int) h->J->m) - wells->W->number_of_wells;
     np  = cq->nphases;
     np2 = np * np;
 
-    WI    = W->data->WI;
-    gpot  = W->data->gpot;
-    pmobp = W->data->phasemob;
+    W = wells->W;
+
+    WI    = W->WI;
+    gpot  = wells->data->gpot;
+    pmobp = wells->data->phasemob;
 
     is_neumann = 1;
 
-    for (w = i = 0; w < W->conn->number_of_wells; w++) {
+    for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[ w ];
 
-        for (; i < W->conn->well_connpos[w + 1];
+        for (; i < W->well_connpos[w + 1];
              i++, gpot += np, pmobp += np) {
 
-            c   = W->conn->well_cells[ i ];
+            c   = W->well_cells[ i ];
             Ac  = cq->Ac  + (c * np2);
             dAc = cq->dAc + (c * np2);
 
@@ -855,11 +893,14 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *W     ,
                                         h->pimpl->flux_work,
                                         h->pimpl->flux_work + np);
 
-            assemble_completion_to_well(w, c, nc, np, pw, dt, W, h);
+            assemble_completion_to_well(w, c, nc, np, pw, dt, wells, h);
         }
 
-        if (W->ctrl->ctrl[ w ] != BHP) {
-            h->F[ nc + w ] -= dt * W->ctrl->target[ w ];
+        ctrl = W->ctrls[ w ];
+        if ((ctrl->current >= 0) && /* OPEN? */
+            (ctrl->type[ ctrl->current ] != BHP)) {
+
+            h->F[ nc + w ] -= dt * ctrl->target[ ctrl->current ];
         }
         else {
             is_neumann = 0;
@@ -983,7 +1024,7 @@ compute_flux(struct UnstructuredGrid       *G,
 
 static void
 compute_wflux(int                        np    ,
-              struct cfs_tpfa_res_wells *W     ,
+              struct cfs_tpfa_res_wells *wells ,
               const double              *pmobc ,
               const double              *cpress,
               const double              *wpress,
@@ -993,21 +1034,31 @@ compute_wflux(int                        np    ,
     double        pw, dp, t;
     const double *pmob;
 
-    for (w = i = 0; w < W->conn->number_of_wells; w++) {
+    struct Wells          *W;
+    struct CompletionData *cdata;
+
+    assert (wells       != NULL);
+    assert (wells->W    != NULL);
+    assert (wells->data != NULL);
+
+    W     = wells->W;
+    cdata = wells->data;
+
+    for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[w];
 
-        for (; i < W->conn->well_connpos[w + 1]; i++) {
-            c  = W->conn->well_cells[ i ];
+        for (; i < W->well_connpos[w + 1]; i++) {
+            c  = W->well_cells[ i ];
             dp = pw - cpress[c];
 
-            if (dp > 0) { pmob = W->data->phasemob + (i * np); } /* w->c */
-            else        { pmob = pmobc             + (c * np); } /* c->w */
+            if (dp > 0) { pmob = cdata->phasemob + (i * np); } /* w->c */
+            else        { pmob = pmobc           + (c * np); } /* c->w */
 
             for (p = 0, t = 0.0; p < np; p++) {
                 t += pmob[ p ];
             }
 
-            wflux[ i ] = W->data->WI[i] * t * dp;
+            wflux[ i ] = W->WI[i] * t * dp;
         }
     }
 }
@@ -1050,9 +1101,9 @@ cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h)
 
 /* ---------------------------------------------------------------------- */
 struct cfs_tpfa_res_data *
-cfs_tpfa_res_construct(struct UnstructuredGrid                 *G      ,
-                       struct WellCompletions *wconn  ,
-                       int                     nphases)
+cfs_tpfa_res_construct(struct UnstructuredGrid   *G      ,
+                       struct cfs_tpfa_res_wells *wells  ,
+                       int                        nphases)
 /* ---------------------------------------------------------------------- */
 {
     size_t                    nf, nwperf;
@@ -1061,8 +1112,8 @@ cfs_tpfa_res_construct(struct UnstructuredGrid                 *G      ,
     h = malloc(1 * sizeof *h);
 
     if (h != NULL) {
-        h->pimpl = impl_allocate(G, wconn, maxconn(G), nphases);
-        h->J     = construct_matrix(G, wconn);
+        h->pimpl = impl_allocate(G, wells, maxconn(G), nphases);
+        h->J     = construct_matrix(G, wells);
 
         if ((h->pimpl == NULL) || (h->J == NULL)) {
             cfs_tpfa_res_destroy(h);
@@ -1074,8 +1125,9 @@ cfs_tpfa_res_construct(struct UnstructuredGrid                 *G      ,
         nf     = G->number_of_faces;
         nwperf = 0;
 
-        if (wconn != NULL) {
-            nwperf = wconn->well_connpos[ wconn->number_of_wells ];
+        if (wells != NULL) {
+            assert (wells->W != NULL);
+            nwperf = wells->W->well_connpos[ wells->W->number_of_wells ];
         }
 
         /* Allocate linear system components */
@@ -1140,11 +1192,11 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid                      *G,
         assemble_cell_contrib(G, c, h);
     }
 
-    if ((forces != NULL) && (forces->W != NULL)) {
-        compute_well_compflux_and_deriv(forces->W, cq->nphases,
+    if ((forces != NULL) && (forces->wells != NULL)) {
+        compute_well_compflux_and_deriv(forces->wells, cq->nphases,
                                         cpress, wpress, h->pimpl);
 
-        well_is_neumann = assemble_well_contrib(forces->W, cq, dt,
+        well_is_neumann = assemble_well_contrib(forces->wells, cq, dt,
                                                 cpress, wpress, h);
     }
 
@@ -1176,10 +1228,10 @@ cfs_tpfa_res_flux(struct UnstructuredGrid                     *G        ,
 {
     compute_flux(G, np, trans, pmobf, gravcap_f, cpress, fflux);
 
-    if ((forces != NULL) && (forces->W != NULL) &&
-        (wpress != NULL) && (wflux     != NULL)) {
+    if ((forces != NULL) && (forces->wells != NULL) &&
+        (wpress != NULL) && (wflux         != NULL)) {
 
-        compute_wflux(np, forces->W, pmobc, cpress, wpress, wflux);
+        compute_wflux(np, forces->wells, pmobc, cpress, wpress, wflux);
     }
 }
 
