@@ -33,6 +33,7 @@ mult_csr_matrix(const struct CSRMatrix *A,
 
 struct ifs_tpfa_impl {
     double *fgrav;              /* Accumulated grav contrib/face */
+    double *work;
 
     /* Linear storage */
     double *ddata;
@@ -70,6 +71,7 @@ impl_allocate(struct UnstructuredGrid *G,
 
     ddata_sz  = 2 * nnu;                 /* b, x */
     ddata_sz += 1 * G->number_of_faces;  /* fgrav */
+    ddata_sz += 1 * nnu;                 /* work */
 
     new = malloc(1 * sizeof *new);
 
@@ -677,6 +679,7 @@ ifs_tpfa_construct(struct UnstructuredGrid *G,
         new->x = new->b             + new->A->m;
 
         new->pimpl->fgrav = new->x  + new->A->m;
+        new->pimpl->work  = new->pimpl->fgrav + G->number_of_faces;
     }
 
     return new;
@@ -766,8 +769,7 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
 
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
-    v = malloc(h->A->m * sizeof *v);
-
+    v = h->pimpl->work;
     mult_csr_matrix(h->A, prev_pressure, v);
 
     /* We want to solve a Newton step for the residual
@@ -782,8 +784,6 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
             h->b[c]     += -(porevol[c] - initial_porevolume[c])/dt - v[c];
         }
     }
-
-    free(v);
 
     return ok;
 }
