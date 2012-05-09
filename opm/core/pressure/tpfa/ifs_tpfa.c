@@ -674,9 +674,9 @@ ifs_tpfa_construct(struct UnstructuredGrid *G,
 
     if (new != NULL) {
         new->b = new->pimpl->ddata;
-        new->x = new->b             + new->A->m;
+        new->x = new->b                       + new->A->m;
 
-        new->pimpl->fgrav = new->x  + new->A->m;
+        new->pimpl->fgrav = new->x            + new->A->m;
         new->pimpl->work  = new->pimpl->fgrav + G->number_of_faces;
     }
 
