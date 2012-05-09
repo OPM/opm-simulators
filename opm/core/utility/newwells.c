@@ -492,7 +492,7 @@ append_well_controls(enum WellControlType type,
                      struct Wells        *W)
 /* ---------------------------------------------------------------------- */
 {
-    int ok, alloc, p, np;
+    int ok, alloc, np;
     struct WellControls    *ctrl;
     struct WellControlMgmt *m;
 
