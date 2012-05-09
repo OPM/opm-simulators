@@ -280,7 +280,7 @@ namespace Opm
                             cartesian_to_compressed.find(cart_grid_indx);
                         if (cgit == cartesian_to_compressed.end()) {
                             THROW("Cell with i,j,k indices " << ix << ' ' << jy << ' '
-                                  << kz << " not found in grid!");
+                                  << kz << " not found in grid (well = " << name << ')');
                         }
                         int cell = cgit->second;
                         PerfData pd;
