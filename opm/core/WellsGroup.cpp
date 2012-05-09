@@ -1099,6 +1099,8 @@ namespace Opm
                         injection_specification.control_mode_ = toInjectionControlMode(line.control_mode_);
                         injection_specification.surface_flow_max_rate_ = line.surface_flow_max_rate_;
                         injection_specification.reservoir_flow_max_rate_ = line.resv_flow_max_rate_;
+                        injection_specification.reinjection_fraction_target_ = line.reinjection_fraction_target_;
+                        injection_specification.voidage_replacment_fraction_ = line.voidage_replacement_fraction_;
                     }
                 }
             }

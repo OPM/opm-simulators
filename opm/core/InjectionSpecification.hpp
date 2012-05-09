@@ -32,6 +32,7 @@ namespace Opm
         double reservoir_flow_max_rate_;
         double BHP_limit_;
         double reinjection_fraction_target_;
+        double voidage_replacment_fraction_;
         double guide_rate_;
         GuideRateType guide_rate_type_;
     };
