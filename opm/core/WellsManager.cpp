@@ -284,7 +284,7 @@ namespace Opm
                         ix = wspec.I_ - 1;
                     }
                     if (jy < 0) {
-                        // Defaulted I location.  Extract from WELSPECS.
+                        // Defaulted J location.  Extract from WELSPECS.
                         jy = wspec.J_ - 1;
                     }
                     if (kz1 < 0) {
