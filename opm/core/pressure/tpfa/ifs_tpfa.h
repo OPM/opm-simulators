@@ -62,9 +62,6 @@ ifs_tpfa_construct(struct UnstructuredGrid *G,
                    struct Wells            *W);
 
 
-void mult_csr_matrix(const struct CSRMatrix* A, const double* u, double* v);
-
-
 int
 ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   const struct ifs_tpfa_forces *F     ,

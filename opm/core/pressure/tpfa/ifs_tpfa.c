@@ -11,8 +11,12 @@
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
 
-void mult_csr_matrix(const struct CSRMatrix* A, const double* u, double* v) {
-    size_t i,j;
+static void
+mult_csr_matrix(const struct CSRMatrix* A,
+                const double*           u,
+                double*                 v)
+{
+    size_t i, j;
     for (j = 0; j < A->m; ++j) {
         v[j] = 0;
         for (i = (size_t) (A->ia[j]); i < (size_t) (A->ia[j+1]); ++i) {
@@ -761,7 +765,7 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
     mult_csr_matrix(h->A, prev_pressure, v);
 
     /* We want to solve a Newton step for the residual
-     * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_imcompressible 
+     * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_imcompressible
      *
      */
 
