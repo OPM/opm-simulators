@@ -35,6 +35,7 @@ public:
     double influx;  // sum_j min(v_ij, 0)*f(s_j)
     double influx_polymer;  // sum_j min(v_ij, 0)*f(s_j)*mc(c_j)
     double outflux; // sum_j max(v_ij, 0)
+    double comp_term; //q - sum_j v_ij
     double porosity;
     double dtpv;    // dt/pv(i)
     double dps;
@@ -43,6 +44,7 @@ public:
     double rhor;
     double ads0;
     GradientMethod gradient_method;
+
     const TransportModelPolymer& tm;
 
     ResidualEquation(const TransportModelPolymer& tmodel, int cell_index);
@@ -382,6 +384,7 @@ namespace Opm
         tm.computeMc(tm.inflow_c_, mc);
 	influx_polymer = src_is_inflow ? dflux*mc : 0.0;
 	outflux = !src_is_inflow ? dflux : 0.0;
+	comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
 	dtpv    = tm.dt_/tm.porevolume_[cell];
 	porosity = tm.porosity_[cell];
 	for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
@@ -404,6 +407,7 @@ namespace Opm
 		} else {
 		    outflux += flux;
 		}
+		comp_term -= flux;
 	    }
 	}
     }
@@ -498,21 +502,24 @@ namespace Opm
                 tm.computeMc(c, mc);
             }
             if (if_res_s) {
-                res[0] = s - s0 +  dtpv*(outflux*ff + influx);
+                res[0] = s - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
             }
             if (if_res_c) {
                 res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-                    + dtpv*(outflux*ff*mc + influx_polymer);
+                    + dtpv*(outflux*ff*mc + influx_polymer)
+		    + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
             }
             if (if_dres_s_dsdc) {
-                dres_s_dsdc[0] = 1 + dtpv*outflux*dff_dsdc[0];
+                dres_s_dsdc[0] = 1 + dtpv*(outflux*dff_dsdc[0] + comp_term);
                 dres_s_dsdc[1] = dtpv*outflux*dff_dsdc[1];
             }
             if (if_dres_c_dsdc) {
-                dres_c_dsdc[0] = (1 - dps)*c + dtpv*outflux*(dff_dsdc[0])*mc;
+                dres_c_dsdc[0] = (1.0 - dps)*c + dtpv*outflux*(dff_dsdc[0])*mc
+		    + dtpv*c*(1.0 - dps)*comp_term;
                 dres_c_dsdc[1] = (1 - dps)*s + rhor*((1.0 - porosity)/porosity)*ads_dc
-                    + dtpv*outflux*(dff_dsdc[1]*mc + ff*mc_dc);
+                    + dtpv*outflux*(dff_dsdc[1]*mc + ff*mc_dc)
+		    + dtpv*(s*(1.0 - dps) - rhor*ads_dc)*comp_term;
             }
 
         } else if (if_res_c || if_res_s) {
@@ -520,7 +527,7 @@ namespace Opm
             double c = x[1];
             tm.fracFlow(s, c, cmax0, cell, ff);
             if (if_res_s) {
-                res[0] = s - s0 +  dtpv*(outflux*ff + influx);
+                res[0] = s - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
             }
             if (if_res_c) {
                 tm.computeMc(c, mc);
@@ -528,7 +535,8 @@ namespace Opm
                 tm.polyprops_.adsorption(c, cmax0, ads);
                 res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
-                    + dtpv*(outflux*ff*mc + influx_polymer);
+                    + dtpv*(outflux*ff*mc + influx_polymer)
+		    + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
             }
         }
 
