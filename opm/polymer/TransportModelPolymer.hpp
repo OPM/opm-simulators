@@ -56,6 +56,7 @@ namespace Opm
 	/// \TODO Now saturation is expected to be one sw value per cell,
 	/// change to [sw so] per cell.
 	void solve(const double* darcyflux,
+                   const double* porevolume,
 		   const double* source,
 		   const double dt,
 		   const double inflow_c,

@@ -177,6 +177,7 @@ namespace Opm
 
 
     void TransportModelPolymer::solve(const double* darcyflux,
+                                      const double* porevolume,
 				      const double* source,
 				      const double dt,
 				      const double inflow_c,
@@ -185,6 +186,7 @@ namespace Opm
 				      double* cmax)
     {
 	darcyflux_ = darcyflux;
+        porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
 	inflow_c_ = inflow_c;
