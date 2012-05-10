@@ -277,13 +277,18 @@ namespace Opm
         F.totmob = &totmob[0];
         F.wdp = &wdp[0];
         
+        bool ok = true;
         if (rock_comp.empty()) {
-            ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
+            ok = ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
         } else {
-            ifs_tpfa_assemble_comprock_increment(gg, &F, &trans_[0], &gpress_omegaweighted_[0],
+            ok = ifs_tpfa_assemble_comprock_increment(gg, &F, &trans_[0], &gpress_omegaweighted_[0],
                                        &porevol[0], &rock_comp[0], dt, &prev_pressure[0], 
 				       &initial_porevol[0], h_);
         }
+        if (!ok) {
+            THROW("Failed assembling pressure system.");
+        }
+
 
 	linsolver_.solve(h_->A, h_->b, &pressure_increment[0]);
 
