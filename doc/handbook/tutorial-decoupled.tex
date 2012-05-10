@@ -162,10 +162,10 @@ on the functions, consult the documentation in the code.
 \subsection{The definition of the parameters that are dependent on space}\label{tutorial-decoupled:description-spatialParameters}
 
 Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
-\verb+tutorialspatialparameters_decoupled.hh+:
+\verb+tutorialspatialparams_decoupled.hh+:
 
-\begin{lst}[File tutorial/tutorialspatialparameters\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
-\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=26]{../../tutorial/tutorialspatialparameters_decoupled.hh}
+\begin{lst}[File tutorial/tutorialspatialparams\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
+\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=26]{../../tutorial/tutorialspatialparams_decoupled.hh}
 \end{lst}
 As this file only slightly differs from the coupled version, consult 
 chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
@@ -228,7 +228,7 @@ When does the front cross the material border? In paraview, the option \textit{V
 For this exercise you should create a new problem file analogous to
 the file \texttt{tutorialproblem\_decoupled.hh} (e.g. with the name 
 \texttt{ex2\_tutorialproblem\_decoupled.hh} and new spatial parameters 
-just like \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to
+just like \texttt{tutorialspatialparams\_decoupled.hh}. These files need to
 be included in the file \texttt{tutorial\_decoupled.cc}. 
 
 Each new files should contain the definition of a new class with a 
@@ -240,7 +240,7 @@ macros in lines \ref{tutorial-decoupled:guardian1} and \ref{tutorial-decoupled:g
 \texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_DECOUPLED\_HH}).  Beside also adjusting the guardian macros, 
 the new problem file should define and use a new type tag for the problem as well as a new problem class
 e.g. \texttt{Ex2TutorialProblemDecoupled}. Make sure to assign your newly defined spatial 
-parameter class to the \texttt{SpatialParameters} property for the new 
+parameter class to the \texttt{SpatialParams} property for the new 
 type tag. 
 
 After this, change the domain size (parameter input file) to match the domain described
@@ -297,7 +297,7 @@ compile the program.
 \subsubsection{Exercise 3: Parameter file input.}
 As you have experienced, compilation takes quite some time. Therefore, \Dumux 2.1 provides a simple method to read in parameters (such as simulation end time or modelling parameters) via \texttt{Paramter Input Files}. The tests in the Test-folder \texttt{/test/} already use this system.\\
 If you look at the Application in \texttt{/test/boxmodels/2p/}, you see that the main file looks rather empty: The parameter file \texttt{test\_2p.input} is read by a standard start procedure, which is called in the main function. This should be adapted for your problem at hand. The program run has to be called with the parameter file as argument. As this is a basic \Dumux feature, the procedure is the equivalent in the decoupled as in the box models.
-In the code, parameters can be read via the macro \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar, MyWonderfulGroup.MyWonderfulParameter);}. In \texttt{test\_2p}, \texttt{MyWonderfulGroup} is the group \texttt{SpatialParameters} - any type of groups is applicable, if the group definition in the parameter file is enclosed in square brackets. The parameters are then listed thereafter. Try and use as much parameters as possible via the input file, such as lens dimension, grid resolution, soil properties etc. In addition, certain parameters that are specific to the model, such as the \texttt{CFL}-factor, can be assigned in the parameter file without any further action.
+In the code, parameters can be read via the macro \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar, MyWonderfulGroup.MyWonderfulParameter);}. In \texttt{test\_2p}, \texttt{MyWonderfulGroup} is the group \texttt{SpatialParams} - any type of groups is applicable, if the group definition in the parameter file is enclosed in square brackets. The parameters are then listed thereafter. Try and use as much parameters as possible via the input file, such as lens dimension, grid resolution, soil properties etc. In addition, certain parameters that are specific to the model, such as the \texttt{CFL}-factor, can be assigned in the parameter file without any further action.
 
 \subsubsection{Exercise 4}
 If both the coupled and the decoupled tutorial are completed, one should have noticed that the function arguments in the problem function differ slighty, as the numerical models differ. However, both are functions that depend on space, so both models can also work with functions based ond \mbox{\texttt{...AtPos(GlobalPosition \& globalPos)}}, no matter if we model coupled or decoupled. Try to formulate a spatial parameters file that works with both problems, the coupled and the decoupled. Therein, only use functions at the position.

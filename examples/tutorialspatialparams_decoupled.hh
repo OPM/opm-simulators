@@ -27,7 +27,7 @@
 #ifndef DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 #define DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 
-#include <dumux/material/spatialparameters/fvspatialparameters.hh>
+#include <dumux/decoupled/spatialparams/fvspatialparams.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
@@ -40,19 +40,19 @@ namespace Dumux
 
 //forward declaration
 template<class TypeTag>
-class TutorialSpatialParametersDecoupled;
+class TutorialSpatialParamsDecoupled;
 
 namespace Properties
 {
 // The spatial parameters TypeTag
-NEW_TYPE_TAG(TutorialSpatialParametersDecoupled);
+NEW_TYPE_TAG(TutorialSpatialParamsDecoupled);
 
 // Set the spatial parameters
-SET_TYPE_PROP(TutorialSpatialParametersDecoupled, SpatialParams,
-        Dumux::TutorialSpatialParametersDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
+SET_TYPE_PROP(TutorialSpatialParamsDecoupled, SpatialParams,
+        Dumux::TutorialSpatialParamsDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
 
 // Set the material law
-SET_PROP(TutorialSpatialParametersDecoupled, MaterialLaw)
+SET_PROP(TutorialSpatialParamsDecoupled, MaterialLaw)
 {
 private:
     // material law typedefs
@@ -66,9 +66,9 @@ public:
 //! Definition of the spatial parameters for the decoupled tutorial
 
 template<class TypeTag>
-class TutorialSpatialParametersDecoupled: public FVSpatialParameters<TypeTag>
+class TutorialSpatialParamsDecoupled: public FVSpatialParams<TypeTag>
 {
-    typedef FVSpatialParameters<TypeTag> ParentType;
+    typedef FVSpatialParams<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -127,7 +127,7 @@ public:
     }
 
     //! Constructor
-    TutorialSpatialParametersDecoupled(const GridView& gridView)
+    TutorialSpatialParamsDecoupled(const GridView& gridView)
     : ParentType(gridView), K_(0)
     {
         for (int i = 0; i < dim; i++)
