@@ -336,7 +336,10 @@ namespace Opm
             soln.well_press = &well_bhp[0];
         }
 
-	memcpy(h_->x, &pressure[0], grid_.number_of_cells * sizeof *(h_->x));
+	// memcpy(h_->x, &pressure[0], grid_.number_of_cells * sizeof *(h_->x));
+	ASSERT(int(pressure.size()) == grid_.number_of_cells);
+	std::copy(pressure.begin(), pressure.end(), h_->x);
+	std::copy(well_bhp.begin(), well_bhp.end(), h_->x + grid_.number_of_cells);
 
         ifs_tpfa_press_flux(gg, &F, &trans_[0], h_, &soln);
     }

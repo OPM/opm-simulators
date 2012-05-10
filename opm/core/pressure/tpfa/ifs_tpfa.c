@@ -760,7 +760,7 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
                                      struct ifs_tpfa_data         *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int     c, system_singular, ok;
+    int     c, w, system_singular, ok;
     size_t  j;
     double *v;
 
@@ -780,6 +780,11 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
             h->A->sa[j] += porevol[c] * rock_comp[c] / dt;
             h->b[c]     += -(porevol[c] - initial_porevolume[c])/dt - v[c];
         }
+	if (F->W != NULL) {
+	    for (w = 0; w < F->W->number_of_wells; ++w) {
+		h->b[c] += -v[c];
+	    }
+	}
     }
 
     return ok;
