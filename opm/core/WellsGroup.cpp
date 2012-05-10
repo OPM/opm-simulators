@@ -558,7 +558,8 @@ namespace Opm
                                                       const std::vector<double>& well_surfacerates_phase)
     {
         if (injSpec().control_mode_ == InjectionSpecification::REIN) {
-            BlackoilPhases::PhaseIndex phase;
+            // Defaulting to water to satisfy -Wmaybe-uninitialized
+            BlackoilPhases::PhaseIndex phase = BlackoilPhases::Aqua;
             switch (injSpec().injector_type_) {
             case InjectionSpecification::WATER:
                 phase = BlackoilPhases::Aqua;
