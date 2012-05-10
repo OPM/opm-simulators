@@ -766,15 +766,15 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
 
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
-    v = h->pimpl->work;
-    mult_csr_matrix(h->A, prev_pressure, v);
-
     /* We want to solve a Newton step for the residual
      * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_imcompressible
      *
      */
 
     if (ok) {
+        v = h->pimpl->work;
+        mult_csr_matrix(h->A, prev_pressure, v);
+
         for (c = 0; c < G->number_of_cells; ++c) {
             j = csrmatrix_elm_index(c, c, h->A);
             h->A->sa[j] += porevol[c] * rock_comp[c] / dt;
