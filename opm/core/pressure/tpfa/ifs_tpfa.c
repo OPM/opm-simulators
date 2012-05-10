@@ -760,7 +760,7 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
                                      struct ifs_tpfa_data         *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int     c, w, system_singular, ok;
+    int     c, w, wdof, system_singular, ok;
     size_t  j;
     double *v;
 
@@ -782,7 +782,8 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
         }
 	if (F->W != NULL) {
 	    for (w = 0; w < F->W->number_of_wells; ++w) {
-		h->b[c] += -v[c];
+                wdof = G->number_of_cells + w;
+		h->b[wdof] += -v[wdof];
 	    }
 	}
     }
