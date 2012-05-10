@@ -446,7 +446,7 @@ main(int argc, char** argv)
         if (use_segregation_split) {
             use_column_solver = param.getDefault("use_column_solver", use_column_solver);
             if (use_column_solver) {
-                THROW("gauss_seidel_gravity is not implemented for polymer");
+                use_gauss_seidel_gravity = param.getDefault("use_gauss_seidel_gravity", use_gauss_seidel_gravity);
             }
         }
     }
