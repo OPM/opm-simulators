@@ -157,11 +157,13 @@ namespace Opm
         // following implementation.
         if (dAdp) {
 // #pragma omp parallel for
+            // (1): dA/dp <- A
             std::copy(A, A + n*np*np, dAdp);
 
             for (int i = 0; i < n; ++i) {
                 double*       m  = dAdp + i*np*np;
 
+                // (2): dA/dp <- -dA/dp*(dB/dp) == -A*(dB/dp)
                 const double* dB = & dB_[i * np];
                 for (int i2 = 0; i2 < np; ++i2) {
                     for (int i1 = 0; i1 < np; ++i1) {
@@ -170,12 +172,14 @@ namespace Opm
                 }
 
                 if (oil_and_gas) {
+                    // (2b): dA/dp += dR/dp (== dR/dp - A*(dB/dp))
                     const double* dR = & dR_[i * np];
 
                     m[o*np + g] += dR[ o ];
                     m[g*np + o] += dR[ g ];
                 }
 
+                // (3): dA/dp *= inv(B) (== final result)
                 const double* B = & B_[i * np];
                 for (int i2 = 0; i2 < np; ++i2) {
                     for (int i1 = 0; i1 < np; ++i1) {
