@@ -35,9 +35,9 @@ namespace Opm
 
     /// Encapsulating a tpfa pressure solver for the incompressible-fluid case.
     /// Supports gravity, wells controlled by bhp or reservoir rates,
-    /// and simple sources as driving forces.
+    /// boundary conditions and simple sources as driving forces.
     /// Rock compressibility can be included, but any nonlinear iterations
-    /// are not handled in this class. 
+    /// are not handled in this class.
     /// Below we use the shortcuts D for the number of dimensions, N
     /// for the number of cells and F for the number of faces.
     class IncompTpfa
