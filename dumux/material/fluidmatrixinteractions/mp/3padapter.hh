@@ -28,10 +28,13 @@
 #ifndef DUMUX_MP_3P_ADAPTER_HH
 #define DUMUX_MP_3P_ADAPTER_HH
 
+#include <dune/common/exceptions.hh>
+
+#include <dumux/common/valgrind.hh>
+
 #include <algorithm>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  *

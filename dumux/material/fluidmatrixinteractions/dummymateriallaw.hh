@@ -28,6 +28,8 @@
 #ifndef DUMUX_DUMMY_MATERIAL_LAW_HH
 #define DUMUX_DUMMY_MATERIAL_LAW_HH
 
+#include <dune/common/exceptions.hh>
+
 #include <algorithm>
 
 namespace Dumux
