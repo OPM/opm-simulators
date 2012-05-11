@@ -147,19 +147,40 @@ namespace Opm
         }
 
         // Derivative of A matrix.
+        // A     = R*inv(B) whence
+        //
+        // dA/dp = (dR/dp*inv(B) + R*d(inv(B))/dp)
+        //       = (dR/dp*inv(B) - R*inv(B)*(dB/dp)*inv(B))
+        //       = (dR/dp - A*(dB/dp)) * inv(B)
+        //
+        // The B matrix is diagonal and that fact is exploited in the
+        // following implementation.
         if (dAdp) {
 // #pragma omp parallel for
+            std::copy(A, A + n*np*np, dAdp);
+
             for (int i = 0; i < n; ++i) {
-                double* m = dAdp + i*np*np;
-                std::fill(m, m + np*np, 0.0);
-                // Diagonal entries.
-                for (int phase = 0; phase < np; ++phase) {
-                    m[phase + phase*np] = -dB_[i*np + phase]/B_[i*np + phase]*B_[i*np + phase];
+                double*       m  = dAdp + i*np*np;
+
+                const double* dB = & dB_[i * np];
+                for (int i2 = 0; i2 < np; ++i2) {
+                    for (int i1 = 0; i1 < np; ++i1) {
+                        m[i2*np + i1] *= - dB[ i1 ]; // Note sign.
+                    }
                 }
-                // Off-diagonal entries.
+
                 if (oil_and_gas) {
-                    m[o + g*np] = m[g + g*np]*R_[i*np + g] + dR_[i*np + g]/B_[i*np + g];
-                    m[g + o*np] = m[o + o*np]*R_[i*np + o] + dR_[i*np + o]/B_[i*np + o];
+                    const double* dR = & dR_[i * np];
+
+                    m[o*np + g] += dR[ o ];
+                    m[g*np + o] += dR[ g ];
+                }
+
+                const double* B = & B_[i * np];
+                for (int i2 = 0; i2 < np; ++i2) {
+                    for (int i1 = 0; i1 < np; ++i1) {
+                        m[i2*np + i1] /= B[ i1 ];
+                    }
                 }
             }
         }
