@@ -165,9 +165,9 @@ namespace Opm
 
                 // (2): dA/dp <- -dA/dp*(dB/dp) == -A*(dB/dp)
                 const double* dB = & dB_[i * np];
-                for (int i2 = 0; i2 < np; ++i2) {
-                    for (int i1 = 0; i1 < np; ++i1) {
-                        m[i2*np + i1] *= - dB[ i2 ]; // Note sign.
+                for (int col = 0; col < np; ++col) {
+                    for (int row = 0; row < np; ++row) {
+                        m[col*np + row] *= - dB[ col ]; // Note sign.
                     }
                 }
 
@@ -181,9 +181,9 @@ namespace Opm
 
                 // (3): dA/dp *= inv(B) (== final result)
                 const double* B = & B_[i * np];
-                for (int i2 = 0; i2 < np; ++i2) {
-                    for (int i1 = 0; i1 < np; ++i1) {
-                        m[i2*np + i1] /= B[ i2 ];
+                for (int col = 0; col < np; ++col) {
+                    for (int row = 0; row < np; ++row) {
+                        m[col*np + row] /= B[ col ];
                     }
                 }
             }
