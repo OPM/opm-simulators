@@ -446,7 +446,11 @@ main(int argc, char** argv)
         if (use_segregation_split) {
             use_column_solver = param.getDefault("use_column_solver", use_column_solver);
             if (use_column_solver) {
-                THROW("gauss_seidel_gravity is not implemented for polymer");
+                // use_gauss_seidel_gravity is not implemented for polymer.
+                use_gauss_seidel_gravity = param.getDefault("use_gauss_seidel_gravity", use_gauss_seidel_gravity);
+                if (use_gauss_seidel_gravity) {
+                    THROW("gauss_seidel_gravity is not implemented for polymer");
+                }
             }
         }
     }
@@ -537,8 +541,7 @@ main(int argc, char** argv)
     }
     TransportSolver tsolver(model);
     // Column-based gravity segregation solver.
-    typedef std::pair<std::vector<int>, std::vector<std::vector<int> > > ColMap;
-    ColMap columns;
+    std::vector<std::vector<int> > columns;
     if (use_column_solver) {
         Opm::extractColumn(*grid->c_grid(), columns);
     }

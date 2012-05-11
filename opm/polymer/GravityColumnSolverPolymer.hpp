@@ -45,7 +45,7 @@ namespace Opm
 	///                            problem. For each column, its cells must be in a single
 	///                            vertical column, and ordered
 	///                            (direction doesn't matter).
-	void solve(const std::pair<std::vector<int>, std::vector<std::vector<int> > >& columns,
+	void solve(const std::vector<std::vector<int> >& columns,
 		   const double dt,
 		   std::vector<double>& s,
 		   std::vector<double>& c,
