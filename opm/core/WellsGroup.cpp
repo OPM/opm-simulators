@@ -1076,7 +1076,11 @@ namespace Opm
 
             if (deck.hasField("WCONPROD")) {
                 WCONPROD wconprod = deck.getWCONPROD();
+
+#if THIS_STATEMENT_IS_REALLY_NEEDED
                 std::cout << wconprod.wconprod.size() << std::endl;
+#endif
+
                 for (size_t i = 0; i < wconprod.wconprod.size(); i++) {
                     if (wconprod.wconprod[i].well_ == name) {
                         WconprodLine line = wconprod.wconprod[i];
