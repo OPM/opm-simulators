@@ -1,6 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
+ *   Copyright (C) 2012 by Andreas Lauser                                    *
  *   Copyright (C) 2011 by Benjamin Faigle                                   *
  *   Copyright (C) 2011 by Klaus Mosthaf                                     *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
@@ -345,7 +346,6 @@ public:
 
         if (phaseIdx == lPhaseIdx)
         {
-            //return 1000.;
             if (!useComplexRelations)
                 // assume pure water
                 return H2O::liquidDensity(T, p);
@@ -365,7 +365,6 @@ public:
         }
         else if (phaseIdx == gPhaseIdx)
         {
-            //return 1.189;
             if (!useComplexRelations)
                 // for the gas phase assume an ideal gas
                 return
