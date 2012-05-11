@@ -602,7 +602,7 @@ namespace Opm
 
 
 
-    void TransportModelTwophase::solveGravity(const std::pair<std::vector<int>, std::vector<std::vector<int> > >& columns,
+    void TransportModelTwophase::solveGravity(const std::vector<std::vector<int> >& columns,
                                               const double* porevolume,
                                               const double dt,
                                               std::vector<double>& saturation)
@@ -630,12 +630,12 @@ namespace Opm
 
         // Solve on all columns.
         int num_iters = 0;
-        for (std::vector<std::vector<int> >::size_type i = 0; i < columns.second.size(); i++) {
+        for (std::vector<std::vector<int> >::size_type i = 0; i < columns.size(); i++) {
             // std::cout << "==== new column" << std::endl;
-            num_iters += solveGravityColumn(columns.second[i]);
+            num_iters += solveGravityColumn(columns[i]);
         }
         std::cout << "Gauss-Seidel column solver average iterations: "
-                  << double(num_iters)/double(columns.second.size()) << std::endl;
+                  << double(num_iters)/double(columns.size()) << std::endl;
     }
 
 } // namespace Opm
