@@ -167,7 +167,7 @@ namespace Opm
                 const double* dB = & dB_[i * np];
                 for (int i2 = 0; i2 < np; ++i2) {
                     for (int i1 = 0; i1 < np; ++i1) {
-                        m[i2*np + i1] *= - dB[ i1 ]; // Note sign.
+                        m[i2*np + i1] *= - dB[ i2 ]; // Note sign.
                     }
                 }
 
@@ -183,7 +183,7 @@ namespace Opm
                 const double* B = & B_[i * np];
                 for (int i2 = 0; i2 < np; ++i2) {
                     for (int i1 = 0; i1 < np; ++i1) {
-                        m[i2*np + i1] /= B[ i1 ];
+                        m[i2*np + i1] /= B[ i2 ];
                     }
                 }
             }
