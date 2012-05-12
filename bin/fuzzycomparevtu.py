@@ -40,9 +40,11 @@ def isFuzzyEqualText(text1, text2, absolute, relative):
     for number1, number2 in zip(list1, list2):
         number1 = float(number1)
         number2 = float(number2)
-        if (abs(number1 - number2) > absolute 
-            and (number2 == 0.0 or abs(abs(number1 / number2) - 1.0) > relative)):
-            print 'Difference to large between', number1, ' and ', number2
+        if abs(number1 - number2) > absolute:
+            print 'Absolute difference between %f and %f too large (%f)'%(number1,number2,abs(number1 - number2))
+        else number2 != 0 \
+            and abs(number1/number2 - 1) > relative)):
+            print 'Relative difference between %f and %f too large (%f%%)'%(number1,number2,abs(number1/number2 - 1)*100)
             return False
     return True
 
@@ -63,9 +65,7 @@ parser.add_argument('-a', '--absolute', type=float, default=1e-9,
 args = parser.parse_args()
 
 # fuzzy compare
-if (isFuzzyEqualXml(args.vtu_file_1.read(), args.vtu_file_2.read(), args.absolute, args.relative)):
+if isFuzzyEqualXml(args.vtu_file_1.read(), args.vtu_file_2.read(), args.absolute, args.relative):
     exit
 else:
     exit(1)
-
-
