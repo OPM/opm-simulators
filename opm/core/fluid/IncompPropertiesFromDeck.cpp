@@ -90,6 +90,12 @@ namespace Opm
 	return pvt_.reservoirDensities();
     }
 
+    /// \return Array of P density values.
+    const double* IncompPropertiesFromDeck::surfaceDensity() const
+    {
+	return pvt_.surfaceDensities();
+    }
+
     /// \param[in]  n      Number of data points.
     /// \param[in]  s      Array of nP saturation values.
     /// \param[in]  cells  Array of n cell indices to be associated with the s values.

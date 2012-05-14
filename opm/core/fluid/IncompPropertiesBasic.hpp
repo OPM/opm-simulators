@@ -92,8 +92,13 @@ namespace Opm
         /// \return Array of P viscosity values.
         virtual const double* viscosity() const;
 
+        /// Densities of fluid phases at reservoir conditions.
         /// \return Array of P density values.
         virtual const double* density() const;
+
+        /// Densities of fluid phases at surface conditions.
+        /// \return Array of P density values.
+        virtual const double* surfaceDensity() const;
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  s      Array of nP saturation values.

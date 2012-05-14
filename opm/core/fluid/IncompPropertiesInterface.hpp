@@ -62,8 +62,21 @@ namespace Opm
         /// \return Array of P viscosity values.
         virtual const double* viscosity() const = 0;
 
+        /// Densities of fluid phases at surface conditions.
         /// \return Array of P density values.
         virtual const double* density() const = 0;
+
+        /// Densities of fluid phases at surface conditions.
+        /// Note: a reasonable question to ask is why there can be
+        /// different densities at surface and reservoir conditions,
+        /// when the phases are assumed incompressible. The answer is
+        /// that even if we approximate the phases as being
+        /// incompressible during simulation, the density difference
+        /// between surface and reservoir may be larger. For accurate
+        /// reporting and using data given in terms of surface values,
+        /// we need to handle this difference.
+        /// \return Array of P density values.
+        virtual const double* surfaceDensity() const = 0;
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  s      Array of nP saturation values.

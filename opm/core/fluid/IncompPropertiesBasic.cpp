@@ -115,6 +115,16 @@ namespace Opm
     /// \return Array of P density values.
     const double* IncompPropertiesBasic::density() const
     {
+        // No difference between reservoir and surface densities
+        // modelled by this class.
+	return pvt_.surfaceDensities();
+    }
+
+    /// \return Array of P density values.
+    const double* IncompPropertiesBasic::surfaceDensity() const
+    {
+        // No difference between reservoir and surface densities
+        // modelled by this class.
 	return pvt_.surfaceDensities();
     }
 
