@@ -91,6 +91,7 @@ namespace Opm
                             double* dAdp) const = 0;
 
 
+        /// Densities of stock components at reservoir conditions.
         /// \param[in]  n      Number of data points.
         /// \param[in]  A      Array of nP^2 values, where the P^2 values for a cell give the
         ///                    matrix A = RB^{-1} which relates z to u by z = Au. The matrices
@@ -100,6 +101,10 @@ namespace Opm
         virtual void density(const int n,
                              const double* A,
                              double* rho) const = 0;
+
+        /// Densities of stock components at surface conditions.
+        /// \return Array of P density values.
+        virtual const double* surfaceDensity() const = 0;
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  s      Array of nP saturation values.

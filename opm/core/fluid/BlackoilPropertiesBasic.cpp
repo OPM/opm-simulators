@@ -168,6 +168,14 @@ namespace Opm
         }
     }
 
+    /// Densities of stock components at surface conditions.
+    /// \return Array of P density values.
+    const double* BlackoilPropertiesBasic::surfaceDensity() const
+    {
+        return pvt_.surfaceDensities();
+    }
+
+
     /// \param[in]  n      Number of data points.
     /// \param[in]  s      Array of nP saturation values.
     /// \param[in]  cells  Array of n cell indices to be associated with the s values.
