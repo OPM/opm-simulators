@@ -92,6 +92,36 @@ namespace Opm
         }
         return NULL;
     }
+
+    /// Adds the child to the collection
+    /// and appends it to parent's children.
+    /// \param[in] child   the child node
+    /// \param[in] parent  name of parent node
+
+    void WellCollection::addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node,
+                                  const std::string& parent_name)
+    {
+        WellsGroupInterface* parent = findNode(parent_name);
+        if (parent == NULL) {
+            THROW("Parent with name = " << parent_name << " not found.");
+        }
+        ASSERT(!parent->isLeafNode());
+        static_cast<WellsGroup*>(parent)->addChild(child_node);
+        if (child_node->isLeafNode()) {
+            leaf_nodes_.push_back(static_cast<WellNode*>(child_node.get()));
+        }
+
+    }
+
+    /// Adds the node to the collection (as a root node)
+
+    void WellCollection::addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node)
+    {
+        roots_.push_back(child_node);
+        if (child_node->isLeafNode()) {
+            leaf_nodes_.push_back(static_cast<WellNode*> (child_node.get()));
+        }
+    }
     
     bool WellCollection::conditionsMet(const std::vector<double>& well_bhp,
                                        const std::vector<double>& well_reservoirrates_phase,

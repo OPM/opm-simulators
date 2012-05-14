@@ -42,6 +42,16 @@ namespace Opm
         void addChild(const std::string& child,
                       const std::string& parent,
                       const EclipseGridParser& deck);
+        
+        /// Adds the child to the collection
+        /// and appends it to parent's children.
+        /// \param[in] child   the child node
+        /// \param[in] parent  name of parent node
+        void addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node,
+                      const std::string& parent);
+        
+        /// Adds the node to the collection (as a root node)
+        void addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node);
 
         /// Checks if each condition is met, applies well controls where needed
         /// (that is, it either changes the active control of violating wells, or shuts
