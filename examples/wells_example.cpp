@@ -92,9 +92,9 @@ int main(int argc, char** argv)
     const int num_cells = grid.c_grid()->number_of_cells;
     std::vector<double> porevol;
     if (rock_comp.isActive()) {
-        computePorevolume(*grid.c_grid(), incomp_properties, rock_comp, state.pressure(), porevol);
+        computePorevolume(*grid.c_grid(), incomp_properties.porosity(), rock_comp, state.pressure(), porevol);
     } else {
-        computePorevolume(*grid.c_grid(), incomp_properties, porevol);
+        computePorevolume(*grid.c_grid(), incomp_properties.porosity(), porevol);
     }
     if (rock_comp.isActive()) {
         std::vector<double> initial_pressure = state.pressure();
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
                 break;
             }
         }
-        computePorevolume(*grid.c_grid(), incomp_properties, rock_comp, state.pressure(), porevol);
+        computePorevolume(*grid.c_grid(), incomp_properties.porosity(), rock_comp, state.pressure(), porevol);
     } else {
         pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), state.pressure(), state.faceflux(),
                 well_bhp, well_rate_per_cell);
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
                     break;
                 }
             }
-            computePorevolume(*grid.c_grid(), incomp_properties, rock_comp, state.pressure(), porevol);
+            computePorevolume(*grid.c_grid(), incomp_properties.porosity(), rock_comp, state.pressure(), porevol);
         } else {
             pressure_solver.solve(totmob, omega, src, wdp, bcs.c_bcs(), state.pressure(), state.faceflux(),
                     well_bhp, well_rate_per_cell);
