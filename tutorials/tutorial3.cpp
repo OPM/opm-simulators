@@ -319,7 +319,7 @@ int main ()
     /// \details We compute the pore volume
     /// \code
     std::vector<double> porevol;
-    computePorevolume(*grid.c_grid(), props, porevol);
+    Opm::computePorevolume(*grid.c_grid(), props.porosity(), porevol);
     /// \endcode
 
     /// \page tutorial3
