@@ -39,6 +39,7 @@
 #include <opm/polymer/GravityColumnSolverPolymer.hpp>
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <iterator>
 
 namespace Opm
 {
@@ -178,6 +179,13 @@ namespace Opm
 	// This is written only to work with SinglePointUpwindTwoPhase,
 	// not with arbitrary problem models.
         int col_size = column_cells.size();
+
+        if (col_size == 1) {
+	    sol_vec[2*column_cells[0] + 0] = 0.0;
+	    sol_vec[2*column_cells[0] + 1] = 0.0;
+            return;
+        }
+
 	StateWithZeroFlux state(s, c, cmax); // This holds s by reference.
 
 	// Assemble.
@@ -249,6 +257,9 @@ namespace Opm
 	// Solution will be written to rhs.
         dgbsv_(&N, &kl, &ku, &num_rhs, &hm[0], &nrow, &ipiv[0], &rhs[0], &N, &info);
 	if (info != 0) {
+            std::cerr << "Failed column cells: ";
+            std::copy(column_cells.begin(), column_cells.end(), std::ostream_iterator<int>(std::cerr, " "));
+            std::cerr << "\n";
 	    THROW("Lapack reported error in dgtsv: " << info);
 	}
 	for (int ci = 0; ci < col_size; ++ci) {
