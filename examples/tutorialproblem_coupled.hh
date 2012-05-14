@@ -129,7 +129,7 @@ class TutorialProblemCoupled
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> Tensor;
+    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     // Dumux specific types
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
@@ -137,7 +137,7 @@ class TutorialProblemCoupled
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, TwoPIndices) Indices;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     
     // get material law from property system
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
@@ -164,7 +164,7 @@ public:
     {
         // set main diagonal entries of the permeability tensor to a value
         // setting to a single value means: isotropic, homogeneous
-        K_ = this->toTensor_(1e-7);
+        K_ = this->toDimMatrix_(1e-7);
 
         //set residual saturations
         materialParams_.setSwr(0.0);                /*@\label{tutorial-coupled:setLawParams}@*/
@@ -208,7 +208,7 @@ public:
      *  is the vector including the global coordinates of the finite volume.
      */
     template <class Context>
-    const Tensor &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
+    const DimMatrix &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
                                         int spaceIdx, int timeIdx) const
     { return K_; }
 
@@ -298,7 +298,7 @@ public:
     }
 
 private:
-    Tensor K_;
+    DimMatrix K_;
     // Object that holds the values/parameters of the selected material law.
     MaterialLawParams materialParams_;                 /*@\label{tutorial-coupled:matParamsObject}@*/
 
