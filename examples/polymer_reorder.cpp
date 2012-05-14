@@ -541,7 +541,8 @@ main(int argc, char** argv)
     }
     TransportSolver tsolver(model);
     // Column-based gravity segregation solver.
-    std::vector<std::vector<int> > columns;
+    typedef std::pair<std::vector<int>, std::vector<std::vector<int> > > ColMap;
+    ColMap columns;
     if (use_column_solver) {
         Opm::extractColumn(*grid->c_grid(), columns);
     }
