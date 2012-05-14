@@ -234,7 +234,7 @@ protected:
 
         // assemble jacobian matrix of the constraints for the composition
         for (int i = 0; i < numComponents; ++ i) {
-            const Scalar eps = 1e-11; //std::max(1e-16, std::abs(x_i)*1e-9);
+            const Scalar eps = 1e-11; //std::max(1e-16, std::abs(xI)*1e-9);
 
             ////////
             // approximately calculate partial derivatives of the
@@ -243,8 +243,8 @@ protected:
             // forward differences
 
             // deviate the mole fraction of the i-th component
-            Scalar x_i = fluidState.moleFraction(phaseIdx, i);
-            fluidState.setMoleFraction(phaseIdx, i, x_i + eps);
+            Scalar xI = fluidState.moleFraction(phaseIdx, i);
+            fluidState.setMoleFraction(phaseIdx, i, xI + eps);
             paramCache.updateSingleMoleFraction(fluidState, phaseIdx, i);
 
             // compute new defect and derivative for all component
@@ -269,7 +269,7 @@ protected:
             }
 
             // reset composition to original value
-            fluidState.setMoleFraction(phaseIdx, i, x_i);
+            fluidState.setMoleFraction(phaseIdx, i, xI);
             paramCache.updateSingleMoleFraction(fluidState, phaseIdx, i);
 
             // end forward differences

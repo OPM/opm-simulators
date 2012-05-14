@@ -315,10 +315,10 @@ protected:
             // forward differences
 
             // deviate the mole fraction of the i-th component
-            Scalar x_i = getQuantity_(fluidState, pvIdx);
+            Scalar xI = getQuantity_(fluidState, pvIdx);
             const Scalar eps = 1e-8/quantityWeight_(fluidState, pvIdx);
-            setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
-            assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
+            setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, xI + eps);
+            assert(getQuantity_(fluidState, pvIdx) == xI + eps);
 
             // compute derivative of the defect
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
