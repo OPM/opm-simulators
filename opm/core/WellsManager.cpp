@@ -467,17 +467,17 @@ namespace Opm
 
                         // Set well component fraction.
                         double cf[3] = { 0.0, 0.0, 0.0 };
-                        if (wci_line.injector_type_ == "WATER") {
+                        if (wci_line.injector_type_[0] == 'W') {
                             if (!pu.phase_used[BlackoilPhases::Aqua]) {
                                 THROW("Water phase not used, yet found water-injecting well.");
                             }
                             cf[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                        } else if (wci_line.injector_type_ == "OIL") {
+                        } else if (wci_line.injector_type_[0] == 'O') {
                             if (!pu.phase_used[BlackoilPhases::Liquid]) {
                                 THROW("Oil phase not used, yet found oil-injecting well.");
                             }
                             cf[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                        } else if (wci_line.injector_type_ == "GAS") {
+                        } else if (wci_line.injector_type_[0] == 'G') {
                             if (!pu.phase_used[BlackoilPhases::Vapour]) {
                                 THROW("Water phase not used, yet found water-injecting well.");
                             }
