@@ -606,6 +606,8 @@ compute_cell_contrib(struct UnstructuredGrid               *G    ,
 
             pimpl->ratio->mat_row[  0  ] += s * dt * dF1;
             pimpl->ratio->mat_row[ off ] += s * dt * dF2;
+
+            dv += 2 * np;       /* '2' == number of one-sided derivatives. */
         }
     }
 }
