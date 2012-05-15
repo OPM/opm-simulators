@@ -964,13 +964,13 @@ namespace Opm
 
         InjectionSpecification::InjectorType toInjectorType(std::string type)
         {
-            if (type == "OIL") {
+            if (type[0] == 'O') {
                 return InjectionSpecification::OIL;
             }
-            if (type == "WATER") {
+            if (type[0] == 'W') {
                 return InjectionSpecification::WATER;
             }
-            if (type == "GAS") {
+            if (type[0] == 'G') {
                 return InjectionSpecification::GAS;
             }
             THROW("Unknown type " << type << ", could not convert to SurfaceComponent");
