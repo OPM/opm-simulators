@@ -34,21 +34,21 @@ namespace Opm
 
     /// @brief Computes pore volume of all cells in a grid.
     /// @param[in]  grid      a grid
-    /// @param[in]  props     rock and fluid properties
+    /// @param[in]  porosity  array of grid.number_of_cells porosity values
     /// @param[out] porevol   the pore volume by cell.
     void computePorevolume(const UnstructuredGrid& grid,
-			   const Opm::IncompPropertiesInterface& props,
+                           const double* porosity,
 			   std::vector<double>& porevol);
 
 
     /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
     /// @param[in]  grid      a grid
-    /// @param[in]  props     rock and fluid properties
+    /// @param[in]  porosity  array of grid.number_of_cells porosity values
     /// @param[in]  rock_comp rock compressibility properties
     /// @param[in]  pressure  pressure by cell
     /// @param[out] porevol   the pore volume by cell.
     void computePorevolume(const UnstructuredGrid& grid,
-                           const IncompPropertiesInterface& props,
+                           const double* porosity,
                            const RockCompressibility& rock_comp,
                            const std::vector<double>& pressure,
                            std::vector<double>& porevol);
