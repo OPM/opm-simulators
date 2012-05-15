@@ -250,8 +250,16 @@ namespace Opm
         const int* global_cell = grid.global_cell;
         const int* cpgdim = grid.cartdims;
         std::map<int,int> cartesian_to_compressed;
-        for (int i = 0; i < grid.number_of_cells; ++i) {
-            cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+
+        if (global_cell) {
+            for (int i = 0; i < grid.number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+            }
+        }
+        else {
+            for (int i = 0; i < grid.number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(i, i));
+            }
         }
 
         // Get COMPDAT data
