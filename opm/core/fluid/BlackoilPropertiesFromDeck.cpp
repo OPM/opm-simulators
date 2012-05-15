@@ -258,6 +258,21 @@ namespace Opm
     }
 
 
+    /// Obtain the range of allowable saturation values.
+    /// In cell cells[i], saturation of phase p is allowed to be
+    /// in the interval [smin[i*P + p], smax[i*P + p]].
+    /// \param[in]  n      Number of data points.
+    /// \param[in]  cells  Array of n cell indices.
+    /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
+    /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
+    void BlackoilPropertiesFromDeck::satRange(const int n,
+                                              const int* cells,
+                                              double* smin,
+                                              double* smax) const
+    {
+	satprops_.satRange(n, cells, smin, smax);
+    }
+
 
 } // namespace Opm
 
