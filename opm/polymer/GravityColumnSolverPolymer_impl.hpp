@@ -180,11 +180,11 @@ namespace Opm
 	// not with arbitrary problem models.
         int col_size = column_cells.size();
 
-        if (col_size == 1) {
-	    sol_vec[2*column_cells[0] + 0] = 0.0;
-	    sol_vec[2*column_cells[0] + 1] = 0.0;
-            return;
-        }
+        // if (col_size == 1) {
+	//     sol_vec[2*column_cells[0] + 0] = 0.0;
+	//     sol_vec[2*column_cells[0] + 1] = 0.0;
+        //     return;
+        // }
 
 	StateWithZeroFlux state(s, c, cmax); // This holds s by reference.
 
@@ -243,7 +243,11 @@ namespace Opm
             hm[bmc(2*ci + 0, 2*ci + 0)] += dF[0];
             hm[bmc(2*ci + 0, 2*ci + 1)] += dF[1];
             hm[bmc(2*ci + 1, 2*ci + 0)] += dF[2];
-            hm[bmc(2*ci + 1, 2*ci + 1)] += dF[3];
+            if (std::abs(dF[3]) < 1e-12) {
+                hm[bmc(2*ci + 1, 2*ci + 1)] += 1e-12;
+            } else {
+                hm[bmc(2*ci + 1, 2*ci + 1)] += dF[3];
+            }
 
             rhs[2*ci + 0] += F[0];
             rhs[2*ci + 1] += F[1];
