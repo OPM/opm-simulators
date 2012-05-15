@@ -962,7 +962,7 @@ namespace Opm
     namespace
     {
 
-        InjectionSpecification::InjectorType toInjectorType(std::string type)
+        InjectionSpecification::InjectorType toInjectorType(const std::string& type)
         {
             if (type[0] == 'O') {
                 return InjectionSpecification::OIL;
