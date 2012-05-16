@@ -369,7 +369,7 @@ main(int argc, char** argv)
         // Gravity.
         gravity[2] = deck.hasField("NOGRAV") ? 0.0 : Opm::unit::gravity;
         // Init state variables (saturation and pressure).
-        initStateTwophaseFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
         // Init polymer properties.
         polyprop.readFromDeck(deck);
     } else {
@@ -393,7 +393,7 @@ main(int argc, char** argv)
         // Gravity.
         gravity[2] = param.getDefault("gravity", 0.0);
         // Init state variables (saturation and pressure).
-        initStateTwophaseBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         // Init polymer properties.
         // Setting defaults to provide a simple example case.
         double c_max = param.getDefault("c_max_limit", 5.0);

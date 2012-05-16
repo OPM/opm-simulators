@@ -34,9 +34,9 @@ namespace Opm
     class PolymerState : public TwophaseState
     {
     public:
-        void init(const UnstructuredGrid& g)
+        void init(const UnstructuredGrid& g, int num_phases)
         {
-            TwophaseState::init(g);
+            TwophaseState::init(g, num_phases);
             concentration_.resize(g.number_of_cells, 0.0);
             cmax_.resize(g.number_of_cells, 0.0);
         }
