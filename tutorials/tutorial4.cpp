@@ -331,11 +331,12 @@ int main ()
 
     /// \page tutorial4
     /// \details 
-    /// We initialise water saturation to minimum everywhere.
+    /// We set up a two-phase state object, and
+    /// initialise water saturation to minimum everywhere.
     /// \code
     TwophaseState state;
-    state.init(*grid.c_grid());
-    state.setWaterSat(allcells, props, TwophaseState::MinSat);
+    state.init(*grid.c_grid(), 2);
+    state.setFirstSat(allcells, props, TwophaseState::MinSat);
     /// \endcode
     
     /// \page tutorial4
