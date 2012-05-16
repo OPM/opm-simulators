@@ -33,6 +33,7 @@ namespace Opm
 
     class BlackoilState;
     class LinearSolverInterface;
+    class WellState;
 
     /// Encapsulating a tpfa pressure solver for the compressible-fluid case.
     /// Supports gravity, wells and simple sources as driving forces.
@@ -52,6 +53,7 @@ namespace Opm
         ///                          is ignored if NULL
         /// \param[in] num_phases    Must be 2 or 3.
 	CompressibleTpfa(const UnstructuredGrid& g,
+                         const double* porevol,
                          const double* permeability,
                          const double* gravity,
                          const LinearSolverInterface& linsolver,
@@ -62,12 +64,15 @@ namespace Opm
 	~CompressibleTpfa();
 
         void solve(const double dt,
-                   BlackoilState& state);
+                   BlackoilState& state,
+                   WellState& well_state);
 
     private:
-        void computeDynamicData();
+        void computePerSolveDynamicData();
+        void computePerIterationDynamicData();
         void assemble(const double dt,
-                      const BlackoilState& state);
+                      const BlackoilState& state,
+                      const WellState& well_state);
         void solveIncrement();
 
 	void computeResults(std::vector<double>& pressure,
@@ -77,6 +82,7 @@ namespace Opm
 
         // ------ Data that will remain unmodified after construction. ------
 	const UnstructuredGrid& grid_;
+        const double* porevol_;
         const LinearSolverInterface& linsolver_;
 	std::vector<double> htrans_;
 	std::vector<double> trans_ ;
@@ -86,15 +92,23 @@ namespace Opm
 	struct cfs_tpfa_res_data* h_;
 
         // ------ Data that will be modified for every solve. ------
+        std::vector<double> wellperf_gpot_;
 
         // ------ Data that will be modified for every solver iteration. ------
+        // Gravity and capillary contributions (per face).
+        std::vector<double> face_gravcap_;
+        std::vector<double> wellperf_A_;
+        std::vector<double> wellperf_phasemob_;
+        std::vector<double> cell_A_;
+        std::vector<double> cell_dA_;
+        std::vector<double> face_A_;
+        std::vector<double> face_phasemob_;
+        std::vector<double> cell_voldisc_;
         // The update to be applied to the pressures (cell and bhp).
         std::vector<double> pressure_increment_;
 
 
 
-        // Gravity and capillary contributions (per face).
-        std::vector<double> gravcapf_;
 
 
     };

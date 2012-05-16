@@ -28,6 +28,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/newwells.h>
 #include <opm/core/BlackoilState.hpp>
+#include <opm/core/WellState.hpp>
 
 #include <algorithm>
 
@@ -46,11 +47,13 @@ namespace Opm
     ///                          is ignored if NULL
     CompressibleTpfa::CompressibleTpfa(const UnstructuredGrid& g,
                                        const double* permeability,
+                                       const double* porevol,
                                        const double* /* gravity */, // ???
                                        const LinearSolverInterface& linsolver,
                                        const struct Wells* wells,
                                        const int num_phases)
 	: grid_(g),
+          porevol_(porevol),
           linsolver_(linsolver),
 	  htrans_(g.cell_facepos[ g.number_of_cells ]),
 	  trans_ (g.number_of_faces),
@@ -85,13 +88,15 @@ namespace Opm
 
     /// Solve pressure equation, by Newton iterations.
     void CompressibleTpfa::solve(const double dt,
-                                 BlackoilState& state)
+                                 BlackoilState& state,
+                                 WellState& well_state)
     {
         // Set up dynamic data.
-        computeDynamicData();
+        computePerSolveDynamicData();
+        computePerIterationDynamicData();
 
         // Assemble J and F.
-        assemble(dt, state);
+        assemble(dt, state, well_state);
 
         bool residual_ok = false; // Replace with tolerance check.
         while (!residual_ok) {
@@ -103,10 +108,10 @@ namespace Opm
             // Update pressure vars with increment.
 
             // Set up dynamic data.
-            computeDynamicData();
+            computePerIterationDynamicData();
 
             // Assemble J and F.
-            assemble(dt, state);
+            assemble(dt, state, well_state);
 
             // Check for convergence.
             // Include both tolerance check for residual
@@ -120,8 +125,16 @@ namespace Opm
 
 
 
-    /// Solve pressure equation, by Newton iterations.
-    void CompressibleTpfa::computeDynamicData()
+    /// Compute per-solve dynamic properties.
+    void CompressibleTpfa::computePerSolveDynamicData()
+    {
+    }
+
+
+
+
+    /// Compute per-iteration dynamic properties.
+    void CompressibleTpfa::computePerIterationDynamicData()
     {
     }
 
@@ -130,19 +143,18 @@ namespace Opm
 
     /// Compute the residual and Jacobian.
     void CompressibleTpfa::assemble(const double dt,
-                                    const BlackoilState& state)
+                                    const BlackoilState& state,
+                                    const WellState& well_state)
     {
-        // Arguments or members?
         const double* z = &state.surfacevol()[0];
         const double* cell_press = &state.pressure()[0];
-        const double* well_bhp = NULL;
-        const double* porevol = NULL;
-
+        const double* well_bhp = well_state.bhp().empty() ? NULL : &well_state.bhp()[0];
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+
         CompletionData completion_data;
-        completion_data.gpot = 0; // TODO
-        completion_data.A = 0; // TODO
-        completion_data.phasemob = 0; // TODO
+        completion_data.gpot = &wellperf_gpot_[0];
+        completion_data.A = &wellperf_A_[0];
+        completion_data.phasemob = &wellperf_phasemob_[0];
         cfs_tpfa_res_wells wells_tmp;
         wells_tmp.W = const_cast<Wells*>(wells_);
         wells_tmp.data = &completion_data;
@@ -150,15 +162,14 @@ namespace Opm
         forces.wells = &wells_tmp;
         forces.src = NULL; // Check if it is legal to leave it as NULL.
         compr_quantities_gen cq;
-        cq.Ac = 0; // TODO
-        cq.dAc = 0; // TODO
-        cq.Af = 0; // TODO
-        cq.phasemobf = 0; // TODO
-        cq.voldiscr = 0; // TODO
-        // TODO: gravcapf_ must be set already.
+        cq.Ac = &cell_A_[0];
+        cq.dAc = &cell_dA_[0];
+        cq.Af = &face_A_[0];
+        cq.phasemobf = &face_phasemob_[0];
+        cq.voldiscr = &cell_voldisc_[0];
         cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
-                              &gravcapf_[0], &cell_press[0], &well_bhp[0],
-                              &porevol[0], h_);
+                              &face_gravcap_[0], cell_press, well_bhp,
+                              porevol_, h_);
     }
 
 
