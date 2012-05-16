@@ -46,7 +46,7 @@ namespace Opm
     ///                       where P = s.size()/src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
-                                 const std::vector<double>& p,
+                                 const std::vector<double>& press,
                                  const std::vector<double>& z,
 				 const std::vector<double>& s,
 				 const std::vector<double>& src,
@@ -70,7 +70,7 @@ namespace Opm
 		const double flux = -src[c]*dt;
 		const double* sat = &s[np*c];
 		props.relperm(1, sat, &c, &mob[0], 0);
-                props.viscosity(1, &p[c], &z[np*c], &c, &visc[0], 0);
+                props.viscosity(1, &press[c], &z[np*c], &c, &visc[0], 0);
 		double totmob = 0.0;
 		for (int p = 0; p < np; ++p) {
 		    mob[p] /= visc[p];
@@ -94,14 +94,14 @@ namespace Opm
     /// @param[out] totmob    total mobilities.
     void computeTotalMobility(const Opm::BlackoilPropertiesInterface& props,
 			      const std::vector<int>& cells,
-                              const std::vector<double>& p,
+                              const std::vector<double>& press,
                               const std::vector<double>& z,
 			      const std::vector<double>& s,
 			      std::vector<double>& totmob)
     {
         std::vector<double> pmobc;
 
-        computePhaseMobilities(props, cells, p, z, s, pmobc);
+        computePhaseMobilities(props, cells, press, z, s, pmobc);
 
         const std::size_t                 np = props.numPhases();
         const std::vector<int>::size_type nc = cells.size();
