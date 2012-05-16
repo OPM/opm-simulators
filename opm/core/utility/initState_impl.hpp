@@ -29,7 +29,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-
+#include <cmath>
 
 namespace Opm
 {
