@@ -59,7 +59,7 @@ namespace Opm
             THROW("Inconsistent number of phases specified: "
                   << wells_->number_of_phases << " != " << num_phases);
         }
-        const int num_dofs = g.number_of_cells + wells ? wells->number_of_wells : 0;
+        const int num_dofs = g.number_of_cells + (wells ? wells->number_of_wells : 0);
         pressure_increment_.resize(num_dofs);
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
 	tpfa_htrans_compute(gg, permeability, &htrans_[0]);
