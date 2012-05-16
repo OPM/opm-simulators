@@ -265,7 +265,6 @@ namespace Opm
     } // anonymous namespace
 
 
-
     /// Initialize a twophase state from parameters.
     /// The following parameters are accepted (defaults):
     ///    convection_testcase   (false)    Water in the 'left' part of the grid.
@@ -375,6 +374,84 @@ namespace Opm
             const double dens[2] = { rho, rho };
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
             initHydrostaticPressure(grid, dens, ref_z, gravity, ref_z, ref_p, state);
+        }
+    }
+
+
+    /// Initialize a blackoil state from parameters.
+    /// The following parameters are accepted (defaults):
+    ///    convection_testcase   (false)    Water in the 'left' part of the grid.
+    ///    ref_pressure          (100)      Initial pressure in bar for all cells
+    ///                                     (if convection_testcase is true),
+    ///                                     or pressure at woc depth.
+    ///    water_oil_contact     (none)     Depth of water-oil contact (woc).
+    /// If convection_testcase is true, the saturation is initialised
+    /// as indicated, and pressure is initialised to a constant value
+    /// ('ref_pressure').
+    /// Otherwise we have 2 cases:
+    ///   1) If 'water_oil_contact' is given, saturation is initialised
+    ///      accordingly.
+    ///   2) Water saturation is set to minimum.
+    /// In both cases, pressure is initialised hydrostatically.
+    /// In case 2), the depth of the first cell is used as reference depth.
+    template <class State>
+    void initStateBasic(const UnstructuredGrid& grid,
+                        const BlackoilPropertiesInterface& props,
+                        const parameter::ParameterGroup& param,
+                        const double gravity,
+                        State& state)
+    {
+        // TODO: Refactor to exploit similarity with IncompProp* case.
+        const int num_phases = props.numPhases();
+        if (num_phases != 2) {
+            THROW("initStateTwophaseBasic(): currently handling only two-phase scenarios.");
+        }
+        state.init(grid, num_phases);
+        const int num_cells = props.numCells();
+        // By default: initialise water saturation to minimum everywhere.
+        std::vector<int> all_cells(num_cells);
+        for (int i = 0; i < num_cells; ++i) {
+            all_cells[i] = i;
+        }
+        state.setFirstSat(all_cells, props, State::MinSat);
+        const bool convection_testcase = param.getDefault("convection_testcase", false);
+        if (convection_testcase) {
+            // Initialise water saturation to max in the 'left' part.
+            std::vector<int> left_cells;
+            left_cells.reserve(num_cells/2);
+            const int *glob_cell = grid.global_cell;
+            const int* cd = grid.cartdims;
+            for (int cell = 0; cell < num_cells; ++cell) {
+                const int gc = glob_cell == 0 ? cell : glob_cell[cell];
+                bool left = (gc % cd[0]) < cd[0]/2;
+                if (left) {
+                    left_cells.push_back(cell);
+                }
+            }
+            state.setFirstSat(left_cells, props, State::MaxSat);
+            const double init_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            std::fill(state.pressure().begin(), state.pressure().end(), init_p);
+        } else if (param.has("water_oil_contact")) {
+            // Warn against error-prone usage.
+            if (gravity == 0.0) {
+                std::cout << "**** Warning: running gravity convection scenario, but gravity is zero." << std::endl;
+            }
+            if (grid.cartdims[2] <= 1) {
+                std::cout << "**** Warning: running gravity convection scenario, which expects nz > 1." << std::endl;
+            }
+            // Initialise water saturation to max below water-oil contact.
+            const double woc = param.get<double>("water_oil_contact");
+            initWaterOilContact(grid, props, woc, WaterBelow, state);
+            // Initialise pressure to hydrostatic state.
+            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            initHydrostaticPressure(grid, props, woc, gravity, woc, ref_p, state);
+        } else {
+            // Use default: water saturation is minimum everywhere.
+            // Initialise pressure to hydrostatic state.
+            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
+            const double woc = -1e100;
+            initHydrostaticPressure(grid, props, woc, gravity, ref_z, ref_p, state);
         }
     }
 

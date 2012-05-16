@@ -59,6 +59,29 @@ namespace Opm
                         const double gravity,
                         State& state);
 
+    /// Initialize a blackoil state from parameters.
+    /// The following parameters are accepted (defaults):
+    ///    convection_testcase   (false)    Water in the 'left' part of the grid.
+    ///    ref_pressure          (100)      Initial pressure in bar for all cells
+    ///                                     (if convection_testcase is true),
+    ///                                     or pressure at woc depth.
+    ///    water_oil_contact     (none)     Depth of water-oil contact (woc).
+    /// If convection_testcase is true, the saturation is initialised
+    /// as indicated, and pressure is initialised to a constant value
+    /// ('ref_pressure').
+    /// Otherwise we have 2 cases:
+    ///   1) If 'water_oil_contact' is given, saturation is initialised
+    ///      accordingly.
+    ///   2) Water saturation is set to minimum.
+    /// In both cases, pressure is initialised hydrostatically.
+    /// In case 2), the depth of the first cell is used as reference depth.
+    template <class State>
+    void initStateBasic(const UnstructuredGrid& grid,
+                        const BlackoilPropertiesInterface& props,
+                        const parameter::ParameterGroup& param,
+                        const double gravity,
+                        State& state);
+
     /// Initialize a two-phase state from input deck.
     /// If EQUIL is present:
     ///   - saturation is set according to the water-oil contact,
