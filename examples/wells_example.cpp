@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
     Opm::TwophaseState state;
 
-    initStateTwophaseFromDeck(*grid.c_grid(), incomp_properties, parser, gravity[2], state);
+    initStateFromDeck(*grid.c_grid(), incomp_properties, parser, gravity[2], state);
 
     // Compute phase mobilities
     std::vector<double> phase_mob;
