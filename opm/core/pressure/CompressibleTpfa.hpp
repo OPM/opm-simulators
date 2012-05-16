@@ -31,6 +31,7 @@ struct FlowBoundaryConditions;
 namespace Opm
 {
 
+    class BlackoilState;
     class LinearSolverInterface;
 
     /// Encapsulating a tpfa pressure solver for the compressible-fluid case.
@@ -60,11 +61,13 @@ namespace Opm
 	/// Destructor.
 	~CompressibleTpfa();
 
-        void solve();
+        void solve(const double dt,
+                   BlackoilState& state);
 
     private:
         void computeDynamicData();
-        void assemble();
+        void assemble(const double dt,
+                      const BlackoilState& state);
         void solveIncrement();
 
 	void computeResults(std::vector<double>& pressure,

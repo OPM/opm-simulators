@@ -27,6 +27,7 @@
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/newwells.h>
+#include <opm/core/BlackoilState.hpp>
 
 #include <algorithm>
 
@@ -83,13 +84,14 @@ namespace Opm
 
 
     /// Solve pressure equation, by Newton iterations.
-    void CompressibleTpfa::solve()
+    void CompressibleTpfa::solve(const double dt,
+                                 BlackoilState& state)
     {
         // Set up dynamic data.
         computeDynamicData();
 
         // Assemble J and F.
-        assemble();
+        assemble(dt, state);
 
         bool residual_ok = false; // Replace with tolerance check.
         while (!residual_ok) {
@@ -104,7 +106,7 @@ namespace Opm
             computeDynamicData();
 
             // Assemble J and F.
-            assemble();
+            assemble(dt, state);
 
             // Check for convergence.
             // Include both tolerance check for residual
@@ -127,12 +129,12 @@ namespace Opm
 
 
     /// Compute the residual and Jacobian.
-    void CompressibleTpfa::assemble()
+    void CompressibleTpfa::assemble(const double dt,
+                                    const BlackoilState& state)
     {
         // Arguments or members?
-        const double dt = 0.0;
-        const double* z = NULL;
-        const double* cell_press = NULL;
+        const double* z = &state.surfacevol()[0];
+        const double* cell_press = &state.pressure()[0];
         const double* well_bhp = NULL;
         const double* porevol = NULL;
 
