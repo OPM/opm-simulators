@@ -22,6 +22,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
+#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
@@ -595,6 +596,60 @@ namespace Opm
                     const int cell = wells.well_cells[perf];
                     double mob[2];
                     props.relperm(1, &saturation[2*cell], &cell, mob, 0);
+                    mob[0] /= visc[0];
+                    mob[1] /= visc[1];
+                    const double fracflow = mob[0]/(mob[0] + mob[1]);
+                    well_rate_water += perf_rate*fracflow;
+                }
+            }
+            data_now.push_back(well_rate_total);
+            if (well_rate_total == 0.0) {
+                data_now.push_back(0.0);
+            } else {
+                data_now.push_back(well_rate_water/well_rate_total);
+            }
+        }
+        data_.push_back(data_now);
+    }
+
+
+
+
+    void WellReport::push(const BlackoilPropertiesInterface& props,
+                          const Wells& wells,
+                          const std::vector<double>& p,
+                          const std::vector<double>& z,
+                          const std::vector<double>& s,
+                          const double time,
+                          const std::vector<double>& well_bhp,
+                          const std::vector<double>& well_perfrates)
+    {
+        // TODO: refactor, since this is almost identical to the other push().
+        int nw = well_bhp.size();
+        ASSERT(nw == wells.number_of_wells);
+        if (props.numPhases() != 2) {
+            THROW("WellReport for now assumes two phase flow.");
+        }
+        std::vector<double> data_now;
+        data_now.reserve(1 + 3*nw);
+        data_now.push_back(time/unit::day);
+        for (int w = 0; w < nw; ++w) {
+            data_now.push_back(well_bhp[w]/(unit::barsa));
+            double well_rate_total = 0.0;
+            double well_rate_water = 0.0;
+            for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
+                const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
+                well_rate_total += perf_rate;
+                if (perf_rate > 0.0) {
+                    // Injection.
+                    well_rate_water += perf_rate*wells.comp_frac[0];
+                } else {
+                    // Production.
+                    const int cell = wells.well_cells[perf];
+                    double mob[2];
+                    props.relperm(1, &s[2*cell], &cell, mob, 0);
+                    double visc[2];
+                    props.viscosity(1, &p[cell], &z[2*cell], &cell, visc, 0);
                     mob[0] /= visc[0];
                     mob[1] /= visc[1];
                     const double fracflow = mob[0]/(mob[0] + mob[1]);

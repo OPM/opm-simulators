@@ -30,6 +30,7 @@ namespace Opm
 {
 
     class IncompPropertiesInterface;
+    class BlackoilPropertiesInterface;
     class RockCompressibility;
 
     /// @brief Computes pore volume of all cells in a grid.
@@ -244,6 +245,15 @@ namespace Opm
         void push(const IncompPropertiesInterface& props,
                   const Wells& wells,
                   const std::vector<double>& saturation,
+                  const double time,
+                  const std::vector<double>& well_bhp,
+                  const std::vector<double>& well_perfrates);
+        /// Add a report point (compressible fluids).
+        void push(const BlackoilPropertiesInterface& props,
+                  const Wells& wells,
+                  const std::vector<double>& p,
+                  const std::vector<double>& z,
+                  const std::vector<double>& s,
                   const double time,
                   const std::vector<double>& well_bhp,
                   const std::vector<double>& well_perfrates);

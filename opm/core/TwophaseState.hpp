@@ -32,38 +32,44 @@ namespace Opm
     {
     public:
 
-        void init(const UnstructuredGrid& g)
+        void init(const UnstructuredGrid& g, int num_phases)
         {
+            num_phases_ = num_phases;
             press_.resize(g.number_of_cells, 0.0);
             fpress_.resize(g.number_of_faces, 0.0);
             flux_.resize(g.number_of_faces, 0.0);
-            sat_.resize(2 * g.number_of_cells, 0.0);
+            sat_.resize(num_phases_ * g.number_of_cells, 0.0);
             for (int cell = 0; cell < g.number_of_cells; ++cell) {
-                sat_[2*cell + 1] = 1.0; // Defaulting oil saturations to 1.0.
+                // Defaulting the second saturation to 1.0.
+                // This will usually be oil in a water-oil case,
+                // gas in an oil-gas case.
+                // For proper initialization, one should not rely on this,
+                // but use available phase information instead.
+                sat_[num_phases_*cell + 1] = 1.0;
             }
         }
 
         enum ExtremalSat { MinSat, MaxSat };
 
-        void setWaterSat(const std::vector<int>& cells,
+        void setFirstSat(const std::vector<int>& cells,
                          const Opm::IncompPropertiesInterface& props,
                          ExtremalSat es)
         {
             const int n = cells.size();
-            std::vector<double> smin(2*n);
-            std::vector<double> smax(2*n);
+            std::vector<double> smin(num_phases_*n);
+            std::vector<double> smax(num_phases_*n);
             props.satRange(n, &cells[0], &smin[0], &smax[0]);
             const double* svals = (es == MinSat) ? &smin[0] : &smax[0];
             for (int ci = 0; ci < n; ++ci) {
                 const int cell = cells[ci];
-                sat_[2*cell] = svals[2*ci];
-                sat_[2*cell + 1] = 1.0 - sat_[2*cell];
+                sat_[num_phases_*cell] = svals[num_phases_*ci];
+                sat_[num_phases_*cell + 1] = 1.0 - sat_[num_phases_*cell];
             }
         }
 
         int numPhases() const
         {
-            return 2;
+            return num_phases_;
         }
 
         std::vector<double>& pressure    () { return press_ ; }
@@ -77,6 +83,7 @@ namespace Opm
         const std::vector<double>& saturation  () const { return sat_   ; }
 
     private:
+        int num_phases_;
         std::vector<double> press_ ;
         std::vector<double> fpress_;
         std::vector<double> flux_  ;
