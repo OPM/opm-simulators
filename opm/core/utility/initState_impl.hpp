@@ -25,8 +25,10 @@
 #include <opm/core/grid.h>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/MonotCubicInterpolator.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
+#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
 
 
 namespace Opm
@@ -62,9 +64,9 @@ namespace Opm
         // Initialize saturations so that there is water below woc,
         // and oil above.
         // If invert is true, water is instead above, oil below.
-        template <class State>
+        template <class Props, class State>
         void initWaterOilContact(const UnstructuredGrid& grid,
-                                 const IncompPropertiesInterface& props,
+                                 const Props& props,
                                  const double woc,
                                  const WaterInit waterinit,
                                  State& state)
@@ -73,10 +75,10 @@ namespace Opm
             std::vector<int> water;
             std::vector<int> oil;
             // Assuming that water should go below the woc, but warning if oil is heavier.
-            if (props.density()[0] < props.density()[1]) {
-                std::cout << "*** warning: water density is less than oil density, "
-                    "but initialising water below woc." << std::endl;
-            }
+            // if (props.density()[0] < props.density()[1]) {
+            //     std::cout << "*** warning: water density is less than oil density, "
+            //         "but initialising water below woc." << std::endl;
+            // }
             switch (waterinit) {
             case WaterBelow:
                 cellsBelowAbove(grid, woc, water, oil);
@@ -85,9 +87,10 @@ namespace Opm
                 cellsBelowAbove(grid, woc, oil, water);
             }
             // Set saturations.
-            state.setWaterSat(oil, props, State::MinSat);
-            state.setWaterSat(water, props, State::MaxSat);
+            state.setFirstSat(oil, props, State::MinSat);
+            state.setFirstSat(water, props, State::MaxSat);
         }
+
 
         // Initialize hydrostatic pressures depending only on gravity,
         // (constant) phase densities and a water-oil contact depth.
@@ -123,11 +126,147 @@ namespace Opm
             }
         }
 
+
+        // Facade to initHydrostaticPressure() taking a property object,
+        // for similarity to initHydrostaticPressure() for compressible fluids.
+        template <class State>
+        void initHydrostaticPressure(const UnstructuredGrid& grid,
+                                     const IncompPropertiesInterface& props,
+                                     const double woc,
+                                     const double gravity,
+                                     const double datum_z,
+                                     const double datum_p,
+                                     State& state)
+        {
+            const double* densities = props.density();
+            initHydrostaticPressure(grid, densities, woc, gravity, datum_z, datum_p, state);
+        }
+
+
+
+        // Helper functor for initHydrostaticPressure() for compressible fluids.
+        struct Density
+        {
+            const BlackoilPropertiesInterface& props_;
+            Density(const BlackoilPropertiesInterface& props) : props_(props) {}
+            double operator()(const double pressure, const int phase)
+            {
+                ASSERT(props_.numPhases() == 2);
+                const double surfvol[2][2] = { { 1.0, 0.0 },
+                                               { 0.0, 1.0 } };
+                // We do not handle multi-region PVT/EQUIL at this point.
+                const int* cells = 0;
+                double A[4] = { 0.0 };
+                props_.matrix(1, &pressure, surfvol[phase], cells, A, 0);
+                double rho[2] = { 0.0 };
+                props_.density(1, A, rho);
+                return rho[phase];
+            }
+        };
+
+        // Initialize hydrostatic pressures depending only on gravity,
+        // phase densities that may vary with pressure and a water-oil
+        // contact depth. The pressure ODE is given as
+        //     \grad p = \rho g \grad z
+        // where rho is the oil density above the woc, water density
+        // below woc. Note that even if there is (immobile) water in
+        // the oil zone, it does not contribute to the pressure there.
+        template <class State>
+        void initHydrostaticPressure(const UnstructuredGrid& grid,
+                                     const BlackoilPropertiesInterface& props,
+                                     const double woc,
+                                     const double gravity,
+                                     const double datum_z,
+                                     const double datum_p,
+                                     State& state)
+        {
+            ASSERT(props.numPhases() == 2);
+
+            // Obtain max and min z for which we will need to compute p.
+            const int num_cells = grid.number_of_cells;
+            const int dim = grid.dimensions;
+            double zlim[2] = { 1e100, -1e100 };
+            for (int c = 0; c < num_cells; ++c) {
+                const double z = grid.cell_centroids[dim*c + dim - 1];
+                zlim[0] = std::min(zlim[0], z);
+                zlim[1] = std::max(zlim[1], z);
+            }
+
+            // We'll use a minimum stepsize of 1/100 of the z range.
+            const double hmin = (zlim[1] - zlim[0])/100.0;
+
+            // Store p(z) results in an associative array.
+            std::map<double, double> press_by_z;
+            press_by_z[datum_z] = datum_p;
+
+            // Set up density evaluator.
+            Density rho(props);
+
+            // Solve the ODE from datum_z to woc.
+            int phase = (datum_z > woc) ? 0 : 1;
+            int num_steps = int(std::ceil(std::fabs(woc - datum_z)/hmin));
+            double pval = datum_p;
+            double zval = datum_z;
+            double h = (woc - datum_z)/double(num_steps);
+            for (int i = 0; i < num_steps; ++i) {
+                zval += h;
+                const double dp = rho(pval, phase)*gravity;
+                pval += h*dp;
+                press_by_z[zval] = pval;
+            }
+            double woc_p = pval;
+
+            // Solve the ODE from datum_z to the end of the interval.
+            double z_end = (datum_z > woc) ? zlim[1] : zlim[0];
+            num_steps = int(std::ceil(std::fabs(z_end - datum_z)/hmin));
+            pval = datum_p;
+            zval = datum_z;
+            h = (z_end - datum_z)/double(num_steps);
+            for (int i = 0; i < num_steps; ++i) {
+                zval += h;
+                const double dp = rho(pval, phase)*gravity;
+                pval += h*dp;
+                press_by_z[zval] = pval;
+            }
+
+            // Solve the ODE from woc to the other end of the interval.
+            // Switching phase and z_end.
+            phase = (phase + 1) % 2;
+            z_end = (datum_z > woc) ? zlim[0] : zlim[1];
+            pval = woc_p;
+            zval = woc;
+            h = (z_end - datum_z)/double(num_steps);
+            for (int i = 0; i < num_steps; ++i) {
+                zval += h;
+                const double dp = rho(pval, phase)*gravity;
+                pval += h*dp;
+                press_by_z[zval] = pval;
+            }
+
+            // Create monotone spline for interpolating solution.
+            std::vector<double> zv, pv;
+            zv.reserve(press_by_z.size());
+            pv.reserve(press_by_z.size());
+            for (std::map<double, double>::const_iterator it = press_by_z.begin();
+                 it != press_by_z.end(); ++it) {
+                zv.push_back(it->first);
+                pv.push_back(it->second);
+            }
+            MonotCubicInterpolator press(zv, pv);
+
+            // Evaluate pressure at each cell centroid.
+            std::vector<double>& p = state.pressure();
+            for (int c = 0; c < num_cells; ++c) {
+                const double z = grid.cell_centroids[dim*c + dim - 1];
+                p[c] = press(z);
+            }
+        }
+
     } // anonymous namespace
 
 
 
-    /// Initialize a state from parameters.
+    /// Initialize a twophase state from parameters.
     /// The following parameters are accepted (defaults):
     ///    convection_testcase   (false)    Water in the 'left' part of the grid.
     ///    ref_pressure          (100)      Initial pressure in bar for all cells
@@ -156,17 +295,18 @@ namespace Opm
                                 const double gravity,
                                 State& state)
     {
-        if (state.numPhases() != 2) {
-            THROW("initStateTwophaseFromDeck(): state must have two phases.");
+        const int num_phases = props.numPhases();
+        if (num_phases != 2) {
+            THROW("initStateTwophaseBasic(): currently handling only two-phase scenarios.");
         }
-        state.init(grid);
+        state.init(grid, num_phases);
         const int num_cells = props.numCells();
         // By default: initialise water saturation to minimum everywhere.
         std::vector<int> all_cells(num_cells);
         for (int i = 0; i < num_cells; ++i) {
             all_cells[i] = i;
         }
-        state.setWaterSat(all_cells, props, State::MinSat);
+        state.setFirstSat(all_cells, props, State::MinSat);
         const bool convection_testcase = param.getDefault("convection_testcase", false);
         const bool segregation_testcase = param.getDefault("segregation_testcase", false);
         if (convection_testcase) {
@@ -182,7 +322,7 @@ namespace Opm
                     left_cells.push_back(cell);
                 }
             }
-            state.setWaterSat(left_cells, props, State::MaxSat);
+            state.setFirstSat(left_cells, props, State::MaxSat);
             const double init_p = param.getDefault("ref_pressure", 100)*unit::barsa;
             std::fill(state.pressure().begin(), state.pressure().end(), init_p);
         } else if (segregation_testcase) {
@@ -246,17 +386,18 @@ namespace Opm
     /// Otherwise:
     ///   - saturation is set according to SWAT,
     ///   - pressure is set according to PRESSURE.
-    template <class State>
-    void initStateTwophaseFromDeck(const UnstructuredGrid& grid,
-                                   const IncompPropertiesInterface& props,
-                                   const EclipseGridParser& deck,
-                                   const double gravity,
-                                   State& state)
+    template <class Props, class State>
+    void initStateFromDeck(const UnstructuredGrid& grid,
+                           const Props& props,
+                           const EclipseGridParser& deck,
+                           const double gravity,
+                           State& state)
     {
-        if (state.numPhases() != 2) {
-            THROW("initStateTwophaseFromDeck(): state must have two phases.");
+        const int num_phases = props.numPhases();
+        if (num_phases != 2) {
+            THROW("initStateFromDeck(): currently handling only two-phase scenarios.");
         }
-        state.init(grid);
+        state.init(grid, num_phases);
         if (deck.hasField("EQUIL")) {
             // Set saturations depending on oil-water contact.
             const EQUIL& equil= deck.getEQUIL();
@@ -268,7 +409,7 @@ namespace Opm
             // Set pressure depending on densities and depths.
             const double datum_z = equil.equil[0].datum_depth_;
             const double datum_p = equil.equil[0].datum_depth_pressure_;
-            initHydrostaticPressure(grid, props.density(), woc, gravity, datum_z, datum_p, state);
+            initHydrostaticPressure(grid, props, woc, gravity, datum_z, datum_p, state);
         } else if (deck.hasField("SWAT") && deck.hasField("PRESSURE")) {
             // Set saturations from SWAT, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
@@ -283,7 +424,7 @@ namespace Opm
                 p[c] = p_deck[c_deck];
             }
         } else {
-            THROW("initStateTwophaseFromDeck(): we must either have EQUIL, or both SWAT and PRESSURE.");
+            THROW("initStateFromDeck(): we must either have EQUIL, or both SWAT and PRESSURE.");
         }
     }
 
