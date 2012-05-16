@@ -289,11 +289,11 @@ namespace Opm
     /// In all three cases, pressure is initialised hydrostatically.
     /// In case 2) and 3), the depth of the first cell is used as reference depth.
     template <class State>
-    void initStateTwophaseBasic(const UnstructuredGrid& grid,
-                                const IncompPropertiesInterface& props,
-                                const parameter::ParameterGroup& param,
-                                const double gravity,
-                                State& state)
+    void initStateBasic(const UnstructuredGrid& grid,
+                        const IncompPropertiesInterface& props,
+                        const parameter::ParameterGroup& param,
+                        const double gravity,
+                        State& state)
     {
         const int num_phases = props.numPhases();
         if (num_phases != 2) {
