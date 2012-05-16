@@ -19,7 +19,8 @@
 
 
 #include <opm/core/fluid/RockFromDeck.hpp>
-#include <opm/core/eclipse/EclipseGridInspector.hpp>
+
+#include <tr1/array>
 
 namespace Opm
 {
