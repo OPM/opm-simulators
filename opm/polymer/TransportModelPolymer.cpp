@@ -320,7 +320,7 @@ namespace Opm
 	    double c_ads;
             tm.polyprops_.adsorption(c_arg, cmax0, c_ads);
 	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
-	    res_c = s_arg*(1 - dps)*c_arg - (s0 - dps)*c0
+	    res_c = s_arg*(1 - dps)*c_arg - s0*(1 - dps)*c0
 		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
                 + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*c_ads)*comp_term;
