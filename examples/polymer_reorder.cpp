@@ -448,11 +448,7 @@ main(int argc, char** argv)
         if (use_segregation_split) {
             use_column_solver = param.getDefault("use_column_solver", use_column_solver);
             if (use_column_solver) {
-                // use_gauss_seidel_gravity is not implemented for polymer.
                 use_gauss_seidel_gravity = param.getDefault("use_gauss_seidel_gravity", use_gauss_seidel_gravity);
-                if (use_gauss_seidel_gravity) {
-                    THROW("gauss_seidel_gravity is not implemented for polymer");
-                }
             }
         }
     }
@@ -533,8 +529,7 @@ main(int argc, char** argv)
                                              method, nl_tolerance, nl_maxiter);
 
     if (use_gauss_seidel_gravity) {
-        THROW("use_gauss_seidel_gravity option not yet implemented for polymer case.");
-        // reorder_model.initGravity(grav);
+        reorder_model.initGravity(grav);
     }
     // Non-reordering solver.
     NewtonPolymerTransportModel  model(fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
@@ -750,9 +745,9 @@ main(int argc, char** argv)
                 if (use_segregation_split) {
                     if (use_column_solver) {
                         if (use_gauss_seidel_gravity) {
-                            THROW("use_gauss_seidel_gravity option not implemented for polymer.");
-                            // reorder_model.solveGravity(columns, stepsize, reorder_sat);
-                            // Opm::toBothSat(reorder_sat, state.saturation());
+                            reorder_model.solveGravity(columns, &porevol[0], stepsize, reorder_sat,
+                                                       state.concentration(), state.maxconcentration());
+                            Opm::toBothSat(reorder_sat, state.saturation());
                         } else {
                             colsolver.solve(columns, stepsize, state.saturation(), state.concentration(),
                                             state.maxconcentration());

@@ -22,6 +22,7 @@
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/RootFinders.hpp>
+#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <cmath>
 
 
@@ -63,6 +64,41 @@ private:
                              double* dres_c_dsdc, double& mc, double& ff) const;
 };
 
+class Opm::TransportModelPolymer::ResidualCGrav {
+public:
+    const TransportModelPolymer& tm;
+    const int cell;
+    const double s0;
+    const double c0;
+    const double cmax0;
+    const double porosity;
+    const double dtpv;    // dt/pv(i)
+    const double dps;
+    const double rhor;
+    double c_ads0;
+    double gf[2];
+    int nbcell[2];
+
+    ResidualCGrav(const TransportModelPolymer& tmodel,
+                  const std::vector<int>& cells,
+                  const int pos,
+                  const double* gravflux);
+
+    double operator()(double c) const;
+    double computeGravResidualS(double s, double c) const;
+    double computeGravResidualC(double s, double c) const;
+};
+
+class Opm::TransportModelPolymer::ResidualSGrav {
+public:
+    const ResidualCGrav& res_c_eq_;
+    double c_;
+
+    ResidualSGrav(const ResidualCGrav& res_c_eq, const double c = 0.0);
+    double sOfc(double c);
+    double operator()(double s) const;
+};
+    
 
 namespace
 {
@@ -910,6 +946,284 @@ namespace Opm
                                                  double &dmc_dc) const
     {
         polyprops_.computeMcWithDer(c, mc, dmc_dc);
+    }
+
+
+    
+    TransportModelPolymer::ResidualSGrav::ResidualSGrav(const ResidualCGrav& res_c_eq,
+                                                        const double c)
+        : res_c_eq_(res_c_eq),
+          c_(c)
+    {
+    }
+
+    double TransportModelPolymer::ResidualSGrav::operator()(double s) const
+    {
+        return res_c_eq_.computeGravResidualS(s, c_);
+    }
+
+    double TransportModelPolymer::ResidualSGrav::sOfc(double c)  // for a given c, returns the value of s for which residual in s vanishes.
+    {
+        c_ = c;
+        int iters_used;
+        return modifiedRegulaFalsi(*this, res_c_eq_.s0, 0.0, 1.0,
+                                   res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_, 
+                                   iters_used);
+    }
+
+
+
+    // Residual for concentration equation for gravity segregation
+    //
+    // res_c = s*(1 - dps)*c - s0*( - dps)*c0
+    //     +  dtpv*sum_{j adj i}( mc * gravmod_ij * gf_ij ).
+    //  \TODO doc me
+    // where ...
+    // Influxes are negative, outfluxes positive.
+
+    TransportModelPolymer::ResidualCGrav::ResidualCGrav(const TransportModelPolymer& tmodel,
+                                                        const std::vector<int>& cells,
+                                                        const int pos,
+                                                        const double* gravflux) // Always oriented towards next in column. Size = colsize - 1.
+        : tm(tmodel),
+          cell(cells[pos]),
+          s0(tm.saturation_[cell]),
+          c0(tm.concentration_[cell]),
+          cmax0(tm.cmax0_[cell]),
+          porosity(tm.porosity_[cell]),
+          dtpv(tm.dt_/tm.porevolume_[cell]),
+          dps(tm.polyprops_.deadPoreVol()),
+          rhor(tm.polyprops_.rockDensity())
+
+    {
+        nbcell[0] = -1;
+        gf[0] = 0.0;
+        if (cell > 0) {
+            nbcell[0] = cells[pos - 1];
+            gf[0] = -gravflux[pos - 1];
+        }
+        nbcell[1] = -1;
+        gf[1] = 0.0;
+        if (pos < int(cells.size() - 1)) {
+            nbcell[1] = cells[pos + 1];
+            gf[1] = gravflux[pos];
+        }
+            
+        tm.polyprops_.adsorption(c0, cmax0, c_ads0);
+    }
+
+    double TransportModelPolymer::ResidualCGrav::operator()(double c) const
+    {
+            
+        ResidualSGrav res_s(*this);
+        return computeGravResidualC(res_s.sOfc(c), c);
+
+    }
+
+    double TransportModelPolymer::ResidualCGrav::computeGravResidualS(double s, double c) const 
+    {
+
+        double mobcell[2];
+        tm.mobility(s, c, cell, mobcell);
+
+        double res = s - s0;
+
+        for (int nb = 0; nb < 2; ++nb) {
+            if (nbcell[nb] != -1) {
+                double m[2];
+                if (gf[nb] < 0.0) {
+                    m[0] = mobcell[0];
+                    m[1] = tm.mob_[2*nbcell[nb] + 1];
+                } else {
+                    m[0] = tm.mob_[2*nbcell[nb]];
+                    m[1] = mobcell[1];
+                }
+                if (m[0] + m[1] > 0.0) { 
+                    res += -dtpv*gf[nb]*m[0]*m[1]/(m[0] + m[1]);
+                }
+            }
+        }
+        return res;
+    }
+
+    double TransportModelPolymer::ResidualCGrav::computeGravResidualC(double s, double c) const 
+    {
+
+        double mobcell[2];
+        tm.mobility(s, c, cell,  mobcell);
+        double c_ads;
+        tm.polyprops_.adsorption(c, cmax0, c_ads);
+
+        double res = (1 - dps)*s*c - (1 - dps)*s0*c0
+            + rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0);
+        for (int nb = 0; nb < 2; ++nb) {
+            if (nbcell[nb] != -1) {
+                double m[2];
+                double mc;
+                if (gf[nb] < 0.0) {
+                    m[0] = mobcell[0];
+                    tm.computeMc(c, mc);
+                    m[1] = tm.mob_[2*nbcell[nb] + 1];
+                } else {
+                    m[0] = tm.mob_[2*nbcell[nb]];
+                    mc = tm.mc_[nbcell[nb]];
+                    m[1] = mobcell[1];
+                }
+                if (m[0] + m[1] > 0.0) { 
+                    res += -dtpv*gf[nb]*mc*m[0]*m[1]/(m[0] + m[1]);
+                }
+            }
+        }
+        return res;
+    }
+
+
+    void TransportModelPolymer::mobility(double s, double c, int cell, double* mob) const
+    {
+	double sat[2] = { s, 1.0 - s };
+        double relperm[2];
+	props_.relperm(1, sat, &cell, relperm, 0);
+        polyprops_.effectiveMobilities(c, cmax0_[cell], &visc_[cell], relperm, mob);
+    }
+
+
+    void TransportModelPolymer::initGravity(const double* grav)
+    {
+        // Set up gravflux_ = T_ij g (rho_w - rho_o) (z_i - z_j)
+        std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
+        const int nf = grid_.number_of_faces;
+        const int dim = grid_.dimensions;
+        gravflux_.resize(nf);
+        tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid_), props_.permeability(), &htrans[0]);
+        tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &gravflux_[0]);
+        const double delta_rho = props_.density()[0] - props_.density()[1];
+        for (int f = 0; f < nf; ++f) {
+            const int* c = &grid_.face_cells[2*f];
+            double gdz = 0.0;
+            if (c[0] != -1 && c[1] != -1) {
+                for (int d = 0; d < dim; ++d) {
+                    gdz += grav[d]*(grid_.cell_centroids[dim*c[0] + d] - grid_.cell_centroids[dim*c[1] + d]);
+                }
+            }
+            gravflux_[f] *= delta_rho*gdz;
+        }
+    }
+
+
+    void TransportModelPolymer::solveSingleCellGravity(const std::vector<int>& cells,
+                                                        const int pos,
+                                                        const double* gravflux)
+    {
+        const int cell = cells[pos];
+        ResidualCGrav res_c(*this, cells, pos, gravflux);
+
+        // Check if current state is an acceptable solution.
+	double res_sc[2];
+	res_sc[0]=res_c.computeGravResidualS(saturation_[cell], concentration_[cell]);
+	res_sc[1]=res_c.computeGravResidualC(saturation_[cell], concentration_[cell]);
+
+        if (norm(res_sc) < tol_) {
+            return;
+        }
+
+	const double a = 0.0;
+	const double b = polyprops_.cMax()*1.1; // Add 10% to account for possible non-monotonicity of hyperbolic system.
+        int iters_used;
+        concentration_[cell] = modifiedRegulaFalsi(res_c, a, b, maxit_, tol_, iters_used);
+        ResidualSGrav res_s(res_c);
+        saturation_[cell] = res_s.sOfc(concentration_[cell]);
+        cmax_[cell] = std::max(cmax0_[cell], concentration_[cell]);
+        saturation_[cell] = std::min(std::max(saturation_[cell], smin_[2*cell]), smax_[2*cell]);
+        computeMc(concentration_[cell], mc_[cell]);
+        mobility(saturation_[cell], concentration_[cell], cell, &mob_[2*cell]);
+    }
+
+    int TransportModelPolymer::solveGravityColumn(const std::vector<int>& cells)
+    {
+        // Set up column gravflux.
+        const int nc = cells.size();
+        std::vector<double> col_gravflux(nc - 1);
+        for (int ci = 0; ci < nc - 1; ++ci) {
+	    const int cell = cells[ci];
+	    const int next_cell = cells[ci + 1];
+	    for (int j = grid_.cell_facepos[cell]; j < grid_.cell_facepos[cell+1]; ++j) {
+		const int face = grid_.cell_faces[j];
+		const int c1 = grid_.face_cells[2*face + 0];
+                const int c2 = grid_.face_cells[2*face + 1];
+		if (c1 == next_cell || c2 == next_cell) {
+                    const double gf = gravflux_[face];
+                    col_gravflux[ci] = (c1 == cell) ? gf : -gf;
+		}
+	    }
+        }
+
+        // Store initial saturation s0
+        s0_.resize(nc);
+        c0_.resize(nc);
+        cmax0_.resize(nc);
+        for (int ci = 0; ci < nc; ++ci) {
+            s0_[ci] = saturation_[cells[ci]];
+            c0_[ci] = concentration_[cells[ci]];
+            cmax0_[ci] = cmax_[cells[ci]];
+        }
+
+        // Solve single cell problems, repeating if necessary.
+	double max_s_change = 0.0;
+        int num_iters = 0;
+        do {
+            max_s_change = 0.0;
+            for (int ci = 0; ci < nc; ++ci) {
+                const int ci2 = nc - ci - 1;
+                double old_s[2] = { saturation_[cells[ci]],
+                                    saturation_[cells[ci2]] };
+                saturation_[cells[ci]] = s0_[ci];
+                saturation_[cells[ci2]] = s0_[ci2];
+                solveSingleCellGravity(cells, ci, &col_gravflux[0]);
+                solveSingleCellGravity(cells, ci2, &col_gravflux[0]);
+                max_s_change = std::max(max_s_change, std::max(std::fabs(saturation_[cells[ci]] - old_s[0]),
+                                                               std::fabs(saturation_[cells[ci2]] - old_s[1])));
+            }
+            // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change << std::endl;
+	} while (max_s_change > tol_ && ++num_iters < maxit_);
+
+	if (max_s_change > tol_) {
+	    THROW("In solveGravityColumn(), we did not converge after "
+	    	  << num_iters << " iterations. Delta s = " << max_s_change);
+	}
+        return num_iters + 1;
+    }
+
+
+    void TransportModelPolymer::solveGravity(const std::vector<std::vector<int> >& columns,
+                                              const double* porevolume,
+                                              const double dt,
+                                              std::vector<double>& saturation,
+                                              std::vector<double>& concentration,
+                                              std::vector<double>& cmax)
+    {
+        // Initialize mobilities.
+        const int nc = grid_.number_of_cells;
+        mob_.resize(2*nc);
+
+        for (int cell = 0; cell < nc; ++cell) {
+            mobility(saturation[cell], concentration[cell], cell, &mob_[2*cell]);
+        }
+
+        // Set up other variables.
+        porevolume_ = porevolume;
+        dt_ = dt;
+        saturation_ = &saturation[0];
+        concentration_ = &concentration[0];
+        cmax_ = &cmax[0];
+
+        // Solve on all columns.
+        int num_iters = 0;
+        for (std::vector<std::vector<int> >::size_type i = 0; i < columns.size(); i++) {
+            // std::cout << "==== new column" << std::endl;
+            num_iters += solveGravityColumn(columns[i]);
+        }
+        std::cout << "Gauss-Seidel column solver average iterations: "
+                  << double(num_iters)/double(columns.size()) << std::endl;
     }
 
 } // namespace Opm

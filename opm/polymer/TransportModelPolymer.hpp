@@ -70,6 +70,18 @@ namespace Opm
 	void solveSingleCellNewton(int cell);
 	class ResidualEquation;
 
+        void initGravity(const double* grav);
+        void solveSingleCellGravity(const std::vector<int>& cells,
+                                    const int pos,
+                                    const double* gravflux);
+        int solveGravityColumn(const std::vector<int>& cells);
+        void solveGravity(const std::vector<std::vector<int> >& columns,
+                          const double* porevolume,
+                          const double dt,
+                          std::vector<double>& saturation,
+                          std::vector<double>& concentration,
+                          std::vector<double>& cmax);
+
 
     private:
 	const UnstructuredGrid& grid_;
@@ -94,8 +106,18 @@ namespace Opm
 	const double* visc_;
 	SingleCellMethod method_;
 
+        // For gravity segregation.
+        std::vector<double> gravflux_;
+        std::vector<double> mob_;
+        std::vector<double> s0_;
+        std::vector<double> c0_;
+        std::vector<double> cmax0_;
+
 	struct ResidualC;
 	struct ResidualS;
+
+	class ResidualCGrav;
+	class ResidualSGrav;
 
 
 	void fracFlow(double s, double c, double cmax, int cell, double& ff) const;
@@ -105,6 +127,7 @@ namespace Opm
                           double* dff_dsdc, bool if_with_der) const;
 	void computeMc(double c, double& mc) const;
 	void computeMcWithDer(double c, double& mc, double& dmc_dc) const;
+        void mobility(double s, double c, int cell, double* mob) const;
     };
 
 } // namespace Opm
