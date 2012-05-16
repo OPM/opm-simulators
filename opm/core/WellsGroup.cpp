@@ -962,15 +962,15 @@ namespace Opm
     namespace
     {
 
-        InjectionSpecification::InjectorType toInjectorType(std::string type)
+        InjectionSpecification::InjectorType toInjectorType(const std::string& type)
         {
-            if (type == "OIL") {
+            if (type[0] == 'O') {
                 return InjectionSpecification::OIL;
             }
-            if (type == "WATER") {
+            if (type[0] == 'W') {
                 return InjectionSpecification::WATER;
             }
-            if (type == "GAS") {
+            if (type[0] == 'G') {
                 return InjectionSpecification::GAS;
             }
             THROW("Unknown type " << type << ", could not convert to SurfaceComponent");
@@ -1076,11 +1076,6 @@ namespace Opm
 
             if (deck.hasField("WCONPROD")) {
                 WCONPROD wconprod = deck.getWCONPROD();
-
-#if THIS_STATEMENT_IS_REALLY_NEEDED
-                std::cout << wconprod.wconprod.size() << std::endl;
-#endif
-
                 for (size_t i = 0; i < wconprod.wconprod.size(); i++) {
                     if (wconprod.wconprod[i].well_ == name) {
                         WconprodLine line = wconprod.wconprod[i];
