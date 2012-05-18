@@ -26,6 +26,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/newwells.h>
 #include <opm/core/BlackoilState.hpp>
 #include <opm/core/WellState.hpp>
@@ -37,41 +38,45 @@ namespace Opm
 
 
     /// Construct solver.
-    /// \param[in] g             A 2d or 3d grid.
-    /// \param[in] permeability  Array of permeability tensors, the array
-    ///                          should have size N*D^2, if D == g.dimensions
-    ///                          and N == g.number_of_cells.
+    /// \param[in] grid          A 2d or 3d grid.
+    /// \param[in] props         Rock and fluid properties.
+    /// \param[in] linsolver     Linear solver to use.
     /// \param[in] gravity       Gravity vector. If nonzero, the array should
     ///                          have D elements.
     /// \param[in] wells         The wells argument. Will be used in solution, 
-    ///                          is ignored if NULL
-    CompressibleTpfa::CompressibleTpfa(const UnstructuredGrid& g,
-                                       const double* permeability,
-                                       const double* porevol,
-                                       const double* /* gravity */, // ???
+    ///                          is ignored if NULL.
+    ///                          Note: this class observes the well object, and
+    ///                                makes the assumption that the well topology
+    ///                                and completions does not change during the
+    ///                                run. However, controls (only) are allowed
+    ///                                to change.
+    CompressibleTpfa::CompressibleTpfa(const UnstructuredGrid& grid,
+                                       const BlackoilPropertiesInterface& props,
                                        const LinearSolverInterface& linsolver,
-                                       const struct Wells* wells,
-                                       const int num_phases)
-	: grid_(g),
-          porevol_(porevol),
+                                       const double* gravity,
+                                       const struct Wells* wells)
+	: grid_(grid),
+          props_(props),
           linsolver_(linsolver),
-	  htrans_(g.cell_facepos[ g.number_of_cells ]),
-	  trans_ (g.number_of_faces),
-          wells_(wells)
+          gravity_(gravity),
+          wells_(wells),
+	  htrans_(grid.cell_facepos[ grid.number_of_cells ]),
+	  trans_ (grid.number_of_faces)
     {
-        if (wells_ && (wells_->number_of_phases != num_phases)) {
-            THROW("Inconsistent number of phases specified: "
-                  << wells_->number_of_phases << " != " << num_phases);
+        if (wells_ && (wells_->number_of_phases != props.numPhases())) {
+            THROW("Inconsistent number of phases specified (wells vs. props): "
+                  << wells_->number_of_phases << " != " << props.numPhases());
         }
-        const int num_dofs = g.number_of_cells + (wells ? wells->number_of_wells : 0);
+        const int num_dofs = grid.number_of_cells + (wells ? wells->number_of_wells : 0);
         pressure_increment_.resize(num_dofs);
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
-	tpfa_htrans_compute(gg, permeability, &htrans_[0]);
+	tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
 	tpfa_trans_compute(gg, &htrans_[0], &trans_[0]);
+        computePorevolume(grid_, props.porosity(), porevol_);
         cfs_tpfa_res_wells w;
         w.W = const_cast<struct Wells*>(wells_);
         w.data = NULL;
-	h_ = cfs_tpfa_res_construct(gg, &w, num_phases);
+	h_ = cfs_tpfa_res_construct(gg, &w, props.numPhases());
     }
 
 
@@ -92,7 +97,7 @@ namespace Opm
                                  WellState& well_state)
     {
         // Set up dynamic data.
-        computePerSolveDynamicData();
+        computePerSolveDynamicData(state);
         computePerIterationDynamicData();
 
         // Assemble J and F.
@@ -125,9 +130,52 @@ namespace Opm
 
 
 
-    /// Compute per-solve dynamic properties.
-    void CompressibleTpfa::computePerSolveDynamicData()
+
+    /// Compute well potentials.
+    void CompressibleTpfa::computeWellPotentials(const BlackoilState& state)
     {
+        if (wells_ == NULL) return;
+
+        const int nw = wells_->number_of_wells;
+        const int np = props_.numPhases();
+        const int nperf = wells_->well_connpos[nw];
+        const int dim = grid_.dimensions;
+        const double grav = gravity_ ? gravity_[dim - 1] : 0.0;
+        if (grav == 0.0) {
+            wellperf_gpot_.clear();
+            wellperf_gpot_.resize(np*nperf, 0.0);
+            return;
+        }
+        // Temporary storage for perforation A matrices and densities.
+        std::vector<double> A(np*np, 0.0);
+        std::vector<double> rho(np, 0.0);
+
+        // Main loop, iterate over all perforations,
+        // using the following formula (by phase):
+        //    gpot(perf) = g*(perf_z - well_ref_z)*rho(perf)
+        // where the phase densities rho(perf) are taken to be
+        // the densities in the perforation cell.
+        for (int w = 0; w < nw; ++w) {
+            const double ref_depth = wells_->depth_ref[w];
+            for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w + 1]; ++j) {
+                const int cell = wells_->well_cells[j];
+                const double cell_depth = grid_.cell_centroids[dim * cell + dim - 1];
+                props_.matrix(1, &state.pressure()[cell], &state.surfacevol()[np*cell], &cell, &A[0], 0);
+                props_.density(1, &A[0], &rho[0]);
+                for (int phase = 0; phase < np; ++phase) {
+                    wellperf_gpot_[np*j + phase] = rho[phase]*grav*(cell_depth - ref_depth);
+                }
+            }
+        }
+    }
+
+
+
+
+    /// Compute per-solve dynamic properties.
+    void CompressibleTpfa::computePerSolveDynamicData(const BlackoilState& state)
+    {
+        computeWellPotentials(state);
     }
 
 
@@ -136,6 +184,14 @@ namespace Opm
     /// Compute per-iteration dynamic properties.
     void CompressibleTpfa::computePerIterationDynamicData()
     {
+        // std::vector<double> face_gravcap_;
+        // std::vector<double> wellperf_A_;
+        // std::vector<double> wellperf_phasemob_;
+        // std::vector<double> cell_A_;
+        // std::vector<double> cell_dA_;
+        // std::vector<double> face_A_;
+        // std::vector<double> face_phasemob_;
+        // std::vector<double> cell_voldisc_;
     }
 
 
@@ -169,7 +225,7 @@ namespace Opm
         cq.voldiscr = &cell_voldisc_[0];
         cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
                               &face_gravcap_[0], cell_press, well_bhp,
-                              porevol_, h_);
+                              &porevol_[0], h_);
     }
 
 

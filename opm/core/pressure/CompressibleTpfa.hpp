@@ -32,6 +32,7 @@ namespace Opm
 {
 
     class BlackoilState;
+    class BlackoilPropertiesInterface;
     class LinearSolverInterface;
     class WellState;
 
@@ -42,23 +43,24 @@ namespace Opm
     class CompressibleTpfa
     {
     public:
-	/// Construct solver.
-	/// \param[in] g             A 2d or 3d grid.
-	/// \param[in] permeability  Array of permeability tensors, the array
-	///                          should have size N*D^2, if D == g.dimensions
-	///                          and N == g.number_of_cells.
-	/// \param[in] gravity       Gravity vector. If nonzero, the array should
-	///                          have D elements.
+        /// Construct solver.
+        /// \param[in] grid          A 2d or 3d grid.
+        /// \param[in] props         Rock and fluid properties.
+        /// \param[in] linsolver     Linear solver to use.
+        /// \param[in] gravity       Gravity vector. If nonzero, the array should
+        ///                          have D elements.
         /// \param[in] wells         The wells argument. Will be used in solution, 
-        ///                          is ignored if NULL
-        /// \param[in] num_phases    Must be 2 or 3.
-	CompressibleTpfa(const UnstructuredGrid& g,
-                         const double* porevol,
-                         const double* permeability,
-                         const double* gravity,
+        ///                          is ignored if NULL.
+        ///                          Note: this class observes the well object, and
+        ///                                makes the assumption that the well topology
+        ///                                and completions does not change during the
+        ///                                run. However, controls (only) are allowed
+        ///                                to change.
+	CompressibleTpfa(const UnstructuredGrid& grid,
+                         const BlackoilPropertiesInterface& props,
                          const LinearSolverInterface& linsolver,
-                         const struct Wells* wells,
-                         const int num_phases);
+                         const double* gravity,
+                         const Wells* wells);
 
 	/// Destructor.
 	~CompressibleTpfa();
@@ -68,7 +70,8 @@ namespace Opm
                    WellState& well_state);
 
     private:
-        void computePerSolveDynamicData();
+        void computeWellPotentials(const BlackoilState& state);
+        void computePerSolveDynamicData(const BlackoilState& state);
         void computePerIterationDynamicData();
         void assemble(const double dt,
                       const BlackoilState& state,
@@ -82,11 +85,13 @@ namespace Opm
 
         // ------ Data that will remain unmodified after construction. ------
 	const UnstructuredGrid& grid_;
-        const double* porevol_;
+        const BlackoilPropertiesInterface& props_;
         const LinearSolverInterface& linsolver_;
+        const double* gravity_;
+        const Wells* wells_;   // Outside may modify controls (only) between calls to solve().
 	std::vector<double> htrans_;
 	std::vector<double> trans_ ;
-        const Wells* wells_;   // Outside may modify controls (only) between calls to solve().
+        std::vector<double> porevol_;
 
         // ------ Internal data for the cfs_tpfa_res solver. ------
 	struct cfs_tpfa_res_data* h_;
