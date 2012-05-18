@@ -61,13 +61,13 @@ namespace Dumux
 template <class Scalar>
 class H2O : public Component<Scalar, H2O<Scalar> >
 {
-
+    typedef Dumux::Constants<Scalar> Constants;
     typedef IAPWS::Common<Scalar> Common;
     typedef IAPWS::Region1<Scalar> Region1;
     typedef IAPWS::Region2<Scalar> Region2;
     typedef IAPWS::Region4<Scalar> Region4;
 
-    static const Scalar Rs; // specific gas constant of water
+    static constexpr Scalar Rs = Common::Rs; // specific gas constant of water
 
 public:
     /*!
@@ -930,9 +930,6 @@ private:
             Rs * temperature / pressure;
     };
 }; // end class
-
-template <class Scalar>
-const Scalar H2O<Scalar>::Rs = Common::Rs;
 
 } // end namepace
 
