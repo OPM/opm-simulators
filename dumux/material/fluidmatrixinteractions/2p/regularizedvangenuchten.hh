@@ -32,10 +32,9 @@
 #include "vangenuchten.hh"
 #include "regularizedvangenuchtenparams.hh"
 
-#include <algorithm>
-
-
 #include <dumux/common/spline.hh>
+
+#include <algorithm>
 
 namespace Dumux
 {

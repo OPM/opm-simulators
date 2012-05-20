@@ -94,9 +94,7 @@ public:
      *         Genuchten, linear...)
      */
     static Scalar pC(const Params &params, Scalar Sw)
-    {
-        return EffLaw::pC(params, SwToSwe(params, Sw));
-    }
+    { return EffLaw::pC(params, SwToSwe(params, Sw));}
 
     /*!
      * \brief The saturation-capillary pressure curve.
