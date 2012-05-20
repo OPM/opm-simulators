@@ -32,6 +32,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <dumux/common/valgrind.hh>
+
 namespace Dumux
 {
 /*!

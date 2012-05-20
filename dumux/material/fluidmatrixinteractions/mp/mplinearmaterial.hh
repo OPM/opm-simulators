@@ -30,6 +30,8 @@
 
 #include "mplinearmaterialparams.hh"
 
+#include <dune/common/exceptions.hh>
+
 #include <algorithm>
 
 namespace Dumux
