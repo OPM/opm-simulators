@@ -21,7 +21,7 @@ struct SortByAbsFlux
     {}
     bool operator() (int f1, int f2)
     {
-	return std::fabs(flux_[f1]) < std::fabs(flux_[f2]);
+        return std::fabs(flux_[f1]) < std::fabs(flux_[f2]);
     }
     const double* flux_;
 };
@@ -86,7 +86,7 @@ make_upwind_graph(int           nc       ,
 
             if ( theflux < 0)
             {
-		ja[p++] = work[f];
+                ja[p++] = work[f];
             }
         }
         ia[i+1] = p;
@@ -100,11 +100,11 @@ compute_reorder_sequence_graph(int           nc,
                                const int    *cellfaces,
                                const int    *facepos,
                                const int    *face2cell,
-			       const double *flux,
+                               const double *flux,
                                int          *sequence,
                                int          *components,
                                int          *ncomponents,
-			       int *ia, int *ja, int* work)
+                               int *ia, int *ja, int* work)
 // ---------------------------------------------------------------------
 {
     make_upwind_graph(nc, cellfaces, facepos, face2cell,
@@ -130,7 +130,7 @@ compute_sequence(const struct UnstructuredGrid* grid       ,
     std::vector<int> work(sz);
     std::vector<int> ia  (nc + 1);
     std::vector<int> ja  (nf);  // A bit too much.
-    
+
     compute_reorder_sequence_graph(grid->number_of_cells,
                                    grid->cell_faces,
                                    grid->cell_facepos,
