@@ -48,7 +48,7 @@ namespace Opm {
         class ModelParameterStorage {
         public:
             ModelParameterStorage(int nc, int totconn)
-                : drho_(0.0), deadporespace_(0.0), rockdensity_(0.0), mob_(0), 
+                : drho_(0.0), rockdensity_(0.0), mob_(0), 
                   dmobds_(0), dmobwatdc_(0), mc_(0),
                   dmcdc_(0), porevol_(0), porosity_(0), dg_(0), sw_(0), c_(0), cmax_(0),
                   ds_(0), dsc_(0), dcads_(0), dcadsdc_(0), pc_(0), dpc_(0), 
@@ -63,12 +63,11 @@ namespace Opm {
                 alloc_sz +=  nc;           // dmcdc_
                 alloc_sz += 1 * nc;        // porevol_
                 alloc_sz += 1 * nc;        // porosity_
-                alloc_sz += 1 * nc;        // deadporespace_
                 alloc_sz += 1 * totconn;   // dg_
                 alloc_sz += 1 * nc;        // sw_
                 alloc_sz += 1 * nc;        // c_
                 alloc_sz += 1 * nc;        // cmax_
-                alloc_sz += 1 * nc;        // dc_
+                alloc_sz += 1 * nc;        // ds_
                 alloc_sz += 1 * nc;        // dsc_
                 alloc_sz += 1 * nc;        // dcads_
                 alloc_sz += 1 * nc;        // dcadsdc_
@@ -99,9 +98,6 @@ namespace Opm {
 
             double&       drho   ()            { return drho_            ; }
             double        drho   ()      const { return drho_            ; }
-
-            double&       deadporespace()            { return deadporespace_      ; }
-            double        deadporespace()    const { return deadporespace_  ; }
 
             double&       rockdensity()            { return rockdensity_      ; }
             double        rockdensity()    const { return rockdensity_  ; }
@@ -163,7 +159,6 @@ namespace Opm {
 
         private:
             double  drho_        ;
-            double  deadporespace_ ;
             double  rockdensity_  ;
             double *mob_         ;
             double *dmobds_      ;
@@ -382,7 +377,7 @@ namespace Opm {
             (void) g;
 
             const double pv   = store_.porevol(cell);
-            const double dps  = store_.deadporespace();
+            const double dps  = fluid_.deadporespace();
             const double rhor = fluid_.rockdensity();
             const double poro = store_.porosity(cell);
 
