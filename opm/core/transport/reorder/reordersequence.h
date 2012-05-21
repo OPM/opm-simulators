@@ -26,10 +26,11 @@ struct UnstructuredGrid;
  *                 permutation.
  *
  * \param[in] flux Darcy flux field.  One scalar value for each
- *                 interface/connection in the grid, including the boundary.  We assume that
- *                 <CODE>flux[f]</CODE> is positive if the flow is
- *                 from cell <CODE>grid->face_cells[2*f + 0]</CODE> to
- *                 cell <CODE>grid->face_cells[2*f + 1]</CODE>.
+ *                 interface/connection in the grid, including the
+ *                 boundary.  We assume that <CODE>flux[f]</CODE> is
+ *                 positive if the flow is from cell
+ *                 <CODE>grid->face_cells[2*f + 0]</CODE> to cell
+ *                 <CODE>grid->face_cells[2*f + 1]</CODE>.
  *
  * \param[out] sequence
  *                 Causal grid cell permutation.  Ordered according to
@@ -58,9 +59,9 @@ struct UnstructuredGrid;
  *                 Number of strongly connected components.  Pointer
  *                 to a single integer.  The <CODE>components</CODE>
  *                 output are valid for all <CODE>i = 0
- *                 ... *ncomponents - 1</CODE>. Furhtermore, the number of
- *                 components must be in the interval <CODE>[1
- *                 .. grid->number_of_cells]</CODE>.
+ *                 ... *ncomponents - 1</CODE>. Furhtermore, the
+ *                 number of components must be in the interval
+ *                 <CODE>[1 .. grid->number_of_cells]</CODE>.
  */
 void
 compute_sequence(const struct UnstructuredGrid *grid       ,
@@ -78,10 +79,11 @@ compute_sequence(const struct UnstructuredGrid *grid       ,
  *                 permutation.
  *
  * \param[in] flux Darcy flux field.  One scalar value for each
- *                 interface/connection in the grid, including the boundary.  We assume that
- *                 <CODE>flux[f]</CODE> is positive if the flow is
- *                 from cell <CODE>grid->face_cells[2*f + 0]</CODE> to
- *                 cell <CODE>grid->face_cells[2*f + 1]</CODE>.
+ *                 interface/connection in the grid, including the
+ *                 boundary.  We assume that <CODE>flux[f]</CODE> is
+ *                 positive if the flow is from cell
+ *                 <CODE>grid->face_cells[2*f + 0]</CODE> to cell
+ *                 <CODE>grid->face_cells[2*f + 1]</CODE>.
  *
  * \param[out] sequence
  *                 Causal grid cell permutation.  Ordered according to
@@ -110,9 +112,9 @@ compute_sequence(const struct UnstructuredGrid *grid       ,
  *                 Number of strongly connected components.  Pointer
  *                 to a single integer.  The <CODE>components</CODE>
  *                 output are valid for all <CODE>i = 0
- *                 ... *ncomponents - 1</CODE>. Furhtermore, the number of
- *                 components must be in the interval <CODE>[1
- *                 .. grid->number_of_cells]</CODE>.
+ *                 ... *ncomponents - 1</CODE>. Furhtermore, the
+ *                 number of components must be in the interval
+ *                 <CODE>[1 .. grid->number_of_cells]</CODE>.
  *
  * \param[out] ia  Indirection pointers into <CODE>ja</CODE> that
  *                 define the "upwind" cells that influence a
