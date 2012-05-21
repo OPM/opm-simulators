@@ -163,8 +163,8 @@ namespace Opm
 
         std::cout << "Solved pressure in " << iter << " iterations." << std::endl;
 
-        // Write to output parameters.
-        // computeResults(...);
+        // Compute fluxes and face pressures.
+        computeResults(state, well_state);
     }
 
 
@@ -517,15 +517,41 @@ namespace Opm
 
 
     /// Compute the output.
-    void CompressibleTpfa::computeResults(std::vector<double>& // pressure
-                                          ,
-                                          std::vector<double>& // faceflux
-                                          ,
-                                          std::vector<double>& // well_bhp
-                                          ,
-                                          std::vector<double>& // well_rate
-                                          ) const
+    void CompressibleTpfa::computeResults(BlackoilState& state,
+                                          WellState& well_state) const
     {
+	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+        CompletionData completion_data;
+        completion_data.gpot = const_cast<double*>(&wellperf_gpot_[0]);
+        completion_data.A = const_cast<double*>(&wellperf_A_[0]);
+        completion_data.phasemob = const_cast<double*>(&wellperf_phasemob_[0]);
+        cfs_tpfa_res_wells wells_tmp;
+        wells_tmp.W = const_cast<Wells*>(wells_);
+        wells_tmp.data = &completion_data;
+        cfs_tpfa_res_forces forces;
+        forces.wells = &wells_tmp;
+        forces.src = NULL;
+
+        cfs_tpfa_res_flux(gg,
+                          &forces,
+                          props_.numPhases(),
+                          &trans_[0],
+                          &cell_phasemob_[0],
+                          &face_phasemob_[0],
+                          &face_gravcap_[0],
+                          &state.pressure()[0],
+                          &well_state.bhp()[0],
+                          &state.faceflux()[0],
+                          &well_state.perfRates()[0]);
+        cfs_tpfa_res_fpress(gg,
+                            props_.numPhases(),
+                            &htrans_[0],
+                            &face_phasemob_[0],
+                            &face_gravcap_[0],
+                            h_,
+                            &state.pressure()[0],
+                            &state.faceflux()[0],
+                            &state.facepressure()[0]);
     }
 
 } // namespace Opm

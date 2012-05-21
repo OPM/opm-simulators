@@ -101,10 +101,8 @@ namespace Opm
         void solveIncrement();
         double residualNorm() const;
         double incrementNorm() const;
-	void computeResults(std::vector<double>& pressure,
-                            std::vector<double>& faceflux,
-                            std::vector<double>& well_bhp,
-                            std::vector<double>& well_rate) const;
+	void computeResults(BlackoilState& state,
+                            WellState& well_state) const;
 
         // ------ Data that will remain unmodified after construction. ------
 	const UnstructuredGrid& grid_;
