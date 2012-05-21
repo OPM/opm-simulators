@@ -122,10 +122,9 @@ namespace Opm
         double inc_norm = 0.0;
         int iter = 0;
         double res_norm = residualNorm();
-        const int width = 18;
-        std::cout << "\nIteration         Residual          Change"
-                  << std::setw(width) << iter
-                  << std::setw(width) << res_norm << std::endl;
+        std::cout << "\nIteration         Residual        Change in p\n"
+                  << std::setw(9) << iter
+                  << std::setw(18) << res_norm << std::endl;
         for (; (iter < maxiter_) && (res_norm > residual_tol_); ++iter) {
             // Solve for increment in Newton method:
             //   incr = x_{n+1} - x_{n} = -J^{-1}F
@@ -151,10 +150,9 @@ namespace Opm
             // Update residual norm.
             res_norm = residualNorm();
 
-            std::cout << "\nIteration         Residual          Change"
-                      << std::setw(width) << iter + 1
-                      << std::setw(width) << res_norm 
-                      << std::setw(width) << inc_norm << std::endl;
+            std::cout << std::setw(9) << iter + 1
+                      << std::setw(18) << res_norm 
+                      << std::setw(18) << inc_norm << std::endl;
         }
 
         if ((iter == maxiter_) && (res_norm > residual_tol_) && (inc_norm > change_tol_)) {
