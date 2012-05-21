@@ -4,21 +4,30 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  /* __cplusplus */
 
 struct UnstructuredGrid;
 
-void compute_sequence(const struct UnstructuredGrid *grid, const double *flux,
-                      int *sequence, int *components, int *ncomponents);
+void
+compute_sequence(const struct UnstructuredGrid *grid       ,
+                 const double                  *flux       ,
+                 int                           *sequence   ,
+                 int                           *components ,
+                 int                           *ncomponents);
 
-void compute_sequence_graph(const struct UnstructuredGrid *grid, const double *flux,
-			    int *sequence, int *components, int *ncomponents,
-			    int *ia, int *ja);
+void
+compute_sequence_graph(const struct UnstructuredGrid *grid       ,
+                       const double                  *flux       ,
+                       int                           *sequence   ,
+                       int                           *components ,
+                       int                           *ncomponents,
+                       int                           *ia         ,
+                       int                           *ja         );
 
 
 #ifdef __cplusplus
 }
-#endif
+#endif  /* __cplusplus */
 
 #endif /* REORDERSEQUENCE_H_INCLUDED */
 
