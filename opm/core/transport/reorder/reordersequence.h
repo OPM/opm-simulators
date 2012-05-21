@@ -59,7 +59,7 @@ struct UnstructuredGrid;
  *                 Number of strongly connected components.  Pointer
  *                 to a single integer.  The <CODE>components</CODE>
  *                 output are valid for all <CODE>i = 0
- *                 ... *ncomponents - 1</CODE>. Furhtermore, the
+ *                 ... *ncomponents - 1</CODE>.  Furthermore, the
  *                 number of components must be in the interval
  *                 <CODE>[1 .. grid->number_of_cells]</CODE>.
  */
@@ -112,7 +112,7 @@ compute_sequence(const struct UnstructuredGrid *grid       ,
  *                 Number of strongly connected components.  Pointer
  *                 to a single integer.  The <CODE>components</CODE>
  *                 output are valid for all <CODE>i = 0
- *                 ... *ncomponents - 1</CODE>. Furhtermore, the
+ *                 ... *ncomponents - 1</CODE>.  Furthermore, the
  *                 number of components must be in the interval
  *                 <CODE>[1 .. grid->number_of_cells]</CODE>.
  *
