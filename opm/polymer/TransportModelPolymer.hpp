@@ -109,9 +109,10 @@ namespace Opm
         // For gravity segregation.
         std::vector<double> gravflux_;
         std::vector<double> mob_;
+        std::vector<double> cmax0_;
+        // For gravity segregation, column variables
         std::vector<double> s0_;
         std::vector<double> c0_;
-        std::vector<double> cmax0_;
 
 	struct ResidualC;
 	struct ResidualS;

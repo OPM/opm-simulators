@@ -186,6 +186,11 @@ public:
         return props_.porosity();
     }
 
+    double deadporespace() const
+    {
+        return polyprops_.deadPoreVol();
+    }
+
     double rockdensity() const
     {
         return polyprops_.rockDensity();
@@ -394,6 +399,17 @@ main(int argc, char** argv)
         gravity[2] = param.getDefault("gravity", 0.0);
         // Init state variables (saturation and pressure).
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        // Init Polymer state
+        if (param.has("poly_init")) {
+            double poly_init = param.getDefault("poly_init", 0.0);
+            for (int cell = 0; cell < grid->c_grid()->number_of_cells; ++cell) {
+                if (state.saturation()[2*cell] > 0) {
+                    state.concentration()[cell] = poly_init;
+                } else {
+                    state.concentration()[cell] = 0.;
+                }
+            }
+        }
         // Init polymer properties.
         // Setting defaults to provide a simple example case.
         double c_max = param.getDefault("c_max_limit", 5.0);
@@ -417,8 +433,10 @@ main(int argc, char** argv)
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
         // polyprop.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
-        ads_vals[1] = 0.0015;
-        ads_vals[2] = 0.0025;
+        // ads_vals[1] = 0.0015;
+        // ads_vals[2] = 0.0025;
+        ads_vals[1] = 0.0;
+        ads_vals[2] = 0.0;
         polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
                      static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
                      c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
@@ -495,7 +513,7 @@ main(int argc, char** argv)
         src[0] = flow_per_sec;
         src[num_cells - 1] = -flow_per_sec;
     }
-    
+
     std::vector<double> reorder_src = src;
 
     // Boundary conditions.

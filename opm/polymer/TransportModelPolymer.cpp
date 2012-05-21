@@ -98,7 +98,7 @@ public:
     double sOfc(double c);
     double operator()(double s) const;
 };
-    
+
 
 namespace
 {
@@ -949,7 +949,7 @@ namespace Opm
     }
 
 
-    
+
     TransportModelPolymer::ResidualSGrav::ResidualSGrav(const ResidualCGrav& res_c_eq,
                                                         const double c)
         : res_c_eq_(res_c_eq),
@@ -967,7 +967,7 @@ namespace Opm
         c_ = c;
         int iters_used;
         return modifiedRegulaFalsi(*this, res_c_eq_.s0, 0.0, 1.0,
-                                   res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_, 
+                                   res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_,
                                    iters_used);
     }
 
@@ -1008,19 +1008,19 @@ namespace Opm
             nbcell[1] = cells[pos + 1];
             gf[1] = gravflux[pos];
         }
-            
+
         tm.polyprops_.adsorption(c0, cmax0, c_ads0);
     }
 
     double TransportModelPolymer::ResidualCGrav::operator()(double c) const
     {
-            
+
         ResidualSGrav res_s(*this);
         return computeGravResidualC(res_s.sOfc(c), c);
 
     }
 
-    double TransportModelPolymer::ResidualCGrav::computeGravResidualS(double s, double c) const 
+    double TransportModelPolymer::ResidualCGrav::computeGravResidualS(double s, double c) const
     {
 
         double mobcell[2];
@@ -1038,7 +1038,7 @@ namespace Opm
                     m[0] = tm.mob_[2*nbcell[nb]];
                     m[1] = mobcell[1];
                 }
-                if (m[0] + m[1] > 0.0) { 
+                if (m[0] + m[1] > 0.0) {
                     res += -dtpv*gf[nb]*m[0]*m[1]/(m[0] + m[1]);
                 }
             }
@@ -1046,7 +1046,7 @@ namespace Opm
         return res;
     }
 
-    double TransportModelPolymer::ResidualCGrav::computeGravResidualC(double s, double c) const 
+    double TransportModelPolymer::ResidualCGrav::computeGravResidualC(double s, double c) const
     {
 
         double mobcell[2];
@@ -1069,7 +1069,7 @@ namespace Opm
                     mc = tm.mc_[nbcell[nb]];
                     m[1] = mobcell[1];
                 }
-                if (m[0] + m[1] > 0.0) { 
+                if (m[0] + m[1] > 0.0) {
                     res += -dtpv*gf[nb]*mc*m[0]*m[1]/(m[0] + m[1]);
                 }
             }
@@ -1083,7 +1083,7 @@ namespace Opm
 	double sat[2] = { s, 1.0 - s };
         double relperm[2];
 	props_.relperm(1, sat, &cell, relperm, 0);
-        polyprops_.effectiveMobilities(c, cmax0_[cell], &visc_[cell], relperm, mob);
+        polyprops_.effectiveMobilities(c, cmax0_[cell], visc_, relperm, mob);
     }
 
 
@@ -1111,8 +1111,8 @@ namespace Opm
 
 
     void TransportModelPolymer::solveSingleCellGravity(const std::vector<int>& cells,
-                                                        const int pos,
-                                                        const double* gravflux)
+                                                       const int pos,
+                                                       const double* gravflux)
     {
         const int cell = cells[pos];
         ResidualCGrav res_c(*this, cells, pos, gravflux);
@@ -1160,11 +1160,9 @@ namespace Opm
         // Store initial saturation s0
         s0_.resize(nc);
         c0_.resize(nc);
-        cmax0_.resize(nc);
         for (int ci = 0; ci < nc; ++ci) {
             s0_[ci] = saturation_[cells[ci]];
             c0_[ci] = concentration_[cells[ci]];
-            cmax0_[ci] = cmax_[cells[ci]];
         }
 
         // Solve single cell problems, repeating if necessary.
@@ -1177,8 +1175,10 @@ namespace Opm
                 double old_s[2] = { saturation_[cells[ci]],
                                     saturation_[cells[ci2]] };
                 saturation_[cells[ci]] = s0_[ci];
-                saturation_[cells[ci2]] = s0_[ci2];
+                concentration_[cells[ci]] = c0_[ci];
                 solveSingleCellGravity(cells, ci, &col_gravflux[0]);
+                saturation_[cells[ci2]] = s0_[ci2];
+                concentration_[cells[ci2]] = c0_[ci2];
                 solveSingleCellGravity(cells, ci2, &col_gravflux[0]);
                 max_s_change = std::max(max_s_change, std::max(std::fabs(saturation_[cells[ci]] - old_s[0]),
                                                                std::fabs(saturation_[cells[ci2]] - old_s[1])));
@@ -1201,20 +1201,23 @@ namespace Opm
                                               std::vector<double>& concentration,
                                               std::vector<double>& cmax)
     {
-        // Initialize mobilities.
+        // initialize variables.
+        porevolume_ = porevolume;
+        dt_ = dt;
+        saturation_ = &saturation[0];
+        concentration_ = &concentration[0];
+        cmax_ = &cmax[0];
         const int nc = grid_.number_of_cells;
+        cmax0_.resize(nc);
+        std::copy(cmax.begin(), cmax.end(), &cmax0_[0]);
+
+        // Initialize mobilities.
         mob_.resize(2*nc);
 
         for (int cell = 0; cell < nc; ++cell) {
             mobility(saturation[cell], concentration[cell], cell, &mob_[2*cell]);
         }
 
-        // Set up other variables.
-        porevolume_ = porevolume;
-        dt_ = dt;
-        saturation_ = &saturation[0];
-        concentration_ = &concentration[0];
-        cmax_ = &cmax[0];
 
         // Solve on all columns.
         int num_iters = 0;
