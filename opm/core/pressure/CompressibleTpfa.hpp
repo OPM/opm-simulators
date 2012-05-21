@@ -47,7 +47,10 @@ namespace Opm
         /// \param[in] grid          A 2d or 3d grid.
         /// \param[in] props         Rock and fluid properties.
         /// \param[in] linsolver     Linear solver to use.
-        /// \param[in] gravity       Gravity vector. If nonzero, the array should
+        /// \param[in] residual_tol  Solution accepted if inf-norm of residual is smaller.
+        /// \param[in] change_tol    Solution accepted if inf-norm of change is smaller.
+        /// \param[in] maxiter       Maximum acceptable 
+        /// \param[in] gravity       Gravity vector. If non-null, the array should
         ///                          have D elements.
         /// \param[in] wells         The wells argument. Will be used in solution, 
         ///                          is ignored if NULL.
@@ -59,12 +62,18 @@ namespace Opm
 	CompressibleTpfa(const UnstructuredGrid& grid,
                          const BlackoilPropertiesInterface& props,
                          const LinearSolverInterface& linsolver,
+                         const double residual_tol,
+                         const double change_tol,
+                         const int maxiter,
                          const double* gravity,
                          const Wells* wells);
 
 	/// Destructor.
 	~CompressibleTpfa();
 
+        /// Solve the pressure equation by Newton-Raphson scheme.
+        /// May throw an exception if the number of iterations
+        /// exceed maxiter (set in constructor).
         void solve(const double dt,
                    BlackoilState& state,
                    WellState& well_state);
@@ -89,8 +98,8 @@ namespace Opm
         void assemble(const double dt,
                       const BlackoilState& state,
                       const WellState& well_state);
+        double residualNorm();
         void solveIncrement();
-
 	void computeResults(std::vector<double>& pressure,
                             std::vector<double>& faceflux,
                             std::vector<double>& well_bhp,
@@ -100,8 +109,11 @@ namespace Opm
 	const UnstructuredGrid& grid_;
         const BlackoilPropertiesInterface& props_;
         const LinearSolverInterface& linsolver_;
-        const double* gravity_;
-        const Wells* wells_;   // Outside may modify controls (only) between calls to solve().
+        const double residual_tol_;
+        const double change_tol_;
+        const int maxiter_;
+        const double* gravity_; // May be NULL
+        const Wells* wells_;    // May be NULL, outside may modify controls (only) between calls to solve().
 	std::vector<double> htrans_;
 	std::vector<double> trans_ ;
         std::vector<double> porevol_;
