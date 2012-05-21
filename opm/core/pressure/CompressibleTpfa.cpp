@@ -44,7 +44,10 @@ namespace Opm
     /// \param[in] grid          A 2d or 3d grid.
     /// \param[in] props         Rock and fluid properties.
     /// \param[in] linsolver     Linear solver to use.
-    /// \param[in] gravity       Gravity vector. If nonzero, the array should
+    /// \param[in] residual_tol  Solution accepted if inf-norm of residual is smaller.
+    /// \param[in] change_tol    Solution accepted if inf-norm of change is smaller.
+    /// \param[in] maxiter       Maximum acceptable 
+    /// \param[in] gravity       Gravity vector. If non-null, the array should
     ///                          have D elements.
     /// \param[in] wells         The wells argument. Will be used in solution, 
     ///                          is ignored if NULL.
