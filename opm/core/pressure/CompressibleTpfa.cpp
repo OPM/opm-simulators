@@ -181,11 +181,12 @@ namespace Opm
         const int nperf = wells_->well_connpos[nw];
         const int dim = grid_.dimensions;
         const double grav = gravity_ ? gravity_[dim - 1] : 0.0;
+        wellperf_gpot_.clear();
+        wellperf_gpot_.resize(np*nperf, 0.0);
         if (grav == 0.0) {
-            wellperf_gpot_.clear();
-            wellperf_gpot_.resize(np*nperf, 0.0);
             return;
         }
+
         // Temporary storage for perforation A matrices and densities.
         std::vector<double> A(np*np, 0.0);
         std::vector<double> rho(np, 0.0);
