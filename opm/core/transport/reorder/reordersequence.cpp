@@ -86,15 +86,10 @@ make_upwind_graph(int           nc       ,
 
             if ( theflux < 0)
             {
-                // ja[p++] = f;
 		ja[p++] = work[f];
             }
         }
         ia[i+1] = p;
-	// std::sort(ja + ia[i], ja + ia[i+1], SortByAbsFlux(flux));
-	// for (j = ia[i]; j < ia[i+1]; ++j) {
-	//     ja[j] = work[ja[j]];
-	// }
     }
 }
 
