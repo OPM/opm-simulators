@@ -70,7 +70,9 @@ namespace Opm
                    WellState& well_state);
 
     private:
-        void computePerSolveDynamicData(const BlackoilState& state);
+        void computePerSolveDynamicData(const double dt,
+                                        const BlackoilState& state,
+                                        const WellState& well_state);
         void computeWellPotentials(const BlackoilState& state);
         void computePerIterationDynamicData(const double dt,
                                             const BlackoilState& state,
@@ -84,9 +86,7 @@ namespace Opm
         void computeWellDynamicData(const double dt,
                                     const BlackoilState& state,
                                     const WellState& well_state);
-        void assemble(const double dt,
-                      const BlackoilState& state,
-                      const WellState& well_state);
+        void assemble();
         void solveIncrement();
 
 	void computeResults(std::vector<double>& pressure,
@@ -109,6 +109,10 @@ namespace Opm
 	struct cfs_tpfa_res_data* h_;
 
         // ------ Data that will be modified for every solve. ------
+        double dt_;
+        std::vector<double> initial_press_;
+        std::vector<double> initial_bhp_;
+        const double* cell_z_;
         std::vector<double> wellperf_gpot_;
 
         // ------ Data that will be modified for every solver iteration. ------

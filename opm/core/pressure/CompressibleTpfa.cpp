@@ -101,12 +101,14 @@ namespace Opm
                                  BlackoilState& state,
                                  WellState& well_state)
     {
+        const int nc = grid_.number_of_cells;
+
         // Set up dynamic data.
-        computePerSolveDynamicData(state);
+        computePerSolveDynamicData(dt, state, well_state);
         computePerIterationDynamicData(dt, state, well_state);
 
         // Assemble J and F.
-        assemble(dt, state, well_state);
+        assemble();
 
         bool residual_ok = false; // Replace with tolerance check.
         while (!residual_ok) {
@@ -116,12 +118,14 @@ namespace Opm
             solveIncrement();
 
             // Update pressure vars with increment.
+            std::copy(pressure_increment_.begin(), pressure_increment_.begin() + nc, state.pressure().begin());
+            std::copy(pressure_increment_.begin() + nc, pressure_increment_.end(), well_state.bhp().begin());
 
             // Set up dynamic data.
             computePerIterationDynamicData(dt, state, well_state);
 
             // Assemble J and F.
-            assemble(dt, state, well_state);
+            assemble();
 
             // Check for convergence.
             // Include both tolerance check for residual
@@ -178,8 +182,14 @@ namespace Opm
 
 
     /// Compute per-solve dynamic properties.
-    void CompressibleTpfa::computePerSolveDynamicData(const BlackoilState& state)
+    void CompressibleTpfa::computePerSolveDynamicData(const double dt,
+                                                      const BlackoilState& state,
+                                                      const WellState& well_state)
     {
+        dt_ = dt;
+        initial_press_ = state.pressure();
+        initial_bhp_ = well_state.bhp();
+        cell_z_ = &state.surfacevol()[0];
         computeWellPotentials(state);
     }
 
@@ -397,15 +407,11 @@ namespace Opm
 
 
     /// Compute the residual and Jacobian.
-    void CompressibleTpfa::assemble(const double dt,
-                                    const BlackoilState& state,
-                                    const WellState& well_state)
+    void CompressibleTpfa::assemble()
     {
-        const double* z = &state.surfacevol()[0];
-        const double* cell_press = &state.pressure()[0];
-        const double* well_bhp = well_state.bhp().empty() ? NULL : &well_state.bhp()[0];
+        const double* cell_press = &initial_press_[0];
+        const double* well_bhp = initial_bhp_.empty() ? NULL : &initial_bhp_[0];
 	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
-
         CompletionData completion_data;
         completion_data.gpot = &wellperf_gpot_[0];
         completion_data.A = &wellperf_A_[0];
@@ -422,7 +428,7 @@ namespace Opm
         cq.Af = &face_A_[0];
         cq.phasemobf = &face_phasemob_[0];
         cq.voldiscr = &cell_voldisc_[0];
-        cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
+        cfs_tpfa_res_assemble(gg, dt_, &forces, cell_z_, &cq, &trans_[0],
                               &face_gravcap_[0], cell_press, well_bhp,
                               &porevol_[0], h_);
     }
