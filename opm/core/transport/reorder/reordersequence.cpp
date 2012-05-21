@@ -11,6 +11,7 @@
 #endif
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <vector>
 
@@ -111,6 +112,9 @@ compute_reorder_sequence_graph(int           nc,
                       flux, ia, ja, work);
 
     tarjan (nc, ia, ja, sequence, components, ncomponents, work);
+
+    assert (0 < *ncomponents);
+    assert (*ncomponents <= nc);
 }
 
 
