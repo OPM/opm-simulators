@@ -576,9 +576,11 @@ namespace Opm
             double* z = &state.surfacevol()[c*np];
             const double* s = &state.saturation()[c*np];
             const double* A = &allA[c*np*np];
-            for (int row = 0; row < np; ++row) {
-                z[row] = 0.0;
-                for (int col = 0; col < np; ++col) {
+
+            for (int row = 0; row < np; ++row) { z[row] = 0.0; }
+
+            for (int col = 0; col < np; ++col) {
+                for (int row = 0; row < np; ++row) {
                     // Recall: A has column-major ordering.
                     z[row] += A[row + np*col]*s[col];
                 }
