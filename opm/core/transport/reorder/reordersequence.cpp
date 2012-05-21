@@ -1,7 +1,5 @@
 /* Copyright 2011 (c) Jostein R. Natvig <Jostein.R.Natvig at sintef.no> */
 
-#include <cstdlib>
-
 #ifdef MATLAB_MEX_FILE
 #include "grid.h"
 #include "reordersequence.h"
@@ -14,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 struct SortByAbsFlux
 {
@@ -133,25 +132,19 @@ compute_sequence(const struct UnstructuredGrid* grid       ,
     const std::size_t nf = grid->number_of_faces;
     const std::size_t sz = std::max(nf, 3 * nc);
 
-    int* work = (int*) std::malloc( sz      * sizeof *work);
-    int* ia   = (int*) std::malloc((nc + 1) * sizeof *ia  );
-    int* ja   = (int*) std::malloc( nf      * sizeof *ja  ); /* A bit too much... */
-
-    if (work && ia && ja) {
-        compute_reorder_sequence_graph(grid->number_of_cells,
-                                       grid->cell_faces,
-                                       grid->cell_facepos,
-                                       grid->face_cells,
-                                       flux,
-                                       sequence,
-                                       components,
-                                       ncomponents,
-                                       ia, ja, work);
-    }
-
-    std::free(ja);
-    std::free(ia);
-    std::free(work);
+    std::vector<int> work(sz);
+    std::vector<int> ia  (nc + 1);
+    std::vector<int> ja  (nf);  // A bit too much.
+    
+    compute_reorder_sequence_graph(grid->number_of_cells,
+                                   grid->cell_faces,
+                                   grid->cell_facepos,
+                                   grid->face_cells,
+                                   flux,
+                                   sequence,
+                                   components,
+                                   ncomponents,
+                                   & ia[0], & ja[0], & work[0]);
 }
 
 
@@ -170,21 +163,17 @@ compute_sequence_graph(const struct UnstructuredGrid* grid       ,
     const std::size_t nf = grid->number_of_faces;
     const std::size_t sz = std::max(nf, 3 * nc);
 
-    int* work = (int*) std::malloc(sz * sizeof *work);
+    std::vector<int> work(sz);
 
-    if (work) {
-        compute_reorder_sequence_graph(grid->number_of_cells,
-                                       grid->cell_faces,
-                                       grid->cell_facepos,
-                                       grid->face_cells,
-                                       flux,
-                                       sequence,
-                                       components,
-                                       ncomponents,
-                                       ia, ja, work);
-    }
-
-    std::free(work);
+    compute_reorder_sequence_graph(grid->number_of_cells,
+                                   grid->cell_faces,
+                                   grid->cell_facepos,
+                                   grid->face_cells,
+                                   flux,
+                                   sequence,
+                                   components,
+                                   ncomponents,
+                                   ia, ja, & work[0]);
 }
 
 
