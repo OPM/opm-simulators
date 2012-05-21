@@ -114,6 +114,7 @@ namespace Opm
                                  WellState& well_state)
     {
         const int nc = grid_.number_of_cells;
+        const int nw = wells_->number_of_wells;
 
         // Set up dynamic data.
         computePerSolveDynamicData(dt, state, well_state);
@@ -127,20 +128,29 @@ namespace Opm
         double res_norm = residualNorm();
         std::cout << "\nIteration         Residual        Change in p\n"
                   << std::setw(9) << iter
-                  << std::setw(18) << res_norm << std::endl;
-        for (; (iter < maxiter_) && (res_norm > residual_tol_); ++iter) {
+                  << std::setw(18) << res_norm
+                  << std::setw(18) << '*' << std::endl;
+        for (; (iter < maxiter_) && (res_norm > residual_tol_); ) {
             // Solve for increment in Newton method:
             //   incr = x_{n+1} - x_{n} = -J^{-1}F
             // (J is Jacobian matrix, F is residual)
             solveIncrement();
+            ++iter;
 
             // Update pressure vars with increment.
-            std::copy(pressure_increment_.begin(), pressure_increment_.begin() + nc, state.pressure().begin());
-            std::copy(pressure_increment_.begin() + nc, pressure_increment_.end(), well_state.bhp().begin());
+            for (int c = 0; c < nc; ++c) {
+                state.pressure()[c] += pressure_increment_[c];
+            }
+            for (int w = 0; w < nw; ++w) {
+                well_state.bhp()[w] += pressure_increment_[nc + w];
+            }
 
             // Stop iterating if increment is small.
             inc_norm = incrementNorm();
             if (inc_norm <= change_tol_) {
+                std::cout << std::setw(9) << iter
+                          << std::setw(18) << '*' 
+                          << std::setw(18) << inc_norm << std::endl;
                 break;
             }
 
@@ -153,7 +163,7 @@ namespace Opm
             // Update residual norm.
             res_norm = residualNorm();
 
-            std::cout << std::setw(9) << iter + 1
+            std::cout << std::setw(9) << iter
                       << std::setw(18) << res_norm 
                       << std::setw(18) << inc_norm << std::endl;
         }
@@ -411,11 +421,9 @@ namespace Opm
         wellperf_phasemob_.resize(nperf*np);
         // The A matrix is set equal to the perforation grid cells'
         // matrix, for both injectors and producers.
-        // The mobilities are all set equal to the total mobility for the
-        // cell for injectors, and equal to individual phase mobilities
-        // for producers.
+        // The mobilities are set equal to the perforation grid cells'
+        // mobilities, for both injectors and producers.
         for (int w = 0; w < nw; ++w) {
-            bool is_injector = wells_->type[w] == INJECTOR;
             for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w+1]; ++j) {
                 const int c = wells_->well_cells[j];
                 const double* cA = &cell_A_[np*np*c];
@@ -423,15 +431,7 @@ namespace Opm
                 std::copy(cA, cA + np*np, wpA);
                 const double* cM = &cell_phasemob_[np*c];
                 double* wpM = &wellperf_phasemob_[np*j];
-                if (is_injector) {
-                    double totmob = 0.0;
-                    for (int phase = 0; phase < np; ++phase) {
-                        totmob += cM[phase];
-                    }
-                    std::fill(wpM, wpM + np, totmob);
-                } else {
-                    std::copy(cM, cM + np, wpM);
-                }
+                std::copy(cM, cM + np, wpM);
             }
         }
     }
