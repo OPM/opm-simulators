@@ -550,6 +550,43 @@ namespace Opm
     }
 
 
+
+
+
+    /// Initialize surface volume from pressure and saturation by z = As.
+    template <class Props, class State>
+    void initBlackoilSurfvol(const UnstructuredGrid& grid,
+                             const Props& props,
+                             State& state)
+    {
+        state.surfacevol() = state.saturation();
+        const int np = props.numPhases();
+        const int nc = grid.number_of_cells;
+        std::vector<double> allA(nc*np*np);
+        std::vector<int> allcells(nc);
+        for (int c = 0; c < nc; ++c) {
+            allcells[c] = c;
+        }
+        // Assuming that using the saturation as z argument here does not change
+        // the outcome. This is not guaranteed unless we have only a single phase
+        // per cell.
+        props.matrix(nc, &state.pressure()[0], &state.surfacevol()[0], &allcells[0], &allA[0], 0);
+        for (int c = 0; c < nc; ++c) {
+            // Using z = As
+            double* z = &state.surfacevol()[c*np];
+            const double* s = &state.saturation()[c*np];
+            const double* A = &allA[c*np*np];
+            for (int row = 0; row < np; ++row) {
+                z[row] = 0.0;
+                for (int col = 0; col < np; ++col) {
+                    // Recall: A has column-major ordering.
+                    z[row] += A[row + np*col]*s[col];
+                }
+            }
+        }
+    }
+
+
 } // namespace Opm
 
 

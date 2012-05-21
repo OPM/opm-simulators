@@ -96,6 +96,21 @@ namespace Opm
                            const double gravity,
                            State& state);
 
+    /// Initialize a two-phase water-oil blackoil state from input deck.
+    /// If EQUIL is present:
+    ///   - saturation is set according to the water-oil contact,
+    ///   - pressure is set to hydrostatic equilibrium.
+    /// Otherwise:
+    ///   - saturation is set according to SWAT,
+    ///   - pressure is set according to PRESSURE.
+    /// In addition, this function sets surfacevol.
+    template <class Props, class State>
+    void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
+                                   const Props& props,
+                                   const EclipseGridParser& deck,
+                                   const double gravity,
+                                   State& state);
+
 
 } // namespace Opm
 
