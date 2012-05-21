@@ -61,7 +61,9 @@ namespace Opm
           gravity_(gravity),
           wells_(wells),
 	  htrans_(grid.cell_facepos[ grid.number_of_cells ]),
-	  trans_ (grid.number_of_faces)
+	  trans_ (grid.number_of_faces),
+          porevol_(grid.number_of_cells),
+          allcells_(grid.number_of_cells)
     {
         if (wells_ && (wells_->number_of_phases != props.numPhases())) {
             THROW("Inconsistent number of phases specified (wells vs. props): "
@@ -73,6 +75,9 @@ namespace Opm
 	tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
 	tpfa_trans_compute(gg, &htrans_[0], &trans_[0]);
         computePorevolume(grid_, props.porosity(), porevol_);
+        for (int c = 0; c < grid.number_of_cells; ++c) {
+            allcells_[c] = c;
+        }
         cfs_tpfa_res_wells w;
         w.W = const_cast<struct Wells*>(wells_);
         w.data = NULL;
@@ -98,7 +103,7 @@ namespace Opm
     {
         // Set up dynamic data.
         computePerSolveDynamicData(state);
-        computePerIterationDynamicData();
+        computePerIterationDynamicData(dt, state, well_state);
 
         // Assemble J and F.
         assemble(dt, state, well_state);
@@ -113,7 +118,7 @@ namespace Opm
             // Update pressure vars with increment.
 
             // Set up dynamic data.
-            computePerIterationDynamicData();
+            computePerIterationDynamicData(dt, state, well_state);
 
             // Assemble J and F.
             assemble(dt, state, well_state);
@@ -182,18 +187,212 @@ namespace Opm
 
 
     /// Compute per-iteration dynamic properties.
-    void CompressibleTpfa::computePerIterationDynamicData()
+    void CompressibleTpfa::computePerIterationDynamicData(const double dt,
+                                                          const BlackoilState& state,
+                                                          const WellState& well_state)
     {
+        // These are the variables that get computed by this function:
+        //
+        // std::vector<double> cell_A_;
+        // std::vector<double> cell_dA_;
+        // std::vector<double> cell_viscosity_;
+        // std::vector<double> cell_phasemob_;
+        // std::vector<double> cell_voldisc_;
+        // std::vector<double> face_A_;
+        // std::vector<double> face_phasemob_;
         // std::vector<double> face_gravcap_;
         // std::vector<double> wellperf_A_;
         // std::vector<double> wellperf_phasemob_;
-        // std::vector<double> cell_A_;
-        // std::vector<double> cell_dA_;
-        // std::vector<double> face_A_;
-        // std::vector<double> face_phasemob_;
-        // std::vector<double> cell_voldisc_;
+        computeCellDynamicData(dt, state, well_state);
+        computeFaceDynamicData(dt, state, well_state);
+        computeWellDynamicData(dt, state, well_state);
     }
 
+
+
+
+
+    /// Compute per-iteration dynamic properties for cells.
+    void CompressibleTpfa::computeCellDynamicData(const double /*dt*/,
+                                                  const BlackoilState& state,
+                                                  const WellState& /*well_state*/)
+    {
+        // These are the variables that get computed by this function:
+        //
+        // std::vector<double> cell_A_;
+        // std::vector<double> cell_dA_;
+        // std::vector<double> cell_viscosity_;
+        // std::vector<double> cell_phasemob_;
+        // std::vector<double> cell_voldisc_;
+        const int nc = grid_.number_of_cells;
+        const int np = props_.numPhases();
+        const double* cell_p = &state.pressure()[0];
+        const double* cell_z = &state.surfacevol()[0];
+        const double* cell_s = &state.saturation()[0];
+        cell_A_.resize(nc*np*np);
+        cell_dA_.resize(nc*np*np);
+        props_.matrix(nc, cell_p, cell_z, &allcells_[0], &cell_A_[0], &cell_dA_[0]);
+        cell_viscosity_.resize(nc*np);
+        props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
+        cell_phasemob_.resize(nc*np);
+        props_.relperm(nc, cell_s, &allcells_[0], &cell_phasemob_[0], 0);
+	std::transform(cell_phasemob_.begin(), cell_phasemob_.end(),
+		       cell_viscosity_.begin(),
+		       cell_phasemob_.begin(),
+		       std::divides<double>());
+        // Volume discrepancy: we have that
+        //     z = Au, voldiscr = sum(u) - 1,
+        // but I am not sure it is actually needed.
+        // Use zero for now.
+        // TODO: Check this!
+        cell_voldisc_.clear();
+        cell_voldisc_.resize(nc, 0.0);
+    }
+
+
+
+    /// Compute per-iteration dynamic properties for faces.
+    void CompressibleTpfa::computeFaceDynamicData(const double /*dt*/,
+                                                  const BlackoilState& state,
+                                                  const WellState& /*well_state*/)
+    {
+        // These are the variables that get computed by this function:
+        //
+        // std::vector<double> face_A_;
+        // std::vector<double> face_phasemob_;
+        // std::vector<double> face_gravcap_;
+        const int np = props_.numPhases();
+        const int nf = grid_.number_of_faces;
+        const int dim = grid_.dimensions;
+        const double grav = gravity_ ? gravity_[dim - 1] : 0.0;
+        std::vector<double> gravcontrib[2];
+        std::vector<double> pot[2];
+        gravcontrib[0].resize(np);
+        gravcontrib[1].resize(np);
+        pot[0].resize(np);
+        pot[1].resize(np);
+        face_A_.resize(nf*np*np);
+        face_phasemob_.resize(nf*np);
+        face_gravcap_.resize(nf*np);
+        for (int face = 0; face < nf; ++face) {
+            // Obtain properties from both sides of the face.
+            const double face_depth = grid_.face_centroids[face*dim + dim - 1];
+            const int* c = &grid_.face_cells[2*face];
+
+            // Get pressures and compute gravity contributions,
+            // to decide upwind directions.
+            double c_press[2];
+            for (int j = 0; j < 2; ++j) {
+                if (c[j] >= 0) {
+                    // Pressure
+                    c_press[j] = state.pressure()[c[j]];
+                    // Gravity contribution, gravcontrib = rho*(face_z - cell_z) [per phase].
+                    if (grav != 0.0) {
+                        const double depth_diff = face_depth - grid_.cell_centroids[c[j]*dim + dim - 1];
+                        props_.density(1, &cell_A_[np*np*c[j]], &gravcontrib[j][0]);
+                        for (int p = 0; p < np; ++p) {
+                            gravcontrib[j][p] *= depth_diff;
+                        }
+                    } else {
+                        std::fill(gravcontrib[j].begin(), gravcontrib[j].end(), 0.0);
+                    }
+                } else {
+                    // Pressures
+                    c_press[j] = state.facepressure()[face];
+                    // Gravity contribution.
+                    std::fill(gravcontrib[j].begin(), gravcontrib[j].end(), 0.0);
+                }
+            }
+
+            // Gravity contribution:
+            //    gravcapf = rho_1*g*(z_12 - z_1) - rho_2*g*(z_12 - z_2)
+            // where _1 and _2 refers to two neigbour cells, z is the
+            // z coordinate of the centroid, and z_12 is the face centroid.
+            // Also compute the potentials.
+            for (int phase = 0; phase < np; ++phase) {
+                face_gravcap_[np*face + phase] = gravcontrib[0][phase] - gravcontrib[1][phase];
+                pot[0][phase] = c_press[0] + face_gravcap_[np*face + phase];
+                pot[1][phase] = c_press[1];
+            }
+
+            // Now we can easily find the upwind direction for every phase,
+            // we can also tell which boundary faces are inflow bdys.
+
+            // Get upwind mobilities by phase.
+            // Get upwind A matrix rows by phase.
+            // NOTE:
+            // We should be careful to upwind the R factors,
+            // the B factors are not that vital.
+            //      z = Au = RB^{-1}u,
+            // where (this example is for gas-oil)
+            //      R = [1 RgL; RoV 1], B = [BL 0 ; 0 BV]
+            // (RgL is gas in Liquid phase, RoV is oil in Vapour phase.)
+            //      A = [1/BL RgL/BV; RoV/BL 1/BV]
+            // This presents us with a dilemma, as V factors should be
+            // upwinded according to V phase flow, same for L. What then
+            // about the RgL/BV and RoV/BL numbers?
+            // We give priority to R, and therefore upwind the rows of A
+            // by phase (but remember, Fortran matrix ordering).
+            // This prompts the question if we should split the matrix()
+            // property method into formation volume and R-factor methods.
+            for (int phase = 0; phase < np; ++phase) {
+                int upwindc = -1;
+                if (c[0] >=0 && c[1] >= 0) {
+                    upwindc = (pot[0] < pot[1]) ? c[1] : c[0];
+                } else {
+                    upwindc = (c[0] >= 0) ? c[0] : c[1];
+                }
+                face_phasemob_[np*face + phase] = cell_phasemob_[np*upwindc + phase];
+                for (int p2 = 0; p2 < np; ++p2) {
+                    // Recall: column-major ordering.
+                    face_A_[np*np*face + phase + np*p2]
+                        = cell_A_[np*np*upwindc + phase + np*p2];
+                }
+            }
+        }
+    }
+
+
+    /// Compute per-iteration dynamic properties for faces.
+    void CompressibleTpfa::computeWellDynamicData(const double /*dt*/,
+                                                  const BlackoilState& /*state*/,
+                                                  const WellState& /*well_state*/)
+    {
+        // These are the variables that get computed by this function:
+        //
+        // std::vector<double> wellperf_A_;
+        // std::vector<double> wellperf_phasemob_;
+        const int np = props_.numPhases();
+        const int nw = wells_->number_of_wells;
+        const int nperf = wells_->well_connpos[nw];
+        wellperf_A_.resize(nperf*np*np);
+        wellperf_phasemob_.resize(nperf*np);
+        // The A matrix is set equal to the perforation grid cells'
+        // matrix, for both injectors and producers.
+        // The mobilities are all set equal to the total mobility for the
+        // cell for injectors, and equal to individual phase mobilities
+        // for producers.
+        for (int w = 0; w < nw; ++w) {
+            bool is_injector = wells_->type[w] == INJECTOR;
+            for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w+1]; ++j) {
+                const int c = wells_->well_cells[j];
+                const double* cA = &cell_A_[np*np*c];
+                double* wpA = &wellperf_A_[np*np*j];
+                std::copy(cA, cA + np*np, wpA);
+                const double* cM = &cell_phasemob_[np*c];
+                double* wpM = &wellperf_phasemob_[np*j];
+                if (is_injector) {
+                    double totmob = 0.0;
+                    for (int phase = 0; phase < np; ++phase) {
+                        totmob += cM[phase];
+                    }
+                    std::fill(wpM, wpM + np, totmob);
+                } else {
+                    std::copy(cM, cM + np, wpM);
+                }
+            }
+        }
+    }
 
 
 

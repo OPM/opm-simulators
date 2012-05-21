@@ -70,9 +70,20 @@ namespace Opm
                    WellState& well_state);
 
     private:
-        void computeWellPotentials(const BlackoilState& state);
         void computePerSolveDynamicData(const BlackoilState& state);
-        void computePerIterationDynamicData();
+        void computeWellPotentials(const BlackoilState& state);
+        void computePerIterationDynamicData(const double dt,
+                                            const BlackoilState& state,
+                                            const WellState& well_state);
+        void computeCellDynamicData(const double dt,
+                                    const BlackoilState& state,
+                                    const WellState& well_state);
+        void computeFaceDynamicData(const double dt,
+                                    const BlackoilState& state,
+                                    const WellState& well_state);
+        void computeWellDynamicData(const double dt,
+                                    const BlackoilState& state,
+                                    const WellState& well_state);
         void assemble(const double dt,
                       const BlackoilState& state,
                       const WellState& well_state);
@@ -92,6 +103,7 @@ namespace Opm
 	std::vector<double> htrans_;
 	std::vector<double> trans_ ;
         std::vector<double> porevol_;
+        std::vector<int> allcells_;
 
         // ------ Internal data for the cfs_tpfa_res solver. ------
 	struct cfs_tpfa_res_data* h_;
@@ -101,14 +113,16 @@ namespace Opm
 
         // ------ Data that will be modified for every solver iteration. ------
         // Gravity and capillary contributions (per face).
+        std::vector<double> cell_A_;
+        std::vector<double> cell_dA_;
+        std::vector<double> cell_viscosity_;
+        std::vector<double> cell_phasemob_;
+        std::vector<double> cell_voldisc_;
+        std::vector<double> face_A_;
+        std::vector<double> face_phasemob_;
         std::vector<double> face_gravcap_;
         std::vector<double> wellperf_A_;
         std::vector<double> wellperf_phasemob_;
-        std::vector<double> cell_A_;
-        std::vector<double> cell_dA_;
-        std::vector<double> face_A_;
-        std::vector<double> face_phasemob_;
-        std::vector<double> cell_voldisc_;
         // The update to be applied to the pressures (cell and bhp).
         std::vector<double> pressure_increment_;
 
