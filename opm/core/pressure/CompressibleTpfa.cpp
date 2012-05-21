@@ -32,6 +32,9 @@
 #include <opm/core/WellState.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <iomanip>
 
 namespace Opm
 {
@@ -116,8 +119,14 @@ namespace Opm
         // Assemble J and F.
         assemble(dt, state, well_state);
 
-        bool residual_ok = false; // Replace with tolerance check.
-        while (!residual_ok) {
+        double inc_norm = 0.0;
+        int iter = 0;
+        double res_norm = residualNorm();
+        const int width = 18;
+        std::cout << "\nIteration         Residual          Change"
+                  << std::setw(width) << iter
+                  << std::setw(width) << res_norm << std::endl;
+        for (; (iter < maxiter_) && (res_norm > residual_tol_); ++iter) {
             // Solve for increment in Newton method:
             //   incr = x_{n+1} - x_{n} = -J^{-1}F
             // (J is Jacobian matrix, F is residual)
@@ -127,16 +136,32 @@ namespace Opm
             std::copy(pressure_increment_.begin(), pressure_increment_.begin() + nc, state.pressure().begin());
             std::copy(pressure_increment_.begin() + nc, pressure_increment_.end(), well_state.bhp().begin());
 
+            // Stop iterating if increment is small.
+            inc_norm = incrementNorm();
+            if (inc_norm <= change_tol_) {
+                break;
+            }
+
             // Set up dynamic data.
             computePerIterationDynamicData(dt, state, well_state);
 
             // Assemble J and F.
             assemble(dt, state, well_state);
 
-            // Check for convergence.
-            // Include both tolerance check for residual
-            // and solution change.
+            // Update residual norm.
+            res_norm = residualNorm();
+
+            std::cout << "\nIteration         Residual          Change"
+                      << std::setw(width) << iter + 1
+                      << std::setw(width) << res_norm 
+                      << std::setw(width) << inc_norm << std::endl;
         }
+
+        if ((iter == maxiter_) && (res_norm > residual_tol_) && (inc_norm > change_tol_)) {
+            THROW("CompressibleTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
+        }
+
+        std::cout << "Solved pressure in " << iter << " iterations." << std::endl;
 
         // Write to output parameters.
         // computeResults(...);
@@ -263,6 +288,7 @@ namespace Opm
 
 
 
+
     /// Compute per-iteration dynamic properties for faces.
     void CompressibleTpfa::computeFaceDynamicData(const double /*dt*/,
                                                   const BlackoilState& state,
@@ -365,6 +391,8 @@ namespace Opm
     }
 
 
+
+
     /// Compute per-iteration dynamic properties for faces.
     void CompressibleTpfa::computeWellDynamicData(const double /*dt*/,
                                                   const BlackoilState& /*state*/,
@@ -405,6 +433,7 @@ namespace Opm
             }
         }
     }
+
 
 
 
@@ -453,6 +482,40 @@ namespace Opm
 
 
 
+    namespace {
+        template <class FI>
+        double infnorm(FI beg, FI end)
+        {
+            double norm = 0.0;
+            for (; beg != end; ++beg) {
+                norm = std::max(norm, std::fabs(*beg));
+            }
+            return norm;
+        }
+    } // anonymous namespace
+
+
+
+
+    /// Computes the inf-norm of the residual.
+    double CompressibleTpfa::residualNorm() const 
+    {
+        const int ndof = pressure_increment_.size();
+        return infnorm(h_->F, h_->F + ndof);
+    }
+
+
+
+
+    /// Computes the inf-norm of pressure_increment_.
+    double CompressibleTpfa::incrementNorm() const
+    {
+        return infnorm(pressure_increment_.begin(), pressure_increment_.end());
+    }
+
+
+
+
     /// Compute the output.
     void CompressibleTpfa::computeResults(std::vector<double>& // pressure
                                           ,
@@ -461,7 +524,7 @@ namespace Opm
                                           std::vector<double>& // well_bhp
                                           ,
                                           std::vector<double>& // well_rate
-                                          )
+                                          ) const
     {
     }
 

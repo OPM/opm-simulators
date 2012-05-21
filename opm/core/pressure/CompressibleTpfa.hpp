@@ -98,12 +98,13 @@ namespace Opm
         void assemble(const double dt,
                       const BlackoilState& state,
                       const WellState& well_state);
-        double residualNorm();
         void solveIncrement();
+        double residualNorm() const;
+        double incrementNorm() const;
 	void computeResults(std::vector<double>& pressure,
                             std::vector<double>& faceflux,
                             std::vector<double>& well_bhp,
-                            std::vector<double>& well_rate);
+                            std::vector<double>& well_rate) const;
 
         // ------ Data that will remain unmodified after construction. ------
 	const UnstructuredGrid& grid_;
