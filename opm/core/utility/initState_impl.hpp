@@ -410,6 +410,9 @@ namespace Opm
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
             initHydrostaticPressure(grid, dens, ref_z, gravity, ref_z, ref_p, state);
         }
+
+        // Finally, init face pressures.
+        initFacePressure(grid, state);
     }
 
 
@@ -488,6 +491,9 @@ namespace Opm
             const double woc = -1e100;
             initHydrostaticPressure(grid, props, woc, gravity, ref_z, ref_p, state);
         }
+
+        // Finally, init face pressures.
+        initFacePressure(grid, state);
     }
 
 
@@ -538,6 +544,9 @@ namespace Opm
         } else {
             THROW("initStateFromDeck(): we must either have EQUIL, or both SWAT and PRESSURE.");
         }
+
+        // Finally, init face pressures.
+        initFacePressure(grid, state);
     }
 
 
