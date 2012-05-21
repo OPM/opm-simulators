@@ -262,6 +262,41 @@ namespace Opm
             }
         }
 
+        // Initialize face pressures to distance-weighted average of adjacent cell pressures.
+        template <class State>
+        void initFacePressure(const UnstructuredGrid& grid,
+                              State& state)
+        {
+            const int dim = grid.dimensions;
+            const std::vector<double>& cp = state.pressure();
+            std::vector<double>& fp = state.facepressure();
+            for (int f = 0; f < grid.number_of_faces; ++f) {
+                double dist[2] = { 0.0, 0.0 };
+                double press[2] = { 0.0, 0.0 };
+                int bdy_idx = -1;
+                for (int j = 0; j < 2; ++j) {
+                    const int c = grid.face_cells[2*f + j];
+                    if (c >= 0) {
+                        dist[j] = 0.0;
+                        for (int dd = 0; dd < dim; ++dd) {
+                            double diff = grid.face_centroids[dim*f + dd] - grid.cell_centroids[dim*c + dd];
+                            dist[j] += diff*diff;
+                        }
+                        dist[j] = std::sqrt(dist[j]);
+                        press[j] = cp[c];
+                    } else {
+                        bdy_idx = j;
+                    }
+                }
+                if (bdy_idx == -1) {
+                    fp[f] = press[0]*(dist[1]/(dist[0] + dist[1])) + press[1]*(dist[0]/(dist[0] + dist[1]));
+                } else {
+                    fp[f] = press[(bdy_idx + 1) % 2];
+                }
+            }
+        }
+
+
     } // anonymous namespace
 
 
