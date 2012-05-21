@@ -584,8 +584,8 @@ namespace Opm
                 double old_s[2] = { saturation_[cells[ci]],
                                     saturation_[cells[ci2]] };
                 saturation_[cells[ci]] = s0_[ci];
-                saturation_[cells[ci2]] = s0_[ci2];
                 solveSingleCellGravity(cells, ci, &col_gravflux[0]);
+                saturation_[cells[ci2]] = s0_[ci2];
                 solveSingleCellGravity(cells, ci2, &col_gravflux[0]);
                 max_s_change = std::max(max_s_change, std::max(std::fabs(saturation_[cells[ci]] - old_s[0]),
                                                                std::fabs(saturation_[cells[ci2]] - old_s[1])));
