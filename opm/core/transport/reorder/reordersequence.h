@@ -41,7 +41,7 @@ struct UnstructuredGrid;
  *                 Indirection pointers that describe the strongly
  *                 connected components (i.e., loops) of the Darcy
  *                 flux upwind graph.  Specifically, the \f$i\f$'th
- *                 strongly connected components constitutes cells
+ *                 strongly connected component constitutes cells
  *                 <CODE>sequence[components[i] ... components[i + 1]
  *                 - 1]</CODE>.
  *
@@ -93,7 +93,7 @@ compute_sequence(const struct UnstructuredGrid *grid       ,
  *                 Indirection pointers that describe the strongly
  *                 connected components (i.e., loops) of the Darcy
  *                 flux upwind graph.  Specifically, the \f$i\f$'th
- *                 strongly connected components constitutes cells
+ *                 strongly connected component constitutes cells
  *                 <CODE>sequence[components[i] ... components[i + 1]
  *                 - 1]</CODE>.
  *
