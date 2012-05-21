@@ -1,7 +1,7 @@
 /* Copyright 2011 (c) Jostein R. Natvig <Jostein.R.Natvig at sintef.no> */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
+
 #ifdef MATLAB_MEX_FILE
 #include "grid.h"
 #include "reordersequence.h"
@@ -102,9 +102,9 @@ compute_reorder_sequence(int nc, int nf, int *cellfaces, int *faceptr, int *face
         sz = 3*nc;
     }
 
-    work = (int*) malloc( sz    * sizeof *work);
-    ia   = (int*) malloc((nc+1) * sizeof *ia);
-    ja   = (int*) malloc( nf    * sizeof *ja); /* A bit too much... */
+    work = (int*) std::malloc( sz    * sizeof *work);
+    ia   = (int*) std::malloc((nc+1) * sizeof *ia);
+    ja   = (int*) std::malloc( nf    * sizeof *ja); /* A bit too much... */
 
 
     make_upwind_graph(nc, cellfaces, faceptr, face2cell,
@@ -112,9 +112,9 @@ compute_reorder_sequence(int nc, int nf, int *cellfaces, int *faceptr, int *face
 
     tarjan (nc, ia, ja, sequence, components, ncomponents, work);
 
-    free(ja);
-    free(ia);
-    free(work);
+    std::free(ja);
+    std::free(ia);
+    std::free(work);
 }
 
 
@@ -130,7 +130,7 @@ compute_reorder_sequence_graph(int nc, int nf, int *cellfaces, int *faceptr, int
         sz = 3*nc;
     }
 
-    work = (int*) malloc( sz    * sizeof *work);
+    work = (int*) std::malloc( sz    * sizeof *work);
 
 
     make_upwind_graph(nc, cellfaces, faceptr, face2cell,
@@ -138,7 +138,7 @@ compute_reorder_sequence_graph(int nc, int nf, int *cellfaces, int *faceptr, int
 
     tarjan (nc, ia, ja, sequence, components, ncomponents, work);
 
-    free(work);
+    std::free(work);
 }
 
 
