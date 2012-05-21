@@ -26,7 +26,7 @@ struct UnstructuredGrid;
  *                 permutation.
  *
  * \param[in] flux Darcy flux field.  One scalar value for each
- *                 interface/connection in the grid.  We assume that
+ *                 interface/connection in the grid, including the boundary.  We assume that
  *                 <CODE>flux[f]</CODE> is positive if the flow is
  *                 from cell <CODE>grid->face_cells[2*f + 0]</CODE> to
  *                 cell <CODE>grid->face_cells[2*f + 1]</CODE>.
@@ -78,7 +78,7 @@ compute_sequence(const struct UnstructuredGrid *grid       ,
  *                 permutation.
  *
  * \param[in] flux Darcy flux field.  One scalar value for each
- *                 interface/connection in the grid.  We assume that
+ *                 interface/connection in the grid, including the boundary.  We assume that
  *                 <CODE>flux[f]</CODE> is positive if the flow is
  *                 from cell <CODE>grid->face_cells[2*f + 0]</CODE> to
  *                 cell <CODE>grid->face_cells[2*f + 1]</CODE>.
