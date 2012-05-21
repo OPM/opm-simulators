@@ -458,6 +458,7 @@ namespace Opm
         forces.wells = &wells_tmp;
         forces.src = NULL; // Check if it is legal to leave it as NULL.
         compr_quantities_gen cq;
+        cq.nphases = props_.numPhases();
         cq.Ac = &cell_A_[0];
         cq.dAc = &cell_dA_[0];
         cq.Af = &face_A_[0];
