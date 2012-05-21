@@ -29,11 +29,18 @@ namespace Opm
     class WellState
     {
     public:
-        void init(const Wells* wells)
+        template <class State>
+        void init(const Wells* wells, const State& state)
         {
             if (wells) {
-                bhp_.resize(wells->number_of_wells);
-                perfrates_.resize(wells->well_connpos[wells->number_of_wells]);
+                const int nw = wells->number_of_wells;
+                bhp_.resize(nw);
+                // Initialize bhp to be pressure in first perforation cell.
+                for (int w = 0; w < nw; ++w) {
+                    const int cell = wells->well_cells[wells->well_connpos[w]];
+                    bhp_[w] = state.pressure()[cell];
+                }
+                perfrates_.resize(wells->well_connpos[nw]);
             }
         }
 
