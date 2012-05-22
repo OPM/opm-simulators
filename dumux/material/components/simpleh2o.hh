@@ -279,7 +279,7 @@ public:
     static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
     {
         return 1e-05;
-    };
+    }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure water.
@@ -290,7 +290,7 @@ public:
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
         return 1e-03;
-    };
+    }
 };
 
 template <class Scalar>

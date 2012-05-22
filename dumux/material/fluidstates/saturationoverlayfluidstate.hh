@@ -31,7 +31,7 @@
 
 #include <dumux/common/valgrind.hh>
 
-#include <tr1/array>
+#include <array>
 
 namespace Dumux
 {
@@ -207,7 +207,7 @@ public:
 
 protected:
     const FluidState *fs_;
-    std::tr1::array<Scalar, numPhases> saturation_;
+    std::array<Scalar, numPhases> saturation_;
 };
 
 } // end namepace Dumux

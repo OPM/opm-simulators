@@ -73,7 +73,7 @@ public:
         Valgrind::CheckDefined(a_);
         Valgrind::CheckDefined(b_);
 #endif
-    };
+    }
 
     /*!
      * \brief Set the attractive parameter 'a' of the Peng-Robinson

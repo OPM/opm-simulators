@@ -50,7 +50,7 @@ public:
     {
         setEntryPC(entryPC);
         setMaxPC(maxPC);
-    };
+    }
 
 
     /*!

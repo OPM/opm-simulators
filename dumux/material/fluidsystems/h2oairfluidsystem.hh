@@ -219,7 +219,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return Tcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief Critical pressure of a component [Pa].
@@ -235,7 +235,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return pcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief The acentric factor of a component [].
@@ -251,7 +251,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return accFac[compIdx];
-    };
+    }
 
     /****************************************
      * thermodynamic relations

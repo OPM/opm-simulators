@@ -228,7 +228,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return Tcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief Critical pressure of a component [Pa].
@@ -247,7 +247,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return pcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief Molar volume of a component at the critical point [m^3/mol].
@@ -267,7 +267,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return vcrit[compIdx];
-    };
+    }
 
     /*!
      * \brief The acentric factor of a component [].
@@ -286,7 +286,7 @@ public:
 
         assert(0 <= compIdx && compIdx < numComponents);
         return accFac[compIdx];
-    };
+    }
 
     /*!
      * \brief Returns the interaction coefficient for two components.
@@ -457,7 +457,7 @@ private:
         case C20Idx: return 1e10;
         default: DUNE_THROW(Dune::InvalidStateException, "Unknown component index " << compIdx);
         }
-    };
+    }
 };
 
 } // end namepace

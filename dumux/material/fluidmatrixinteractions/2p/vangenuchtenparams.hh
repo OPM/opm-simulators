@@ -54,7 +54,7 @@ public:
     {
         setVgAlpha(vgAlpha);
         setVgN(vgN);
-    };
+    }
 
     /*!
      * \brief Return the \f$\alpha\f$ shape parameter of van Genuchten's

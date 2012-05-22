@@ -753,7 +753,7 @@ public:
 
         Scalar rho = gasDensity(temperature, pressure);
         return Common::viscosity(temperature, rho);
-    };
+    }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure water.
@@ -777,7 +777,7 @@ public:
 
         Scalar rho = liquidDensity(temperature, pressure);
         return Common::viscosity(temperature, rho);
-    };
+    }
 
     /*!
      * \brief Thermal conductivity \f$\mathrm{[[W/(m K)]}\f$ of water (IAPWS) .
@@ -839,7 +839,7 @@ private:
             Region1::tau(temperature) *
             Region1::dgamma_dtau(temperature, pressure) *
             Rs*temperature;
-    };
+    }
 
     // the unregularized specific isobaric heat capacity
     static Scalar heatCap_p_Region1_(Scalar temperature, Scalar pressure)
@@ -848,7 +848,7 @@ private:
             - std::pow(Region1::tau(temperature), 2 ) *
             Region1::ddgamma_ddtau(temperature, pressure) *
             Rs;
-    };
+    }
 
     // the unregularized specific isochoric heat capacity
     static Scalar heatCap_v_Region1_(Scalar temperature, Scalar pressure)
@@ -861,7 +861,7 @@ private:
             - std::pow(tau, 2 ) *
             Region1::ddgamma_ddtau(temperature, pressure) * Rs +
             diff;
-    };
+    }
 
     // the unregularized specific internal energy for liquid water
     static Scalar internalEnergyRegion1_(Scalar temperature, Scalar pressure)
@@ -870,7 +870,7 @@ private:
             Rs * temperature *
             ( Region1::tau(temperature)*Region1::dgamma_dtau(temperature, pressure) -
               Region1::pi(pressure)*Region1::dgamma_dpi(temperature, pressure));
-    };
+    }
 
     // the unregularized specific volume for liquid water
     static Scalar volumeRegion1_(Scalar temperature, Scalar pressure)
@@ -879,7 +879,7 @@ private:
             Region1::pi(pressure)*
             Region1::dgamma_dpi(temperature, pressure) *
             Rs * temperature / pressure;
-    };
+    }
 
     // the unregularized specific enthalpy for steam
     static Scalar enthalpyRegion2_(Scalar temperature, Scalar pressure)
@@ -888,7 +888,7 @@ private:
             Region2::tau(temperature) *
             Region2::dgamma_dtau(temperature, pressure) *
             Rs*temperature;
-    };
+    }
 
     // the unregularized specific internal energy for steam
     static Scalar internalEnergyRegion2_(Scalar temperature, Scalar pressure)
@@ -897,7 +897,7 @@ private:
             Rs * temperature *
             ( Region2::tau(temperature)*Region2::dgamma_dtau(temperature, pressure) -
               Region2::pi(pressure)*Region2::dgamma_dpi(temperature, pressure));
-    };
+    }
 
     // the unregularized specific isobaric heat capacity
     static Scalar heatCap_p_Region2_(Scalar temperature, Scalar pressure)
@@ -906,7 +906,7 @@ private:
             - std::pow(Region2::tau(temperature), 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) *
             Rs;
-    };
+    }
 
     // the unregularized specific isochoric heat capacity
     static Scalar heatCap_v_Region2_(Scalar temperature, Scalar pressure)
@@ -919,7 +919,7 @@ private:
             - std::pow(tau, 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) * Rs
             - diff;
-    };
+    }
 
     // the unregularized specific volume for steam
     static Scalar volumeRegion2_(Scalar temperature, Scalar pressure)
@@ -928,7 +928,7 @@ private:
             Region2::pi(pressure)*
             Region2::dgamma_dpi(temperature, pressure) *
             Rs * temperature / pressure;
-    };
+    }
 }; // end class
 
 } // end namepace

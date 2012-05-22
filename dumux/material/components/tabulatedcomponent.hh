@@ -275,7 +275,7 @@ public:
             return RawComponent::vaporPressure(T);
         }
         return result;
-    };
+    }
 
     /*!
      * \brief Specific enthalpy of the gas \f$\mathrm{[J/kg]}\f$.
@@ -392,7 +392,7 @@ public:
                                              density);
         }
         return result;
-    };
+    }
 
     /*!
      * \brief The pressure of liquid in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
@@ -411,7 +411,7 @@ public:
                                                 density);
         }
         return result;
-    };
+    }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
@@ -486,7 +486,7 @@ public:
             return RawComponent::gasViscosity(temperature, pressure);
         }
         return result;
-    };
+    }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of liquid.
@@ -504,7 +504,7 @@ public:
             return RawComponent::liquidViscosity(temperature, pressure);
         }
         return result;
-    };
+    }
 
     /*!
      * \brief The thermal conductivity of gaseous water \f$\mathrm{[W / (m K)]}\f$.
@@ -522,7 +522,7 @@ public:
             return RawComponent::gasThermalConductivity(temperature, pressure);
         }
         return result;
-    };
+    }
 
     /*!
      * \brief The thermal conductivity of liquid water \f$\mathrm{[W / (m K)]}\f$.
@@ -540,7 +540,7 @@ public:
             return RawComponent::liquidThermalConductivity(temperature, pressure);
         }
         return result;
-    };
+    }
 
 
 private:

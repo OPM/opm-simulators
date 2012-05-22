@@ -40,7 +40,7 @@ class NullParameterCache : public ParameterCacheBase<NullParameterCache>
 {
 public:
     NullParameterCache()
-    {};
+    {}
 };
 
 } // end namepace

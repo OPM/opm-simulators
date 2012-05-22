@@ -559,7 +559,7 @@ private:
     static Scalar gasPhaseDensity_(Scalar T, Scalar pg, Scalar xgw, Scalar xga, Scalar xgc)
     {
         return H2O::gasDensity(T, pg*xgw) + Air::gasDensity(T, pg*xga) + NAPL::gasDensity(T, pg*xgc);
-    };
+    }
 
     static Scalar NAPLPhaseDensity_(Scalar T, Scalar pn)
     {

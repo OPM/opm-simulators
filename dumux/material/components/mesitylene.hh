@@ -76,7 +76,7 @@ public:
     static Scalar tripleTemperature()
     {
         DUNE_THROW(Dune::NotImplemented, "tripleTemperature for mesitylene");
-    };
+    }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at mesitylene's triple point.
@@ -84,7 +84,7 @@ public:
     static Scalar triplePressure()
     {
         DUNE_THROW(Dune::NotImplemented, "triplePressure for mesitylene");
-    };
+    }
 
     /*!
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of

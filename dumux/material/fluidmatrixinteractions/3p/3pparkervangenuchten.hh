@@ -264,7 +264,7 @@ public:
 
         Scalar r = 1. - std::pow(1 - std::pow(Se, 1/params.vgM()), params.vgM());
         return std::sqrt(Se)*r*r;
-    };
+    }
 
     /*!
      * \brief The relative permeability for the non-wetting phase
@@ -310,7 +310,7 @@ public:
 
 
         return krn_;
-    };
+    }
 
 
     /*!
@@ -347,7 +347,7 @@ public:
         Scalar result = scalFact * std::pow(1 - Se, 1.0/3.) * std::pow(1 - std::pow(Se, 1/params.vgM()), 2*params.vgM());
 
         return result;
-    };
+    }
 
     /*!
      * \brief The relative permeability for a phase.
@@ -372,7 +372,7 @@ public:
             break;
         }
         return 0;
-    };
+    }
 
    /*
     * \brief the basis for calculating adsorbed NAPL in storage term

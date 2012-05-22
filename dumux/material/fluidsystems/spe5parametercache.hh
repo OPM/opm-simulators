@@ -73,7 +73,7 @@ public:
             VmUpToDate_[phaseIdx] = false;
             Valgrind::SetUndefined(Vm_[phaseIdx]);
         }
-    };
+    }
 
     /*!
      * \brief Update all parameters required by the fluid system to

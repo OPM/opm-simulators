@@ -53,7 +53,7 @@ public:
     RegularizedVanGenuchtenParams(Scalar vgAlpha,
                                    Scalar vgN)
         : Parent(vgAlpha, vgN)
-    {};
+    {}
 
     /*!
      * \brief Threshold saturation below which the capillary pressure

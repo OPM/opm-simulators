@@ -51,7 +51,7 @@ public:
      * \brief Returs whether the fluid is a liquid
      */
     static bool isLiquid()
-    { return true; };
+    { return true; }
 
     /*!
      * \brief Returns true iff the fluid is assumed to be compressible

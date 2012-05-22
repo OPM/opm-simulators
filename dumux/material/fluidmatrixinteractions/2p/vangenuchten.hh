@@ -155,7 +155,7 @@ public:
 
         Scalar r = 1. - std::pow(1 - std::pow(Swe, 1/params.vgM()), params.vgM());
         return std::sqrt(Swe)*r*r;
-    };
+    }
 
     /*!
      * \brief The derivative of the relative permeability for the
@@ -174,7 +174,7 @@ public:
         const Scalar x = 1 - std::pow(Swe, 1.0/params.vgM());
         const Scalar xToM = std::pow(x, params.vgM());
         return (1 - xToM)/std::sqrt(Swe) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );
-    };
+    }
 
 
     /*!
@@ -194,7 +194,7 @@ public:
         return
             std::pow(1 - Swe, 1.0/3) *
             std::pow(1 - std::pow(Swe, 1/params.vgM()), 2*params.vgM());
-    };
+    }
 
     /*!
      * \brief The derivative of the relative permeability for the

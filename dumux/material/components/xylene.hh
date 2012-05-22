@@ -76,7 +76,7 @@ public:
     static Scalar tripleTemperature()
     {
         DUNE_THROW(Dune::NotImplemented, "tripleTemperature for xylene");
-    };
+    }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at xylene's triple point.
@@ -84,7 +84,7 @@ public:
     static Scalar triplePressure()
     {
         DUNE_THROW(Dune::NotImplemented, "triplePressure for xylene");
-    };
+    }
 
     /*!
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of pure xylene

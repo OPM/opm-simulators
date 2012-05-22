@@ -285,7 +285,7 @@ public:
         }
 
         return VanGenuchten::krw(params, Swe);
-    };
+    }
 
     /*!
      * \brief   Regularized version of the  relative permeability

@@ -52,7 +52,7 @@ class SomertonParams
 {
     // do not copy!
     SomertonParams(const SomertonParams &)
-    {};
+    {}
 
 public:
     typedef ScalarT Scalar;

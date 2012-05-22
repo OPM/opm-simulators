@@ -155,7 +155,7 @@ public:
         assert(0 <= Swe && Swe <= 1);
 
         return std::pow(Swe, 2.0/params.lambda() + 3);
-    };
+    }
 
     /*!
      * \brief The derivative of the relative permeability for the
@@ -173,7 +173,7 @@ public:
         assert(0 <= Swe && Swe <= 1);
 
         return (2.0/params.lambda() + 3)*std::pow(Swe, 2.0/params.lambda() + 2);
-    };
+    }
 
     /*!
      * \brief The relative permeability for the non-wetting phase of
@@ -219,7 +219,7 @@ public:
                     Swe*(1.0/params.lambda() + 1.0/2)
                     )
                 );
-    };
+    }
 
 };
 }

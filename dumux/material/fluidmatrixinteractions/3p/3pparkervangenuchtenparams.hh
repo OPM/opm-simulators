@@ -66,7 +66,7 @@ public:
         setkrRegardsSnr(regardSnr);
         setKdNAPL(KdNAPL);
         setRhoBulk(rhoBulk);
-    };
+    }
 
     /*!
      * \brief Return the \f$\alpha\f$ shape parameter of van Genuchten's

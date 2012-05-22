@@ -228,7 +228,7 @@ public:
         Valgrind::CheckDefined(this->a());
         Valgrind::CheckDefined(this->b());
 #endif
-    };
+    }
 
 protected:
     PureParams pureParams_[numComponents];

@@ -173,7 +173,7 @@ public:
         r = 1.496*1.E-6*std::pow(temperature,1.5)/(temperature+120.);
         return (r);
 
-    };
+    }
 
     /*!
      * \brief Specific enthalpy of liquid water \f$\mathrm{[J/kg]}\f$

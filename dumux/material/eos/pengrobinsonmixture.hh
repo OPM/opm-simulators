@@ -46,7 +46,7 @@ class PengRobinsonMixture
     typedef Dumux::PengRobinson<Scalar> PengRobinson;
 
     // this class cannot be instantiated!
-    PengRobinsonMixture() {};
+    PengRobinsonMixture() {}
 
     // the ideal gas constant
     static constexpr Scalar R = Dumux::Constants<Scalar>::R;
