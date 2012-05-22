@@ -998,7 +998,7 @@ namespace Opm
     {
         nbcell[0] = -1;
         gf[0] = 0.0;
-        if (cell > 0) {
+        if (pos > 0) {
             nbcell[0] = cells[pos - 1];
             gf[0] = -gravflux[pos - 1];
         }
