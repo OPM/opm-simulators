@@ -1281,16 +1281,17 @@ namespace
 	direction_[1] = direction[1];
 	end_point_[0] = end_point[0];
 	end_point_[1] = end_point[1];
-        if (adjust_dir) {
+        const double size_direction = std::abs(direction_[0]) + std::abs(direction_[1]);
+	if (size_direction == 0) {
+	    direction_[0] = end_point_[0]-x_[0];
+	    direction_[1] = end_point_[1]-x_[1];
+	}
+        if (adjust_dir || size_direction < 1e-5) {
             if ((end_point_[0]-x_[0])*direction_[0] + (end_point_[1]-x_[1])*direction_[1] < 0) {
                 direction_[0] *= -1.0;
                 direction_[1] *= -1.0;
             }
         }
-	if ((std::abs(direction_[0]) + std::abs(direction_[1])) == 0) {
-	    direction_[0] = end_point_[0]-x_[0];
-	    direction_[1] = end_point_[1]-x_[1];
-	}
 	bool t0_exists = true;
 	double t0 = 0; // dummy default value (so that compiler does not complain).
 	if (direction_[0] > 0) {
