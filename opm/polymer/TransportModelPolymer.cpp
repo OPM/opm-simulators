@@ -680,7 +680,8 @@ namespace Opm
 	}
 
 	falsi_tol =  std::max(reduc_factor_falsi_tol*norm(res), tol_);
-	double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
+	// double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
+        double x_min[2] = { 0.0, 0.0 };
 	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
 	double t;
 	double t_max;
@@ -1286,7 +1287,7 @@ namespace
                 direction_[1] *= -1.0;
             }
         }
-	if ((std::abs(direction_[0]) + std::abs(direction_[0])) == 0) {
+	if ((std::abs(direction_[0]) + std::abs(direction_[1])) == 0) {
 	    direction_[0] = end_point_[0]-x_[0];
 	    direction_[1] = end_point_[1]-x_[1];
 	}
