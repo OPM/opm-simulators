@@ -1166,29 +1166,33 @@ namespace Opm
         }
 
         // Solve single cell problems, repeating if necessary.
-	double max_s_change = 0.0;
+	double max_sc_change = 0.0;
         int num_iters = 0;
         do {
-            max_s_change = 0.0;
+            max_sc_change = 0.0;
             for (int ci = 0; ci < nc; ++ci) {
                 const int ci2 = nc - ci - 1;
                 double old_s[2] = { saturation_[cells[ci]],
                                     saturation_[cells[ci2]] };
+                double old_c[2] = { concentration_[cells[ci]],
+                                    concentration_[cells[ci2]] };
                 saturation_[cells[ci]] = s0_[ci];
                 concentration_[cells[ci]] = c0_[ci];
                 solveSingleCellGravity(cells, ci, &col_gravflux[0]);
                 saturation_[cells[ci2]] = s0_[ci2];
                 concentration_[cells[ci2]] = c0_[ci2];
                 solveSingleCellGravity(cells, ci2, &col_gravflux[0]);
-                max_s_change = std::max(max_s_change, std::max(std::fabs(saturation_[cells[ci]] - old_s[0]),
-                                                               std::fabs(saturation_[cells[ci2]] - old_s[1])));
+                max_sc_change = std::max(max_sc_change, 0.25*(std::fabs(saturation_[cells[ci]] - old_s[0]) + 
+                                                              std::fabs(concentration_[cells[ci]] - old_c[0]) +
+                                                              std::fabs(saturation_[cells[ci2]] - old_s[1]) +
+                                                              std::fabs(concentration_[cells[ci2]] - old_c[1])));
             }
             // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change << std::endl;
-	} while (max_s_change > tol_ && ++num_iters < maxit_);
+	} while (max_sc_change > tol_ && ++num_iters < maxit_);
 
-	if (max_s_change > tol_) {
+	if (max_sc_change > tol_) {
 	    THROW("In solveGravityColumn(), we did not converge after "
-	    	  << num_iters << " iterations. Delta s = " << max_s_change);
+	    	  << num_iters << " iterations. Delta s = " << max_sc_change);
 	}
         return num_iters + 1;
     }
