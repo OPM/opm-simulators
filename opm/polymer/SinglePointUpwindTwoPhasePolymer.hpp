@@ -479,9 +479,11 @@ namespace Opm {
             } else {
                 std::fill(x.begin(), x.end(), 0.0);
 		const std::vector<double>& s = state.saturation();
+		const std::vector<double>& c = state.concentration();
 		for (int cell = 0, ncell = g.number_of_cells; cell < ncell; ++cell) {
 		    // Impose s=0.5 at next time level as an NR initial value.
 		    x[2*cell + 0] = 0.5 - s[2*cell + 0];
+                    x[2*cell + 1] = 1e-5 - c[cell];
 		}
 	    }
         }
