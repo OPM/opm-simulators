@@ -405,8 +405,10 @@ main(int argc, char** argv)
             for (int cell = 0; cell < grid->c_grid()->number_of_cells; ++cell) {
                 if (state.saturation()[2*cell] > 0) {
                     state.concentration()[cell] = poly_init;
+                    state.maxconcentration()[cell] = poly_init;
                 } else {
                     state.concentration()[cell] = 0.;
+                    state.maxconcentration()[cell] = poly_init;
                 }
             }
         }
