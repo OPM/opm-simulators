@@ -41,14 +41,6 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iterator>
 
-// namespace {
-
-//     int sgn(double val) {
-//         return (0.0 < val) - (val < 0);
-//     }
-
-// }
-
 namespace Opm
 {
 
