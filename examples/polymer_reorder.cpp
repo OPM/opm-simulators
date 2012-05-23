@@ -237,6 +237,10 @@ public:
         return smax_[2*c + 0];
     }
 
+    double cMax() const
+    {
+        return polyprops_.cMax();
+    }
 
     template <class PolyC,
               class Mc,
@@ -255,7 +259,7 @@ private:
 };
 
 typedef PolymerFluid2pWrappingProps TwophaseFluidPolymer;
-typedef Opm::SinglePointUpwindTwoPhasePolymer<TwophaseFluidPolymer> NewtonPolymerTransportModel;
+typedef Opm::SinglePointUpwindTwoPhasePolymer<TwophaseFluidPolymer> FluxModel;
 
 using namespace Opm::ImplicitTransportDefault;
 
@@ -271,7 +275,7 @@ public:
     }
 };
 
-typedef Opm::ImplicitTransport<NewtonPolymerTransportModel,
+typedef Opm::ImplicitTransport<FluxModel,
                                JacSys        ,
                                MaxNorm       ,
                                VectorNegater ,
@@ -403,12 +407,16 @@ main(int argc, char** argv)
         if (param.has("poly_init")) {
             double poly_init = param.getDefault("poly_init", 0.0);
             for (int cell = 0; cell < grid->c_grid()->number_of_cells; ++cell) {
-                if (state.saturation()[2*cell] > 0) {
+                double smin[2], smax[2];
+                props->satRange(1, &cell, smin, smax);
+                if (state.saturation()[2*cell] > 0.5*(smin[0] + smax[0])) {
                     state.concentration()[cell] = poly_init;
                     state.maxconcentration()[cell] = poly_init;
                 } else {
+                    state.saturation()[2*cell + 0] = 0.;
+                    state.saturation()[2*cell + 1] = 1.;
                     state.concentration()[cell] = 0.;
-                    state.maxconcentration()[cell] = poly_init;
+                    state.maxconcentration()[cell] = 0.;
                 }
             }
         }
@@ -435,10 +443,10 @@ main(int argc, char** argv)
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
         // polyprop.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
-        // ads_vals[1] = 0.0015;
-        // ads_vals[2] = 0.0025;
-        ads_vals[1] = 0.0;
-        ads_vals[2] = 0.0;
+        ads_vals[1] = 0.0015;
+        ads_vals[2] = 0.0025;
+        // ads_vals[1] = 0.0;
+        // ads_vals[2] = 0.0;
         polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
                      static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
                      c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
@@ -552,17 +560,17 @@ main(int argc, char** argv)
         reorder_model.initGravity(grav);
     }
     // Non-reordering solver.
-    NewtonPolymerTransportModel  model(fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
+    FluxModel  fmodel(fluid, *grid->c_grid(), porevol, grav, guess_old_solution);
     if (use_gravity) {
-        model.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
+        fmodel.initGravityTrans(*grid->c_grid(), psolver.getHalfTrans());
     }
-    TransportSolver tsolver(model);
+    TransportSolver tsolver(fmodel);
     // Column-based gravity segregation solver.
     std::vector<std::vector<int> > columns;
     if (use_column_solver) {
         Opm::extractColumn(*grid->c_grid(), columns);
     }
-    Opm::GravityColumnSolverPolymer<NewtonPolymerTransportModel> colsolver(model, *grid->c_grid(), nl_tolerance, nl_maxiter);
+    Opm::GravityColumnSolverPolymer<FluxModel, TwophaseFluidPolymer> colsolver(fmodel, fluid, *grid->c_grid(), nl_tolerance, nl_maxiter);
 
     // // // Not implemented for polymer.
     // // Control init.

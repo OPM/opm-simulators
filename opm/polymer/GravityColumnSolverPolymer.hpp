@@ -29,16 +29,17 @@ namespace Opm
 
     /// Class for doing gravity segregation (only),
     /// on a vertical column of cells.
-    template <class Model>
+    template <class FluxModel, class Model>
     class GravityColumnSolverPolymer
     {
     public:
 	/// Note: the model will be changed since it stores computed
 	/// quantities in itself, such as mobilities.
-	GravityColumnSolverPolymer(Model& model,
-			    const UnstructuredGrid& grid,
-			    const double tol,
-			    const int maxit);
+	GravityColumnSolverPolymer(FluxModel& fmodel,
+                                   const Model& model,
+                                   const UnstructuredGrid& grid,
+                                   const double tol,
+                                   const int maxit);
 
 	/// \param[in] columns         for each column (with logical cartesian indices as key),
 	///                            contains the cells on which to solve the segregation
@@ -59,7 +60,8 @@ namespace Opm
 			       std::vector<double>& cmax,
 			       std::vector<double>& sol_vec
  			       );
-	Model& model_;
+	FluxModel& fmodel_;
+        const Model& model_;
 	const UnstructuredGrid& grid_;
 	const double tol_;
 	const int maxit_;

@@ -41,15 +41,24 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iterator>
 
+// namespace {
+
+//     int sgn(double val) {
+//         return (0.0 < val) - (val < 0);
+//     }
+
+// }
+
 namespace Opm
 {
 
-    template <class Model>
-    GravityColumnSolverPolymer<Model>::GravityColumnSolverPolymer(Model& model,
-						    const UnstructuredGrid& grid,
-						    const double tol,
-						    const int maxit)
-	: model_(model), grid_(grid), tol_(tol), maxit_(maxit)
+    template <class FluxModel, class Model>
+    GravityColumnSolverPolymer<FluxModel, Model>::GravityColumnSolverPolymer(FluxModel& fmodel,
+                                                                             const Model& model,
+                                                                             const UnstructuredGrid& grid,
+                                                                             const double tol,
+                                                                             const int maxit)
+	: fmodel_(fmodel), model_(model), grid_(grid), tol_(tol), maxit_(maxit)
     {
     }
 
@@ -117,8 +126,8 @@ namespace Opm
     ///                            problem. For each column, its cells must be in a single
     ///                            vertical column, connected and ordered
     ///                            (direction doesn't matter).
-    template <class Model>
-    void GravityColumnSolverPolymer<Model>::solve(const std::vector<std::vector<int> >& columns,
+    template <class FluxModel, class Model>
+    void GravityColumnSolverPolymer<FluxModel, Model>::solve(const std::vector<std::vector<int> >& columns,
 						  const double dt,
 						  std::vector<double>& s,
 						  std::vector<double>& c,
@@ -129,20 +138,83 @@ namespace Opm
 	StateWithZeroFlux state(s, c, cmax); // This holds s, c and cmax by reference.
 	JacSys sys(2*grid_.number_of_cells);
 	std::vector<double> increment(2*grid_.number_of_cells, 0.0);
-	model_.initStep(state, grid_, sys);
+	fmodel_.initStep(state, grid_, sys);
 
 	int iter = 0;
 	double max_delta = 1e100;
+        const double cmax_cell = 2.0*model_.cMax();
+        const double tol_c_cell = 1e-2*cmax_cell; 
 	while (iter < maxit_) {
-	    model_.initIteration(state, grid_, sys);
+	    fmodel_.initIteration(state, grid_, sys);
             int size = columns.size();
             for(int i = 0; i < size; ++i) {
 		solveSingleColumn(columns[i], dt, s, c, cmax, increment);
 	    }
 	    for (int cell = 0; cell < grid_.number_of_cells; ++cell) {
-		sys.vector().writableSolution()[2*cell + 0] += increment[2*cell + 0];
-		sys.vector().writableSolution()[2*cell + 1] += increment[2*cell + 1];
-	    }
+                double& s_cell = sys.vector().writableSolution()[2*cell + 0];
+                double& c_cell = sys.vector().writableSolution()[2*cell + 1];
+		s_cell += increment[2*cell + 0];
+		c_cell += increment[2*cell + 1];
+                if (s_cell < 0.) {
+                    double& incr = increment[2*cell + 0];
+                    s_cell -=  incr;
+                    if (std::fabs(incr) < 1e-2) {
+                        incr = -s_cell;
+                        s_cell = 0.;
+                    } else {
+                        incr = -s_cell/2.0;
+                        s_cell = s_cell/2.0;
+                    }
+                }
+                if (s_cell > 1.) {
+                    double& incr = increment[2*cell + 0];
+                    s_cell -=  incr;
+                    if (std::fabs(incr) < 1e-2) {
+                        incr = 1. - s_cell;
+                        s_cell = 1.;
+                    } else {
+                        incr = (1 - s_cell)/2.0;
+                        s_cell = (1 + s_cell)/2.0;
+                    }
+                }
+                if (c_cell < 0.) {
+                    double& incr = increment[2*cell + 1];
+                    c_cell -=  incr;
+                    if (std::fabs(incr) < tol_c_cell) {
+                        incr = -c_cell;
+                        c_cell = 0.;
+                    } else {
+                        incr = -c_cell/2.0;
+                        c_cell = c_cell/2.0;
+                    }
+                }
+                if (c_cell > cmax_cell) {
+                    double& incr = increment[2*cell + 1];
+                    c_cell -=  incr;
+                    if (std::fabs(incr) < tol_c_cell) {
+                        incr = cmax_cell - c_cell;
+                        c_cell = cmax_cell;
+                    } else {
+                        incr = (cmax_cell - c_cell)/2.0;
+                        c_cell = (cmax_cell + c_cell)/2.0;
+                    }
+                }
+                
+                // if (s_cell < 0.) {
+                //     increment[2*cell + 0] = increment[2*cell + 0] - s_cell;
+                //     s_cell = 0.;
+                // } else if (s_cell > 1.) {
+                //     increment[2*cell + 0] = increment[2*cell + 0] - s_cell + 1.;
+                //     s_cell = 1.;
+                // }
+                // if (c_cell < 0) {
+                //     increment[2*cell + 1] = increment[2*cell + 1] - c_cell;
+                //     c_cell = 0.;
+                // } else if (c_cell > cmax_cell) {
+                //     increment[2*cell + 1] = increment[2*cell + 1] - c_cell + cmax_cell;
+                //     c_cell = cmax_cell;
+                // }
+	    } 
 	    const double maxelem = *std::max_element(increment.begin(), increment.end());
 	    const double minelem = *std::min_element(increment.begin(), increment.end());
 	    max_delta = std::max(maxelem, -minelem);
@@ -156,10 +228,10 @@ namespace Opm
 	    THROW("Failed to converge!");
 	}
 	// Finalize.
-	// model_.finishIteration(); //
+	// fmodel_.finishIteration(); //
 	// finishStep() writes to state, which holds s by reference.
 	// This will update the entire grid's state... cmax is updated here.
-	model_.finishStep(grid_, sys.vector().solution(), state);
+	fmodel_.finishStep(grid_, sys.vector().solution(), state);
     }
 
 
@@ -168,8 +240,8 @@ namespace Opm
     /// \param[in] column_cells    the cells on which to solve the segregation
     ///                            problem. Must be in a single vertical column,
     ///                            and ordered (direction doesn't matter).
-    template <class Model>
-    void GravityColumnSolverPolymer<Model>::solveSingleColumn(const std::vector<int>& column_cells,
+    template <class FluxModel, class Model>
+    void GravityColumnSolverPolymer<FluxModel, Model>::solveSingleColumn(const std::vector<int>& column_cells,
                                                               const double dt,
                                                               std::vector<double>& s,
                                                               std::vector<double>& c,
@@ -215,7 +287,7 @@ namespace Opm
                     F.assign(2, 0.);
                     dFd1.assign(4, 0.);
                     dFd2.assign(4, 0.);
-		    model_.fluxConnection(state, grid_, dt, cell, face, &F[0], &dFd1[0], &dFd2[0]);
+		    fmodel_.fluxConnection(state, grid_, dt, cell, face, &F[0], &dFd1[0], &dFd2[0]);
 		    if (c1 == prev_cell || c2 == prev_cell) {
                         hm[bmc(2*ci + 0, 2*(ci - 1) + 0)] += dFd2[0];
                         hm[bmc(2*ci + 0, 2*(ci - 1) + 1)] += dFd2[1];
@@ -239,7 +311,7 @@ namespace Opm
 	    }
 	    F.assign(2, 0.);
             dF.assign(4, 0.);
-	    model_.accumulation(grid_, cell, &F[0], &dF[0]);
+	    fmodel_.accumulation(grid_, cell, &F[0], &dF[0]);
             hm[bmc(2*ci + 0, 2*ci + 0)] += dF[0];
             hm[bmc(2*ci + 0, 2*ci + 1)] += dF[1];
             hm[bmc(2*ci + 1, 2*ci + 0)] += dF[2];
