@@ -225,7 +225,7 @@ void checkFluidState(const BaseFluidState &fs)
 
     // make sure the fluid state provides all mandatory methods
     while (false) {
-        Scalar DUMUX_UNUSED val;
+        Scalar DUNE_UNUSED val;
 
         val = fs.temperature(/*phaseIdx=*/0);
         val = fs.pressure(/*phaseIdx=*/0);
@@ -282,7 +282,7 @@ void checkFluidSystem()
 
     // some value to make sure the return values of the fluid system
     // are convertible to scalars
-    Scalar DUMUX_UNUSED val;
+    Scalar DUNE_UNUSED val;
 
     // actually check the fluid system API
     FluidSystem::init();
@@ -313,15 +313,15 @@ void checkFluidSystem()
 
     // test for phaseName(), isLiquid() and isIdealGas()
     for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-        std::string DUMUX_UNUSED name = FluidSystem::phaseName(phaseIdx);
-        bool DUMUX_UNUSED bVal = FluidSystem::isLiquid(phaseIdx);
+        std::string DUNE_UNUSED name = FluidSystem::phaseName(phaseIdx);
+        bool DUNE_UNUSED bVal = FluidSystem::isLiquid(phaseIdx);
         bVal = FluidSystem::isIdealGas(phaseIdx);
     }
 
     // test for componentName()
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
         val = FluidSystem::molarMass(compIdx);
-        std::string DUMUX_UNUSED name = FluidSystem::componentName(compIdx);
+        std::string DUNE_UNUSED name = FluidSystem::componentName(compIdx);
     }
 
     std::cout << "----------------------------------\n";
