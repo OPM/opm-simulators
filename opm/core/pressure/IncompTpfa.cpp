@@ -128,7 +128,7 @@ namespace Opm
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
         F.totmob = &totmob[0];
-        F.wdp = &wdp[0];
+        if (! wdp.empty()) { F.wdp = &wdp[0]; }
         
 	int ok = ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
         if (!ok) {
@@ -210,7 +210,7 @@ namespace Opm
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
         F.totmob = &totmob[0];
-        F.wdp = &wdp[0];
+        if (! wdp.empty()) { F.wdp = &wdp[0]; }
         int ok = true;
         if (rock_comp.empty()) {
             ok = ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
@@ -275,7 +275,7 @@ namespace Opm
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
         F.totmob = &totmob[0];
-        F.wdp = &wdp[0];
+        if (! wdp.empty()) { F.wdp = &wdp[0]; }
         
         bool ok = true;
         if (rock_comp.empty()) {
@@ -324,7 +324,7 @@ namespace Opm
         if (! src.empty()) { F.src = &src[0]; }
         F.bc = bcs;
         F.totmob = &totmob[0];
-        F.wdp = &wdp[0];
+        if (! wdp.empty()) { F.wdp = &wdp[0]; }
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
 	
