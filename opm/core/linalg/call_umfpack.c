@@ -57,12 +57,12 @@ csc_deallocate(struct CSCMatrix *csc)
 /* ---------------------------------------------------------------------- */
 {
     if (csc != NULL) {
-        if (csc->x != NULL) { free(csc->x); }
-        if (csc->i != NULL) { free(csc->i); }
-        if (csc->p != NULL) { free(csc->p); }
-
-        free(csc);
+        free(csc->x);
+        free(csc->i);
+        free(csc->p);
     }
+
+    free(csc);
 }
 
 
