@@ -26,6 +26,10 @@
 #include <cmath>
 
 
+// Choose error policy for scalar solves here.
+typedef Opm::RegulaFalsi<Opm::WarnAndContinueOnError> RootFinder;
+
+
 class Opm::TransportModelPolymer::ResidualEquation
 {
 public:
@@ -371,8 +375,8 @@ namespace Opm
 	    // Solve for s first.
 	    // s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
 	    //     		    tm.maxit_, tm.tol_, iters_used);
-	    s = modifiedRegulaFalsi(res_s, s0, 0.0, 1.0,
-				    tm.maxit_, tm.tol_, iters_used);
+	    s = RootFinder::solve(res_s, s0, 0.0, 1.0,
+                                  tm.maxit_, tm.tol_, iters_used);
 	    double ff;
             tm.fracFlow(s, c, cmax0, cell, ff);
 	    double mc;
@@ -639,7 +643,7 @@ namespace Opm
 	    return;
 	}
 
-	concentration_[cell] = modifiedRegulaFalsi(res, a, b, maxit_, tol_, iters_used);
+	concentration_[cell] = RootFinder::solve(res, a, b, maxit_, tol_, iters_used);
 	cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
 	saturation_[cell] = res.lastSaturation();
 	fracFlow(saturation_[cell], concentration_[cell], cmax_[cell], cell,
@@ -799,7 +803,7 @@ namespace Opm
 			}
 		    }
 		    // Note: In some experiments modifiedRegularFalsi does not yield a result under the given tolerance.
-		    t = modifiedRegulaFalsi(res_s_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
+		    t = RootFinder::solve(res_s_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
 		    res_s_on_curve.curve.computeXOfT(x, t);
 		} else {
 		    if (res[1] < 0) {
@@ -817,7 +821,7 @@ namespace Opm
 			    t_max = t_out;
 			}
 		    }
-		    t = modifiedRegulaFalsi(res_c_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
+		    t = RootFinder::solve(res_c_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
 		    res_c_on_curve.curve.computeXOfT(x, t);
 
 		}
@@ -967,9 +971,9 @@ namespace Opm
     {
         c_ = c;
         int iters_used;
-        return modifiedRegulaFalsi(*this, res_c_eq_.s0, 0.0, 1.0,
-                                   res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_,
-                                   iters_used);
+        return RootFinder::solve(*this, res_c_eq_.s0, 0.0, 1.0,
+                                 res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_,
+                                 iters_used);
     }
 
 
@@ -1130,7 +1134,7 @@ namespace Opm
 	const double a = 0.0;
 	const double b = polyprops_.cMax()*1.1; // Add 10% to account for possible non-monotonicity of hyperbolic system.
         int iters_used;
-        concentration_[cell] = modifiedRegulaFalsi(res_c, a, b, maxit_, tol_, iters_used);
+        concentration_[cell] = RootFinder::solve(res_c, a, b, maxit_, tol_, iters_used);
         ResidualSGrav res_s(res_c);
         saturation_[cell] = res_s.sOfc(concentration_[cell]);
         cmax_[cell] = std::max(cmax0_[cell], concentration_[cell]);
