@@ -367,13 +367,13 @@ compute_darcyflux_and_deriv(int           np,
 
 
 static void
-compute_compflux_and_deriv(struct UnstructuredGrid               *G     ,
-                           int                   np    ,
-                           const double         *cpress,
-                           const double         *trans ,
-                           const double         *pmobf ,
-                           const double         *gcapf ,
-                           const double         *Af    ,
+compute_compflux_and_deriv(struct UnstructuredGrid  *G     ,
+                           int                       np    ,
+                           const double             *cpress,
+                           const double             *trans ,
+                           const double             *pmobf ,
+                           const double             *gcapf ,
+                           const double             *Af    ,
                            struct cfs_tpfa_res_impl *pimpl )
 {
     int     c1, c2, f, np2;
@@ -488,12 +488,12 @@ count_internal_conn(struct UnstructuredGrid *G, int c)
 
 
 static int
-init_cell_contrib(struct UnstructuredGrid               *G    ,
-                  int                   c    ,
-                  int                   np   ,
-                  double                pvol ,
-                  double                dt   ,
-                  const double         *z    ,
+init_cell_contrib(struct UnstructuredGrid  *G    ,
+                  int                       c    ,
+                  int                       np   ,
+                  double                    pvol ,
+                  double                    dt   ,
+                  const double             *z    ,
                   struct cfs_tpfa_res_impl *pimpl)
 {
     int     c1, c2, f, i, conn, nconn;
@@ -536,14 +536,14 @@ init_cell_contrib(struct UnstructuredGrid               *G    ,
 
 
 static void
-compute_cell_contrib(struct UnstructuredGrid               *G    ,
-                     int                   c    ,
-                     int                   np   ,
-                     double                pvol ,
-                     double                dt   ,
-                     const double         *z    ,
-                     const double         *Ac   ,
-                     const double         *dAc  ,
+compute_cell_contrib(struct UnstructuredGrid  *G    ,
+                     int                       c    ,
+                     int                       np   ,
+                     double                    pvol ,
+                     double                    dt   ,
+                     const double             *z    ,
+                     const double             *Ac   ,
+                     const double             *dAc  ,
                      struct cfs_tpfa_res_impl *pimpl)
 {
     int        c1, c2, f, i, off, nconn, p;
@@ -631,8 +631,8 @@ assemble_sources(double                    dt ,
 
 /* ---------------------------------------------------------------------- */
 static int
-assemble_cell_contrib(struct UnstructuredGrid               *G,
-                      int                   c,
+assemble_cell_contrib(struct UnstructuredGrid  *G,
+                      int                       c,
                       struct cfs_tpfa_res_data *h)
 /* ---------------------------------------------------------------------- */
 {
@@ -915,15 +915,15 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
 
 /* ---------------------------------------------------------------------- */
 static void
-compute_fpress(struct UnstructuredGrid       *G,
-               int           np,
-               const double *htrans,
-               const double *pmobf,
-               const double *gravcap_f,
-               const double *cpress,
-               const double *fflux,
-               double       *fpress,
-               double       *scratch_f)
+compute_fpress(struct UnstructuredGrid *G        ,
+               int                      np       ,
+               const double            *htrans   ,
+               const double            *pmobf    ,
+               const double            *gravcap_f,
+               const double            *cpress   ,
+               const double            *fflux    ,
+               double                  *fpress   ,
+               double                  *scratch_f)
 /* ---------------------------------------------------------------------- */
 {
     int    c, i, f; /* , c1, c2; */
@@ -972,13 +972,13 @@ compute_fpress(struct UnstructuredGrid       *G,
 
 /* ---------------------------------------------------------------------- */
 static void
-compute_flux(struct UnstructuredGrid       *G,
-             int           np,
-             const double *trans,
-             const double *pmobf,
-             const double *gravcap_f,
-             const double *cpress,
-             double       *fflux)
+compute_flux(struct UnstructuredGrid *G        ,
+             int                      np       ,
+             const double            *trans    ,
+             const double            *pmobf    ,
+             const double            *gravcap_f,
+             const double            *cpress   ,
+             double                  *fflux    )
 /* ---------------------------------------------------------------------- */
 {
     int    f, c1, c2, p;
@@ -1157,17 +1157,17 @@ cfs_tpfa_res_construct(struct UnstructuredGrid   *G      ,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_res_assemble(struct UnstructuredGrid                      *G,
-                      double                       dt,
-                      struct cfs_tpfa_res_forces  *forces,
-                      const double                *zc,
-                      struct compr_quantities_gen *cq,
-                      const double                *trans,
+cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
+                      double                       dt       ,
+                      struct cfs_tpfa_res_forces  *forces   ,
+                      const double                *zc       ,
+                      struct compr_quantities_gen *cq       ,
+                      const double                *trans    ,
                       const double                *gravcap_f,
-                      const double                *cpress,
-                      const double                *wpress,
-                      const double                *porevol,
-                      struct cfs_tpfa_res_data    *h)
+                      const double                *cpress   ,
+                      const double                *wpress   ,
+                      const double                *porevol  ,
+                      struct cfs_tpfa_res_data    *h        )
 /* ---------------------------------------------------------------------- */
 {
     int res_is_neumann, well_is_neumann, c, np2;
@@ -1215,7 +1215,7 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid                      *G,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_res_flux(struct UnstructuredGrid                     *G        ,
+cfs_tpfa_res_flux(struct UnstructuredGrid    *G        ,
                   struct cfs_tpfa_res_forces *forces   ,
                   int                         np       ,
                   const double               *trans    ,
@@ -1240,15 +1240,15 @@ cfs_tpfa_res_flux(struct UnstructuredGrid                     *G        ,
 
 /* ---------------------------------------------------------------------- */
 void
-cfs_tpfa_res_fpress(struct UnstructuredGrid                   *G,
-                    int                       np,
-                    const double             *htrans,
-                    const double             *pmobf,
+cfs_tpfa_res_fpress(struct UnstructuredGrid  *G        ,
+                    int                       np       ,
+                    const double             *htrans   ,
+                    const double             *pmobf    ,
                     const double             *gravcap_f,
-                    struct cfs_tpfa_res_data *h,
-                    const double             *cpress,
-                    const double             *fflux,
-                    double                   *fpress)
+                    struct cfs_tpfa_res_data *h        ,
+                    const double             *cpress   ,
+                    const double             *fflux    ,
+                    double                   *fpress   )
 /* ---------------------------------------------------------------------- */
 {
     compute_fpress(G, np, htrans, pmobf, gravcap_f,
