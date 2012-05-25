@@ -769,7 +769,9 @@ main(int argc, char** argv)
                 reorder_model.solve(&state.faceflux()[0], &porevol[0], &reorder_src[0], stepsize, inflow_c,
                                     &reorder_sat[0], &state.concentration()[0], &state.maxconcentration()[0]);
                 Opm::toBothSat(reorder_sat, state.saturation());
-                Opm::computeInjectedProduced(*props, state.saturation(), reorder_src, stepsize, injected, produced);
+                Opm::computeInjectedProduced(*props, polyprop, state.saturation(), state.concentration(), state.maxconcentration(),
+                                             reorder_src, simtimer.currentStepLength(), inflow_c,
+                                             injected, produced, polyinj, polyprod);
                 if (use_segregation_split) {
                     if (use_column_solver) {
                         if (use_gauss_seidel_gravity) {
@@ -797,9 +799,6 @@ main(int argc, char** argv)
         Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
         polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), polyprop.deadPoreVol());
         polymass_adsorbed = Opm::computePolymerAdsorbed(*props, polyprop, porevol, state.maxconcentration());
-        Opm::computeInjectedProduced(*props, polyprop, state.saturation(), state.concentration(), state.maxconcentration(),
-                                     src, simtimer.currentStepLength(), inflow_c,
-                                     injected, produced, polyinj, polyprod);
         tot_injected[0] += injected[0];
         tot_injected[1] += injected[1];
         tot_produced[0] += produced[0];
