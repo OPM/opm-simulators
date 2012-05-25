@@ -461,7 +461,7 @@ namespace Opm
                         InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
                         const int cpos = control_pos[mode];
                         if (cpos == -1 && mode != InjectionControl::GRUP) {
-                            THROW("Control mode type " << mode << " not present in well " << well_names[wix]);
+                            THROW("Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
                         }
                         set_current_control(wix, cpos, w_);
 
