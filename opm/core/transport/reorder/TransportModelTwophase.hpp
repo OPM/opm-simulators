@@ -31,32 +31,47 @@ namespace Opm
 
     class IncompPropertiesInterface;
 
+    /// Implements a reordering transport solver for incompressible two-phase flow.
     class TransportModelTwophase : public TransportModelInterface
     {
     public:
+	/// Construct solver.
+	/// \param[in] grid      A 2d or 3d grid.
+	/// \param[in] props     Rock and fluid properties.
+	/// \param[in] tol       Tolerance used in the solver.
+	/// \param[in] maxit     Maximum number of non-linear iterations used.
 	TransportModelTwophase(const UnstructuredGrid& grid,
 			       const Opm::IncompPropertiesInterface& props,
 			       const double tol,
 			       const int maxit);
 
+	/// Solve for saturation at next timestep.
+	/// \param[in] darcyflux         Array of signed face fluxes.
+	/// \param[in] porevolume        Array of pore volumes.
+	/// \param[in] source            Transport source term.
+	/// \param[in] dt                Time step.
+	/// \param[in, out] saturation   Phase saturations.
 	void solve(const double* darcyflux,
                    const double* porevolume,
 		   const double* source,
 		   const double dt,
 		   std::vector<double>& saturation);
 
-	virtual void solveSingleCell(const int cell);
-	virtual void solveMultiCell(const int num_cells, const int* cells);
-
         void initGravity(const double* grav);
-        void solveSingleCellGravity(const std::vector<int>& cells,
-                                    const int pos,
-                                    const double* gravflux);
-        int solveGravityColumn(const std::vector<int>& cells);
+
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
+
+    private:
+	virtual void solveSingleCell(const int cell);
+	virtual void solveMultiCell(const int num_cells, const int* cells);
+
+        void solveSingleCellGravity(const std::vector<int>& cells,
+                                    const int pos,
+                                    const double* gravflux);
+        int solveGravityColumn(const std::vector<int>& cells);
 
     private:
 	const UnstructuredGrid& grid_;
