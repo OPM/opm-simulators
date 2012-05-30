@@ -36,6 +36,7 @@ namespace Opm
     {
     public:
 	virtual ~TransportModelInterface() {}
+    private:
 	virtual void solveSingleCell(const int cell) = 0;
 	virtual void solveMultiCell(const int num_cells, const int* cells) = 0;
     protected:
