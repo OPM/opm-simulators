@@ -35,14 +35,7 @@
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/fluid/IncompPropertiesBasic.hpp>
 
-#include <opm/core/transport/transport_source.h>
-#include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
-#include <opm/core/transport/NormSupport.hpp>
-#include <opm/core/transport/ImplicitAssembly.hpp>
-#include <opm/core/transport/ImplicitTransport.hpp>
-#include <opm/core/transport/JacobianSystem.hpp>
-#include <opm/core/transport/CSRMatrixBlockAssembler.hpp>
-#include <opm/core/transport/SinglePointUpwindTwoPhase.hpp>
+#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
 
 #include <opm/core/TwophaseState.hpp>
 
@@ -68,8 +61,8 @@
 /// The conservation of mass for each phase writes:
 /// \f[\frac{\partial}{\partial t}(\phi\rho_\alpha s_\alpha)+\nabla\cdot(\rho_\alpha u_\alpha)=q_\alpha\f]
 /// where \f$s_\alpha\f$ denotes the saturation of the phase \f$\alpha\f$ and \f$q_\alpha\f$ is a source term. Let
-/// us consider a two phase flow with oil and water. We assume that the phases are incompressible. Since
-/// \f$s_w+s_o=1\f$, we get
+/// us consider a two phase flow with oil and water. We assume that the rock and both fluid phases are incompressible. Since
+/// \f$s_w+s_o=1\f$, we may add the conservation equations to get
 ///  \f[ \nabla\cdot u=\frac{q_w}{\rho_w}+\frac{q_o}{\rho_o}.\f]
 /// where we define
 ///   \f[u=u_w+u_o.\f]
@@ -84,7 +77,7 @@
 /// as
 /// \f[f_w=\frac{\lambda_w}{\lambda_w+\lambda_o}\f]
 /// and obtain
-/// \f[\phi\frac{\partial s}{\partial t}+\nabla\cdot(f_w u)=\frac{q_w}{\rho_w}\f]
+/// \f[\phi\frac{\partial s_w}{\partial t}+\nabla\cdot(f_w u)=\frac{q_w}{\rho_w}\f]
 /// which is referred to as the <strong>transport equation</strong>. The pressure and 
 /// transport equation are coupled. In this tutorial, we implement a splitting scheme, 
 /// where, at each time step, we decouple the two equations. We solve first
@@ -92,111 +85,6 @@
 /// the transport equation assuming that \f$u\f$ is constant in time in the time step 
 /// interval we are considering.
 
-/// \page tutorial3
-/// \section commentedcode3 Commented code:
-/// \page tutorial3
-/// \details
-/// We define a class which computes mobility, capillary pressure and
-/// the minimum and maximum saturation value for each cell. 
-/// \code
-class TwophaseFluid
-{
-public:
-    /// \endcode
-    /// \page tutorial3
-    /// \details Constructor operator. Takes in the fluid properties defined  
-    /// \c props
-    /// \code
-    TwophaseFluid(const Opm::IncompPropertiesInterface& props);
-    /// \endcode
-
-    /// \page tutorial3
-    /// \details Density for each phase.
-    /// \code
-    double density(int phase) const;
-    /// \endcode
-
-    /// \page tutorial3
-    /// \details Computes the mobility and its derivative with respect to saturation
-    /// for a given cell \c c and saturation \c sat. The template classes \c Sat, 
-    /// \c Mob, \c DMob are typically arrays. By using templates, we do not have to 
-    /// investigate how these array objects are implemented 
-    /// (as long as they have an \c operator[] method).
-    /// \code
-    template <class Sat, class Mob, class DMob>  
-    void mobility(int c, const Sat& s, Mob& mob, DMob& dmob) const;
-    /// \endcode
-
-    /// \page tutorial3
-    /// \details Computes the capillary pressure  and its derivative with respect 
-    ///  to saturation
-    /// for a given cell \c c and saturation \c sat.
-    /// \code
-    template <class Sat, class Pcap, class DPcap>  
-    void pc(int c, const Sat& s, Pcap& pcap, DPcap& dpcap) const;
-    /// \endcode
-
-    /// \page tutorial3
-    /// \details Returns the minimum permitted saturation.
-    /// \code
-    double s_min(int c) const;
-    /// \endcode
-
-    /// \page tutorial3
-    /// \details Returns the maximum permitted saturation
-    /// \code
-    double s_max(int c) const;
-    /// \endcode
-
-    /// \page tutorial3
-    /// \details Private variables
-    /// \code
-private:
-    const Opm::IncompPropertiesInterface& props_;
-    std::vector<double> smin_;
-    std::vector<double> smax_;
-};
-/// \endcode
-
-/// \page tutorial3
-/// \details We set up the transport model.
-/// \code
-typedef Opm::SinglePointUpwindTwoPhase<TwophaseFluid> TransportModel;
-/// \endcode
-
-/// \page tutorial3
-/// \details
-/// The transport equation is nonlinear. We use an implicit transport solver
-/// which implements a Newton-Raphson solver. 
-/// We define the format of the objects 
-/// which will be used by the solver.
-/// \code
-using namespace Opm::ImplicitTransportDefault;
-typedef NewtonVectorCollection< ::std::vector<double> >  NVecColl;
-typedef JacobianSystem< struct CSRMatrix, NVecColl > JacSys;
-
-template <class Vector>
-class MaxNorm {
-public:
-    static double
-    norm(const Vector& v) {
-        return AccumulationNorm <Vector, MaxAbs>::norm(v);
-    }
-};
-/// \endcode
-
-/// \page tutorial3
-/// \details
-/// We set up the solver.
-/// \code
-typedef Opm::ImplicitTransport<TransportModel,
-        JacSys        ,
-        MaxNorm       ,
-        VectorNegater ,
-        VectorZero    ,
-        MatrixZero    ,
-        VectorAssign  > TransportSolver;
-/// \endcode
 
 
 /// \page tutorial3
@@ -208,65 +96,64 @@ int main ()
     /// \endcode
     /// \page tutorial3
     /// \details
-    /// We define the grid. A cartesian grid with 1200 cells.
+    /// We define the grid. A cartesian grid with 400 cells,
+    /// each being 10m along each side. Note that we treat the
+    /// grid as 3-dimensional, but have a thickness of only one
+    /// layer in the Z direction.
+    ///
+    /// The Opm::GridManager is responsible for creating and destroying the grid,
+    /// the UnstructuredGrid data structure contains the actual grid topology
+    /// and geometry.
     /// \code
-    int dim = 3;
     int nx = 20;
     int ny = 20;
     int nz = 1;
-    double dx = 10.;
-    double dy = 10.;
-    double dz = 10.;
+    double dx = 10.0;
+    double dy = 10.0;
+    double dz = 10.0;
     using namespace Opm;
-    GridManager grid(nx, ny, nz, dx, dy, dz);
-    int num_cells = grid.c_grid()->number_of_cells;
+    GridManager grid_manager(nx, ny, nz, dx, dy, dz);
+    const UnstructuredGrid& grid = *grid_manager.c_grid();
+    int num_cells = grid.number_of_cells;
     /// \endcode
 
     /// \page tutorial3
     /// \details
     /// We define the properties of the fluid.\n 
-    /// Number of phases.
+    /// Number of phases, phase densities, phase viscosities,
+    /// rock porosity and permeability.
+    ///
+    /// We always use SI units in the simulator. Many units are
+    /// available for use, however.  They are stored as constants in
+    /// the Opm::unit namespace, while prefixes are in the Opm::prefix
+    /// namespace. See Units.hpp for more.
     /// \code
     int num_phases = 2;
-    using namespace unit;
-    using namespace prefix;
-    /// \endcode
-    /// \page tutorial3
-    /// \details density vector (one component per phase).
-    /// \code
-    std::vector<double> rho(2, 1000.);
-    /// \endcode
-    /// \page tutorial3
-    /// \details viscosity vector (one component per phase).
-    /// \code
-    std::vector<double> mu(2, 1.*centi*Poise);
-    /// \endcode
-    /// \page tutorial3
-    /// \details porosity and permeability of the rock.
-    /// \code
+    using namespace Opm::unit;
+    using namespace Opm::prefix;
+    std::vector<double> density(num_phases, 1000.0);
+    std::vector<double> viscosity(num_phases, 1.0*centi*Poise);
     double porosity = 0.5;
-    double k = 10*milli*darcy;
+    double permeability = 10.0*milli*darcy;
     /// \endcode
 
     /// \page tutorial3
     /// \details We define the relative permeability function. We use a basic fluid
     /// description and set this function to be linear. For more realistic fluid, the 
-    /// saturation function is given by the data.
+    /// saturation function may be interpolated from experimental data.
     /// \code
-    SaturationPropsBasic::RelPermFunc rel_perm_func;
-    rel_perm_func = SaturationPropsBasic::Linear;
+    SaturationPropsBasic::RelPermFunc rel_perm_func = SaturationPropsBasic::Linear;
     /// \endcode
 
     /// \page tutorial3
-    /// \details We construct a basic fluid with the properties we have defined above.
-    /// Each property is constant and hold for all cells.
+    /// \details We construct a basic fluid and rock property object
+    /// with the properties we have defined above.  Each property is
+    /// constant and hold for all cells.
     /// \code
-    IncompPropertiesBasic props(num_phases, rel_perm_func, rho, mu,
-                                     porosity, k, dim, num_cells);
-    TwophaseFluid fluid(props);
+    IncompPropertiesBasic props(num_phases, rel_perm_func, density, viscosity,
+                                porosity, permeability, grid.dimensions, num_cells);
     /// \endcode
 
-    
     /// \page tutorial3
     /// \details Gravity parameters. Here, we set zero gravity.
     /// \code
@@ -275,16 +162,17 @@ int main ()
     /// \endcode
 
     /// \page tutorial3
-    /// \details We set up the pressure solver.
+    /// \details We may now set up the pressure solver. At this point,
+    /// unchanging parameters such as transmissibility are computed
+    /// and stored internally by the IncompTpfa class.
     /// \code
     LinearSolverUmfpack linsolver;
-    IncompTpfa psolver(*grid.c_grid(), props.permeability(), grav, linsolver);
+    IncompTpfa psolver(grid, props.permeability(), grav, linsolver);
     /// \endcode
 
-    
-
     /// \page tutorial3
-    /// \details We set up the source term
+    /// \details We set up the source term. Positive numbers indicate that the cell is a source,
+    /// while negative numbers indicate a sink.
     /// \code
     std::vector<double> src(num_cells, 0.0);
     src[0] = 1.;
@@ -292,83 +180,55 @@ int main ()
     /// \endcode
 
     /// \page tutorial3
-    /// \details We set up the wells. Here, there are no well and we let them empty.
+    /// \details We set up data vectors for the wells. Here, there are
+    /// no wells and we let them be empty dummies.
     /// \code
-    std::vector<double> empty_wdp; 
+    std::vector<double> empty_wdp;
     std::vector<double> empty_well_bhp;
     std::vector<double> empty_well_flux;
     /// \endcode
 
-    /// \page tutorial3
-    /// \details We set up the source term for the transport solver.
-    /// \code
-    TransportSource* tsrc = create_transport_source(2, 2);
-    double ssrc[]   = { 1.0, 0.0 };
-    double ssink[]  = { 0.0, 1.0 };
-    double zdummy[] = { 0.0, 0.0 };
-    for (int cell = 0; cell < num_cells; ++cell) {
-        if (src[cell] > 0.0) {
-            append_transport_source(cell, 2, 0, src[cell], ssrc, zdummy, tsrc);
-        } else if (src[cell] < 0.0) {
-            append_transport_source(cell, 2, 0, src[cell], ssink, zdummy, tsrc);
-        }
-    }
-    /// \endcode
 
     /// \page tutorial3
     /// \details We compute the pore volume
     /// \code
     std::vector<double> porevol;
-    Opm::computePorevolume(*grid.c_grid(), props.porosity(), porevol);
+    Opm::computePorevolume(grid, props.porosity(), porevol);
     /// \endcode
 
     /// \page tutorial3
-    /// \details We set up the transport solver.
+    /// \details Set up the transport solver. This is a reordering implicit Euler transport solver.
     /// \code
-    const bool guess_old_solution = true;
-    TransportModel  model  (fluid, *grid.c_grid(), porevol, grav, guess_old_solution);
-    TransportSolver tsolver(model);
+    const double tolerance = 1e-9;
+    const int max_iterations = 30;
+    Opm::TransportModelTwophase transport_solver(grid, props, tolerance, max_iterations);
     /// \endcode
 
     /// \page tutorial3
     /// \details Time integration parameters
     /// \code
-    double dt = 0.1*day;
-    int num_time_steps = 20;
+    const double dt = 0.1*day;
+    const int num_time_steps = 20;
     /// \endcode
-
-    /// \page tutorial3
-    /// \details Control paramaters for the implicit solver.
-    /// \code 
-    ImplicitTransportDetails::NRReport  rpt;
-    ImplicitTransportDetails::NRControl ctrl;
-    /// \endcode
-
 
 
     /// \page tutorial3
     /// \details We define a vector which contains all cell indexes. We use this 
-    /// vector to set up parameters on the whole domains.
+    /// vector to set up parameters on the whole domain.
+    /// \code
     std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;
     }
-
+    /// \endcode
 
     /// \page tutorial3
-    /// \details We set up the boundary conditions. Letting bcs empty is equivalent 
-    /// to no flow boundary conditions.
+    /// \details We set up the boundary conditions. Letting bcs be empty is equivalent 
+    /// to no-flow boundary conditions.
     /// \code
     FlowBCManager bcs;
     /// \endcode
 
-    /// \page tutorial3
-    /// \details 
-    /// Linear solver init.
-    /// \code
-    using ImplicitTransportLinAlgSupport::CSRMatrixUmfpackSolver;
-    CSRMatrixUmfpackSolver linsolve;
-    /// \endcode
 
     /// \page tutorial3
     /// \details 
@@ -376,7 +236,7 @@ int main ()
     /// initialise water saturation to minimum everywhere.
     /// \code
     TwophaseState state;
-    state.init(*grid.c_grid(), 2);
+    state.init(grid, 2);
     state.setFirstSat(allcells, props, TwophaseState::MinSat);
     /// \endcode
     
@@ -388,7 +248,8 @@ int main ()
     /// \endcode
 
     /// \page tutorial3
-    /// \details This string will contain the name of a VTK output vector.
+    /// \details This string stream will be used to construct a new
+    /// output filename at each timestep.
     /// \code
     std::ostringstream vtkfilename;
     /// \endcode
@@ -400,7 +261,10 @@ int main ()
     for (int i = 0; i < num_time_steps; ++i) {
         /// \endcode
         /// \page tutorial3
-        /// \details Compute the total mobility. It is needed by the pressure solver
+
+        /// \details Compute the total mobility. It is needed by the
+        /// pressure solver and must be recomputed every time step
+        /// since it depends on the saturation.
         /// \code
         computeTotalMobility(props, allcells, state.saturation(), totmob);
         /// \endcode
@@ -412,9 +276,10 @@ int main ()
                       empty_well_flux);
         /// \endcode
         /// \page tutorial3
-        /// \details  Transport solver
+        /// \details  Solve the transport equation.
         /// \code
-        tsolver.solve(*grid.c_grid(), tsrc, dt, ctrl, state, linsolve, rpt);
+        transport_solver.solve(&state.faceflux()[0], &porevol[0], &src[0],
+                               dt, state.saturation());
         /// \endcode
 
         /// \page tutorial3
@@ -426,75 +291,11 @@ int main ()
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
+        Opm::writeVtkData(grid, dm, vtkfile);
     }
 }
 /// \endcode
 
-/// \page tutorial3
-/// \details Implementation of the TwophaseFluid class.
-/// \code
-TwophaseFluid::TwophaseFluid(const Opm::IncompPropertiesInterface& props)
-    : props_(props),
-      smin_(props.numCells()*props.numPhases()),
-      smax_(props.numCells()*props.numPhases())
-{
-    const int num_cells = props.numCells();
-        std::vector<int> cells(num_cells);
-        for (int c = 0; c < num_cells; ++c) {
-            cells[c] = c;
-        }
-        props.satRange(num_cells, &cells[0], &smin_[0], &smax_[0]);
-    }
-
-double TwophaseFluid::density(int phase) const
-{
-    return props_.density()[phase];
-}
-
-template <class Sat,
-          class Mob,
-          class DMob>
-void TwophaseFluid::mobility(int c, const Sat& s, Mob& mob, DMob& dmob) const
-{
-    props_.relperm(1, &s[0], &c, &mob[0], &dmob[0]);
-    const double* mu = props_.viscosity();
-    mob[0] /= mu[0];
-    mob[1] /= mu[1];
-    /// \endcode
-    /// \page tutorial3
-    /// \details We
-    /// recall that we use Fortran ordering for kr derivatives,
-    /// therefore dmob[i*2 + j] is row j and column i of the
-    /// matrix.
-    /// Each row corresponds to a kr function, so which mu to
-    /// divide by also depends on the row, j.
-    /// \code
-    dmob[0*2 + 0] /= mu[0];
-    dmob[0*2 + 1] /= mu[1];
-    dmob[1*2 + 0] /= mu[0];
-    dmob[1*2 + 1] /= mu[1];
-}
-
-template <class Sat,
-          class Pcap,
-          class DPcap>
-void TwophaseFluid::pc(int /*c */, const Sat& /* s*/, Pcap& pcap, DPcap& dpcap) const
-{
-    pcap = 0.;
-    dpcap = 0.;
-}
-
-double TwophaseFluid::s_min(int c) const
-{
-    return smin_[2*c + 0];
-}
-
-double TwophaseFluid::s_max(int c) const
-{
-    return smax_[2*c + 0];
-}
-/// \endcode
 
 
 /// \page tutorial3
