@@ -126,7 +126,6 @@ int main()
     /// \details We set up the boundary conditions.
     /// By default, we obtain no-flow boundary conditions.
     /// \code
-    /// \code
     Opm::FlowBCManager bcs;
     /// \endcode
 
