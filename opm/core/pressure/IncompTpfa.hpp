@@ -50,6 +50,7 @@ namespace Opm
 	///                          and N == g.number_of_cells.
 	/// \param[in] gravity       Gravity vector. If nonzero, the array should
 	///                          have D elements.
+	/// \param[in] linsolver     A linear solver.
         /// \param[in] wells         The wells argument. Will be used in solution, 
         ///                          is ignored if NULL
 	IncompTpfa(const UnstructuredGrid& g,
@@ -70,6 +71,9 @@ namespace Opm
 	/// \param[in]  src        Must contain N source rates (one per cell).
 	///                        Positive values represent total inflow rates,
 	///                        negative values represent total outflow rates.
+	/// \param[in]  wdp        Should contain the differences between
+        ///                        well BHP and perforation pressures.
+	///                        May be empty if there are no wells.
 	/// \param[in]  bcs        If non-null, specifies boundary conditions.
 	///                        If null, noflow conditions are assumed.
 	/// \param[out] pressure   Will contain N cell-pressure values.
@@ -98,6 +102,9 @@ namespace Opm
         /// \param[in]  src        Must contain N source rates (one per cell).
         ///                        Positive values represent total inflow rates,
         ///                        negative values represent total outflow rates.
+	/// \param[in]  wdp        Should contain the differences between
+        ///                        well BHP and perforation pressures.
+	///                        May be empty if there are no wells.
         /// \param[in]  bcs        If non-null, specifies boundary conditions.
         ///                        If null, noflow conditions are assumed.
         /// \param[in]  porevol    Must contain N pore volumes.
