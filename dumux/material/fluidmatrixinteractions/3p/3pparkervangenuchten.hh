@@ -100,7 +100,7 @@ public:
         
             /* evaluate tangential */
             r        = (Se-Se_regu)*pc_prime+pc;
-            return(r);
+            return(r/params.betaGW());
         }
     }
 
@@ -144,7 +144,7 @@ public:
 
             /* evaluate tangential */
             r        = (Se-Se_regu)*pc_prime+pc;
-            return(r);
+            return(r/params.betaNW());
         }
     }
 
@@ -187,7 +187,7 @@ public:
 
             /* evaluate tangential */
             r        = (Se-Se_regu)*pc_prime+pc;
-            return(r);
+            return(r/params.betaGN());
         }
     }
 

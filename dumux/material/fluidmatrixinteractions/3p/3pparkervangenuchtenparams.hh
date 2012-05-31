@@ -55,7 +55,7 @@ public:
     ParkerVanGen3PParams()
     {}
 
-    ParkerVanGen3PParams(Scalar vgAlpha, Scalar vgN, Scalar KdNAPL, Scalar rhoBulk, Dune::FieldVector<Scalar, 4> residualSaturation, bool regardSnr=false)
+    ParkerVanGen3PParams(Scalar vgAlpha, Scalar vgN, Scalar KdNAPL, Scalar rhoBulk, Dune::FieldVector<Scalar, 4> residualSaturation, Scalar betaNW = 1, Scalar betaGN = 1, Scalar betaGW = 1, bool regardSnr=false)
     {
         setVgAlpha(vgAlpha);
         setVgN(vgN);
@@ -65,6 +65,9 @@ public:
         setSwrx(residualSaturation[3]);
         setkrRegardsSnr(regardSnr);
         setKdNAPL(KdNAPL);
+        setBetaNW(betaNW);
+        setBetaGN(betaGN);
+        setBetaGW(betaGW);
         setRhoBulk(rhoBulk);
     }
 
@@ -191,6 +194,30 @@ public:
     { Swrx_ = input; }
 
     /*!
+     * \brief defines the scaling parameters of capillary pressure between the phases (=1 for Gas-Water)
+     */
+    void setBetaNW(Scalar input)
+    { betaNW_ = input; }
+
+    void setBetaGN(Scalar input)
+    { betaGN_ = input; }
+
+    void setBetaGW(Scalar input)
+    { betaGW_ = input; }
+
+    /*!
+     * \brief Return the values for the beta scaling parameters of capillary pressure between the phases
+     */
+    Scalar betaNW() const
+    { return betaNW_; }
+
+    Scalar betaGN() const
+    { return betaNW_; }
+
+    Scalar betaGW() const
+    { return betaNW_; }
+
+    /*!
      * \brief defines if residual n-phase saturation should be regarded in its relative permeability.
      */
     void setkrRegardsSnr(bool input)
@@ -251,6 +278,10 @@ private:
 
     Scalar KdNAPL_;
     Scalar rhoBulk_;
+
+    Scalar betaNW_;
+    Scalar betaGN_;
+    Scalar betaGW_;
 
     bool krRegardsSnr_ ;
 };
