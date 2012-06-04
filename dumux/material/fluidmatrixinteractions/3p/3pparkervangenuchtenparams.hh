@@ -53,9 +53,9 @@ public:
     typedef ScalarT Scalar;
 
     ParkerVanGen3PParams()
-    {}
+    {betaGW_ = betaNW_ = betaGN_ = 1.;}
 
-    ParkerVanGen3PParams(Scalar vgAlpha, Scalar vgN, Scalar KdNAPL, Scalar rhoBulk, Dune::FieldVector<Scalar, 4> residualSaturation, Scalar betaNW = 1, Scalar betaGN = 1, Scalar betaGW = 1, bool regardSnr=false)
+    ParkerVanGen3PParams(Scalar vgAlpha, Scalar vgN, Scalar KdNAPL, Scalar rhoBulk, Dune::FieldVector<Scalar, 4> residualSaturation, Scalar betaNW = 1., Scalar betaGN = 1., Scalar betaGW = 1., bool regardSnr=false)
     {
         setVgAlpha(vgAlpha);
         setVgN(vgN);
@@ -212,10 +212,10 @@ public:
     { return betaNW_; }
 
     Scalar betaGN() const
-    { return betaNW_; }
+    { return betaGN_; }
 
     Scalar betaGW() const
-    { return betaNW_; }
+    { return betaGW_; }
 
     /*!
      * \brief defines if residual n-phase saturation should be regarded in its relative permeability.
