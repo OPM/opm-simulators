@@ -5,14 +5,14 @@
 
 #include "opm/core/utility/initState.hpp"
 #include "opm/core/utility/SimulatorTimer.hpp"
-#include <opm/core/WellsManager.hpp>
+#include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 #include <opm/core/newwells.h>
 #include <opm/core/grid.h>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/TwophaseState.hpp>
+#include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
