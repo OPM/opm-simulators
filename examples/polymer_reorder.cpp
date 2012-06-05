@@ -28,7 +28,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/newwells.h>
-#include <opm/core/WellsManager.hpp>
+#include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/initState.hpp>
 #include <opm/core/utility/SimulatorTimer.hpp>
@@ -53,7 +53,7 @@
 #include <opm/core/transport/CSRMatrixBlockAssembler.hpp>
 #include <opm/core/transport/SinglePointUpwindTwoPhase.hpp>
 
-#include <opm/core/ColumnExtract.hpp>
+#include <opm/core/utility/ColumnExtract.hpp>
 
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp>

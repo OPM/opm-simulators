@@ -21,7 +21,7 @@
 #define OPM_POLYMERSTATE_HEADER_INCLUDED
 
 
-#include <opm/core/TwophaseState.hpp>
+#include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/grid.h>
 #include <vector>
 
