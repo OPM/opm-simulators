@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/WellsGroup.hpp>
+#include <opm/core/wells/WellsGroup.hpp>
 #include <cmath>
 #include <opm/core/newwells.h>
 #include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>

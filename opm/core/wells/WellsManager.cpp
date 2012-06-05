@@ -18,13 +18,13 @@
 */
 
 
-#include <opm/core/WellsManager.hpp>
+#include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/WellCollection.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
 
 #include <tr1/array>

@@ -23,7 +23,7 @@ along with OpenRS.  If not, see <http://www.gnu.org/licenses/>.
 #define	OPM_WELLCOLLECTION_HPP
 
 #include <vector>
-#include <opm/core/WellsGroup.hpp>
+#include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
