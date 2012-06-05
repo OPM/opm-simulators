@@ -435,13 +435,13 @@ namespace Opm
                         // Add all controls that are present in well.
                         int ok = 1;
                         int control_pos[5] = { -1, -1, -1, -1, -1 };
-                        if (ok && wci_line.surface_flow_max_rate_ > 0.0) {
+                        if (ok && wci_line.surface_flow_max_rate_ >= 0.0) {
                             control_pos[InjectionControl::RATE] = w_->ctrls[wix]->num;
                             const double distr[3] = { 1.0, 1.0, 1.0 };
                             ok = append_well_controls(SURFACE_RATE, wci_line.surface_flow_max_rate_,
                                                       distr, wix, w_);
                         }
-                        if (ok && wci_line.reservoir_flow_max_rate_ > 0.0) {
+                        if (ok && wci_line.reservoir_flow_max_rate_ >= 0.0) {
                             control_pos[InjectionControl::RESV] = w_->ctrls[wix]->num;
                             const double distr[3] = { 1.0, 1.0, 1.0 };
                             ok = append_well_controls(RESERVOIR_RATE, wci_line.reservoir_flow_max_rate_,
@@ -515,7 +515,7 @@ namespace Opm
                         // Add all controls that are present in well.
                         int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
                         int ok = 1;
-                        if (ok && wcp_line.oil_max_rate_ > 0.0) {
+                        if (ok && wcp_line.oil_max_rate_ >= 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Liquid]) {
                                 THROW("Oil phase not active and ORAT control specified.");
                             }
@@ -525,7 +525,7 @@ namespace Opm
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.oil_max_rate_,
                                                       distr, wix, w_);
                         }
-                        if (ok && wcp_line.water_max_rate_ > 0.0) {
+                        if (ok && wcp_line.water_max_rate_ >= 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Aqua]) {
                                 THROW("Water phase not active and WRAT control specified.");
                             }
@@ -535,7 +535,7 @@ namespace Opm
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.water_max_rate_,
                                                       distr, wix, w_);
                         }
-                        if (ok && wcp_line.gas_max_rate_ > 0.0) {
+                        if (ok && wcp_line.gas_max_rate_ >= 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Vapour]) {
                                 THROW("Gas phase not active and GRAT control specified.");
                             }
@@ -545,7 +545,7 @@ namespace Opm
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.gas_max_rate_,
                                                       distr, wix, w_);
                         }
-                        if (ok && wcp_line.liquid_max_rate_ > 0.0) {
+                        if (ok && wcp_line.liquid_max_rate_ >= 0.0) {
                             if (!pu.phase_used[BlackoilPhases::Aqua]) {
                                 THROW("Water phase not active and LRAT control specified.");
                             }
@@ -559,7 +559,7 @@ namespace Opm
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.liquid_max_rate_,
                                                       distr, wix, w_);
                         }
-                        if (ok && wcp_line.reservoir_flow_max_rate_ > 0.0) {
+                        if (ok && wcp_line.reservoir_flow_max_rate_ >= 0.0) {
                             control_pos[ProductionControl::RESV] = w_->ctrls[wix]->num;
                             double distr[3] = { 1.0, 1.0, 1.0 };
                             ok = append_well_controls(RESERVOIR_RATE, -wcp_line.reservoir_flow_max_rate_,
