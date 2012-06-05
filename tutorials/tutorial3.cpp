@@ -37,7 +37,7 @@
 
 #include <opm/core/transport/reorder/TransportModelTwophase.hpp>
 
-#include <opm/core/TwophaseState.hpp>
+#include <opm/core/simulator/TwophaseState.hpp>
 
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
