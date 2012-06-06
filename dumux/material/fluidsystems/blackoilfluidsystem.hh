@@ -92,7 +92,7 @@ public:
         SplineSamplingPoints tmp(samplePoints.begin(), samplePoints.end());
         gasFormationFactorSpline_.setContainerOfTuples(tmp);
         bubblePressure_ = tmp[samplePoints.size() - 2].first;
-    };
+    }
 
     /*!
      * \brief Initialize the spline for the oil formation volume factor
@@ -238,7 +238,7 @@ public:
             exit(1);
         }
 #endif
-    };
+    }
 
     
     /*!
@@ -306,7 +306,7 @@ public:
     {
         DUNE_THROW(Dune::NotImplemented,
                    "Critical temperatures for components.");
-    };
+    }
 
     /*!
      * \brief Critical pressure of a component [Pa].
@@ -315,7 +315,7 @@ public:
     {
         DUNE_THROW(Dune::NotImplemented,
                    "Critical pressures for components.");
-    };
+    }
 
     /*!
      * \brief Molar volume of a component at the critical point [m^3/mol].
@@ -324,7 +324,7 @@ public:
     {
         DUNE_THROW(Dune::NotImplemented,
                    "Critical molar volumes for components.");
-    };
+    }
 
     /*!
      * \brief Returns true if and only if a fluid phase is assumed to
@@ -557,13 +557,13 @@ private:
         }
 
         return pvWater / pressure;
-    };
+    }
 
     static Scalar fugCoefficientInGas_(int compIdx, Scalar pressure)
     {
         // assume an ideal gas
         return 1.0;
-    };
+    }
 
     static Scalar fugCoefficientInOil_(int compIdx, Scalar pressure)
     {
@@ -593,7 +593,7 @@ private:
         // composition if we were doing a flash experiment
         Scalar phi_gG = fugCoefficientInGas_(gCompIdx, pressure);
         return phi_gG / x_oGf;
-    };
+    }
 
     static Scalar gasDensity_(Scalar pressure)
     {
