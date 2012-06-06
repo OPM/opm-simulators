@@ -71,6 +71,14 @@ namespace Opm
                                          const double* rhs,
                                          double* solution) const = 0;
 
+        /// Set tolerance for the linear solver.
+        /// \param[in] tol         tolerance value
+        virtual void setTolerance(const double tol) = 0;
+
+        /// Get tolerance for the linear solver.
+        /// \param[out] tolerance value
+        virtual double getTolerance() const = 0;
+ 
     };
 
 

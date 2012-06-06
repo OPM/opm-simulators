@@ -56,6 +56,18 @@ namespace Opm
                                          const double* sa,
                                          const double* rhs,
                                          double* solution) const;
+
+        /// Set tolerance for the linear solver.
+        /// \param[in] tol         tolerance value
+        /// Not used for UMFPACK solver.
+        virtual void setTolerance(const double /*tol*/);
+
+        /// Get tolerance for the linear solver.
+        /// \param[out] tolerance value
+        /// Not used for UMFPACK solver. Returns -1.
+        virtual double getTolerance() const;
+
+
     };
 
 

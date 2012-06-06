@@ -60,5 +60,15 @@ namespace Opm
         return rep;
     }
 
+    void LinearSolverUmfpack::setTolerance(const double /*tol*/)
+    {
+    }
+
+    double LinearSolverUmfpack::getTolerance() const
+    {
+        return -1.;
+    }
+
+
 } // namespace Opm
 

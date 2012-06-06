@@ -71,6 +71,15 @@ namespace Opm
                                          const double* sa,
                                          const double* rhs,
                                          double* solution) const;
+
+        /// Set tolerance for the residual in dune istl linear solver.
+        /// \param[in] tol         tolerance value
+        virtual void setTolerance(const double tol);
+
+        /// Get tolerance ofthe linear solver.
+        /// \param[out] tolerance value
+        virtual double getTolerance() const;
+
     private:
         double linsolver_residual_tolerance_;
         int linsolver_verbosity_;

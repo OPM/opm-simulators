@@ -93,6 +93,15 @@ namespace Opm
         return solver_->solve(size, nonzeros, ia, ja, sa, rhs, solution);
     }
 
+    void LinearSolverFactory::setTolerance(const double tol) 
+    {
+        solver_->setTolerance(tol);
+    }
+
+    double LinearSolverFactory::getTolerance() const
+    {
+        return solver_->getTolerance();
+    }
 
 
 

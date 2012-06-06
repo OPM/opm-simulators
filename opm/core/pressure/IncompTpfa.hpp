@@ -56,7 +56,7 @@ namespace Opm
 	IncompTpfa(const UnstructuredGrid& g,
 		   const double* permeability,
 		   const double* gravity,
-                   const LinearSolverInterface& linsolver,
+                   LinearSolverInterface& linsolver,
                    const struct Wells* wells = 0);
 
 	/// Destructor.
@@ -155,9 +155,18 @@ namespace Opm
         /// Expose read-only reference to internal half-transmissibility.
         const ::std::vector<double>& getHalfTrans() const { return htrans_; }
 
+        /// Set tolerance for the linear solver.
+        /// \param[in] tol         tolerance value
+        void setTolerance(const double tol);
+
+        /// Get tolerance of the linear solver.
+        /// \param[out] tolerance value
+        double getTolerance() const;
+
+
     private:
 	const UnstructuredGrid& grid_;
-        const LinearSolverInterface& linsolver_;
+        LinearSolverInterface& linsolver_;
 	::std::vector<double> htrans_;
 	::std::vector<double> trans_ ;
 	::std::vector<double> gpress_;

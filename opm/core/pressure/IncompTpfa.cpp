@@ -40,12 +40,12 @@ namespace Opm
     ///                          and N == g.number_of_cells.
     /// \param[in] gravity       Gravity vector. If nonzero, the array should
     ///                          have D elements.
-    /// \param[in] wells         The wells argument. Will be used in solution, 
+    /// \param[in] wells         The wells argument. Will be used in solution,
     ///                          is ignored if NULL
     IncompTpfa::IncompTpfa(const UnstructuredGrid& g,
 			   const double* permeability,
 			   const double* gravity,
-                           const LinearSolverInterface& linsolver,
+                           LinearSolverInterface& linsolver,
                            const struct Wells* wells)
 	: grid_(g),
           linsolver_(linsolver),
@@ -294,6 +294,16 @@ namespace Opm
 
     }
 
+    void IncompTpfa::setTolerance(const double tol)
+    {
+        linsolver_.setTolerance(tol);
+    }
+
+    double IncompTpfa::getTolerance() const {
+        return linsolver_.getTolerance();
+    }
+
+
     void IncompTpfa::computeFaceFlux(const std::vector<double>& totmob,
 				     const std::vector<double>& omega,
 				     const std::vector<double>& src,
@@ -327,7 +337,7 @@ namespace Opm
         if (! wdp.empty()) { F.wdp = &wdp[0]; }
 
 	ifs_tpfa_assemble(gg, &F, &trans_[0], &gpress_omegaweighted_[0], h_);
-	
+        
 	faceflux.resize(grid_.number_of_faces);
 
         ifs_tpfa_solution soln = { NULL, NULL, NULL, NULL };

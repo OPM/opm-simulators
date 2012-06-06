@@ -172,6 +172,17 @@ namespace Opm
         return res;
     }
 
+    void LinearSolverIstl::setTolerance(const double tol)
+    {
+        linsolver_residual_tolerance_ = tol;
+    }
+
+    double LinearSolverIstl::getTolerance() const
+    {
+        return linsolver_residual_tolerance_;
+    }
+
+
 
     namespace
     {

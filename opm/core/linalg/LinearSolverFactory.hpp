@@ -75,6 +75,17 @@ namespace Opm
                                          const double* sa,
                                          const double* rhs,
                                          double* solution) const;
+
+        /// Set tolerance for the linear solver.
+        /// \param[in] tol         tolerance value
+        /// Not used for LinearSolverFactory
+        virtual void setTolerance(const double tol);
+
+        /// Get tolerance for the linear solver.
+        /// \param[out] tolerance value
+        /// Not used for LinearSolverFactory. Returns -1.
+        virtual double getTolerance() const;
+
     private:
         std::tr1::shared_ptr<LinearSolverInterface> solver_;
     };
