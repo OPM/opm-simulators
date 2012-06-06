@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with OpenRS.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "WellCollection.hpp"
+#include <opm/core/wells/WellCollection.hpp>
 
 namespace Opm
 {

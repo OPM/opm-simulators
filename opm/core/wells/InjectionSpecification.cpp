@@ -1,4 +1,5 @@
-#include <opm/core/InjectionSpecification.hpp>
+#include <opm/core/wells/InjectionSpecification.hpp>
+
 namespace Opm
 {
 

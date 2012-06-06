@@ -1,4 +1,4 @@
-#include <opm/core/ProductionSpecification.hpp>
+#include <opm/core/wells/ProductionSpecification.hpp>
 
 namespace Opm
 {

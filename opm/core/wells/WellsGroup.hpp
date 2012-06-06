@@ -20,8 +20,8 @@
 #ifndef OPM_WELLSGROUP_HPP
 #define	OPM_WELLSGROUP_HPP
 
-#include <opm/core/InjectionSpecification.hpp>
-#include <opm/core/ProductionSpecification.hpp>
+#include <opm/core/wells/InjectionSpecification.hpp>
+#include <opm/core/wells/ProductionSpecification.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>

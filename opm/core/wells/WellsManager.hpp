@@ -21,8 +21,8 @@
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
 
 
-#include <opm/core/WellCollection.hpp>
-#include <opm/core/WellsGroup.hpp>
+#include <opm/core/wells/WellCollection.hpp>
+#include <opm/core/wells/WellsGroup.hpp>
 
 struct Wells;
 struct UnstructuredGrid;
