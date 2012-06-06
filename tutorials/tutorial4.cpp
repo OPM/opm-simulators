@@ -355,6 +355,7 @@ int main ()
 
     /// \page tutorial4
     /// To create wells we need an instance of the PhaseUsage-object
+    /// \code
     PhaseUsage phase_usage;
     phase_usage.num_phases = num_phases;
     phase_usage.phase_used[BlackoilPhases::Aqua] = 1;
@@ -363,7 +364,8 @@ int main ()
     
     phase_usage.phase_pos[BlackoilPhases::Aqua] = 0;
     phase_usage.phase_pos[BlackoilPhases::Liquid] = 1;
-    
+    /// \endcode
+
     /// \page tutorial4
     /// \details This will contain our well-specific information
     /// \code
@@ -382,7 +384,7 @@ int main ()
     
     /// \page tutorial4
     /// \details Create our well group. We hand it an empty injection specification, 
-    ///          as we don't want to control it's injection target. We use the shared_ptr-type because that's 
+    ///          as we don't want to control its injection target. We use the shared_ptr-type because that's 
     ///          what the interface expects. The first argument is the (unique) name of the group.
     /// \code 
     std::tr1::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", well_group_prod_spec, InjectionSpecification(), 
