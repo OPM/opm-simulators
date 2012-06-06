@@ -44,12 +44,12 @@
 #include <opm/core/transport/CSRMatrixBlockAssembler.hpp>
 #include <opm/core/transport/SinglePointUpwindTwoPhase.hpp>
 
-#include <opm/core/TwophaseState.hpp>
+#include <opm/core/simulator/TwophaseState.hpp>
 
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/WellCollection.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 
 /// \page tutorial4 Well controls
 /// 
