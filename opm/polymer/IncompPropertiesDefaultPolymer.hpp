@@ -32,6 +32,14 @@ namespace Opm
     class IncompPropertiesDefaultPolymer : public Opm::IncompPropertiesBasic
     {
     public:
+        /// Construct from parameters.
+	/// The following parameters are accepted (defaults):
+	///    num_phases         (2)         Must be 1 or 2.
+	///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
+	///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
+	///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
+	///    porosity           (1.0)       Porosity
+	///    permeability       (100.0)     Permeability in mD
         IncompPropertiesDefaultPolymer(const Opm::parameter::ParameterGroup& param, int dim, int num_cells)
             : Opm::IncompPropertiesBasic(param, dim, num_cells)
         {
@@ -51,6 +59,16 @@ namespace Opm
             kro_[0] = 0.0;
             kro_[1] = 1.0;
         }
+
+        /// \param[in]  n      Number of data points.
+        /// \param[in]  s      Array of nP saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the s values.
+        /// \param[out] kr     Array of nP relperm values, array must be valid before calling.
+        /// \param[out] dkrds  If non-null: array of nP^2 relperm derivative values,
+        ///                    array must be valid before calling.
+        ///                    The P^2 derivative matrix is
+        ///                           m_{ij} = \frac{dkr_i}{ds^j},
+        ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
 
         virtual void relperm(const int n,
                              const double* s,
@@ -72,6 +90,13 @@ namespace Opm
             }
         }
 
+	/// Obtain the range of allowable saturation values.
+	/// In cell cells[i], saturation of phase p is allowed to be
+	/// in the interval [smin[i*P + p], smax[i*P + p]].
+        /// \param[in]  n      Number of data points.
+        /// \param[in]  cells  Array of n cell indices.
+        /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
+        /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
         virtual void satRange(const int n,
                               const int* /*cells*/,
                               double* smin,
