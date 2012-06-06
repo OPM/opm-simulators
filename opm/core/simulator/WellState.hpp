@@ -26,9 +26,11 @@
 namespace Opm
 {
 
+    /// The state of a set of wells.
     class WellState
     {
     public:
+        /// Allocate and initialize if wells is non-null.
         template <class State>
         void init(const Wells* wells, const State& state)
         {
@@ -44,9 +46,11 @@ namespace Opm
             }
         }
 
+        /// One bhp pressure per well.
         std::vector<double>& bhp() { return bhp_; }
         const std::vector<double>& bhp() const { return bhp_; }
 
+        /// One rate per well connection.
         std::vector<double>& perfRates() { return perfrates_; }
         const std::vector<double>& perfRates() const { return perfrates_; }
 
