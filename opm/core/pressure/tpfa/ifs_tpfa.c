@@ -760,9 +760,10 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
                                      struct ifs_tpfa_data         *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int     c, w, wdof, system_singular, ok;
+    int   c, w, wdof, system_singular;
     size_t  j;
     double *v;
+    int ok = 1;
 
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
