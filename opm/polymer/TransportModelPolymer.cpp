@@ -151,7 +151,7 @@ namespace
 	double operator()(const double t) const;
 	CurveInSCPlane curve;
     private:
-	Opm::TransportModelPolymer::ResidualEquation res_eq_;
+	const Opm::TransportModelPolymer::ResidualEquation& res_eq_;
     };
 
     // Compute the "c" residual along the curve "curve" for a given residual equation "res_eq".
@@ -163,7 +163,7 @@ namespace
 	double operator()(const double t) const;
 	CurveInSCPlane curve;
     private:
-	Opm::TransportModelPolymer::ResidualEquation res_eq_;
+	const Opm::TransportModelPolymer::ResidualEquation& res_eq_;
     };
 
 }
