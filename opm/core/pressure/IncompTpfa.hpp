@@ -57,7 +57,7 @@ namespace Opm
 		   const double* permeability,
 		   const double* gravity,
                    LinearSolverInterface& linsolver,
-                   const struct Wells* wells = 0);
+                   const Wells* wells);
 
 	/// Destructor.
 	~IncompTpfa();
