@@ -164,10 +164,11 @@ int main ()
     /// \page tutorial3
     /// \details We may now set up the pressure solver. At this point,
     /// unchanging parameters such as transmissibility are computed
-    /// and stored internally by the IncompTpfa class.
+    /// and stored internally by the IncompTpfa class. The final (null pointer)
+    /// constructor argument is for wells, which are now used in this tutorial.
     /// \code
     LinearSolverUmfpack linsolver;
-    IncompTpfa psolver(grid, props.permeability(), grav, linsolver);
+    IncompTpfa psolver(grid, props.permeability(), grav, linsolver, 0);
     /// \endcode
 
     /// \page tutorial3

@@ -108,12 +108,15 @@ int main()
     Opm::LinearSolverUmfpack linsolver;
     /// \endcode
     /// \page tutorial2
+
     /// We set up a pressure solver for the incompressible problem,
-    /// using the two-point flux approximation discretization.
-    /// The third argument which corresponds to gravity is set to
-    /// zero (no gravity).
+    /// using the two-point flux approximation discretization.  The
+    /// third argument which corresponds to gravity is set to a null
+    /// pointer (no gravity). The final argument would be a pointer to
+    /// a Wells data structure, again we use a null pointer to
+    /// indicate that we have no wells.
     /// \code
-    Opm::IncompTpfa psolver(*grid.c_grid(), &permeability[0], 0, linsolver);
+    Opm::IncompTpfa psolver(*grid.c_grid(), &permeability[0], 0, linsolver, 0);
     /// \endcode
     /// \page tutorial2
     /// We define the source term.
