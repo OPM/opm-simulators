@@ -57,8 +57,19 @@ namespace Opm
 		   const double dt,
 		   std::vector<double>& saturation);
 
+        /// Initialise quantities needed by gravity solver.
+        /// \param[in] grav    gravity vector
         void initGravity(const double* grav);
 
+        /// Solve for gravity segregation.
+        /// This uses a column-wise nonlinear Gauss-Seidel approach.
+        /// It assumes that the input columns contain cells in a single
+        /// vertical stack, that do not interact with other columns (for
+        /// gravity segregation.
+	/// \param[in] columns           Vector of cell-columns.
+	/// \param[in] porevolume        Array of pore volumes.
+	/// \param[in] dt                Time step.
+	/// \param[in, out] saturation   Phase saturations.
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* porevolume,
                           const double dt,

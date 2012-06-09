@@ -33,11 +33,23 @@ namespace Opm
     class TransportModelCompressibleTwophase : public TransportModelInterface
     {
     public:
+	/// Construct solver.
+	/// \param[in] grid      A 2d or 3d grid.
+	/// \param[in] props     Rock and fluid properties.
+	/// \param[in] tol       Tolerance used in the solver.
+	/// \param[in] maxit     Maximum number of non-linear iterations used.
 	TransportModelCompressibleTwophase(const UnstructuredGrid& grid,
                                            const Opm::BlackoilPropertiesInterface& props,
                                            const double tol,
                                            const int maxit);
 
+	/// Solve for saturation at next timestep.
+	/// \param[in] darcyflux         Array of signed face fluxes.
+	/// \param[in] pressure          Array of cell pressures
+	/// \param[in] surfacevol0       Array of surface volumes at start of timestep
+	/// \param[in] porevolume        Array of pore volumes.
+	/// \param[in] source            Transport source term.
+	/// \param[in] dt                Time step.
 	/// \param[in, out] saturation   Phase saturations.
 	void solve(const double* darcyflux,
                    const double* pressure,
@@ -47,19 +59,29 @@ namespace Opm
 		   const double dt,
 		   std::vector<double>& saturation);
 
-	virtual void solveSingleCell(const int cell);
-	virtual void solveMultiCell(const int num_cells, const int* cells);
-
+        /// Initialise quantities needed by gravity solver.
+        /// \param[in] grav    gravity vector
         void initGravity(const double* grav);
-        void solveSingleCellGravity(const std::vector<int>& cells,
-                                    const int pos,
-                                    const double* gravflux);
-        int solveGravityColumn(const std::vector<int>& cells);
+
+        /// Solve for gravity segregation.
+        /// This uses a column-wise nonlinear Gauss-Seidel approach.
+        /// It assumes that the input columns contain cells in a single
+        /// vertical stack, that do not interact with other columns (for
+        /// gravity segregation.
+        /// \TODO: Implement this.
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* pressure,
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
+
+    private:
+	virtual void solveSingleCell(const int cell);
+	virtual void solveMultiCell(const int num_cells, const int* cells);
+        void solveSingleCellGravity(const std::vector<int>& cells,
+                                    const int pos,
+                                    const double* gravflux);
+        int solveGravityColumn(const std::vector<int>& cells);
 
     private:
 	const UnstructuredGrid& grid_;
@@ -77,7 +99,7 @@ namespace Opm
 	const double* porevolume_;  // one volume per cell
 	const double* source_;      // one source per cell
 	double dt_;
-        std::vector<double> saturation_;        // one per cell
+        std::vector<double> saturation_;        // P (= num. phases) per cell
 	std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
         // For gravity segregation.
         std::vector<double> gravflux_;
