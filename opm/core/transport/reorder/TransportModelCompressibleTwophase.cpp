@@ -49,7 +49,7 @@ namespace Opm
 	  darcyflux_(0),
 	  source_(0),
 	  dt_(0.0),
-	  saturation_(0),
+	  saturation_(grid.number_of_cells, -1.0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
 	  mob_(2*grid.number_of_cells, -1.0),
           ia_upw_(grid.number_of_cells + 1, -1),
@@ -79,14 +79,15 @@ namespace Opm
                                                    const double* porevolume,
                                                    const double* source,
                                                    const double dt,
-                                                   double* saturation)
+                                                   std::vector<double>& saturation)
     {
 	darcyflux_ = darcyflux;
         surfacevol0_ = surfacevol0;
         porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
-	saturation_ = saturation;
+        toWaterSat(saturation, saturation_);
+
         props_.viscosity(props_.numCells(), pressure, NULL, &allcells_[0], &visc_[0], NULL);
         props_.matrix(props_.numCells(), pressure, NULL, &allcells_[0], &A_[0], NULL);
 
@@ -103,6 +104,7 @@ namespace Opm
 			       &seq[0], &comp[0], &ncomp,
 			       &ia_downw_[0], &ja_downw_[0]);
 	reorderAndTransport(grid_, darcyflux);
+        toBothSat(saturation_, saturation);
     }
 
     // Residual function r(s) for a single-cell implicit Euler transport
@@ -489,7 +491,7 @@ namespace Opm
         // Set up other variables.
         porevolume_ = porevolume;
         dt_ = dt;
-        saturation_ = &saturation[0];
+        toWaterSat(saturation, saturation_);
 
         // Solve on all columns.
         int num_iters = 0;
@@ -499,6 +501,7 @@ namespace Opm
         }
         std::cout << "Gauss-Seidel column solver average iterations: "
                   << double(num_iters)/double(columns.size()) << std::endl;
+        toBothSat(saturation_, saturation);
     }
 
 } // namespace Opm

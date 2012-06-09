@@ -38,13 +38,14 @@ namespace Opm
                                            const double tol,
                                            const int maxit);
 
+	/// \param[in, out] saturation   Phase saturations.
 	void solve(const double* darcyflux,
                    const double* pressure,
                    const double* surfacevol0,
                    const double* porevolume,
 		   const double* source,
 		   const double dt,
-		   double* saturation);
+		   std::vector<double>& saturation);
 
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
@@ -76,7 +77,7 @@ namespace Opm
 	const double* porevolume_;  // one volume per cell
 	const double* source_;      // one source per cell
 	double dt_;
-	double* saturation_;        // one per cell
+        std::vector<double> saturation_;        // one per cell
 	std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
         // For gravity segregation.
         std::vector<double> gravflux_;
