@@ -126,7 +126,7 @@ namespace
 	CurveInSCPlane();
 	void setup(const double* x, const double* direction,
 		   const double* end_point, const double* x_min,
-		   const double* x_max, const bool adjust_dir,
+		   const double* x_max, const bool adjust_dir, const double tol,
                    double& t_max_out, double& t_out_out);
 	void computeXOfT(double*, const double) const;
 
@@ -658,13 +658,6 @@ namespace Opm
     // curve. In these cases, we can use a robust 1d solver.
     void TransportModelPolymer::solveSingleCellNewton(int cell)
     {
-	// the tolerance for 1d solver is set as a function of the residual, because if we are far
-	// from the solution we do not need a very accurate 1d solver (recall that the 1d solver
-	// solves for only one of the two residuals)
-	// The tolerance falsi_tol is improved by
-	// (reduc_factor_falsi_tol * "previous residual") at each step
-	double falsi_tol;
-	const double reduc_factor_falsi_tol = 1e-2;
 	int iters_used_falsi = 0;
 	const int max_iters_split = maxit_;
 	int iters_used_split = 0;
@@ -683,7 +676,6 @@ namespace Opm
 	    return;
 	}
 
-	falsi_tol =  std::max(reduc_factor_falsi_tol*norm(res), tol_);
 	// double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
         double x_min[2] = { 0.0, 0.0 };
 	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
@@ -706,7 +698,8 @@ namespace Opm
  	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
 	    if (counter_drop_newton == 0 && solveNewtonStep(x, res_eq, res, x_new)) {
-		res_eq.computeResidual(x_new, res_new, mc, ff);
+                check_interval(x_new, x_min, x_max);
+                res_eq.computeResidual(x_new, res_new, mc, ff);
 		unsuccessfull_newton_step = false;
 		not_so_successfull_newton_step = false;
 		if (norm(res_new) > norm(res) || x_new[0] < x_min[0] || x_new[1] < x_min[1] || x_new[0] > x_max[0] || x_new[1] > x_max[1]) {
@@ -714,7 +707,7 @@ namespace Opm
 		} else  {
 		    x[0] = x_new[0];
 		    x[1] = x_new[1];
-		    if (norm(res_new) > 1e-1*norm(res) && norm(res_new) < 1e1*tol_) {
+		    if (norm(res_new) > 1e-1*norm(res)) {
 			// We are close to the solution and Newton does not perform well.
 			// Then, we drop Newton for a given number of iterations.
 			not_so_successfull_newton_step = true;
@@ -722,9 +715,6 @@ namespace Opm
 		    }
 		    res[0] = res_new[0];
 		    res[1] = res_new[1];
-                    if (check_interval(x, x_min, x_max)) {
-                        res_eq.computeResidual(x, res, mc, ff);
-                    }
 		    iters_used_split += 1;
 		}
 	    } else {
@@ -748,13 +738,12 @@ namespace Opm
 		// We start with the zero curve of the s and r residual we are closest to.
                 bool adjust_dir = true;
 		if (std::abs(res[0]) < std::abs(res[1])) {
-		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[0]), tol_);
-		    if (res[0] < -falsi_tol) {
+		    if (res[0] < -tol_) {
 			direction[0] = x_max[0] - x[0];
 			direction[1] = x_min[1] - x[1];
                         adjust_dir = true;
 			if_res_s = true;
-		    } else if (res[0] > falsi_tol) {
+		    } else if (res[0] > tol_) {
 			direction[0] = x_min[0] - x[0];
 			direction[1] = x_max[1] - x[1];
                         adjust_dir = true;
@@ -763,17 +752,16 @@ namespace Opm
 			res_eq.computeGradientResS(x, res, gradient);
 			direction[0] = -gradient[1];
 			direction[1] = gradient[0];
-                        adjust_dir = false;
+                        adjust_dir = true;
 			if_res_s = false;
 		    }
 		} else {
-		    falsi_tol =  std::max(reduc_factor_falsi_tol*std::abs(res[1]), tol_);
-		    if (res[1] < -falsi_tol) {
+		    if (res[1] < -tol_) {
 			direction[0] = x_max[0] - x[0];
 			direction[1] = x_max[1] - x[1];
                         adjust_dir = true;
 			if_res_s = false;
-		    } else if (res[1] > falsi_tol) {
+		    } else if (res[1] > tol_) {
 			direction[0] = x_min[0] - x[0];
 			direction[1] = x_min[1] - x[1];
                         adjust_dir = true;
@@ -782,7 +770,7 @@ namespace Opm
 			res_eq.computeGradientResC(x, res, gradient);
 			direction[0] = -gradient[1];
 			direction[1] = gradient[0];
-                        adjust_dir = false;
+                        adjust_dir = true;
 			if_res_s = true;
 		    }
 		}
@@ -790,42 +778,41 @@ namespace Opm
 		    if (res[0] < 0) {
 			end_point[0] = x_max[0];
 			end_point[1] = x_min[1];
-			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
+			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, tol_, t_max, t_out);
 			if (res_s_on_curve(t_out) >= 0) {
 			    t_max = t_out;
 			}
 		    } else {
 			end_point[0] = x_min[0];
 			end_point[1] = x_max[1];
-			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
+			res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, tol_, t_max, t_out);
 			if (res_s_on_curve(t_out) <= 0) {
 			    t_max = t_out;
 			}
 		    }
 		    // Note: In some experiments modifiedRegularFalsi does not yield a result under the given tolerance.
-		    t = RootFinder::solve(res_s_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
+		    t = RootFinder::solve(res_s_on_curve, 0., t_max, maxit_, tol_, iters_used_falsi);
 		    res_s_on_curve.curve.computeXOfT(x, t);
 		} else {
 		    if (res[1] < 0) {
 			end_point[0] = x_max[0];
 			end_point[1] = x_max[1];
-			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
+			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, tol_, t_max, t_out);
 			if (res_c_on_curve(t_out) >= 0) {
 			    t_max = t_out;
 			}
 		    } else {
 			end_point[0] = x_min[0];
 			end_point[1] = x_min[1];
-			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, t_max, t_out);
+			res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, adjust_dir, tol_, t_max, t_out);
 			if (res_c_on_curve(t_out) <= 0) {
 			    t_max = t_out;
 			}
 		    }
-		    t = RootFinder::solve(res_c_on_curve, 0., t_max, maxit_, falsi_tol, iters_used_falsi);
+		    t = RootFinder::solve(res_c_on_curve, 0., t_max, maxit_, tol_, iters_used_falsi);
 		    res_c_on_curve.curve.computeXOfT(x, t);
 
 		}
-                check_interval(x, x_min, x_max);
 		res_eq.computeResidual(x, res, mc, ff);
 		iters_used_split += 1;
 	    }
@@ -1272,7 +1259,7 @@ namespace
     // rectangle. x_out=(s_out, c_out) denotes the values of s and c at that point.
     void CurveInSCPlane::setup(const double* x, const double* direction,
                                const double* end_point, const double* x_min,
-                               const double* x_max, const bool adjust_dir,
+                               const double* x_max, const bool adjust_dir, const double tol,
                                double& t_max_out, double& t_out_out)
     {
 	x_[0] = x[0];
@@ -1286,7 +1273,7 @@ namespace
 	end_point_[0] = end_point[0];
 	end_point_[1] = end_point[1];
         const double size_direction = std::abs(direction_[0]) + std::abs(direction_[1]);
-	if (size_direction == 0) {
+	if (size_direction < tol) {
 	    direction_[0] = end_point_[0]-x_[0];
 	    direction_[1] = end_point_[1]-x_[1];
 	}

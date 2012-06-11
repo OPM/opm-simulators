@@ -38,7 +38,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/polymer/IncompPropertiesDefaultPolymer.hpp>
+#include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
 
@@ -392,7 +392,7 @@ main(int argc, char** argv)
         grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
         // Rock and fluid init.
         // props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        props.reset(new Opm::IncompPropertiesDefaultPolymer(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+        props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
         // Wells init.
         wells.reset(new Opm::WellsManager());
         // Timer init.
@@ -442,7 +442,6 @@ main(int argc, char** argv)
         c_vals_ads[2] = 8.0;
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
-        // polyprop.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
         ads_vals[1] = 0.0015;
         ads_vals[2] = 0.0025;
         // ads_vals[1] = 0.0;
