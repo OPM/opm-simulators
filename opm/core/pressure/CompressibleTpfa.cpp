@@ -45,8 +45,8 @@ namespace Opm
     /// \param[in] props         Rock and fluid properties.
     /// \param[in] linsolver     Linear solver to use.
     /// \param[in] residual_tol  Solution accepted if inf-norm of residual is smaller.
-    /// \param[in] change_tol    Solution accepted if inf-norm of change is smaller.
-    /// \param[in] maxiter       Maximum acceptable
+    /// \param[in] change_tol    Solution accepted if inf-norm of change in pressure is smaller.
+    /// \param[in] maxiter       Maximum acceptable number of iterations.
     /// \param[in] gravity       Gravity vector. If non-null, the array should
     ///                          have D elements.
     /// \param[in] wells         The wells argument. Will be used in solution,

@@ -48,11 +48,11 @@ namespace Opm
         /// \param[in] props         Rock and fluid properties.
         /// \param[in] linsolver     Linear solver to use.
         /// \param[in] residual_tol  Solution accepted if inf-norm of residual is smaller.
-        /// \param[in] change_tol    Solution accepted if inf-norm of change is smaller.
-        /// \param[in] maxiter       Maximum acceptable 
+        /// \param[in] change_tol    Solution accepted if inf-norm of change in pressure is smaller.
+        /// \param[in] maxiter       Maximum acceptable number of iterations.
         /// \param[in] gravity       Gravity vector. If non-null, the array should
         ///                          have D elements.
-        /// \param[in] wells         The wells argument. Will be used in solution, 
+        /// \param[in] wells         The wells argument. Will be used in solution,
         ///                          is ignored if NULL.
         ///                          Note: this class observes the well object, and
         ///                                makes the assumption that the well topology
@@ -125,7 +125,6 @@ namespace Opm
         std::vector<double> wellperf_gpot_;
 
         // ------ Data that will be modified for every solver iteration. ------
-        // Gravity and capillary contributions (per face).
         std::vector<double> cell_A_;
         std::vector<double> cell_dA_;
         std::vector<double> cell_viscosity_;
