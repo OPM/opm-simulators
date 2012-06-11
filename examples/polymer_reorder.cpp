@@ -458,6 +458,7 @@ main(int argc, char** argv)
         c_vals_ads[0] = 0.0;
         c_vals_ads[1] = 2.0;
         c_vals_ads[2] = 8.0;
+        // Here we set up adsorption equal to zero.
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
         ads_vals[1] = 0.0;
