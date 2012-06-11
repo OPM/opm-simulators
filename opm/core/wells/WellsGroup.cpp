@@ -941,7 +941,6 @@ namespace Opm
     double WellNode::productionGuideRate(bool only_group) 
     {
         if (!only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
-            std::cout << prodSpec().guide_rate_ << std::endl;
             return prodSpec().guide_rate_;
         }
         return 0.0;
