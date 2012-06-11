@@ -28,7 +28,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/newwells.h>
-#include <opm/core/wells/WellsManager.hpp>
+#include <opm/core/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/initState.hpp>
 #include <opm/core/utility/SimulatorTimer.hpp>
@@ -38,7 +38,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/polymer/IncompPropertiesDefaultPolymer.hpp>
+#include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
 
@@ -53,7 +53,7 @@
 #include <opm/core/transport/CSRMatrixBlockAssembler.hpp>
 #include <opm/core/transport/SinglePointUpwindTwoPhase.hpp>
 
-#include <opm/core/utility/ColumnExtract.hpp>
+#include <opm/core/ColumnExtract.hpp>
 
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp>
@@ -78,14 +78,15 @@
 #include <iterator>
 #include <vector>
 #include <numeric>
-
+#include <list>
 
 
 
 static void outputState(const UnstructuredGrid& grid,
                         const Opm::PolymerState& state,
                         const int step,
-                        const std::string& output_dir)
+                        const std::string& output_dir,
+                        const Opm::TransportModelPolymer& reorder_model)
 {
     // Write data in VTK format.
     std::ostringstream vtkfilename;
@@ -115,6 +116,23 @@ static void outputState(const UnstructuredGrid& grid,
         const std::vector<double>& d = *(it->second);
         std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
     }
+
+    std::ostringstream fname;
+    fname << output_dir << "/" << "residualcounts" << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+    std::ofstream file(fname.str().c_str());
+    if (!file) {
+        THROW("Failed to open " << fname.str());
+    }
+
+    typedef std::list<Opm::TransportModelPolymer::Newton_Iter> ListRes;
+
+    const ListRes& res_counts = reorder_model.res_counts;
+    for (ListRes::const_iterator it = res_counts.begin(); it != res_counts.end(); ++it) {
+        file << it->res_s << "," << it->cell << "," << std::setprecision(15) << it->s << "," << std::setprecision(15) << it->c << "\n";
+    }
+    file.close();
+
+    
 }
 
 
@@ -392,7 +410,7 @@ main(int argc, char** argv)
         grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
         // Rock and fluid init.
         // props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        props.reset(new Opm::IncompPropertiesDefaultPolymer(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+        props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
         // Wells init.
         wells.reset(new Opm::WellsManager());
         // Timer init.
@@ -442,9 +460,8 @@ main(int argc, char** argv)
         c_vals_ads[2] = 8.0;
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
-        // polyprop.ads_vals[1] = param.getDefault("c_max_ads", 0.0025);
-        ads_vals[1] = 0.0015;
-        ads_vals[2] = 0.0025;
+        ads_vals[1] = 0.0;
+        ads_vals[2] = 0.0;
         // ads_vals[1] = 0.0;
         // ads_vals[2] = 0.0;
         polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
@@ -646,7 +663,7 @@ main(int argc, char** argv)
         // Report timestep and (optionally) write state to disk.
         simtimer.report(std::cout);
         if (output && (simtimer.currentStepNum() % output_interval == 0)) {
-            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
+            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir, reorder_model);
         }
 
         // Solve pressure.
@@ -860,7 +877,7 @@ main(int argc, char** argv)
               << "\n  Transport time: " << ttime << std::endl;
 
     if (output) {
-        outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
+        outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir, reorder_model);
         outputWaterCut(watercut, output_dir);
         if (wells->c_wells()) {
             outputWellReport(wellreport, output_dir);

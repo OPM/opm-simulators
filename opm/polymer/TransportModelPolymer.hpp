@@ -24,6 +24,7 @@
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <vector>
+#include <list>
 
 class UnstructuredGrid;
 
@@ -82,6 +83,24 @@ namespace Opm
                           std::vector<double>& concentration,
                           std::vector<double>& cmax);
 
+        // for testing
+        class Newton_Iter {
+        public:
+            bool res_s;
+            int cell;
+            double s;
+            double c;
+
+            Newton_Iter(bool res_s_val, int cell_val, double s_val, double c_val) {
+                res_s = res_s_val;
+                cell = cell_val;
+                s = s_val;
+                c = c_val;
+            }
+        };
+
+        std::list<Newton_Iter> res_counts;
+
 
     private:
 	const UnstructuredGrid& grid_;
@@ -129,6 +148,7 @@ namespace Opm
 	void computeMc(double c, double& mc) const;
 	void computeMcWithDer(double c, double& mc, double& dmc_dc) const;
         void mobility(double s, double c, int cell, double* mob) const;
+
     };
 
 } // namespace Opm
