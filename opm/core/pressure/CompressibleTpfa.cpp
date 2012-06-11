@@ -46,10 +46,10 @@ namespace Opm
     /// \param[in] linsolver     Linear solver to use.
     /// \param[in] residual_tol  Solution accepted if inf-norm of residual is smaller.
     /// \param[in] change_tol    Solution accepted if inf-norm of change is smaller.
-    /// \param[in] maxiter       Maximum acceptable 
+    /// \param[in] maxiter       Maximum acceptable
     /// \param[in] gravity       Gravity vector. If non-null, the array should
     ///                          have D elements.
-    /// \param[in] wells         The wells argument. Will be used in solution, 
+    /// \param[in] wells         The wells argument. Will be used in solution,
     ///                          is ignored if NULL.
     ///                          Note: this class observes the well object, and
     ///                                makes the assumption that the well topology
@@ -64,7 +64,7 @@ namespace Opm
                                        const int maxiter,
                                        const double* gravity,
                                        const struct Wells* wells)
-	: grid_(grid),
+        : grid_(grid),
           props_(props),
           linsolver_(linsolver),
           residual_tol_(residual_tol),
@@ -72,8 +72,8 @@ namespace Opm
           maxiter_(maxiter),
           gravity_(gravity),
           wells_(wells),
-	  htrans_(grid.cell_facepos[ grid.number_of_cells ]),
-	  trans_ (grid.number_of_faces),
+          htrans_(grid.cell_facepos[ grid.number_of_cells ]),
+          trans_ (grid.number_of_faces),
           porevol_(grid.number_of_cells),
           allcells_(grid.number_of_cells)
     {
@@ -83,9 +83,9 @@ namespace Opm
         }
         const int num_dofs = grid.number_of_cells + (wells ? wells->number_of_wells : 0);
         pressure_increment_.resize(num_dofs);
-	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
-	tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
-	tpfa_trans_compute(gg, &htrans_[0], &trans_[0]);
+        UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+        tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
+        tpfa_trans_compute(gg, &htrans_[0], &trans_[0]);
         computePorevolume(grid_, props.porosity(), porevol_);
         for (int c = 0; c < grid.number_of_cells; ++c) {
             allcells_[c] = c;
@@ -93,7 +93,7 @@ namespace Opm
         cfs_tpfa_res_wells w;
         w.W = const_cast<struct Wells*>(wells_);
         w.data = NULL;
-	h_ = cfs_tpfa_res_construct(gg, &w, props.numPhases());
+        h_ = cfs_tpfa_res_construct(gg, &w, props.numPhases());
     }
 
 
@@ -102,7 +102,7 @@ namespace Opm
     /// Destructor.
     CompressibleTpfa::~CompressibleTpfa()
     {
-	cfs_tpfa_res_destroy(h_);
+        cfs_tpfa_res_destroy(h_);
     }
 
 
@@ -130,7 +130,7 @@ namespace Opm
                   << std::setw(9) << iter
                   << std::setw(18) << res_norm
                   << std::setw(18) << '*' << std::endl;
-        for (; (iter < maxiter_) && (res_norm > residual_tol_); ) {
+        while ((iter < maxiter_) && (res_norm > residual_tol_)) {
             // Solve for increment in Newton method:
             //   incr = x_{n+1} - x_{n} = -J^{-1}F
             // (J is Jacobian matrix, F is residual)
@@ -149,7 +149,7 @@ namespace Opm
             inc_norm = incrementNorm();
             if (inc_norm <= change_tol_) {
                 std::cout << std::setw(9) << iter
-                          << std::setw(18) << '*' 
+                          << std::setw(18) << '*'
                           << std::setw(18) << inc_norm << std::endl;
                 break;
             }
@@ -164,7 +164,7 @@ namespace Opm
             res_norm = residualNorm();
 
             std::cout << std::setw(9) << iter
-                      << std::setw(18) << res_norm 
+                      << std::setw(18) << res_norm
                       << std::setw(18) << inc_norm << std::endl;
         }
 
@@ -285,10 +285,10 @@ namespace Opm
         props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
         props_.relperm(nc, cell_s, &allcells_[0], &cell_phasemob_[0], 0);
-	std::transform(cell_phasemob_.begin(), cell_phasemob_.end(),
-		       cell_viscosity_.begin(),
-		       cell_phasemob_.begin(),
-		       std::divides<double>());
+        std::transform(cell_phasemob_.begin(), cell_phasemob_.end(),
+                       cell_viscosity_.begin(),
+                       cell_phasemob_.begin(),
+                       std::divides<double>());
         // Volume discrepancy: we have that
         //     z = Au, voldiscr = sum(u) - 1,
         // but I am not sure it is actually needed.
@@ -447,7 +447,7 @@ namespace Opm
         const double* cell_press = &state.pressure()[0];
         const double* well_bhp = well_state.bhp().empty() ? NULL : &well_state.bhp()[0];
         const double* z = &state.surfacevol()[0];
-	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+        UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
         completion_data.gpot = &wellperf_gpot_[0];
         completion_data.A = &wellperf_A_[0];
@@ -477,7 +477,7 @@ namespace Opm
     void CompressibleTpfa::solveIncrement()
     {
         // Increment is equal to -J^{-1}F
-	linsolver_.solve(h_->J, h_->F, &pressure_increment_[0]);        
+        linsolver_.solve(h_->J, h_->F, &pressure_increment_[0]);
         std::transform(pressure_increment_.begin(), pressure_increment_.end(),
                        pressure_increment_.begin(), std::negate<double>());
     }
@@ -501,7 +501,7 @@ namespace Opm
 
 
     /// Computes the inf-norm of the residual.
-    double CompressibleTpfa::residualNorm() const 
+    double CompressibleTpfa::residualNorm() const
     {
         const int ndof = pressure_increment_.size();
         return infnorm(h_->F, h_->F + ndof);
@@ -523,7 +523,7 @@ namespace Opm
     void CompressibleTpfa::computeResults(BlackoilState& state,
                                           WellState& well_state) const
     {
-	UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+        UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
         completion_data.gpot = const_cast<double*>(&wellperf_gpot_[0]);
         completion_data.A = const_cast<double*>(&wellperf_A_[0]);
