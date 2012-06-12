@@ -57,7 +57,7 @@ namespace Opm
         /// Construct from arguments a basic two phase fluid.
         IncompPropertiesBasic(const int num_phases,
                               const SaturationPropsBasic::RelPermFunc& relpermfunc,
-                              const std::vector<double>&  rho,
+                              const std::vector<double>& rho,
 			      const std::vector<double>& mu,
                               const double porosity,
                               const double permeability,
