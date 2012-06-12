@@ -55,19 +55,28 @@ namespace Opm
 
     LinearSolverFactory::LinearSolverFactory(const parameter::ParameterGroup& param)
     {
-        const std::string ls = param.getDefault<std::string>("linsolver", "umfpack");
+        const std::string ls =
+            param.getDefault<std::string>("linsolver", "umfpack");
+
         if (ls == "umfpack") {
 #if HAVE_SUITESPARSE_UMFPACK_H
             solver_.reset(new LinearSolverUmfpack);
-#else
-            THROW("Linear solver " << ls <<" is not available.");
 #endif
-        } else if (ls == "istl") {
+        }
+
+        else if (ls == "istl") {
 #if HAVE_DUNE_ISTL
             solver_.reset(new LinearSolverIstl(param));
-#else
-            THROW("Linear solver " << ls <<" is not available.");
 #endif
+        }
+
+        else {
+            THROW("Linear solver " << ls << " is unknown.");
+        }
+
+        if (! solver_) {
+            THROW("Linear solver " << ls << " is not enabled in "
+                  "this configuration.");
         }
     }
 
