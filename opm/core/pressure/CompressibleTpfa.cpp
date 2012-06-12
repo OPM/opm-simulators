@@ -405,7 +405,7 @@ namespace Opm
 
 
 
-    /// Compute per-iteration dynamic properties for faces.
+    /// Compute per-iteration dynamic properties for wells.
     void CompressibleTpfa::computeWellDynamicData(const double /*dt*/,
                                                   const BlackoilState& /*state*/,
                                                   const WellState& /*well_state*/)
