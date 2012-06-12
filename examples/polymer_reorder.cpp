@@ -276,6 +276,66 @@ private:
     std::vector<double> smax_;
 };
 
+class IncompPropertiesCorey : public Opm::IncompPropertiesBasic {
+
+private:
+    std::vector<double> exponents_;
+    int np_;
+
+    double corey_kr(double s, int p) const  {
+        return std::pow(s, exponents_[p]);
+    }
+
+    double corey_dkrds(double s, int p) const {
+        return exponents_[p]*std::pow(s, exponents_[p] - 1.0);
+    }
+
+public:
+    IncompPropertiesCorey(const Opm::parameter::ParameterGroup& param,
+                          const int dim,
+                          const int num_cells,
+                          const std::vector<double> exponents
+                          ) : IncompPropertiesBasic(param, dim, num_cells) {
+        exponents_ = exponents;
+        np_ = numPhases();
+    }
+    /// \param[in]  n      Number of data points.
+    /// \param[in]  s      Array of nP saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the s values.
+    /// \param[out] kr     Array of nP relperm values, array must be valid before calling.
+    /// \param[out] dkrds  If non-null: array of nP^2 relperm derivative values,
+    ///                    array must be valid before calling.
+    ///                    The P^2 derivative matrix is
+    ///                           m_{ij} = \frac{dkr_i}{ds^j},
+    ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
+    virtual void relperm(const int n,
+                         const double* s,
+                         const int* /*cells*/,
+                         double* kr,
+                         double* dkrds) const {
+
+        if (dkrds == 0) {
+            // #pragma omp parallel for
+            for (int i = 0; i < n; ++i) {
+                for (int p = 0; p < np_; ++p) {
+                    kr[i*np_ + p] = corey_kr(s[i*np_ + p], p);
+                }
+            }
+            return;
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < n; ++i) {
+            std::fill(dkrds + i*np_*np_, dkrds + (i+1)*np_*np_, 0.0);
+            for (int p = 0; p < np_; ++p) {
+                kr[i*np_ + p] = corey_kr(s[i*np_ + p], p);
+                // Only diagonal elements in derivative.
+                dkrds[i*np_*np_ + p*np_ + p] = corey_dkrds(s[i*np_ + p], p);
+            }
+        }
+    }
+};
+
+
 typedef PolymerFluid2pWrappingProps TwophaseFluidPolymer;
 typedef Opm::SinglePointUpwindTwoPhasePolymer<TwophaseFluidPolymer> FluxModel;
 
@@ -410,7 +470,16 @@ main(int argc, char** argv)
         grid.reset(new Opm::GridManager(nx, ny, nz, dx, dy, dz));
         // Rock and fluid init.
         // props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        props.reset(new Opm::IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+        bool use_corey = false;
+        use_corey = param.getDefault("use_corey", false);
+        if (use_corey) {
+            std::vector<double> exponents(2, 1.0);
+            exponents[0] = param.getDefault("n1", 1.0);
+            exponents[1] = param.getDefault("n2", 1.0);
+            props.reset(new IncompPropertiesCorey(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells, exponents));
+        } else {
+            props.reset(new IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+        }
         // Wells init.
         wells.reset(new Opm::WellsManager());
         // Timer init.
