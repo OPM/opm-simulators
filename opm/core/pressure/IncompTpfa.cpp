@@ -41,10 +41,53 @@ namespace Opm
 
 
 
-    /// Construct solver.
+    /// Construct solver for incompressible case.
     /// \param[in] grid             A 2d or 3d grid.
     /// \param[in] props            Rock and fluid properties.
-    /// \param[in] rock_comp_props  Rock compressibility properties.
+    /// \param[in] linsolver        Linear solver to use.
+    /// \param[in] gravity          Gravity vector. If non-null, the array should
+    ///                             have D elements.
+    /// \param[in] wells            The wells argument. Will be used in solution,
+    ///                             is ignored if NULL.
+    ///                             Note: this class observes the well object, and
+    ///                                   makes the assumption that the well topology
+    ///                                   and completions does not change during the
+    ///                                   run. However, controls (only) are allowed
+    ///                                   to change.
+    /// \param[in] src              Source terms. May be empty().
+    /// \param[in] bcs              Boundary conditions, treat as all noflow if null.
+    IncompTpfa::IncompTpfa(const UnstructuredGrid& grid,
+                           const IncompPropertiesInterface& props,
+                           LinearSolverInterface& linsolver,
+                           const double* gravity,
+                           const Wells* wells,
+                           const std::vector<double>& src,
+                           const FlowBoundaryConditions* bcs)
+        : grid_(grid),
+          props_(props),
+          rock_comp_props_(NULL),
+          linsolver_(linsolver),
+          residual_tol_(0.0),
+          change_tol_(0.0),
+          maxiter_(0),
+          gravity_(gravity),
+          wells_(wells),
+          src_(src),
+          bcs_(bcs),
+          htrans_(grid.cell_facepos[ grid.number_of_cells ]),
+          allcells_(grid.number_of_cells),
+          trans_ (grid.number_of_faces)
+    {
+        computeStaticData();
+    }
+
+
+
+
+    /// Construct solver, possibly with rock compressibility.
+    /// \param[in] grid             A 2d or 3d grid.
+    /// \param[in] props            Rock and fluid properties.
+    /// \param[in] rock_comp_props  Rock compressibility properties. May be null.
     /// \param[in] linsolver        Linear solver to use.
     /// \param[in] residual_tol     Solution accepted if inf-norm of residual is smaller.
     /// \param[in] change_tol       Solution accepted if inf-norm of change in pressure is smaller.
@@ -58,7 +101,7 @@ namespace Opm
     ///                                   and completions does not change during the
     ///                                   run. However, controls (only) are allowed
     ///                                   to change.
-    /// \param[in] src              Source terms.
+    /// \param[in] src              Source terms. May be empty().
     /// \param[in] bcs              Boundary conditions, treat as all noflow if null.
     IncompTpfa::IncompTpfa(const UnstructuredGrid& grid,
                            const IncompPropertiesInterface& props,
@@ -86,31 +129,9 @@ namespace Opm
           allcells_(grid.number_of_cells),
           trans_ (grid.number_of_faces)
     {
-        if (wells_ && (wells_->number_of_phases != props.numPhases())) {
-            THROW("Inconsistent number of phases specified (wells vs. props): "
-                  << wells_->number_of_phases << " != " << props.numPhases());
-        }
-        const int num_dofs = grid.number_of_cells + (wells ? wells->number_of_wells : 0);
-        pressures_.resize(num_dofs);
-        UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
-        tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
-        if (gravity) {
-            gpress_.resize(gg->cell_facepos[ gg->number_of_cells ], 0.0);
-
-            mim_ip_compute_gpress(gg->number_of_cells, gg->dimensions, gravity,
-                                  gg->cell_facepos, gg->cell_faces,
-                                  gg->face_centroids, gg->cell_centroids,
-                                  &gpress_[0]);
-        }
-        // gpress_omegaweighted_ is sent to assembler always, and it dislikes
-        // getting a zero pointer.
-        gpress_omegaweighted_.resize(gg->cell_facepos[ gg->number_of_cells ], 0.0);
-        for (int c = 0; c < grid.number_of_cells; ++c) {
-            allcells_[c] = c;
-        }
-        h_ = ifs_tpfa_construct(gg, const_cast<struct Wells*>(wells_));
-
+        computeStaticData();
     }
+
 
 
 
@@ -255,6 +276,38 @@ namespace Opm
         computeResults(state, well_state);
     }
 
+
+
+
+
+
+    /// Compute data that never changes (after construction).
+    void IncompTpfa::computeStaticData()
+    {
+        if (wells_ && (wells_->number_of_phases != props_.numPhases())) {
+            THROW("Inconsistent number of phases specified (wells vs. props): "
+                  << wells_->number_of_phases << " != " << props_.numPhases());
+        }
+        const int num_dofs = grid_.number_of_cells + (wells_ ? wells_->number_of_wells : 0);
+        pressures_.resize(num_dofs);
+        UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
+        tpfa_htrans_compute(gg, props_.permeability(), &htrans_[0]);
+        if (gravity_) {
+            gpress_.resize(gg->cell_facepos[ gg->number_of_cells ], 0.0);
+
+            mim_ip_compute_gpress(gg->number_of_cells, gg->dimensions, gravity_,
+                                  gg->cell_facepos, gg->cell_faces,
+                                  gg->face_centroids, gg->cell_centroids,
+                                  &gpress_[0]);
+        }
+        // gpress_omegaweighted_ is sent to assembler always, and it dislikes
+        // getting a zero pointer.
+        gpress_omegaweighted_.resize(gg->cell_facepos[ gg->number_of_cells ], 0.0);
+        for (int c = 0; c < grid_.number_of_cells; ++c) {
+            allcells_[c] = c;
+        }
+        h_ = ifs_tpfa_construct(gg, const_cast<struct Wells*>(wells_));
+    }
 
 
 

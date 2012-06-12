@@ -47,10 +47,33 @@ namespace Opm
     class IncompTpfa
     {
     public:
-	/// Construct solver.
+	/// Construct solver for incompressible case.
         /// \param[in] grid             A 2d or 3d grid.
         /// \param[in] props            Rock and fluid properties.
-        /// \param[in] rock_comp_props  Rock compressibility properties.
+        /// \param[in] linsolver        Linear solver to use.
+        /// \param[in] gravity          Gravity vector. If non-null, the array should
+        ///                             have D elements.
+        /// \param[in] wells            The wells argument. Will be used in solution,
+        ///                             is ignored if NULL.
+        ///                             Note: this class observes the well object, and
+        ///                                   makes the assumption that the well topology
+        ///                                   and completions does not change during the
+        ///                                   run. However, controls (only) are allowed
+        ///                                   to change.
+        /// \param[in] src              Source terms. May be empty().
+        /// \param[in] bcs              Boundary conditions, treat as all noflow if null.
+	IncompTpfa(const UnstructuredGrid& grid,
+                   const IncompPropertiesInterface& props,
+                   LinearSolverInterface& linsolver,
+                   const double* gravity,
+                   const Wells* wells,
+		   const std::vector<double>& src,
+		   const FlowBoundaryConditions* bcs);
+
+	/// Construct solver, possibly with rock compressibility.
+        /// \param[in] grid             A 2d or 3d grid.
+        /// \param[in] props            Rock and fluid properties.
+        /// \param[in] rock_comp_props  Rock compressibility properties. May be null.
         /// \param[in] linsolver        Linear solver to use.
         /// \param[in] residual_tol     Solution accepted if inf-norm of residual is smaller.
         /// \param[in] change_tol       Solution accepted if inf-norm of change in pressure is smaller.
@@ -106,6 +129,7 @@ namespace Opm
                            TwophaseState& state,
                            WellState& well_state);
         // Helper functions.
+        void computeStaticData();
         void computePerSolveDynamicData(const double dt,
                                         const TwophaseState& state,
                                         const WellState& well_state);
