@@ -38,6 +38,7 @@
 #include <opm/core/transport/reorder/TransportModelTwophase.hpp>
 
 #include <opm/core/simulator/TwophaseState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -162,16 +163,6 @@ int main ()
     /// \endcode
 
     /// \page tutorial3
-    /// \details We may now set up the pressure solver. At this point,
-    /// unchanging parameters such as transmissibility are computed
-    /// and stored internally by the IncompTpfa class. The final (null pointer)
-    /// constructor argument is for wells, which are now used in this tutorial.
-    /// \code
-    LinearSolverUmfpack linsolver;
-    IncompTpfa psolver(grid, props.permeability(), grav, linsolver, 0);
-    /// \endcode
-
-    /// \page tutorial3
     /// \details We set up the source term. Positive numbers indicate that the cell is a source,
     /// while negative numbers indicate a sink.
     /// \code
@@ -181,14 +172,28 @@ int main ()
     /// \endcode
 
     /// \page tutorial3
-    /// \details We set up data vectors for the wells. Here, there are
-    /// no wells and we let them be empty dummies.
+    /// \details We set up the boundary conditions. Letting bcs be empty is equivalent 
+    /// to no-flow boundary conditions.
     /// \code
-    std::vector<double> empty_wdp;
-    std::vector<double> empty_well_bhp;
-    std::vector<double> empty_well_flux;
+    FlowBCManager bcs;
     /// \endcode
 
+    /// \page tutorial3
+    /// \details We may now set up the pressure solver. At this point,
+    /// unchanging parameters such as transmissibility are computed
+    /// and stored internally by the IncompTpfa class. The null pointer
+    /// constructor argument is for wells, which are not used in this tutorial.
+    /// \code
+    LinearSolverUmfpack linsolver;
+    IncompTpfa psolver(grid, props, linsolver, grav, NULL, src, bcs.c_bcs());
+    /// \endcode
+
+    /// \page tutorial3
+    /// \details We set up a state object for the wells. Here, there are
+    /// no wells and we let it remain empty.
+    /// \code
+    WellState well_state;
+    /// \endcode
 
     /// \page tutorial3
     /// \details We compute the pore volume
@@ -224,14 +229,6 @@ int main ()
     /// \endcode
 
     /// \page tutorial3
-    /// \details We set up the boundary conditions. Letting bcs be empty is equivalent 
-    /// to no-flow boundary conditions.
-    /// \code
-    FlowBCManager bcs;
-    /// \endcode
-
-
-    /// \page tutorial3
     /// \details 
     /// We set up a two-phase state object, and
     /// initialise water saturation to minimum everywhere.
@@ -239,13 +236,6 @@ int main ()
     TwophaseState state;
     state.init(grid, 2);
     state.setFirstSat(allcells, props, TwophaseState::MinSat);
-    /// \endcode
-    
-    /// \page tutorial3
-    /// \details We introduce a vector which contains the total mobility 
-    /// on all cells.
-    /// \code
-    std::vector<double> totmob;
     /// \endcode
 
     /// \page tutorial3
@@ -263,18 +253,11 @@ int main ()
         /// \endcode
         /// \page tutorial3
 
-        /// \details Compute the total mobility. It is needed by the
-        /// pressure solver and must be recomputed every time step
-        /// since it depends on the saturation.
-        /// \code
-        computeTotalMobility(props, allcells, state.saturation(), totmob);
         /// \endcode
         /// \page tutorial3
         /// \details Solve the pressure equation
         /// \code
-        psolver.solve(totmob, omega, src, empty_wdp, bcs.c_bcs(), 
-                      state.pressure(), state.faceflux(), empty_well_bhp, 
-                      empty_well_flux);
+        psolver.solve(dt, state, well_state);
         /// \endcode
         /// \page tutorial3
         /// \details  Solve the transport equation.

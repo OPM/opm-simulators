@@ -39,11 +39,14 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <opm/core/fluid/IncompPropertiesBasic.hpp>
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
+#include <opm/core/simulator/TwophaseState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 
 /// \page tutorial2
 /// \section commentedcode2 Program walkthrough.
@@ -68,16 +71,21 @@ int main()
     int num_cells = grid.c_grid()->number_of_cells;
     int num_faces = grid.c_grid()->number_of_faces;
     /// \endcode
+
+
     /// \page tutorial2
     /// \details
-    /// We define a fluid viscosity equal to 1 cP. 
+    /// We define a fluid viscosity equal to 1 cP and density equal
+    /// to 1000 kg/m^3.
     /// The <opm/core/utility/Units.hpp> header contains support
     /// for common units and prefixes, in the namespaces Opm::unit
     /// and Opm::prefix.
     /// \code
     using namespace Opm::unit;
     using namespace Opm::prefix;
-    double mu = 1.0*centi*Poise;
+    int num_phases = 1;
+    std::vector<double> mu(num_phases, 1.0*centi*Poise);
+    std::vector<double> rho(num_phases, 1000.0*kilogram/cubic(meter));
     /// \endcode
     /// \page tutorial2
     /// \details
@@ -87,17 +95,13 @@ int main()
     /// \endcode
     /// \page tutorial2
     /// \details
-    /// We set up a diagonal permeability tensor and compute the mobility for each cell.
-    /// The resulting permeability matrix is flattened in a vector.
+
+    /// \page tutorial2
+    /// \details
+    /// We set up a simple property object for a single-phase situation.
     /// \code
-    std::vector<double> permeability(num_cells*dim*dim, 0.);
-    std::vector<double> mob(num_cells);
-    for (int cell = 0; cell < num_cells; ++cell) {
-        permeability[9*cell + 0] = k;
-        permeability[9*cell + 4] = k;
-        permeability[9*cell + 8] = k;
-        mob[cell] = 1/mu;
-    }
+    Opm::IncompPropertiesBasic props(1, Opm::SaturationPropsBasic::Constant, rho,
+                                     mu, 1.0, k, dim, num_cells);
     /// \endcode
 
     /// \page tutorial2
@@ -109,14 +113,6 @@ int main()
     /// \endcode
     /// \page tutorial2
 
-    /// We set up a pressure solver for the incompressible problem,
-    /// using the two-point flux approximation discretization.  The
-    /// third argument which corresponds to gravity is set to a null
-    /// pointer (no gravity). The final argument would be a pointer to
-    /// a Wells data structure, again we use a null pointer to
-    /// indicate that we have no wells.
-    /// \code
-    Opm::IncompTpfa psolver(*grid.c_grid(), &permeability[0], 0, linsolver, 0);
     /// \endcode
     /// \page tutorial2
     /// We define the source term.
@@ -132,39 +128,33 @@ int main()
     Opm::FlowBCManager bcs;
     /// \endcode
 
+    /// We set up a pressure solver for the incompressible problem,
+    /// using the two-point flux approximation discretization.  The
+    /// null pointers correspond to arguments for gravity, wells and
+    /// boundary conditions, which are all defaulted (to zero gravity,
+    /// no wells, and no-flow boundaries).
+    /// \code
+    Opm::IncompTpfa psolver(*grid.c_grid(), props, linsolver, NULL, NULL, src, NULL);
+
     /// \page tutorial2
-    /// We declare the solution vectors, i.e., the pressure and face
-    /// flux vectors we are going to compute.  The well solution
-    /// vectors are needed for interface compatibility with the
+    /// We declare the state object, that will contain the pressure and face
+    /// flux vectors we are going to compute.  The well state
+    /// object is needed for interface compatibility with the
     /// <CODE>solve()</CODE> method of class
     /// <CODE>Opm::IncompTPFA</CODE>.
     /// \code
-    std::vector<double> pressure(num_cells);
-    std::vector<double> faceflux(num_faces);
-    std::vector<double> well_bhp;
-    std::vector<double> well_flux;
-    /// \endcode
-    /// \page tutorial2
-    /// \details
-    /// We declare the gravity term which is required by the pressure solver (see
-    /// Opm::IncompTpfa.solve()). In the absence of gravity, an empty vector is required.
-    /// \code
-    std::vector<double> omega;
-    /// \endcode
-
-    /// \page tutorial2
-    /// \details
-    /// We declare the wdp term which is required by the pressure solver (see
-    /// Opm::IncompTpfa.solve()). In the absence of wells, an empty vector is required.
-    /// \code
-    std::vector<double> wdp;
+    Opm::TwophaseState state;
+    state.pressure().resize(num_cells);
+    state.faceflux().resize(num_faces);
+    Opm::WellState well_state;
     /// \endcode
 
     /// \page tutorial2
     /// We call the pressure solver.
+    /// The first (timestep) argument does not matter for this
+    /// incompressible case.
     /// \code
-    psolver.solve(mob, omega, src, wdp, bcs.c_bcs(),
-                  pressure, faceflux, well_bhp, well_flux);
+    psolver.solve(1.0*day, state, well_state);
     /// \endcode
 
     /// \page tutorial2
@@ -175,9 +165,9 @@ int main()
     /// \code
     std::ofstream vtkfile("tutorial2.vtu");
     Opm::DataMap dm;
-    dm["pressure"] = &pressure;
+    dm["pressure"] = &state.pressure();
     std::vector<double> cell_velocity;
-    Opm::estimateCellVelocity(*grid.c_grid(), faceflux, cell_velocity);
+    Opm::estimateCellVelocity(*grid.c_grid(), state.faceflux(), cell_velocity);
     dm["velocity"] = &cell_velocity;
     Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
 }

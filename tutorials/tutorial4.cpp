@@ -38,6 +38,7 @@
 #include <opm/core/transport/reorder/TransportModelTwophase.hpp>
 
 #include <opm/core/simulator/TwophaseState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -120,20 +121,6 @@ int main ()
     std::vector<double> omega; 
     /// \endcode
 
-   
-
-    /// \page tutorial4
-    /// \details We set up necessary information for the wells
-    /// \code
-    std::vector<double> wdp; 
-    std::vector<double> well_bhp;
-    std::vector<double> well_flux;
-    std::vector<double> well_resflowrates_phase;
-    std::vector<double> well_surflowrates_phase;
-    std::vector<double> fractional_flows;
-    
-    /// \endcode
-
     /// \page tutorial4
     /// \details We set up the source term. Positive numbers indicate that the cell is a source,
     /// while negative numbers indicate a sink.
@@ -192,13 +179,6 @@ int main ()
     state.setFirstSat(allcells, props, TwophaseState::MinSat);
     /// \endcode
     
-    /// \page tutorial4
-    /// \details We introduce a vector which contains the total mobility 
-    /// on all cells.
-    /// \code
-    std::vector<double> totmob;
-    /// \endcode
-
     /// \page tutorial4
     /// \details This string will contain the name of a VTK output vector.
     /// \code
@@ -299,11 +279,21 @@ int main ()
     ///\endcode
     
     /// \page tutorial4
-    /// \details We set up the pressure solver. We need to pass the wells pointer as the
-    ///          last argument.
+    /// \details We set up necessary information for the wells
+    /// \code
+    WellState well_state;
+    well_state.init(wells, state);
+    std::vector<double> well_resflowrates_phase;
+    std::vector<double> well_surflowrates_phase;
+    std::vector<double> fractional_flows;
+    /// \endcode
+
+    /// \page tutorial4
+    /// \details We set up the pressure solver.
     /// \code
     LinearSolverUmfpack linsolver;
-    IncompTpfa psolver(grid, props.permeability(), grav, linsolver, wells);
+    IncompTpfa psolver(grid, props, linsolver,
+                       grav, wells, src, bcs.c_bcs());
     /// \endcode
 
     
@@ -311,18 +301,6 @@ int main ()
     /// \details Loop over the time steps.
     /// \code
     for (int i = 0; i < num_time_steps; ++i) {
-        /// \endcode
-        /// \page tutorial4
-        /// \details Compute the total mobility. It is needed by the pressure solver
-        /// \code
-        computeTotalMobility(props, allcells, state.saturation(), totmob);
-        /// \endcode
-
-        /// \endcode 
-        /// \page tutorial4
-        /// \details In order to use the well controls, we need to generate the WDP for each well.
-        /// \code
-        Opm::computeWDP(*wells, grid, state.saturation(), props.density(), gravity, true, wdp);
         /// \endcode
 
         /// \page tutorial4
@@ -338,31 +316,29 @@ int main ()
             /// \page tutorial4
             /// \details Solve the pressure equation
             /// \code
-            psolver.solve(totmob, omega, src, wdp, bcs.c_bcs(),
-                    state.pressure(), state.faceflux(), well_bhp,
-                    well_flux);
+            psolver.solve(dt, state, well_state);
 
             /// \endcode
             /// \page tutorial4
             /// \details We compute the new well rates. Notice that we approximate (wrongly) surfflowsrates := resflowsrate 
             Opm::computeFractionalFlow(props, allcells, state.saturation(), fractional_flows);
-            Opm::computePhaseFlowRatesPerWell(*wells, well_flux, fractional_flows, well_resflowrates_phase);
-            Opm::computePhaseFlowRatesPerWell(*wells, well_flux, fractional_flows, well_surflowrates_phase);
+            Opm::computePhaseFlowRatesPerWell(*wells, well_state.perfRates(), fractional_flows, well_resflowrates_phase);
+            Opm::computePhaseFlowRatesPerWell(*wells, well_state.perfRates(), fractional_flows, well_surflowrates_phase);
             /// \endcode
 
             /// \page tutorial4
             /// \details We check if the well conditions are met.
-            well_conditions_met = well_collection.conditionsMet(well_bhp, well_resflowrates_phase, well_surflowrates_phase);
+            well_conditions_met = well_collection.conditionsMet(well_state.bhp(), well_resflowrates_phase, well_surflowrates_phase);
             ++well_iter;
             if (!well_conditions_met && well_iter == max_well_iterations) {
                 THROW("Conditions not met within " << max_well_iterations<< " iterations.");
             }
         }
         /// \endcode
-        
 
         /// \page tutorial4
         /// \details  Transport solver
+        /// \TODO We must call computeTransportSource() here, since we have wells.
         /// \code
         transport_solver.solve(&state.faceflux()[0], &porevol[0], &src[0], dt, state.saturation());
         /// \endcode
