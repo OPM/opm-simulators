@@ -39,7 +39,7 @@ namespace Opm
     {
     public:
 
-	enum SingleCellMethod { Bracketing, Newton };
+	enum SingleCellMethod { Bracketing, Newton, Gradient };
         enum GradientMethod { Analytic, FinDif }; // Analytic is chosen (hard-coded)
 
 	/// Construct solver.
@@ -104,7 +104,7 @@ namespace Opm
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
 	void solveSingleCellNewton(int cell);
-	void solveSingleCellNewtonGradient(int cell);
+	void solveSingleCellGradient(int cell);
 	class ResidualEquation;
 
         void initGravity(const double* grav);
