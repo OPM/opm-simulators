@@ -144,8 +144,9 @@ int main()
     /// <CODE>Opm::IncompTPFA</CODE>.
     /// \code
     Opm::TwophaseState state;
-    state.pressure().resize(num_cells);
-    state.faceflux().resize(num_faces);
+    state.pressure().resize(num_cells, 0.0);
+    state.faceflux().resize(num_faces, 0.0);
+    state.saturation().resize(num_cells, 1.0);
     Opm::WellState well_state;
     /// \endcode
 
