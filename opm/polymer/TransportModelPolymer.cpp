@@ -1210,7 +1210,7 @@ namespace Opm
         mob_.resize(2*nc);
 
         for (int cell = 0; cell < nc; ++cell) {
-            mobility(saturation[cell], concentration[cell], cell, &mob_[2*cell]);
+            mobility(saturation_[cell], concentration_[cell], cell, &mob_[2*cell]);
         }
 
 
