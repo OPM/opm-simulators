@@ -45,8 +45,6 @@ namespace Opm
 
 	/// \TODO document me, especially method.
 	TransportModelPolymer(const UnstructuredGrid& grid,
-			      const double* porosity,
-			      const double* porevolume,
 			      const IncompPropertiesInterface& props,
 			      const PolymerProperties& polyprops,
 			      const SingleCellMethod method,
@@ -61,9 +59,9 @@ namespace Opm
 		   const double* source,
 		   const double dt,
 		   const double inflow_c,
-		   double* saturation,
-		   double* concentration,
-		   double* cmax);
+		   std::vector<double>& saturation,
+                   std::vector<double>& concentration,
+                   std::vector<double>& cmax);
 
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
@@ -118,7 +116,7 @@ namespace Opm
 	const double* source_;      // one source per cell
 	double dt_;
 	double inflow_c_;
-	double* saturation_;        // one per cell
+        std::vector<double> saturation_; // one per cell, only water saturation!
 	double* concentration_;
 	double* cmax_;
 	std::vector<double> fractionalflow_;  // one per cell
@@ -149,7 +147,6 @@ namespace Opm
 	void computeMc(double c, double& mc) const;
 	void computeMcWithDer(double c, double& mc, double& dmc_dc) const;
         void mobility(double s, double c, int cell, double* mob) const;
-
     };
 
 } // namespace Opm

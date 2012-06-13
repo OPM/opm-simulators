@@ -22,6 +22,7 @@
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/RootFinders.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <cmath>
 #include <list>
@@ -172,16 +173,14 @@ namespace
 namespace Opm
 {
     TransportModelPolymer::TransportModelPolymer(const UnstructuredGrid& grid,
-						 const double* porosity,
-						 const double* porevolume,
 						 const IncompPropertiesInterface& props,
 						 const PolymerProperties& polyprops,
 						 const SingleCellMethod method,
 						 const double tol,
 						 const int maxit)
 	: grid_(grid),
-	  porosity_(porosity),
-	  porevolume_(porevolume),
+	  porosity_(props.porosity()),
+	  porevolume_(NULL),
 	  props_(props),
 	  polyprops_(polyprops),
 	  tol_(tol),
@@ -190,7 +189,6 @@ namespace Opm
 	  source_(0),
 	  dt_(0.0),
 	  inflow_c_(0.0),
-	  saturation_(0),
 	  concentration_(0),
 	  cmax_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
@@ -223,20 +221,21 @@ namespace Opm
 				      const double* source,
 				      const double dt,
 				      const double inflow_c,
-				      double* saturation,
-				      double* concentration,
-				      double* cmax)
+				      std::vector<double>& saturation,
+				      std::vector<double>& concentration,
+				      std::vector<double>& cmax)
     {
 	darcyflux_ = darcyflux;
         porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
 	inflow_c_ = inflow_c;
-	saturation_ = saturation;
-	concentration_ = concentration;
-	cmax_ = cmax;
+        toWaterSat(saturation, saturation_);
+	concentration_ = &concentration[0];
+	cmax_ = &cmax[0];
         res_counts.clear();
 	reorderAndTransport(grid_, darcyflux);
+        toBothSat(saturation_, saturation);
     }
 
 
@@ -1335,7 +1334,7 @@ namespace Opm
         // initialize variables.
         porevolume_ = porevolume;
         dt_ = dt;
-        saturation_ = &saturation[0];
+        toWaterSat(saturation, saturation_);
         concentration_ = &concentration[0];
         cmax_ = &cmax[0];
         const int nc = grid_.number_of_cells;
@@ -1346,7 +1345,7 @@ namespace Opm
         mob_.resize(2*nc);
 
         for (int cell = 0; cell < nc; ++cell) {
-            mobility(saturation[cell], concentration[cell], cell, &mob_[2*cell]);
+            mobility(saturation_[cell], concentration_[cell], cell, &mob_[2*cell]);
         }
 
 
@@ -1358,6 +1357,8 @@ namespace Opm
         }
         std::cout << "Gauss-Seidel column solver average iterations: "
                   << double(num_iters)/double(columns.size()) << std::endl;
+
+        toBothSat(saturation_, saturation);
     }
 
 } // namespace Opm
