@@ -206,16 +206,16 @@ namespace Opm
                                std::vector<double>& fractional_flows)
     {
         const int num_phases = props.numPhases();
-        std::vector<double> pc_mobs(cells.size() * num_phases);
-        computePhaseMobilities(props, cells, p, z, s, pc_mobs);
-        fractional_flows.resize(cells.size() * num_phases);
-        for (size_t i = 0; i < cells.size(); ++i) {
+
+        computePhaseMobilities(props, cells, p, z, s, fractional_flows);
+
+        for (std::vector<int>::size_type i = 0; i < cells.size(); ++i) {
             double phase_sum = 0.0;
             for (int phase = 0; phase < num_phases; ++phase) {
-                phase_sum += pc_mobs[i * num_phases + phase];
+                phase_sum += fractional_flows[i * num_phases + phase];
             }
             for (int phase = 0; phase < num_phases; ++phase) {
-                fractional_flows[i * num_phases + phase] = pc_mobs[i * num_phases + phase] / phase_sum;
+                fractional_flows[i * num_phases + phase] /= phase_sum;
             }
         }
     }
