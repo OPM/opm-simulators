@@ -44,8 +44,6 @@ namespace Opm
 
 	/// \TODO document me, especially method.
 	TransportModelPolymer(const UnstructuredGrid& grid,
-			      const double* porosity,
-			      const double* porevolume,
 			      const IncompPropertiesInterface& props,
 			      const PolymerProperties& polyprops,
 			      const SingleCellMethod method,

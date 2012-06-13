@@ -172,16 +172,14 @@ namespace
 namespace Opm
 {
     TransportModelPolymer::TransportModelPolymer(const UnstructuredGrid& grid,
-						 const double* porosity,
-						 const double* porevolume,
 						 const IncompPropertiesInterface& props,
 						 const PolymerProperties& polyprops,
 						 const SingleCellMethod method,
 						 const double tol,
 						 const int maxit)
 	: grid_(grid),
-	  porosity_(porosity),
-	  porevolume_(porevolume),
+	  porosity_(props.porosity()),
+	  porevolume_(NULL),
 	  props_(props),
 	  polyprops_(polyprops),
 	  tol_(tol),

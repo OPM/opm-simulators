@@ -557,7 +557,7 @@ main(int argc, char** argv)
         THROW("Unknown method: " << method_string);
     }
 
-    Opm::TransportModelPolymer reorder_model(*grid->c_grid(), props->porosity(), &porevol[0], *props, polyprop,
+    Opm::TransportModelPolymer reorder_model(*grid->c_grid(), *props, polyprop,
                                              method, nl_tolerance, nl_maxiter);
 
     if (use_gauss_seidel_gravity) {
