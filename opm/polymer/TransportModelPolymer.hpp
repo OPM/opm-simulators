@@ -66,6 +66,7 @@ namespace Opm
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
 	void solveSingleCellNewton(int cell);
+	void solveSingleCellNewtonGradient(int cell);
 	class ResidualEquation;
 
         void initGravity(const double* grav);
