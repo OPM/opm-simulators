@@ -216,6 +216,14 @@ namespace Opm
 
 
 
+    void TransportModelPolymer::setPreferredMethod(SingleCellMethod method)
+    {
+        method_ = method;
+    }
+
+
+
+
     void TransportModelPolymer::solve(const double* darcyflux,
                                       const double* porevolume,
 				      const double* source,
@@ -1257,6 +1265,7 @@ namespace Opm
 
         // Solve on all columns.
         int num_iters = 0;
+        // std::cout << "Gauss-Seidel column solver # columns: " << columns.size() << std::endl;
         for (std::vector<std::vector<int> >::size_type i = 0; i < columns.size(); i++) {
             // std::cout << "==== new column" << std::endl;
             num_iters += solveGravityColumn(columns[i]);
@@ -1405,7 +1414,7 @@ namespace
 	if(!(x[0]>0)){
 	    x[0] = dx;
             x[1] = 0;
-	}else{
+	} else {
 	    x[0] = xx[0];
             x[1] = xx[1];
 	}

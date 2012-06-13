@@ -33,8 +33,8 @@ namespace Opm
 
     class IncompPropertiesInterface;
 
-    /// A transport model for two-phase flow with polymer in the
-    /// water phase.
+    /// Implements a reordering transport solver for incompressible two-phase flow
+    /// with polymer in the water phase.
     /// \TODO Include permeability reduction effect.
     class TransportModelPolymer : public TransportModelInterface
     {
@@ -43,7 +43,16 @@ namespace Opm
 	enum SingleCellMethod { Bracketing, Newton, Gradient };
         enum GradientMethod { Analytic, FinDif }; // Analytic is chosen (hard-coded)
 
-	/// \TODO document me, especially method.
+	/// Construct solver.
+	/// \param[in] grid       A 2d or 3d grid.
+	/// \param[in] props      Rock and fluid properties.
+	/// \param[in] polyprops  Polymer properties.
+	/// \param[in] method     Bracketing: solve for c in outer loop, s in inner loop,
+        ///                                   each solve being bracketed for robustness.
+	///                       Newton: solve simultaneously for c and s with Newton's method.
+        ///                               (using gradient variant and bracketing as fallbacks).
+	/// \param[in] tol        Tolerance used in the solver.
+	/// \param[in] maxit      Maximum number of non-linear iterations used.
 	TransportModelPolymer(const UnstructuredGrid& grid,
 			      const IncompPropertiesInterface& props,
 			      const PolymerProperties& polyprops,
@@ -51,9 +60,19 @@ namespace Opm
 			      const double tol,
 			      const int maxit);
 
-	/// Solve transport eqn with implicit Euler scheme, reordered.
-	/// \TODO Now saturation is expected to be one sw value per cell,
-	/// change to [sw so] per cell.
+	/// Set the preferred method, Bracketing or Newton.
+        void setPreferredMethod(SingleCellMethod method);
+
+	/// Solve for saturation, concentration and cmax at next timestep.
+	/// Using implicit Euler scheme, reordered.
+	/// \param[in] darcyflux           Array of signed face fluxes.
+	/// \param[in] porevolume          Array of pore volumes.
+	/// \param[in] source              Transport source term.
+	/// \param[in] dt                  Time step.
+	/// \param[in] inflow_c            Time step.
+	/// \param[in, out] saturation     Phase saturations.
+	/// \param[in, out] concentration  Polymer concentration.
+	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
 	void solve(const double* darcyflux,
                    const double* porevolume,
 		   const double* source,
@@ -63,11 +82,30 @@ namespace Opm
                    std::vector<double>& concentration,
                    std::vector<double>& cmax);
 
+        /// Solve for gravity segregation.
+        /// This uses a column-wise nonlinear Gauss-Seidel approach.
+        /// It assumes that the input columns contain cells in a single
+        /// vertical stack, that do not interact with other columns (for
+        /// gravity segregation.
+	/// \param[in] columns             Vector of cell-columns.
+	/// \param[in] porevolume          Array of pore volumes.
+	/// \param[in] dt                  Time step.
+	/// \param[in, out] saturation     Phase saturations.
+	/// \param[in, out] concentration  Polymer concentration.
+	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
+        void solveGravity(const std::vector<std::vector<int> >& columns,
+                          const double* porevolume,
+                          const double dt,
+                          std::vector<double>& saturation,
+                          std::vector<double>& concentration,
+                          std::vector<double>& cmax);
+
+    public: // But should be made private...
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
 	void solveSingleCellNewton(int cell);
-	void solveSingleCellNewtonGradient(int cell);
+	void solveSingleCellGradient(int cell);
 	class ResidualEquation;
 
         void initGravity(const double* grav);
@@ -75,12 +113,6 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
-        void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* porevolume,
-                          const double dt,
-                          std::vector<double>& saturation,
-                          std::vector<double>& concentration,
-                          std::vector<double>& cmax);
 
         // for testing
         class Newton_Iter {
