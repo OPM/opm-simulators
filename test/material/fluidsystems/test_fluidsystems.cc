@@ -36,6 +36,7 @@
 // include all fluid systems in dumux-stable
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
+#include <dumux/material/fluidsystems/blackoilfluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2liquidphasefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
@@ -90,6 +91,10 @@ int main()
         {   Dumux::SaturationOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
             checkFluidState<Scalar>(fs); }
     }
+
+    // black-oil
+    {   typedef Dumux::FluidSystems::BlackOil<Scalar> FluidSystem;
+        if (false) checkFluidSystem<Scalar, FluidSystem>(); }
 
     // H2O -- N2
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;

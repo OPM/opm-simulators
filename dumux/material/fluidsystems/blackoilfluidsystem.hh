@@ -33,6 +33,7 @@
 
 #include <dumux/material/constants.hh>
 #include <dumux/material/components/h2o.hh>
+#include <dumux/material/fluidsystems/basefluidsystem.hh>
 #include <dumux/material/fluidsystems/nullparametercache.hh>
 
 #include <array>
@@ -45,7 +46,8 @@ namespace FluidSystems {
  *        to calculate termodynamically meaningful quantities.
  */
 template <class Scalar>
-class BlackOil
+class BlackOil 
+    : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
     typedef Dumux::Spline<Scalar, -1> Spline;
     typedef std::vector<std::pair<Scalar, Scalar> > SplineSamplingPoints;
@@ -66,6 +68,14 @@ public:
     //! Index of the gas phase
     static const int gPhaseIdx = 2;
     
+    static void init()
+    {
+        DUNE_THROW(Dune::InvalidStateException, "No generic init() method for this fluid system. The black-oil fluid system must be initialized with:\n"
+                   << "    FluidSystem::initBegin()\n"
+                   << "    // set black oil parameters\n"
+                   << "    FluidSystem::initEnd()\n");
+    }
+
     static void initBegin()
     {}
     
@@ -262,9 +272,9 @@ public:
     /*!
      * \brief Return whether a phase is liquid
      */
-    static bool phaseIsLiquid(const int phaseIdx)
+    static constexpr bool isLiquid(const int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        // assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
@@ -300,33 +310,6 @@ public:
     { return molarMass_[compIdx]; }
 
     /*!
-     * \brief Critical temperature of a component [K].
-     */
-    static Scalar criticalTemperature(const int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented,
-                   "Critical temperatures for components.");
-    }
-
-    /*!
-     * \brief Critical pressure of a component [Pa].
-     */
-    static Scalar criticalPressure(const int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented,
-                   "Critical pressures for components.");
-    }
-
-    /*!
-     * \brief Molar volume of a component at the critical point [m^3/mol].
-     */
-    static Scalar criticalMolarVolume(const int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented,
-                   "Critical molar volumes for components.");
-    }
-
-    /*!
      * \brief Returns true if and only if a fluid phase is assumed to
      *        be an ideal mixture.
      *
@@ -338,12 +321,32 @@ public:
      * only damage done will be (slightly) increased computation times
      * in some cases.
      */
-    static bool isIdealMixture(int phaseIdx)
+    static constexpr bool isIdealMixture(int phaseIdx)
     {
         // fugacity coefficients are only pressure dependent -> we
         // have an ideal mixture
         return true;
     }
+
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be compressible.
+     *
+     * Compressible means that the partial derivative of the density
+     * to the fluid pressure is always larger than zero.
+     *
+     * \param phaseIdx The index of the fluid phase to consider
+     */
+    static constexpr bool isCompressible(int phaseIdx)
+    {
+        return true; // all phases are compressible
+    }
+    
+    /*!
+     * \brief Returns true iff a fluid is considered an ideal gas
+     */
+    static constexpr bool isIdealGas(int phaseIdx)
+    { return false; }
 
     /*!
      * \brief Calculate the densityy [kg/m^3] of a fluid phase
@@ -459,62 +462,6 @@ public:
         }
         
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
-    }
-
-    /*!
-     * \brief Calculate the binary molecular diffusion coefficient for
-     *        a component in a fluid phase [mol^2 * s / (kg*m^3)]
-     *
-     * Molecular diffusion of a compoent $\kappa$ is caused by a
-     * gradient of the chemical potential and follows the law
-     *
-     * \f[ J = - D \grad mu_\kappa \f] 
-     *
-     * where \f$\mu_\kappa\$ is the component's chemical potential,
-     * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
-     * diffusive flux. \f$mu_\kappa\f$ is connected to the component's
-     * fugacity \f$f_\kappa\f$ by the relation
-     *
-     * \f[ \mu_\kappa = R T_\alpha \mathrm{ln} \frac{f_\kappa}{p_\alpha} \f]
-     *
-     * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
-     * pressure and temperature.
-     */
-    template <class FluidState>
-    static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "Diffusion coefficients");
-    }
-
-    /*!
-     * \brief Given a phase's composition, temperature and pressure,
-     *        return the binary diffusion coefficient for components
-     *        \f$i\f$ and \f$j\f$ in this phase.
-     */
-    template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             const ParameterCache &paramCache,
-                                             int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
-                                  
-    {
-        DUNE_THROW(Dune::NotImplemented, "Binary diffusion coefficients");
-    }
-
-    /*!
-     * \brief Given a phase's composition, temperature, pressure and
-     *        density, calculate its specific enthalpy [J/kg].
-     */
-    template <class FluidState>
-    static Scalar enthalpy(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
-    {
-        DUNE_THROW(Dune::NotImplemented, "Enthalpy");
     }
 
     static Scalar surfaceDensity(int phaseIdx)

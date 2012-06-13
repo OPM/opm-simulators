@@ -79,43 +79,43 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of water.
      */
-    static Scalar molarMass()
+    static constexpr Scalar molarMass()
     { return Common::molarMass; }
 
     /*!
      * \brief The acentric factor \f$\mathrm{[-]}\f$ of water.
      */
-    static Scalar acentricFactor()
+    static constexpr Scalar acentricFactor()
     { return Common::acentricFactor; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of water
      */
-    static Scalar criticalTemperature()
+    static constexpr Scalar criticalTemperature()
     { return Common::criticalTemperature; }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of water.
      */
-    static Scalar criticalPressure()
+    static constexpr Scalar criticalPressure()
     { return Common::criticalPressure; }
 
     /*!
      * \brief Returns the molar volume \f$\mathrm{[m^3/mol]}\f$ of water at the critical point
      */
-    static Scalar criticalMolarVolume()
+    static constexpr Scalar criticalMolarVolume()
     { return Common::criticalMolarVolume; }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at water's triple point.
      */
-    static Scalar tripleTemperature()
+    static constexpr Scalar tripleTemperature()
     { return Common::tripleTemperature; }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at water's triple point.
      */
-    static Scalar triplePressure()
+    static constexpr Scalar triplePressure()
     { return Common::triplePressure; }
 
     /*!
@@ -152,8 +152,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar gasEnthalpy(Scalar temperature,
-                                    Scalar pressure)
+    static Scalar gasEnthalpy(Scalar temperature,
+                              Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
@@ -202,8 +202,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar liquidEnthalpy(Scalar temperature,
-                                       Scalar pressure)
+    static Scalar liquidEnthalpy(Scalar temperature,
+                                 Scalar pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
@@ -243,8 +243,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar gasHeatCapacity(Scalar temperature,
-                                        Scalar pressure)
+    static Scalar gasHeatCapacity(Scalar temperature,
+                                  Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
@@ -279,8 +279,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar liquidHeatCapacity(Scalar temperature,
-                                           Scalar pressure)
+    static Scalar liquidHeatCapacity(Scalar temperature,
+                                     Scalar pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
@@ -312,8 +312,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature,
-                                             Scalar pressure)
+    static Scalar liquidInternalEnergy(Scalar temperature,
+                                       Scalar pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
@@ -340,14 +340,14 @@ public:
             Scalar pi = Region1::pi(pv);
             Scalar dpi_dp = Region1::dpi_dp(pv);
             Scalar du_dp =
-                Rs*temperature*
-                (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
+            Rs*temperature*
+            (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
             */
 
             // use a straight line for extrapolation. use forward
             // differences to calculate the partial derivative to the
             // pressure at the vapor pressure
-            static const Scalar eps = 1e-7;
+            Scalar eps = 1e-7;
             Scalar uv = internalEnergyRegion1_(temperature, pv);
             Scalar uvPEps = internalEnergyRegion1_(temperature, pv + eps);
             Scalar du_dp = (uvPEps - uv)/eps;
@@ -368,7 +368,7 @@ public:
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
-    */
+     */
     static Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
@@ -409,8 +409,8 @@ public:
             Scalar pi = Region2::pi(pv);
             Scalar dpi_dp = Region2::dpi_dp(pv);
             Scalar du_dp =
-                Rs*temperature*
-                (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
+            Rs*temperature*
+            (tau*dpi_dp*ddgamma_dtaudpi + dpi_dp*dpi_dp*dgamma_dpi + pi*dpi_dp*ddgamma_ddpi);
 
             // use a straight line for extrapolation
             Scalar uv = internalEnergyRegion2_(temperature, pv);
@@ -420,7 +420,7 @@ public:
             // use a straight line for extrapolation. use backward
             // differences to calculate the partial derivative to the
             // pressure at the vapor pressure
-            static const Scalar eps = 1e-7;
+            Scalar eps = 1e-7;
             Scalar uv = internalEnergyRegion2_(temperature, pv);
             Scalar uvMEps = internalEnergyRegion2_(temperature, pv - eps);
             Scalar du_dp = (uv - uvMEps)/eps;
@@ -442,8 +442,8 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static const Scalar liquidHeatCapacityConstVolume(Scalar temperature,
-                                                      Scalar pressure)
+    static Scalar liquidHeatCapacityConstVolume(Scalar temperature,
+                                                Scalar pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
@@ -475,7 +475,7 @@ public:
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
-    */
+     */
     static Scalar gasHeatCapacityConstVolume(Scalar temperature, Scalar pressure)
     {
         if (!Region2::isValid(temperature, pressure))
@@ -501,13 +501,13 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsCompressible()
+    static constexpr bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsCompressible()
+    static constexpr bool liquidIsCompressible()
     { return true; }
 
     /*!
@@ -554,21 +554,21 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            const Scalar eps = pv*1e-8;
+            Scalar eps = pv*1e-8;
             Scalar v0 = volumeRegion2_(temperature, pv);
             Scalar v1 = volumeRegion2_(temperature, pv + eps);
             Scalar dv_dp = (v1 - v0)/eps;
             /*
-            Scalar pi = Region2::pi(pv);
-            Scalar dp_dpi = Region2::dp_dpi(pv);
-            Scalar dgamma_dpi = Region2::dgamma_dpi(temperature, pv);
-            Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
+              Scalar pi = Region2::pi(pv);
+              Scalar dp_dpi = Region2::dp_dpi(pv);
+              Scalar dgamma_dpi = Region2::dgamma_dpi(temperature, pv);
+              Scalar ddgamma_ddpi = Region2::ddgamma_ddpi(temperature, pv);
 
-            Scalar RT = Rs*temperature;
-            Scalar dv_dp =
-                RT/(dp_dpi*pv)
-                *
-                (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
+              Scalar RT = Rs*temperature;
+              Scalar dv_dp =
+              RT/(dp_dpi*pv)
+              *
+              (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             */
 
             // calculate the partial derivative of the density to the
@@ -585,7 +585,7 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static bool gasIsIdeal()
+    static constexpr bool gasIsIdeal()
     { return false; }
 
     /*!
@@ -660,23 +660,23 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            const Scalar eps = pv*1e-8;
+            Scalar eps = pv*1e-8;
             Scalar v0 = volumeRegion1_(temperature, pv);
             Scalar v1 = volumeRegion1_(temperature, pv + eps);
             Scalar dv_dp = (v1 - v0)/eps;
 
             /*
-            Scalar v0 = volumeRegion1_(temperature, pv);
-            Scalar pi = Region1::pi(pv);
-            Scalar dp_dpi = Region1::dp_dpi(pv);
-            Scalar dgamma_dpi = Region1::dgamma_dpi(temperature, pv);
-            Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
+              Scalar v0 = volumeRegion1_(temperature, pv);
+              Scalar pi = Region1::pi(pv);
+              Scalar dp_dpi = Region1::dp_dpi(pv);
+              Scalar dgamma_dpi = Region1::dgamma_dpi(temperature, pv);
+              Scalar ddgamma_ddpi = Region1::ddgamma_ddpi(temperature, pv);
 
-            Scalar RT = Rs*temperature;
-            Scalar dv_dp =
-                RT/(dp_dpi*pv)
-                *
-                (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
+              Scalar RT = Rs*temperature;
+              Scalar dv_dp =
+              RT/(dp_dpi*pv)
+              *
+              (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             */
 
             // calculate the partial derivative of the density to the
@@ -792,14 +792,14 @@ public:
      * \param temperature absolute temperature in K
      * \param pressure of the phase in Pa
      */
-    static Scalar liquidThermalConductivity( Scalar temperature,  Scalar pressure)
+    static Scalar liquidThermalConductivity(Scalar temperature,  Scalar pressure)
     {
         // Thermal conductivity of water is empirically fit.
         // Evaluating that fitting-function outside the area of validity does not make sense.
         assert( (pressure <= 400e6 and ((273.15<=temperature) and (temperature<=398.15)) )
-                    or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
-                    or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
-                    or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
+                or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
+                or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
+                or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
 
         Scalar rho = liquidDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);
@@ -818,14 +818,14 @@ public:
      * \param temperature absolute temperature in K
      * \param pressure of the phase in Pa
      */
-    static Scalar gasThermalConductivity(const Scalar temperature, const Scalar pressure)
+    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
     {
         // Thermal conductivity of water is empirically fit.
         // Evaluating that fitting-function outside the area of validity does not make sense.
         assert( (pressure <= 400e6 and ((273.15<=temperature) and (temperature<=398.15)) )
-                    or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
-                    or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
-                    or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
+                or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
+                or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
+                or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
 
         Scalar rho = gasDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);

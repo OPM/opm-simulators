@@ -86,13 +86,13 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isLiquid(int phaseIdx)
+    static constexpr bool isLiquid(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
-    static bool isIdealGas(int phaseIdx)
+    static constexpr bool isIdealGas(int phaseIdx)
     { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
 
     /*!
@@ -109,9 +109,10 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealMixture(int phaseIdx)
+    static constexpr bool isIdealMixture(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+
         // we assume Henry's and Rault's laws for the water phase and
         // and no interaction between gas molecules of different
         // components, so all phases are ideal mixtures!
@@ -127,18 +128,17 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isCompressible(int phaseIdx)
+    static constexpr bool isCompressible(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        // gases are always compressible
-        if (phaseIdx == gPhaseIdx)
-            return true;
-        else if (phaseIdx == wPhaseIdx)
+        return 
+            (phaseIdx == gPhaseIdx)
+            // gases are always compressible
+            ? true
+            : (phaseIdx == wPhaseIdx)
             // the water component decides for the water phase...
-            return H2O::liquidIsCompressible();
-
-        // the NAPL component decides for the napl phase...
-        return NAPL::liquidIsCompressible();
+            ? H2O::liquidIsCompressible()
+            // the NAPL component decides for the napl phase...
+            : NAPL::liquidIsCompressible();
     }
 
     /*!
@@ -170,14 +170,19 @@ public:
     /*!
      * \brief Return the molar mass of a component in [kg/mol].
      */
-    static Scalar molarMass(int compIdx)
+    static constexpr Scalar molarMass(int compIdx)
     {
-        switch (compIdx) {
-        case H2OIdx: return H2O::molarMass();
-        case airIdx: return Air::molarMass();
-        case NAPLIdx: return NAPL::molarMass();
-        };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+        return 
+            (compIdx == H2OIdx)
+            // gases are always compressible
+            ? H2O::molarMass()
+            : (compIdx == airIdx)
+            // the water component decides for the water comp...
+            ? Air::molarMass()
+            // the NAPL component decides for the napl comp...
+            : (compIdx == NAPLIdx)
+            ? NAPL::molarMass()
+            : 1e100;
     }
 
     /*!

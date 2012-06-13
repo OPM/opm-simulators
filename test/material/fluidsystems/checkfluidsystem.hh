@@ -285,7 +285,7 @@ void checkFluidSystem()
     Scalar DUNE_UNUSED val;
 
     // actually check the fluid system API
-    FluidSystem::init();
+    try { FluidSystem::init(); } catch (...) {};
     for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
         fs.restrictToPhase(phaseIdx);
         fs.allowPressure(FluidSystem::isCompressible(phaseIdx));

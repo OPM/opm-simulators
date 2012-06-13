@@ -55,36 +55,32 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of mesitylene
      */
-    static Scalar molarMass()
+    static constexpr Scalar molarMass()
     { return 0.120; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of mesitylene
      */
-    static Scalar criticalTemperature()
+    static constexpr Scalar criticalTemperature()
     { return 637.3; }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of mesitylene
      */
-    static Scalar criticalPressure()
+    static constexpr Scalar criticalPressure()
     { return 31.3e5; }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at mesitylene's triple point.
      */
     static Scalar tripleTemperature()
-    {
-        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for mesitylene");
-    }
+    { DUNE_THROW(Dune::NotImplemented, "tripleTemperature for mesitylene"); }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at mesitylene's triple point.
      */
     static Scalar triplePressure()
-    {
-        DUNE_THROW(Dune::NotImplemented, "triplePressure for mesitylene");
-    }
+    { DUNE_THROW(Dune::NotImplemented, "triplePressure for mesitylene"); }
 
     /*!
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of
@@ -153,19 +149,19 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsCompressible()
+    static constexpr bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static bool gasIsIdeal()
+    static constexpr bool gasIsIdeal()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsCompressible()
+    static constexpr bool liquidIsCompressible()
     { return false; }
 
     /*!

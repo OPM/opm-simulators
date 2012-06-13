@@ -104,13 +104,13 @@ public:
     /*!
      * \brief Return whether a phase is liquid
      */
-    static bool isLiquid(int phaseIdx)
+    static constexpr bool isLiquid(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-
-        if (phaseIdx == wPhaseIdx)
-            return WettingPhase::isLiquid();
-        return NonwettingPhase::isLiquid();
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+        return
+            (phaseIdx == wPhaseIdx)
+            ? WettingPhase::isLiquid()
+            : NonwettingPhase::isLiquid();
     }
 
     /*!
@@ -125,9 +125,9 @@ public:
      * only damage done will be (slightly) increased computation times
      * in some cases.
      */
-    static bool isIdealMixture(int phaseIdx)
+    static constexpr bool isIdealMixture(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         // we assume immisibility
         return true;
@@ -142,14 +142,14 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isCompressible(int phaseIdx)
+    static constexpr bool isCompressible(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        // let the fluids decide
-        if (phaseIdx == wPhaseIdx)
-            return WettingPhase::isCompressible();
-        return NonwettingPhase::isCompressible();
+        return
+            (phaseIdx == wPhaseIdx)
+            ? WettingPhase::isCompressible()
+            : NonwettingPhase::isCompressible();
     }
 
     /*!
@@ -158,14 +158,15 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealGas(int phaseIdx)
+    static constexpr bool isIdealGas(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         // let the fluids decide
-        if (phaseIdx == wPhaseIdx)
-            return WettingPhase::isIdealGas();
-        return NonwettingPhase::isIdealGas();
+        return
+            (phaseIdx == wPhaseIdx)
+            ? WettingPhase::isIdealGas()
+            : NonwettingPhase::isIdealGas();
     }
 
     /****************************************
@@ -199,49 +200,54 @@ public:
      *
      * \param compIdx index of the component
      */
-    static Scalar molarMass(int compIdx)
+    static constexpr Scalar molarMass(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        //assert(0 <= compIdx && compIdx < numComponents);
 
-        if (compIdx == wCompIdx)
-            return WettingPhase::molarMass();
-        return NonwettingPhase::molarMass();
+        // let the fluids decide
+        return
+            (compIdx == wCompIdx)
+            ? WettingPhase::molarMass()
+            : NonwettingPhase::molarMass();
     }
 
     /*!
      * \brief Critical temperature of a component [K].
      */
-    static Scalar criticalTemperature(int compIdx)
+    static constexpr Scalar criticalTemperature(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
-
-        if (compIdx == wCompIdx)
-            return WettingPhase::criticalTemperature();
-        return NonwettingPhase::criticalTemperature();
+        //assert(0 <= compIdx && compIdx < numComponents);
+        // let the fluids decide
+        return
+            (compIdx == wCompIdx)
+            ? WettingPhase::criticalTemperature()
+            : NonwettingPhase::criticalTemperature();
     }
 
     /*!
      * \brief Critical pressure of a component [Pa].
      */
-    static Scalar criticalPressure(int compIdx)
+    static constexpr Scalar criticalPressure(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
-
-        if (compIdx == wCompIdx)
-            return WettingPhase::criticalPressure();
-        return NonwettingPhase::criticalPressure();
+        //assert(0 <= compIdx && compIdx < numComponents);
+        // let the fluids decide
+        return
+            (compIdx == wCompIdx)
+            ? WettingPhase::criticalPressure()
+            : NonwettingPhase::criticalPressure();
     }
 
     /*!
      * \brief The acentric factor of a component [].
      */
-    static Scalar acentricFactor(int compIdx)
+    static constexpr Scalar acentricFactor(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
-
-        if (compIdx == wCompIdx)
-            return WettingPhase::acentricFactor();
-        return NonwettingPhase::acentricFactor();
+        //assert(0 <= compIdx && compIdx < numComponents);
+        // let the fluids decide
+        return
+            (compIdx == wCompIdx)
+            ? WettingPhase::acentricFactor()
+            : NonwettingPhase::acentricFactor();
     }
 
     /****************************************

@@ -55,7 +55,7 @@ public:
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsCompressible()
+    static constexpr bool liquidIsCompressible()
     { return false; }
 
     /*!

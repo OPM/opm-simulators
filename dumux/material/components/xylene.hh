@@ -55,35 +55,37 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of xylene
      */
-    static Scalar molarMass()
+    static constexpr Scalar molarMass()
     { return 0.106; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of xylene
      */
-    static Scalar criticalTemperature()
+    static constexpr Scalar criticalTemperature()
     { return 617.1; }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of xylene
      */
-    static Scalar criticalPressure()
+    static constexpr Scalar criticalPressure()
     { return 35.4e5; }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at xylene's triple point.
      */
-    static Scalar tripleTemperature()
+    static constexpr Scalar tripleTemperature()
     {
-        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for xylene");
+        //DUNE_THROW(Dune::NotImplemented, "tripleTemperature for xylene");
+        return 1e100;
     }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at xylene's triple point.
      */
-    static Scalar triplePressure()
+    static constexpr Scalar triplePressure()
     {
-        DUNE_THROW(Dune::NotImplemented, "triplePressure for xylene");
+        //DUNE_THROW(Dune::NotImplemented, "triplePressure for xylene");
+        return 1e100;
     }
 
     /*!
@@ -92,7 +94,6 @@ public:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
-
     static Scalar vaporPressure(Scalar temperature)
     {
         const Scalar A = 7.00909;;
@@ -112,7 +113,7 @@ public:
      * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar spHeatCapLiquidPhase(Scalar temp, Scalar pressure)
+    static Scalar spHeatCapLiquidPhase(Scalar temp, Scalar pressure) 
     {
         Scalar CH3,C6H5,H;
         // after Reid et al. : Missenard group contrib. method (s. example 5-8)
@@ -208,7 +209,7 @@ public:
 
     static Scalar molarGasDensity(Scalar temperature, Scalar pressure)
     {
-        return (gasDensity(temperature, pressure)*molarMass());
+        return gasDensity(temperature, pressure)*molarMass();
     }
 
     /*!
@@ -248,19 +249,19 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsCompressible()
+    static constexpr bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static bool gasIsIdeal()
+    static constexpr bool gasIsIdeal()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsCompressible()
+    static constexpr bool liquidIsCompressible()
     { return false; }
 
     /*!

@@ -100,9 +100,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isLiquid(int phaseIdx)
+    static constexpr bool isLiquid(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
@@ -120,9 +120,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealMixture(int phaseIdx)
+    static constexpr bool isIdealMixture(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // we assume Henry's and Rault's laws for the water phase and
         // and no interaction between gas molecules of different
         // components, so all phases are ideal mixtures!
@@ -138,14 +138,15 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isCompressible(int phaseIdx)
+    static constexpr bool isCompressible(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        // ideal gases are always compressible
-        if (phaseIdx == gPhaseIdx)
-            return true;
-        // the water component decides for the liquid phase...
-        return H2O::liquidIsCompressible();
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+        return (phaseIdx == gPhaseIdx)
+            // ideal gases are always compressible
+            ? true
+            :
+            // the water component decides for the liquid phase...
+            H2O::liquidIsCompressible();
     }
 
     /*!
@@ -154,14 +155,12 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealGas(int phaseIdx)
+    static constexpr bool isIdealGas(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-
-        // let the fluids decide
-        if (phaseIdx == gPhaseIdx)
-            return H2O::gasIsIdeal() && Air::gasIsIdeal();
-        return false; // not a gas
+        return
+            (phaseIdx == gPhaseIdx)
+            ? H2O::gasIsIdeal() && Air::gasIsIdeal()
+            : false;
     }
 
     /****************************************
@@ -194,15 +193,15 @@ public:
      *
      * \param compIdx index of the component
      */
-    static Scalar molarMass(int compIdx)
+    static constexpr Scalar molarMass(int compIdx)
     {
-        switch (compIdx)
-        {
-        case H2OIdx: return H2O::molarMass();
-        case AirIdx: return Air::molarMass();
-        };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
-    }
+        return
+            (compIdx == H2OIdx)
+            ? H2O::molarMass()
+            : (compIdx == AirIdx)
+            ? Air::molarMass()
+            : 1e100;
+   }
 
 
     /*!
@@ -210,15 +209,14 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static Scalar criticalTemperature(int compIdx)
+    static constexpr Scalar criticalTemperature(int compIdx)
     {
-        static const Scalar Tcrit[] = {
-            H2O::criticalTemperature(),
-            Air::criticalTemperature()
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return Tcrit[compIdx];
+        return
+            (compIdx == H2OIdx)
+            ? H2O::criticalTemperature()
+            : (compIdx == AirIdx)
+            ? Air::criticalTemperature()
+            : 1e100;
     }
 
     /*!
@@ -226,15 +224,14 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static Scalar criticalPressure(int compIdx)
+    static constexpr Scalar criticalPressure(int compIdx)
     {
-        static const Scalar pcrit[] = {
-            H2O::criticalPressure(),
-            Air::criticalPressure()
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return pcrit[compIdx];
+        return
+            (compIdx == H2OIdx)
+            ? H2O::criticalPressure()
+            : (compIdx == AirIdx)
+            ? Air::criticalPressure()
+            : 1e100;
     }
 
     /*!
@@ -242,15 +239,14 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static Scalar acentricFactor(int compIdx)
+    static constexpr Scalar acentricFactor(int compIdx)
     {
-        static const Scalar accFac[] = {
-            H2O::acentricFactor(), // H2O (from Reid, et al.)
-            Air::acentricFactor()
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return accFac[compIdx];
+        return
+            (compIdx == H2OIdx)
+            ? H2O::acentricFactor()
+            : (compIdx == AirIdx)
+            ? Air::acentricFactor()
+            : 1e100;
     }
 
     /****************************************

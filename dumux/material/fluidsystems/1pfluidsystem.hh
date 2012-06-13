@@ -88,9 +88,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isLiquid(int phaseIdx)
+    static constexpr bool isLiquid(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         return Fluid::isLiquid();
     }
@@ -104,9 +104,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isCompressible(int phaseIdx)
+    static constexpr bool isCompressible(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         // let the fluid decide
         return Fluid::isCompressible();
@@ -126,9 +126,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealMixture(int phaseIdx)
+    static constexpr bool isIdealMixture(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         // we assume immisibility
         return true;
@@ -140,9 +140,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealGas(int phaseIdx)
+    static constexpr bool isIdealGas(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         // let the fluid decide
         return Fluid::isIdealGas();
@@ -172,9 +172,9 @@ public:
      *
      * \param compIdx index of the component
      */
-    static Scalar molarMass(int compIdx)
+    static constexpr Scalar molarMass(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        //assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::molarMass();
     }
@@ -184,9 +184,9 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static Scalar criticalTemperature(int compIdx)
+    static constexpr Scalar criticalTemperature(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        //assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::criticalTemperature();
     }
@@ -196,9 +196,9 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static Scalar criticalPressure(int compIdx)
+    static constexpr Scalar criticalPressure(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        //assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::criticalPressure();
     }
@@ -208,9 +208,9 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static Scalar acentricFactor(int compIdx)
+    static constexpr Scalar acentricFactor(int compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        //assert(0 <= compIdx && compIdx < numComponents);
 
         return Fluid::acentricFactor();
     }

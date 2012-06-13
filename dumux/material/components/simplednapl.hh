@@ -53,41 +53,43 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
      */
-    static Scalar molarMass()
-    {
-        return 131.39e-3; // kg/mol
-    }
+    static constexpr Scalar molarMass()
+    { return 0.13139; } // kg/mol
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of TCE.
      */
-    static Scalar criticalTemperature()
+    static constexpr Scalar criticalTemperature()
     {
-        DUNE_THROW(Dune::NotImplemented, "criticalTemperature for TCE");
+        //DUNE_THROW(Dune::NotImplemented, "criticalTemperature for TCE");
+        return 1e100;
     }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of TCE.
      */
-    static Scalar criticalPressure()
+    static constexpr Scalar criticalPressure()
     {
-        DUNE_THROW(Dune::NotImplemented, "criticalPressure for TCE");
+        //DUNE_THROW(Dune::NotImplemented, "criticalPressure for TCE");
+        return 1e100;
     }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at TCE's triple point.
      */
-    static Scalar tripleTemperature()
+    static constexpr Scalar tripleTemperature()
     {
-        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for TCE");
+        //DUNE_THROW(Dune::NotImplemented, "tripleTemperature for TCE");
+        return 1e100;
     }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at TCE's triple point.
      */
-    static Scalar triplePressure()
+    static constexpr Scalar triplePressure()
     {
-        DUNE_THROW(Dune::NotImplemented, "triplePressure for TCE");
+        //DUNE_THROW(Dune::NotImplemented, "triplePressure for TCE");
+        return 1e100;
     }
 
     /*!
@@ -97,20 +99,18 @@ public:
      * \param T temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
-    {
-        return 3900; // [Pa] (at 20C)
-    }
+    { return 3900; } // [Pa] (at 20C)
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsCompressible()
+    static constexpr bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static bool liquidIsCompressible()
+    static constexpr bool liquidIsCompressible()
     { return false; }
 
     /*!
@@ -129,7 +129,7 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static bool gasIsIdeal()
+    static constexpr bool gasIsIdeal()
     { return true; }
 
     /*!
@@ -139,9 +139,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    {
-        return 1460.0; // [kg/m^3]
-    }
+    { return 1460.0; } // [kg/m^3]
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure TCE.
@@ -150,9 +148,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    {
-        return 5.7e-4;//[Pa s]
-    }
+    { return 5.7e-4; } //[Pa s]
 };
 
 } // end namepace

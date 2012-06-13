@@ -235,31 +235,31 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of the component.
      */
-    static Scalar molarMass()
+    static constexpr Scalar molarMass()
     { return RawComponent::molarMass(); }
 
     /*!
      * \brief Returns the critical temperature in \f$\mathrm{[K]}\f$ of the component.
      */
-    static Scalar criticalTemperature()
+    static constexpr Scalar criticalTemperature()
     { return RawComponent::criticalTemperature(); }
 
     /*!
      * \brief Returns the critical pressure in \f$\mathrm{[Pa]}\f$ of the component.
      */
-    static Scalar criticalPressure()
+    static constexpr Scalar criticalPressure()
     { return RawComponent::criticalPressure(); }
 
     /*!
      * \brief Returns the temperature in \f$\mathrm{[K]}\f$ at the component's triple point.
      */
-    static Scalar tripleTemperature()
+    static constexpr Scalar tripleTemperature()
     { return RawComponent::tripleTemperature(); }
 
     /*!
      * \brief Returns the pressure in \f$\mathrm{[Pa]}\f$ at the component's triple point.
      */
-    static Scalar triplePressure()
+    static constexpr Scalar triplePressure()
     { return RawComponent::triplePressure(); }
 
     /*!
@@ -416,7 +416,7 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsCompressible()
+    static constexpr bool gasIsCompressible()
     { return RawComponent::gasIsCompressible(); }
 
     /*!
@@ -428,7 +428,7 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static bool gasIsIdeal()
+    static constexpr bool gasIsIdeal()
     { return RawComponent::gasIsIdeal(); }
 
 

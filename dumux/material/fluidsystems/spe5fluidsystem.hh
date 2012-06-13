@@ -42,6 +42,7 @@
 #include "spe5parametercache.hh"
 
 #include <dumux/common/spline.hh>
+#include <dumux/material/constants.hh>
 #include <dumux/material/eos/pengrobinsonmixture.hh>
 
 namespace Dumux
@@ -70,6 +71,8 @@ class Spe5
 
     typedef typename Dumux::PengRobinsonMixture<Scalar, ThisType> PengRobinsonMixture;
     typedef typename Dumux::PengRobinson<Scalar> PengRobinson;
+
+    static constexpr Scalar R = Dumux::Constants<Scalar>::R;
 
 public:
     typedef Dumux::Spe5ParameterCache<Scalar, ThisType> ParameterCache;
@@ -109,9 +112,9 @@ public:
     /*!
      * \brief Return whether a phase is liquid
      */
-    static bool isLiquid(int phaseIdx)
+    static constexpr bool isLiquid(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
@@ -120,9 +123,9 @@ public:
      *
      * In the SPE-5 problems all fluids are compressible...
      */
-    static bool isCompressible(int phaseIdx)
+    static constexpr bool isCompressible(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return true;
     }
 
@@ -138,7 +141,7 @@ public:
      * only damage done will be (slightly) increased computation times
      * in some cases.
      */
-    static bool isIdealMixture(int phaseIdx)
+    static constexpr bool isIdealMixture(int phaseIdx)
     {
         // always use the reference oil for the fugacity coefficents,
         // so they cannot be dependent on composition and they the
@@ -152,9 +155,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase to consider
      */
-    static bool isIdealGas(int phaseIdx)
+    static constexpr bool isIdealGas(int phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return false; // gas is not ideal here!
     }
 
@@ -195,58 +198,70 @@ public:
     /*!
      * \brief Return the molar mass of a component in [kg/mol].
      */
-    static Scalar molarMass(int compIdx)
+    static constexpr Scalar molarMass(int compIdx)
     {
-        static const Scalar M[] = {
-            H2O::molarMass(),
-            16.04e-3, // C1
-            44.10e-3, // C3
-            86.18e-3, // C6
-            142.29e-3, // C10
-            206.00e-3, // C15
-            282.00e-3 // C20
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return M[compIdx];
+        return 
+            (compIdx == H2OIdx)
+            ? H2O::molarMass()
+            : (compIdx == C1Idx)
+            ? 16.04e-3
+            : (compIdx == C3Idx)
+            ? 44.10e-3
+            : (compIdx == C6Idx)
+            ? 86.18e-3
+            : (compIdx == C10Idx)
+            ? 142.29e-3
+            : (compIdx == C15Idx)
+            ? 206.00e-3
+            : (compIdx == C20Idx)
+            ? 282.00e-3
+            : 1e100;
     }
 
     /*!
      * \brief Critical temperature of a component [K].
      */
-    static Scalar criticalTemperature(int compIdx)
+    static constexpr Scalar criticalTemperature(int compIdx)
     {
-        static const Scalar Tcrit[] = {
-            H2O::criticalTemperature(), // H2O
-            343.0*5/9, // C1
-            665.7*5/9, // C3
-            913.4*5/9, // C6
-            1111.8*5/9, // C10
-            1270.0*5/9, // C15
-            1380.0*5/9 // C20
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return Tcrit[compIdx];
+        return 
+            (compIdx == H2OIdx)
+            ? H2O::criticalTemperature()
+            : (compIdx == C1Idx)
+            ? 343.0*5/9
+            : (compIdx == C3Idx)
+            ? 665.7*5/9
+            : (compIdx == C6Idx)
+            ? 913.4*5/9
+            : (compIdx == C10Idx)
+            ? 1111.8*5/9
+            : (compIdx == C15Idx)
+            ? 1270.0*5/9
+            : (compIdx == C20Idx)
+            ? 1380.0*5/9
+            : 1e100;
     }
 
     /*!
      * \brief Critical pressure of a component [Pa].
      */
-    static Scalar criticalPressure(int compIdx)
+    static constexpr Scalar criticalPressure(int compIdx)
     {
-        static const Scalar pcrit[] = {
-            H2O::criticalPressure(), // H2O
-            667.8 * 6894.7573, // C1
-            616.3 * 6894.7573, // C3
-            436.9 * 6894.7573, // C6
-            304.0 * 6894.7573, // C10
-            200.0 * 6894.7573, // C15
-            162.0 * 6894.7573  // C20
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return pcrit[compIdx];
+        return 
+            (compIdx == H2OIdx)
+            ? H2O::criticalPressure()
+            : (compIdx == C1Idx)
+            ? 667.8 * 6894.7573
+            : (compIdx == C3Idx)
+            ? 616.3 * 6894.7573
+            : (compIdx == C6Idx)
+            ? 436.9 * 6894.7573
+            : (compIdx == C10Idx)
+            ? 304.0 * 6894.7573
+            : (compIdx == C15Idx)
+            ? 200.0 * 6894.7573
+            : (compIdx == C20Idx)
+            ? 162.0 * 6894.7573
+            : 1e100;
     }
 
     /*!
@@ -254,38 +269,45 @@ public:
      */
     static Scalar criticalMolarVolume(int compIdx)
     {
-        static const Scalar R = 8.314472;
-        static const Scalar vcrit[] = {
-            H2O::criticalMolarVolume(), // H2O
-            0.290*R*criticalTemperature(1)/criticalPressure(1), // C1
-            0.277*R*criticalTemperature(2)/criticalPressure(2), // C3
-            0.264*R*criticalTemperature(3)/criticalPressure(3), // C6
-            0.257*R*criticalTemperature(4)/criticalPressure(4), // C10
-            0.245*R*criticalTemperature(5)/criticalPressure(5), // C15
-            0.235*R*criticalTemperature(6)/criticalPressure(6) // C20
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return vcrit[compIdx];
+        return 
+            (compIdx == H2OIdx)
+            ? H2O::criticalMolarVolume()
+            : (compIdx == C1Idx)
+            ? 0.290*R*criticalTemperature(C1Idx)/criticalPressure(C1Idx)
+            : (compIdx == C3Idx)
+            ? 0.277*R*criticalTemperature(C3Idx)/criticalPressure(C3Idx)
+            : (compIdx == C6Idx)
+            ? 0.264*R*criticalTemperature(C6Idx)/criticalPressure(C6Idx)
+            : (compIdx == C10Idx)
+            ? 0.257*R*criticalTemperature(C10Idx)/criticalPressure(C10Idx)
+            : (compIdx == C15Idx)
+            ? 0.245*R*criticalTemperature(C15Idx)/criticalPressure(C15Idx)
+            : (compIdx == C20Idx)
+            ? 0.235*R*criticalTemperature(C20Idx)/criticalPressure(C20Idx)
+            : 1e100;
     }
 
     /*!
      * \brief The acentric factor of a component [].
      */
-    static Scalar acentricFactor(int compIdx)
+    static constexpr Scalar acentricFactor(int compIdx)
     {
-        static const Scalar accFac[] = {
-            0.344, // H2O (from Reid, et al.)
-            0.0130, // C1
-            0.1524, // C3
-            0.3007, // C6
-            0.4885, // C10
-            0.6500, // C15
-            0.8500  // C20
-        };
-
-        assert(0 <= compIdx && compIdx < numComponents);
-        return accFac[compIdx];
+        return 
+            (compIdx == H2OIdx)
+            ? H2O::acentricFactor()
+            : (compIdx == C1Idx)
+            ? 0.0130
+            : (compIdx == C3Idx)
+            ? 0.1524
+            : (compIdx == C6Idx)
+            ? 0.3007
+            : (compIdx == C10Idx)
+            ? 0.4885
+            : (compIdx == C15Idx)
+            ? 0.6500
+            : (compIdx == C20Idx)
+            ? 0.8500
+            : 1e100;
     }
 
     /*!
@@ -295,6 +317,8 @@ public:
      */
     static Scalar interactionCoefficient(int comp1Idx, int comp2Idx)
     {
+        // TODO: make this a constexpr method !?
+
         int i = std::min(comp1Idx, comp2Idx);
         int j = std::max(comp1Idx, comp2Idx);
         if (i == C1Idx && (j == C15Idx || j == C20Idx))

@@ -77,7 +77,7 @@ public:
     static constexpr Scalar criticalPressure = 22.064e6;
 
     //! Density of water at the critical point \f$\mathrm{[kg/m^3]}\f$
-    static constexpr Scalar criticalDensity  = 322.0;
+    static constexpr Scalar criticalDensity = 322.0;
 
     //! Critical molar volume of water \f$\mathrm{[m^3/mol]}\f$
     static constexpr Scalar criticalMolarVolume = molarMass/criticalDensity;
@@ -116,8 +116,8 @@ public:
             { 8.50895e-2, 9.99115e-1,-9.06851e-1, 2.57399e-1, 0, 0, 0 },
             {-1.08374 , 1.88797 ,-7.72479e-1, 0, 0, 0, 0 },
             {-2.89555e-1, 1.26613 ,-4.89837e-1, 0, 6.98452e-2, 0,-4.35673e-3 },
-            {          0, 0,-2.57040e-1, 0, 0, 8.72102e-3, 0 },
-            {          0, 1.20573e-1, 0, 0, 0, 0,-5.93264e-4 }
+            {0, 0,-2.57040e-1, 0, 0, 8.72102e-3, 0 },
+            { 0, 1.20573e-1, 0, 0, 0, 0,-5.93264e-4 }
         };
 
         Scalar tmp, tmp2, tmp3 = 1;
@@ -164,30 +164,30 @@ public:
     * \param T absolute temperature in K
     * \param rho density of water in kg/m^3
     */
-    static Scalar thermalConductivityIAPWS(const Scalar T, const Scalar rho)
+    static Scalar thermalConductivityIAPWS(Scalar T, Scalar rho)
     {
-        static constexpr Scalar thcond_tstar   = 647.26 ;
+        static constexpr Scalar thcond_tstar = 647.26 ;
         static constexpr Scalar thcond_rhostar = 317.7 ;
-        /*static constexpr Scalar thcond_kstar   = 1.0 ;*/
+        /*static constexpr Scalar thcond_kstar = 1.0 ;*/
 
-        static constexpr Scalar thcond_b0      = -0.397070 ;
-        static constexpr Scalar thcond_b1      = 0.400302 ;
-        static constexpr Scalar thcond_b2      = 1.060000 ;
-        static constexpr Scalar thcond_B1      = -0.171587 ;
-        static constexpr Scalar thcond_B2      = 2.392190 ;
+        static constexpr Scalar thcond_b0 = -0.397070 ;
+        static constexpr Scalar thcond_b1 = 0.400302 ;
+        static constexpr Scalar thcond_b2 = 1.060000 ;
+        static constexpr Scalar thcond_B1 = -0.171587 ;
+        static constexpr Scalar thcond_B2 = 2.392190 ;
 
-        static constexpr Scalar thcond_c1      = 0.642857 ;
-        static constexpr Scalar thcond_c2      = -4.11717 ;
-        static constexpr Scalar thcond_c3      = -6.17937 ;
-        static constexpr Scalar thcond_c4      = 0.00308976 ;
-        static constexpr Scalar thcond_c5      = 0.0822994 ;
-        static constexpr Scalar thcond_c6      = 10.0932 ;
+        static constexpr Scalar thcond_c1 = 0.642857 ;
+        static constexpr Scalar thcond_c2 = -4.11717 ;
+        static constexpr Scalar thcond_c3 = -6.17937 ;
+        static constexpr Scalar thcond_c4 = 0.00308976 ;
+        static constexpr Scalar thcond_c5 = 0.0822994 ;
+        static constexpr Scalar thcond_c6 = 10.0932 ;
 
-        static constexpr Scalar thcond_d1      = 0.0701309 ;
-        static constexpr Scalar thcond_d2      = 0.0118520 ;
-        static constexpr Scalar thcond_d3      = 0.00169937 ;
-        static constexpr Scalar thcond_d4      = -1.0200 ;
-        static constexpr int    thcond_a_count = 4;
+        static constexpr Scalar thcond_d1 = 0.0701309 ;
+        static constexpr Scalar thcond_d2 = 0.0118520 ;
+        static constexpr Scalar thcond_d3 = 0.00169937 ;
+        static constexpr Scalar thcond_d4 = -1.0200 ;
+        static constexpr int thcond_a_count = 4;
         static constexpr Scalar thcond_a[thcond_a_count] = {
             0.0102811
             ,0.0299621
