@@ -50,6 +50,9 @@ namespace Opm
 			      const double tol,
 			      const int maxit);
 
+	/// \TODO document me.
+        void setPreferredMethod(SingleCellMethod method);
+
 	/// Solve transport eqn with implicit Euler scheme, reordered.
 	/// \TODO Now saturation is expected to be one sw value per cell,
 	/// change to [sw so] per cell.
@@ -62,6 +65,13 @@ namespace Opm
                    std::vector<double>& concentration,
                    std::vector<double>& cmax);
 
+        void solveGravity(const std::vector<std::vector<int> >& columns,
+                          const double* porevolume,
+                          const double dt,
+                          std::vector<double>& saturation,
+                          std::vector<double>& concentration,
+                          std::vector<double>& cmax);
+    public: // But should be made private...
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
@@ -74,12 +84,6 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
-        void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* porevolume,
-                          const double dt,
-                          std::vector<double>& saturation,
-                          std::vector<double>& concentration,
-                          std::vector<double>& cmax);
 
 
     private:

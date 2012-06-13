@@ -346,33 +346,6 @@ typedef Opm::ImplicitTransport<FluxModel,
 
 
 
-
-
-class PolymerInflow
-{
-public:
-    PolymerInflow(const double starttime,
-                  const double endtime,
-                  const double amount)
-        : stime_(starttime), etime_(endtime), amount_(amount)
-    {
-    }
-    double operator()(double time)
-    {
-        if (time >= stime_ && time < etime_) {
-            return amount_;
-        } else {
-            return 0.0;
-        }
-    }
-private:
-    double stime_;
-    double etime_;
-    double amount_;
-};
-
-
-
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
@@ -787,7 +760,6 @@ main(int argc, char** argv)
             std::cout << "**** Warning: polymer inflow rate changes during timestep. Using rate near start of step.";
         }
         const double inflow_c = inflowc0;
-
 
         // Solve transport.
         transport_timer.start();
