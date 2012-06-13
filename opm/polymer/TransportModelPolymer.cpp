@@ -931,10 +931,8 @@ namespace Opm
                 x_new[1] = (x_new[0]>0) ?  x_new[1]/x_new[0] : 0.0;
                 check_interval(x_new, x_min, x_max);
                 res_eq.computeResidual(x_new, res_new, mc, ff);
-                std::cout << " " << res_new[0] << "  " << res_new[1] << std::endl;
                 alpha=alpha/2.0;
                 lin_it=lin_it+1;
-                std::cout << "Linear iterations" << lin_it << "  " << norm(res_new) << std::endl;
             }
             if (lin_it>=max_lin_it) {
                 successfull_newton_step = false;
@@ -946,7 +944,6 @@ namespace Opm
                 iters_used_split += 1;
                 successfull_newton_step = true;;		    
             }
-    	    std::cout << "Nonlinear " << iters_used_split << "  " << norm(res) << std::endl;
 	}
 		
 	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
