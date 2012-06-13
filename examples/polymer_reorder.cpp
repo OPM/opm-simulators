@@ -496,9 +496,6 @@ main(int argc, char** argv)
 
     // Source-related variables init.
     int num_cells = grid->c_grid()->number_of_cells;
-    std::vector<double> totmob;
-    std::vector<double> omega; // Will remain empty if no gravity.
-    std::vector<double> rc; // Will remain empty if no rock compressibility.
 
     // Extra rock init.
     std::vector<double> porevol;
@@ -649,13 +646,6 @@ main(int argc, char** argv)
         }
 
         // Solve pressure.
-        if (use_gravity) {
-            computeTotalMobilityOmega(*props, polyprop, allcells, state.saturation(), state.concentration(), state.maxconcentration(),
-                                      totmob, omega);
-        } else {
-            computeTotalMobility(*props, polyprop, allcells, state.saturation(), state.concentration(), state.maxconcentration(),
-                                 totmob);
-        }
         if (check_well_controls) {
             computeFractionalFlow(*props, allcells, state.saturation(), fractional_flows);
         }
