@@ -656,10 +656,6 @@ main(int argc, char** argv)
             computeTotalMobility(*props, polyprop, allcells, state.saturation(), state.concentration(), state.maxconcentration(),
                                  totmob);
         }
-        std::vector<double> wdp;
-        if (wells->c_wells()) {
-            Opm::computeWDP(*wells->c_wells(), *grid->c_grid(), state.saturation(), props->density(), gravity[2], true, wdp);
-        }
         if (check_well_controls) {
             computeFractionalFlow(*props, allcells, state.saturation(), fractional_flows);
         }
