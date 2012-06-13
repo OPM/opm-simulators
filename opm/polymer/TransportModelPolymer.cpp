@@ -214,6 +214,14 @@ namespace Opm
 
 
 
+    void TransportModelPolymer::setPreferredMethod(SingleCellMethod method)
+    {
+        method_ = method;
+    }
+
+
+
+
     void TransportModelPolymer::solve(const double* darcyflux,
                                       const double* porevolume,
 				      const double* source,
