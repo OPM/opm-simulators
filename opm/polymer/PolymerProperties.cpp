@@ -211,7 +211,7 @@ namespace Opm
         double rk = 1 + (res_factor_ - 1)*c_ads/c_max_ads_;
         eff_relperm_wat = relperm[0]/rk;
         if (if_with_der) {
-            deff_relperm_wat_ds = drelperm_ds[0]/rk;
+            deff_relperm_wat_ds = (drelperm_ds[0]-drelperm_ds[3])/rk; //derivative with respect to sw
             deff_relperm_wat_dc = dc_ads_dc*relperm[0]/(rk*rk*c_max_ads_);
         } else {
             deff_relperm_wat_ds = -1.0;
@@ -268,6 +268,9 @@ namespace Opm
                              deff_relperm_wat_ds, deff_relperm_wat_dc,
                              if_with_der);
 
+        // The "function" eff_relperm_wat is defined as a function of only sw (so that its 
+        // partial derivative with respect to so is zero).
+
         mob[0] = eff_relperm_wat*inv_mu_w_eff;
         mob[1] = relperm[1]/visc[1];
 
@@ -275,9 +278,9 @@ namespace Opm
             dmobwat_dc = eff_relperm_wat*dinv_mu_w_eff_dc
                 + deff_relperm_wat_dc*inv_mu_w_eff;
             dmob_ds[0*2 + 0] = deff_relperm_wat_ds*inv_mu_w_eff;
-            dmob_ds[0*2 + 1] = drelperm_ds[0*2 + 1]/visc[1];
-            dmob_ds[1*2 + 0] = drelperm_ds[1*2 + 0]*inv_mu_w_eff;
-            dmob_ds[1*2 + 1] = drelperm_ds[1*2 + 1]/visc[1];
+            dmob_ds[0*2 + 1] = (drelperm_ds[0*2 + 1] - drelperm_ds[1*2 + 2])/visc[1];
+            dmob_ds[1*2 + 0] = -deff_relperm_wat_ds*inv_mu_w_eff;
+            dmob_ds[1*2 + 1] = (drelperm_ds[1*2 + 1] - drelperm_ds[0*2 + 1])/visc[1];
         }
     }
 
@@ -321,7 +324,8 @@ namespace Opm
                                 mob, dmob_ds, dmobwat_dc, if_with_der);
         totmob = mob[0] + mob[1];
         if (if_with_der) {
-            dtotmob_dsdc[0] = dmob_ds[0] + dmob_ds[2]; //derivative with respect to s
+            dtotmob_dsdc[0] = dmob_ds[0*2 + 0] -  dmob_ds[1*2 + 0]
+                + dmob_ds[0*2 + 1] - dmob_ds[1*2 + 1]; //derivative with respect to sw
             dtotmob_dsdc[1] = dmobwat_dc; //derivative with respect to c
         }
     }
