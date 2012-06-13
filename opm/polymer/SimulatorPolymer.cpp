@@ -45,7 +45,7 @@
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/TransportModelPolymer.hpp>
-#include <opm/polymer/PolymerUtilities.hpp>
+#include <opm/polymer/PolymerProperties.hpp>
 
 #include <boost/filesystem/convenience.hpp>
 #include <boost/scoped_ptr.hpp>
