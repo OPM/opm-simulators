@@ -267,7 +267,7 @@ namespace Opm
         }
 
         if ((iter == maxiter_) && (res_norm > residual_tol_) && (inc_norm > change_tol_)) {
-            THROW("CompressibleTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
+            THROW("IncompTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
         }
 
         std::cout << "Solved pressure in " << iter << " iterations." << std::endl;
@@ -303,6 +303,9 @@ namespace Opm
         // gpress_omegaweighted_ is sent to assembler always, and it dislikes
         // getting a zero pointer.
         gpress_omegaweighted_.resize(gg->cell_facepos[ gg->number_of_cells ], 0.0);
+        if (rock_comp_props_) {
+            rock_comp_.resize(grid_.number_of_cells);
+        }
         for (int c = 0; c < grid_.number_of_cells; ++c) {
             allcells_[c] = c;
         }
@@ -416,7 +419,10 @@ namespace Opm
         // Increment is equal to -J^{-1}R.
         // The Jacobian is in h_->A, residual in h_->b.
         linsolver_.solve(h_->A, h_->b, h_->x);
-        std::transform(h_->x, h_->x + h_->A->m, h_->x, std::negate<double>());
+        // It is not necessary to negate the increment,
+        // apparently the system for the increment is generated,
+        // not the Jacobian and residual as such.
+        // std::transform(h_->x, h_->x + h_->A->m, h_->x, std::negate<double>());
     }
 
 
