@@ -102,7 +102,7 @@ namespace Opm
 		   const FlowBoundaryConditions* bcs);
 
 	/// Destructor.
-	~IncompTpfa();
+	virtual ~IncompTpfa();
 
         /// Solve the pressure equation. If there is no pressure
         /// dependency introduced by rock compressibility effects,
@@ -119,7 +119,7 @@ namespace Opm
         /// Expose read-only reference to internal half-transmissibility.
         const std::vector<double>& getHalfTrans() const { return htrans_; }
 
-    private:
+    protected:
         // Solve with no rock compressibility (linear eqn).
         void solveIncomp(const double dt,
                          TwophaseState& state,
@@ -128,11 +128,12 @@ namespace Opm
         void solveRockComp(const double dt,
                            TwophaseState& state,
                            WellState& well_state);
+    private:
         // Helper functions.
         void computeStaticData();
-        void computePerSolveDynamicData(const double dt,
-                                        const TwophaseState& state,
-                                        const WellState& well_state);
+        virtual void computePerSolveDynamicData(const double dt,
+                                                const TwophaseState& state,
+                                                const WellState& well_state);
         void computePerIterationDynamicData(const double dt,
                                             const TwophaseState& state,
                                             const WellState& well_state);
@@ -145,7 +146,7 @@ namespace Opm
 	void computeResults(TwophaseState& state,
                             WellState& well_state) const;
 
-    private:
+    protected:
         // ------ Data that will remain unmodified after construction. ------
 	const UnstructuredGrid& grid_;
         const IncompPropertiesInterface& props_;
