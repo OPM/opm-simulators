@@ -29,7 +29,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/polymer/PolymerState.hpp>
-#include <opm/polymer/PolymerUtilities.hpp>
+#include <opm/polymer/polymerUtilities.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
