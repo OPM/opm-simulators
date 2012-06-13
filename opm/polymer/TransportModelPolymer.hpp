@@ -40,7 +40,7 @@ namespace Opm
     {
     public:
 
-	enum SingleCellMethod { Bracketing, Newton };
+	enum SingleCellMethod { Bracketing, Newton, Gradient };
         enum GradientMethod { Analytic, FinDif }; // Analytic is chosen (hard-coded)
 
 	/// \TODO document me, especially method.
