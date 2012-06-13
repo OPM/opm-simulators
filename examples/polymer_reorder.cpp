@@ -22,7 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/pressure/IncompTpfa.hpp>
+#include <opm/polymer/IncompTpfaPolymer.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
@@ -575,10 +575,10 @@ main(int argc, char** argv)
     Opm::LinearSolverFactory linsolver(param);
     // Pressure solver.
     const double *grav = use_gravity ? &gravity[0] : 0;
-    Opm::IncompTpfa psolver(*grid->c_grid(), *props, rock_comp.get(), linsolver,
-                            nl_pressure_residual_tolerance, nl_pressure_change_tolerance,
-                            nl_pressure_maxiter,
-                            grav, wells->c_wells(), src, bcs.c_bcs());
+    Opm::IncompTpfaPolymer psolver(*grid->c_grid(), *props, rock_comp.get(), polyprop, linsolver,
+                                   nl_pressure_residual_tolerance, nl_pressure_change_tolerance,
+                                   nl_pressure_maxiter,
+                                   grav, wells->c_wells(), src, bcs.c_bcs());
     // Reordering solver.
     const double nl_tolerance = param.getDefault("nl_tolerance", 1e-9);
     const int nl_maxiter = param.getDefault("nl_maxiter", 30);

@@ -29,25 +29,46 @@ namespace Opm
 {
 
     /// Simulator state for a two-phase simulator with polymer.
-    /// Inheritance is not used for runtime polymorphism,
-    /// just for simplicity of implementation.
-    class PolymerState : public TwophaseState
+    class PolymerState
     {
     public:
         void init(const UnstructuredGrid& g, int num_phases)
         {
-            TwophaseState::init(g, num_phases);
+            state2p_.init(g, num_phases);
             concentration_.resize(g.number_of_cells, 0.0);
             cmax_.resize(g.number_of_cells, 0.0);
         }
 
-        std::vector<double>& concentration() { return concentration_; }
+        enum ExtremalSat { MinSat = TwophaseState::MinSat, MaxSat = TwophaseState::MaxSat };
+
+        void setFirstSat(const std::vector<int>& cells,
+                         const Opm::IncompPropertiesInterface& props,
+                         ExtremalSat es)
+        {
+            // A better solution for embedding TwophaseState::ExtremalSat could perhaps
+            // be found, to avoid the cast.
+            state2p_.setFirstSat(cells, props, static_cast<TwophaseState::ExtremalSat>(es));
+        }
+
+        std::vector<double>& pressure    ()     { return state2p_.pressure(); }
+        std::vector<double>& facepressure()     { return state2p_.facepressure(); }
+        std::vector<double>& faceflux    ()     { return state2p_.faceflux(); }
+        std::vector<double>& saturation  ()     { return state2p_.saturation(); }
+        std::vector<double>& concentration()    { return concentration_; }
         std::vector<double>& maxconcentration() { return cmax_; }
 
-        const std::vector<double>& concentration() const { return concentration_; }
+        const std::vector<double>& pressure    () const     { return state2p_.pressure(); }
+        const std::vector<double>& facepressure() const     { return state2p_.facepressure(); }
+        const std::vector<double>& faceflux    () const     { return state2p_.faceflux(); }
+        const std::vector<double>& saturation  () const     { return state2p_.saturation(); }
+        const std::vector<double>& concentration() const    { return concentration_; }
         const std::vector<double>& maxconcentration() const { return cmax_; }
 
+        TwophaseState& twophaseState() { return state2p_; }
+        const TwophaseState& twophaseState() const { return state2p_; }
+
     private:
+        TwophaseState state2p_;
         std::vector<double> concentration_;
         std::vector<double> cmax_;
     };

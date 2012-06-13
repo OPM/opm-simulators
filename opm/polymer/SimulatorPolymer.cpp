@@ -26,7 +26,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
-#include <opm/core/pressure/IncompTpfa.hpp>
+#include <opm/polymer/IncompTpfaPolymer.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
@@ -114,7 +114,7 @@ namespace Opm
         const LinearSolverInterface& linsolver_;
         const double* gravity_;
         // Solvers
-        IncompTpfa psolver_;
+        IncompTpfaPolymer psolver_;
         TransportModelPolymer tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
@@ -175,7 +175,7 @@ namespace Opm
           bcs_(bcs),
           linsolver_(linsolver),
           gravity_(gravity),
-          psolver_(grid, props, rock_comp_props, linsolver,
+          psolver_(grid, props, rock_comp_props, poly_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 1e-8),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
