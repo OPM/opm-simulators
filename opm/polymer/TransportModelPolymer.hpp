@@ -58,9 +58,9 @@ namespace Opm
 		   const double* source,
 		   const double dt,
 		   const double inflow_c,
-		   double* saturation,
-		   double* concentration,
-		   double* cmax);
+		   std::vector<double>& saturation,
+                   std::vector<double>& concentration,
+                   std::vector<double>& cmax);
 
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
@@ -96,7 +96,7 @@ namespace Opm
 	const double* source_;      // one source per cell
 	double dt_;
 	double inflow_c_;
-	double* saturation_;        // one per cell
+        std::vector<double> saturation_; // one per cell, only water saturation!
 	double* concentration_;
 	double* cmax_;
 	std::vector<double> fractionalflow_;  // one per cell

@@ -22,6 +22,7 @@
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/RootFinders.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <cmath>
 
@@ -188,7 +189,6 @@ namespace Opm
 	  source_(0),
 	  dt_(0.0),
 	  inflow_c_(0.0),
-	  saturation_(0),
 	  concentration_(0),
 	  cmax_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
@@ -219,19 +219,20 @@ namespace Opm
 				      const double* source,
 				      const double dt,
 				      const double inflow_c,
-				      double* saturation,
-				      double* concentration,
-				      double* cmax)
+				      std::vector<double>& saturation,
+				      std::vector<double>& concentration,
+				      std::vector<double>& cmax)
     {
 	darcyflux_ = darcyflux;
         porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
 	inflow_c_ = inflow_c;
-	saturation_ = saturation;
-	concentration_ = concentration;
-	cmax_ = cmax;
+        toWaterSat(saturation, saturation_);
+	concentration_ = &concentration[0];
+	cmax_ = &cmax[0];
 	reorderAndTransport(grid_, darcyflux);
+        toBothSat(saturation_, saturation);
     }
 
 
@@ -1198,7 +1199,7 @@ namespace Opm
         // initialize variables.
         porevolume_ = porevolume;
         dt_ = dt;
-        saturation_ = &saturation[0];
+        toWaterSat(saturation, saturation_);
         concentration_ = &concentration[0];
         cmax_ = &cmax[0];
         const int nc = grid_.number_of_cells;
@@ -1215,12 +1216,15 @@ namespace Opm
 
         // Solve on all columns.
         int num_iters = 0;
+        // std::cout << "Gauss-Seidel column solver # columns: " << columns.size() << std::endl;
         for (std::vector<std::vector<int> >::size_type i = 0; i < columns.size(); i++) {
             // std::cout << "==== new column" << std::endl;
             num_iters += solveGravityColumn(columns[i]);
         }
         std::cout << "Gauss-Seidel column solver average iterations: "
                   << double(num_iters)/double(columns.size()) << std::endl;
+
+        toBothSat(saturation_, saturation);
     }
 
 } // namespace Opm
