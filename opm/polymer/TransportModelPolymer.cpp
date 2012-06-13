@@ -667,7 +667,7 @@ namespace Opm
     // Newton method, where we first try a Newton step. Then, if it does not work well, we look for
     // the zero of either the residual in s or the residual in c along a specified piecewise linear
     // curve. In these cases, we can use a robust 1d solver.
-    void TransportModelPolymer::solveSingleCellNewton(int cell)
+    void TransportModelPolymer::solveSingleCellNewtonGradient(int cell)
     {
 	int iters_used_falsi = 0;
 	const int max_iters_split = maxit_;
@@ -676,18 +676,37 @@ namespace Opm
 	// Check if current state is an acceptable solution.
 	ResidualEquation res_eq(*this, cell);
 	double x[2] = {saturation_[cell], concentration_[cell]};
+	//	double x[2] = {0.5, polyprops_.cMax()/2.0};
 	double res[2];
 	double mc;
 	double ff;
-	res_eq.computeResidual(x, res, mc, ff);
+        res_eq.computeResidual(x, res, mc, ff);
 	if (norm(res) <= tol_) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
  	    fractionalflow_[cell] = ff;
 	    mc_[cell] = mc;
 	    return;
+	} else {
+            // Can be advantageous to reset saturation and concentration when we
+            // are close to the end points.
+	    /*
+	    x[0] = saturation_[]-res[0];
+	    if((x[0]>1) || (x[0]<0)){
+		x[0] = 0.5;
+	    }
+	    if(x[0]>0){
+		x[1] =  concentration_[cell]*saturation_[cell]-res[1];
+		x[1] = x[1]/x[0];
+	    }else{
+		x[1]=0;
+	    }
+	    */
+	    /*
+	    x[0]=0.5;x[1]=polyprops_.cMax()/2.0;
+	    res_eq.computeResidual(x, res, mc, ff);
+	    */
 	}
 
-	// double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
         double x_min[2] = { 0.0, 0.0 };
 	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
 	double t;
@@ -709,18 +728,19 @@ namespace Opm
  	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
 	    // We first try a Newton step
 	    if (counter_drop_newton == 0 && solveNewtonStep(x, res_eq, res, x_new)) {
-                if (check_interval(x_new, x_min, x_max)) {
-                    // for testing
-                    res_eq.computeResidual(x_new, res_new, mc, ff);
-                }  else {
-                    res_eq.computeResidual(x_new, res_new, mc, ff);
-                }
- 
+                check_interval(x_new, x_min, x_max);
+                res_eq.computeResidual(x_new, res_new, mc, ff);
+                
 		unsuccessfull_newton_step = false;
 		not_so_successfull_newton_step = false;
-		if (norm(res_new) > norm(res) || x_new[0] < x_min[0] || x_new[1] < x_min[1] || x_new[0] > x_max[0] || x_new[1] > x_max[1]) {
+
+		if (norm(res_new) > norm(res) ||
+		    x_new[0] < x_min[0] ||
+		    x_new[1] < x_min[1] ||
+		    x_new[0] > x_max[0] ||
+		    x_new[1] > x_max[1]) {
 		    unsuccessfull_newton_step = true;
-		} else  {
+		}  else {
 		    x[0] = x_new[0];
 		    x[1] = x_new[1];
 		    if (norm(res_new) > 1e-1*norm(res)) {
@@ -742,6 +762,7 @@ namespace Opm
 		if (not_so_successfull_newton_step) {
 		    counter_drop_newton -= 1;
 		}
+
 		// General comment on the zero curves of the s and c residuals:
 		// Typically res_s(s,c)=0 defines an increasing curve in the s-c plane while
 		// res_c(s,c)=0 defines a decreasing curve. However, we do not assume that in the algorithm.
@@ -831,7 +852,8 @@ namespace Opm
 		}
 		res_eq.computeResidual(x, res, mc, ff);
 		iters_used_split += 1;
-	    }
+		}
+	    
 	}
 
 
@@ -846,6 +868,103 @@ namespace Opm
 	    mc_[cell] = mc;
 	}
     }
+    
+    void TransportModelPolymer::solveSingleCellNewton(int cell)
+    {
+	const int max_iters_split = maxit_;
+	int iters_used_split = 0;
+
+	// Check if current state is an acceptable solution.
+	ResidualEquation res_eq(*this, cell);
+	double x[2] = {saturation_[cell], concentration_[cell]};
+	double res[2];
+	double mc;
+	double ff;
+	res_eq.computeResidual(x, res, mc, ff);
+	if (norm(res) <= tol_) {
+	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+ 	    fractionalflow_[cell] = ff;
+	    mc_[cell] = mc;
+	    return;
+	} else {
+	    /*
+	    x[0] = saturation_[]-res[0];
+	    if((x[0]>1) || (x[0]<0)){
+		x[0] = 0.5;
+	    }
+	    if(x[0]>0){
+		x[1] =  concentration_[cell]*saturation_[cell]-res[1];
+		x[1] = x[1]/x[0];
+	    }else{
+		x[1]=0;
+	    }
+	    */
+	    
+	    x[0]=0.5; x[1]=polyprops_.cMax()/2.0;
+	    res_eq.computeResidual(x, res, mc, ff);
+	}
+
+        double x_min[2] = { 0.0, 0.0 };
+	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
+	bool successfull_newton_step = true;
+	double x_new[2];
+	double res_new[2];
+	ResSOnCurve res_s_on_curve(res_eq);
+	ResCOnCurve res_c_on_curve(res_eq);
+	
+ 	while ((norm(res) > tol_) &&
+	       (iters_used_split < max_iters_split)  &&
+	       successfull_newton_step) {
+            double dres_s_dsdc[2];
+            double dres_c_dsdc[2];
+            res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
+            //    	double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
+            double dFx_dx=(dres_s_dsdc[0]-x[1]*dres_s_dsdc[1]/x[0]);
+            double dFx_dy= (dres_s_dsdc[1]/x[0]);
+            double dFy_dx=(dres_c_dsdc[0]-x[1]*dres_c_dsdc[1]/x[0]);
+            double dFy_dy= (dres_c_dsdc[1]/x[0]);
+            double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
+            double alpha=1;
+            int max_lin_it=100;
+            int lin_it=0;
+            res_new[0]=res[0]*2;
+            res_new[1]=res[1]*2;
+            while((norm(res_new)>norm(res)) && (lin_it<max_lin_it)) {
+                x_new[0] = x[0] - alpha*(res[0]*dFy_dy - res[1]*dFx_dy)/det;
+                x_new[1] = x[1]*x[0] - alpha*(res[1]*dFx_dx - res[0]*dFy_dx)/det;
+                x_new[1] = (x_new[0]>0) ?  x_new[1]/x_new[0] : 0.0;
+                check_interval(x_new, x_min, x_max);
+                res_eq.computeResidual(x_new, res_new, mc, ff);
+                std::cout << " " << res_new[0] << "  " << res_new[1] << std::endl;
+                alpha=alpha/2.0;
+                lin_it=lin_it+1;
+                std::cout << "Linear iterations" << lin_it << "  " << norm(res_new) << std::endl;
+            }
+            if (lin_it>=max_lin_it) {
+                successfull_newton_step = false;
+            } else  {
+                x[0] = x_new[0];
+                x[1] = x_new[1];
+                res[0] = res_new[0];
+                res[1] = res_new[1];
+                iters_used_split += 1;
+                successfull_newton_step = true;;		    
+            }
+    	    std::cout << "Nonlinear " << iters_used_split << "  " << norm(res) << std::endl;
+	}
+		
+	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
+	    MESSAGE("Newton for single cell did not work in cell number " << cell);
+	    solveSingleCellBracketing(cell);
+	} else {
+	    concentration_[cell] = x[1];
+	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+	    saturation_[cell] = x[0];
+	    fractionalflow_[cell] = ff;
+	    mc_[cell] = mc;
+	}
+    }
+
 
     void TransportModelPolymer::solveMultiCell(const int num_cells, const int* cells)
     {
@@ -931,7 +1050,7 @@ namespace Opm
             props_.relperm(1, sat, &cell, relperm, 0);
         }
         double mob[2];
-        double dmob_ds[2];
+        double dmob_ds[4];
         double dmob_dc[2];
 	double dmobwat_dc;
         polyprops_.effectiveMobilitiesBoth(c, cmax, visc_, relperm, drelperm_ds,
@@ -940,7 +1059,7 @@ namespace Opm
         if (if_with_der) {
             dmob_dc[0] = dmobwat_dc;
             dmob_dc[1] = 0.;
-            dff_dsdc[0] = (dmob_ds[0]*mob[1] - dmob_ds[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
+            dff_dsdc[0] = (dmob_ds[0]*mob[1] + dmob_ds[3]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
             dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
         }
     }
@@ -1372,20 +1491,57 @@ namespace
 	return res_eq_.computeResidualC(x_of_t);
     }
 
-    bool solveNewtonStep(const double* x, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
+    // bool solveNewtonStep(const double* x, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
+    //     		 const double* res, double* x_new) {
+
+    // 	double dres_s_dsdc[2];
+    // 	double dres_c_dsdc[2];
+    //     double dx=1e-11;
+    //     res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
+	
+
+    //     double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
+
+    // 	if (std::abs(det) < 1e-8) {
+    // 	    return false;
+    // 	} else {
+    // 	    x_new[0] = x[0] - (res[0]*dres_c_dsdc[1] - res[1]*dres_s_dsdc[1])/det;
+    //         x_new[1] = x[1] - (res[1]*dres_s_dsdc[0] - res[0]*dres_c_dsdc[0])/det;
+    //         return true;
+    //     }
+    // }
+
+    bool solveNewtonStep(const double* xx, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
 			 const double* res, double* x_new) {
 
     	double dres_s_dsdc[2];
     	double dres_c_dsdc[2];
-
+	double dx=1e-11;
+	double x[2];
+	if(!(x[0]>0)){
+	    x[0]=dx;x[1]=0;
+	}else{
+	    x[0]=xx[0];x[1]=xx[1];
+	}
 	res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
+	
 
-    	double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
+	//    	double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
+	double dFx_dx=(dres_s_dsdc[0]-x[1]*dres_s_dsdc[1]);
+	double dFx_dy= (dres_s_dsdc[1]/x[0]);
+	double dFy_dx=(dres_c_dsdc[0]-x[1]*dres_c_dsdc[1]);
+	double dFy_dy= (dres_c_dsdc[1]/x[0]);
+
+	//	double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
+	double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
     	if (std::abs(det) < 1e-8) {
     	    return false;
     	} else {
-    	    x_new[0] = x[0] - (res[0]*dres_c_dsdc[1] - res[1]*dres_s_dsdc[1])/det;
-    	    x_new[1] = x[1] - (res[1]*dres_s_dsdc[0] - res[0]*dres_c_dsdc[0])/det;
+    	    /*x_new[0] = x[0] - (res[0]*dres_c_dsdc[1] - res[1]*dres_s_dsdc[1])/det;
+	      x_new[1] = x[1] - (res[1]*dres_s_dsdc[0] - res[0]*dres_c_dsdc[0])/det;*/
+	    x_new[0] = x[0] - (res[0]*dFy_dy - res[1]*dFx_dy)/det;
+	    x_new[1] = x[1]*x[0] - (res[1]*dFx_dx - res[0]*dFy_dx)/det;
+	    x_new[1] = (x_new[0]>0) ?  x_new[1]/x_new[0] : 0.0;
 	    return true;
 	}
     }

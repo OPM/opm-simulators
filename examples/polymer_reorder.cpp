@@ -522,7 +522,7 @@ main(int argc, char** argv)
         std::vector<double> visc_mult_vals(2, -1e100);
         visc_mult_vals[0] = 1.0;
         // polyprop.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-        visc_mult_vals[1] = 20.0;
+        visc_mult_vals[1] = 1.0;
         std::vector<double> c_vals_ads(3, -1e100);
         c_vals_ads[0] = 0.0;
         c_vals_ads[1] = 2.0;
