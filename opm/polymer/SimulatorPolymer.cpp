@@ -296,6 +296,11 @@ namespace Opm
                 ptime += pt;
             } while (false);
 
+            // Update pore volumes if rock is compressible.
+            if (rock_comp_props_ && rock_comp_props_->isActive()) {
+                computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
+            }
+
             // Process transport sources (to include bdy terms and well flows).
             Opm::computeTransportSource(grid_, src_, state.faceflux(), 1.0,
                                         wells_, well_state.perfRates(), transport_src);

@@ -767,6 +767,11 @@ main(int argc, char** argv)
             }
         } while (!well_control_passed);
 
+        // Update pore volumes if rock is compressible.
+        if (rock_comp->isActive()) {
+            computePorevolume(*grid->c_grid(), props->porosity(), *rock_comp, state.pressure(), porevol);
+        }
+
         // Process transport sources (to include bdy terms and well flows).
         Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0,
                                     wells->c_wells(), well_state.perfRates(), reorder_src);
