@@ -32,7 +32,8 @@
 #include <opm/core/newwells.h>
 #include <opm/core/pressure/flow_bc.h>
 
-#include <opm/core/utility/SimulatorTimer.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -144,10 +145,9 @@ namespace Opm
 
 
 
-    SimulatorPolymer::SimulatorReport
-    SimulatorPolymer::run(SimulatorTimer& timer,
-                          PolymerState& state,
-                          WellState& well_state)
+    SimulatorReport SimulatorPolymer::run(SimulatorTimer& timer,
+                                          PolymerState& state,
+                                          WellState& well_state)
     {
         return pimpl_->run(timer, state, well_state);
     }
@@ -231,10 +231,9 @@ namespace Opm
 
 
 
-    SimulatorPolymer::SimulatorReport
-    SimulatorPolymer::Impl::run(SimulatorTimer& timer,
-                                PolymerState& state,
-                                WellState& well_state)
+    SimulatorReport SimulatorPolymer::Impl::run(SimulatorTimer& timer,
+                                                PolymerState& state,
+                                                WellState& well_state)
     {
         std::vector<double> transport_src;
 

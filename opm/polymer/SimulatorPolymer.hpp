@@ -37,6 +37,7 @@ namespace Opm
     class SimulatorTimer;
     class PolymerState;
     class WellState;
+    class SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
     class SimulatorPolymer
@@ -76,17 +77,6 @@ namespace Opm
                         const FlowBoundaryConditions* bcs,
                         LinearSolverInterface& linsolver,
                         const double* gravity);
-
-        /// A struct for returning timing data to the client.
-        struct SimulatorReport
-        {
-            double pressure_time;
-            double transport_time;
-            double total_time;
-            SimulatorReport();
-            void operator+=(const SimulatorReport& sr);
-            void report(std::ostream& os);
-        };
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
