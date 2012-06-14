@@ -90,9 +90,9 @@ namespace Opm
              LinearSolverInterface& linsolver,
              const double* gravity);
 
-        void run(SimulatorTimer& timer,
-                 PolymerState& state,
-                 WellState& well_state);
+        SimulatorReport run(SimulatorTimer& timer,
+                            PolymerState& state,
+                            WellState& well_state);
 
     private:
         // Data.
@@ -144,12 +144,12 @@ namespace Opm
 
 
 
-
-    void SimulatorPolymer::run(SimulatorTimer& timer,
-                                PolymerState& state,
-                                WellState& well_state)
+    SimulatorPolymer::SimulatorReport
+    SimulatorPolymer::run(SimulatorTimer& timer,
+                          PolymerState& state,
+                          WellState& well_state)
     {
-        pimpl_->run(timer, state, well_state);
+        return pimpl_->run(timer, state, well_state);
     }
 
 
@@ -177,7 +177,7 @@ namespace Opm
           linsolver_(linsolver),
           gravity_(gravity),
           psolver_(grid, props, rock_comp_props, poly_props, linsolver,
-                   param.getDefault("nl_pressure_residual_tolerance", 1e-8),
+                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
                    gravity, wells, src, bcs),
@@ -231,10 +231,10 @@ namespace Opm
 
 
 
-
-    void SimulatorPolymer::Impl::run(SimulatorTimer& timer,
-                                     PolymerState& state,
-                                     WellState& well_state)
+    SimulatorPolymer::SimulatorReport
+    SimulatorPolymer::Impl::run(SimulatorTimer& timer,
+                                PolymerState& state,
+                                WellState& well_state)
     {
         std::vector<double> transport_src;
 
@@ -255,7 +255,6 @@ namespace Opm
         double ttime = 0.0;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        std::cout << "\n\n================    Starting main simulation loop     ===============" << std::endl;
         double init_satvol[2] = { 0.0 };
         double init_polymass = 0.0;
         double satvol[2] = { 0.0 };
@@ -393,12 +392,6 @@ namespace Opm
                                 well_state.bhp(), well_state.perfRates());
             }
         }
-        total_timer.stop();
-
-        std::cout << "\n\n================    End of simulation     ===============\n"
-                  << "Total time taken: " << total_timer.secsSinceStart()
-                  << "\n  Pressure time:  " << ptime
-                  << "\n  Transport time: " << ttime << std::endl;
 
         if (output_) {
             outputState(grid_, state, timer.currentStepNum(), output_dir_);
@@ -407,6 +400,14 @@ namespace Opm
                 outputWellReport(wellreport, output_dir_);
             }
         }
+
+        total_timer.stop();
+
+        SimulatorReport report;
+        report.pressure_time = ptime;
+        report.transport_time = ttime;
+        report.total_time = total_timer.secsSinceStart();
+        return report;
     }
 
 

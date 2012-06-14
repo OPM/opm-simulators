@@ -84,8 +84,8 @@ namespace Opm
                 if (dkrds != 0) {
                     dkrds[2*i] = krw_dsw(s[2*i]);
                     dkrds[2*i+3] = kro_dso(s[2*i+1]);
-                    dkrds[2*i+1] = -dkrds[2*i+3];
-                    dkrds[2*i+2] = -dkrds[2*i];
+                    dkrds[2*i+1] = 0.0;
+                    dkrds[2*i+2] = 0.0;
                 }
             }
         }
