@@ -3,8 +3,8 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 
-#include "opm/core/utility/initState.hpp"
-#include "opm/core/utility/SimulatorTimer.hpp"
+#include <opm/core/utility/initState.hpp>
+#include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
