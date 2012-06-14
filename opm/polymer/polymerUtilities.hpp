@@ -117,6 +117,37 @@ namespace Opm
                                   const std::vector<double>& cmax);
 
 
+    /// @brief Functor giving the injected amount of polymer as a function of time.
+    class PolymerInflow
+    {
+    public:
+        /// Constructor.
+        /// @param[in]  starttime  Start time of injection in seconds.
+        /// @param[in]  endtime    End time of injection in seconds.
+        /// @param[in]  amount     Amount to be injected per second.
+        PolymerInflow(const double starttime,
+                      const double endtime,
+                      const double amount)
+            : stime_(starttime), etime_(endtime), amount_(amount)
+        {
+        }
+        /// Get the current injection rate.
+        /// @param[in]  time   Current time in seconds.
+        double operator()(double time)
+        {
+            if (time >= stime_ && time < etime_) {
+                return amount_;
+            } else {
+                return 0.0;
+            }
+        }
+    private:
+        double stime_;
+        double etime_;
+        double amount_;
+    };
+
+
 } // namespace Opm
 
 

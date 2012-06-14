@@ -689,7 +689,7 @@ namespace Opm
 	double res[2];
 	double mc;
 	double ff;
-        res_eq.computeResidual(x, res, mc, ff);
+	res_eq.computeResidual(x, res, mc, ff);
 	if (norm(res) <= tol_) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
  	    fractionalflow_[cell] = ff;

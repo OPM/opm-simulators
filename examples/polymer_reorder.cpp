@@ -22,7 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/pressure/IncompTpfa.hpp>
+#include <opm/polymer/IncompTpfaPolymer.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
@@ -364,33 +364,6 @@ typedef Opm::ImplicitTransport<FluxModel,
 
 
 
-
-
-class PolymerInflow
-{
-public:
-    PolymerInflow(const double starttime,
-                  const double endtime,
-                  const double amount)
-        : stime_(starttime), etime_(endtime), amount_(amount)
-    {
-    }
-    double operator()(double time)
-    {
-        if (time >= stime_ && time < etime_) {
-            return amount_;
-        } else {
-            return 0.0;
-        }
-    }
-private:
-    double stime_;
-    double etime_;
-    double amount_;
-};
-
-
-
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
@@ -621,10 +594,10 @@ main(int argc, char** argv)
     Opm::LinearSolverFactory linsolver(param);
     // Pressure solver.
     const double *grav = use_gravity ? &gravity[0] : 0;
-    Opm::IncompTpfa psolver(*grid->c_grid(), *props, rock_comp.get(), linsolver,
-                            nl_pressure_residual_tolerance, nl_pressure_change_tolerance,
-                            nl_pressure_maxiter,
-                            grav, wells->c_wells(), src, bcs.c_bcs());
+    Opm::IncompTpfaPolymer psolver(*grid->c_grid(), *props, rock_comp.get(), polyprop, linsolver,
+                                   nl_pressure_residual_tolerance, nl_pressure_change_tolerance,
+                                   nl_pressure_maxiter,
+                                   grav, wells->c_wells(), src, bcs.c_bcs());
     // Reordering solver.
     const double nl_tolerance = param.getDefault("nl_tolerance", 1e-9);
     const int nl_maxiter = param.getDefault("nl_maxiter", 30);
@@ -730,7 +703,7 @@ main(int argc, char** argv)
         // Report timestep and (optionally) write state to disk.
         simtimer.report(std::cout);
         if (output && (simtimer.currentStepNum() % output_interval == 0)) {
-            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir, reorder_model);
+            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
         }
 
         // Solve pressure.
@@ -806,7 +779,6 @@ main(int argc, char** argv)
             std::cout << "**** Warning: polymer inflow rate changes during timestep. Using rate near start of step.";
         }
         const double inflow_c = inflowc0;
-
 
         // Solve transport.
         transport_timer.start();
