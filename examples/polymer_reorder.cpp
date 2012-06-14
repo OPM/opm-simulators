@@ -607,6 +607,8 @@ main(int argc, char** argv)
         method = Opm::TransportModelPolymer::Bracketing;
     } else if (method_string == "Newton") {
         method = Opm::TransportModelPolymer::Newton;
+    } else if (method_string == "Gradient") {
+        method = Opm::TransportModelPolymer::Gradient;
     } else {
         THROW("Unknown method: " << method_string);
     }
