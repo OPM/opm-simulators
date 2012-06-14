@@ -107,7 +107,7 @@ public:
 
 namespace
 {
-    bool check_interval(double* x, const double* xmin, const double* xmax);
+    bool check_interval(const double* xmin, const double* xmax, double* x);
 
     double norm(double* res)
     {
@@ -730,12 +730,7 @@ namespace Opm
                     res_eq.computeGradientResS(x_c, res, gradient);
                     // dResS/d(s_) = dResS/ds - c/s*dResS/ds
                     // dResS/d(sc_) = -1/s*dResS/dc
-                    if (x[0] < 1e-2*tol_) {
-                        // We take 1.0/s*gradient[1]: wrong for linear permeability,
-                        // acceptable for nonlinear relative permeability.
-                        direction[0] = 0.0;
-                        direction[1] = gradient[0];
-                    } else {
+                    if (x[0] > 1e-2*tol_) {
                         // With s,c variables, we should have
                         // direction[0] = -gradient[1];
                         // direction[1] = gradient[0];
@@ -743,6 +738,10 @@ namespace Opm
                         scToc(x, x_c);
                         direction[0] = 1.0/x[0]*gradient[1];
                         direction[1] = gradient[0] - x_c[1]/x[0]*gradient[1];
+                    } else {
+                        // acceptable approximation for nonlinear relative permeability.
+                        direction[0] = 0.0;
+                        direction[1] = gradient[0];
                     }
                     if_res_s = false;
                 }
@@ -759,12 +758,7 @@ namespace Opm
                     res_eq.computeGradientResC(x, res, gradient);
                     // dResC/d(s_) = dResC/ds - c/s*dResC/ds
                     // dResC/d(sc_) = -1/s*dResC/dc
-                    if (x[0] < 1e-2*tol_) {
-                        // We take 1.0/s*gradient[1]: wrong for linear permeability,
-                        // acceptable for nonlinear relative permeability.
-                        direction[0] = 0.0;
-                        direction[1] = gradient[0];
-                    } else {
+                    if (x[0] > 1e-2*tol_) {
                         // With s,c variables, we should have
                         // direction[0] = -gradient[1];
                         // direction[1] = gradient[0];
@@ -772,6 +766,11 @@ namespace Opm
                         scToc(x, x_c);
                         direction[0] = 1.0/x[0]*gradient[1];
                         direction[1] = gradient[0] - x_c[1]/x[0]*gradient[1];
+                    } else {
+                        // We take 1.0/s*gradient[1]: wrong for linear permeability,
+                        // acceptable for nonlinear relative permeability.
+                        direction[0] = 1.0 - res_eq.dps;
+                        direction[1] = gradient[0];
                     }
                     if_res_s = true;
                 }
@@ -852,50 +851,68 @@ namespace Opm
  	    fractionalflow_[cell] = ff;
 	    mc_[cell] = mc;
 	    return;
-	} else {
-	    x[0]=0.5; x[1]=polyprops_.cMax()/2.0;
-	    res_eq.computeResidual(x, res, mc, ff);
+	} else  if (0.99 < x[0]) {
+            // x[0] = 0.5; 
+            // x[1] = polyprops_.cMax()/2.0;
+            // res_eq.computeResidual(x, res, mc, ff);
 	}
 
         double x_min[2] = { 0.0, 0.0 };
 	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
 	bool successfull_newton_step = true;
-	double x_new[2];
+        // initialize x_new to avoid warning
+	double x_new[2] = {0.0, 0.0};
 	double res_new[2];
 	ResSOnCurve res_s_on_curve(res_eq);
 	ResCOnCurve res_c_on_curve(res_eq);
+
+        // We switch to s-sc variable
+        x[1] = x[0]*x[1];
+        // x_c will contain the s-c variable 
+        double x_c[2];
 	
  	while ((norm(res) > tol_) &&
 	       (iters_used_split < max_iters_split)  &&
 	       successfull_newton_step) {
             double dres_s_dsdc[2];
             double dres_c_dsdc[2];
-            res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
-            // 	double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
-            double dFx_dx=(dres_s_dsdc[0]-x[1]*dres_s_dsdc[1]/x[0]);
-            double dFx_dy= (dres_s_dsdc[1]/x[0]);
-            double dFy_dx=(dres_c_dsdc[0]-x[1]*dres_c_dsdc[1]/x[0]);
-            double dFy_dy= (dres_c_dsdc[1]/x[0]);
+            scToc(x, x_c);
+            res_eq.computeJacobiRes(x_c, dres_s_dsdc, dres_c_dsdc);
+            double dFx_dx = (dres_s_dsdc[0]-x_c[1]*dres_s_dsdc[1]);
+            double dFx_dy;
+            if (x[0] < 1e-2*tol_) {
+                dFx_dy = 0.0;
+            } else {
+                dFx_dy = (dres_s_dsdc[1]/x[0]);
+            }
+            double dFy_dx = (dres_c_dsdc[0]-x_c[1]*dres_c_dsdc[1]);
+            double dFy_dy;
+            if (x[0] < 1e-2*tol_) {
+                dFy_dy = 1.0 - res_eq.dps;
+            } else {
+                dFy_dy = (dres_c_dsdc[1]/x[0]);
+            }
             double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
-            double alpha=1;
-            int max_lin_it=100;
-            int lin_it=0;
-            res_new[0]=res[0]*2;
-            res_new[1]=res[1]*2;
+            double alpha = 1.0;
+            int max_lin_it = 100;
+            int lin_it = 0;
+            res_new[0] = res[0]*2;
+            res_new[1] = res[1]*2;
             while((norm(res_new)>norm(res)) && (lin_it<max_lin_it)) {
                 x_new[0] = x[0] - alpha*(res[0]*dFy_dy - res[1]*dFx_dy)/det;
-                x_new[1] = x[1]*x[0] - alpha*(res[1]*dFx_dx - res[0]*dFy_dx)/det;
-                x_new[1] = (x_new[0]>0) ?  x_new[1]/x_new[0] : 0.0;
-                check_interval(x_new, x_min, x_max);
-                res_eq.computeResidual(x_new, res_new, mc, ff);
-                alpha=alpha/2.0;
-                lin_it=lin_it+1;
+                x_new[1] = x[1] - alpha*(res[1]*dFx_dx - res[0]*dFy_dx)/det;
+                check_interval(x_min, x_max, x_new);
+                scToc(x_new, x_c);
+                res_eq.computeResidual(x_c, res_new, mc, ff);
+                alpha = alpha/2.0;
+                lin_it = lin_it + 1;
             }
             if (lin_it>=max_lin_it) {
                 successfull_newton_step = false;
             } else  {
-                x[0] = x_new[0];
-                x[1] = x_new[1];
+                scToc(x_new, x_c);
+                x[0] = x_c[0];
+                x[1] = x_c[1];
                 res[0] = res_new[0];
                 res[1] = res_new[1];
                 iters_used_split += 1;
@@ -1316,7 +1333,7 @@ namespace Opm
     void TransportModelPolymer::scToc(const double* x, double* x_c) const {
         x_c[0] = x[0];
         if (x[0] < 1e-2*tol_) {
-            x_c[1] = polyprops_.cMax();
+            x_c[1] = 0.5*polyprops_.cMax();
         } else {
             x_c[1] = x[1]/x[0];
         }
@@ -1327,7 +1344,7 @@ namespace Opm
 
 namespace
 {
-    bool check_interval(double* x, const double* xmin, const double* xmax) {
+    bool check_interval(const double* xmin, const double* xmax, double* x) {
         bool test = false;
         if (x[0] < xmin[0]) {
             test = true;
