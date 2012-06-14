@@ -703,7 +703,7 @@ main(int argc, char** argv)
         // Report timestep and (optionally) write state to disk.
         simtimer.report(std::cout);
         if (output && (simtimer.currentStepNum() % output_interval == 0)) {
-            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
+            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir, reorder_model);
         }
 
         // Solve pressure.
