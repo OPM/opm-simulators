@@ -211,7 +211,7 @@ namespace Opm
         double rk = 1 + (res_factor_ - 1)*c_ads/c_max_ads_;
         eff_relperm_wat = relperm[0]/rk;
         if (if_with_der) {
-            deff_relperm_wat_ds = (drelperm_ds[0]-drelperm_ds[3])/rk; //derivative with respect to sw
+            deff_relperm_wat_ds = (drelperm_ds[0]-drelperm_ds[2])/rk; //derivative with respect to sw
             deff_relperm_wat_dc = dc_ads_dc*relperm[0]/(rk*rk*c_max_ads_);
         } else {
             deff_relperm_wat_ds = -1.0;
