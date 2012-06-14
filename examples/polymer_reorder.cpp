@@ -79,14 +79,15 @@
 #include <iterator>
 #include <vector>
 #include <numeric>
-
+#include <list>
 
 
 
 static void outputState(const UnstructuredGrid& grid,
                         const Opm::PolymerState& state,
                         const int step,
-                        const std::string& output_dir)
+                        const std::string& output_dir,
+                        const Opm::TransportModelPolymer& reorder_model)
 {
     // Write data in VTK format.
     std::ostringstream vtkfilename;
@@ -116,6 +117,23 @@ static void outputState(const UnstructuredGrid& grid,
         const std::vector<double>& d = *(it->second);
         std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
     }
+
+    std::ostringstream fname;
+    fname << output_dir << "/" << "residualcounts" << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+    std::ofstream file(fname.str().c_str());
+    if (!file) {
+        THROW("Failed to open " << fname.str());
+    }
+
+    typedef std::list<Opm::TransportModelPolymer::Newton_Iter> ListRes;
+
+    const ListRes& res_counts = reorder_model.res_counts;
+    for (ListRes::const_iterator it = res_counts.begin(); it != res_counts.end(); ++it) {
+        file << it->res_s << "," << it->cell << "," << std::setprecision(15) << it->s << "," << std::setprecision(15) << it->c << "\n";
+    }
+    file.close();
+
+    
 }
 
 
@@ -478,15 +496,16 @@ main(int argc, char** argv)
         std::vector<double> visc_mult_vals(2, -1e100);
         visc_mult_vals[0] = 1.0;
         // polyprop.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-        visc_mult_vals[1] = 20.0;
+        visc_mult_vals[1] = 1.0;
         std::vector<double> c_vals_ads(3, -1e100);
         c_vals_ads[0] = 0.0;
         c_vals_ads[1] = 2.0;
         c_vals_ads[2] = 8.0;
+        // Here we set up adsorption equal to zero.
         std::vector<double> ads_vals(3, -1e100);
         ads_vals[0] = 0.0;
-        ads_vals[1] = 0.0015;
-        ads_vals[2] = 0.0025;
+        ads_vals[1] = 0.0;
+        ads_vals[2] = 0.0;
         // ads_vals[1] = 0.0;
         // ads_vals[2] = 0.0;
         polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
@@ -588,6 +607,8 @@ main(int argc, char** argv)
         method = Opm::TransportModelPolymer::Bracketing;
     } else if (method_string == "Newton") {
         method = Opm::TransportModelPolymer::Newton;
+    } else if (method_string == "Gradient") {
+        method = Opm::TransportModelPolymer::Gradient;
     } else {
         THROW("Unknown method: " << method_string);
     }
@@ -684,7 +705,7 @@ main(int argc, char** argv)
         // Report timestep and (optionally) write state to disk.
         simtimer.report(std::cout);
         if (output && (simtimer.currentStepNum() % output_interval == 0)) {
-            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
+            outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir, reorder_model);
         }
 
         // Solve pressure.
@@ -862,7 +883,7 @@ main(int argc, char** argv)
               << "\n  Transport time: " << ttime << std::endl;
 
     if (output) {
-        outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir);
+        outputState(*grid->c_grid(), state, simtimer.currentStepNum(), output_dir, reorder_model);
         outputWaterCut(watercut, output_dir);
         if (wells->c_wells()) {
             outputWellReport(wellreport, output_dir);

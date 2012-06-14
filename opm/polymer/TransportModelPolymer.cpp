@@ -25,7 +25,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <cmath>
-
+#include <list>
 
 // Choose error policy for scalar solves here.
 typedef Opm::RegulaFalsi<Opm::WarnAndContinueOnError> RootFinder;
@@ -51,9 +51,9 @@ public:
     double ads0;
     GradientMethod gradient_method;
 
-    const TransportModelPolymer& tm;
+    TransportModelPolymer& tm;
 
-    ResidualEquation(const TransportModelPolymer& tmodel, int cell_index);
+    ResidualEquation(TransportModelPolymer& tmodel, int cell_index);
     void computeResidual(const double* x, double* res) const;
     void computeResidual(const double* x, double* res, double& mc, double& ff) const;
     double computeResidualS(const double* x) const;
@@ -200,6 +200,8 @@ namespace Opm
 	}
 	visc_ = props.viscosity();
 
+        res_counts.clear();
+
 	// Set up smin_ and smax_
 	int num_cells = props.numCells();
 	smin_.resize(props.numPhases()*num_cells);
@@ -239,6 +241,7 @@ namespace Opm
         toWaterSat(saturation, saturation_);
 	concentration_ = &concentration[0];
 	cmax_ = &cmax[0];
+        res_counts.clear();
 	reorderAndTransport(grid_, darcyflux);
         toBothSat(saturation_, saturation);
     }
@@ -254,7 +257,7 @@ namespace Opm
     // Influxes are negative, outfluxes positive.
     struct TransportModelPolymer::ResidualS
     {
-	const TransportModelPolymer& tm_;
+        TransportModelPolymer& tm_;
 	const int cell_;
 	const double s0_;
 	const double cmax0_;
@@ -263,7 +266,7 @@ namespace Opm
         const double comp_term_; // q - sum_j v_ij
 	const double dtpv_;    // dt/pv(i)
 	const double c_;
-	explicit ResidualS(const TransportModelPolymer& tmodel,
+	explicit ResidualS(TransportModelPolymer& tmodel,
 			   const int cell,
 			   const double s0,
 			   const double cmax0,
@@ -285,6 +288,7 @@ namespace Opm
 	}
 	double operator()(double s) const
 	{
+            tm_.res_counts.push_back(Newton_Iter(true, cell_, s, c_));
             double ff;
             tm_.fracFlow(s, c_, cmax0_, cell_, ff);
 	    return s - s0_ +  dtpv_*(outflux_*ff + influx_ + s*comp_term_);
@@ -311,8 +315,8 @@ namespace Opm
 	double porosity;
 	double dtpv;    // dt/pv(i)
 	mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
-	const TransportModelPolymer& tm;
-	explicit ResidualC(const TransportModelPolymer& tmodel, int cell_index)
+	TransportModelPolymer& tm;
+	explicit ResidualC(TransportModelPolymer& tmodel, int cell_index)
 	    : tm(tmodel)
 	{
 	    cell    = cell_index;
@@ -371,6 +375,8 @@ namespace Opm
 		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
                 + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*c_ads)*comp_term;
+            tm.res_counts.push_back(Newton_Iter(true, cell, s_arg, c_arg));
+            tm.res_counts.push_back(Newton_Iter(false, cell, s_arg, c_arg));
 
 	}
 
@@ -393,6 +399,7 @@ namespace Opm
             tm.polyprops_.adsorption(c0, cmax0, c_ads0);
 	    double c_ads;
             tm.polyprops_.adsorption(c, cmax0, c_ads);
+            tm.res_counts.push_back(Newton_Iter(false, cell, s, c));
 	    double res = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
@@ -413,7 +420,7 @@ namespace Opm
     // ResidualEquation gathers parameters to construct the residual, computes its
     // value and the values of its derivatives.
 
-    TransportModelPolymer::ResidualEquation::ResidualEquation(const TransportModelPolymer& tmodel, int cell_index)
+    TransportModelPolymer::ResidualEquation::ResidualEquation(TransportModelPolymer& tmodel, int cell_index)
 	: tm(tmodel)
     {
 	gradient_method = Analytic;
@@ -552,12 +559,14 @@ namespace Opm
             }
             if (if_res_s) {
                 res[0] = s - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
+                tm.res_counts.push_back(Newton_Iter(true, cell, x[0], x[1]));
             }
             if (if_res_c) {
                 res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
                     + dtpv*(outflux*ff*mc + influx_polymer)
 		    + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
+                tm.res_counts.push_back(Newton_Iter(false, cell, x[0], x[1]));
             }
             if (if_dres_s_dsdc) {
                 dres_s_dsdc[0] = 1 + dtpv*(outflux*dff_dsdc[0] + comp_term);
@@ -577,6 +586,7 @@ namespace Opm
             tm.fracFlow(s, c, cmax0, cell, ff);
             if (if_res_s) {
                 res[0] = s - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
+                tm.res_counts.push_back(Newton_Iter(true, cell, x[0], x[1]));
             }
             if (if_res_c) {
                 tm.computeMc(c, mc);
@@ -586,6 +596,7 @@ namespace Opm
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
                     + dtpv*(outflux*ff*mc + influx_polymer)
 		    + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
+                tm.res_counts.push_back(Newton_Iter(false, cell, x[0], x[1]));
             }
         }
 
@@ -678,7 +689,7 @@ namespace Opm
 	double res[2];
 	double mc;
 	double ff;
-        res_eq.computeResidual(x, res, mc, ff);
+	res_eq.computeResidual(x, res, mc, ff);
 	if (norm(res) <= tol_) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
  	    fractionalflow_[cell] = ff;
