@@ -212,7 +212,7 @@ namespace Opm
         // \TODO refactor?
 
         const int nc = grid_.number_of_cells;
-        const int nw = wells_->number_of_wells;
+        const int nw = (wells_) ? wells_->number_of_wells : 0;
 
         // Set up dynamic data.
         computePerSolveDynamicData(dt, state, well_state);
