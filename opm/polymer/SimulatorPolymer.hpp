@@ -77,15 +77,27 @@ namespace Opm
                         LinearSolverInterface& linsolver,
                         const double* gravity);
 
+        /// A struct for returning timing data to the client.
+        struct SimulatorReport
+        {
+            double pressure_time;
+            double transport_time;
+            double total_time;
+            SimulatorReport();
+            void operator+=(const SimulatorReport& sr);
+            void report(std::ostream& os);
+        };
+
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
         /// modify the reservoir and well states.
         /// \param[in,out] timer       governs the requested reporting timesteps
         /// \param[in,out] state       state of reservoir: pressure, fluxes
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
-        void run(SimulatorTimer& timer,
-                 PolymerState& state,
-                 WellState& well_state);
+        /// \return                    simulation report, with timing data
+        SimulatorReport run(SimulatorTimer& timer,
+                            PolymerState& state,
+                            WellState& well_state);
 
     private:
         class Impl;
