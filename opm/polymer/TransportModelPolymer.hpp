@@ -132,6 +132,7 @@ namespace Opm
 
         std::list<Newton_Iter> res_counts;
 
+        void scToc(const double* x, double* x_c) const;
 
     private:
 	const UnstructuredGrid& grid_;

@@ -685,11 +685,13 @@ namespace Opm
 
 	// Check if current state is an acceptable solution.
 	ResidualEquation res_eq(*this, cell);
-	double x[2] = {saturation_[cell], concentration_[cell]};
+	double x[2] = {saturation_[cell], saturation_[cell]*concentration_[cell]};
 	double res[2];
 	double mc;
 	double ff;
-	res_eq.computeResidual(x, res, mc, ff);
+        double x_c[2];
+        scToc(x, x_c);
+	res_eq.computeResidual(x_c, res, mc, ff);
 	if (norm(res) <= tol_) {
 	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
  	    fractionalflow_[cell] = ff;
@@ -699,12 +701,16 @@ namespace Opm
 
         double x_min[2] = { 0.0, 0.0 };
 	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
+        double x_min_res_s[2] = { x_min[0], x_min[1] };
+        double x_max_res_s[2] = { x_max[0], x_min[0] };
+        double x_min_res_sc[2] = { x_min[0], x_min[1] };
+        double x_max_res_sc[2] = { x_max[0], x_max[1] };
 	double t;
 	double t_max;
 	double t_out;
 	double direction[2];
 	double end_point[2];
-	double gradient[2];
+        double gradient[2];
 	ResSOnCurve res_s_on_curve(res_eq);
 	ResCOnCurve res_c_on_curve(res_eq);
 	bool if_res_s;
@@ -712,46 +718,75 @@ namespace Opm
  	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
             if (std::abs(res[0]) < std::abs(res[1])) {
                 if (res[0] < -tol_) {
-                    direction[0] = x_max[0] - x[0];
-                    direction[1] = x_min[1] - x[1];
+                    direction[0] = x_max_res_s[0] - x[0];
+                    direction[1] = x_max_res_s[1] - x[1];
                     if_res_s = true;
                 } else if (res[0] > tol_) {
-                    direction[0] = x_min[0] - x[0];
-                    direction[1] = x_max[1] - x[1];
+                    direction[0] = x_min_res_s[0] - x[0];
+                    direction[1] = x_min_res_s[1] - x[1];
                     if_res_s = true;
                 } else {
-                    res_eq.computeGradientResS(x, res, gradient);
-                    direction[0] = -gradient[1];
-                    direction[1] = gradient[0];
+                    scToc(x, x_c);
+                    res_eq.computeGradientResS(x_c, res, gradient);
+                    // dResS/d(s_) = dResS/ds - c/s*dResS/ds
+                    // dResS/d(sc_) = -1/s*dResS/dc
+                    if (x[0] < 1e-2*tol_) {
+                        // We take 1.0/s*gradient[1]: wrong for linear permeability,
+                        // acceptable for nonlinear relative permeability.
+                        direction[0] = 0.0;
+                        direction[1] = gradient[0];
+                    } else {
+                        // With s,c variables, we should have
+                        // direction[0] = -gradient[1];
+                        // direction[1] = gradient[0];
+                        // With s, sc variables, we get:
+                        scToc(x, x_c);
+                        direction[0] = 1.0/x[0]*gradient[1];
+                        direction[1] = gradient[0] - x_c[1]/x[0]*gradient[1];
+                    }
                     if_res_s = false;
                 }
             } else {
                 if (res[1] < -tol_) {
-                    direction[0] = x_max[0] - x[0];
-                    direction[1] = x_max[1] - x[1];
+                    direction[0] = x_max_res_sc[0] - x[0];
+                    direction[1] = x_max_res_sc[1] - x[1];
                     if_res_s = false;
                 } else if (res[1] > tol_) {
-                    direction[0] = x_min[0] - x[0];
-                    direction[1] = x_min[1] - x[1];
+                    direction[0] = x_min_res_sc[0] - x[0];
+                    direction[1] = x_min_res_sc[1] - x[1];
                     if_res_s = false;
                 } else {
                     res_eq.computeGradientResC(x, res, gradient);
-                    direction[0] = -gradient[1];
-                    direction[1] = gradient[0];
+                    // dResC/d(s_) = dResC/ds - c/s*dResC/ds
+                    // dResC/d(sc_) = -1/s*dResC/dc
+                    if (x[0] < 1e-2*tol_) {
+                        // We take 1.0/s*gradient[1]: wrong for linear permeability,
+                        // acceptable for nonlinear relative permeability.
+                        direction[0] = 0.0;
+                        direction[1] = gradient[0];
+                    } else {
+                        // With s,c variables, we should have
+                        // direction[0] = -gradient[1];
+                        // direction[1] = gradient[0];
+                        // With s, sc variables, we get:
+                        scToc(x, x_c);
+                        direction[0] = 1.0/x[0]*gradient[1];
+                        direction[1] = gradient[0] - x_c[1]/x[0]*gradient[1];
+                    }
                     if_res_s = true;
                 }
             }
             if (if_res_s) {
                 if (res[0] < 0) {
-                    end_point[0] = x_max[0];
-                    end_point[1] = x_min[1];
+                    end_point[0] = x_max_res_s[0];
+                    end_point[1] = x_max_res_s[1];
                     res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, tol_, t_max, t_out);
                     if (res_s_on_curve(t_out) >= 0) {
                         t_max = t_out;
                     }
                 } else {
-                    end_point[0] = x_min[0];
-                    end_point[1] = x_max[1];
+                    end_point[0] = x_min_res_s[0];
+                    end_point[1] = x_min_res_s[1];
                     res_s_on_curve.curve.setup(x, direction, end_point, x_min, x_max, tol_, t_max, t_out);
                     if (res_s_on_curve(t_out) <= 0) {
                         t_max = t_out;
@@ -762,15 +797,15 @@ namespace Opm
                 res_s_on_curve.curve.computeXOfT(x, t);
             } else {
                 if (res[1] < 0) {
-                    end_point[0] = x_max[0];
-                    end_point[1] = x_max[1];
+                    end_point[0] = x_max_res_sc[0];
+                    end_point[1] = x_max_res_sc[1];
                     res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, tol_, t_max, t_out);
                     if (res_c_on_curve(t_out) >= 0) {
                         t_max = t_out;
                     }
                 } else {
-                    end_point[0] = x_min[0];
-                    end_point[1] = x_min[1];
+                    end_point[0] = x_min_res_sc[0];
+                    end_point[1] = x_min_res_sc[1];
                     res_c_on_curve.curve.setup(x, direction, end_point, x_min, x_max, tol_, t_max, t_out);
                     if (res_c_on_curve(t_out) <= 0) {
                         t_max = t_out;
@@ -780,7 +815,8 @@ namespace Opm
                 res_c_on_curve.curve.computeXOfT(x, t);
 
             }
-            res_eq.computeResidual(x, res, mc, ff);
+            scToc(x, x_c);
+            res_eq.computeResidual(x_c, res, mc, ff);
             iters_used_split += 1;
         }
 	    
@@ -790,7 +826,8 @@ namespace Opm
             MESSAGE("Newton for single cell did not work in cell number " << cell);
             solveSingleCellBracketing(cell);
         } else {
-            concentration_[cell] = x[1];
+            scToc(x, x_c);
+            concentration_[cell] = x_c[1];
             cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
             saturation_[cell] = x[0];
             fractionalflow_[cell] = ff;
@@ -1276,6 +1313,15 @@ namespace Opm
         toBothSat(saturation_, saturation);
     }
 
+    void TransportModelPolymer::scToc(const double* x, double* x_c) const {
+        x_c[0] = x[0];
+        if (x[0] < 1e-2*tol_) {
+            x_c[1] = polyprops_.cMax();
+        } else {
+            x_c[1] = x[1]/x[0];
+        }
+    }
+
 } // namespace Opm
 
 
@@ -1388,8 +1434,10 @@ namespace
     double ResSOnCurve::operator()(const double t) const
     {
 	double x_of_t[2];
+        double x_c[2];
 	curve.computeXOfT(x_of_t, t);
-	return res_eq_.computeResidualS(x_of_t);
+        res_eq_.tm.scToc(x_of_t, x_c);
+	return res_eq_.computeResidualS(x_c);
     }
 
     ResCOnCurve::ResCOnCurve(const Opm::TransportModelPolymer::ResidualEquation& res_eq)
@@ -1400,8 +1448,10 @@ namespace
     double ResCOnCurve::operator()(const double t) const
     {
 	double x_of_t[2];
+        double x_c[2];
 	curve.computeXOfT(x_of_t, t);
-	return res_eq_.computeResidualC(x_of_t);
+        res_eq_.tm.scToc(x_of_t, x_c);
+	return res_eq_.computeResidualC(x_c);
     }
 
     bool solveNewtonStep(const double* xx, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
@@ -1435,6 +1485,7 @@ namespace
 	    return true;
 	}
     }
+
 
 } // Anonymous namespace
 
