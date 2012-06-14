@@ -31,7 +31,7 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/initState.hpp>
-#include <opm/core/utility/SimulatorTimer.hpp>
+#include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/writeVtkData.hpp>

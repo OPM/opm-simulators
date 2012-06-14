@@ -10,8 +10,12 @@ $(BOOST_SYSTEM_LIB)
 
 
 noinst_PROGRAMS =				\
-polymer_reorder					
+polymer_reorder					\
+sim_poly2p_incomp_reorder
 
 polymer_reorder_SOURCES =			\
 polymer_reorder.cpp
+
+sim_poly2p_incomp_reorder_SOURCES =		\
+sim_poly2p_incomp_reorder.cpp
 
