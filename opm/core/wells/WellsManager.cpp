@@ -486,7 +486,7 @@ namespace Opm
                             THROW("Failure occured appending controls for well " << well_names[wix]);
                         }
                         InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
-                        const int cpos = control_pos[mode];
+                        int cpos = control_pos[mode];
                         if (cpos == -1 && mode != InjectionControl::GRUP) {
                             THROW("Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
                         }
@@ -614,7 +614,7 @@ namespace Opm
                             THROW("Failure occured appending controls for well " << well_names[wix]);
                         }
                         ProductionControl::Mode mode = ProductionControl::mode(wcp_line.control_mode_);
-                        const int cpos = control_pos[mode];
+                        int cpos = control_pos[mode];
                         if (cpos == -1 && mode != ProductionControl::GRUP) {
                             THROW("Control mode type " << mode << " not present in well " << well_names[wix]);
                         }
