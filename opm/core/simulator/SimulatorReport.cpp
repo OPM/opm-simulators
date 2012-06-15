@@ -40,7 +40,7 @@ namespace Opm
     {
         os << "Total time taken: " << total_time
            << "\n  Pressure time:  " << pressure_time
-           << "\n  Transport time: " << total_time << std::endl;
+           << "\n  Transport time: " << transport_time << std::endl;
     }
 
 
