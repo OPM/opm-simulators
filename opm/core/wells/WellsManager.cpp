@@ -689,17 +689,23 @@ namespace Opm
         		std::string wellname = line.well_;
         		std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
         		if (it == well_names_to_index.end()) {
-        			THROW("Trying to open well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
+        			THROW("Trying to open/shut well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
         		}
         		int index = it->second;
-
-        		// We don't open already open wells
-        		/// \TODO Should this perhaps be allowed? I.e. should it be if(well_shut) { shutwell(); } else { /* do nothing*/ }?
-        		ASSERT(w_->ctrls[index]->current < 0);
+        		if (line.openshutflag_ == "SHUT") {
+        			// We don't open already open wells
+        			/// \TODO Should this perhaps be allowed? I.e. should it be if(well_shut) { shutwell(); } else { /* do nothing*/ }?
+        			ASSERT(w_->ctrls[index]->current < 0);
+        		} else if (line.openshutflag_ == "OPEN") {
+        			ASSERT(w_->ctrls[index]->current >= 0);
+        		} else {
+        			THROW("Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
+        		}
 
         		// We revert back to it's original control.
         		// Note that this is OK as ~~ = id.
         		w_->ctrls[index]->current = ~w_->ctrls[index]->current;
+
 
         	}
         }
