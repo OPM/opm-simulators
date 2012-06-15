@@ -490,6 +490,10 @@ namespace Opm
                         if (cpos == -1 && mode != InjectionControl::GRUP) {
                             THROW("Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
                         }
+                        // We need to check if the well is shut or not
+                        if (wci_line.open_shut_flag_ == "SHUT") {
+                        	cpos = ~cpos;
+                        }
                         set_current_control(wix, cpos, w_);
 
                         // Set well component fraction.
