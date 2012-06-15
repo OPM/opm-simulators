@@ -495,19 +495,14 @@ main(int argc, char** argv)
         c_vals_visc[1] = 7.0;
         std::vector<double> visc_mult_vals(2, -1e100);
         visc_mult_vals[0] = 1.0;
-        // polyprop.visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-        visc_mult_vals[1] = 1.0;
-        std::vector<double> c_vals_ads(3, -1e100);
+        visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+        std::vector<double> c_vals_ads(2, -1e100);
         c_vals_ads[0] = 0.0;
-        c_vals_ads[1] = 2.0;
-        c_vals_ads[2] = 8.0;
+        c_vals_ads[1] = 8.0;
         // Here we set up adsorption equal to zero.
-        std::vector<double> ads_vals(3, -1e100);
+        std::vector<double> ads_vals(2, -1e100);
         ads_vals[0] = 0.0;
         ads_vals[1] = 0.0;
-        ads_vals[2] = 0.0;
-        // ads_vals[1] = 0.0;
-        // ads_vals[2] = 0.0;
         polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
                      static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
                      c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
@@ -609,6 +604,10 @@ main(int argc, char** argv)
         method = Opm::TransportModelPolymer::Newton;
     } else if (method_string == "Gradient") {
         method = Opm::TransportModelPolymer::Gradient;
+    } else if (method_string == "NewtonSimpleSC") {
+        method = Opm::TransportModelPolymer::NewtonSimpleSC;
+    } else if (method_string == "NewtonSimpleC") {
+        method = Opm::TransportModelPolymer::NewtonSimpleC;
     } else {
         THROW("Unknown method: " << method_string);
     }
@@ -766,6 +765,11 @@ main(int argc, char** argv)
                 }
             }
         } while (!well_control_passed);
+
+        // Update pore volumes if rock is compressible.
+        if (rock_comp->isActive()) {
+            computePorevolume(*grid->c_grid(), props->porosity(), *rock_comp, state.pressure(), porevol);
+        }
 
         // Process transport sources (to include bdy terms and well flows).
         Opm::computeTransportSource(*grid->c_grid(), src, state.faceflux(), 1.0,
