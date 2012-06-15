@@ -618,6 +618,10 @@ namespace Opm
                         if (cpos == -1 && mode != ProductionControl::GRUP) {
                             THROW("Control mode type " << mode << " not present in well " << well_names[wix]);
                         }
+                        // If it's shut, we complement the cpos
+                        if (wcp_line.open_shut_flag_ == "SHUT") {
+                        	cpos = ~cpos; // So we can easily retrieve the cpos later
+                        }
                         set_current_control(wix, cpos, w_);
                     }
                 }
@@ -677,6 +681,28 @@ namespace Opm
         */
 #endif
 
+        if (deck.hasField("WELOPEN")) {
+        	const WELOPEN& welopen = deck.getWELOPEN();
+
+        	for (size_t i = 0; i < welopen.welopen.size(); ++i) {
+        		WelopenLine line = welopen.welopen[i];
+        		std::string wellname = line.well_;
+        		std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
+        		if (it == well_names_to_index.end()) {
+        			THROW("Trying to open well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
+        		}
+        		int index = it->second;
+
+        		// We don't open already open wells
+        		/// \TODO Should this perhaps be allowed? I.e. should it be if(well_shut) { shutwell(); } else { /* do nothing*/ }?
+        		ASSERT(w_->ctrls[index]->current < 0);
+
+        		// We revert back to it's original control.
+        		// Note that this is OK as ~~ = id.
+        		w_->ctrls[index]->current = ~w_->ctrls[index]->current;
+
+        	}
+        }
 
         // Build the well_collection_ well group hierarchy.
         if (deck.hasField("GRUPTREE")) {
