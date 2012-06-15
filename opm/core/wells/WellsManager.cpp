@@ -693,11 +693,11 @@ namespace Opm
         		}
         		int index = it->second;
         		if (line.openshutflag_ == "SHUT") {
-        			// We don't open already open wells
+        			// We currently don't care if the well is open or not.
         			/// \TODO Should this perhaps be allowed? I.e. should it be if(well_shut) { shutwell(); } else { /* do nothing*/ }?
-        			ASSERT(w_->ctrls[index]->current < 0);
+        			//ASSERT(w_->ctrls[index]->current < 0);
         		} else if (line.openshutflag_ == "OPEN") {
-        			ASSERT(w_->ctrls[index]->current >= 0);
+        			//ASSERT(w_->ctrls[index]->current >= 0);
         		} else {
         			THROW("Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
         		}
