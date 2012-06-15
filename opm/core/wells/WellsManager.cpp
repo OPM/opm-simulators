@@ -42,6 +42,7 @@ namespace
         // double target;
         double reference_bhp_depth;
         // Opm::InjectionSpecification::InjectorType injected_phase;
+        int welspecsline;
     };
 
 
@@ -224,26 +225,45 @@ namespace Opm
 
         // For easy lookup:
         std::map<std::string, int> well_names_to_index;
+        typedef std::map<std::string, int>::const_iterator WNameIt;
 
-        // Get WELSPECS data
+        // Get WELSPECS data.
+        // It is allowed to have multiple lines corresponding to
+        // the same well, in which case the last one encountered
+        // is the one used.
         const WELSPECS& welspecs = deck.getWELSPECS();
-        const int num_wells = welspecs.welspecs.size();
-        well_names.reserve(num_wells);
-        well_data.reserve(num_wells);
-        wellperf_data.resize(num_wells);
-        for (int w = 0; w < num_wells; ++w) {
-            well_names.push_back(welspecs.welspecs[w].name_);
-            WellData wd;
-            well_data.push_back(wd);
-            well_names_to_index[welspecs.welspecs[w].name_] = w;
-            well_data.back().reference_bhp_depth = welspecs.welspecs[w].datum_depth_BHP_;
-            if (welspecs.welspecs[w].datum_depth_BHP_ < 0.0) {
-                // Set refdepth to a marker value, will be changed
-                // after getting perforation data to the centroid of
-                // the cell of the top well perforation.
-                well_data.back().reference_bhp_depth = -1e100;
+        const int num_welspecs = welspecs.welspecs.size();
+        well_names.reserve(num_welspecs);
+        well_data.reserve(num_welspecs);
+        for (int w = 0; w < num_welspecs; ++w) {
+            // First check if this well has already been encountered.
+            // If so, we modify it's data instead of appending a new well
+            // to the well_data and well_names vectors.
+            const std::string& name = welspecs.welspecs[w].name_;
+            const double refdepth = welspecs.welspecs[w].datum_depth_BHP_;
+            WNameIt wit = well_names_to_index.find(name);
+            if (wit == well_names_to_index.end()) {
+                // New well, append data.
+                well_names_to_index[welspecs.welspecs[w].name_] = well_data.size();
+                well_names.push_back(name);
+                WellData wd;
+                // If negative (defaulted), set refdepth to a marker
+                // value, will be changed after getting perforation
+                // data to the centroid of the cell of the top well
+                // perforation.
+                wd.reference_bhp_depth = (refdepth < 0.0) ? -1e100 : refdepth;
+                wd.welspecsline = w;
+                well_data.push_back(wd);
+            } else {
+                // Existing well, change data.
+                const int wix = wit->second;
+                well_data[wix].reference_bhp_depth = (refdepth < 0.0) ? -1e100 : refdepth;
+                well_data[wix].welspecsline = w;
             }
         }
+        const int num_wells = well_data.size();
+        wellperf_data.resize(num_wells);
+
 
         // global_cell is a map from compressed cells to Cartesian grid cells.
         // We must make the inverse lookup.
@@ -263,6 +283,8 @@ namespace Opm
         }
 
         // Get COMPDAT data
+        // It is *not* allowed to have multiple lines corresponding to
+        // the same perforation!
         const COMPDAT& compdat = deck.getCOMPDAT();
         const int num_compdat  = compdat.compdat.size();
         for (int kw = 0; kw < num_compdat; ++kw) {
@@ -279,7 +301,7 @@ namespace Opm
                 if (well_names[wix].compare(0,len, name) == 0) { // equal
                     // Extract corresponding WELSPECS defintion for
                     // purpose of default location specification.
-                    const WelspecsLine& wspec = welspecs.welspecs[wix];
+                    const WelspecsLine& wspec = welspecs.welspecs[well_data[wix].welspecsline];
 
                     // We have a matching name.
                     int ix = compdat.compdat[kw].grid_ind_[0] - 1;
@@ -345,7 +367,7 @@ namespace Opm
         ASSERT(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
-            if (well_data[w].reference_bhp_depth == -1e100) {
+            if (well_data[w].reference_bhp_depth < 0.0) {
                 // It was defaulted. Set reference depth to minimum perforation depth.
                 double min_depth = 1e100;
                 int num_wperfs = wellperf_data[w].size();
@@ -371,8 +393,7 @@ namespace Opm
                 if (it != well_names_to_index.end()) {
                     const int well_index = it->second;
                     well_data[well_index].type = INJECTOR;
-                }
-                else {
+                } else {
                     THROW("Unseen well name: " << lines[i].well_ << " first seen in WCONINJE");
                 }
             }
@@ -411,6 +432,9 @@ namespace Opm
         }
 
         // Get WCONINJE data, add injection controls to wells.
+        // It is allowed to have multiple lines corresponding to
+        // the same well, in which case the last one encountered
+        // is the one used.
         if (deck.hasField("WCONINJE")) {
             const WCONINJE& wconinjes = deck.getWCONINJE();
             const int num_wconinjes = wconinjes.wconinje.size();
@@ -433,6 +457,9 @@ namespace Opm
                         }
 
                         // Add all controls that are present in well.
+                        // First we must clear existing controls, in case the
+                        // current WCONINJE line is modifying earlier controls.
+                        clear_well_controls(wix, w_);
                         int ok = 1;
                         int control_pos[5] = { -1, -1, -1, -1, -1 };
                         if (ok && wci_line.surface_flow_max_rate_ >= 0.0) {
@@ -494,6 +521,9 @@ namespace Opm
         }
 
         // Get WCONPROD data
+        // It is allowed to have multiple lines corresponding to
+        // the same well, in which case the last one encountered
+        // is the one used.
         if (deck.hasField("WCONPROD")) {
             const WCONPROD& wconprods = deck.getWCONPROD();
             const int num_wconprods   = wconprods.wconprod.size();
@@ -513,6 +543,9 @@ namespace Opm
                             THROW("Found WCONPROD entry for a non-producer well: " << well_names[wix]);
                         }
                         // Add all controls that are present in well.
+                        // First we must clear existing controls, in case the
+                        // current WCONPROD line is modifying earlier controls.
+                        clear_well_controls(wix, w_);
                         int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
                         int ok = 1;
                         if (ok && wcp_line.oil_max_rate_ >= 0.0) {
