@@ -425,7 +425,7 @@ namespace Opm
             // We initialize all wells with a null component fraction,
             // and must (for injection wells) overwrite it later.
             int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
-                              comp_frac, &perf_cells[0], &perf_prodind[0], w_);
+                              comp_frac, &perf_cells[0], &perf_prodind[0], well_names[w].c_str(), w_);
             if (!ok) {
                 THROW("Failed adding well " << well_names[w] << " to Wells data structure.");
             }

@@ -100,6 +100,7 @@ struct Wells
     double              *WI;              /** Well productivity index, same size and structure as well_cells. */
     struct WellControls **ctrls;          /** Well controls, one set of controls for each well. */
 
+    char                **name;           /** Well names. One string for each well. */
 
     void               *data;             /** Internal management structure. */
 };
@@ -180,6 +181,7 @@ add_well(enum WellType  type     ,
          const double  *comp_frac,
          const int     *cells    ,
          const double  *WI       ,
+         const char    *name     ,
          struct Wells  *W        );
 
 
