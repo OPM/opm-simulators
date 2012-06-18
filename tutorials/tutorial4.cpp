@@ -357,6 +357,8 @@ int main ()
         dm["pressure"] = &state.pressure();
         Opm::writeVtkData(grid, dm, vtkfile);
     }
+
+    destroy_wells(wells);
 }
 /// \endcode
 
