@@ -263,7 +263,10 @@ int main ()
     for (int i = 0; i < num_wells; ++i) {
         const int well_cells = i*nx;
         const double well_index = 1;
-        add_well(PRODUCER, 0, 1, NULL, &well_cells, &well_index, wells);
+        std::stringstream well_name;
+        well_name << "well" << i;
+        add_well(PRODUCER, 0, 1, NULL, &well_cells, &well_index,
+                 well_name.str().c_str(), wells);
     }
     /// \endcode
     
