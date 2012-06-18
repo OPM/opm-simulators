@@ -1,5 +1,5 @@
-TEnd = 100000 # duration of the simulation [s]
-DtInitial = 10 # initial time step size [s]
+EndTime = 100000 # duration of the simulation [s]
+InitialTimeStepSize = 10 # initial time step size [s]
 [Grid]
 SizeX = 300 # x-coordinate of the upper-right corner of the grid [m]
 SizeY = 60 # y-coordinate of the upper-right corner of the grid [m]
