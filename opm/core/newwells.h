@@ -169,6 +169,7 @@ create_wells(int nphases, int nwells, int nperf);
  * \param[in] cells      Grid cells in which well is perforated.  Should
  *                       ideally be track ordered.
  * \param[in] WI         Well production index per perforation, or NULL.
+ * \param[in] name       Name of new well. NULL if no name.
  * \param[in,out] W      Existing set of wells to which new well will
  *                       be added.
  *
