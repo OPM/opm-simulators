@@ -33,6 +33,9 @@
 #include <cmath>
 #include <cstddef>
 #include <fstream>
+#include <map>
+#include <string>
+#include <utility>
 
 
 // Helper structs and functions for the implementation.
@@ -62,30 +65,39 @@ namespace
                     LRAT, CRAT, RESV,
                     BHP , THP , GRUP };
 
+        namespace Details {
+            std::map<std::string, Mode>
+            init_mode_map() {
+                std::map<std::string, Mode> m;
+
+                m.insert(std::make_pair("ORAT", ORAT));
+                m.insert(std::make_pair("WRAT", WRAT));
+                m.insert(std::make_pair("GRAT", GRAT));
+                m.insert(std::make_pair("LRAT", LRAT));
+                m.insert(std::make_pair("CRAT", CRAT));
+                m.insert(std::make_pair("RESV", RESV));
+                m.insert(std::make_pair("BHP" , BHP ));
+                m.insert(std::make_pair("THP" , THP ));
+                m.insert(std::make_pair("GRUP", GRUP));
+
+                return m;
+            }
+        } // namespace Details
+
         Mode mode(const std::string& control)
         {
-            static std::string prod_control_modes[] =
-                {std::string("ORAT"), std::string("WRAT"), std::string("GRAT"),
-                 std::string("LRAT"), std::string("CRAT"), std::string("RESV"),
-                 std::string("BHP") , std::string("THP") , std::string("GRUP") };
+            static std::map<std::string, Mode>
+                mode_map = Details::init_mode_map();
 
-            static const std::size_t num_prod_control_modes =
-                sizeof(prod_control_modes) / sizeof(prod_control_modes[0]);
+            std::map<std::string, Mode>::iterator
+                p = mode_map.find(control);
 
-            const std::string* p =
-                std::find(prod_control_modes,
-                          prod_control_modes + num_prod_control_modes,
-                          control);
-
-            int m = -1;
-            if (p != prod_control_modes + num_prod_control_modes) {
-                m = int(p - prod_control_modes);
+            if (p != mode_map.end()) {
+                return p->second;
             }
-
-            if (m >= 0) {
-                return static_cast<Mode>(m);
-            } else {
-                THROW("Unknown well control mode = " << control << " in input file");
+            else {
+                THROW("Unknown well control mode = "
+                      << control << " in input file");
             }
         }
     } // namespace ProductionControl
@@ -96,28 +108,35 @@ namespace
         enum Mode { RATE, RESV, BHP,
                     THP, GRUP };
 
+        namespace Details {
+            std::map<std::string, Mode>
+            init_mode_map() {
+                std::map<std::string, Mode> m;
+
+                m.insert(std::make_pair("RATE", RATE));
+                m.insert(std::make_pair("RESV", RESV));
+                m.insert(std::make_pair("BHP" , BHP ));
+                m.insert(std::make_pair("THP" , THP ));
+                m.insert(std::make_pair("GRUP", GRUP));
+
+                return m;
+            }
+        } // namespace Details
+
         Mode mode(const std::string& control)
         {
-            static std::string inje_control_modes[] =
-                {std::string("RATE"), std::string("RESV"), std::string("BHP"),
-                 std::string("THP") , std::string("GRUP") };
+            static std::map<std::string, Mode>
+                mode_map = Details::init_mode_map();
 
-            static const std::size_t num_inje_control_modes =
-                sizeof(inje_control_modes) / sizeof(inje_control_modes[0]);
+            std::map<std::string, Mode>::iterator
+                p = mode_map.find(control);
 
-            const std::string* p =
-                std::find(inje_control_modes,
-                          inje_control_modes + num_inje_control_modes,
-                          control);
-            int m = -1;
-            if (p != inje_control_modes + num_inje_control_modes) {
-                m = int(p - inje_control_modes);
+            if (p != mode_map.end()) {
+                return p->second;
             }
-
-            if (m >= 0) {
-                return static_cast<Mode>(m);
-            } else {
-                THROW("Unknown well control mode = " << control << " in input file");
+            else {
+                THROW("Unknown well control mode = "
+                      << control << " in input file");
             }
         }
     } // namespace InjectionControl
