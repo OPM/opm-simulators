@@ -29,6 +29,11 @@
 
 #include <tr1/array>
 #include <cmath>
+#include <cstddef>
+#include <algorithm>
+
+#include <cassert>
+#include <fstream>
 
 
 // Helper structs and functions for the implementation.
@@ -56,21 +61,28 @@ namespace
     {
         enum Mode { ORAT, WRAT, GRAT,
                     LRAT, CRAT, RESV,
-                    BHP, THP, GRUP };
+                    BHP , THP , GRUP };
+
         Mode mode(const std::string& control)
         {
-            const int num_prod_control_modes = 9;
-            static std::string prod_control_modes[num_prod_control_modes] =
+            static std::string prod_control_modes[] =
                 {std::string("ORAT"), std::string("WRAT"), std::string("GRAT"),
                  std::string("LRAT"), std::string("CRAT"), std::string("RESV"),
-                 std::string("BHP"), std::string("THP"), std::string("GRUP") };
+                 std::string("BHP") , std::string("THP") , std::string("GRUP") };
+
+            static const std::size_t num_prod_control_modes =
+                sizeof(prod_control_modes) / sizeof(prod_control_modes[0]);
+
+            const std::string* p =
+                std::find(prod_control_modes,
+                          prod_control_modes + num_prod_control_modes,
+                          control);
+
             int m = -1;
-            for (int i=0; i<num_prod_control_modes; ++i) {
-                if (control == prod_control_modes[i]) {
-                    m = i;
-                    break;
-                }
+            if (p != prod_control_modes + num_prod_control_modes) {
+                m = int(p - prod_control_modes);
             }
+
             if (m >= 0) {
                 return static_cast<Mode>(m);
             } else {
@@ -84,18 +96,23 @@ namespace
     {
         enum Mode { RATE, RESV, BHP,
                     THP, GRUP };
+
         Mode mode(const std::string& control)
         {
-            const int num_inje_control_modes = 5;
-            static std::string inje_control_modes[num_inje_control_modes] =
+            static std::string inje_control_modes[] =
                 {std::string("RATE"), std::string("RESV"), std::string("BHP"),
-                 std::string("THP"), std::string("GRUP") };
+                 std::string("THP") , std::string("GRUP") };
+
+            static const std::size_t num_inje_control_modes =
+                sizeof(inje_control_modes) / sizeof(inje_control_modes[0]);
+
+            const std::string* p =
+                std::find(inje_control_modes,
+                          inje_control_modes + num_inje_control_modes,
+                          control);
             int m = -1;
-            for (int i=0; i<num_inje_control_modes; ++i) {
-                if (control == inje_control_modes[i]) {
-                    m = i;
-                    break;
-                }
+            if (p != inje_control_modes + num_inje_control_modes) {
+                m = int(p - inje_control_modes);
             }
 
             if (m >= 0) {
@@ -408,10 +425,10 @@ namespace Opm
                 } else {
                     THROW("Unseen well name: " << lines[i].well_ << " first seen in WCONPROD");
                 }
-                
+
             }
         }
-        
+
         // Add wells.
         for (int w = 0; w < num_wells; ++w) {
             const int w_num_perf = wellperf_data[w].size();
