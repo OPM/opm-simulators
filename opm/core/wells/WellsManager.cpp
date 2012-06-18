@@ -28,11 +28,10 @@
 #include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
 
 #include <tr1/array>
+#include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <algorithm>
-
-#include <cassert>
 #include <fstream>
 
 
