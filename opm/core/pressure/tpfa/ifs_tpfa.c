@@ -378,7 +378,7 @@ assemble_well_contrib(int                   nc ,
                 break;
 
             case RESERVOIR_RATE:
-                for (p = 0; p < np; ++p) {
+                for (p = 0; p < np; p++) {
                     if (ctrls->distr[np * ctrls->current + p] != 1.0) {
                         *ok = 0;
                         break;
@@ -539,7 +539,7 @@ well_solution(const struct UnstructuredGrid *G   ,
 
     if (soln->well_press != NULL) {
         /* Extract BHP directly from solution vector for non-shut wells */
-        for (w = 0; w < F->W->number_of_wells; ++w) {
+        for (w = 0; w < F->W->number_of_wells; w++) {
             if (F->W->ctrls[w]->current >= 0) {
                 soln->well_press[w] = h->x[G->number_of_cells + w];
             }
@@ -585,7 +585,8 @@ assemble_incompressible(struct UnstructuredGrid      *G     ,
     int res_is_neumann, wells_are_rate;
 
     double s;
-    *ok=1;
+
+    *ok = 1;
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
@@ -733,9 +734,11 @@ ifs_tpfa_assemble_comprock(struct UnstructuredGrid      *G        ,
      * after it will always be nonsingular.
      */
     if (ok) {
-        for (c = 0; c < G->number_of_cells; ++c) {
+        for (c = 0; c < G->number_of_cells; c++) {
             j = csrmatrix_elm_index(c, c, h->A);
+
             d = porevol[c] * rock_comp[c] / dt;
+
             h->A->sa[j] += d;
             h->b[c]     += d * pressure[c];
         }
@@ -761,7 +764,7 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
 {
     int     c, w, wdof, system_singular, ok;
     size_t  j;
-    double *v;
+    double *v, dpvdt;
 
     ok = 1;
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
@@ -775,17 +778,22 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
         v = h->pimpl->work;
         mult_csr_matrix(h->A, prev_pressure, v);
 
-        for (c = 0; c < G->number_of_cells; ++c) {
+        for (c = 0; c < G->number_of_cells; c++) {
             j = csrmatrix_elm_index(c, c, h->A);
+
+            dpvdt = (porevol[c] - initial_porevolume[c]) / dt;
+
             h->A->sa[j] += porevol[c] * rock_comp[c] / dt;
-            h->b[c]     += -(porevol[c] - initial_porevolume[c])/dt - v[c];
+            h->b[c]     -= dpvdt + v[c];
         }
-	if (F->W != NULL) {
-	    for (w = 0; w < F->W->number_of_wells; ++w) {
-                wdof = G->number_of_cells + w;
-		h->b[wdof] += -v[wdof];
-	    }
-	}
+
+        if (F->W != NULL) {
+            wdof = G->number_of_cells;
+
+            for (w = 0; w < F->W->number_of_wells; w++, wdof++) {
+                h->b[wdof] -= v[wdof];
+            }
+        }
     }
 
     return ok;
