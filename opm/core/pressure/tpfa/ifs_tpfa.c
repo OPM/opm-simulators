@@ -695,6 +695,7 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
 /* ---------------------------------------------------------------------- */
 {
     int system_singular, ok;
+
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
     if (ok && system_singular) {
