@@ -737,7 +737,9 @@ namespace Opm
     void WellNode::shutWell() 
     {
         if (shut_well_) {
-            set_current_control(self_index_, -1, wells_);
+        	// We set the tilde of the current control
+            // set_current_control(self_index_, -1, wells_);
+        	wells_->ctrls[self_index_]->current = ~ wells_->ctrls[self_index_]->current;
         }
         else {
             const double target = 0.0;
@@ -755,7 +757,7 @@ namespace Opm
                 wells_->ctrls[self_index_]->target[group_control_index_] = target;
                 std::copy(distr, distr + np, wells_->ctrls[self_index_]->distr + np * group_control_index_);
             }
-            set_current_control(self_index_, -1, wells_);
+            wells_->ctrls[self_index_]->current = ~ wells_->ctrls[self_index_]->current;
         }
     }
     

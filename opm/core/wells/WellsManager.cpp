@@ -28,7 +28,13 @@
 #include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
 
 #include <tr1/array>
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <map>
+#include <string>
+#include <utility>
 
 
 // Helper structs and functions for the implementation.
@@ -56,25 +62,41 @@ namespace
     {
         enum Mode { ORAT, WRAT, GRAT,
                     LRAT, CRAT, RESV,
-                    BHP, THP, GRUP };
+                    BHP , THP , GRUP };
+
+        namespace Details {
+            std::map<std::string, Mode>
+            init_mode_map() {
+                std::map<std::string, Mode> m;
+
+                m.insert(std::make_pair("ORAT", ORAT));
+                m.insert(std::make_pair("WRAT", WRAT));
+                m.insert(std::make_pair("GRAT", GRAT));
+                m.insert(std::make_pair("LRAT", LRAT));
+                m.insert(std::make_pair("CRAT", CRAT));
+                m.insert(std::make_pair("RESV", RESV));
+                m.insert(std::make_pair("BHP" , BHP ));
+                m.insert(std::make_pair("THP" , THP ));
+                m.insert(std::make_pair("GRUP", GRUP));
+
+                return m;
+            }
+        } // namespace Details
+
         Mode mode(const std::string& control)
         {
-            const int num_prod_control_modes = 9;
-            static std::string prod_control_modes[num_prod_control_modes] =
-                {std::string("ORAT"), std::string("WRAT"), std::string("GRAT"),
-                 std::string("LRAT"), std::string("CRAT"), std::string("RESV"),
-                 std::string("BHP"), std::string("THP"), std::string("GRUP") };
-            int m = -1;
-            for (int i=0; i<num_prod_control_modes; ++i) {
-                if (control == prod_control_modes[i]) {
-                    m = i;
-                    break;
-                }
+            static std::map<std::string, Mode>
+                mode_map = Details::init_mode_map();
+
+            std::map<std::string, Mode>::iterator
+                p = mode_map.find(control);
+
+            if (p != mode_map.end()) {
+                return p->second;
             }
-            if (m >= 0) {
-                return static_cast<Mode>(m);
-            } else {
-                THROW("Unknown well control mode = " << control << " in input file");
+            else {
+                THROW("Unknown well control mode = "
+                      << control << " in input file");
             }
         }
     } // namespace ProductionControl
@@ -84,24 +106,36 @@ namespace
     {
         enum Mode { RATE, RESV, BHP,
                     THP, GRUP };
+
+        namespace Details {
+            std::map<std::string, Mode>
+            init_mode_map() {
+                std::map<std::string, Mode> m;
+
+                m.insert(std::make_pair("RATE", RATE));
+                m.insert(std::make_pair("RESV", RESV));
+                m.insert(std::make_pair("BHP" , BHP ));
+                m.insert(std::make_pair("THP" , THP ));
+                m.insert(std::make_pair("GRUP", GRUP));
+
+                return m;
+            }
+        } // namespace Details
+
         Mode mode(const std::string& control)
         {
-            const int num_inje_control_modes = 5;
-            static std::string inje_control_modes[num_inje_control_modes] =
-                {std::string("RATE"), std::string("RESV"), std::string("BHP"),
-                 std::string("THP"), std::string("GRUP") };
-            int m = -1;
-            for (int i=0; i<num_inje_control_modes; ++i) {
-                if (control == inje_control_modes[i]) {
-                    m = i;
-                    break;
-                }
-            }
+            static std::map<std::string, Mode>
+                mode_map = Details::init_mode_map();
 
-            if (m >= 0) {
-                return static_cast<Mode>(m);
-            } else {
-                THROW("Unknown well control mode = " << control << " in input file");
+            std::map<std::string, Mode>::iterator
+                p = mode_map.find(control);
+
+            if (p != mode_map.end()) {
+                return p->second;
+            }
+            else {
+                THROW("Unknown well control mode = "
+                      << control << " in input file");
             }
         }
     } // namespace InjectionControl
@@ -408,10 +442,10 @@ namespace Opm
                 } else {
                     THROW("Unseen well name: " << lines[i].well_ << " first seen in WCONPROD");
                 }
-                
+
             }
         }
-        
+
         // Add wells.
         for (int w = 0; w < num_wells; ++w) {
             const int w_num_perf = wellperf_data[w].size();
@@ -425,7 +459,7 @@ namespace Opm
             // We initialize all wells with a null component fraction,
             // and must (for injection wells) overwrite it later.
             int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
-                              comp_frac, &perf_cells[0], &perf_prodind[0], w_);
+                              comp_frac, &perf_cells[0], &perf_prodind[0], well_names[w].c_str(), w_);
             if (!ok) {
                 THROW("Failed adding well " << well_names[w] << " to Wells data structure.");
             }
@@ -486,9 +520,13 @@ namespace Opm
                             THROW("Failure occured appending controls for well " << well_names[wix]);
                         }
                         InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
-                        const int cpos = control_pos[mode];
+                        int cpos = control_pos[mode];
                         if (cpos == -1 && mode != InjectionControl::GRUP) {
                             THROW("Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
+                        }
+                        // We need to check if the well is shut or not
+                        if (wci_line.open_shut_flag_ == "SHUT") {
+                        	cpos = ~cpos;
                         }
                         set_current_control(wix, cpos, w_);
 
@@ -610,9 +648,13 @@ namespace Opm
                             THROW("Failure occured appending controls for well " << well_names[wix]);
                         }
                         ProductionControl::Mode mode = ProductionControl::mode(wcp_line.control_mode_);
-                        const int cpos = control_pos[mode];
+                        int cpos = control_pos[mode];
                         if (cpos == -1 && mode != ProductionControl::GRUP) {
                             THROW("Control mode type " << mode << " not present in well " << well_names[wix]);
+                        }
+                        // If it's shut, we complement the cpos
+                        if (wcp_line.open_shut_flag_ == "SHUT") {
+                        	cpos = ~cpos; // So we can easily retrieve the cpos later
                         }
                         set_current_control(wix, cpos, w_);
                     }
@@ -673,6 +715,34 @@ namespace Opm
         */
 #endif
 
+        if (deck.hasField("WELOPEN")) {
+        	const WELOPEN& welopen = deck.getWELOPEN();
+
+        	for (size_t i = 0; i < welopen.welopen.size(); ++i) {
+        		WelopenLine line = welopen.welopen[i];
+        		std::string wellname = line.well_;
+        		std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
+        		if (it == well_names_to_index.end()) {
+        			THROW("Trying to open/shut well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
+        		}
+        		int index = it->second;
+        		if (line.openshutflag_ == "SHUT") {
+        			// We currently don't care if the well is open or not.
+        			/// \TODO Should this perhaps be allowed? I.e. should it be if(well_shut) { shutwell(); } else { /* do nothing*/ }?
+        			//ASSERT(w_->ctrls[index]->current < 0);
+        		} else if (line.openshutflag_ == "OPEN") {
+        			//ASSERT(w_->ctrls[index]->current >= 0);
+        		} else {
+        			THROW("Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
+        		}
+
+        		// We revert back to it's original control.
+        		// Note that this is OK as ~~ = id.
+        		w_->ctrls[index]->current = ~w_->ctrls[index]->current;
+
+
+        	}
+        }
 
         // Build the well_collection_ well group hierarchy.
         if (deck.hasField("GRUPTREE")) {
