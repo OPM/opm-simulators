@@ -585,7 +585,7 @@ assemble_incompressible(struct UnstructuredGrid      *G     ,
     int res_is_neumann, wells_are_rate;
 
     double s;
-
+    *ok=1;
     csrmatrix_zero(         h->A);
     vector_zero   (h->A->m, h->b);
 
@@ -694,7 +694,6 @@ ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
 /* ---------------------------------------------------------------------- */
 {
     int system_singular, ok;
-
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
     if (ok && system_singular) {
