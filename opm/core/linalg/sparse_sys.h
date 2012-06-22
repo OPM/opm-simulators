@@ -123,8 +123,8 @@ csrmatrix_new_elms_pushback(struct CSRMatrix *A);
  *              element set of row @c i.
  * \param[in] A Matrix.
  *
- * \return Non-zero index, into @c A->ja and @c A->sa, of the @c (i,j)
- * matrix element.
+ * \return Non-zero index, into @c A->ja and @c A->sa, of the
+ * <CODE>(i,j)</CODE> matrix element.
  */
 size_t
 csrmatrix_elm_index(int i, int j, const struct CSRMatrix *A);
