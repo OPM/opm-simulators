@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "sparse_sys.h"
+#include <opm/core/linalg/sparse_sys.h>
 
 
 /* ---------------------------------------------------------------------- */
