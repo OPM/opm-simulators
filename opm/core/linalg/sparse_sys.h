@@ -20,6 +20,11 @@
 #ifndef OPM_SPARSE_SYS_HEADER_INCLUDED
 #define OPM_SPARSE_SYS_HEADER_INCLUDED
 
+/**
+ * \file
+ * Data structure and operations to manage sparse matrices in CSR formats.
+ */
+
 #include <stddef.h>
 #include <stdio.h>
 
@@ -27,56 +32,214 @@
 extern "C" {
 #endif
 
-
+/**
+ * Basic compressed-sparse row (CSR) matrix data structure.
+ */
 struct CSRMatrix
 {
-    size_t      m;
-    size_t      nnz;
+    size_t      m;    /** Number of rows */
+    size_t      nnz;  /** Number of structurally non-zero elements */
 
-    int        *ia;
-    int        *ja;
+    int        *ia;   /** Row pointers */
+    int        *ja;   /** Column indices */
 
-    double     *sa;
+    double     *sa;   /** Matrix elements */
 };
 
 
-
+/**
+ * Allocate a matrix structure and corresponding row pointers,
+ * @c ia, sufficiently initialised to support "count and push-back"
+ * construction scheme.
+ *
+ * The matrix will be fully formed in csrmatrix_new_elms_pushback().
+ *
+ * \param[in] m Number of matrix rows.
+ *
+ * \return Allocated matrix structure with allocated row pointers and
+ * valid @c m field.  The row pointer elements are initialised all zero
+ * to simplify the non-zero element counting procedure.  The @c ja and
+ * @c sa fields are NULL.  This function returns NULL in case of
+ * allocation failure.
+ */
 struct CSRMatrix *
 csrmatrix_new_count_nnz(size_t m);
 
+
+/**
+ * Allocate a matrix structure and all constituent fields to hold a
+ * sparse matrix with a specified number of (structural) non-zero
+ * elements.
+ *
+ * The contents of the individual matrix arrays is undefined.  In particular,
+ * the sparsity pattern must be constructed through some other, external,
+ * means prior to using the matrix in (e.g.,) a global system assembly
+ * process.
+ *
+ * The memory resources should be released through the csrmatrix_delete()
+ * function.
+ *
+ * \param[in] m   Number of matrix rows.
+ * \param[in] nnz Number of structural non-zeros.
+ *
+ * \return Allocated matrix structure and constituent element arrays.
+ * NULL in case of allocation failure.
+ */
 struct CSRMatrix *
 csrmatrix_new_known_nnz(size_t m, size_t nnz);
 
+
+/**
+ * Set row pointers and allocate column index and matrix element arrays of
+ * a matrix previous obtained from csrmatrix_new_count_nnz().
+ *
+ * The memory resources should be released through the csrmatrix_delete()
+ * function.
+ *
+ * This function assumes that, on input, the total number of structurally
+ * non-zero elements of row @c i are stored in @c A->ia[i+1] for all
+ * <CODE>i = 0, ..., A->m - 1</CODE> and that <CODE>A->ia[0] == 0</CODE>.
+ * If successful, then on output the row pointers are valid.  If not, then
+ * the @c A->ja and @c A->sa arrays remain unallocated.
+ *
+ * Following a successful call to csmatrix_new_elms_pushback(), the entire
+ * matrix structure (sparsity pattern) is structurally consistent, but the
+ * contents of the @c ja and @c sa arrays is undefined and must be set prior
+ * to using the matrix in, e.g., a pressure system solve.
+ *
+ * \param[in,out] A Matrix.
+ *
+ * \return Total number of allocated non-zeros, <CODE>A->nnz ==
+ * A->ia[A->m]</CODE> if successful and zero in case of allocation failure.
+ */
 size_t
 csrmatrix_new_elms_pushback(struct CSRMatrix *A);
 
+
+/**
+ * Compute non-zero index of specified matrix element.
+ *
+ * \param[in] i Row index.
+ * \param[in] j Column index.  Must be in the structural non-zero
+ *              element set of row @c i.
+ * \param[in] A Matrix.
+ *
+ * \return Non-zero index, into @c A->ja and @c A->sa, of the @c (i,j)
+ * matrix element.
+ */
 size_t
 csrmatrix_elm_index(int i, int j, const struct CSRMatrix *A);
 
+
+/**
+ * Sort column indices within each matrix row in ascending order.
+ *
+ * The corresponding matrix elements (i.e., @c sa) are not referenced.
+ * Consequently, following a call to csrmatrix_sortrows(), all relations
+ * to any pre-existing matrix elements are lost and must be rebuilt.
+ *
+ * After a call to csrmatrix_sortrows(), the following relation holds
+ * <CODE>A->ja[k] < A->ja[k+1]</CODE> for all <CODE>k = A->ia[i], ...,
+ * A->ia[i+1]-2</CODE> in each row <CODE>i = 0, ..., A->m - 1</CODE>.
+ *
+ * \param[in,out] A Matrix.
+ */
 void
 csrmatrix_sortrows(struct CSRMatrix *A);
 
+
+/**
+ * Dispose of memory resources obtained through prior calls to
+ * allocation routines.
+ *
+ * \param[in] A Matrix obtained from csrmatrix_new_count_nnz() +
+ *            csrmatrix_new_elms_pushback() or
+ *            csrmatrix_new_known_nnz().
+ *
+ * The pointer @c A is invalid following a call to csrmatrix_delete().
+ */
 void
 csrmatrix_delete(struct CSRMatrix *A);
 
+
+/**
+ * Zero all matrix elements, typically in preparation of
+ * elemental assembly.
+ *
+ * \param[in,out] A Matrix for which to zero the elements.
+ */
 void
 csrmatrix_zero(struct CSRMatrix *A);
 
-/* ---------------------------------------------------------------------- */
-/* v = zeros([n, 1]) */
-/* ---------------------------------------------------------------------- */
+
+/**
+ * Zero all vector elements.
+ *
+ * \param[in]  n Number of vector elements.
+ * \param[out] v Vector for which to zero the elements.
+ */
 void
 vector_zero(size_t n, double *v);
 
+
+/**
+ * Print matrix to file.
+ *
+ * The matrix content is printed in coordinate format with row and
+ * column indices ranging from @c 1 to @c A->m.  This output format
+ * facilitates simple processing through the @c spconvert function in
+ * MATLAB© or Octave.
+ *
+ * This function is implemented in terms of csrmatrix_write_stream().
+ *
+ * \param[in] A  Matrix.
+ * \param[in] fn Name of file to which matrix contents will be output.
+ */
 void
 csrmatrix_write(const struct CSRMatrix *A, const char *fn);
 
+
+/**
+ * Print matrix to stream.
+ *
+ * The matrix content is printed in coordinate format with row and
+ * column indices ranging from @c 1 to @c A->m.  This output format
+ * facilitates simple processing through the @c spconvert function in
+ * MATLAB© or Octave.
+ *
+ * \param[in] A  Matrix.
+ * \param[in] fp Open (text) stream to which matrix contents will be output.
+ */
 void
 csrmatrix_write_stream(const struct CSRMatrix *A, FILE *fp);
 
+
+/**
+ * Print vector to file.
+ *
+ * Elements are printed with one line (separated by '\n')
+ * per vector element.
+ *
+ * This function is implemented in terms of vector_write_stream().
+ *
+ * \param[in] n  Number of vector elements.
+ * \param[in] v  Vector.
+ * \param[in] fn Name of file to which vector contents will be output.
+ */
 void
 vector_write(size_t n, const double *v, const char *fn);
 
+
+/**
+ * Print vector to stream.
+ *
+ * Elements are printed with one line (separated by '\n')
+ * per vector element.
+ *
+ * \param[in] n  Number of vector elements.
+ * \param[in] v  Vector.
+ * \param[in] fp Open (text) stream to which vector contents will be output.
+ */
 void
 vector_write_stream(size_t n, const double *v, FILE *fp);
 
