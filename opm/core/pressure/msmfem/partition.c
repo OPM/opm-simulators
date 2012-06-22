@@ -22,8 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dfs.h"
-#include "partition.h"
+#include <opm/core/pressure/msmfem/dfs.h>
+#include <opm/core/pressure/msmfem/partition.h>
 
 
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))

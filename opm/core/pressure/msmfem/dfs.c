@@ -20,7 +20,7 @@
 
 #include <assert.h>
 
-#include "dfs.h"
+#include <opm/core/pressure/msmfem/dfs.h>
 
 /* 
  * Assign color (nonnegative number) to each connected component of graph 
