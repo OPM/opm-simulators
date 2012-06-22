@@ -58,9 +58,9 @@ struct CSRMatrix
  *
  * \return Allocated matrix structure with allocated row pointers and
  * valid @c m field.  The row pointer elements are initialised all
- * zero to simplify the non-zero element counting procedure.  The @c
- * ja and @c sa fields are NULL.  This function returns NULL in case
- * of allocation failure.
+ * zero to simplify the non-zero element counting procedure.  The
+ * @c ja and @c sa fields are @c NULL.  This function returns @c NULL
+ * in case of allocation failure.
  */
 struct CSRMatrix *
 csrmatrix_new_count_nnz(size_t m);
@@ -83,7 +83,7 @@ csrmatrix_new_count_nnz(size_t m);
  * \param[in] nnz Number of structural non-zeros.
  *
  * \return Allocated matrix structure and constituent element arrays.
- * NULL in case of allocation failure.
+ * @c NULL in case of allocation failure.
  */
 struct CSRMatrix *
 csrmatrix_new_known_nnz(size_t m, size_t nnz);
@@ -98,17 +98,12 @@ csrmatrix_new_known_nnz(size_t m, size_t nnz);
  * csrmatrix_delete() function.
  *
  * This function assumes that, on input, the total number of
- * structurally non-zero elements of row @c i are stored in @c
- * A->ia[i+1] for all <CODE>i = 0, ..., A->m - 1</CODE> and that
- * <CODE>A->ia[0] == 0</CODE>.  If successful, then on output the row
- * pointers are valid.  If not, then the @c A->ja and @c A->sa arrays
- * remain unallocated.
- *
- * Following a successful call to csmatrix_new_elms_pushback(), the
- * entire matrix structure (sparsity pattern) is structurally
- * consistent, but the contents of the @c ja and @c sa arrays is
- * undefined and must be set prior to using the matrix in, e.g., a
- * pressure system solve.
+ * structurally non-zero elements of row @c i are stored in
+ * <CODE>A->ia[i+1]</CODE> for all <CODE>i = 0, ..., A->m - 1</CODE>
+ * and that <CODE>A->ia[0] == 0</CODE>.  If successful, then on output
+ * the row \em end pointers <CODE>A->ia[i+1]</CODE> are positioned at
+ * the \em start of the corresponding rows.  If not, then the
+ * <CODE>A->ja</CODE> and <CODE>A->sa</CODE> arrays remain unallocated.
  *
  * \param[in,out] A Matrix.
  *
@@ -157,9 +152,9 @@ csrmatrix_sortrows(struct CSRMatrix *A);
  * Dispose of memory resources obtained through prior calls to
  * allocation routines.
  *
- * \param[in] A Matrix obtained from csrmatrix_new_count_nnz() +
- *            csrmatrix_new_elms_pushback() or
- *            csrmatrix_new_known_nnz().
+ * \param[in,out] A Matrix obtained from csrmatrix_new_count_nnz() +
+ *                csrmatrix_new_elms_pushback() or
+ *                csrmatrix_new_known_nnz().
  *
  * The pointer @c A is invalid following a call to csrmatrix_delete().
  */
@@ -212,9 +207,9 @@ csrmatrix_write(const struct CSRMatrix *A, const char *fn);
  * facilitates simple processing through the @c spconvert function in
  * MATLAB© or Octave.
  *
- * \param[in] A  Matrix.
- * \param[in] fp Open (text) stream to which matrix contents will be
- *               output.
+ * \param[in]     A  Matrix.
+ * \param[in,out] fp Open (text) stream to which matrix contents
+ *                   will be output.
  */
 void
 csrmatrix_write_stream(const struct CSRMatrix *A, FILE *fp);
@@ -223,8 +218,8 @@ csrmatrix_write_stream(const struct CSRMatrix *A, FILE *fp);
 /**
  * Print vector to file.
  *
- * Elements are printed with one line (separated by '\n') per vector
- * element.
+ * Elements are printed with one line (separated by <CODE>'\n'</CODE>)
+ * per vector element.
  *
  * This function is implemented in terms of vector_write_stream().
  *
@@ -239,13 +234,13 @@ vector_write(size_t n, const double *v, const char *fn);
 /**
  * Print vector to stream.
  *
- * Elements are printed with one line (separated by '\n') per vector
- * element.
+ * Elements are printed with one line (separated by <CODE>'\n'</CODE>)
+ * per vector element.
  *
- * \param[in] n  Number of vector elements.
- * \param[in] v  Vector.
- * \param[in] fp Open (text) stream to which vector contents will be
- *               output.
+ * \param[in]     n  Number of vector elements.
+ * \param[in]     v  Vector.
+ * \param[in,out] fp Open (text) stream to which vector contents will be
+ *                   output.
  */
 void
 vector_write_stream(size_t n, const double *v, FILE *fp);
