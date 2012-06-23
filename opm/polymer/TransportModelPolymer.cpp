@@ -391,7 +391,7 @@ namespace Opm
 	    // Solve for s first.
 	    // s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
 	    //     		    tm.maxit_, tm.tol_, iters_used);
-	    s = RootFinder::solve(res_s, s, 0.0, 1.0,
+	    s = RootFinder::solve(res_s, s0, 0.0, 1.0,
                                   tm.maxit_, tm.tol_, iters_used);
 	    double ff;
             tm.fracFlow(s, c, cmax0, cell, ff);
@@ -991,7 +991,7 @@ namespace Opm
 	    // We first try a Newton step
 	    double dres_s_dsdc[2];
 	    double dres_c_dsdc[2];
-	    double dx=1e-6;
+	    double dx=tol_;
 	    double tmp_x[2];
 	    if(!(x[0]>0)){
 		tmp_x[0]=dx;
@@ -1026,7 +1026,7 @@ namespace Opm
 	      std::cout << "Nonlinear " << iters_used_split
 	      << "  " << norm(res_new)
 	      << "  " << norm(res) << std::endl;*/
-	    
+	    /*
 	      std::cout  << "x" << std::endl;
 	      std::cout  << " " <<  x[0] << " " <<  x[1] << std::endl;
 	      std::cout  << "dF" << std::endl;
@@ -1036,7 +1036,7 @@ namespace Opm
 	      std::cout  << " " <<  dres_s_dsdc[0] << " " <<  dres_s_dsdc[1] << std::endl;
 	      std::cout  << " " <<  dres_c_dsdc[0] << " " <<  dres_c_dsdc[1] << std::endl;
 	      std::cout  << std::endl;
-	    
+	    */
 	    res_new[0]=res[0]*2;
 	    res_new[1]=res[1]*2;
 	    double update[2]={(res[0]*dFy_dy - res[1]*dFx_dy)/det,
@@ -1070,7 +1070,7 @@ namespace Opm
 	}
 		
 	if ((iters_used_split >=  max_iters_split) || (norm(res) > tol_)) {
-	    MESSAGE("Newton for single cell did not work in cell number " << cell);
+	    MESSAGE("NewtonSimple for single cell did not work in cell number " << cell);
 	    solveSingleCellBracketing(cell);
 	} else {
 	    concentration_[cell] = x[1];
@@ -1176,7 +1176,8 @@ namespace Opm
         if (if_with_der) {
             dmob_dc[0] = dmobwat_dc;
             dmob_dc[1] = 0.;
-            dff_dsdc[0] = (dmob_ds[0]*mob[1] + dmob_ds[3]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
+            //dff_dsdc[0] = (dmob_ds[0]*mob[1] + dmob_ds[3]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
+	    dff_dsdc[0] = ((dmob_ds[1]-dmob_ds[2])*mob[1] - (dmob_ds[1]-dmob_ds[3])*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s 
             dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
         }
     }
