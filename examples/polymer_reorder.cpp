@@ -43,6 +43,7 @@
 #include <opm/core/fluid/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
+//#include <opm/core/linalg/LinearSolverAGMG.hpp>
 
 #include <opm/core/transport/transport_source.h>
 #include <opm/core/transport/CSRMatrixUmfpackSolver.hpp>
@@ -486,13 +487,13 @@ main(int argc, char** argv)
         double c_max = param.getDefault("c_max_limit", 5.0);
         double mix_param = param.getDefault("mix_param", 1.0);
         double rock_density = param.getDefault("rock_density", 1000.0);
-        double dead_pore_vol = param.getDefault("dead_pore_vol", 0.15);
+        double dead_pore_vol = param.getDefault("dead_pore_vol", 0.1);
         double res_factor = param.getDefault("res_factor", 1.) ; // res_factor = 1 gives no change in permeability
         double c_max_ads = param.getDefault("c_max_ads", 1.);
         int ads_index = param.getDefault<int>("ads_index", Opm::PolymerProperties::NoDesorption);
         std::vector<double> c_vals_visc(2, -1e100);
         c_vals_visc[0] = 0.0;
-        c_vals_visc[1] = 7.0;
+        c_vals_visc[1] = c_max;
         std::vector<double> visc_mult_vals(2, -1e100);
         visc_mult_vals[0] = 1.0;
         visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
@@ -587,6 +588,7 @@ main(int argc, char** argv)
     // Solvers init.
     // Linear solver.
     Opm::LinearSolverFactory linsolver(param);
+    //Opm::LinearSolverAGMG linsolver;
     // Pressure solver.
     const double *grav = use_gravity ? &gravity[0] : 0;
     Opm::IncompTpfaPolymer psolver(*grid->c_grid(), *props, rock_comp.get(), polyprop, linsolver,
