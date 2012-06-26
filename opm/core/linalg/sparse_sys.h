@@ -37,13 +37,13 @@ extern "C" {
  */
 struct CSRMatrix
 {
-    size_t      m;    /** Number of rows */
-    size_t      nnz;  /** Number of structurally non-zero elements */
+    size_t      m;    /**< Number of rows */
+    size_t      nnz;  /**< Number of structurally non-zero elements */
 
-    int        *ia;   /** Row pointers */
-    int        *ja;   /** Column indices */
+    int        *ia;   /**< Row pointers */
+    int        *ja;   /**< Column indices */
 
-    double     *sa;   /** Matrix elements */
+    double     *sa;   /**< Matrix elements */
 };
 
 
