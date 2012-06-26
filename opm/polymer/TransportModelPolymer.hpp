@@ -157,7 +157,8 @@ namespace Opm
 	std::vector<double> mc_;  // one per cell
 	const double* visc_;
 	SingleCellMethod method_;
-
+	double adhoc_safety_;
+	
         // For gravity segregation.
         std::vector<double> gravflux_;
         std::vector<double> mob_;

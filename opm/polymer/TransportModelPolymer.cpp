@@ -196,7 +196,8 @@ namespace Opm
 	  cmax_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
 	  mc_(grid.number_of_cells, -1.0),
-	  method_(method)
+	  method_(method),
+	  adhoc_safety_(1.0) 
     {
 	if (props.numPhases() != 2) {
 	    THROW("Property object must have 2 phases");
@@ -660,7 +661,7 @@ namespace Opm
     {
 	ResidualC res(*this, cell);
 	const double a = 0.0;
-	const double b = polyprops_.cMax()*1.1; // Add 10% to account for possible non-monotonicity of hyperbolic system.
+	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
 	int iters_used;
 
 	// Check if current state is an acceptable solution.
@@ -709,7 +710,7 @@ namespace Opm
 	} 
 
         double x_min[2] = { 0.0, 0.0 };
-	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
+	double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
         double x_min_res_s[2] = { x_min[0], x_min[1] };
         double x_max_res_s[2] = { x_max[0], x_min[0] };
         double x_min_res_sc[2] = { x_min[0], x_min[1] };
@@ -867,7 +868,7 @@ namespace Opm
 	}
 
         const double x_min[2] = { 0.0, 0.0 };
-	const double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
+	const double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
 	bool successfull_newton_step = true;
         // initialize x_new to avoid warning
 	double x_new[2] = {0.0, 0.0};
@@ -978,7 +979,7 @@ namespace Opm
 
 	// double x_min[2] = { std::max(polyprops_.deadPoreVol(), smin_[2*cell]), 0.0 };
         double x_min[2] = { 0.0, 0.0 };
-	double x_max[2] = { 1.0, polyprops_.cMax()*1.1 };
+	double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
 	bool successfull_newton_step = true;
 	double x_new[2];
 	double res_new[2];
@@ -1172,12 +1173,14 @@ namespace Opm
 	double dmobwat_dc;
         polyprops_.effectiveMobilitiesBoth(c, cmax, visc_, relperm, drelperm_ds,
                                            mob, dmob_ds, dmobwat_dc, if_with_der);
+	
  	ff = mob[0]/(mob[0] + mob[1]);
         if (if_with_der) {
             dmob_dc[0] = dmobwat_dc;
             dmob_dc[1] = 0.;
             //dff_dsdc[0] = (dmob_ds[0]*mob[1] + dmob_ds[3]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
-	    dff_dsdc[0] = ((dmob_ds[1]-dmob_ds[2])*mob[1] - (dmob_ds[1]-dmob_ds[3])*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s 
+	    // at the moment the dmob_ds only have diagonal elements since the saturation is derivated out in effectiveMobilitiesBouth
+	    dff_dsdc[0] = ((dmob_ds[0]-dmob_ds[2])*mob[1] - (dmob_ds[1]-dmob_ds[3])*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s 
             dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
         }
     }
@@ -1372,7 +1375,7 @@ namespace Opm
         }
 
 	const double a = 0.0;
-	const double b = polyprops_.cMax()*1.1; // Add 10% to account for possible non-monotonicity of hyperbolic system.
+	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
         int iters_used;
         concentration_[cell] = RootFinder::solve(res_c, a, b, maxit_, tol_, iters_used);
         ResidualSGrav res_s(res_c);
