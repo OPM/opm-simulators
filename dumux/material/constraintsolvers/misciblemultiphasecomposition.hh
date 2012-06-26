@@ -36,6 +36,64 @@
 #include <dumux/common/valgrind.hh>
 
 namespace Dumux {
+
+/*!
+ * \brief Specifies an auxiliary constraint for the
+ *        MiscibleMultiPhaseComposition constraint solver.
+ *
+ * For this constraint solver, an auxiliary constraint is defined as a
+ * fixed mole fraction of a component in a fluid phase.
+ */
+template <class Scalar>
+class MMPCAuxConstraint
+{
+public:
+    MMPCAuxConstraint()
+    {}
+
+    MMPCAuxConstraint(int phaseIdx, int compIdx, Scalar value)
+        : phaseIdx_(phaseIdx)
+        , compIdx_(compIdx)
+        , value_(value)
+    {}
+
+    /*!
+     * \brief Specify the auxiliary constraint.
+     */
+    void set(int phaseIdx, int compIdx, Scalar value)
+    {
+        phaseIdx_ = phaseIdx;
+        compIdx_ = compIdx;
+        value_ = value;
+    }
+    
+    /*!
+     * \brief Returns the index of the fluid phase for which the
+     *        auxiliary constraint is specified.
+     */
+    int phaseIdx() const
+    { return phaseIdx_; }
+
+    /*!
+     * \brief Returns the index of the component for which the
+     *        auxiliary constraint is specified.
+     */
+    int compIdx() const
+    { return compIdx_; }
+
+    /*!
+     * \brief Returns value of the mole fraction of the auxiliary
+     *        constraint.
+     */
+    Scalar value() const
+    { return value_; }
+
+private:
+    int phaseIdx_;
+    int compIdx_;
+    Scalar value_;
+};
+
 /*!
  * \brief Computes the composition of all phases of a N-phase,
  *        N-component fluid system assuming that all N phases are
@@ -65,8 +123,8 @@ class MiscibleMultiPhaseComposition
     static constexpr int numPhases = FluidSystem::numPhases;
     static constexpr int numComponents = FluidSystem::numComponents;
 
-    static_assert(numComponents == numPhases,
-                  "This solver requires that the number fluid phases is equal "
+    static_assert(numPhases <= numComponents,
+                  "This solver requires that the number fluid phases is smaller or equal "
                   "to the number of components");
 
 
@@ -97,6 +155,9 @@ public:
     template <class FluidState, class ParameterCache>
     static void solve(FluidState &fluidState,
                       ParameterCache &paramCache,
+                      int phaseState,
+                      const MMPCAuxConstraint<Scalar> *auxConstraints,
+                      int numAuxConstraints,
                       bool setViscosity,
                       bool setInternalEnergy)
     {
@@ -123,25 +184,12 @@ public:
             }
         }
 
-
         // create the linear system of equations which defines the
         // mole fractions
-        Dune::FieldMatrix<Scalar, numComponents*numPhases, numComponents*numPhases> M(0.0);
-        Dune::FieldVector<Scalar, numComponents*numPhases> x(0.0);
-        Dune::FieldVector<Scalar, numComponents*numPhases> b(0.0);
-
-        // assemble the equations expressing the assumption that the
-        // sum of all mole fractions in each phase must be 1
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            int rowIdx = numComponents*(numPhases - 1) + phaseIdx;
-            b[rowIdx] = 1.0;
-
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                int colIdx = phaseIdx*numComponents + compIdx;
-
-                M[rowIdx][colIdx] = 1.0;
-            }
-        }
+        static constexpr int numEq = numComponents*numPhases;
+        Dune::FieldMatrix<Scalar, numEq, numEq> M(0.0);
+        Dune::FieldVector<Scalar, numEq> x(0.0);
+        Dune::FieldVector<Scalar, numEq> b(0.0);
 
         // assemble the equations expressing the fact that the
         // fugacities of each component is equal in all phases
@@ -164,10 +212,53 @@ public:
             }
         }
 
-        // solve for all mole fractions
-        M.solve(x, b);
+        // assemble the equations expressing the assumption that the
+        // sum of all mole fractions in each phase must be 1 for the
+        // phases present.
+        int presentPhases = 0;
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!(phaseState & (1 << phaseIdx)))
+                continue;
 
-        // set all mole fractions and the the additional quantities in
+            int rowIdx = numComponents*(numPhases - 1) + presentPhases;
+            presentPhases += 1;
+
+            b[rowIdx] = 1.0;
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+                int colIdx = phaseIdx*numComponents + compIdx;
+
+                M[rowIdx][colIdx] = 1.0;
+            }
+        }
+
+        assert(presentPhases + numAuxConstraints == numComponents);
+        
+        // assemble the equations expressing the assumption that the
+        // sum of all mole fractions in each phase must be 1 for the
+        // phases present.
+        for (int auxEqIdx = 0; auxEqIdx < numAuxConstraints; ++auxEqIdx) {
+            int rowIdx = numComponents*(numPhases - 1) + presentPhases + auxEqIdx;
+            b[rowIdx] = auxConstraints[auxEqIdx].value();
+
+            int colIdx = auxConstraints[auxEqIdx].phaseIdx()*numComponents + auxConstraints[auxEqIdx].compIdx();
+            M[rowIdx][colIdx] = 1.0;
+        }
+
+        // solve for all mole fractions
+        try {
+            Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-50);
+            M.solve(x, b);
+        }
+        catch (const Dune::FMatrixError &e) {
+            DUNE_THROW(NumericalProblem,
+                       "Numerical problem in MiscibleMultiPhaseComposition::solve(): " << NumericalProblem(e.what()) << "; M="<<M);
+        }
+        catch (...) {
+            throw;
+        }
+
+
+        // set all mole fractions and the additional quantities in
         // the fluid state
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
@@ -189,6 +280,28 @@ public:
                 fluidState.setEnthalpy(phaseIdx, value);
             }
         }
+    }
+
+    /*!
+     * \brief Computes the composition of all phases of a N-phase,
+     *        N-component fluid system assuming that all N phases are
+     *        present
+     *
+     * This is a convenience method where no auxiliary constraints are used.
+     */
+    template <class FluidState, class ParameterCache>
+    static void solve(FluidState &fluidState,
+                      ParameterCache &paramCache,
+                      bool setViscosity,
+                      bool setInternalEnergy)
+    {
+        solve(fluidState,
+              paramCache,
+              /*phaseState=*/0xffffff,
+              /*numAuxConstraints=*/0,
+              /*auxConstraints=*/0,
+              setViscosity,
+              setInternalEnergy);
     }
 };
 

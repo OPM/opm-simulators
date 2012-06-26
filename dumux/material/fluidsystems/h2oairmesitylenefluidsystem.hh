@@ -367,6 +367,8 @@ public:
                                        int phaseIdx,
                                        int compIdx)
     {
+        return 0;
+#if 0
         Scalar T = fluidState.temperature(phaseIdx) ;
         Scalar p = fluidState.pressure(phaseIdx);
         Scalar diffCont;
@@ -414,6 +416,7 @@ public:
                        "substances in liquid phase are undefined!\n");
         }
         return 0;
+#endif
     }
 
     /*!
