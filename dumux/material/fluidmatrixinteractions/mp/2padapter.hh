@@ -54,12 +54,12 @@ public:
                                    const Params &params,
                                    const FluidState &fluidState)
     {
-        // non-wetting phase gets the capillary pressure added
-        values[nPhaseIdx] = 0;
-
         // wetting phase does not get anything added
-        values[wPhaseIdx] = - TwoPLaw::pC(params, fluidState.saturation(wPhaseIdx));
-    }
+        values[wPhaseIdx] = 0;
+ 
+        // non-wetting phase gets the capillary pressure added
+        values[nPhaseIdx] = TwoPLaw::pC(params, fluidState.saturation(wPhaseIdx));
+   }
 
     /*!
      * \brief The inverse of the capillary pressure-saturation curve.
