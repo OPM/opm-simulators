@@ -1,7 +1,8 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2008-2009 by Melanie Darcis, Klaus Mosthaf                *
+ *   Copyright (C) 2008-2009 by Melanie Darcis                               *
+ *   Copyright (C) 2008-2009 by Klaus Mosthaf                                *
  *   Copyright (C) 2009-2012 by Andreas Lauser                               *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
@@ -29,7 +30,7 @@
 #define DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
 
 // The numerical model
-#include <dumux/boxmodels/2p/2pmodel.hh>
+#include <dumux/boxmodels/immiscible/immisciblemodel.hh>
 
 // The components that are used
 #include <dumux/material/components/h2o.hh>
@@ -56,7 +57,7 @@ class TutorialProblemCoupled;
 
 namespace Properties {
 // Create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxTwoP)); /*@\label{tutorial-coupled:create-type-tag}@*/
+NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxImmiscibleTwoPhase)); /*@\label{tutorial-coupled:create-type-tag}@*/
 
 // Set the "Problem" property
 SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
@@ -153,10 +154,6 @@ class TutorialProblemCoupled
     enum { contiWEqIdx = Indices::conti0EqIdx + wPhaseIdx };
     enum { contiNEqIdx = Indices::conti0EqIdx + nPhaseIdx };
 
-    // indices of the primary variables
-    enum { pwIdx = Indices::pwIdx };
-    enum { SnIdx = Indices::SnIdx };
-
 public:
     TutorialProblemCoupled(TimeManager &timeManager)
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
@@ -240,9 +237,7 @@ public:
                                                int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
-    /*!
-     * \brief Evaluate the boundary conditions.
-     */
+    //! Evaluate the boundary conditions.
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
     {
@@ -293,8 +288,23 @@ public:
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
-        values[pwIdx] = 200.0e3; // 200 kPa = 2 bar
-        values[SnIdx] = 1.0;
+        ImmiscibleFluidState<Scalar, FluidSystem> fs;
+
+        // the domain is initially fully saturated by oil
+        Scalar Sw = 0.0;
+        fs.setSaturation(wPhaseIdx, Sw);
+        fs.setSaturation(nPhaseIdx, 1.0 - Sw);
+
+        // the temperature is given by the temperature() method
+        fs.setTemperature(temperature(context, spaceIdx, timeIdx));
+        
+        // set pressure of the wetting phase to 200 kPa = 2 bar
+        Scalar pC[numPhases];
+        MaterialLaw::capillaryPressures(pC, materialLawParams(context, spaceIdx, timeIdx), fs);
+        fs.setPressure(wPhaseIdx, 200e3);
+        fs.setPressure(nPhaseIdx, 200e3 + pC[nPhaseIdx] - pC[nPhaseIdx]);
+        
+        values.assignNaive(fs);
     }
 
 private:
