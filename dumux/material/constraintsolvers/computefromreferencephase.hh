@@ -116,7 +116,6 @@ public:
                       bool setViscosity,
                       bool setEnthalpy)
     {
-        ComponentVector fugVec;
 
         // compute the density and enthalpy of the
         // reference phase
@@ -146,13 +145,18 @@ public:
                                                                                paramCache,
                                                                                refPhaseIdx,
                                                                                compIdx));
-            fugVec[compIdx] = fluidState.fugacity(refPhaseIdx, compIdx);
         }
 
         // compute all quantities for the non-reference phases
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (phaseIdx == refPhaseIdx)
                 continue; // reference phase is already calculated
+
+            ComponentVector fugVec;
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+                fugVec[compIdx] = 
+                    fluidState.fugacity(refPhaseIdx, compIdx)
+                    * fluidState.pressure(phaseIdx)/fluidState.pressure(refPhaseIdx);
 
             CompositionFromFugacities::guessInitial(fluidState, paramCache, phaseIdx, fugVec);
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);

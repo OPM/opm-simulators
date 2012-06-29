@@ -268,7 +268,6 @@ public:
         }
 
         assert (phaseIdx == gPhaseIdx);
-
         Scalar pH2O =
             fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
             fluidState.pressure(gPhaseIdx);
