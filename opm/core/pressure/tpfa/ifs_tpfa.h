@@ -20,6 +20,16 @@
 #ifndef OPM_IFS_TPFA_HEADER_INCLUDED
 #define OPM_IFS_TPFA_HEADER_INCLUDED
 
+/**
+ * \file
+ * Interfaces and data structures to assemble a system of simultaneous linear
+ * equations discretising a flow problem that is either incompressible or
+ * features rock compressibility using the two-point flux approximation method.
+ *
+ * Includes support for reconstructing the Darcy flux field as well as well
+ * connection fluxes.
+ */
+
 #include <opm/core/grid.h>
 
 #ifdef __cplusplus
@@ -31,37 +41,66 @@ struct CSRMatrix;
 struct FlowBoundaryConditions;
 struct Wells;
 
+/**
+ * Main data structure presenting a view of an assembled system of simultaneous
+ * linear equations which may be solved using external software.
+ */
 struct ifs_tpfa_data {
-    struct CSRMatrix     *A;
-    double               *b;
-    double               *x;
+    struct CSRMatrix     *A;      /**< Coefficient matrix */
+    double               *b;      /**< Right-hand side */
+    double               *x;      /**< Solution */
 
-    struct ifs_tpfa_impl *pimpl;
+    struct ifs_tpfa_impl *pimpl;  /**< Internal management structure */
 };
 
+/**
+ * Solution variables.
+ */
 struct ifs_tpfa_solution {
-    double *cell_press;
-    double *face_flux ;
+    double *cell_press;  /**< Cell pressures */
+    double *face_flux ;  /**< Interface fluxes */
 
-    double *well_press;         /* BHP */
-    double *well_flux ;         /* Perforation (total) fluxes */
+    double *well_press;  /**< Bottom-hole pressures for each well */
+    double *well_flux ;  /**< Well connection total fluxes */
 };
 
+/**
+ * Driving forces pertaining to a particular model setup.
+ */
 struct ifs_tpfa_forces {
-    const double                        *src;
-    const struct FlowBoundaryConditions *bc ;
+    const double                        *src;  /**< Explicit source terms */
+    const struct FlowBoundaryConditions *bc ;  /**< Boundary conditions */
 
-    const struct Wells *W     ;
-    const double       *totmob;
-    const double       *wdp   ;
+    const struct Wells *W     ;  /**< Well topology */
+    const double       *totmob;  /**< Total mobility in each cell */
+    const double       *wdp   ;  /**< Gravity adjustment at each perforation */
 };
 
 
+/**
+ * Allocate TPFA management structure capable of assembling a system of
+ * simultaneous linear equations corresponding to a particular grid and well
+ * configuration.
+ *
+ * @param[in] G Grid.
+ * @param[in] W Well topology.
+ * @return Fully formed TPFA management structure if successful, @c NULL in case
+ * of allocation failure.
+ */
 struct ifs_tpfa_data *
 ifs_tpfa_construct(struct UnstructuredGrid *G,
                    struct Wells            *W);
 
 
+/**
+ *
+ * @param[in]     G
+ * @param[in]     F
+ * @param[in]     trans
+ * @param[in]     gpress
+ * @param[in,out] h
+ * @return
+ */
 int
 ifs_tpfa_assemble(struct UnstructuredGrid      *G     ,
                   const struct ifs_tpfa_forces *F     ,
