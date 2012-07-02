@@ -52,8 +52,9 @@ namespace Dumux {
  * This sums up to M*(N + 2). On the equations side of things,
  * we have:
  *
- * - (M - 1)*N equation stemming from the fact that the
- *   fugacity of any component is the same in all phases
+ * - (M - 1)*N equation stemming from the fact that the fugacity
+ *   divided by the phase pressure of any component is the same in all
+ *   phases
  * - 1 equation from the closure condition of all saturations
  *   (they sum up to 1)
  * - M - 1 constraints from the capillary pressures
@@ -352,19 +353,19 @@ protected:
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
                 Valgrind::CheckDefined(fluidState.fugacity(phaseIdx, compIdx));
                 b[eqIdx] =
-                    fluidState.fugacity(/*phaseIdx=*/0, compIdx) -
-                    fluidState.fugacity(phaseIdx, compIdx);
+                    fluidState.fugacity(/*phaseIdx=*/0, compIdx)/fluidState.pressure(/*phaseIdx=*/0) -
+                    fluidState.fugacity(phaseIdx, compIdx)/fluidState.pressure(phaseIdx);
                 ++eqIdx;
             }
         }
 
         assert(eqIdx == numComponents*(numPhases - 1));
 
-        // the fact saturations must sum up to 1 is included explicitly!
+        // the fact saturations must sum up to 1 is included
+        // explicitly, and capillary pressures are also explicitly
+        // included!
 
-        // capillary pressures are explicitly included!
-
-        // global molarities are given
+        // the global molarities are given
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             b[eqIdx] = 0.0;
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
