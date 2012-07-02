@@ -99,6 +99,7 @@ namespace Opm
 
     /// Default constructor.
     SaturationPropsBasic::SaturationPropsBasic()
+        : num_phases_(0), relperm_func_(Constant)
     {
     }
 
