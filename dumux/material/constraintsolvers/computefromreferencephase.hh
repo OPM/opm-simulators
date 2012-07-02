@@ -157,6 +157,7 @@ public:
                 fugVec[compIdx] = 
                     fluidState.fugacity(refPhaseIdx, compIdx)
                     * fluidState.pressure(phaseIdx)/fluidState.pressure(refPhaseIdx);
+            }
 
             CompositionFromFugacities::guessInitial(fluidState, paramCache, phaseIdx, fugVec);
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);

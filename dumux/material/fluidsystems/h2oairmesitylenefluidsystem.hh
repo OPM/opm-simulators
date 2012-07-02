@@ -534,44 +534,18 @@ public:
             Scalar lambdaDryAir = Air::gasThermalConductivity(T, p);
             return lambdaDryAir;
         }
-        else { // NAPL phase
-            // Taken from: 
-            //
-            // D. K. H. Briggs: "Thermal Conductivity of Liquids",
-            // Ind. Eng. Chem., 1957, 49 (3), pp 418–421
-            //
-            // Convertion to SI units: 
-            // 344e-6 cal/(s cm K) = 0.0143964 J/(s m K)
-            return 0.0143964;
-        }
 
-        assert(0);
+        assert(phaseIdx == nPhaseIdx);
+        
+        // Taken from: 
+        //
+        // D. K. H. Briggs: "Thermal Conductivity of Liquids",
+        // Ind. Eng. Chem., 1957, 49 (3), pp 418–421
+        //
+        // Convertion to SI units: 
+        // 344e-6 cal/(s cm K) = 0.0143964 J/(s m K)
+        return 0.0143964;
     }
-
-
-private:
-    static Scalar waterPhaseDensity_(Scalar T, Scalar pw, Scalar xww, Scalar xwa, Scalar xwc)
-    {
-        Scalar rholH2O = H2O::liquidDensity(T, pw);
-        Scalar clH2O = rholH2O/H2O::molarMass();
-
-        // this assumes each dissolved molecule displaces exactly one
-        // water molecule in the liquid
-        return
-            clH2O*(xww*H2O::molarMass() + xwa*Air::molarMass() + xwc*NAPL::molarMass());
-    }
-
-    static Scalar gasPhaseDensity_(Scalar T, Scalar pg, Scalar xgw, Scalar xga, Scalar xgc)
-    {
-        return H2O::gasDensity(T, pg*xgw) + Air::gasDensity(T, pg*xga) + NAPL::gasDensity(T, pg*xgc);
-    }
-
-    static Scalar NAPLPhaseDensity_(Scalar T, Scalar pn)
-    {
-        return
-            NAPL::liquidDensity(T, pn);
-    }
-
 };
 } // end namespace FluidSystems
 } // end namespace Dumux
