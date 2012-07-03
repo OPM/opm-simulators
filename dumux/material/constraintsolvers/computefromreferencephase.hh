@@ -156,7 +156,8 @@ public:
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                 fugVec[compIdx] = 
                     fluidState.fugacity(refPhaseIdx, compIdx)
-                    * fluidState.pressure(phaseIdx)/fluidState.pressure(refPhaseIdx);
+                    / fluidState.pressure(refPhaseIdx)
+                    * fluidState.pressure(phaseIdx);
             }
 
             CompositionFromFugacities::guessInitial(fluidState, paramCache, phaseIdx, fugVec);
