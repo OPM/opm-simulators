@@ -108,6 +108,7 @@ static void outputState(const UnstructuredGrid& grid,
     Opm::writeVtkData(grid, dm, vtkfile);
 
     // Write data (not grid) in Matlab format
+    dm["faceflux"] = &state.faceflux();
     for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
         std::ostringstream fname;
         fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
@@ -396,7 +397,8 @@ main(int argc, char** argv)
     const int num_transport_substeps = param.getDefault("num_transport_substeps", 1);
 
     // If we have a "deck_filename", grid and props will be read from that.
-    bool use_deck = param.has("deck_filename");
+    bool use_deck = param.getDefault("use_deck", true);
+    use_deck = param.has("deck_filename") && use_deck;
     boost::scoped_ptr<Opm::GridManager> grid;
     boost::scoped_ptr<Opm::IncompPropertiesInterface> props;
     boost::scoped_ptr<Opm::WellsManager> wells;
@@ -459,8 +461,6 @@ main(int argc, char** argv)
         wells.reset(new Opm::WellsManager());
         // Timer init.
         simtimer.init(param);
-        // Rock compressibility.
-        rock_comp.reset(new Opm::RockCompressibility(param));
         // Gravity.
         gravity[2] = param.getDefault("gravity", 0.0);
         // Init state variables (saturation and pressure).
@@ -484,29 +484,39 @@ main(int argc, char** argv)
         }
         // Init polymer properties.
         // Setting defaults to provide a simple example case.
-        double c_max = param.getDefault("c_max_limit", 5.0);
-        double mix_param = param.getDefault("mix_param", 1.0);
-        double rock_density = param.getDefault("rock_density", 1000.0);
-        double dead_pore_vol = param.getDefault("dead_pore_vol", 0.1);
-        double res_factor = param.getDefault("res_factor", 1.) ; // res_factor = 1 gives no change in permeability
-        double c_max_ads = param.getDefault("c_max_ads", 1.);
-        int ads_index = param.getDefault<int>("ads_index", Opm::PolymerProperties::NoDesorption);
-        std::vector<double> c_vals_visc(2, -1e100);
-        c_vals_visc[0] = 0.0;
-        c_vals_visc[1] = c_max;
-        std::vector<double> visc_mult_vals(2, -1e100);
-        visc_mult_vals[0] = 1.0;
-        visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
-        std::vector<double> c_vals_ads(2, -1e100);
-        c_vals_ads[0] = 0.0;
-        c_vals_ads[1] = 8.0;
-        // Here we set up adsorption equal to zero.
-        std::vector<double> ads_vals(2, -1e100);
-        ads_vals[0] = 0.0;
-        ads_vals[1] = 0.0;
-        polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
-                     static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
-                     c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
+	bool use_deck_fluid = param.getDefault("use_deck_fluid", false);
+	if(!use_deck_fluid){
+	    // Rock compressibility.
+	    rock_comp.reset(new Opm::RockCompressibility(param));
+	    double c_max = param.getDefault("c_max_limit", 5.0);
+	    double mix_param = param.getDefault("mix_param", 1.0);
+	    double rock_density = param.getDefault("rock_density", 1000.0);
+	    double dead_pore_vol = param.getDefault("dead_pore_vol", 0.1);
+	    double res_factor = param.getDefault("res_factor", 1.) ; // res_factor = 1 gives no change in permeability
+	    double c_max_ads = param.getDefault("c_max_ads", 1.);
+	    int ads_index = param.getDefault<int>("ads_index", Opm::PolymerProperties::NoDesorption);
+	    std::vector<double> c_vals_visc(2, -1e100);
+	    c_vals_visc[0] = 0.0;
+	    c_vals_visc[1] = c_max;
+	    std::vector<double> visc_mult_vals(2, -1e100);
+	    visc_mult_vals[0] = 1.0;
+	    visc_mult_vals[1] = param.getDefault("c_max_viscmult", 30.0);
+	    std::vector<double> c_vals_ads(2, -1e100);
+	    c_vals_ads[0] = 0.0;
+	    c_vals_ads[1] = 8.0;
+	    // Here we set up adsorption equal to zero.
+	    std::vector<double> ads_vals(2, -1e100);
+	    ads_vals[0] = 0.0;
+	    ads_vals[1] = 0.0;
+	    polyprop.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
+			 static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
+			 c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
+	}else{
+	    std::string deck_filename = param.get<std::string>("deck_filename");
+	    Opm::EclipseGridParser deck(deck_filename);
+	    rock_comp.reset(new Opm::RockCompressibility(deck));
+	    polyprop.readFromDeck(deck);
+	}
     }
 
     // Initialize polymer inflow function.

@@ -959,7 +959,8 @@ namespace Opm
  	    fractionalflow_[cell] = ff;
 	    mc_[cell] = mc;
 	    return;
-	}else{	    
+	}else{
+	    //*
 	    x[0] = saturation_[cell]-res[0];
 	    if((x[0]>1) || (x[0]<0)){
 		x[0] = 0.5;
@@ -968,12 +969,18 @@ namespace Opm
 	    if(x[0]>0){
 		    x[1] =  concentration_[cell]*saturation_[cell]-res[1];
 		    x[1] = x[1]/x[0];
+		    if(x[1]> polyprops_.cMax()){
+			x[1]= polyprops_.cMax()/2.0;		
+		    }
+		    if(x[1]<0){
+			x[1]=0;
+		    }
 	    }else{
 		x[1]=0;
 	    }	    	    
 	    //x[0]=0.5;x[1]=polyprops_.cMax()/2.0;
 	    res_eq.computeResidual(x, res, mc, ff);
-	    
+	    //*/
 	}
 
 
