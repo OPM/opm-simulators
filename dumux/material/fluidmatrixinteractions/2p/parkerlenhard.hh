@@ -1,5 +1,7 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2008 by Andreas Lauser                                    *
+ *   Copyright (C) 2008-2012 by Andreas Lauser                               *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -18,11 +20,13 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file ParkerLenhard.hh
- * \brief Template implementing Parker-Lenhard capillary pressure hystersis.
+ * \file 
+ *
+ * \brief An implementation of the Parker-Lenhard capillary pressure
+ *        hystersis model.
  */
-#ifndef PARKER_LENHARD_HH
-#define PARKER_LENHARD_HH
+#ifndef DUMUX_PARKER_LENHARD_HH
+#define DUMUX_PARKER_LENHARD_HH
 
 #include <dumux/material/fluidmatrixinteractions/2p/vangenuchten.hh>
 #include "parkerlenhardparams.hh"

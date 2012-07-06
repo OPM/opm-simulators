@@ -1,5 +1,7 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2008,2011 by Andreas Lauser                               *
+ *   Copyright (C) 2008-2012 by Andreas Lauser                               *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -18,13 +20,13 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file ParkerLenhardParams.hh
+ * \file
  *
  * \brief Default parameter class for the Parker-Lenhard hysteresis
  *        model.
  */
-#ifndef PARKER_LENHARD_PARAMS_HH
-#define PARKER_LENHARD_PARAMS_HH
+#ifndef DUMUX_PARKER_LENHARD_PARAMS_HH
+#define DUMUX_PARKER_LENHARD_PARAMS_HH
 
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedvangenuchten.hh>
 
