@@ -1,4 +1,4 @@
-// $Id$
+// $Id: settablephase.hh 3777 2010-06-24 06:46:46Z bernd $
 /*****************************************************************************
  *   Copyright (C) 2010 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *

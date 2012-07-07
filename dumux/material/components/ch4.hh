@@ -1,6 +1,5 @@
-// $Id: n2.hh 3783 2010-06-24 11:33:53Z bernd $
 /*****************************************************************************
- *   Copyright (C) 2009 by Andreas Lauser
+ *   Copyright (C) 2010 by Andreas Lauser
  *   Institute of Hydraulic Engineering                                      *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -16,10 +15,10 @@
 /*!
  * \file
  *
- * \brief Properties of pure molecular nitrogen \f$N_2\f$.
+ * \brief Properties of methone (\f$CH_4\f$).
  */
-#ifndef DUMUX_N2_HH
-#define DUMUX_N2_HH
+#ifndef DUMUX_CH4_HH
+#define DUMUX_CH4_HH
 
 #include <dumux/material/idealgas.hh>
 #include <dune/common/exceptions.hh>
@@ -32,89 +31,61 @@ namespace Dumux
 {
 
 /*!
- * \brief Properties of pure molecular nitrogen \f$N_2\f$.
+ * \brief Properties of pure molecular methane \f$CH_4\f$.
  */
 template <class Scalar>
-class N2 : public Component<Scalar, N2<Scalar> >
+class CH4 : public Component<Scalar, CH4<Scalar> >
 {
-    typedef Component<Scalar, N2<Scalar> >  ParentType;
+    typedef Component<Scalar, CH4<Scalar> >  ParentType;
     typedef Dumux::IdealGas<Scalar> IdealGas;
 
 public:
     /*!
-     * \brief A human readable name for nitrogen.
+     * \brief A human readable name for methane.
      */
     static const char *name()
-    { return "N2"; }
+    { return "CH4"; }
 
     /*!
-     * \brief The mass in [kg/mol] of one of molecular nitrogen.
+     * \brief The mass in [kg/mol] of one of molecular methane.
      */
     static Scalar molarMass()
-    { return 28.0134e-3;}
+    { return 16.043e-3;}
 
     /*!
-     * \brief Returns the critical temperature [K] of molecular nitrogen
+     * \brief Returns the critical temperature [K] of molecular methane
      */
     static Scalar criticalTemperature()
-    { return 126.192; /* [K] */ }
+    { return 190.4; /* [K] */ }
 
     /*!
-     * \brief Returns the critical pressure [Pa] of molecular nitrogen
+     * \brief Returns the critical pressure [Pa] of molecular methane
      */
     static Scalar criticalPressure()
-    { return 3.39858e6; /* [N/m^2] */ }
+    { return 46e5; /* [N/m^2] */ }
 
     /*!
-     * \brief Returns the temperature [K] at molecular nitrogen's triple point.
+     * \brief Returns the temperature [K] at molecular methane's triple point.
      */
     static Scalar tripleTemperature()
-    { return 63.151; /* [K] */ }
+    { return 90.7; /* [K] */ }
 
     /*!
-     * \brief Returns the pressure [Pa] at molecular nitrogen's triple point.
+     * \brief Returns the pressure [Pa] at molecular methane's triple point.
      */
     static Scalar triplePressure()
-    { return 12.523e3; /* [N/m^2] */ }
+    { return 0; /* [N/m^2] */ }
 
     /*!
-     * \brief The vapor pressure in [Pa] of pure molecular nitrogen
+     * \brief The vapor pressure in [Pa] of pure molecular methane
      *        at a given temperature.
-     *
-     * Taken from:
-     *
-     * R. Span, E.W. Lemmon, et al.: "A Reference Equation of State
-     * for the Thermodynamic Properties of Nitrogen for Temperatures
-     * from 63.151 to 1000 K and Pressures to 2200 MPa", Journal of
-     * Physical and Chemical Refefence Data, Vol. 29, No. 6,
-     * pp. 1361-1433
      */
     static Scalar vaporPressure(Scalar T)
-    {
-        if (T > criticalTemperature())
-            return criticalPressure();
-        if (T < tripleTemperature())
-            return 0; // N2 is solid: We don't take sublimation into
-                      // account
+    { DUNE_THROW(Dune::NotImplemented, "vaporPressure for CH4"); }
 
-        // note: this is the ancillary equation given on page 1368
-        Scalar sigma = Scalar(1.0) - T/criticalTemperature();
-        Scalar sqrtSigma = std::sqrt(sigma);
-        const Scalar N1 = -6.12445284;
-        const Scalar N2 = 1.26327220;
-        const Scalar N3 = -0.765910082;
-        const Scalar N4 = -1.77570564;
-        return
-            criticalPressure() *
-            std::exp(criticalTemperature()/T*
-                     (sigma*(N1 +
-                             sqrtSigma*N2 +
-                             sigma*(sqrtSigma*N3 +
-                                    sigma*sigma*sigma*N4))));
-    }
 
     /*!
-     * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     * \brief The density [kg/m^3] of CH4 gas at a given pressure and temperature.
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -123,7 +94,7 @@ public:
     }
 
     /*
-     * \brief The pressure of gaseous N2 at a given density and temperature [Pa].
+     * \brief The pressure of gaseous CH4 at a given density and temperature [Pa].
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -132,39 +103,39 @@ public:
     }
 
     /*!
-     * \brief The density [kg/m^3] of N2 gas at a given pressure and temperature.
+     * \brief The density [kg/m^3] of CH4 gas at a given pressure and temperature.
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidDensity for N2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidDensity for CH4"); }
 
     /*
-     * \brief The pressure of liquid nitrogen at a given density and
+     * \brief The pressure of liquid methane at a given density and
      *        temperature [Pa].
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
-    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for N2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidPressure for CH4"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     * \brief Specific enthalpy [J/kg] of pure methane gas.
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
-     * edition, McGraw-Hill, 1987, pp 154, 657, 665
+     * edition, McGraw-Hill, 1987, pp 154, 657, 671
      */
     static const Scalar gasEnthalpy(Scalar T,
                                     Scalar pressure)
     {
         // method of Joback
-        const Scalar cpVapA =  31.15;
-        const Scalar cpVapB = -0.01357;
-        const Scalar cpVapC =  2.680e-5;
-        const Scalar cpVapD = -1.168e-8;
+        const Scalar cpVapA =  19.25;
+        const Scalar cpVapB =  0.05213;
+        const Scalar cpVapC =  1.197e-5;
+        const Scalar cpVapD = -1.132e-8;
 
         //Scalar cp =
         //    cpVapA + T*(cpVapB + T*(cpVapC + T*cpVapD));
 
         // calculate: \int_0^T c_p dT
         return
-            1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
+            1/molarMass()* // conversion from [J/mol] to [J/kg]
 
             T*(cpVapA + T*
                (cpVapB/2 + T*
@@ -173,13 +144,13 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     * \brief Specific enthalpy [J/kg] of pure liquid CH4.
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for N2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidEnthalpy for CH4"); }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure nitrogen gas.
+     * \brief Specific enthalpy [J/kg] of pure methane gas.
      */
     static const Scalar gasInternalEnergy(Scalar temperature,
                                           Scalar pressure)
@@ -191,24 +162,24 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy [J/kg] of pure liquid N2.
+     * \brief Specific enthalpy [J/kg] of pure liquid CH4.
      */
     static Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of N2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidInternalEnergy of CH4"); }
 
     /*!
-     * \brief The dynamic viscosity [Pa s] of N2 at a given pressure and temperature.
+     * \brief The dynamic viscosity [Pa s] of CH4 at a given pressure and temperature.
      *
      * See:
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
-     * edition, McGraw-Hill, 1987, pp 396-397, 664
+     * edition, McGraw-Hill, 1987, pp 396-397, 670
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
         const Scalar Tc = criticalTemperature();
-        const Scalar Vc = 89.8; // critical specific volume [cm^3/mol]
-        const Scalar omega = 0.0039; // accentric factor
+        const Scalar Vc = 99.2; // critical specific volume [cm^3/mol]
+        const Scalar omega = 0.011; // accentric factor
         const Scalar M = molarMass() * 1e3; // molar mas [g/mol]
         const Scalar dipole = 0.0; // dipole moment [debye]
 
@@ -229,10 +200,10 @@ public:
     }
 
     /*!
-     * \brief The dynamic liquid viscosity [N/m^3*s] of pure N2.
+     * \brief The dynamic liquid viscosity [N/m^3*s] of pure CH4.
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for N2"); }
+    { DUNE_THROW(Dune::NotImplemented, "liquidViscosity for CH4"); }
 };
 
 } // end namepace

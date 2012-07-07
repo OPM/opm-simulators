@@ -1,4 +1,4 @@
-// $Id$
+// $Id: regularizedvangenuchten.hh 3777 2010-06-24 06:46:46Z bernd $
 /*****************************************************************************
  *   Copyright (C) 2008 by Andreas Lauser, Bernd Flemisch                    *
  *   Institute of Hydraulic Engineering                                      *
