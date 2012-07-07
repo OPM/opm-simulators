@@ -1,7 +1,7 @@
 # tests where program to build and program to run are equal
 NORMALTESTS = tutorial_decoupled tutorial_coupled
 
-EXTRA_DIST=CMakeLists.txt results/*/*/*.vtu
+EXTRA_DIST=results/*/*/*.vtu
 noinst_HEADERS= tutorialspatialparameters_decoupled.hh tutorialproblem_decoupled.hh tutorialspatialparameters_coupled.hh tutorialproblem_coupled.hh
 
 # list of tests to run

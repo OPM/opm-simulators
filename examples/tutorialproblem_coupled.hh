@@ -1,4 +1,4 @@
-// $Id$
+// $Id: tutorialproblem_coupled.hh 3783 2010-06-24 11:33:53Z bernd $
 /*****************************************************************************
  *   Copyright (C) 2008-2009 by Melanie Darcis                               *
  *   Copyright (C) 2009 by Andreas Lauser                                    *

@@ -49,7 +49,7 @@ properties of the solid matrix are defined in a special soil
 class. The \texttt{soil} object is generated in line
 \ref{tutorial-decoupled:soil}. As can be seen, the class type is
 \texttt{Dune::TutorialSoil}, which is defined in the file
-\texttt{tutorial\_soilproperties\_decoupled.hh} in the folder
+\texttt{tutorialspatialparameters\_decoupled.hh} in the folder
 \texttt{/tutorial}. A description of this file and the definition of a
 soil class including the soil parameters can be found in section
 \ref{tutorial-decoupled:description-soil-class}. Finally, in line
@@ -87,13 +87,13 @@ Soil properties which can be defined in \Dumux are the \textit{intrinsic permeab
 
 The base class \texttt{Dune::Matrix2p} for the definition of the soil parameters can be found in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dumux/material}. Derived from this base class, there exist two standard soil type classes named \texttt{HomogeneousSoil} and \texttt{HeterogeneousSoil}. Both can be found in the file \texttt{matrixproperties.hh} in the \texttt{/material} folder. If one wants to use a soil that differs from this standard soil types, new soil classes can be derived either from the base class (\texttt{Dune::Matrix2p}) or from the two standard soil classes (\texttt{Dune::HomogeneousSoil} and \texttt{Dune::HeterogeneousSoil}).
 
-For this tutorial problem a new soil class named \texttt{TutorialSoil} is derived from \texttt{Dune::Matrix2p} (listing \ref{tutorial-deoucpled:soilpropertiesfile}, line \ref{tutorial-decoupled:tutorialsoil}), which can be found in the file \texttt{tutorial\_soilproperties\_decoupled.hh} in the directory \texttt{/tutorial}.
+For this tutorial problem a new soil class named \texttt{TutorialSoil} is derived from \texttt{Dune::Matrix2p} (listing \ref{tutorial-deoucpled:soilpropertiesfile}, line \ref{tutorial-decoupled:tutorialsoil}), which can be found in the file \texttt{tutorialspatialparameters\_decoupled.hh} in the directory \texttt{/tutorial}.
 
-Listing \ref{tutorial-deoucpled:soilpropertiesfile} shows the file \texttt{tutorial\_soilproperties\_decoupled.hh}.
+Listing \ref{tutorial-deoucpled:soilpropertiesfile} shows the file \texttt{tutorialspatialparameters\_decoupled.hh}.
 
-\begin{lst}[File tutorial/tutorial\_soilproperties\_decoupled.hh]\label{tutorial-deoucpled:soilpropertiesfile} \mbox{}
+\begin{lst}[File tutorial/tutorialspatialparametrs\_decoupled.hh]\label{tutorial-deoucpled:soilpropertiesfile} \mbox{}
 \lstinputlisting[basicstyle=\ttfamily\scriptsize,numbers=left, 
-numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorial_soilproperties_decoupled.hh}
+numberstyle=\tiny, numbersep=5pt]{../../tutorial/tutorialspatialparameters_decoupled.hh}
 \end{lst}
 
 In line \ref{tutorial-decoupled:permeability} the function returning the intrinsic permeability can be found. As can be seen, the function has to be called with three different arguments. The first one (\texttt{x}) is a vector including the global coordinates of the current entity (can be an element, vertex, etc.), the second one (\texttt{e}) is the entity itself and the third one is a vector including the local coordinates of the current entity. The intrinsic permeability is a tensor and thus returned in form of a $n \times n$-matrix where $n$ is the dimension of the problem.
@@ -153,7 +153,7 @@ Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Wat
 \texttt{/dumux/material/fluids}.
 
 \item \textbf{Changing Constitutive Relationships} \\
-Use a Brooks-Corey law with $\lambda$ = 2 and entry pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorial\_soilproperties\_decoupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dumux/material}.  
+Use a Brooks-Corey law with $\lambda$ = 2 and entry pressure $p_b = 0.0$ instead of a linear law for the relative-permeability/saturation relationship. To do that you have to change the file \texttt{tutorialspatialparameters\_decoupled.hh}. You can find the flag that you have to set for the Brooks-Corey law in the file \texttt{property\_baseclasses.hh} in the directory \texttt{/dumux/material}.  
 The available relative permeability and capillary pressure functions are defined in the file \texttt{/dumux/material/relperm\_pc\_law}.\\
 (Hint: The CFL-security-factor should be set to a value smaller than 1 if nonlinear relationships are used (Suggestion: 0.95). It can be found in the application file \texttt{tutorialproblem\_decoupled.hh}.)
  
@@ -175,7 +175,7 @@ Set up a model domain with the soil properties given in Figure \ref{tutorial-deo
 \end{enumerate}
 
 \subsubsection{Exercise 2}
-For this exercise you should create a new proplem file according to the file \texttt{tutorialproblem\_decoupled.hh} and a new soil property file according to the file \texttt{tutorial\_soilproperties\_decoupled.hh}. These files need to be included in the file \texttt{tutorial\_decoupled.cc}.\\
+For this exercise you should create a new proplem file according to the file \texttt{tutorialproblem\_decoupled.hh} and a new soil property file according to the file \texttt{tutorialspatialparameters\_decoupled.hh}. These files need to be included in the file \texttt{tutorial\_decoupled.cc}.\\
 The new soil file should contain the definition of a new soil class e.g. SoilEx2. Make sure that you also adjust the preprocessor commands (e.g. change TUTORIAL\_SOILPROPERTIES to TUTORIAL\_SOILEX2). 
 The new problem file should contain the definition of a new problem class e.g. ProblemEx2. Here you also need to adjust the preprocessor commands. 
 Replace the classes \texttt{TutorialSoil} and \texttt{TutorialProblemDecoupled} by the the new classes you just created. \\
