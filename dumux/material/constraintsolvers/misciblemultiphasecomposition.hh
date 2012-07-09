@@ -134,7 +134,7 @@ public:
      *        N-component fluid system assuming that all N phases are
      *        present
      *
-     * It constraint solver assumes the following quantities to be set:
+     * The constraint solver assumes the following quantities to be set:
      *
      * - temperatures of *all* phases
      * - saturations of *all* phases
