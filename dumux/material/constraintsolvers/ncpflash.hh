@@ -28,13 +28,11 @@
 #ifndef DUMUX_NCP_FLASH_HH
 #define DUMUX_NCP_FLASH_HH
 
-#include <dumux/common/exceptions.hh>
-#include <dumux/common/valgrind.hh>
-
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <iostream>
+#include <dumux/common/exceptions.hh>
+#include <dumux/common/valgrind.hh>
 
 namespace Dumux {
 
@@ -52,9 +50,8 @@ namespace Dumux {
  * This sums up to M*(N + 2). On the equations side of things,
  * we have:
  *
- * - (M - 1)*N equation stemming from the fact that the fugacity
- *   divided by the phase pressure of any component is the same in all
- *   phases
+ * - (M - 1)*N equation stemming from the fact that the
+ *   fugacity of any component is the same in all phases
  * - 1 equation from the closure condition of all saturations
  *   (they sum up to 1)
  * - M - 1 constraints from the capillary pressures
@@ -114,7 +111,7 @@ public:
                 fluidState.setMoleFraction(phaseIdx,
                                            compIdx,
                                            globalMolarities[compIdx]/sumMoles);
-
+            
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 1.0135e5);
 
@@ -174,10 +171,11 @@ public:
         std::cout << "\n";
         */
 
+        bool inPhase2 = false;
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
-            linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities);
+            linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities, inPhase2);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
 
@@ -213,7 +211,7 @@ public:
                     std::cout << s;
                 }
                 std::cout << "\n";
-            };
+            }
 
             std::cout << "deltaX: " << deltaX << "\n";
             std::cout << "---------------\n";
@@ -222,7 +220,11 @@ public:
             // update the fluid quantities.
             Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
 
-            if (relError < 1e-9)
+            if (!std::isfinite(relError))
+                break;
+            else if (relError < 1e-7 && !inPhase2)
+                inPhase2 = true;
+            else if (relError < 1e-9)
                 return;
         }
 
@@ -293,7 +295,8 @@ protected:
                            FluidState &fluidState,
                            ParameterCache &paramCache,
                            const typename MaterialLaw::Params &matParams,
-                           const ComponentVector &globalMolarities)
+                           const ComponentVector &globalMolarities,
+                           bool inPhase2)
     {
         FluidState origFluidState(fluidState);
         ParameterCache origParamCache(paramCache);
@@ -304,7 +307,7 @@ protected:
         J = 0;
 
         Valgrind::SetUndefined(b);
-        calculateDefect_(b, fluidState, fluidState, globalMolarities);
+        calculateDefect_(b, fluidState, fluidState, globalMolarities, inPhase2);
         Valgrind::CheckDefined(b);
 
         // assemble jacobian matrix
@@ -316,13 +319,13 @@ protected:
             // forward differences
 
             // deviate the mole fraction of the i-th component
-            Scalar xI = getQuantity_(fluidState, pvIdx);
+            Scalar x_i = getQuantity_(fluidState, pvIdx);
             const Scalar eps = 1e-8/quantityWeight_(fluidState, pvIdx);
-            setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, xI + eps);
-            assert(getQuantity_(fluidState, pvIdx) == xI + eps);
+            setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
+            assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
 
             // compute derivative of the defect
-            calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
+            calculateDefect_(tmp, origFluidState, fluidState, globalMolarities, inPhase2);
             tmp -= b;
             tmp /= eps;
 
@@ -343,40 +346,48 @@ protected:
     static void calculateDefect_(Vector &b,
                                  const FluidState &fluidStateEval,
                                  const FluidState &fluidState,
-                                 const ComponentVector &globalMolarities)
+                                 const ComponentVector &globalMolarities, 
+                                 bool inPhase2)
     {
         int eqIdx = 0;
 
         // fugacity of any component must be equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            Valgrind::CheckDefined(fluidState.fugacity(/*phaseIdx=*/0, compIdx));
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-                Valgrind::CheckDefined(fluidState.fugacity(phaseIdx, compIdx));
-                b[eqIdx] =
-                    fluidState.fugacity(/*phaseIdx=*/0, compIdx)/fluidState.pressure(/*phaseIdx=*/0) -
-                    fluidState.fugacity(phaseIdx, compIdx)/fluidState.pressure(phaseIdx);
+                if (!inPhase2)
+                    // in phase1 we equalize fugacities. this is more
+                    // stable numerically and leads to the correct
+                    // solution if capillary pressure is 0
+                    b[eqIdx] =
+                        fluidState.fugacity(/*phaseIdx=*/0, compIdx) -
+                        fluidState.fugacity(phaseIdx, compIdx);
+                else
+                    // in phase1 we equalize the fugacities divided by
+                    // pressure. this is less stable and but
+                    // physically correct for non-zero capillary
+                    // pressures
+                    b[eqIdx] =
+                        fluidState.fugacity(/*phaseIdx=*/0, compIdx)/fluidState.pressure(/*phaseIdx=*/0) -
+                        fluidState.fugacity(phaseIdx, compIdx)/fluidState.pressure(phaseIdx);
                 ++eqIdx;
             }
         }
 
         assert(eqIdx == numComponents*(numPhases - 1));
 
-        // the fact saturations must sum up to 1 is included
-        // explicitly, and capillary pressures are also explicitly
-        // included!
+        // the fact saturations must sum up to 1 is included explicitly!
 
-        // the global molarities are given
+        // capillary pressures are explicitly included!
+
+        // global molarities are given
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             b[eqIdx] = 0.0;
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Valgrind::CheckDefined(fluidState.saturation(phaseIdx));
-                Valgrind::CheckDefined(fluidState.molarity(phaseIdx, compIdx));
                 b[eqIdx] +=
                     fluidState.saturation(phaseIdx)
                     * fluidState.molarity(phaseIdx, compIdx);
             }
 
-            Valgrind::CheckDefined(globalMolarities[compIdx]);
             b[eqIdx] -= globalMolarities[compIdx];
             ++eqIdx;
         }
@@ -408,6 +419,13 @@ protected:
                           const typename MaterialLaw::Params &matParams,
                           const Vector &deltaX)
     {
+        // make sure we don't swallow non-finite update vectors
+        Scalar tmp = 0;
+        for (int i = 0; i < Vector::dimension; ++i)
+            tmp += deltaX[i];
+        if (!std::isfinite(tmp))
+            return tmp;
+
         Scalar relError = 0;
         for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             Scalar tmp = getQuantity_(fluidState, pvIdx);
@@ -429,7 +447,7 @@ protected:
                 // dampen to at most 15% change in pressure per
                 // iteration
                 delta = std::min(0.15*fluidState.pressure(0), std::max(-0.15*fluidState.pressure(0), delta));
-            };
+            }
 
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
         }
@@ -453,15 +471,15 @@ protected:
                 if (value < 0)
                     fluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
             }
-        };
+        }
 
         // last saturation
         if (sumSat > 1.05) {
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar value = fluidState.saturation(phaseIdx)/(0.95*sumSat);
                 fluidState.setSaturation(phaseIdx, value);
-            };
-        };
+            }
+        }
 
         completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
 
