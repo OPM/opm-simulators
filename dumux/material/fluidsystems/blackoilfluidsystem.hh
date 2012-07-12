@@ -102,6 +102,29 @@ public:
         SplineSamplingPoints tmp(samplePoints.begin(), samplePoints.end());
         gasFormationFactorSpline_.setContainerOfTuples(tmp);
         bubblePressure_ = tmp[samplePoints.size() - 2].first;
+
+        // create the spline representing saturation pressure
+        // depending of the mass fraction in gas
+        int i = 0;
+        int n = tmp.size()*5;
+        int delta = 
+            1.0/(n - 1)
+            * (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin());
+        SplineSamplingPoints pSatSamplePoints;
+        while (true) {
+            Scalar pSat = i*delta + gasFormationFactorSpline_.xMin();
+            Scalar X_oG = flashGasMassFracInOil_(pSat);
+
+            std::pair<Scalar, Scalar> val(X_oG, pSat);
+            pSatSamplePoints.push_back(val);;
+
+            if (i > n && X_oG > 0.7)
+                break;
+            ++i;
+        };
+
+        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints);
+        assert(saturationPressureSpline_.monotonic());
     }
 
     /*!
@@ -363,8 +386,6 @@ public:
         switch (phaseIdx) {
         case wPhaseIdx: return waterDensity_(p);
         case gPhaseIdx: return gasDensity_(p);
-#warning TODO
-#if 0
         case oPhaseIdx: {
             Scalar X_oG = fluidState.massFraction(oPhaseIdx, gCompIdx);
             Scalar X_oO = fluidState.massFraction(oPhaseIdx, oCompIdx);
@@ -408,7 +429,6 @@ public:
 
             return std::max(250.0, std::min(1250.0, rho_o));
         }
-#endif
         }
         
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
@@ -435,9 +455,9 @@ public:
 
         Scalar p = fluidState.pressure(phaseIdx);
         switch (phaseIdx) {
-        case wPhaseIdx: return fugCoefficientInWater_(compIdx, p);
-        case gPhaseIdx: return fugCoefficientInGas_(compIdx, p);
-        case oPhaseIdx: return fugCoefficientInOil_(compIdx, p); 
+        case wPhaseIdx: return fugCoefficientInWater(compIdx, p);
+        case gPhaseIdx: return fugCoefficientInGas(compIdx, p);
+        case oPhaseIdx: return fugCoefficientInOil(compIdx, p); 
         }
 
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase or component index");
@@ -488,8 +508,7 @@ public:
                                               /*extrapolate=*/true);
     }
 
-private:
-    static Scalar fugCoefficientInWater_(int compIdx, Scalar pressure)
+    static Scalar fugCoefficientInWater(int compIdx, Scalar pressure)
     {
         // set the affinity of the gas and oil components to the water
         // phase to be 6 orders of magnitute smaller than that of the
@@ -506,13 +525,13 @@ private:
         return pvWater / pressure;
     }
 
-    static Scalar fugCoefficientInGas_(int compIdx, Scalar pressure)
+    static Scalar fugCoefficientInGas(int compIdx, Scalar pressure)
     {
         // assume an ideal gas
         return 1.0;
     }
 
-    static Scalar fugCoefficientInOil_(int compIdx, Scalar pressure)
+    static Scalar fugCoefficientInOil(int compIdx, Scalar pressure)
     {
         // set the oil component fugacity coefficient in oil phase
         // arbitrarily. we use some pseudo-realistic value for the vapor
@@ -538,10 +557,11 @@ private:
         // then, scale the gas component's gas phase fugacity
         // coefficient, so that the oil phase ends up at the right
         // composition if we were doing a flash experiment
-        Scalar phi_gG = fugCoefficientInGas_(gCompIdx, pressure);
+        Scalar phi_gG = fugCoefficientInGas(gCompIdx, pressure);
         return phi_gG / x_oGf;
     }
 
+private:
     static Scalar gasDensity_(Scalar pressure)
     {
         // gas formation volume factor at reservoir pressure
@@ -573,6 +593,14 @@ private:
         // reservoir density is surface density scaled by the ratio of
         // the volume formation factors
         return rhoRef * BoRef/Bo;
+    }
+
+    static Scalar oilSaturationPressure_(Scalar X_oG, Scalar pInit)
+    {
+        X_oG = std::max(saturationPressureSpline_.xMin(), 
+                        std::min(saturationPressureSpline_.xMax(), 
+                                 X_oG));
+        return saturationPressureSpline_.eval(X_oG);
     }
 
     // oil phase compressibility at _constant_ composition
@@ -646,6 +674,7 @@ private:
 
     static Spline gasFormationFactorSpline_;
     static Spline gasFormationVolumeFactorSpline_;
+    static Spline saturationPressureSpline_;
     static Scalar bubblePressure_;
 
     static Spline gasViscositySpline_;
@@ -675,6 +704,10 @@ BlackOil<Scalar>::gasFormationFactorSpline_;
 template <class Scalar>
 typename BlackOil<Scalar>::Spline 
 BlackOil<Scalar>::gasFormationVolumeFactorSpline_;
+
+template <class Scalar>
+typename BlackOil<Scalar>::Spline 
+BlackOil<Scalar>::saturationPressureSpline_;
 
 template <class Scalar>
 Scalar BlackOil<Scalar>::bubblePressure_;
