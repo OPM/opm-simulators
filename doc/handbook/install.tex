@@ -35,7 +35,7 @@ The GNU tool chain of \texttt{g++}  and the tools of the GNU build system \cite{
 (\texttt{autoconf}, \texttt{automake}, \texttt{autogen}, \texttt{libtool}), as well as the GNU variant of \texttt{make}
 called gmake must be available in a recent version. For example Ubuntu Linux provides these tools with the
 packages \texttt{autoconf}, \texttt{automake}, \texttt{libtool}
-and the C++ compiler \texttt{g++} and \texttt{make} are contained in \texttt{build-essential}.
+and the \Cplusplus compiler \texttt{g++} and \texttt{make} are contained in \texttt{build-essential}.
 
 At the time of writing this manual, it is expected that \texttt{g++} of version $\geqslant$ 4.5.0, \texttt{automake} of version $\geqslant$ 1.9,
 \texttt{autoconf} of version $\geqslant$ 2.65, \texttt{autogen} of version $\geqslant$ 5.9.7,  \texttt{libtool} of version $\geqslant$ 2.2.6
@@ -266,7 +266,7 @@ In the following list, you can find some external modules and external libraries
 \begin{itemize}
 \item \textbf{ALBERTA}: External library for use as grid. Adaptive multi Level finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications. Building it requires a Fortran compiler \texttt{gfortran}. Download: \texttt{\url{http://www.alberta-fem.de}}.
 
-\item \textbf{ALUGrid}: External library for use as grid. ALUGrid is built by a C++-compiler like \texttt{g++}. If you want to build a parallel version, you will need \texttt{MPI}. It was successfully run with \texttt{openmpi}. The parallel version needs also a graph partitioner, such as \texttt{METIS}. It was run successfully in combination with \Dune using \texttt{METIS}. \\
+\item \textbf{ALUGrid}: External library for use as grid. ALUGrid is built by a \Cplusplus compiler like \texttt{g++}. If you want to build a parallel version, you will need \texttt{MPI}. It was successfully run with \texttt{openmpi}. The parallel version needs also a graph partitioner, such as \texttt{METIS}. It was run successfully in combination with \Dune using \texttt{METIS}. \\
 Download: \texttt{\url{http://aam.mathematik.uni-freiburg.de/IAM/Research/alugrid}}
 
 \item \textbf{\Dune-multidomaingrid}: External module. If you going to run on the same grid different domains or subdomains,
@@ -279,7 +279,7 @@ this can be the package of choice. This is done by providing a meta grid. It can
 
 \item \textbf{SuperLU}: External library for solving linear equations. SuperLU is a general purpose library for the direct solution of large, sparse, non-symmetric systems of linear equations. Be aware that the version 4.3 is not supported by \Dune prior to 2.1.0. \\ (\texttt{\url{http://crd.lbl.gov/~xiaoye/SuperLU}}).
 
-\item \textbf{UG}: External library for use as grid. UG is a toolbox for Unstructured Grids: For \Dumux it has to be build by GNU buildsystem and a C++-compiler. That's why \Dune specific patches need applied before use. Building it makes use of the tools \texttt{lex}/\texttt{yacc} or the GNU variants \texttt{flex}/\texttt{bison}. 
+\item \textbf{UG}: External library for use as grid. UG is a toolbox for Unstructured Grids: For \Dumux it has to be build by GNU buildsystem and a \Cplusplus compiler. That's why \Dune specific patches need applied before use. Building it makes use of the tools \texttt{lex}/\texttt{yacc} or the GNU variants \texttt{flex}/\texttt{bison}. 
 
 \end{itemize}
 
@@ -297,7 +297,7 @@ Available by \texttt{\url{http://www.tacc.utexas.edu/tacc-projects/gotoblas2/}}.
 
 \item \textbf{METIS}: This is a dependency of ALUGrid, if you are going to run it parallel.
 
-\item \textbf{Compilers}: Beside \texttt{g++} it has been reported that \Dune was successfully built with CLang++ from the LLVM project and the Intel C++ compiler. 
+\item \textbf{Compilers}: Beside \texttt{g++} it has been reported that \Dune was successfully built with \texttt{Clang++} from the LLVM project and the Intel \Cplusplus compiler. 
 C and Fortran compiler is needed for some external libraries. As code of different compilers is linked together they have to be be compatible with each other. A good choice is the GNU compiler suite \texttt{gcc}, \texttt{g++} and \texttt{gfortran}.
 
 \item \textbf{libgomp}: External libraries, such as ALUGrid, can make use of OpenMP when used together with METIS. For that purpose it can be necessary to install the \texttt{libgomp} library.

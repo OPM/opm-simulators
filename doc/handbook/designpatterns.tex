@@ -5,18 +5,18 @@ This chapter tries to give a high-level understanding of some of the
 fundamental techniques which are used by \Dune and \Dumux and the
 motivation behind these design decisions. It is assumed that the
 reader already has basic experience in object oriented programming
-with C++.
+with \Cplusplus.
 
-First, a quick motivation of C++ template programming is given. Then
+First, a quick motivation of \Cplusplus template programming is given. Then
 follows an introduction to polymorphism and its opportunities as
 opened by the template mechanism. After that, some drawbacks
 associated with template programming are discussed, in particular the
 blow-up of identifier names, the proliferation of template arguments
 and some approaches on how to deal with these problems.
 
-\section{C++ Template Programming}
+\section{\Cplusplus Template Programming}
 
-One of the main features of modern versions of the C++ programming
+One of the main features of modern versions of the \Cplusplus programming
 language is robust support for templates. Templates are a mechanism
 for code generation built directly into the compiler.  For the
 motivation behind templates, consider a linked list of \texttt{double}
@@ -40,7 +40,7 @@ only ``clean'' way to achive this without templates would be to copy
 \texttt{DoubleList}, then rename it and change the type of the
 \texttt{value} attribute. It is obvious that this is a very
 cumbersome, error-prone and unproductive process. For this reason,
-recent standards of the C++ programming language specify the template
+recent standards of the \Cplusplus programming language specify the template
 mechanism, which is a way of letting the compiler do the tedious work. Using
 templates, a generic linked list can be implemented like this:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
@@ -73,21 +73,20 @@ preprocessor -- as done for example by the UG framework~\cite{UG-HP}
 -- templates have several advantages:
 \begin{description}
 \item[Well Programmable:] Programming errors are directly detected by
-  the C++ compiler. Thus, diagnostic messages from the compiler are
+  the \Cplusplus compiler. Thus, diagnostic messages from the compiler are
   directly useful because the source code compiled is the
   same as the one written by the developer. This is not the case
   for code generators and C-preprocessor macros where the actual
   statements processed by the compiler are obfuscated.
 \item[Easily Debugable:] Programs which use the template mechanism can be
-  debugged almost as easily as C++ programs which do not use
+  debugged almost as easily as \Cplusplus programs which do not use
   templates. This is due to the fact that the debugger always knows
   the ``real'' source file and line number.
 \end{description}
 For these reasons \Dune and \Dumux extensively use the template
 mechanism. Both projects also try to avoid duplicating functionality
 provided by the Standard Template Library (STL,~\cite{STL-REF-HP})
-which is part of the C++ standard and functionality provided by the
-quasi-standard Boost~\cite{BOOST-HP} libraries.
+which is part of the \Cplusplus standard and was improved in the \Cplusplus11 standard.
 
 \section{Polymorphism}
 
@@ -100,14 +99,14 @@ which is specific to the type of object for which the method is
 called\footnote{This is the \textit{poly} of polymorphism: There are
   multiple ways to achieve the same goal.}.
 
-In C++, there are two common ways to achieve polymorphism: The
+In \Cplusplus, there are two common ways to achieve polymorphism: The
 traditional dynamic polymorphism which does not require template
 programming, and static polymorphism which is made possible by the
 template mechanism.
 
 \subsection*{Dynamic Polymorphism}
 
-To utilize \textit{dynamic polymorphism} in C++, the polymorphic
+To utilize \textit{dynamic polymorphism} in \Cplusplus, the polymorphic
 methods are marked with the \texttt{virtual} keyword in the base
 class. Internally, the compiler realizes dynamic polymorphism by
 storing a pointer to a so-called \texttt{vtable} within each object of
@@ -207,7 +206,7 @@ What happens if \dots
 Dynamic polymorphism has a few disadvantages. The most relevant in the
 context of \Dumux is that the compiler can not see ``inside'' the
 called methods and thus cannot optimize properly. For example, modern
-C++ compilers 'inline' short methods, i.e. they copy the method's body
+\Cplusplus compilers 'inline' short methods, i.e. they copy the method's body
 to where it is called. First, inlining allows to save a few
 instructions by avoiding to jump into and out of the method. Second,
 and more importantly, inlining also allows further optimizations which
@@ -223,7 +222,7 @@ achive polymorphism at compile time. This works by supplying the type
 of the derived class as an additional template parameter to the base
 class. Whenever the base class needs to call back the derived class, \texttt{this} pointer of the base class is reinterpreted as
 being a pointer to an object of the derived class and the method is
-then called on the reinterpreted pointer. This scheme gives the C++
+then called on the reinterpreted pointer. This scheme gives the \Cplusplus
 compiler complete transparency of the code executed and thus opens
 much better optimization oportunities. Since this mechanism completely
 happens at compile time, it is called ``static polymorphism'' because
@@ -295,19 +294,19 @@ int main()
 
 \section{Common Template Programming Related Problems}
 
-Although C++ template programming opens a few intriguing
+Although \Cplusplus template programming opens a few intriguing
 possibilities, it also has a few disadvantages. In this section, a few
 of them are outlined and some hints on how they can be dealt with are
 provided.
 
 \subsection*{Identifier-Name Blow-Up}
 
-One particular problem with the advanced use of C++ templates is that the
+One particular problem with the advanced use of \Cplusplus templates is that the
 canonical identifier names for types and methods quickly become really
 long and unintelligible. For example, a typical error message
 generated using GCC 4.5 and \Dune-PDELab looks like this
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize, numbersep=5pt]
-test_pdelab.cc:171:9: error: no matching function for call to ‘Dune::\
+test_pdelab.cc:171:9: error: no matching function for call to ï¿½Dune::\
 PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
 PDELab::GridFunctionSpace<Dune::GridView<Dune::DefaultLeafGridViewTraits\
 <const Dune::UGGrid<3>, (Dune::PartitionIteratorType)4u> >, Dune::\
@@ -323,7 +322,7 @@ PDELab::GridFunctionSpaceBlockwiseMapper>, Dumux::PDELab::BoxLocalOperator\
 <Dumux::Properties::TTag::LensProblem>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
-ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()’
+ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()ï¿½
 \end{lstlisting}
 This seriously complicates diagnostics. Although there is no full
 solution to this problem yet, an effective way of dealing with such
@@ -472,8 +471,3 @@ often useful to specify parameters in such a way.
 % independent variables. (e.g. the material laws: BrooksCorey
 % (function), BrooksCoreyParams (function parameters), wetting
 % saturation/fluid state (independent variables)
-
-%%% Local Variables: 
-%%% mode: latex
-%%% TeX-master: "dumux-handbook"
-%%% End: 

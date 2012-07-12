@@ -28,14 +28,14 @@ but also try to include error details.
 
 It is possible to compile \Dumux with nearly no explicit options to the build system.
 However, for the successful compilation of \Dune and \Dumux, it is currently necessary to pass the
-the option \texttt{-fno-strict-aliasing} to the C++-compiler
+the option \texttt{-fno-strict-aliasing} to the \Cplusplus compiler
 \cite{WIKIPED-ALIASING}, which is done here via a command-line argument to \texttt{dunecontrol}:
 \begin{lstlisting}[style=Bash]
 $ # make sure you are in the directory DUNE-Root
 $ ./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all
 \end{lstlisting}
 
-Too many options can make life hard. That's why usually option files are being used together with dunecontrol and its sub-tools.
+Too many options can make life hard. That's why usually option files are being used together with \texttt{dunecontrol} and its sub-tools.
 Larger sets of options are kept in them. If you are going to compile with options suited for debugging the code, the following
 can be a starting point:
 \begin{lstlisting}[style=Bash]

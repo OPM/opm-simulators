@@ -65,7 +65,7 @@ be debugged because the debugger gets confused. But the cool thing is, that you 
 \begin{itemize}
 \item open your application's Makefile with the text editor of your choice
 \item find the line including \texttt{CXXFLAGS =}
-\item these are the options given to the C++ compiler
+\item these are the options given to the \Cplusplus compiler
 \item add \texttt{-g} (debugging symbols)
 \item remove \texttt{-O3} (third level optimization, i.\,e. do not care for anything but execution speed),  \texttt{-march=native} and \texttt{-DNDEBUG}.
 \item build your application again. 
@@ -73,7 +73,7 @@ be debugged because the debugger gets confused. But the cool thing is, that you 
 \item compiling without optimization takes also shorter time
 \end{itemize}
 
-(The other possibility is to run dunecontrol with \texttt{debug.opts} and afterwards adding \texttt{-O3} into your application Makefile. The performance penalty does not make a big difference and so do the other options besides \texttt{-O3})
+(The other possibility is to run \texttt{dunecontrol} with \texttt{debug.opts} and afterwards adding \texttt{-O3} into your application Makefile. The performance penalty does not make a big difference and so do the other options besides \texttt{-O3})
 
 Debugging with the optimization options active will lead to erratic behavior while debugging. 
 

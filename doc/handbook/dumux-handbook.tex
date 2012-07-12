@@ -45,6 +45,7 @@
 \usepackage{makeidx}
 \usepackage{graphicx}
 \usepackage{xspace}
+\usepackage{relsize}
 \usepackage[htt]{hyphenat}
 \usepackage{lscape}
 \usepackage{enumerate}
@@ -71,8 +72,12 @@
 
 \DeclareGraphicsExtensions{.eps, .jpg}
 
+% Dune logo
 \newcommand{\Dune}{{DUNE}\xspace}
-\newcommand{\Dumux}{\texorpdfstring{Du\-Mu$^x$\xspace}{DuMuX}}
+% DuMuX logo
+\newcommand{\Dumux}{\texorpdfstring{Du\-Mu$^\text{x}$\xspace}{DuMuX}}
+% beautify C++
+\DeclareRobustCommand\Cplusplus{\texorpdfstring{C\raisebox{2pt}{{\relsize{-3}++}}\xspace}{C++}}
 
 \newcommand{\porosity}{\phi}
 \newcommand{\saturation}{S}
@@ -173,8 +178,3 @@ Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
 \bibliography{dumux-handbook}
 \printindex
 \end{document}
-
-%%% Local Variables: 
-%%% mode: latex
-%%% TeX-master: "dumux-handbook"
-%%% End: 
