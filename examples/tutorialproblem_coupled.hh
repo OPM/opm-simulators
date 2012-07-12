@@ -103,13 +103,13 @@ public:
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
 
 // define the properties required by the cube grid creator
-SET_SCALAR_PROP(TutorialProblemCoupled, GridSizeX, 300.0);
-SET_SCALAR_PROP(TutorialProblemCoupled, GridSizeY, 60.0);
-SET_SCALAR_PROP(TutorialProblemCoupled, GridSizeZ, 0.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX, 300.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeY, 60.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeZ, 0.0);
 
-SET_INT_PROP(TutorialProblemCoupled, GridCellsX, 100);
-SET_INT_PROP(TutorialProblemCoupled, GridCellsY, 1);
-SET_INT_PROP(TutorialProblemCoupled, GridCellsZ, 0);
+SET_INT_PROP(TutorialProblemCoupled, CellsX, 100);
+SET_INT_PROP(TutorialProblemCoupled, CellsY, 1);
+SET_INT_PROP(TutorialProblemCoupled, CellsZ, 0);
 }
 
 /*!

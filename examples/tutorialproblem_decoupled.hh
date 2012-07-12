@@ -102,13 +102,13 @@ SET_SCALAR_PROP(TutorialProblemDecoupled, CFLFactor, 0.95); /*@\label{tutorial-d
 SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutorial-decoupled:gravity}@*/
 
 // define the properties required by the cube grid creator
-SET_SCALAR_PROP(TutorialProblemDecoupled, GridSizeX, 300.0);
-SET_SCALAR_PROP(TutorialProblemDecoupled, GridSizeY, 60.0);
-SET_SCALAR_PROP(TutorialProblemDecoupled, GridSizeZ, 0.0);
+SET_SCALAR_PROP(TutorialProblemDecoupled, DomainSizeX, 300.0);
+SET_SCALAR_PROP(TutorialProblemDecoupled, DomainSizeY, 60.0);
+SET_SCALAR_PROP(TutorialProblemDecoupled, DomainSizeZ, 0.0);
 
-SET_INT_PROP(TutorialProblemDecoupled, GridCellsX, 100);
-SET_INT_PROP(TutorialProblemDecoupled, GridCellsY, 1);
-SET_INT_PROP(TutorialProblemDecoupled, GridCellsZ, 0);
+SET_INT_PROP(TutorialProblemDecoupled, CellsX, 100);
+SET_INT_PROP(TutorialProblemDecoupled, CellsY, 1);
+SET_INT_PROP(TutorialProblemDecoupled, CellsZ, 0);
 } /*@\label{tutorial-decoupled:propertysystem-end}@*/
 
 /*! \ingroup DecoupledProblems
