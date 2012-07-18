@@ -65,7 +65,7 @@ public:
     Scalar pCLowSw() const
     {
         // Some problems are very sensitive to this value
-        // (e.g. makeing it smaller might result in negative
+        // (e.g. making it smaller might result in negative
         // pressures), if you change it here, you will almost
         // certainly break someone's code!
         //
@@ -86,7 +86,7 @@ public:
     Scalar pCHighSw() const
     {
         // Some problems are very sensitive to this value
-        // (e.g. makeing it smaller might result in negative
+        // (e.g. making it smaller might result in negative
         // pressures), if you change it here, you will almost
         // certainly break someone's code!
         //
