@@ -341,7 +341,7 @@ namespace Opm
                         const double depth_diff = face_depth - grid_.cell_centroids[c[j]*dim + dim - 1];
                         props_.density(1, &cell_A_[np*np*c[j]], &gravcontrib[j][0]);
                         for (int p = 0; p < np; ++p) {
-                            gravcontrib[j][p] *= depth_diff;
+                            gravcontrib[j][p] *= depth_diff*grav;
                         }
                     } else {
                         std::fill(gravcontrib[j].begin(), gravcontrib[j].end(), 0.0);
