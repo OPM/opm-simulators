@@ -47,6 +47,7 @@ namespace Opm
 	/// \param[in] darcyflux         Array of signed face fluxes.
 	/// \param[in] pressure          Array of cell pressures
 	/// \param[in] surfacevol0       Array of surface volumes at start of timestep
+	/// \param[in] porevolume0       Array of pore volumes at start of timestep.
 	/// \param[in] porevolume        Array of pore volumes.
 	/// \param[in] source            Transport source term.
 	/// \param[in] dt                Time step.
@@ -54,6 +55,7 @@ namespace Opm
 	void solve(const double* darcyflux,
                    const double* pressure,
                    const double* surfacevol0,
+                   const double* porevolume0,
                    const double* porevolume,
 		   const double* source,
 		   const double dt,
@@ -71,6 +73,7 @@ namespace Opm
         /// \TODO: Implement this.
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* pressure,
+                          const double* porevolume0,
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
@@ -96,6 +99,7 @@ namespace Opm
 
 	const double* darcyflux_;   // one flux per grid face
 	const double* surfacevol0_; // one per phase per cell
+	const double* porevolume0_; // one volume per cell
 	const double* porevolume_;  // one volume per cell
 	const double* source_;      // one source per cell
 	double dt_;

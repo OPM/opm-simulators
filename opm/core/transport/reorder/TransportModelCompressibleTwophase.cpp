@@ -76,6 +76,7 @@ namespace Opm
     void TransportModelCompressibleTwophase::solve(const double* darcyflux,
                                                    const double* pressure,
                                                    const double* surfacevol0,
+                                                   const double* porevolume0,
                                                    const double* porevolume,
                                                    const double* source,
                                                    const double dt,
@@ -83,6 +84,7 @@ namespace Opm
     {
 	darcyflux_ = darcyflux;
         surfacevol0_ = surfacevol0;
+        porevolume0_ = porevolume0;
         porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
@@ -111,37 +113,38 @@ namespace Opm
     //
     // [[ incompressible was: r(s) = s - s0 + dt/pv*( influx + outflux*f(s) ) ]]
     //
-    //     r(s) = s - B*z0 + dt/pv*( influx + outflux*f(s))
+    //     r(s) = s - B*z0 + dt/pv*( influx + outflux*f(s) )
     //
     // @@@ What about the source term
     // 
     // where influx is water influx, outflux is total outflux.
-    // We need the formula influx = B_i sum_{j->i} b_j v_{ij} + q_w.
-    //                     outflux = B_i sum_{i->j} b_i v_{ij} - q = sum_{i->j} v_{ij} - q (as before)
+    // We need the formula influx = B_i sum_{j->i} b_j v_{ij} - B_i q_w.
+    //                     outflux = B_i sum_{i->j} b_i v_{ij} - B_i q = sum_{i->j} v_{ij} - B_i q
     // Influxes are negative, outfluxes positive.
     struct TransportModelCompressibleTwophase::Residual
     {
 	int cell;
-	double s0;
-	double influx;    // sum_j min(v_ij, 0)*f(s_j) + q_w // TODO: fix comment.
-	double outflux;   // sum_j max(v_ij, 0) - q
+        double B_cell;
+	double z0;
+	double influx;    // B_i sum_j b_j min(v_ij, 0)*f(s_j) - B_i q_w
+	double outflux;   // sum_j max(v_ij, 0) - B_i q
         // @@@ TODO: figure out change to rock-comp. terms with fluid compr.
-        // double comp_term; // q - sum_j v_ij
+        double comp_term; // Now: used to be: q - sum_j v_ij
 	double dtpv;    // dt/pv(i)
 	const TransportModelCompressibleTwophase& tm;
 	explicit Residual(const TransportModelCompressibleTwophase& tmodel, int cell_index)
 	    : tm(tmodel)
 	{
 	    cell    = cell_index;
-	    s0      = tm.saturation_[cell];
             const int np = tm.props_.numPhases();
-            const double B_cell = 1.0/tm.A_[np*np*cell + 0];
+	    z0      = tm.surfacevol0_[np*cell + 0]; // I.e. water surface volume
+            B_cell = 1.0/tm.A_[np*np*cell + 0];
             double src_flux       = -tm.source_[cell];
             bool src_is_inflow = src_flux < 0.0;
-	    influx  =  src_is_inflow ? src_flux : 0.0;
-	    outflux = !src_is_inflow ? src_flux : 0.0;
-            // comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
-	    dtpv    = tm.dt_/tm.porevolume_[cell];
+	    influx  =  src_is_inflow ? B_cell*src_flux : 0.0;
+	    outflux = !src_is_inflow ? B_cell*src_flux : 0.0;
+            comp_term = (tm.porevolume_[cell] - tm.porevolume0_[cell])/tm.porevolume0_[cell];
+	    dtpv    = tm.dt_/tm.porevolume0_[cell];
 	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
 		const int f = tm.grid_.cell_faces[i];
 		double flux;
@@ -160,16 +163,15 @@ namespace Opm
                         const double b_face = tm.A_[np*np*other + 0];
 			influx  += B_cell*b_face*flux*tm.fractionalflow_[other];
 		    } else {
-			outflux += flux;
+			outflux += flux; // Because B_cell*b_face = 1 for outflow faces
 		    }
-                    // comp_term -= flux;
 		}
 	    }
 	}
 	double operator()(double s) const
 	{
 	    // return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx + s*comp_term);
-	    return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx);
+	    return s - B_cell*z0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx) + s*comp_term;
 	}
     };
 
@@ -333,7 +335,7 @@ namespace Opm
                 gf[1] = gravflux[pos];
             }
 	    s0      = tm.saturation_[cell];
-	    dtpv    = tm.dt_/tm.porevolume_[cell];
+	    dtpv    = tm.dt_/tm.porevolume0_[cell];
             
 	}
 	double operator()(double s) const
@@ -467,6 +469,7 @@ namespace Opm
 
     void TransportModelCompressibleTwophase::solveGravity(const std::vector<std::vector<int> >& columns,
                                                           const double* pressure,
+                                                          const double* porevolume0,
                                                           const double* porevolume,
                                                           const double dt,
                                                           std::vector<double>& saturation)
@@ -489,6 +492,7 @@ namespace Opm
         }
 
         // Set up other variables.
+        porevolume0_ = porevolume0;
         porevolume_ = porevolume;
         dt_ = dt;
         toWaterSat(saturation, saturation_);
