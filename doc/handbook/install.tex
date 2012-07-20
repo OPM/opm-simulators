@@ -54,28 +54,28 @@ additional software packages may be required. Some hints on that are given in Se
 
 For the extraction of the content of tar files, the GNU version of \texttt{tar} is used.
 The subversion (svn) software repositories can be accessed with help of a subversion client. We recommend the Apache Subversion command-line client \texttt{svn}
-contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}. 
+contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}.
 
 \begin{table}
 \centering
-\begin{tabular}{lll}
-subversion & git & libtool \\
-automake & build-essential & libboost-all-dev \\
-texlive-latex-base & doxygen & csh\\
-\hline
-for alberta: & & \\
-freeglut3-dev & & \\
-\hline
-for parallel use: & & \\
-openmpi-common & mpi-default-bin & mpi-default-dev \\
-\hline
-for ug parallel: & & \\
-flex & bison & \\
-\hline 
-for alberta parallel: & & \\
-libblas-dev & & \\
-\end{tabular}
 \caption{Ubuntu package names for Ubuntu 12.04}
+\begin{tabular}{llll}
+\toprule
+\textbf{purpose} & \textbf{package names} \\
+\midrule
+general: & subversion & git & libtool \\
+& automake & build-essential & libboost-all-dev \\
+& texlive-latex-base & doxygen & csh\\
+\midrule
+for alberta: & freeglut3-dev &  \\
+\midrule
+for parallel use: & openmpi-common & mpi-default-bin & mpi-default-dev \\
+\midrule
+for ug parallel: & flex & bison & \\
+\midrule
+for alberta parallel: & libblas-dev &\\
+\bottomrule
+\end{tabular}
 \label{tbl:ubuntu-pkg}
 \end{table}
 
