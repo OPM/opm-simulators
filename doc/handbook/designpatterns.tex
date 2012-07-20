@@ -306,7 +306,7 @@ canonical identifier names for types and methods quickly become really
 long and unintelligible. For example, a typical error message
 generated using GCC 4.5 and \Dune-PDELab looks like this
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize, numbersep=5pt]
-test_pdelab.cc:171:9: error: no matching function for call to ï¿½Dune::\
+test_pdelab.cc:171:9: error: no matching function for call to ‘Dune::\
 PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
 PDELab::GridFunctionSpace<Dune::GridView<Dune::DefaultLeafGridViewTraits\
 <const Dune::UGGrid<3>, (Dune::PartitionIteratorType)4u> >, Dune::\
@@ -322,7 +322,7 @@ PDELab::GridFunctionSpaceBlockwiseMapper>, Dumux::PDELab::BoxLocalOperator\
 <Dumux::Properties::TTag::LensProblem>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
-ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()ï¿½
+ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()’
 \end{lstlisting}
 This seriously complicates diagnostics. Although there is no full
 solution to this problem yet, an effective way of dealing with such
