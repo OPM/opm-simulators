@@ -44,7 +44,10 @@ public:
     typedef ScalarT Scalar;
 
     LinearMaterialParams()
-    {}
+    {
+        setEntryPC(0);
+        setMaxPC(0);
+    }
 
     LinearMaterialParams(Scalar entryPC, Scalar maxPC)
     {
