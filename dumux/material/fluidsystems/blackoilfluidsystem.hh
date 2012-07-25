@@ -3,7 +3,7 @@
 /*****************************************************************************
  *   Copyright (C) 2011-2012 by Andreas Lauser                               *
  *   Copyright (C) 2011 by Francesco Patacchini                              *
- *   Institute of Hydraulic Engineering                                      *
+ *   Institute of Modelling Hydraulic and Environmental Systems              *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
  *                                                                           *
