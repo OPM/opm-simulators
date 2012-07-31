@@ -28,16 +28,13 @@
 #ifndef DUMUX_PARKER_LENHARD_HH
 #define DUMUX_PARKER_LENHARD_HH
 
-#include <dumux/material/fluidmatrixinteractions/2p/vangenuchten.hh>
 #include "parkerlenhardparams.hh"
 
-#include <math.h>
-#include <assert.h>
+#include <dumux/material/fluidmatrixinteractions/2p/vangenuchten.hh>
 
 #include <algorithm>
-
 #include <iostream>
-#include <boost/format.hpp>
+#include <cassert>
 
 namespace Dumux
 {

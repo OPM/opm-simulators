@@ -41,7 +41,7 @@
 #include <dune/common/exceptions.hh>
 
 #include <limits>
-#include <assert.h>
+#include <cassert>
 
 namespace Dumux {
 namespace FluidSystems {

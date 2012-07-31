@@ -31,12 +31,12 @@
 #ifndef DUMUX_TABULATED_COMPONENT_HH
 #define DUMUX_TABULATED_COMPONENT_HH
 
-#include <dumux/common/exceptions.hh>
 #include <cmath>
 #include <limits>
-#include <assert.h>
-
+#include <cassert>
 #include <iostream>
+
+#include <dumux/common/exceptions.hh>
 
 namespace Dumux
 {

@@ -41,7 +41,7 @@
 #ifndef DUMUX_SOMERTON_PARAMS_HH
 #define DUMUX_SOMERTON_PARAMS_HH
 
-#include <assert.h>
+#include <cassert>
 
 namespace Dumux {
 /*!

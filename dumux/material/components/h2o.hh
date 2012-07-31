@@ -29,6 +29,9 @@
 #ifndef DUMUX_H2O_HH
 #define DUMUX_H2O_HH
 
+#include <cmath>
+#include <cassert>
+
 #include <dumux/material/idealgas.hh>
 #include <dumux/common/exceptions.hh>
 #include <dumux/common/valgrind.hh>
@@ -39,9 +42,6 @@
 #include "iapws/region1.hh"
 #include "iapws/region2.hh"
 #include "iapws/region4.hh"
-
-#include <cmath>
-#include <assert.h>
 
 namespace Dumux
 {

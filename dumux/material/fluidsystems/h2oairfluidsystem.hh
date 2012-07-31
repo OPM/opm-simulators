@@ -43,7 +43,7 @@
 #include <dumux/common/exceptions.hh>
 
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 
 namespace Dumux
 {

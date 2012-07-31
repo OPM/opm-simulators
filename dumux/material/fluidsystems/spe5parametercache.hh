@@ -29,13 +29,13 @@
 #ifndef SPE5_PARAMETER_CACHE_HH
 #define SPE5_PARAMETER_CACHE_HH
 
+#include <cassert>
+
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/fluidsystems/parametercachebase.hh>
 
 #include <dumux/material/eos/pengrobinson.hh>
 #include <dumux/material/eos/pengrobinsonparamsmixture.hh>
-
-#include <assert.h>
 
 namespace Dumux
 {
