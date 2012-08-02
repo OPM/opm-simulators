@@ -48,54 +48,44 @@ public:
     typedef VanGenuchtenParams<Scalar> Parent;
 
     RegularizedVanGenuchtenParams()
+        : pCLowSw_(0.01)
+        , pCHighSw_(0.99)
     {}
 
     RegularizedVanGenuchtenParams(Scalar vgAlpha,
                                    Scalar vgN)
         : Parent(vgAlpha, vgN)
+        , pCLowSw_(0.01)
+        , pCHighSw_(0.99)
     {}
 
     /*!
-     * \brief Threshold saturation below which the capillary pressure
-     *        is regularized.
-     *
-     * This is just 1%. If you need a different value, overload this
-     * class.
+     * \brief Return the threshold saturation below which the
+     *        capillary pressure is regularized.
      */
     Scalar pCLowSw() const
-    {
-        // Some problems are very sensitive to this value
-        // (e.g. making it smaller might result in negative
-        // pressures), if you change it here, you will almost
-        // certainly break someone's code!
-        //
-        // If you want to use a different regularization threshold,
-        // overload this class and supply the new class as second
-        // template parameter for the RegularizedVanGenuchten law!
-        return /* PLEASE DO _NOT_ */ 1e-2; /* CHANGE THIS VALUE. READ
-                                            * COMMENT ABOVE! */
-   }
+    { return pCLowSw_; }
 
     /*!
-     * \brief Threshold saturation above which the capillary pressure
-     *        is regularized.
-     *
-     * This is just 99%. If you need a different value, overload this
-     * class.
+     * \brief Set the threshold saturation below which the capillary
+     *        pressure is regularized.
+     */
+    Scalar setPCLowSw(Scalar value)
+    { pCLowSw_ = value; }
+
+    /*!
+     * \brief Return the threshold saturation below which the
+     *        capillary pressure is regularized.
      */
     Scalar pCHighSw() const
-    {
-        // Some problems are very sensitive to this value
-        // (e.g. making it smaller might result in negative
-        // pressures), if you change it here, you will almost
-        // certainly break someone's code!
-        //
-        // If you want to use a different regularization threshold,
-        // overload this class and supply the new class as second
-        // template parameter for the RegularizedVanGenuchten law!
-        return /* PLEASE DO _NOT_ */ 99e-2; /* CHANGE THIS VALUE. READ
-                                             * COMMENT ABOVE! */
-    }
+    { return pCHighSw_; }
+
+    /*!
+     * \brief Set the threshold saturation below which the capillary
+     *        pressure is regularized.
+     */
+    Scalar setPCHighSw(Scalar value)
+    { pCHighSw_ = value; }
 
     /*!
      * \brief Threshold saturation below which the relative
@@ -117,6 +107,9 @@ public:
     Scalar krwHighSw() const
     { return 0.90; }
 
+private:
+    Scalar pCLowSw_;
+    Scalar pCHighSw_;
 };
 } // namespace Dumux
 
