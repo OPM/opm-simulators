@@ -68,7 +68,7 @@ public:
      * \brief Set the threshold saturation below which the capillary pressure
      *        is regularized.
      */
-    Scalar setThresholdSw(Scalar value)
+    void setThresholdSw(Scalar value)
     { SwThres_ = value; }
     
 private:

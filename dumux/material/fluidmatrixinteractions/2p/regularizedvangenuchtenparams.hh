@@ -70,7 +70,7 @@ public:
      * \brief Set the threshold saturation below which the capillary
      *        pressure is regularized.
      */
-    Scalar setPCLowSw(Scalar value)
+    void setPCLowSw(Scalar value)
     { pCLowSw_ = value; }
 
     /*!
@@ -84,7 +84,7 @@ public:
      * \brief Set the threshold saturation below which the capillary
      *        pressure is regularized.
      */
-    Scalar setPCHighSw(Scalar value)
+    void setPCHighSw(Scalar value)
     { pCHighSw_ = value; }
 
     /*!
