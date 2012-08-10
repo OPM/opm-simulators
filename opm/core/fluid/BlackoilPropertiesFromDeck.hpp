@@ -27,6 +27,8 @@
 #include <opm/core/fluid/SaturationPropsFromDeck.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
+struct UnstructuredGrid;
+
 namespace Opm
 {
 
@@ -35,12 +37,13 @@ namespace Opm
     class BlackoilPropertiesFromDeck : public BlackoilPropertiesInterface
     {
     public:
-        /// Construct from deck and cell mapping.
-        /// \param  deck         eclipse input parser
-        /// \param  global_cell  mapping from cell indices (typically from a processed grid)
+        /// Initialize from deck and grid.
+        /// \param  deck         Deck input parser
+        /// \param  grid         Grid to which property object applies, needed for the 
+        ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const std::vector<int>& global_cell);
+                                   const UnstructuredGrid& grid);
 
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();

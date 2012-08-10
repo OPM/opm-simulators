@@ -23,11 +23,11 @@ namespace Opm
 {
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                                           const std::vector<int>& global_cell)
+                                                           const UnstructuredGrid& grid)
     {
-        rock_.init(deck, global_cell);
+        rock_.init(deck, grid);
         pvt_.init(deck);
-        satprops_.init(deck, global_cell);
+        satprops_.init(deck, grid);
 	if (pvt_.numPhases() != satprops_.numPhases()) {
 	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
 		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");

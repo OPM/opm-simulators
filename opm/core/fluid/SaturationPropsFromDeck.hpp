@@ -25,6 +25,8 @@
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 #include <vector>
 
+struct UnstructuredGrid;
+
 namespace Opm
 {
 
@@ -34,10 +36,13 @@ namespace Opm
         /// Default constructor.
         SaturationPropsFromDeck();
 
-        /// Initialize from deck.
-        /// global_cell maps from grid cells to their original logical Cartesian indices.
+        /// Initialize from deck and grid.
+        /// \param  deck         Deck input parser
+        /// \param  grid         Grid to which property object applies, needed for the 
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
         void init(const EclipseGridParser& deck,
-                  const std::vector<int>& global_cell);
+                  const UnstructuredGrid& grid);
 
         /// \return   P, the number of phases.
         int numPhases() const;
