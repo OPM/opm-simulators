@@ -38,19 +38,8 @@ int main(int argc, char** argv)
     // Finally handle the wells
     WellsManager wells(parser, *grid.c_grid(), NULL);
 
-    int nc = grid.c_grid()->number_of_cells;
-    std::vector<int> global_cells(nc);
-    const int* gc = grid.c_grid()->global_cell;
-    if (gc != 0) {
-        std::copy(gc, gc + nc, global_cells.begin());
-    } else {
-        for (int cell = 0; cell < nc; ++cell) {
-            global_cells[cell] = cell;
-        }
-    }
-
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
-    IncompPropertiesFromDeck incomp_properties(parser, global_cells);
+    IncompPropertiesFromDeck incomp_properties(parser, *grid.c_grid());
 
     RockCompressibility rock_comp(parser);
 
