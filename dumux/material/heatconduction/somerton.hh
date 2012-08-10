@@ -100,8 +100,12 @@ public:
     static Scalar heatConductivity(const Params &params,
                                    const FluidState &fluidState)
     {
+        Valgrind::CheckDefined(params.vacuumLambda());
+
         Scalar lambda = 0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            Valgrind::CheckDefined(params.fullySaturatedLambda(phaseIdx));
+
             if (FluidSystem::isLiquid(phaseIdx)) {
                 lambda +=
                     regularizedSqrt_(fluidState.saturation(phaseIdx))
