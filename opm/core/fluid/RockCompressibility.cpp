@@ -69,7 +69,8 @@ namespace Opm
             const double cpnorm = rock_comp_*(pressure - pref_);
             return (1.0 + cpnorm + 0.5*cpnorm*cpnorm);
         } else {
-            return Opm::linearInterpolation(p_, poromult_, pressure);
+	    // return Opm::linearInterpolation(p_, poromult_, pressure);
+	    return Opm::linearInterpolationExtrap(p_, poromult_, pressure);
         }
     }
 
@@ -78,8 +79,11 @@ namespace Opm
         if (p_.empty()) {
             return rock_comp_;
         } else {
-            const double poromult = Opm::linearInterpolation(p_, poromult_, pressure);
-            const double dporomultdp = Opm::linearInterpolationDerivative(p_, poromult_, pressure);
+            //const double poromult = Opm::linearInterpolation(p_, poromult_, pressure);
+            //const double dporomultdp = Opm::linearInterpolationDerivative(p_, poromult_, pressure);
+	    const double poromult = Opm::linearInterpolationExtrap(p_, poromult_, pressure);
+            const double dporomultdp = Opm::linearInterpolationDerivativeExtrap(p_, poromult_, pressure);
+
             return dporomultdp/poromult;
         }
     }
