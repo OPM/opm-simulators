@@ -254,6 +254,8 @@ namespace Opm
                 ++update_count;
                 const int cell = cells[i];
                 const double old_s = saturation_[cell];
+                // solveSingleCell() requires saturation_[cell]
+                // to be s0.
                 saturation_[cell] = s0[i];
                 solveSingleCell(cell);
                 const double s_change = std::fabs(saturation_[cell] - old_s);
@@ -305,8 +307,9 @@ namespace Opm
 
     // Residual function r(s) for a single-cell implicit Euler gravity segregation
     //
-    //     r(s) = s - s0 + dt/pv*sum_{j adj i}( gravmod_ij * gf_ij ).
+    // [[ incompressible was: r(s) = s - s0 + dt/pv*sum_{j adj i}( gravmod_ij * gf_ij )  ]]
     //
+    //     r(s) = s - B*z0 + dt/pv*( influx + outflux*f(s) )
     struct TransportModelCompressibleTwophase::GravityResidual
     {
         int cell;
@@ -372,29 +375,49 @@ namespace Opm
 
 
 
-    void TransportModelCompressibleTwophase::initGravity(const double* grav)
+    void TransportModelCompressibleTwophase::initGravity()
     {
-        // Set up gravflux_ = T_ij g (rho_w - rho_o) (z_i - z_j)
+        // Set up transmissibilities.
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
         const int nf = grid_.number_of_faces;
-        const int dim = grid_.dimensions;
-        gravflux_.resize(nf);
+        trans_.resize(nf);
         tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid_), props_.permeability(), &htrans[0]);
-        tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &gravflux_[0]);
+        tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &trans_[0]);
+    }
 
-        const double delta_rho = 0.0;// props_.density()[0] - props_.density()[1];
-        THROW("TransportModelCompressibleTwophase gravity solver not done yet."); // See line above...
+
+
+
+    void TransportModelCompressibleTwophase::initGravityDynamic(const double* grav)
+    {
+        // Set up gravflux_ = T_ij g [   (b_w,i rho_w,S - b_o,i rho_o,S) (z_i - z_f)
+        //                             + (b_w,j rho_w,S - b_o,j rho_o,S) (z_f - z_j) ]
+        // But b_w,i * rho_w,S = rho_w,i, which we conmpute with a call to props_.density().
+        // We assume that we already have stored T_ij in trans_.
+        // We also assume that the A_ matrices are updated from an earlier call to solve().
+        const int nc = grid_.number_of_cells;
+        const int nf = grid_.number_of_faces;
+        const int np = props_.numPhases();
+        ASSERT(np == 2);
+        const int dim = grid_.dimensions;
+        density_.resize(nc*np);
+        props_.density(grid_.number_of_cells, &A_[0], &density_[0]);
+        std::fill(gravflux_.begin(), gravflux_.end(), 0.0);
         for (int f = 0; f < nf; ++f) {
             const int* c = &grid_.face_cells[2*f];
-            double gdz = 0.0;
+            const double signs[2] = { 1.0, -1.0 };
             if (c[0] != -1 && c[1] != -1) {
-                for (int d = 0; d < dim; ++d) {
-                    gdz += grav[d]*(grid_.cell_centroids[dim*c[0] + d] - grid_.cell_centroids[dim*c[1] + d]);
+                for (int ci = 0; ci < 2; ++ci) {
+                    double gdz = 0.0;
+                    for (int d = 0; d < dim; ++d) {
+                        gdz += grav[d]*(grid_.cell_centroids[dim*c[ci] + d] - grid_.face_centroids[dim*f + d]);
+                    }
+                    gravflux_[f] += signs[ci]*trans_[f]*gdz*(density_[2*c[ci]] - density_[2*c[ci] + 1]);
                 }
             }
-            gravflux_[f] *= delta_rho*gdz;
         }
     }
+
 
 
 
@@ -470,10 +493,13 @@ namespace Opm
     void TransportModelCompressibleTwophase::solveGravity(const std::vector<std::vector<int> >& columns,
                                                           const double* pressure,
                                                           const double* porevolume0,
-                                                          const double* porevolume,
                                                           const double dt,
+                                                          const double* grav,
                                                           std::vector<double>& saturation)
     {
+        // Assume that solve() has already been called, so that A_ is current.
+        initGravityDynamic(grav);
+
         // Initialize mobilities.
         const int nc = grid_.number_of_cells;
         std::vector<int> cells(nc);
@@ -493,7 +519,6 @@ namespace Opm
 
         // Set up other variables.
         porevolume0_ = porevolume0;
-        porevolume_ = porevolume;
         dt_ = dt;
         toWaterSat(saturation, saturation_);
 
