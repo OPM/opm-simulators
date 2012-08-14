@@ -114,7 +114,8 @@ namespace Opm
 	    THROW("SaturationPropsBasic::init() illegal num_phases: " << num_phases);
 	}
         num_phases_ = num_phases;
-	std::string rpf = param.getDefault("relperm_func", std::string("Unset"));
+	//std::string rpf = param.getDefault("relperm_func", std::string("Unset"));
+	std::string rpf = param.getDefault("relperm_func", std::string("Linear"));
 	if (rpf == "Constant") {
 	    relperm_func_ = Constant;
 	    if(num_phases!=1){
