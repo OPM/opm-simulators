@@ -43,10 +43,8 @@
 #include <iostream>
 #include <cassert>
 
-namespace Dumux
-{
-namespace FluidSystems
-{
+namespace Dumux {
+namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
