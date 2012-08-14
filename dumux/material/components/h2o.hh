@@ -138,6 +138,27 @@ public:
 
         return Region4::saturationPressure(T);
     }
+    /*!
+     * \brief The vapor temperature in \f$\mathrm{[Ka]}\f$ of pure water
+     *        at a given pressure.
+     *
+     *\param pressure pressure in \f$\mathrm{[Pa]}\f$
+     *
+     * See:
+     *
+     * IAPWS: "Revised Release on the IAPWS Industrial Formulation
+     * 1997 for the Thermodynamic Properties of Water and Steam",
+     * http://www.iapws.org/relguide/IF97-Rev.pdf
+     */
+    static Scalar vaporTemperature(Scalar pressure)
+    {
+        if (pressure > criticalPressure())
+            pressure = criticalPressure();
+        if (pressure < triplePressure())
+            pressure = triplePressure();
+
+        return Region4::vaporTemperature(pressure);
+    }
 
     /*!
      * \brief Specific enthalpy of water steam \f$\mathrm{[J/kg]}\f$.
