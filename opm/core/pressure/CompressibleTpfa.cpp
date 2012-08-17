@@ -487,7 +487,7 @@ namespace Opm
         cq.Af = &face_A_[0];
         cq.phasemobf = &face_phasemob_[0];
         cq.voldiscr = &cell_voldisc_[0];
-        if (rock_comp_props_ == NULL) {
+        if (rock_comp_props_ == NULL || !rock_comp_props_->isActive()) {
             cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
                                   &face_gravcap_[0], cell_press, well_bhp,
                                   &porevol_[0], h_);
