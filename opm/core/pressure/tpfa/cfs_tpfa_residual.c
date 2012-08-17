@@ -1215,6 +1215,79 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
 
 /* ---------------------------------------------------------------------- */
 void
+cfs_tpfa_res_comprock_assemble(
+                      struct UnstructuredGrid     *G        ,
+                      double                       dt       ,
+                      struct cfs_tpfa_res_forces  *forces   ,
+                      const double                *zc       ,
+                      struct compr_quantities_gen *cq       ,
+                      const double                *trans    ,
+                      const double                *gravcap_f,
+                      const double                *cpress   ,
+                      const double                *wpress   ,
+                      const double                *porevol  ,
+                      const double                *porevol0 ,
+                      const double                *rock_comp,
+                      struct cfs_tpfa_res_data    *h        )
+/* ---------------------------------------------------------------------- */
+{
+    /* We want to add this term to the usual residual:
+     *
+     * (porevol(pressure)-porevol(initial_pressure))/dt.
+     *
+     * Its derivative (for the diagonal term of the Jacobian) is:
+     *
+     * porevol(pressure)*rock_comp(pressure)/dt
+     */
+
+    int     c, w, well_is_neumann, rock_is_incomp;
+    size_t  j;
+    double dpvdt;
+    const struct Wells* W;
+
+    /* Assemble usual system (without rock compressibility). */
+    cfs_tpfa_res_assemble(G, dt, forces, zc, cq, trans, gravcap_f,
+                          cpress, wpress, porevol, h);
+
+    /* Check if we have only Neumann wells. */
+    well_is_neumann = 1;
+    W = forces->wells->W;
+    for (w = 0; well_is_neumann && w < W->number_of_wells; w++) {
+        if ((W->ctrls[w]->current >= 0) && /* OPEN? */
+            (W->ctrls[w]->type[ W->ctrls[w]->current ] == BHP)) {
+            well_is_neumann = 0;
+        }
+    }
+
+    /* If we made a singularity-removing adjustment in the
+       regular assembly, we undo it here. */
+    if (well_is_neumann && h->pimpl->is_incomp) {
+        h->J->sa[0] /= 2;
+    }
+
+    /* Add new terms to residual and Jacobian. */
+    rock_is_incomp = 1;
+    for (c = 0; c < G->number_of_cells; c++) {
+        j = csrmatrix_elm_index(c, c, h->J);
+
+        dpvdt = (porevol[c] - porevol0[c]) / dt;
+        if (dpvdt != 0.0 || rock_comp[c] != 0.0) {
+            rock_is_incomp = 0;
+        }
+
+        h->J->sa[j] += porevol[c] * rock_comp[c] / dt;
+        h->F[c]     -= dpvdt;
+    }
+
+    /* Re-do the singularity-removing adjustment if necessary */
+    if (rock_is_incomp && well_is_neumann && h->pimpl->is_incomp) {
+        h->J->sa[0] *= 2;
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+void
 cfs_tpfa_res_flux(struct UnstructuredGrid    *G        ,
                   struct cfs_tpfa_res_forces *forces   ,
                   int                         np       ,
