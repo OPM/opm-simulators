@@ -146,7 +146,7 @@ namespace Opm
         catch (...) {
           THROW("Creating directories failed: " << fpath);
         }
-        vtkfilename << "/" << std::setw(3) << std::setfill('0') << step << ".vtu";
+        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         if (!vtkfile) {
             THROW("Failed to open " << vtkfilename.str());
