@@ -54,6 +54,18 @@
 #include <numeric>
 
 
+namespace
+{
+    void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
+    {
+        if (param.anyUnused()) {
+            std::cout << "--------------------   Unused parameters:   --------------------\n";
+            param.displayUsage();
+            std::cout << "----------------------------------------------------------------" << std::endl;
+        }
+    }
+} // anon namespace
+
 
 
 // ----------------- Main program -----------------
@@ -205,17 +217,20 @@ main(int argc, char** argv)
     // Linear solver.
     LinearSolverFactory linsolver(param);
 
-    // Warn if any parameters are unused.
-    // if (param.anyUnused()) {
-    //     std::cout << "--------------------   Unused parameters:   --------------------\n";
-    //     param.displayUsage();
-    //     std::cout << "----------------------------------------------------------------" << std::endl;
-    // }
-
     // Write parameters used for later reference.
-    // if (output) {
-    //     param.writeParam(output_dir + "/spu_2p.param");
-    // }
+    bool output = param.getDefault("output", true);
+    if (output) {
+      std::string output_dir =
+        param.getDefault("output_dir", std::string("output"));
+      boost::filesystem::path fpath(output_dir);
+      try {
+        create_directories(fpath);
+      }
+      catch (...) {
+        THROW("Creating directories failed: " << fpath);
+      }
+      param.writeParam(output_dir + "/simulation.param");
+    }
 
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
@@ -237,6 +252,7 @@ main(int argc, char** argv)
                                    grav);
         SimulatorTimer simtimer;
         simtimer.init(param);
+        warnIfUnusedParams(param);
         WellState well_state;
         well_state.init(0, state);
         rep = simulator.run(simtimer, state, well_state);
@@ -270,7 +286,7 @@ main(int argc, char** argv)
                       << "\n                  (number of steps: "
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
-            // Create new wells, well_satate
+            // Create new wells, well_state
             WellsManager wells(*deck, *grid->c_grid(), props->permeability());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
@@ -290,8 +306,10 @@ main(int argc, char** argv)
                                        bcs.c_bcs(),
                                        linsolver,
                                        grav);
-            SimulatorReport epoch_rep
-                = simulator.run(simtimer, state, well_state);
+            if (epoch == 0) {
+                warnIfUnusedParams(param);
+            }
+            SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
 
             // Update total timing report and remember step number.
             rep += epoch_rep;
