@@ -381,6 +381,7 @@ namespace Opm
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
         const int nf = grid_.number_of_faces;
         trans_.resize(nf);
+        gravflux_.resize(nf);
         tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid_), props_.permeability(), &htrans[0]);
         tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &trans_[0]);
     }
