@@ -96,6 +96,7 @@ namespace Opm
         WellsManager& wells_manager_;
         const Wells* wells_;
         const std::vector<double>& src_;
+        const FlowBoundaryConditions* bcs_;
         // Solvers
         IncompTpfa psolver_;
         TransportModelTwophase tsolver_;
@@ -224,6 +225,35 @@ namespace Opm
     }
 
 
+    static bool allNeumannBCs(const FlowBoundaryConditions* bcs)
+    {
+        if (bcs == NULL) {
+            return true;
+        } else {
+            return std::find(bcs->type, bcs->type + bcs->nbc, BC_PRESSURE)
+                == bcs->type + bcs->nbc;
+        }
+    }
+
+
+    static bool allRateWells(const Wells* wells)
+    {
+        if (wells == NULL) {
+            return true;
+        }
+        const int nw = wells->number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells->ctrls[w];
+            if (wc->current >= 0) {
+                if (wc->type[wc->current] == BHP) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
 
 
 
@@ -242,6 +272,7 @@ namespace Opm
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
           src_(src),
+          bcs_(bcs),
           psolver_(grid, props, rock_comp, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
@@ -333,9 +364,9 @@ namespace Opm
             wellreport.push(props_, *wells_, state.saturation(), 0.0, well_state.bhp(), well_state.perfRates());
         }
         std::fstream tstep_os;
-        if(output_){
-          std::string filename = output_dir_ + "/step_timing.param";
-          tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
+        if (output_) {
+            std::string filename = output_dir_ + "/step_timing.param";
+            tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
         }
         for (; !timer.done(); ++timer) {
             // Report timestep and (optionally) write state to disk.
@@ -363,8 +394,12 @@ namespace Opm
                 std::vector<double> initial_pressure = state.pressure();
                 psolver_.solve(timer.currentStepLength(), state, well_state);
 
-                // Renormalize if incompressible.
-                if (!rock_comp_->isActive()) {
+                // Renormalize pressure if rock is incompressible, and
+                // there are no pressure conditions (bcs or wells).
+                // It is deemed sufficient for now to renormalize
+                // using geometric volume instead of pore volume.
+                if ((rock_comp_ == NULL || !rock_comp_->isActive())
+                    && allNeumannBCs(bcs_) && allRateWells(wells_)) {
                     // Compute average pressures of previous and last
                     // step, and total volume.
                     double av_prev_press = 0.0;
@@ -381,7 +416,8 @@ namespace Opm
                     for (int cell = 0; cell < num_cells; ++cell) {
                         state.pressure()[cell] += ren_const;
                     }
-                    for (int well = 0; well < wells_->number_of_wells; ++well) {
+                    const int num_wells = (wells_ == NULL) ? 0 : wells_->number_of_wells;
+                    for (int well = 0; well < num_wells; ++well) {
                         well_state.bhp()[well] += ren_const;
                     }
                 }
@@ -485,11 +521,9 @@ namespace Opm
                                 well_state.bhp(), well_state.perfRates());
             }
             sreport.total_time =  step_timer.secsSinceStart();
-            if(output_){
-              sreport.reportParam(tstep_os);
+            if (output_) {
+                sreport.reportParam(tstep_os);
             }
-
-
         }
 
         if (output_) {
