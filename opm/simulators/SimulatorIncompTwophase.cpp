@@ -77,7 +77,6 @@ namespace Opm
 
     private:
         // Data.
-
         // Parameters for output.
         bool output_;
         bool output_vtk_;
@@ -133,8 +132,38 @@ namespace Opm
         return pimpl_->run(timer, state, well_state);
     }
 
-
-
+  static void reportVolumes(std::ostream &os,double satvol[2],double tot_porevol_init,
+                            double tot_injected[2],double tot_produced[2],
+                            double injected[2], double produced[2],
+                            double init_satvol[2]){
+        std::cout.precision(5);
+        const int width = 18;
+        os << "\nVolume balance report (all numbers relative to total pore volume).\n";
+        os << "    Saturated volumes:     "
+           << std::setw(width) << satvol[0]/tot_porevol_init
+           << std::setw(width) << satvol[1]/tot_porevol_init << std::endl;
+        os << "    Injected volumes:      "
+           << std::setw(width) << injected[0]/tot_porevol_init
+           << std::setw(width) << injected[1]/tot_porevol_init << std::endl;
+        os << "    Produced volumes:      "
+           << std::setw(width) << produced[0]/tot_porevol_init
+           << std::setw(width) << produced[1]/tot_porevol_init << std::endl;
+        os << "    Total inj volumes:     "
+           << std::setw(width) << tot_injected[0]/tot_porevol_init
+           << std::setw(width) << tot_injected[1]/tot_porevol_init << std::endl;
+        os << "    Total prod volumes:    "
+           << std::setw(width) << tot_produced[0]/tot_porevol_init
+           << std::setw(width) << tot_produced[1]/tot_porevol_init << std::endl;
+        os << "    In-place + prod - inj: "
+           << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol_init
+           << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol_init << std::endl;
+        os << "    Init - now - pr + inj: "
+           << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol_init
+           << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol_init
+           << std::endl;
+        os.precision(8);
+    }
+  
     static void outputStateVtk(const UnstructuredGrid& grid,
                                const Opm::TwophaseState& state,
                                const int step,
@@ -162,6 +191,49 @@ namespace Opm
         Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
         dm["velocity"] = &cell_velocity;
         Opm::writeVtkData(grid, dm, vtkfile);
+    }
+    static void outputVectorMatlab(const std::string name,
+                                 const std::vector<int> vec,
+                                 const int step,
+                                 const std::string& output_dir)
+    {
+            std::ostringstream fname;
+            fname << output_dir << "/" << name;
+            boost::filesystem::path fpath = fname.str();
+            try {
+              create_directories(fpath);
+            }
+            catch (...) {
+              THROW("Creating directories failed: " << fpath);
+            }
+            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+            std::ofstream file(fname.str().c_str());
+            if (!file) {
+              THROW("Failed to open " << fname.str());
+            }
+            std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
+    }
+    
+    static void outputVectorMatlab(const std::string name,
+                                 const std::vector<double> vec,
+                                 const int step,
+                                 const std::string& output_dir)
+    {
+            std::ostringstream fname;
+            fname << output_dir << "/" << name;
+            boost::filesystem::path fpath = fname.str();
+            try {
+              create_directories(fpath);
+            }
+            catch (...) {
+              THROW("Creating directories failed: " << fpath);
+            }
+            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+            std::ofstream file(fname.str().c_str());
+            if (!file) {
+              THROW("Failed to open " << fname.str());
+            }
+            std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
     }
 
 
@@ -377,6 +449,9 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                outputVectorMatlab(std::string("reorder_it"),
+                                   tsolver_.getReorderIterations(),
+                                   timer.currentStepNum(), output_dir_);
             }
 
             SimulatorReport sreport;
@@ -471,8 +546,16 @@ namespace Opm
                               stepsize, state.saturation());
                 Opm::computeInjectedProduced(props_, state.saturation(), transport_src, stepsize, injected, produced);
                 if (use_segregation_split_) {
-                    tsolver_.solveGravity(columns_, &porevol[0], stepsize, state.saturation());
+                  tsolver_.solveGravity(columns_, &porevol[0], stepsize, state.saturation());
                 }
+                watercut.push(timer.currentTime() + timer.currentStepLength(),
+                              produced[0]/(produced[0] + produced[1]),
+                              tot_produced[0]/tot_porevol_init);
+                if (wells_) {
+                  wellreport.push(props_, *wells_, state.saturation(),
+                                  timer.currentTime() + timer.currentStepLength(),
+                                  well_state.bhp(), well_state.perfRates());
+                }                            
             }
             transport_timer.stop();
             double tt = transport_timer.secsSinceStart();
@@ -485,41 +568,11 @@ namespace Opm
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
             tot_produced[1] += produced[1];
-            std::cout.precision(5);
-            const int width = 18;
-            std::cout << "\nVolume balance report (all numbers relative to total pore volume).\n";
-            std::cout << "    Saturated volumes:     "
-                      << std::setw(width) << satvol[0]/tot_porevol_init
-                      << std::setw(width) << satvol[1]/tot_porevol_init << std::endl;
-            std::cout << "    Injected volumes:      "
-                      << std::setw(width) << injected[0]/tot_porevol_init
-                      << std::setw(width) << injected[1]/tot_porevol_init << std::endl;
-            std::cout << "    Produced volumes:      "
-                      << std::setw(width) << produced[0]/tot_porevol_init
-                      << std::setw(width) << produced[1]/tot_porevol_init << std::endl;
-            std::cout << "    Total inj volumes:     "
-                      << std::setw(width) << tot_injected[0]/tot_porevol_init
-                      << std::setw(width) << tot_injected[1]/tot_porevol_init << std::endl;
-            std::cout << "    Total prod volumes:    "
-                      << std::setw(width) << tot_produced[0]/tot_porevol_init
-                      << std::setw(width) << tot_produced[1]/tot_porevol_init << std::endl;
-            std::cout << "    In-place + prod - inj: "
-                      << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol_init
-                      << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol_init << std::endl;
-            std::cout << "    Init - now - pr + inj: "
-                      << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol_init
-                      << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol_init
-                      << std::endl;
-            std::cout.precision(8);
-
-            watercut.push(timer.currentTime() + timer.currentStepLength(),
-                          produced[0]/(produced[0] + produced[1]),
-                          tot_produced[0]/tot_porevol_init);
-            if (wells_) {
-                wellreport.push(props_, *wells_, state.saturation(),
-                                timer.currentTime() + timer.currentStepLength(),
-                                well_state.bhp(), well_state.perfRates());
-            }
+            //reportVolumes(std::cout,satvol[0],&tot_porevol_init[0],&tot_injected[0]);
+            Opm::reportVolumes(std::cout,satvol, tot_porevol_init,
+                               tot_injected, tot_produced,
+                               injected, produced,
+                               init_satvol);
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
                 sreport.reportParam(tstep_os);
@@ -531,6 +584,9 @@ namespace Opm
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+            outputVectorMatlab(std::string("reorder_it"),
+                               tsolver_.getReorderIterations(),
+                               timer.currentStepNum(), output_dir_);
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);
