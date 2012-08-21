@@ -32,6 +32,7 @@ namespace Opm
     namespace parameter { class ParameterGroup; }
     class IncompPropertiesInterface;
     class RockCompressibility;
+    class WellsManager;
     class LinearSolverInterface;
     class SimulatorTimer;
     class TwophaseState;
@@ -58,19 +59,19 @@ namespace Opm
         ///     use_segregation_split (false)  solve for gravity segregation (if false,
         ///                                    segregation is ignored).
         ///
-        /// \param[in] grid        grid data structure
-        /// \param[in] props       fluid and rock properties
-        /// \param[in] rock_comp   if non-null, rock compressibility properties
-        /// \param[in] wells       if non-null, wells data structure
-        /// \param[in] src         source terms
-        /// \param[in] bcs         boundary conditions, treat as all noflow if null
-        /// \param[in] linsolver   linear solver
-        /// \param[in] gravity     if non-null, gravity vector
+        /// \param[in] grid          grid data structure
+        /// \param[in] props         fluid and rock properties
+        /// \param[in] rock_comp     if non-null, rock compressibility properties
+        /// \param[in] well_manager  well manager, may manage no (null) wells
+        /// \param[in] src           source terms
+        /// \param[in] bcs           boundary conditions, treat as all noflow if null
+        /// \param[in] linsolver     linear solver
+        /// \param[in] gravity       if non-null, gravity vector
        SimulatorIncompTwophase(const parameter::ParameterGroup& param,
                                const UnstructuredGrid& grid,
                                const IncompPropertiesInterface& props,
                                const RockCompressibility* rock_comp,
-                               const Wells* wells,
+                               WellsManager& wells_manager,
                                const std::vector<double>& src,
                                const FlowBoundaryConditions* bcs,
                                LinearSolverInterface& linsolver,
