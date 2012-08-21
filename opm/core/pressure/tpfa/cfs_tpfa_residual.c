@@ -1242,7 +1242,7 @@ cfs_tpfa_res_comprock_assemble(
 
     int     c, w, well_is_neumann, rock_is_incomp;
     size_t  j;
-    double dpvdt;
+    double dpv;
     const struct Wells* W;
 
     /* Assemble usual system (without rock compressibility). */
@@ -1270,13 +1270,13 @@ cfs_tpfa_res_comprock_assemble(
     for (c = 0; c < G->number_of_cells; c++) {
         j = csrmatrix_elm_index(c, c, h->J);
 
-        dpvdt = (porevol[c] - porevol0[c]) / dt;
-        if (dpvdt != 0.0 || rock_comp[c] != 0.0) {
+        dpv = (porevol[c] - porevol0[c]);
+        if (dpv != 0.0 || rock_comp[c] != 0.0) {
             rock_is_incomp = 0;
         }
 
-        h->J->sa[j] += porevol[c] * rock_comp[c] / dt;
-        h->F[c]     += dpvdt;
+        h->J->sa[j] += porevol[c] * rock_comp[c];
+        h->F[c]     += dpv;
     }
 
     /* Re-do the singularity-removing adjustment if necessary */
