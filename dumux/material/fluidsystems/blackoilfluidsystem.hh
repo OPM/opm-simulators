@@ -101,30 +101,6 @@ public:
         //SplineSamplingPoints tmp(samplePoints.begin(), --samplePoints.end());
         SplineSamplingPoints tmp(samplePoints.begin(), samplePoints.end());
         gasFormationFactorSpline_.setContainerOfTuples(tmp);
-        bubblePressure_ = tmp[samplePoints.size() - 2].first;
-
-        // create the spline representing saturation pressure
-        // depending of the mass fraction in gas
-        int i = 0;
-        int n = tmp.size()*5;
-        int delta = 
-            1.0/(n - 1)
-            * (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin());
-        SplineSamplingPoints pSatSamplePoints;
-        while (true) {
-            Scalar pSat = i*delta + gasFormationFactorSpline_.xMin();
-            Scalar X_oG = flashGasMassFracInOil_(pSat);
-
-            std::pair<Scalar, Scalar> val(X_oG, pSat);
-            pSatSamplePoints.push_back(val);;
-
-            if (i > n && X_oG > 0.7)
-                break;
-            ++i;
-        };
-
-        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints);
-        assert(saturationPressureSpline_.monotonic());
     }
 
     /*!
@@ -143,6 +119,14 @@ public:
     }
 
     /*!
+     * \brief Set the bubble pressure of the oil in the reservoir [Pa]
+     *
+     * (That's the pressure below which gas starts to appear.)
+     */
+    static void setBubblePressure(Scalar val)
+    { bubblePressure_ = val; }
+
+    /*!
      * \brief Initialize the spline for the oil viscosity
      */
     static void setOilViscosity(const SplineSamplingPoints &samplePoints)
@@ -158,12 +142,12 @@ public:
     {
         // we use linear interpolation between the first and the
         // second sampling point to avoid a non-monotonic spline...
-        SplineSamplingPoints tmp(++samplePoints.begin(), samplePoints.end());
         Bg0_ = samplePoints[0];
         mBg0_ = 
             (samplePoints[1].second - samplePoints[0].second) /
             (samplePoints[1].first - samplePoints[0].first);
 
+        SplineSamplingPoints tmp(++samplePoints.begin(), samplePoints.end());
         gasFormationVolumeFactorSpline_.setContainerOfTuples(tmp);
         assert(gasFormationVolumeFactorSpline_.monotonic());
     }
@@ -210,12 +194,32 @@ public:
         // spe9 paper
         molarMass_[oCompIdx] = 175e-3; // kg/mol
         
+        // create the spline representing saturation pressure
+        // depending of the mass fraction in gas
+        int i = 0;
+        int n = gasFormationFactorSpline_.numSamples()*5;
+        int delta = 
+            1.0/(n - 1)
+            * (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin());
+        SplineSamplingPoints pSatSamplePoints;
+        while (true) {
+            Scalar pSat = i*delta + gasFormationFactorSpline_.xMin();
+            Scalar X_oG = flashGasMassFracInOil_(pSat);
+
+            std::pair<Scalar, Scalar> val(X_oG, pSat);
+            pSatSamplePoints.push_back(val);;
+
+            if (i > n && X_oG > 0.7)
+                break;
+            ++i;
+        };
+
 #if 0
         {
             Scalar p = 15e6;
             Scalar xoG = 0.01;
             Scalar xoO = 1 - xoG;
-            MutableParameters mp;
+            FluidState fs;
 
             /*
             int n = 1000;
@@ -403,7 +407,7 @@ public:
             Scalar rho_oAlpha = 
                 flashOilDensity_(pAlpha)
                 + 
-                oilCompressibility_(pAlpha)
+                oilCompressibility()
                 *(p - pAlpha);
 
             Scalar pBeta = p;
@@ -413,7 +417,7 @@ public:
             
             Scalar rho_oPure = 
                 surfaceDensity_[oPhaseIdx]
-                + oilCompressibility_(1.0135e5)*(p - 1.0135e5);
+                + oilCompressibility()*(p - 1.0135e5);
 
             Scalar drho_dXoO = 
                 (1.0*rho_oPure - X_oOBeta*rho_oBeta)
@@ -561,6 +565,13 @@ public:
         return phi_gG / x_oGf;
     }
 
+    // oil phase compressibility at _constant_ composition
+    static Scalar oilCompressibility()
+    {
+        return
+            (1.1200 - 1.1189)/((5000 - 4000)*6894.76); // [kg/m^3 / Pa)]
+    }
+
 private:
     static Scalar gasDensity_(Scalar pressure)
     {
@@ -601,14 +612,6 @@ private:
                         std::min(saturationPressureSpline_.xMax(), 
                                  X_oG));
         return saturationPressureSpline_.eval(X_oG);
-    }
-
-    // oil phase compressibility at _constant_ composition
-    static Scalar oilCompressibility_(Scalar pressure)
-    {
-        return
-            surfaceDensity_[oPhaseIdx] *
-            (1.1200 - 1.1189)/((5000 - 4000)*6894.76); // [kg/(m^3 Pa)]
     }
 
     // the mass fraction of the gas component in the oil phase in a
