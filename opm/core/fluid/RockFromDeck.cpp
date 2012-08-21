@@ -87,7 +87,7 @@ namespace Opm
                                           double perm_threshold)
     {
         const int dim              = 3;
-        const int num_global_cells = numGlobalCells(parser);
+        const int num_global_cells = grid.cartdims[0]*grid.cartdims[1]*grid.cartdims[2];
         const int nc = grid.number_of_cells;
 
         ASSERT (num_global_cells > 0);
