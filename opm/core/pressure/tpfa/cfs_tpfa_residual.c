@@ -1247,7 +1247,7 @@ cfs_tpfa_res_comprock_assemble(
 
     /* Assemble usual system (without rock compressibility). */
     cfs_tpfa_res_assemble(G, dt, forces, zc, cq, trans, gravcap_f,
-                          cpress, wpress, porevol, h);
+                          cpress, wpress, porevol0, h);
 
     /* Check if we have only Neumann wells. */
     well_is_neumann = 1;
@@ -1276,7 +1276,7 @@ cfs_tpfa_res_comprock_assemble(
         }
 
         h->J->sa[j] += porevol[c] * rock_comp[c] / dt;
-        h->F[c]     -= dpvdt;
+        h->F[c]     += dpvdt;
     }
 
     /* Re-do the singularity-removing adjustment if necessary */
