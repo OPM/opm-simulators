@@ -311,6 +311,7 @@ namespace Opm
         double ptime = 0.0;
         Opm::time::StopWatch transport_timer;
         double ttime = 0.0;
+        Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
         double init_satvol[2] = { 0.0 };
@@ -331,8 +332,14 @@ namespace Opm
             well_resflows_phase.resize((wells_->number_of_phases)*(wells_->number_of_wells), 0.0);
             wellreport.push(props_, *wells_, state.saturation(), 0.0, well_state.bhp(), well_state.perfRates());
         }
+        std::fstream tstep_os;
+        if(output_){
+          std::string filename = output_dir_ + "/step_timing.param";
+          tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
+        }
         for (; !timer.done(); ++timer) {
             // Report timestep and (optionally) write state to disk.
+            step_timer.start();
             timer.report(std::cout);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
@@ -340,6 +347,8 @@ namespace Opm
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             }
+
+            SimulatorReport sreport;
 
             // Solve pressure equation.
             if (check_well_controls_) {
@@ -382,6 +391,7 @@ namespace Opm
                 double pt = pressure_timer.secsSinceStart();
                 std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
                 ptime += pt;
+                sreport.pressure_time = pt;
 
                 // Optionally, check if well controls are satisfied.
                 if (check_well_controls_) {
@@ -430,9 +440,9 @@ namespace Opm
             }
             transport_timer.stop();
             double tt = transport_timer.secsSinceStart();
+            sreport.transport_time = tt;
             std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
             ttime += tt;
-
             // Report volume balances.
             Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
             tot_injected[0] += injected[0];
@@ -474,6 +484,12 @@ namespace Opm
                                 timer.currentTime() + timer.currentStepLength(),
                                 well_state.bhp(), well_state.perfRates());
             }
+            sreport.total_time =  step_timer.secsSinceStart();
+            if(output_){
+              sreport.reportParam(tstep_os);
+            }
+
+
         }
 
         if (output_) {
@@ -485,6 +501,7 @@ namespace Opm
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);
             }
+            tstep_os.close();
         }
 
         total_timer.stop();
