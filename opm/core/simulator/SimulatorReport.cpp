@@ -42,6 +42,12 @@ namespace Opm
            << "\n  Pressure time:  " << pressure_time
            << "\n  Transport time: " << transport_time << std::endl;
     }
+    void SimulatorReport::reportParam(std::ostream& os)
+    {
+        os << "/timing/total_time=" << total_time
+           << "\n/timing/pressure/total_time=" << pressure_time
+           << "\n/timing/transport/total_time=" << transport_time << std::endl;
+    }
 
 
 } // namespace Opm
