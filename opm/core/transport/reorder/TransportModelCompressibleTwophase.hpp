@@ -30,6 +30,8 @@ namespace Opm
 
     class BlackoilPropertiesInterface;
 
+    /// Implements a reordering transport solver for compressible,
+    /// non-miscible two-phase flow.
     class TransportModelCompressibleTwophase : public TransportModelInterface
     {
     public:
