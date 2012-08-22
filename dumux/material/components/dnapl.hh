@@ -1,7 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2009 by Andreas Lauser
+ *   Copyright (C) 2009 by Andreas Lauser                                    *
  *   Institute for Modelling Hydraulic and Environmental Systems             *
  *   University of Stuttgart, Germany                                        *
  *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
@@ -22,10 +22,13 @@
 /*!
  * \file
  * \ingroup Components
- * \brief A simple component for an exemplary dense NAPL (TCE).
+ * \brief A simple implementation of a dense non-aqueous phase liquid (DNAPL).
+ *
+ * The parameters are chosen to roughly correspond to those of
+ * trichloroethylene (TCE) at standard conditions.
  */
-#ifndef DUMUX_SIMPLE_DNAPL_HH
-#define DUMUX_SIMPLE_DNAPL_HH
+#ifndef DUMUX_DNAPL_HH
+#define DUMUX_DNAPL_HH
 
 #include <dumux/material/idealgas.hh>
 #include "component.hh"
@@ -35,12 +38,12 @@ namespace Dumux
 {
 /*!
  * \ingroup Components
- * \brief A simple component for an exemplary dense NAPL (TCE).
+ * \brief A much simple component for an exemplary dense NAPL (TCE).
  *
  * \tparam Scalar The type used for scalar values
  */
 template <class Scalar>
-class SimpleDNAPL : public Component<Scalar, SimpleDNAPL<Scalar> >
+class DNAPL : public Component<Scalar, DNAPL<Scalar> >
 {
 
 public:
@@ -48,49 +51,37 @@ public:
      * \brief A human readable name for the TCE.
      */
     static const char *name()
-    { return "TCE"; }
+    { return "DNAPL_TCE"; }
 
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
      */
     static constexpr Scalar molarMass()
-    { return 0.13139; } // kg/mol
+    { return 131.39e-3; /* [kg/mol] */ };
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of TCE.
      */
-    static constexpr Scalar criticalTemperature()
-    {
-        //DUNE_THROW(Dune::NotImplemented, "criticalTemperature for TCE");
-        return 1e100;
-    }
+    static Scalar criticalTemperature()
+    { DUNE_THROW(Dune::NotImplemented, "criticalTemperature for TCE"); };
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of TCE.
      */
-    static constexpr Scalar criticalPressure()
-    {
-        //DUNE_THROW(Dune::NotImplemented, "criticalPressure for TCE");
-        return 1e100;
-    }
+    static Scalar criticalPressure()
+    { DUNE_THROW(Dune::NotImplemented, "criticalPressure for TCE"); };
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at TCE's triple point.
      */
-    static constexpr Scalar tripleTemperature()
-    {
-        //DUNE_THROW(Dune::NotImplemented, "tripleTemperature for TCE");
-        return 1e100;
-    }
+    static Scalar tripleTemperature()
+    { DUNE_THROW(Dune::NotImplemented, "tripleTemperature for TCE"); };
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at TCE's triple point.
      */
-    static constexpr Scalar triplePressure()
-    {
-        //DUNE_THROW(Dune::NotImplemented, "triplePressure for TCE");
-        return 1e100;
-    }
+    static Scalar triplePressure()
+    { DUNE_THROW(Dune::NotImplemented, "triplePressure for TCE"); };
 
     /*!
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure TCE
@@ -99,7 +90,7 @@ public:
      * \param T temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
-    { return 3900; } // [Pa] (at 20C)
+    { return 3900; /* [Pa] (at 20C) */ };
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
@@ -124,7 +115,7 @@ public:
         return IdealGas<Scalar>::density(molarMass(),
                                          temperature,
                                          pressure);
-    }
+    };
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
@@ -138,8 +129,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { return 1460.0; } // [kg/m^3]
+    static constexpr Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    { return 1460.0; /* [kg/m^3] */ }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure TCE.
@@ -147,8 +138,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { return 5.7e-4; } //[Pa s]
+    static constexpr Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    { return 5.7e-4; /* [Pa s] */ };
 };
 
 } // end namepace
