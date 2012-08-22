@@ -75,15 +75,15 @@ namespace Opm
 
     void TransportModelCompressibleTwophase::solve(const double* darcyflux,
                                                    const double* pressure,
-                                                   const double* surfacevol0,
                                                    const double* porevolume0,
                                                    const double* porevolume,
                                                    const double* source,
                                                    const double dt,
-                                                   std::vector<double>& saturation)
+                                                   std::vector<double>& saturation,
+                                                   std::vector<double>& surfacevol)
     {
         darcyflux_ = darcyflux;
-        surfacevol0_ = surfacevol0;
+        surfacevol0_ = &surfacevol[0];
         porevolume0_ = porevolume0;
         porevolume_ = porevolume;
         source_ = source;
@@ -107,6 +107,15 @@ namespace Opm
                                &ia_downw_[0], &ja_downw_[0]);
         reorderAndTransport(grid_, darcyflux);
         toBothSat(saturation_, saturation);
+        
+        // Compute surface volume as a postprocessing step from saturation and A_
+        surfacevol = saturation;
+        const int np = props_.numPhases();
+        for (int cell = 0; cell < grid_.number_of_cells; ++cell) {
+            for (int phase = 0; phase < np; ++phase) {
+                surfacevol[np*cell + phase] *= A_[np*np*cell + np*phase + phase];
+            }
+        } 
     }
 
     // Residual function r(s) for a single-cell implicit Euler transport
