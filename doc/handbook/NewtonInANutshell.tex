@@ -24,8 +24,8 @@ One step of the \textsc{Newton} method can be formalized as follows:
 \begin{align}
 \label{NewtonGen}
 \textbf{u}^{r+1} &= \textbf{u}^r -  \left(\textbf{f}^\prime (\textbf{u}^r) \right)^{-1} \textbf{f}(\textbf{u}^r) \\
-\Leftrightarrow ( \textbf{u}^{r+1}-\textbf{u}^r) {\textbf{f}^{\prime}(\textbf{u}^r)} &= -\textbf{f}(\textbf{u}^r) \\
-\Leftrightarrow ( \textbf{u}^r - \textbf{u}^{r+1}) \underbrace{\textbf{f}^{\prime}(\textbf{u}^r)}_{\textnormal{Jacobian}} &= \textbf{f}(\textbf{u}^r) \label{NewtonAsUsed}
+\Leftrightarrow {\textbf{f}^{\prime}(\textbf{u}^r)}  ( \textbf{u}^{r+1}-\textbf{u}^r) &= -\textbf{f}(\textbf{u}^r) \\
+\Leftrightarrow \underbrace{\textbf{f}^{\prime}(\textbf{u}^r)}_{\textnormal{Jacobian}} ( \textbf{u}^r - \textbf{u}^{r+1}) &= \textbf{f}(\textbf{u}^r) \label{NewtonAsUsed}
 \end{align}
 \end{subequations}
 
