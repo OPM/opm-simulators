@@ -33,9 +33,7 @@
 #include <dumux/material/idealgas.hh>
 #include "component.hh"
 
-
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup Components
  * \brief A much simple component for an exemplary dense NAPL (TCE).
@@ -45,7 +43,6 @@ namespace Dumux
 template <class Scalar>
 class DNAPL : public Component<Scalar, DNAPL<Scalar> >
 {
-
 public:
     /*!
      * \brief A human readable name for the TCE.

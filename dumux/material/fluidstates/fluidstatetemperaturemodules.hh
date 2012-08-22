@@ -32,6 +32,7 @@
 #include <dune/common/exceptions.hh>
 
 #include <algorithm>
+#include <cassert>
 
 namespace Dumux
 {
