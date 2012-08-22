@@ -73,6 +73,22 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G,
                       struct cfs_tpfa_res_data    *h);
 
 void
+cfs_tpfa_res_comprock_assemble(
+                      struct UnstructuredGrid     *G,
+                      double                       dt,
+                      struct cfs_tpfa_res_forces  *forces,
+                      const double                *zc,
+                      struct compr_quantities_gen *cq,
+                      const double                *trans,
+                      const double                *gravcap_f,
+                      const double                *cpress,
+                      const double                *wpress,
+                      const double                *porevol,
+                      const double                *porevol0,
+                      const double                *rock_comp,
+                      struct cfs_tpfa_res_data    *h);
+
+void
 cfs_tpfa_res_flux(struct UnstructuredGrid    *G        ,
                   struct cfs_tpfa_res_forces *forces   ,
                   int                         np       ,

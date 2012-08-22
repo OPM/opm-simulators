@@ -54,12 +54,12 @@ namespace Opm
         /// \param[in, out] saturation   Phase saturations.
         void solve(const double* darcyflux,
                    const double* pressure,
-                   const double* surfacevol0,
                    const double* porevolume0,
                    const double* porevolume,
                    const double* source,
                    const double dt,
-                   std::vector<double>& saturation);
+                   std::vector<double>& saturation,
+                   std::vector<double>& surfacevol);
 
         /// Initialise quantities needed by gravity solver.
         void initGravity();
