@@ -34,7 +34,7 @@
 
 // The components that are used
 #include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/oil.hh>
+#include <dumux/material/components/lnapl.hh>
 
 // The material laws
 #include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
@@ -78,7 +78,7 @@ public: typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{
 SET_PROP(TutorialProblemCoupled, NonwettingPhase)
 {
 private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-public: typedef Dumux::LiquidPhase<Scalar, Dumux::Oil<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
+public: typedef Dumux::LiquidPhase<Scalar, Dumux::LNAPL<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-coupled:2p-system-end}@*/
 
 // Set the material law
@@ -290,7 +290,7 @@ public:
     {
         ImmiscibleFluidState<Scalar, FluidSystem> fs;
 
-        // the domain is initially fully saturated by oil
+        // the domain is initially fully saturated by LNAPL
         Scalar Sw = 0.0;
         fs.setSaturation(wPhaseIdx, Sw);
         fs.setSaturation(nPhaseIdx, 1.0 - Sw);
