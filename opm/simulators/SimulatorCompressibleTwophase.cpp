@@ -17,7 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
@@ -153,7 +152,7 @@ namespace Opm
         catch (...) {
           THROW("Creating directories failed: " << fpath);
         }
-        vtkfilename << "/" << std::setw(3) << std::setfill('0') << step << ".vtu";
+        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         if (!vtkfile) {
             THROW("Failed to open " << vtkfilename.str());
@@ -226,36 +225,6 @@ namespace Opm
         }
         wellreport.write(os);
     }
-
-
-    static bool allNeumannBCs(const FlowBoundaryConditions* bcs)
-    {
-        if (bcs == NULL) {
-            return true;
-        } else {
-            return std::find(bcs->type, bcs->type + bcs->nbc, BC_PRESSURE)
-                == bcs->type + bcs->nbc;
-        }
-    }
-
-
-    static bool allRateWells(const Wells* wells)
-    {
-        if (wells == NULL) {
-            return true;
-        }
-        const int nw = wells->number_of_wells;
-        for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells->ctrls[w];
-            if (wc->current >= 0) {
-                if (wc->type[wc->current] == BHP) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
 
 
 
@@ -402,12 +371,12 @@ namespace Opm
                 std::vector<double> initial_pressure = state.pressure();
                 psolver_.solve(timer.currentStepLength(), state, well_state);
 
-                // Renormalize pressure if rock is incompressible, and
-                // there are no pressure conditions (bcs or wells).
-                // It is deemed sufficient for now to renormalize
-                // using geometric volume instead of pore volume.
-                if ((rock_comp_ == NULL || !rock_comp_->isActive())
-                    && allNeumannBCs(bcs_) && allRateWells(wells_)) {
+                // Renormalize pressure if both fluids and rock are
+                // incompressible, and there are no pressure
+                // conditions (bcs or wells).  It is deemed sufficient
+                // for now to renormalize using geometric volume
+                // instead of pore volume.
+                if (psolver_.singularPressure()) {
                     // Compute average pressures of previous and last
                     // step, and total volume.
                     double av_prev_press = 0.0;
