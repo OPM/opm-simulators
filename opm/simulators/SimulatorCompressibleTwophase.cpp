@@ -245,7 +245,6 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           src_(src),
           bcs_(bcs),
-          gravity_(gravity),
           psolver_(grid, props, rock_comp, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
@@ -279,7 +278,7 @@ namespace Opm
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
         use_segregation_split_ = param.getDefault("use_segregation_split", false);
         if (gravity != 0 && use_segregation_split_){
-            tsolver_.initGravity();
+            tsolver_.initGravity(gravity);
             extractColumn(grid_, columns_);
         }
 
@@ -453,7 +452,7 @@ namespace Opm
                                              transport_src, stepsize, injected, produced);
                 if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, &state.pressure()[0], &initial_porevol[0],
-                                          stepsize, gravity_, state.saturation());
+                                          stepsize, state.saturation(), state.surfacevol());
                 }
             }
             transport_timer.stop();
