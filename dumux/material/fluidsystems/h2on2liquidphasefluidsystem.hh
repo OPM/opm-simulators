@@ -3,9 +3,6 @@
 /*****************************************************************************
  *   Copyright (C) 2012 by Katherina Baber
  *   Copyright (C) 2009-2011 by Andreas Lauser                               *
- *   Institute for Modelling Hydraulic and Environmental Systems             *
- *   University of Stuttgart, Germany                                        *
- *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *

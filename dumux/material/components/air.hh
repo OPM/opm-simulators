@@ -1,16 +1,9 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2010 Leopold Stadler                                      *
- *   Chair of Water Resources Management and Modeling of Hydrosystems        *
- *   Technical University of Berlin                                          *
- *   email:lstadler@wahyd.tu-berlin.de                                       *
- *                                                                           *
+ *   Copyright (C) 2010 by Leopold Stadler                                   *
  *   Copyright (C) 2011 by Benjamin Faigle                                   *
  *   Copyright (C) 2011 by Holger Class                                      *
- *   Institute for Modelling Hydraulic and Environmental Systems             *
- *   University of Stuttgart, Germany                                        *
- *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *

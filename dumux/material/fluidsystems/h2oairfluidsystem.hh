@@ -4,9 +4,6 @@
  *   Copyright (C) 2012 by Andreas Lauser                                    *
  *   Copyright (C) 2011 by Benjamin Faigle                                   *
  *   Copyright (C) 2011 by Klaus Mosthaf                                     *
- *   Institute for Modelling Hydraulic and Environmental Systems             *
- *   University of Stuttgart, Germany                                        *
- *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *

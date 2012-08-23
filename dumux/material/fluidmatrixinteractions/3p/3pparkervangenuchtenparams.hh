@@ -3,9 +3,6 @@
 /*****************************************************************************
  *   Copyright (C) 2011 by Holger Class                                      *
  *   Copyright (C) 2010 by Jochen Fritz, Benjamin Faigle                     *
- *   Institute for Modelling Hydraulic and Environmental Systems             *
- *   University of Stuttgart, Germany                                        *
- *   email: <givenname>.<name>@iws.uni-stuttgart.de                          *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *
