@@ -83,7 +83,6 @@
 #include <list>
 
 
-
 static void outputState(const UnstructuredGrid& grid,
                         const Opm::PolymerState& state,
                         const int step,
@@ -120,7 +119,7 @@ static void outputState(const UnstructuredGrid& grid,
         std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
     }
 
-    #if PROFILING
+    #ifdef PROFILING
     std::ostringstream fname;
     fname << output_dir << "/" << "residualcounts" << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
     std::ofstream file(fname.str().c_str());

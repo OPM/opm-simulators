@@ -116,7 +116,7 @@ namespace Opm
         int solveGravityColumn(const std::vector<int>& cells);
         void scToc(const double* x, double* x_c) const;
 
-        #if PROFILING
+        #ifdef PROFILING
         class Newton_Iter {
         public:
             bool res_s;

@@ -45,8 +45,6 @@ public:
     double porosity;
     double dtpv;    // dt/pv(i)
     double dps;
-    double res_factor;
-    double c_max_ads;
     double rhor;
     double ads0;
     GradientMethod gradient_method;
@@ -204,7 +202,7 @@ namespace Opm
 	}
 	visc_ = props.viscosity();
 
-#if PROFILING
+#ifdef PROFILING
         res_counts.clear();
 #endif
 
@@ -445,8 +443,6 @@ namespace Opm
 	dps = tm.polyprops_.deadPoreVol();
 	rhor = tm.polyprops_.rockDensity();
         tm.polyprops_.adsorption(c0, cmax0, ads0);
-	res_factor = tm.polyprops_.resFactor();
-	c_max_ads = tm.polyprops_.cMaxAds();
 	double dflux       = -tm.source_[cell];
 	bool src_is_inflow = dflux < 0.0;
 	influx  =  src_is_inflow ? dflux : 0.0;
