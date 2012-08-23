@@ -112,6 +112,25 @@ namespace Opm
                                const std::vector<double>& s,
                                std::vector<double>& fractional_flows);
 
+
+    /// Computes the surface volume densities from saturations by the formula
+    ///     z = A s
+    /// for a number of data points, where z is the surface volume density,
+    /// s is the saturation (both as column vectors) and A is the
+    /// phase-to-component relation matrix.
+    /// @param[in]  n            number of data points
+    /// @param[in]  np           number of phases, must be 2 or 3
+    /// @param[in]  A            array containing n square matrices of size num_phases,
+    ///                          in Fortran ordering, typically the output of a call
+    ///                          to the matrix() method of a BlackoilProperties* class.
+    /// @param[in]  saturation   concatenated saturation values (for all P phases)
+    /// @param[out] surfacevol   concatenated surface-volume values (for all P phases)
+    void computeSurfacevol(const int n,
+                           const int np,
+                           const double* A,
+                           const double* saturation,
+                           double* surfacevol);
+
 } // namespace Opm
 
 #endif // OPM_MISCUTILITIESBLACKOIL_HEADER_INCLUDED

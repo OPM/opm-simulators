@@ -220,5 +220,35 @@ namespace Opm
         }
     }
 
+    /// Computes the surface volume densities from saturations by the formula
+    ///     z = A s
+    /// for a number of data points, where z is the surface volume density,
+    /// s is the saturation (both as column vectors) and A is the
+    /// phase-to-component relation matrix.
+    /// @param[in]  n            number of data points
+    /// @param[in]  np           number of phases, must be 2 or 3
+    /// @param[in]  A            array containing n square matrices of size num_phases^2,
+    ///                          in Fortran ordering, typically the output of a call
+    ///                          to the matrix() method of a BlackoilProperties* class.
+    /// @param[in]  saturation   concatenated saturation values (for all P phases)
+    /// @param[out] surfacevol   concatenated surface-volume values (for all P phases)
+    void computeSurfacevol(const int n,
+                           const int np,
+                           const double* A,
+                           const double* saturation,
+                           double* surfacevol)
+    {
+        // Note: since this is a simple matrix-vector product, it can
+        // be done by a BLAS call, but then we have to reorder the A
+        // matrix data.
+        std::fill(surfacevol, surfacevol + n*np, 0.0);
+        for (int i = 0; i < n; ++i) {
+            for (int row = 0; row < np; ++row) {
+                for (int col = 0; col < np; ++col) {
+                    surfacevol[i*np + row] += A[i*np*np + row*np + col] * saturation[i*np + col];
+                }
+            }
+        }
+    }
 
 } // namespace Opm
