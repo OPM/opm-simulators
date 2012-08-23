@@ -77,7 +77,8 @@ namespace Opm
           wells_(wells),
           htrans_(grid.cell_facepos[ grid.number_of_cells ]),
           trans_ (grid.number_of_faces),
-          allcells_(grid.number_of_cells)
+          allcells_(grid.number_of_cells),
+          singular_(false)
     {
         if (wells_ && (wells_->number_of_phases != props.numPhases())) {
             THROW("Inconsistent number of phases specified (wells vs. props): "
@@ -183,6 +184,21 @@ namespace Opm
 
         // Compute fluxes and face pressures.
         computeResults(state, well_state);
+    }
+
+
+
+
+
+    /// @brief After solve(), was the resulting pressure singular.
+    /// Returns true if the pressure is singular in the following
+    /// sense: if everything is incompressible and there are no
+    /// pressure conditions, the absolute values of the pressure
+    /// solution are arbitrary. (But the differences in pressure
+    /// are significant.)
+    bool CompressibleTpfa::singularPressure() const
+    {
+        return singular_;
     }
 
 
@@ -487,16 +503,20 @@ namespace Opm
         cq.Af = &face_A_[0];
         cq.phasemobf = &face_phasemob_[0];
         cq.voldiscr = &cell_voldisc_[0];
+        int was_adjusted = 0;
         if (rock_comp_props_ == NULL || !rock_comp_props_->isActive()) {
-            cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
-                                  &face_gravcap_[0], cell_press, well_bhp,
-                                  &porevol_[0], h_);
+            was_adjusted = 
+                cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
+                                      &face_gravcap_[0], cell_press, well_bhp,
+                                      &porevol_[0], h_);
         } else {
-            cfs_tpfa_res_comprock_assemble(gg, dt, &forces, z, &cq, &trans_[0],
-                                           &face_gravcap_[0], cell_press, well_bhp,
-                                           &porevol_[0], &initial_porevol_[0],
-                                           &rock_comp_[0], h_);
+            was_adjusted = 
+                cfs_tpfa_res_comprock_assemble(gg, dt, &forces, z, &cq, &trans_[0],
+                                               &face_gravcap_[0], cell_press, well_bhp,
+                                               &porevol_[0], &initial_porevol_[0],
+                                               &rock_comp_[0], h_);
         }
+        singular_ = (was_adjusted == 1);
     }
 
 

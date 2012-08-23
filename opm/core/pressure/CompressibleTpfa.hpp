@@ -81,6 +81,14 @@ namespace Opm
                    BlackoilState& state,
                    WellState& well_state);
 
+        /// @brief After solve(), was the resulting pressure singular.
+        /// Returns true if the pressure is singular in the following
+        /// sense: if everything is incompressible and there are no
+        /// pressure conditions, the absolute values of the pressure
+        /// solution are arbitrary. (But the differences in pressure
+        /// are significant.)
+        bool singularPressure() const;
+
     private:
         void computePerSolveDynamicData(const double dt,
                                         const BlackoilState& state,
@@ -143,11 +151,11 @@ namespace Opm
         std::vector<double> rock_comp_; // Empty unless rock_comp_props_ is non-null.
         // The update to be applied to the pressures (cell and bhp).
         std::vector<double> pressure_increment_;
-
-
-
-
-
+        // True if the matrix assembled would be singular but for the
+        // adjustment made in the cfs_*_assemble() calls. This happens
+        // if everything is incompressible and there are no pressure
+        // conditions.
+        bool singular_;
     };
 
 } // namespace Opm
