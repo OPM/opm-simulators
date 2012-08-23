@@ -59,7 +59,11 @@ cfs_tpfa_res_construct(struct UnstructuredGrid   *G      ,
 void
 cfs_tpfa_res_destroy(struct cfs_tpfa_res_data *h);
 
-void
+/* Return value is 1 if the assembled matrix was adjusted to remove a
+   singularity. This happens if all fluids are incompressible and
+   there are no pressure conditions on wells or boundaries.
+   Otherwise return 0.  */
+int
 cfs_tpfa_res_assemble(struct UnstructuredGrid     *G,
                       double                       dt,
                       struct cfs_tpfa_res_forces  *forces,
@@ -72,7 +76,12 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G,
                       const double                *porevol,
                       struct cfs_tpfa_res_data    *h);
 
-void
+/* Return value is 1 if the assembled matrix was adjusted to remove a
+   singularity. This happens if all fluids are incompressible, the
+   rock is incompressible, and there are no pressure conditions on
+   wells or boundaries.
+   Otherwise return 0.  */
+int
 cfs_tpfa_res_comprock_assemble(
                       struct UnstructuredGrid     *G,
                       double                       dt,

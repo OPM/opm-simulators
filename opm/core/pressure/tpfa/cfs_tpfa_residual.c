@@ -1156,7 +1156,7 @@ cfs_tpfa_res_construct(struct UnstructuredGrid   *G      ,
 
 
 /* ---------------------------------------------------------------------- */
-void
+int
 cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
                       double                       dt       ,
                       struct cfs_tpfa_res_forces  *forces   ,
@@ -1170,7 +1170,7 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
                       struct cfs_tpfa_res_data    *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int res_is_neumann, well_is_neumann, c, np2;
+    int res_is_neumann, well_is_neumann, c, np2, singular;
 
     csrmatrix_zero(         h->J);
     vector_zero   (h->J->m, h->F);
@@ -1207,14 +1207,17 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
         assemble_sources(dt, forces->src, h);
     }
 
-    if (res_is_neumann && well_is_neumann && h->pimpl->is_incomp) {
-        h->J->sa[0] *= 2;
+    singular = res_is_neumann && well_is_neumann && h->pimpl->is_incomp;
+    if (singular) {
+        h->J->sa[0] *= 2.0;
     }
+
+    return singular;
 }
 
 
 /* ---------------------------------------------------------------------- */
-void
+int
 cfs_tpfa_res_comprock_assemble(
                       struct UnstructuredGrid     *G        ,
                       double                       dt       ,
@@ -1240,29 +1243,18 @@ cfs_tpfa_res_comprock_assemble(
      * porevol(pressure)*rock_comp(pressure)/dt
      */
 
-    int     c, w, well_is_neumann, rock_is_incomp;
+    int     c, rock_is_incomp, singular;
     size_t  j;
-    double dpv;
-    const struct Wells* W;
+    double  dpv;
 
     /* Assemble usual system (without rock compressibility). */
-    cfs_tpfa_res_assemble(G, dt, forces, zc, cq, trans, gravcap_f,
-                          cpress, wpress, porevol0, h);
-
-    /* Check if we have only Neumann wells. */
-    well_is_neumann = 1;
-    W = forces->wells->W;
-    for (w = 0; well_is_neumann && w < W->number_of_wells; w++) {
-        if ((W->ctrls[w]->current >= 0) && /* OPEN? */
-            (W->ctrls[w]->type[ W->ctrls[w]->current ] == BHP)) {
-            well_is_neumann = 0;
-        }
-    }
+    singular = cfs_tpfa_res_assemble(G, dt, forces, zc, cq, trans, gravcap_f,
+                                     cpress, wpress, porevol0, h);
 
     /* If we made a singularity-removing adjustment in the
        regular assembly, we undo it here. */
-    if (well_is_neumann && h->pimpl->is_incomp) {
-        h->J->sa[0] /= 2;
+    if (singular) {
+        h->J->sa[0] /= 2.0;
     }
 
     /* Add new terms to residual and Jacobian. */
@@ -1280,9 +1272,11 @@ cfs_tpfa_res_comprock_assemble(
     }
 
     /* Re-do the singularity-removing adjustment if necessary */
-    if (rock_is_incomp && well_is_neumann && h->pimpl->is_incomp) {
-        h->J->sa[0] *= 2;
+    if (rock_is_incomp && singular) {
+        h->J->sa[0] *= 2.0;
     }
+
+    return rock_is_incomp && singular;
 }
 
 
