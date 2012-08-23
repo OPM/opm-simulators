@@ -1,9 +1,11 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
- *   Copyright (C) 2010 by Leopold Stadler                                   *
- *   Copyright (C) 2011 by Benjamin Faigle                                   *
- *   Copyright (C) 2011 by Holger Class                                      *
+ *   Copyright (C) 2010-2012 by Andreas Lauser                               *
+ *   Copyright (C) 2010 by Felix Bode                                        *
+ *   Copyright (C) 2010 by Katherina Baber                                   *
+ *   Copyright (C) 2012 by Klaus Mosthaf                                     *
+ *   Copyright (C) 2011 by Philipp Nuske                                     *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *
