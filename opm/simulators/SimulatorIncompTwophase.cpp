@@ -335,7 +335,7 @@ namespace Opm
             computePorevolume(grid_, props_.porosity(), porevol);
         }
         const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-
+        std::vector<double> initial_porevol = porevol;
 
         // Main simulation loop.
         Opm::time::StopWatch pressure_timer;
@@ -452,6 +452,7 @@ namespace Opm
 
             // Update pore volumes if rock is compressible.
             if (rock_comp_ && rock_comp_->isActive()) {
+                initial_porevol = porevol;
                 computePorevolume(grid_, props_.porosity(), *rock_comp_, state.pressure(), porevol);
             }
 
@@ -467,11 +468,11 @@ namespace Opm
                 std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_.solve(&state.faceflux()[0], &porevol[0], &transport_src[0],
+                tsolver_.solve(&state.faceflux()[0], &initial_porevol[0], &transport_src[0],
                               stepsize, state.saturation());
                 Opm::computeInjectedProduced(props_, state.saturation(), transport_src, stepsize, injected, produced);
                 if (use_segregation_split_) {
-                    tsolver_.solveGravity(columns_, &porevol[0], stepsize, state.saturation());
+                    tsolver_.solveGravity(columns_, &initial_porevol[0], stepsize, state.saturation());
                 }
             }
             transport_timer.stop();
