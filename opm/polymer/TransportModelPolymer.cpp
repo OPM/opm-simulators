@@ -263,47 +263,23 @@ namespace Opm
     // Influxes are negative, outfluxes positive.
     struct TransportModelPolymer::ResidualS
     {
-        TransportModelPolymer& tm_;
-	const int cell_;
-	const double s0_;
-	const double cmax0_;
-	const double influx_;  // sum_j min(v_ij, 0)*f(s_j)
-	const double outflux_; // sum_j max(v_ij, 0)
-        const double comp_term_; // q - sum_j v_ij
-	const double dtpv_;    // dt/pv(i)
+        TransportModelPolymer::ResidualEquation& res_eq_;
 	const double c_;
-	explicit ResidualS(TransportModelPolymer& tmodel,
-			   const int cell,
-			   const double s0,
-			   const double cmax0,
-			   const double influx,
-			   const double outflux,
-                           const double comp_term,
-			   const double dtpv,
+	explicit ResidualS(TransportModelPolymer::ResidualEquation& res_eq,
 			   const double c)
-	    : tm_(tmodel),
-	      cell_(cell),
-	      s0_(s0),
-	      cmax0_(cmax0),
-	      influx_(influx),
-	      outflux_(outflux),
-              comp_term_(comp_term),
-	      dtpv_(dtpv),
+	    : res_eq_(res_eq),
 	      c_(c)
 	{
 	}
+
 	double operator()(double s) const
 	{
-#if PROFILING
-            tm_.res_counts.push_back(Newton_Iter(true, cell_, s, c_));
-#endif
-            double ff;
-            tm_.fracFlow(s, c_, cmax0_, cell_, ff);
-	    return s - s0_ +  dtpv_*(outflux_*ff + influx_ + s*comp_term_);
+            double x[2];
+            x[0] = s;
+            x[1] = c_;
+            return res_eq_.computeResidualS(x);
 	}
     };
-
-
 
     // Residual for concentration equation, single-cell implicit Euler transport
     //
@@ -312,110 +288,36 @@ namespace Opm
     // Influxes are negative, outfluxes positive.
     struct TransportModelPolymer::ResidualC
     {
-	int cell;
-	double s0;
-	double c0;
-	double cmax0;
-	double influx;  // sum_j min(v_ij, 0)*f(s_j)
-	double influx_polymer;  // sum_j min(v_ij, 0)*f(s_j)*mc(c_j)
-	double outflux; // sum_j max(v_ij, 0)
-        double comp_term; // q - sum_j v_ij
-	double porosity;
-	double dtpv;    // dt/pv(i)
 	mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
-	TransportModelPolymer& tm;
-	explicit ResidualC(TransportModelPolymer& tmodel, int cell_index)
-	    : tm(tmodel)
-	{
-	    cell    = cell_index;
-	    s0      = tm.saturation_[cell];
-	    c0      = tm.concentration_[cell];
-	    cmax0   = tm.cmax_[cell];
-            double dflux       = -tm.source_[cell];
-            bool src_is_inflow = dflux < 0.0;
-	    influx  =  src_is_inflow ? dflux : 0.0;
-            double mc;
-            tm.computeMc(tm.inflow_c_, mc);
-	    influx_polymer = src_is_inflow ? dflux*mc : 0.0;
-	    outflux = !src_is_inflow ? dflux : 0.0;
-            comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
-	    dtpv    = tm.dt_/tm.porevolume_[cell];
-	    porosity = tm.porosity_[cell];
-	    s = s0;
-
-	    for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
-		int f = tm.grid_.cell_faces[i];
-		double flux;
-		int other;
-		// Compute cell flux
-		if (cell == tm.grid_.face_cells[2*f]) {
-		    flux  = tm.darcyflux_[f];
-		    other = tm.grid_.face_cells[2*f+1];
-		} else {
-		    flux  =-tm.darcyflux_[f];
-		    other = tm.grid_.face_cells[2*f];
-		}
-		// Add flux to influx or outflux, if interior.
-		if (other != -1) {
-		    if (flux < 0.0) {
-			influx  += flux*tm.fractionalflow_[other];
-			influx_polymer += flux*tm.fractionalflow_[other]*tm.mc_[other];
-		    } else {
-			outflux += flux;
-		    }
-                    comp_term -= flux;
-		}
-	    }
-	}
+        TransportModelPolymer::ResidualEquation& res_eq_;
+	explicit ResidualC(TransportModelPolymer::ResidualEquation& res_eq)
+	    : res_eq_(res_eq)
+	{}
 
 	void computeBothResiduals(const double s_arg, const double c_arg, double& res_s, double& res_c, double& mc, double& ff) const
 	{
-	    double dps = tm.polyprops_.deadPoreVol();
-	    tm.fracFlow(s_arg, c_arg, cmax0, cell, ff);
-	    tm.computeMc(c_arg, mc);
-	    double rhor = tm.polyprops_.rockDensity();
-	    double c_ads0;
-            tm.polyprops_.adsorption(c0, cmax0, c_ads0);
-	    double c_ads;
-            tm.polyprops_.adsorption(c_arg, cmax0, c_ads);
-	    res_s =  s_arg - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
-	    res_c = s_arg*(1 - dps)*c_arg - s0*(1 - dps)*c0
-		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer)
-                + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*c_ads)*comp_term;
-#if PROFILING
-            tm.res_counts.push_back(Newton_Iter(true, cell, s_arg, c_arg));
-            tm.res_counts.push_back(Newton_Iter(false, cell, s_arg, c_arg));
-#endif
-
+            double x[2];
+            double res[2];
+            x[0] = s_arg;
+            x[1] = c_arg;
+            res_eq_.computeResidual(x, res, mc, ff);
+            res_s = res[0];
+            res_c = res[1];
 	}
 
 	double operator()(double c) const
 	{
-	    double dps = tm.polyprops_.deadPoreVol();
-	    ResidualS res_s(tm, cell, s0, cmax0, influx, outflux, comp_term, dtpv, c);
+	    ResidualS res_s(res_eq_, c);
 	    int iters_used;
 	    // Solve for s first.
 	    // s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
 	    //     		    tm.maxit_, tm.tol_, iters_used);
-	    s = RootFinder::solve(res_s, s0, 0.0, 1.0,
-                                  tm.maxit_, tm.tol_, iters_used);
-	    double ff;
-            tm.fracFlow(s, c, cmax0, cell, ff);
-	    double mc;
-            tm.computeMc(c, mc);
-	    double rhor = tm.polyprops_.rockDensity();
-	    double c_ads0;
-            tm.polyprops_.adsorption(c0, cmax0, c_ads0);
-	    double c_ads;
-            tm.polyprops_.adsorption(c, cmax0, c_ads);
-#if PROFILING
-            tm.res_counts.push_back(Newton_Iter(false, cell, s, c));
-#endif
-            double res = (1 - dps)*s*c - (1 - dps)*s0*c0
-		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
-		+ dtpv*(outflux*ff*mc + influx_polymer)
-                + dtpv*(s*c*(1.0 - dps) - rhor*c_ads)*comp_term;
+	    s = RootFinder::solve(res_s, res_eq_.s0, 0.0, 1.0,
+                                  res_eq_.tm.maxit_, res_eq_.tm.tol_, iters_used);
+            double x[2];
+            x[0] = s;
+            x[1] = c;
+            double res = res_eq_.computeResidualC(x);
 #ifdef EXTRA_DEBUG_OUTPUT
 	    std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
 #endif
@@ -673,7 +575,9 @@ namespace Opm
 
     void TransportModelPolymer::solveSingleCellBracketing(int cell)
     {
-	ResidualC res(*this, cell);
+        
+	ResidualEquation res_eq(*this, cell);
+	ResidualC res(res_eq);
 	const double a = 0.0;
 	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
 	int iters_used;
