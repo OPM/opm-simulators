@@ -39,7 +39,8 @@ namespace Opm
     typedef RegulaFalsi<WarnAndContinueOnError> RootFinder;
 
 
-    TransportModelCompressibleTwophase::TransportModelCompressibleTwophase(const UnstructuredGrid& grid,
+    TransportModelCompressibleTwophase::TransportModelCompressibleTwophase(
+                                                   const UnstructuredGrid& grid,
                                                    const Opm::BlackoilPropertiesInterface& props,
                                                    const double tol,
                                                    const int maxit)
@@ -52,6 +53,7 @@ namespace Opm
           dt_(0.0),
           saturation_(grid.number_of_cells, -1.0),
           fractionalflow_(grid.number_of_cells, -1.0),
+          gravity_(0),
           mob_(2*grid.number_of_cells, -1.0),
           ia_upw_(grid.number_of_cells + 1, -1),
           ja_upw_(grid.number_of_faces, -1),
@@ -384,7 +386,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressibleTwophase::initGravity()
+    void TransportModelCompressibleTwophase::initGravity(const double* grav)
     {
         // Set up transmissibilities.
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
@@ -393,12 +395,15 @@ namespace Opm
         gravflux_.resize(nf);
         tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid_), props_.permeability(), &htrans[0]);
         tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &trans_[0]);
+
+        // Remember gravity vector.
+        gravity_ = grav;
     }
 
 
 
 
-    void TransportModelCompressibleTwophase::initGravityDynamic(const double* grav)
+    void TransportModelCompressibleTwophase::initGravityDynamic()
     {
         // Set up gravflux_ = T_ij g [   (b_w,i rho_w,S - b_o,i rho_o,S) (z_i - z_f)
         //                             + (b_w,j rho_w,S - b_o,j rho_o,S) (z_f - z_j) ]
@@ -420,7 +425,7 @@ namespace Opm
                 for (int ci = 0; ci < 2; ++ci) {
                     double gdz = 0.0;
                     for (int d = 0; d < dim; ++d) {
-                        gdz += grav[d]*(grid_.cell_centroids[dim*c[ci] + d] - grid_.face_centroids[dim*f + d]);
+                        gdz += gravity_[d]*(grid_.cell_centroids[dim*c[ci] + d] - grid_.face_centroids[dim*f + d]);
                     }
                     gravflux_[f] += signs[ci]*trans_[f]*gdz*(density_[2*c[ci]] - density_[2*c[ci] + 1]);
                 }
@@ -504,11 +509,11 @@ namespace Opm
                                                           const double* pressure,
                                                           const double* porevolume0,
                                                           const double dt,
-                                                          const double* grav,
-                                                          std::vector<double>& saturation)
+                                                          std::vector<double>& saturation,
+                                                          std::vector<double>& surfacevol)
     {
         // Assume that solve() has already been called, so that A_ is current.
-        initGravityDynamic(grav);
+        initGravityDynamic();
 
         // Initialize mobilities.
         const int nc = grid_.number_of_cells;
@@ -541,6 +546,9 @@ namespace Opm
         std::cout << "Gauss-Seidel column solver average iterations: "
                   << double(num_iters)/double(columns.size()) << std::endl;
         toBothSat(saturation_, saturation);
+
+        // Compute surface volume as a postprocessing step from saturation and A_
+        computeSurfacevol(grid_.number_of_cells, props_.numPhases(), &A_[0], &saturation[0], &surfacevol[0]);
     }
 
 } // namespace Opm

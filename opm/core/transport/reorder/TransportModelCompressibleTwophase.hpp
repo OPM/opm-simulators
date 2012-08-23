@@ -54,6 +54,7 @@ namespace Opm
         /// \param[in] source            Transport source term.
         /// \param[in] dt                Time step.
         /// \param[in, out] saturation   Phase saturations.
+        /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solve(const double* darcyflux,
                    const double* pressure,
                    const double* porevolume0,
@@ -64,7 +65,8 @@ namespace Opm
                    std::vector<double>& surfacevol);
 
         /// Initialise quantities needed by gravity solver.
-        void initGravity();
+        /// \param[in] grav    Gravity vector
+        void initGravity(const double* grav);
 
         /// Solve for gravity segregation.
         /// This uses a column-wise nonlinear Gauss-Seidel approach.
@@ -74,14 +76,14 @@ namespace Opm
         /// \param[in] columns           Vector of cell-columns.
         /// \param[in] porevolume0       Array of pore volumes at start of timestep.
         /// \param[in] dt                Time step.
-        /// \param[in] grav              Gravity vector.
         /// \param[in, out] saturation   Phase saturations.
+        /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* pressure,
                           const double* porevolume0,
                           const double dt,
-                          const double* grav,
-                          std::vector<double>& saturation);
+                          std::vector<double>& saturation,
+                          std::vector<double>& surfacevol);
 
     private:
         virtual void solveSingleCell(const int cell);
@@ -90,7 +92,7 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
-        void initGravityDynamic(const double* grav);
+        void initGravityDynamic();
 
     private:
         const UnstructuredGrid& grid_;
@@ -112,6 +114,7 @@ namespace Opm
         std::vector<double> saturation_;        // P (= num. phases) per cell
         std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
         // For gravity segregation.
+        const double* gravity_;
         std::vector<double> trans_;
         std::vector<double> density_;
         std::vector<double> gravflux_;
