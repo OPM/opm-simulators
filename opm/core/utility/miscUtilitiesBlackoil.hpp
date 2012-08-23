@@ -46,11 +46,11 @@ namespace Opm
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
                                  const std::vector<double>& p,
                                  const std::vector<double>& z,
-				 const std::vector<double>& s,
-				 const std::vector<double>& src,
-				 const double dt,
-				 double* injected,
-				 double* produced);
+                                 const std::vector<double>& s,
+                                 const std::vector<double>& src,
+                                 const double dt,
+                                 double* injected,
+                                 double* produced);
 
     /// @brief Computes total mobility for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
@@ -60,11 +60,11 @@ namespace Opm
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobilities.
     void computeTotalMobility(const Opm::BlackoilPropertiesInterface& props,
-			      const std::vector<int>& cells,
+                              const std::vector<int>& cells,
                               const std::vector<double>& p,
                               const std::vector<double>& z,
-			      const std::vector<double>& s,
-			      std::vector<double>& totmob);
+                              const std::vector<double>& s,
+                              std::vector<double>& totmob);
 
     /// @brief Computes total mobility and omega for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
@@ -75,12 +75,12 @@ namespace Opm
     /// @param[out] totmob    total mobility
     /// @param[out] omega     fractional-flow weighted fluid densities.
     void computeTotalMobilityOmega(const Opm::BlackoilPropertiesInterface& props,
-				   const std::vector<int>& cells,
+                                   const std::vector<int>& cells,
                                    const std::vector<double>& p,
                                    const std::vector<double>& z,
-				   const std::vector<double>& s,
-				   std::vector<double>& totmob,
-				   std::vector<double>& omega);
+                                   const std::vector<double>& s,
+                                   std::vector<double>& totmob,
+                                   std::vector<double>& omega);
 
 
     /// @brief Computes phase mobilities for a set of saturation values.
@@ -96,7 +96,7 @@ namespace Opm
                                 const std::vector<double>&              z,
                                 const std::vector<double>&              s,
                                 std::vector<double>&                    pmobc);
-    
+
 
     /// Computes the fractional flow for each cell in the cells argument
     /// @param[in]  props            rock and fluid properties
