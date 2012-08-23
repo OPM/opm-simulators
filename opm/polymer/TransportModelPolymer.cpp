@@ -117,7 +117,7 @@ namespace
     bool solveNewtonStepSC(const double* , const Opm::TransportModelPolymer::ResidualEquation&,
 			   const double*, double*);
     bool solveNewtonStepC(const double* , const Opm::TransportModelPolymer::ResidualEquation&,
-			   const double*, double*);
+                          const double*, double*);
 
 
 
@@ -204,7 +204,9 @@ namespace Opm
 	}
 	visc_ = props.viscosity();
 
+#if PROFILING
         res_counts.clear();
+#endif
 
 	// Set up smin_ and smax_
 	int num_cells = props.numCells();
@@ -245,8 +247,10 @@ namespace Opm
         toWaterSat(saturation, saturation_);
 	concentration_ = &concentration[0];
 	cmax_ = &cmax[0];
+#if PROFILING
         res_counts.clear();
-	reorderAndTransport(grid_, darcyflux);
+#endif
+        reorderAndTransport(grid_, darcyflux);
         toBothSat(saturation_, saturation);
     }
 
@@ -292,7 +296,9 @@ namespace Opm
 	}
 	double operator()(double s) const
 	{
+#if PROFILING
             tm_.res_counts.push_back(Newton_Iter(true, cell_, s, c_));
+#endif
             double ff;
             tm_.fracFlow(s, c_, cmax0_, cell_, ff);
 	    return s - s0_ +  dtpv_*(outflux_*ff + influx_ + s*comp_term_);
@@ -379,8 +385,10 @@ namespace Opm
 		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
                 + dtpv*(s_arg*c_arg*(1.0 - dps) - rhor*c_ads)*comp_term;
+#if PROFILING
             tm.res_counts.push_back(Newton_Iter(true, cell, s_arg, c_arg));
             tm.res_counts.push_back(Newton_Iter(false, cell, s_arg, c_arg));
+#endif
 
 	}
 
@@ -403,8 +411,10 @@ namespace Opm
             tm.polyprops_.adsorption(c0, cmax0, c_ads0);
 	    double c_ads;
             tm.polyprops_.adsorption(c, cmax0, c_ads);
+#if PROFILING
             tm.res_counts.push_back(Newton_Iter(false, cell, s, c));
-	    double res = (1 - dps)*s*c - (1 - dps)*s0*c0
+#endif
+            double res = (1 - dps)*s*c - (1 - dps)*s0*c0
 		+ rhor*((1.0 - porosity)/porosity)*(c_ads - c_ads0)
 		+ dtpv*(outflux*ff*mc + influx_polymer)
                 + dtpv*(s*c*(1.0 - dps) - rhor*c_ads)*comp_term;
@@ -563,14 +573,18 @@ namespace Opm
             }
             if (if_res_s) {
                 res[0] = s - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
+#if PROFILING
                 tm.res_counts.push_back(Newton_Iter(true, cell, x[0], x[1]));
+#endif
             }
             if (if_res_c) {
                 res[1] = (1 - dps)*s*c - (1 - dps)*s0*c0
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
                     + dtpv*(outflux*ff*mc + influx_polymer)
 		    + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
+#if PROFILING
                 tm.res_counts.push_back(Newton_Iter(false, cell, x[0], x[1]));
+#endif
             }
             if (if_dres_s_dsdc) {
                 dres_s_dsdc[0] = 1 + dtpv*(outflux*dff_dsdc[0] + comp_term);
@@ -590,7 +604,9 @@ namespace Opm
             tm.fracFlow(s, c, cmax0, cell, ff);
             if (if_res_s) {
                 res[0] = s - s0 +  dtpv*(outflux*ff + influx + s*comp_term);
+#if PROFILING
                 tm.res_counts.push_back(Newton_Iter(true, cell, x[0], x[1]));
+#endif
             }
             if (if_res_c) {
                 tm.computeMc(c, mc);
@@ -600,7 +616,9 @@ namespace Opm
                     + rhor*((1.0 - porosity)/porosity)*(ads - ads0)
                     + dtpv*(outflux*ff*mc + influx_polymer)
 		    + dtpv*(s*c*(1.0 - dps) - rhor*ads)*comp_term;
+#if PROFILING
                 tm.res_counts.push_back(Newton_Iter(false, cell, x[0], x[1]));
+#endif
             }
         }
 
@@ -967,14 +985,14 @@ namespace Opm
 	        x[1] = x[1];
 	    }
 	    if(x[0]>0){
-		    x[1] =  concentration_[cell]*saturation_[cell]-res[1];
-		    x[1] = x[1]/x[0];
-		    if(x[1]> polyprops_.cMax()){
-			x[1]= polyprops_.cMax()/2.0;		
-		    }
-		    if(x[1]<0){
-			x[1]=0;
-		    }
+                x[1] =  concentration_[cell]*saturation_[cell]-res[1];
+                x[1] = x[1]/x[0];
+                if(x[1]> polyprops_.cMax()){
+                    x[1]= polyprops_.cMax()/2.0;		
+                }
+                if(x[1]<0){
+                    x[1]=0;
+                }
 	    }else{
 		x[1]=0;
 	    }	    	    
@@ -1454,11 +1472,11 @@ namespace Opm
 
 
     void TransportModelPolymer::solveGravity(const std::vector<std::vector<int> >& columns,
-                                              const double* porevolume,
-                                              const double dt,
-                                              std::vector<double>& saturation,
-                                              std::vector<double>& concentration,
-                                              std::vector<double>& cmax)
+                                             const double* porevolume,
+                                             const double dt,
+                                             std::vector<double>& saturation,
+                                             std::vector<double>& concentration,
+                                             std::vector<double>& cmax)
     {
         // initialize variables.
         porevolume_ = porevolume;
@@ -1633,7 +1651,7 @@ namespace
     }
 
     bool solveNewtonStepSC(const double* xx, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
-			 const double* res, double* x_new) {
+                           const double* res, double* x_new) {
 
     	double dres_s_dsdc[2];
     	double dres_c_dsdc[2];
@@ -1664,21 +1682,21 @@ namespace
 	}
     }
     bool solveNewtonStepC(const double* xx, const  Opm::TransportModelPolymer::ResidualEquation& res_eq,
-			 const double* res, double* x_new) {
+                          const double* res, double* x_new) {
 	
 	double dres_s_dsdc[2];
 	double dres_c_dsdc[2];
-	 double dx=1e-8;
-	 double x[2];
-	 if(!(x[0]>0)){
-	     x[0] = dx;
-	     x[1] = 0;
-	 } else {
+        double dx=1e-8;
+        double x[2];
+        if(!(x[0]>0)){
+            x[0] = dx;
+            x[1] = 0;
+        } else {
 	    x[0] = xx[0];
             x[1] = xx[1];
-	 }
-	 res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
-	 double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
+        }
+        res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
+        double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
 	if (std::abs(det) < 1e-8) {
     	    return false;
     	} else {

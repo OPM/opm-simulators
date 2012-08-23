@@ -114,8 +114,9 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
+        void scToc(const double* x, double* x_c) const;
 
-        // for testing
+        #if PROFILING
         class Newton_Iter {
         public:
             bool res_s;
@@ -132,8 +133,8 @@ namespace Opm
         };
 
         std::list<Newton_Iter> res_counts;
+        #endif
 
-        void scToc(const double* x, double* x_c) const;
 
     private:
 	const UnstructuredGrid& grid_;

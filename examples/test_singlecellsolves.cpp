@@ -229,6 +229,7 @@ main(int argc, char** argv)
                                 state.concentration(),
                                 state.maxconcentration());
 
+#if PROFILING
             // Extract residual counts.
             typedef std::list<Opm::TransportModelPolymer::Newton_Iter> ListRes;
             const ListRes& res_counts = reorder_model.res_counts;
@@ -241,6 +242,7 @@ main(int argc, char** argv)
             // std::cout << "c residual count: " << counts[0] << '\n';
             // std::cout << "s residual count: " << counts[1] << '\n';
             std::cout << counts[0] << ' ' << counts[1] << ' ' << s << ' ' << c << '\n';
+#endif
         }
     }
 }
