@@ -40,7 +40,7 @@ namespace Opm
     {
     public:
 
-	enum SingleCellMethod { Bracketing, Newton, Gradient };
+	enum SingleCellMethod { Bracketing, Newton, Gradient, NewtonSimpleSC, NewtonSimpleC};
         enum GradientMethod { Analytic, FinDif }; // Analytic is chosen (hard-coded)
 
 	/// Construct solver.
@@ -106,6 +106,7 @@ namespace Opm
 	void solveSingleCellBracketing(int cell);
 	void solveSingleCellNewton(int cell);
 	void solveSingleCellGradient(int cell);
+	void solveSingleCellNewtonSimple(int cell,bool use_sc);
 	class ResidualEquation;
 
         void initGravity(const double* grav);
@@ -113,8 +114,9 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
+        void scToc(const double* x, double* x_c) const;
 
-        // for testing
+        #if PROFILING
         class Newton_Iter {
         public:
             bool res_s;
@@ -131,8 +133,8 @@ namespace Opm
         };
 
         std::list<Newton_Iter> res_counts;
+        #endif
 
-        void scToc(const double* x, double* x_c) const;
 
     private:
 	const UnstructuredGrid& grid_;
@@ -156,7 +158,8 @@ namespace Opm
 	std::vector<double> mc_;  // one per cell
 	const double* visc_;
 	SingleCellMethod method_;
-
+	double adhoc_safety_;
+	
         // For gravity segregation.
         std::vector<double> gravflux_;
         std::vector<double> mob_;

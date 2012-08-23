@@ -278,8 +278,10 @@ namespace Opm
             dmobwat_dc = eff_relperm_wat*dinv_mu_w_eff_dc
                 + deff_relperm_wat_dc*inv_mu_w_eff;
             dmob_ds[0*2 + 0] = deff_relperm_wat_ds*inv_mu_w_eff;
-            dmob_ds[0*2 + 1] = (drelperm_ds[0*2 + 1] - drelperm_ds[1*2 + 2])/visc[1];
-            dmob_ds[1*2 + 0] = -deff_relperm_wat_ds*inv_mu_w_eff;
+	    // one have to deside which variables to derive
+	    // here the full derivative is written out 
+            dmob_ds[0*2 + 1] = 0.0*(drelperm_ds[0*2 + 1] - drelperm_ds[1*2 + 1])/visc[1];
+            dmob_ds[1*2 + 0] = -0.0*deff_relperm_wat_ds*inv_mu_w_eff;
             dmob_ds[1*2 + 1] = (drelperm_ds[1*2 + 1] - drelperm_ds[0*2 + 1])/visc[1];
         }
     }
