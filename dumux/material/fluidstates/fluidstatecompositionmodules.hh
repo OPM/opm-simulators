@@ -73,7 +73,7 @@ public:
     /*!
      * \brief The mean molar mass of a fluid phase [kg/mol]
      *
-     * The average mass is the mean molar mass of a molecule of the
+     * The average molar mass is the mean mass of one mole of the
      * fluid at current composition. It is defined as the sum of the
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
@@ -94,7 +94,9 @@ public:
     { return asImp_().molarDensity(phaseIdx)*moleFraction(phaseIdx, compIdx); }
 
     /*!
-     * \brief Set the mole fraction of a component in a phase []
+     * \brief Set the mole fraction of a component  in a phase []
+     *        and update the average molar mass [kg/mol] according
+     *        to the current composition of the phase
      */
     void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
     {
