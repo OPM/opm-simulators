@@ -132,10 +132,11 @@ namespace Opm
         return pimpl_->run(timer, state, well_state);
     }
 
-  static void reportVolumes(std::ostream &os,double satvol[2],double tot_porevol_init,
-                            double tot_injected[2],double tot_produced[2],
-                            double injected[2], double produced[2],
-                            double init_satvol[2]){
+    static void reportVolumes(std::ostream &os,double satvol[2],double tot_porevol_init,
+                              double tot_injected[2], double tot_produced[2],
+                              double injected[2], double produced[2],
+                              double init_satvol[2])
+    {
         std::cout.precision(5);
         const int width = 18;
         os << "\nVolume balance report (all numbers relative to total pore volume).\n";
@@ -163,7 +164,7 @@ namespace Opm
            << std::endl;
         os.precision(8);
     }
-  
+    
     static void outputStateVtk(const UnstructuredGrid& grid,
                                const Opm::TwophaseState& state,
                                const int step,
@@ -174,10 +175,10 @@ namespace Opm
         vtkfilename << output_dir << "/vtk_files";
         boost::filesystem::path fpath(vtkfilename.str());
         try {
-          create_directories(fpath);
+            create_directories(fpath);
         }
         catch (...) {
-          THROW("Creating directories failed: " << fpath);
+            THROW("Creating directories failed: " << fpath);
         }
         vtkfilename << "/" << std::setw(3) << std::setfill('0') << step << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
@@ -193,47 +194,47 @@ namespace Opm
         Opm::writeVtkData(grid, dm, vtkfile);
     }
     static void outputVectorMatlab(const std::string name,
-                                 const std::vector<int> vec,
-                                 const int step,
-                                 const std::string& output_dir)
+                                   const std::vector<int>& vec,
+                                   const int step,
+                                   const std::string& output_dir)
     {
-            std::ostringstream fname;
-            fname << output_dir << "/" << name;
-            boost::filesystem::path fpath = fname.str();
-            try {
-              create_directories(fpath);
-            }
-            catch (...) {
-              THROW("Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-              THROW("Failed to open " << fname.str());
-            }
-            std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
+        std::ostringstream fname;
+        fname << output_dir << "/" << name;
+        boost::filesystem::path fpath = fname.str();
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            THROW("Creating directories failed: " << fpath);
+        }
+        fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+        std::ofstream file(fname.str().c_str());
+        if (!file) {
+            THROW("Failed to open " << fname.str());
+        }
+        std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
     }
     
     static void outputVectorMatlab(const std::string name,
-                                 const std::vector<double> vec,
-                                 const int step,
-                                 const std::string& output_dir)
+                                   const std::vector<double> vec,
+                                   const int step,
+                                   const std::string& output_dir)
     {
-            std::ostringstream fname;
-            fname << output_dir << "/" << name;
-            boost::filesystem::path fpath = fname.str();
-            try {
-              create_directories(fpath);
-            }
-            catch (...) {
-              THROW("Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-              THROW("Failed to open " << fname.str());
-            }
-            std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
+        std::ostringstream fname;
+        fname << output_dir << "/" << name;
+        boost::filesystem::path fpath = fname.str();
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            THROW("Creating directories failed: " << fpath);
+        }
+        fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+        std::ofstream file(fname.str().c_str());
+        if (!file) {
+            THROW("Failed to open " << fname.str());
+        }
+        std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
     }
 
 
@@ -255,10 +256,10 @@ namespace Opm
             fname << output_dir << "/" << it->first;
             boost::filesystem::path fpath = fname.str();
             try {
-              create_directories(fpath);
+                create_directories(fpath);
             }
             catch (...) {
-              THROW("Creating directories failed: " << fpath);
+                THROW("Creating directories failed: " << fpath);
             }
             fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
             std::ofstream file(fname.str().c_str());
@@ -543,18 +544,18 @@ namespace Opm
             }
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], &porevol[0], &transport_src[0],
-                              stepsize, state.saturation());
+                               stepsize, state.saturation());
                 Opm::computeInjectedProduced(props_, state.saturation(), transport_src, stepsize, injected, produced);
                 if (use_segregation_split_) {
-                  tsolver_.solveGravity(columns_, &porevol[0], stepsize, state.saturation());
+                    tsolver_.solveGravity(columns_, &porevol[0], stepsize, state.saturation());
                 }
                 watercut.push(timer.currentTime() + timer.currentStepLength(),
                               produced[0]/(produced[0] + produced[1]),
                               tot_produced[0]/tot_porevol_init);
                 if (wells_) {
-                  wellreport.push(props_, *wells_, state.saturation(),
-                                  timer.currentTime() + timer.currentStepLength(),
-                                  well_state.bhp(), well_state.perfRates());
+                    wellreport.push(props_, *wells_, state.saturation(),
+                                    timer.currentTime() + timer.currentStepLength(),
+                                    well_state.bhp(), well_state.perfRates());
                 }                            
             }
             transport_timer.stop();
