@@ -171,7 +171,7 @@ namespace Opm
         // if (std::fabs(r0) < tol_) {
         //     return;
         // }
-        int iters_used=0;
+        int iters_used = 0;
         // saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
         saturation_[cell] = RootFinder::solve(res, saturation_[cell], 0.0, 1.0, maxit_, tol_, iters_used);
         // add if it is iteration on an out loop
@@ -547,7 +547,7 @@ namespace Opm
         const int cell = cells[pos];
         GravityResidual res(*this, cells, pos, gravflux);
         if (std::fabs(res(saturation_[cell])) > tol_) {
-            int iters_used=0;
+            int iters_used = 0;
             saturation_[cell] = RootFinder::solve(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
             reorder_iterations_[cell] = reorder_iterations_[cell] + iters_used;
         }
@@ -645,6 +645,10 @@ namespace Opm
 
         toBothSat(saturation_, saturation);
     }
+    void TransportModelTwophase::getReorderIterations()
+    {
+        return reorder_iterations_;
+    }; 
 } // namespace Opm
 
 

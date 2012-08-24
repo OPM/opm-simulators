@@ -74,7 +74,9 @@ namespace Opm
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
-        void reportIterations(std::ostream &os);
+        //// Return reorder iterations
+        ////
+        //// \param[out] vector of iteration per cell
         const std::vector<int>& getReorderIterations(){return reorder_iterations_;};      
     private:
         virtual void solveSingleCell(const int cell);
