@@ -645,7 +645,7 @@ namespace Opm
 
         toBothSat(saturation_, saturation);
     }
-    void TransportModelTwophase::getReorderIterations()
+    const std::vector<int>& TransportModelTwophase::getReorderIterations()
     {
         return reorder_iterations_;
     }; 

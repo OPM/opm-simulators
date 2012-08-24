@@ -77,7 +77,7 @@ namespace Opm
         //// Return reorder iterations
         ////
         //// \param[out] vector of iteration per cell
-        const std::vector<int>& getReorderIterations(){return reorder_iterations_;};      
+        const std::vector<int>& getReorderIterations();
     private:
         virtual void solveSingleCell(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
