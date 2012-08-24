@@ -35,6 +35,7 @@ void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& g
 
     // Invoke appropriate solve method for each interdependent component.
     for (int comp = 0; comp < ncomponents; ++comp) {
+#if 0
 #ifdef MATLAB_MEX_FILE
 	// \TODO replace this with general signal handling code, check if it costs performance.
         if (interrupt_signal) {
@@ -42,6 +43,7 @@ void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& g
                       "cells finished.\n", i, grid.number_of_cells);
             break;
         }
+#endif
 #endif
 	const int comp_size = components[comp + 1] - components[comp];
 	if (comp_size == 1) {
