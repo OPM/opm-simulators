@@ -74,10 +74,11 @@ namespace Opm
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
-        //// Return reorder iterations
-        ////
+
+        //// Return the number of iterations used by the reordering solver.
         //// \param[out] vector of iteration per cell
-        const std::vector<int>& getReorderIterations(){return reorder_iterations_;};      
+        const std::vector<int>& getReorderIterations() const;
+
     private:
         virtual void solveSingleCell(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
@@ -86,7 +87,7 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
-    private:         
+    private:
         const UnstructuredGrid& grid_;
         const IncompPropertiesInterface& props_;
         const double* visc_;
