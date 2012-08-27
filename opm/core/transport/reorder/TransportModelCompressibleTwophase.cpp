@@ -96,7 +96,7 @@ namespace Opm
         props_.viscosity(props_.numCells(), pressure, NULL, &allcells_[0], &visc_[0], NULL);
         props_.matrix(props_.numCells(), pressure, NULL, &allcells_[0], &A_[0], NULL);
 
-        // Check non-miscibility requirement (only done for first cell).
+        // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {
             THROW("TransportModelCompressibleTwophase requires a property object without miscibility.");
         }
