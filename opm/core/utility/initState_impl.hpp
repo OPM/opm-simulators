@@ -512,11 +512,12 @@ namespace Opm
                            State& state)
     {
         const int num_phases = props.numPhases();
-        if (num_phases != 2) {
-            THROW("initStateFromDeck(): currently handling only two-phase scenarios.");
-        }
+        
         state.init(grid, num_phases);
         if (deck.hasField("EQUIL")) {
+            if (num_phases != 2) {
+                THROW("initStateFromDeck(): currently handling only two-phase scenarios.");
+            }
             // Set saturations depending on oil-water contact.
             const EQUIL& equil= deck.getEQUIL();
             if (equil.equil.size() != 1) {
@@ -535,11 +536,22 @@ namespace Opm
             const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
             const std::vector<double>& p_deck = deck.getFloatingPointValue("PRESSURE");
             const int num_cells = grid.number_of_cells;
-            for (int c = 0; c < num_cells; ++c) {
-                int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
-                s[2*c] = sw_deck[c_deck];
-                s[2*c + 1] = 1.0 - s[2*c];
-                p[c] = p_deck[c_deck];
+            if(num_phases == 2){
+                for (int c = 0; c < num_cells; ++c) {
+                    int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                    s[2*c] = sw_deck[c_deck];
+                    s[2*c + 1] = 1.0 - s[2*c];
+                    p[c] = p_deck[c_deck];
+                }
+            }else{
+                const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
+                 for (int c = 0; c < num_cells; ++c) {
+                    int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                    s[2*c] = sw_deck[c_deck];
+                    s[2*c + 1] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
+                    s[2*c + 2] = sg_deck[c_deck];
+                    p[c] = p_deck[c_deck];
+                 }
             }
         } else {
             THROW("initStateFromDeck(): we must either have EQUIL, or both SWAT and PRESSURE.");
