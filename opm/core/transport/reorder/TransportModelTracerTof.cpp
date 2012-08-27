@@ -89,9 +89,12 @@ namespace Opm
 
 
 
-    void TransportModelTracerTof::solveMultiCell(const int /*num_cells*/, const int* /*cells*/)
+    void TransportModelTracerTof::solveMultiCell(const int num_cells, const int* cells)
     {
-        THROW("Not yet implemented.");
+        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
+        for (int i = 0; i < num_cells; ++i) {
+            solveSingleCell(cells[i]);
+        }
     }
 
 
