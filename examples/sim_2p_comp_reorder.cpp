@@ -277,9 +277,9 @@ main(int argc, char** argv)
     rep.report(std::cout);
 
     if (output) {
-      std::string filename = output_dir + "/walltime.param";
-      std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-      rep.reportParam(tot_os);
+        std::string filename = output_dir + "/walltime.param";
+        std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
+        rep.reportParam(tot_os);
     }
 
 }
