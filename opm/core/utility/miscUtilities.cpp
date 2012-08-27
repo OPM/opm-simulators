@@ -574,9 +574,10 @@ namespace Opm
     {
         int nw = well_bhp.size();
         ASSERT(nw == wells.number_of_wells);
-        if (props.numPhases() != 2) {
-            THROW("WellReport for now assumes two phase flow.");
-        }
+        int np = props.numPhases();
+        //if (props.numPhases() != 2) {
+        //    THROW("WellReport for now assumes two phase flow.");
+        //}
         const double* visc = props.viscosity();
         std::vector<double> data_now;
         data_now.reserve(1 + 3*nw);
@@ -586,7 +587,8 @@ namespace Opm
             double well_rate_total = 0.0;
             double well_rate_water = 0.0;
             for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
-                const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
+              const double perf_rate = unit::convert::to(well_perfrates[perf],
+                                                          unit::cubic(unit::meter)/unit::day);
                 well_rate_total += perf_rate;
                 if (perf_rate > 0.0) {
                     // Injection.
@@ -594,11 +596,14 @@ namespace Opm
                 } else {
                     // Production.
                     const int cell = wells.well_cells[perf];
-                    double mob[2];
+                    double mob[np];
                     props.relperm(1, &saturation[2*cell], &cell, mob, 0);
-                    mob[0] /= visc[0];
-                    mob[1] /= visc[1];
-                    const double fracflow = mob[0]/(mob[0] + mob[1]);
+                    double tmob=0;
+                    for(int i=0; i < np; ++i){
+                        mob[i] /= visc[i];
+                        tmob += mob[i];
+                    }                    
+                    const double fracflow = mob[0]/tmob;
                     well_rate_water += perf_rate*fracflow;
                 }
             }
@@ -627,9 +632,10 @@ namespace Opm
         // TODO: refactor, since this is almost identical to the other push().
         int nw = well_bhp.size();
         ASSERT(nw == wells.number_of_wells);
-        if (props.numPhases() != 2) {
-            THROW("WellReport for now assumes two phase flow.");
-        }
+        int np = props.numPhases();
+        //if (props.numPhases() != 2) {
+        //    THROW("WellReport for now assumes two phase flow.");
+        //}
         std::vector<double> data_now;
         data_now.reserve(1 + 3*nw);
         data_now.push_back(time/unit::day);
@@ -640,20 +646,25 @@ namespace Opm
             for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
                 const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
                 well_rate_total += perf_rate;
-                if (perf_rate > 0.0) {
+                if (perf_rate > 0.0) { 
                     // Injection.
                     well_rate_water += perf_rate*wells.comp_frac[0];
                 } else {
                     // Production.
                     const int cell = wells.well_cells[perf];
-                    double mob[2];
+                    double mob[np];
                     props.relperm(1, &s[2*cell], &cell, mob, 0);
-                    double visc[2];
+                    double visc[np];
                     props.viscosity(1, &p[cell], &z[2*cell], &cell, visc, 0);
-                    mob[0] /= visc[0];
-                    mob[1] /= visc[1];
-                    const double fracflow = mob[0]/(mob[0] + mob[1]);
+                    double tmob=0;
+                    for(int i=0; i < np; ++i){
+                        mob[i] /= visc[i];
+                        tmob += mob[i];
+                    }                    
+                    const double fracflow = mob[0]/(tmob);
                     well_rate_water += perf_rate*fracflow;
+                    //const double fracflow = mob[0]/(tmob);
+                    //well_rate_water += perf_rate*fracflow;
                 }
             }
             data_now.push_back(well_rate_total);
