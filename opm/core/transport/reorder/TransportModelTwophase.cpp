@@ -52,8 +52,8 @@ namespace Opm
           source_(0),
           dt_(0.0),
           saturation_(grid.number_of_cells, -1.0),
-          reorder_iterations_(grid.number_of_cells, 0),
           fractionalflow_(grid.number_of_cells, -1.0),
+          reorder_iterations_(grid.number_of_cells, 0),
           mob_(2*grid.number_of_cells, -1.0)
 #ifdef EXPERIMENT_GAUSS_SEIDEL
         , ia_upw_(grid.number_of_cells + 1, -1),
@@ -106,6 +106,13 @@ namespace Opm
         reorderAndTransport(grid_, darcyflux);
         toBothSat(saturation_, saturation);
     }
+
+
+    const std::vector<int>& TransportModelTwophase::getReorderIterations() const
+    {
+        return reorder_iterations_;
+    }
+
 
     // Residual function r(s) for a single-cell implicit Euler transport
     //
@@ -645,10 +652,7 @@ namespace Opm
 
         toBothSat(saturation_, saturation);
     }
-    void TransportModelTwophase::getReorderIterations()
-    {
-        return reorder_iterations_;
-    }; 
+
 } // namespace Opm
 
 

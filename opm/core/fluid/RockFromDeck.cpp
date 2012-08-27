@@ -36,8 +36,6 @@ namespace Opm
         PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::tr1::array<int,9>&                     kmap);
-
-        int numGlobalCells(const EclipseGridParser& parser);
     } // anonymous namespace
 
 
@@ -87,7 +85,7 @@ namespace Opm
                                           double perm_threshold)
     {
         const int dim              = 3;
-        const int num_global_cells = numGlobalCells(parser);
+        const int num_global_cells = grid.cartdims[0]*grid.cartdims[1]*grid.cartdims[2];
         const int nc = grid.number_of_cells;
 
         ASSERT (num_global_cells > 0);
@@ -334,26 +332,6 @@ namespace Opm
             return kind;
         }
 
-        int numGlobalCells(const EclipseGridParser& parser)
-        {
-            int ngc = -1;
-
-            if (parser.hasField("DIMENS")) {
-                const std::vector<int>&
-                    dims = parser.getIntegerValue("DIMENS");
-
-                ngc = dims[0] * dims[1] * dims[2];
-            }
-            else if (parser.hasField("SPECGRID")) {
-                const SPECGRID& sgr = parser.getSPECGRID();
-
-                ngc  = sgr.dimensions[ 0 ];
-                ngc *= sgr.dimensions[ 1 ];
-                ngc *= sgr.dimensions[ 2 ];
-            }
-
-            return ngc;
-        }
     } // anonymous namespace
 
 } // namespace Opm

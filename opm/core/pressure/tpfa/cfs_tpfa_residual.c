@@ -1156,7 +1156,7 @@ cfs_tpfa_res_construct(struct UnstructuredGrid   *G      ,
 
 
 /* ---------------------------------------------------------------------- */
-void
+int
 cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
                       double                       dt       ,
                       struct cfs_tpfa_res_forces  *forces   ,
@@ -1170,7 +1170,7 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
                       struct cfs_tpfa_res_data    *h        )
 /* ---------------------------------------------------------------------- */
 {
-    int res_is_neumann, well_is_neumann, c, np2;
+    int res_is_neumann, well_is_neumann, c, np2, singular;
 
     csrmatrix_zero(         h->J);
     vector_zero   (h->J->m, h->F);
@@ -1207,9 +1207,76 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
         assemble_sources(dt, forces->src, h);
     }
 
-    if (res_is_neumann && well_is_neumann && h->pimpl->is_incomp) {
-        h->J->sa[0] *= 2;
+    singular = res_is_neumann && well_is_neumann && h->pimpl->is_incomp;
+    if (singular) {
+        h->J->sa[0] *= 2.0;
     }
+
+    return singular;
+}
+
+
+/* ---------------------------------------------------------------------- */
+int
+cfs_tpfa_res_comprock_assemble(
+                      struct UnstructuredGrid     *G        ,
+                      double                       dt       ,
+                      struct cfs_tpfa_res_forces  *forces   ,
+                      const double                *zc       ,
+                      struct compr_quantities_gen *cq       ,
+                      const double                *trans    ,
+                      const double                *gravcap_f,
+                      const double                *cpress   ,
+                      const double                *wpress   ,
+                      const double                *porevol  ,
+                      const double                *porevol0 ,
+                      const double                *rock_comp,
+                      struct cfs_tpfa_res_data    *h        )
+/* ---------------------------------------------------------------------- */
+{
+    /* We want to add this term to the usual residual:
+     *
+     * (porevol(pressure)-porevol(initial_pressure))/dt.
+     *
+     * Its derivative (for the diagonal term of the Jacobian) is:
+     *
+     * porevol(pressure)*rock_comp(pressure)/dt
+     */
+
+    int     c, rock_is_incomp, singular;
+    size_t  j;
+    double  dpv;
+
+    /* Assemble usual system (without rock compressibility). */
+    singular = cfs_tpfa_res_assemble(G, dt, forces, zc, cq, trans, gravcap_f,
+                                     cpress, wpress, porevol0, h);
+
+    /* If we made a singularity-removing adjustment in the
+       regular assembly, we undo it here. */
+    if (singular) {
+        h->J->sa[0] /= 2.0;
+    }
+
+    /* Add new terms to residual and Jacobian. */
+    rock_is_incomp = 1;
+    for (c = 0; c < G->number_of_cells; c++) {
+        j = csrmatrix_elm_index(c, c, h->J);
+
+        dpv = (porevol[c] - porevol0[c]);
+        if (dpv != 0.0 || rock_comp[c] != 0.0) {
+            rock_is_incomp = 0;
+        }
+
+        h->J->sa[j] += porevol[c] * rock_comp[c];
+        h->F[c]     += dpv;
+    }
+
+    /* Re-do the singularity-removing adjustment if necessary */
+    if (rock_is_incomp && singular) {
+        h->J->sa[0] *= 2.0;
+    }
+
+    return rock_is_incomp && singular;
 }
 
 

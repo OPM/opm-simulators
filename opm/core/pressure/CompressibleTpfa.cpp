@@ -30,6 +30,7 @@
 #include <opm/core/newwells.h>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/core/fluid/RockCompressibility.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -58,6 +59,7 @@ namespace Opm
     ///                                to change.
     CompressibleTpfa::CompressibleTpfa(const UnstructuredGrid& grid,
                                        const BlackoilPropertiesInterface& props,
+                                       const RockCompressibility* rock_comp_props,
                                        const LinearSolverInterface& linsolver,
                                        const double residual_tol,
                                        const double change_tol,
@@ -66,6 +68,7 @@ namespace Opm
                                        const struct Wells* wells)
         : grid_(grid),
           props_(props),
+          rock_comp_props_(rock_comp_props),
           linsolver_(linsolver),
           residual_tol_(residual_tol),
           change_tol_(change_tol),
@@ -74,8 +77,8 @@ namespace Opm
           wells_(wells),
           htrans_(grid.cell_facepos[ grid.number_of_cells ]),
           trans_ (grid.number_of_faces),
-          porevol_(grid.number_of_cells),
-          allcells_(grid.number_of_cells)
+          allcells_(grid.number_of_cells),
+          singular_(false)
     {
         if (wells_ && (wells_->number_of_phases != props.numPhases())) {
             THROW("Inconsistent number of phases specified (wells vs. props): "
@@ -86,7 +89,12 @@ namespace Opm
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         tpfa_htrans_compute(gg, props.permeability(), &htrans_[0]);
         tpfa_trans_compute(gg, &htrans_[0], &trans_[0]);
-        computePorevolume(grid_, props.porosity(), porevol_);
+        // If we have rock compressibility, pore volumes are updated
+        // in the compute*() methods, otherwise they are constant and
+        // hence may be computed here.
+        if (rock_comp_props_ == NULL || !rock_comp_props_->isActive()) {
+            computePorevolume(grid_, props.porosity(), porevol_);
+        }
         for (int c = 0; c < grid.number_of_cells; ++c) {
             allcells_[c] = c;
         }
@@ -182,6 +190,21 @@ namespace Opm
 
 
 
+    /// @brief After solve(), was the resulting pressure singular.
+    /// Returns true if the pressure is singular in the following
+    /// sense: if everything is incompressible and there are no
+    /// pressure conditions, the absolute values of the pressure
+    /// solution are arbitrary. (But the differences in pressure
+    /// are significant.)
+    bool CompressibleTpfa::singularPressure() const
+    {
+        return singular_;
+    }
+
+
+
+
+
     /// Compute well potentials.
     void CompressibleTpfa::computeWellPotentials(const BlackoilState& state)
     {
@@ -230,6 +253,9 @@ namespace Opm
                                                       const WellState& /*well_state*/)
     {
         computeWellPotentials(state);
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), initial_porevol_);
+        }
     }
 
 
@@ -252,6 +278,8 @@ namespace Opm
         // std::vector<double> face_gravcap_;
         // std::vector<double> wellperf_A_;
         // std::vector<double> wellperf_phasemob_;
+        // std::vector<double> porevol_;   // Only modified if rock_comp_props_ is non-null.
+        // std::vector<double> rock_comp_; // Empty unless rock_comp_props_ is non-null.
         computeCellDynamicData(dt, state, well_state);
         computeFaceDynamicData(dt, state, well_state);
         computeWellDynamicData(dt, state, well_state);
@@ -273,6 +301,8 @@ namespace Opm
         // std::vector<double> cell_viscosity_;
         // std::vector<double> cell_phasemob_;
         // std::vector<double> cell_voldisc_;
+        // std::vector<double> porevol_;   // Only modified if rock_comp_props_ is non-null.
+        // std::vector<double> rock_comp_; // Empty unless rock_comp_props_ is non-null.
         const int nc = grid_.number_of_cells;
         const int np = props_.numPhases();
         const double* cell_p = &state.pressure()[0];
@@ -296,6 +326,14 @@ namespace Opm
         // TODO: Check this!
         cell_voldisc_.clear();
         cell_voldisc_.resize(nc, 0.0);
+
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol_);
+            rock_comp_.resize(nc);
+            for (int cell = 0; cell < nc; ++cell) {
+                rock_comp_[cell] = rock_comp_props_->rockComp(state.pressure()[cell]);
+            }
+        }
     }
 
 
@@ -465,9 +503,20 @@ namespace Opm
         cq.Af = &face_A_[0];
         cq.phasemobf = &face_phasemob_[0];
         cq.voldiscr = &cell_voldisc_[0];
-        cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
-                              &face_gravcap_[0], cell_press, well_bhp,
-                              &porevol_[0], h_);
+        int was_adjusted = 0;
+        if (! (rock_comp_props_ && rock_comp_props_->isActive())) {
+            was_adjusted =
+                cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
+                                      &face_gravcap_[0], cell_press, well_bhp,
+                                      &porevol_[0], h_);
+        } else {
+            was_adjusted =
+                cfs_tpfa_res_comprock_assemble(gg, dt, &forces, z, &cq, &trans_[0],
+                                               &face_gravcap_[0], cell_press, well_bhp,
+                                               &porevol_[0], &initial_porevol_[0],
+                                               &rock_comp_[0], h_);
+        }
+        singular_ = (was_adjusted == 1);
     }
 
 
