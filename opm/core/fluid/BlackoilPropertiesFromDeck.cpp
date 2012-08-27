@@ -28,10 +28,20 @@ namespace Opm
     {
         rock_.init(deck, grid);
         pvt_.init(deck, use_spline);
-        satprops_.init(deck, grid);
-	if (pvt_.numPhases() != satprops_.numPhases()) {
+        // Unfortunate lack of pointer smartness here...
+        if (use_spline) {
+            SaturationPropsFromDeck<>* ptr = new SaturationPropsFromDeck<>();
+            ptr->init(deck, grid);
+            satprops_.reset(ptr);
+        } else {
+            SaturationPropsFromDeck<SatFuncSetNonuniform>* ptr
+                = new SaturationPropsFromDeck<SatFuncSetNonuniform>();
+            ptr->init(deck, grid);
+            satprops_.reset(ptr);
+        }
+	if (pvt_.numPhases() != satprops_->numPhases()) {
 	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
 	}
     }
 
@@ -236,7 +246,7 @@ namespace Opm
                                              double* kr,
                                              double* dkrds) const
     {
-        satprops_.relperm(n, s, cells, kr, dkrds);
+        satprops_->relperm(n, s, cells, kr, dkrds);
     }
 
 
@@ -255,7 +265,7 @@ namespace Opm
                                               double* pc,
                                               double* dpcds) const
     {
-        satprops_.capPress(n, s, cells, pc, dpcds);
+        satprops_->capPress(n, s, cells, pc, dpcds);
     }
 
 
@@ -271,7 +281,7 @@ namespace Opm
                                               double* smin,
                                               double* smax) const
     {
-	satprops_.satRange(n, cells, smin, smax);
+	satprops_->satRange(n, cells, smin, smax);
     }
 
 

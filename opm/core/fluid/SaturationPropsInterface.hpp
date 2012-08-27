@@ -1,5 +1,5 @@
 /*
-  Copyright 2010, 2011, 2012 SINTEF ICT, Applied Mathematics.
+  Copyright 2012 SINTEF ICT, Applied Mathematics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,51 +17,23 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
-#define OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
+#ifndef OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED
+#define OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED
 
-#include <opm/core/fluid/SaturationPropsInterface.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
-#include <vector>
 
-struct UnstructuredGrid;
 
 namespace Opm
 {
 
-
-    /// Class storing saturation functions in a uniform table,
-    /// densely sampled from a monotone spline,
-    /// using linear interpolation.
-    class SatFuncSetUniform;
-
-    /// Class storing saturation functions in a nonuniform table
-    /// using linear interpolation.
-    class SatFuncSetNonuniform;
-
-
-    /// Interface to saturation functions from deck.
-    /// Possible values for template argument:
-    ///   SatFuncSetNonuniform,
-    ///   SatFuncSetUniform (default).
-    template <class SatFuncSet = SatFuncSetUniform>
-    class SaturationPropsFromDeck : public SaturationPropsInterface
+    class SaturationPropsInterface : public BlackoilPhases
     {
     public:
-        /// Default constructor.
-        SaturationPropsFromDeck();
-
-        /// Initialize from deck and grid.
-        /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the 
-        ///                      mapping from cell indices (typically from a processed grid)
-        ///                      to logical cartesian indices consistent with the deck.
-        void init(const EclipseGridParser& deck,
-                  const UnstructuredGrid& grid);
+        /// Virtual destructor.
+        virtual ~SaturationPropsInterface() {};
 
         /// \return   P, the number of phases.
-        int numPhases() const;
+        virtual int numPhases() const = 0;
 
         /// Relative permeability.
         /// \param[in]  n      Number of data points.
@@ -72,11 +44,11 @@ namespace Opm
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dkr_i}{ds^j},
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-        void relperm(const int n,
-                     const double* s,
-                     const int* cells,
-                     double* kr,
-                     double* dkrds) const;
+        virtual void relperm(const int n,
+                             const double* s,
+                             const int* cells,
+                             double* kr,
+                             double* dkrds) const = 0;
 
         /// Capillary pressure.
         /// \param[in]  n      Number of data points.
@@ -87,29 +59,21 @@ namespace Opm
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dpc_i}{ds^j},
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-        void capPress(const int n,
-                      const double* s,
-                      const int* cells,
-                      double* pc,
-                      double* dpcds) const;
+        virtual void capPress(const int n,
+                              const double* s,
+                              const int* cells,
+                              double* pc,
+                              double* dpcds) const = 0;
 
 	/// Obtain the range of allowable saturation values.
         /// \param[in]  n      Number of data points.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-	void satRange(const int n,
-                      const int* cells,
-		      double* smin,
-		      double* smax) const;
+	virtual void satRange(const int n,
+                              const int* cells,
+                              double* smin,
+                              double* smax) const = 0;
 
-    private:
-        PhaseUsage phase_usage_;
-        std::vector<SatFuncSet> satfuncset_;
-        std::vector<int> cell_to_func_; // = SATNUM - 1
-
-        typedef SatFuncSet Funcs;
-
-        const Funcs& funcForCell(const int cell) const;
     };
 
 
@@ -117,7 +81,5 @@ namespace Opm
 } // namespace Opm
 
 
-#include <opm/core/fluid/SaturationPropsFromDeck_impl.hpp>
 
-
-#endif // OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
+#endif // OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED

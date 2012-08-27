@@ -26,6 +26,7 @@
 #include <opm/core/fluid/blackoil/BlackoilPvtProperties.hpp>
 #include <opm/core/fluid/SaturationPropsFromDeck.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <boost/scoped_ptr.hpp>
 
 struct UnstructuredGrid;
 
@@ -166,7 +167,7 @@ namespace Opm
     private:
         RockFromDeck rock_;
         BlackoilPvtProperties pvt_;
-        SaturationPropsFromDeck satprops_;
+        boost::scoped_ptr<SaturationPropsInterface> satprops_;
         mutable std::vector<double> B_;
         mutable std::vector<double> dB_;
         mutable std::vector<double> R_;
