@@ -6,7 +6,8 @@ LDFLAGS = $(BOOST_LDFLAGS)
 
 LDADD = $(top_builddir)/libopmpolymer.la	\
 $(BOOST_FILESYSTEM_LIB)				\
-$(BOOST_SYSTEM_LIB)	                        
+$(BOOST_SYSTEM_LIB)	                        \
+/usr/local/lib/libopmcore.la
 
 
 noinst_PROGRAMS =				\
