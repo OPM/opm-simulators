@@ -76,7 +76,7 @@ namespace Opm
                           std::vector<double>& saturation);
 
         //// Return the number of iterations used by the reordering solver.
-        //// \param[out] vector of iteration per cell
+        //// \return vector of iteration per cell
         const std::vector<int>& getReorderIterations() const;
 
     private:
