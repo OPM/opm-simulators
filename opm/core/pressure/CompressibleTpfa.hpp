@@ -61,7 +61,7 @@ namespace Opm
         ///                                   and completions does not change during the
         ///                                   run. However, controls (only) are allowed
         ///                                   to change.
-	CompressibleTpfa(const UnstructuredGrid& grid,
+        CompressibleTpfa(const UnstructuredGrid& grid,
                          const BlackoilPropertiesInterface& props,
                          const RockCompressibility* rock_comp_props,
                          const LinearSolverInterface& linsolver,
@@ -71,8 +71,8 @@ namespace Opm
                          const double* gravity,
                          const Wells* wells);
 
-	/// Destructor.
-	~CompressibleTpfa();
+        /// Destructor.
+        ~CompressibleTpfa();
 
         /// Solve the pressure equation by Newton-Raphson scheme.
         /// May throw an exception if the number of iterations
@@ -111,13 +111,13 @@ namespace Opm
         void solveIncrement();
         double residualNorm() const;
         double incrementNorm() const;
-	void computeResults(BlackoilState& state,
+        void computeResults(BlackoilState& state,
                             WellState& well_state) const;
     protected:
         void computeWellPotentials(const BlackoilState& state);
 
         // ------ Data that will remain unmodified after construction. ------
-	const UnstructuredGrid& grid_;
+        const UnstructuredGrid& grid_;
         const BlackoilPropertiesInterface& props_;
         const RockCompressibility* rock_comp_props_;
         const LinearSolverInterface& linsolver_;
@@ -126,12 +126,12 @@ namespace Opm
         const int maxiter_;
         const double* gravity_; // May be NULL
         const Wells* wells_;    // May be NULL, outside may modify controls (only) between calls to solve().
-	std::vector<double> htrans_;
-	std::vector<double> trans_ ;
+        std::vector<double> htrans_;
+        std::vector<double> trans_ ;
         std::vector<int> allcells_;
 
         // ------ Internal data for the cfs_tpfa_res solver. ------
-	struct cfs_tpfa_res_data* h_;
+        struct cfs_tpfa_res_data* h_;
 
         // ------ Data that will be modified for every solve. ------
         std::vector<double> wellperf_gpot_;

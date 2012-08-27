@@ -504,13 +504,13 @@ namespace Opm
         cq.phasemobf = &face_phasemob_[0];
         cq.voldiscr = &cell_voldisc_[0];
         int was_adjusted = 0;
-        if (rock_comp_props_ == NULL || !rock_comp_props_->isActive()) {
-            was_adjusted = 
+        if (! (rock_comp_props_ && rock_comp_props_->isActive())) {
+            was_adjusted =
                 cfs_tpfa_res_assemble(gg, dt, &forces, z, &cq, &trans_[0],
                                       &face_gravcap_[0], cell_press, well_bhp,
                                       &porevol_[0], h_);
         } else {
-            was_adjusted = 
+            was_adjusted =
                 cfs_tpfa_res_comprock_assemble(gg, dt, &forces, z, &cq, &trans_[0],
                                                &face_gravcap_[0], cell_press, well_bhp,
                                                &porevol_[0], &initial_porevol_[0],

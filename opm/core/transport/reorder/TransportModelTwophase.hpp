@@ -23,7 +23,7 @@
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
 #include <map>
-
+#include <ostream>
 struct UnstructuredGrid;
 
 namespace Opm
@@ -75,6 +75,10 @@ namespace Opm
                           const double dt,
                           std::vector<double>& saturation);
 
+        //// Return the number of iterations used by the reordering solver.
+        //// \return vector of iteration per cell
+        const std::vector<int>& getReorderIterations() const;
+
     private:
         virtual void solveSingleCell(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
@@ -83,7 +87,6 @@ namespace Opm
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
-
     private:
         const UnstructuredGrid& grid_;
         const IncompPropertiesInterface& props_;
@@ -99,6 +102,8 @@ namespace Opm
         double dt_;
         std::vector<double> saturation_;        // one per cell, only water saturation!
         std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
+        std::vector<int> reorder_iterations_;
+        //std::vector<double> reorder_fval_;
         // For gravity segregation.
         std::vector<double> gravflux_;
         std::vector<double> mob_;

@@ -53,6 +53,7 @@ namespace Opm
           dt_(0.0),
           saturation_(grid.number_of_cells, -1.0),
           fractionalflow_(grid.number_of_cells, -1.0),
+          reorder_iterations_(grid.number_of_cells, 0),
           mob_(2*grid.number_of_cells, -1.0)
 #ifdef EXPERIMENT_GAUSS_SEIDEL
         , ia_upw_(grid.number_of_cells + 1, -1),
@@ -101,10 +102,17 @@ namespace Opm
                                &seq[0], &comp[0], &ncomp,
                                &ia_downw_[0], &ja_downw_[0]);
 #endif
-
+        std::fill(reorder_iterations_.begin(),reorder_iterations_.end(),0);
         reorderAndTransport(grid_, darcyflux);
         toBothSat(saturation_, saturation);
     }
+
+
+    const std::vector<int>& TransportModelTwophase::getReorderIterations() const
+    {
+        return reorder_iterations_;
+    }
+
 
     // Residual function r(s) for a single-cell implicit Euler transport
     //
@@ -170,9 +178,11 @@ namespace Opm
         // if (std::fabs(r0) < tol_) {
         //     return;
         // }
-        int iters_used;
+        int iters_used = 0;
         // saturation_[cell] = modifiedRegulaFalsi(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
         saturation_[cell] = RootFinder::solve(res, saturation_[cell], 0.0, 1.0, maxit_, tol_, iters_used);
+        // add if it is iteration on an out loop
+        reorder_iterations_[cell] = reorder_iterations_[cell] + iters_used;
         fractionalflow_[cell] = fracFlow(saturation_[cell], cell);
     }
 
@@ -544,8 +554,9 @@ namespace Opm
         const int cell = cells[pos];
         GravityResidual res(*this, cells, pos, gravflux);
         if (std::fabs(res(saturation_[cell])) > tol_) {
-            int iters_used;
+            int iters_used = 0;
             saturation_[cell] = RootFinder::solve(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+            reorder_iterations_[cell] = reorder_iterations_[cell] + iters_used;
         }
         saturation_[cell] = std::min(std::max(saturation_[cell], smin_[2*cell]), smax_[2*cell]);
         mobility(saturation_[cell], cell, &mob_[2*cell]);
