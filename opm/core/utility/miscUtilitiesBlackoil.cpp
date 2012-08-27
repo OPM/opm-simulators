@@ -245,7 +245,7 @@ namespace Opm
         for (int i = 0; i < n; ++i) {
             for (int row = 0; row < np; ++row) {
                 for (int col = 0; col < np; ++col) {
-                    surfacevol[i*np + row] += A[i*np*np + row*np + col] * saturation[i*np + col];
+                    surfacevol[i*np + row] += A[i*np*np + row + col*np] * saturation[i*np + col];
                 }
             }
         }
