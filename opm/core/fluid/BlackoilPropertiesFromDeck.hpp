@@ -43,7 +43,8 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const UnstructuredGrid& grid);
+                                   const UnstructuredGrid& grid,
+                                   const bool use_spline);
 
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
