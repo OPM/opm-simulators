@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
-#define OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
+#ifndef OPM_SIMULATORCOMPRESSIBLETWOPHASE_HEADER_INCLUDED
+#define OPM_SIMULATORCOMPRESSIBLETWOPHASE_HEADER_INCLUDED
 
 #include <boost/shared_ptr.hpp>
 #include <vector>
@@ -30,17 +30,17 @@ struct FlowBoundaryConditions;
 namespace Opm
 {
     namespace parameter { class ParameterGroup; }
-    class IncompPropertiesInterface;
+    class BlackoilPropertiesInterface;
     class RockCompressibility;
     class WellsManager;
     class LinearSolverInterface;
     class SimulatorTimer;
-    class TwophaseState;
+    class BlackoilState;
     class WellState;
     struct SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
-    class SimulatorIncompTwophase
+    class SimulatorCompressibleTwophase
     {
     public:
         /// Initialise from parameters and objects to observe.
@@ -67,15 +67,15 @@ namespace Opm
         /// \param[in] bcs           boundary conditions, treat as all noflow if null
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
-       SimulatorIncompTwophase(const parameter::ParameterGroup& param,
-                               const UnstructuredGrid& grid,
-                               const IncompPropertiesInterface& props,
-                               const RockCompressibility* rock_comp,
-                               WellsManager& wells_manager,
-                               const std::vector<double>& src,
-                               const FlowBoundaryConditions* bcs,
-                               LinearSolverInterface& linsolver,
-                               const double* gravity);
+       SimulatorCompressibleTwophase(const parameter::ParameterGroup& param,
+                                     const UnstructuredGrid& grid,
+                                     const BlackoilPropertiesInterface& props,
+                                     const RockCompressibility* rock_comp,
+                                     WellsManager& wells_manager,
+                                     const std::vector<double>& src,
+                                     const FlowBoundaryConditions* bcs,
+                                     LinearSolverInterface& linsolver,
+                                     const double* gravity);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -85,7 +85,7 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            TwophaseState& state,
+                            BlackoilState& state,
                             WellState& well_state);
 
     private:
@@ -96,4 +96,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
+#endif // OPM_SIMULATORCOMPRESSIBLETWOPHASE_HEADER_INCLUDED
