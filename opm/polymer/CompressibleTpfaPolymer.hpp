@@ -106,7 +106,6 @@ namespace Opm
         const std::vector<double>* cmax_;
         std::vector<double> cell_eff_viscosity_;
         std::vector<double> cell_relperm_;
-        std::vector<double> cell_eff_relperm_;
     };
 
 } // namespace Opm

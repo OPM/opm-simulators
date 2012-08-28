@@ -10,6 +10,7 @@ libopmpolymer_la_SOURCES =				\
 opm/polymer/IncompTpfaPolymer.cpp			\
 opm/polymer/SimulatorPolymer.cpp			\
 opm/polymer/TransportModelPolymer.cpp			\
+opm/polymer/TransportModelCompressiblePolymer.cpp       \
 opm/polymer/PolymerProperties.cpp			\
 opm/polymer/polymerUtilities.cpp                  
 
@@ -23,4 +24,5 @@ opm/polymer/PolymerState.hpp				\
 opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp	\
 opm/polymer/SimulatorPolymer.hpp			\
 opm/polymer/TransportModelPolymer.hpp			\
+opm/polymer/TransportModelCompressiblePolymer.hpp       \
 opm/polymer/polymerUtilities.hpp

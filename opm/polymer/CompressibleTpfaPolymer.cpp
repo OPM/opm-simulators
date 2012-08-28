@@ -102,14 +102,8 @@ namespace Opm
         const int nc = grid_.number_of_cells;
         const int np = props_.numPhases();
         cell_relperm_.resize(nc*np);
-        cell_eff_relperm_.resize(nc*np);
         const double* cell_s = &state.saturation()[0];
         props_.relperm(nc, cell_s, &allcells_[0], &cell_relperm_[0], 0);
-        std::copy(cell_relperm_.begin(), cell_relperm_.end(), cell_eff_relperm_.begin());
-        for (int cell; cell < grid_.number_of_cells; ++cell) {
-            // only the water phase is modified by the presence og polymer.
-            poly_props_.effectiveRelperm((*c_)[cell], (*cmax_)[cell], &cell_relperm_[nc + 0], cell_eff_relperm_[nc + 0]);
-        }
         computeWellPotentials(state);
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
             computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), initial_porevol_);
@@ -143,14 +137,12 @@ namespace Opm
         cell_viscosity_.resize(nc*np);
         props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
+        poly_props_.effective
         for (int cell; cell < nc; ++cell) {
-            // Only the water viscosity is modified by polymer.
             poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[nc + 0], cell_eff_viscosity_[nc + 0]);
+            poly_props_.effectiveMobilities((*c_)[cell], (*cmax_)[cell], &cell_viscosity_[nc + 0], &cell_relperm_[nc + 0], &cell_phasemob_[nc + 0]);
         }
-        std::transform(cell_eff_relperm_.begin(), cell_eff_relperm_.end(),
-                       cell_eff_viscosity_.begin(),
-                       cell_phasemob_.begin(),
-                       std::divides<double>());
+
         // Volume discrepancy: we have that
         //     z = Au, voldiscr = sum(u) - 1,
         // but I am not sure it is actually needed.
