@@ -152,12 +152,8 @@ public:
                 continue; // reference phase is already calculated
 
             ComponentVector fugVec;
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                fugVec[compIdx] = 
-                    fluidState.fugacity(refPhaseIdx, compIdx)
-                    / fluidState.pressure(refPhaseIdx)
-                    * fluidState.pressure(phaseIdx);
-            }
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                fugVec[compIdx] = fluidState.fugacity(refPhaseIdx, compIdx);
 
             CompositionFromFugacities::guessInitial(fluidState, paramCache, phaseIdx, fugVec);
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);

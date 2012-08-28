@@ -170,11 +170,10 @@ public:
         std::cout << "\n";
         */
 
-        bool inStage2 = false;
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
-            linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities, inStage2);
+            linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
 
@@ -221,8 +220,6 @@ public:
 
             if (!std::isfinite(relError))
                 break;
-            else if (relError < 1e-5 && !inStage2)
-                inStage2 = true;
             else if (relError < 1e-9)
                 return;
         }
@@ -294,8 +291,7 @@ protected:
                            FluidState &fluidState,
                            ParameterCache &paramCache,
                            const typename MaterialLaw::Params &matParams,
-                           const ComponentVector &globalMolarities,
-                           bool inStage2)
+                           const ComponentVector &globalMolarities)
     {
         FluidState origFluidState(fluidState);
         ParameterCache origParamCache(paramCache);
@@ -306,7 +302,7 @@ protected:
         J = 0;
 
         Valgrind::SetUndefined(b);
-        calculateDefect_(b, fluidState, fluidState, globalMolarities, inStage2);
+        calculateDefect_(b, fluidState, fluidState, globalMolarities);
         Valgrind::CheckDefined(b);
 
         // assemble jacobian matrix
@@ -324,7 +320,7 @@ protected:
             assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
 
             // compute derivative of the defect
-            calculateDefect_(tmp, origFluidState, fluidState, globalMolarities, inStage2);
+            calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
             tmp -= b;
             tmp /= eps;
 
@@ -345,29 +341,20 @@ protected:
     static void calculateDefect_(Vector &b,
                                  const FluidState &fluidStateEval,
                                  const FluidState &fluidState,
-                                 const ComponentVector &globalMolarities, 
-                                 bool inStage2)
+                                 const ComponentVector &globalMolarities)
     {
         int eqIdx = 0;
 
         // fugacity of any component must be equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-                if (!inStage2)
-                    // in phase1 we equalize fugacities. this is more
-                    // stable numerically and leads to the correct
-                    // solution if capillary pressure is 0
-                    b[eqIdx] =
-                        fluidState.fugacity(/*phaseIdx=*/0, compIdx) -
-                        fluidState.fugacity(phaseIdx, compIdx);
-                else
-                    // in phase1 we equalize the fugacities divided by
-                    // pressure. this is less stable and but
-                    // physically correct for non-zero capillary
-                    // pressures
-                    b[eqIdx] =
-                        fluidState.fugacity(/*phaseIdx=*/0, compIdx)/fluidState.pressure(/*phaseIdx=*/0) -
-                        fluidState.fugacity(phaseIdx, compIdx)/fluidState.pressure(phaseIdx);
+                // in phase1 we equalize the fugacities divided by
+                // pressure. this is less stable and but
+                // physically correct for non-zero capillary
+                // pressures
+                b[eqIdx] =
+                    fluidState.fugacity(/*phaseIdx=*/0, compIdx)/fluidState.pressure(/*phaseIdx=*/0) -
+                    fluidState.fugacity(phaseIdx, compIdx)/fluidState.pressure(phaseIdx);
                 ++eqIdx;
             }
         }

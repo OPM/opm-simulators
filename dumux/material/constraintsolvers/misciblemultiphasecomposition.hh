@@ -191,11 +191,12 @@ public:
         Dune::FieldVector<Scalar, numEq> b(0.0);
 
         // assemble the equations expressing the fact that the
-        // fugacities divided by the pressure of each component is
-        // equal in all phases (assuming thermal equilibrium, that is)
+        // fugacities of each component is equal in all phases
+        // (assuming thermal equilibrium, that is)
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             Scalar entryCol1 =
-                fluidState.fugacityCoefficient(/*phaseIdx=*/0, compIdx);
+                fluidState.fugacityCoefficient(/*phaseIdx=*/0, compIdx)
+                * fluidState.pressure(/*phaseIdx=*/0);
             int col1Idx = compIdx;
 
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
@@ -203,7 +204,8 @@ public:
                 int col2Idx = phaseIdx*numComponents + compIdx;
 
                 Scalar entryCol2 =
-                    fluidState.fugacityCoefficient(phaseIdx, compIdx);
+                    fluidState.fugacityCoefficient(phaseIdx, compIdx)
+                    * fluidState.pressure(phaseIdx);
 
                 M[rowIdx][col1Idx] = entryCol1;
                 M[rowIdx][col2Idx] = -entryCol2;
