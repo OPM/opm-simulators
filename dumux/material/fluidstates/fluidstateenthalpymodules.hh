@@ -59,13 +59,11 @@ public:
     Scalar internalEnergy(int phaseIdx) const
     { return enthalpy_[phaseIdx] - asImp_().pressure(phaseIdx)/asImp_().density(phaseIdx); }
 
-
     /*!
      * \brief Set the specific enthalpy of a phase [J/kg]
      */
     void setEnthalpy(int phaseIdx, Scalar value)
     { enthalpy_[phaseIdx] = value; }
-
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid
