@@ -19,10 +19,11 @@
 
 #ifndef OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
 #define OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
-
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
+#include <opm/core/fluid/SatFuncStone2.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -43,6 +44,10 @@ namespace Opm
         ///                      to logical cartesian indices consistent with the deck.
         void init(const EclipseGridParser& deck,
                   const UnstructuredGrid& grid);
+
+        void init(const EclipseGridParser& deck,
+                  const UnstructuredGrid& grid,
+                  const parameter::ParameterGroup& param);
 
         /// \return   P, the number of phases.
         int numPhases() const;
@@ -87,31 +92,11 @@ namespace Opm
 		      double* smax) const;
 
     private:
-        PhaseUsage phase_usage_;
-        class SatFuncSet
-        {
-        public:
-            void init(const EclipseGridParser& deck, const int table_num, PhaseUsage phase_usg);
-            void evalKr(const double* s, double* kr) const;
-            void evalKrDeriv(const double* s, double* kr, double* dkrds) const;
-            void evalPc(const double* s, double* pc) const;
-            void evalPcDeriv(const double* s, double* pc, double* dpcds) const;
-            double smin_[PhaseUsage::MaxNumPhases];
-            double smax_[PhaseUsage::MaxNumPhases];
-        private:
-            PhaseUsage phase_usage; // A copy of the outer class' phase_usage_.
-            UniformTableLinear<double> krw_;
-            UniformTableLinear<double> krow_;
-            UniformTableLinear<double> pcow_;
-            UniformTableLinear<double> krg_;
-            UniformTableLinear<double> krog_;
-            UniformTableLinear<double> pcog_;
-            double krocw_; // = krow_(s_wc)
-        };
-        std::vector<SatFuncSet> satfuncset_;
+        PhaseUsage phase_usage_;        
+        std::vector<SatFuncStone2> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
 
-        const SatFuncSet& funcForCell(const int cell) const;
+        const SatFuncStone2& funcForCell(const int cell) const;
     };
 
 
