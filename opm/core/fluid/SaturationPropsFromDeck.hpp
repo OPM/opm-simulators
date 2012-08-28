@@ -24,6 +24,7 @@
 #include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 #include <opm/core/fluid/SatFuncStone2.hpp>
+#include <opm/core/fluid/SatFuncSimple.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -92,11 +93,12 @@ namespace Opm
 		      double* smax) const;
 
     private:
-        PhaseUsage phase_usage_;        
-        std::vector<SatFuncStone2> satfuncset_;
+        PhaseUsage phase_usage_;
+        typedef SatFuncSimple satfunc_t;
+        std::vector<satfunc_t> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
 
-        const SatFuncStone2& funcForCell(const int cell) const;
+        const satfunc_t& funcForCell(const int cell) const;
     };
 
 
