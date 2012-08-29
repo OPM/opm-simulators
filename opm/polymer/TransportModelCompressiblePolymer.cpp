@@ -201,11 +201,11 @@ namespace Opm
 	  fractionalflow_(grid.number_of_cells, -1.0),
 	  mc_(grid.number_of_cells, -1.0)
     {
+        const int np = props.numPhases();
+        const int num_cells = grid.number_of_cells;
         if (props.numPhases() != 2) {
             THROW("Property object must have 2 phases");
         }
-        int np = props.numPhases();
-        int num_cells = props.numCells();
         visc_.resize(np*num_cells);
         A_.resize(np*np*num_cells);
         A0_.resize(np*np*num_cells);
@@ -215,7 +215,7 @@ namespace Opm
         for (int i = 0; i < num_cells; ++i) {
             allcells_[i] = i;
         }
-        props.satRange(props.numCells(), &allcells_[0], &smin_[0], &smax_[0]);
+        props.satRange(num_cells, &allcells_[0], &smin_[0], &smax_[0]);
     }
 
 
@@ -251,9 +251,9 @@ namespace Opm
         res_counts.clear();
 #endif
         
-        props_.viscosity(props_.numCells(), &pressure[0], NULL, &allcells_[0], &visc_[0], NULL);
-        props_.matrix(props_.numCells(), &pressure0[0], NULL, &allcells_[0], &A0_[0], NULL);
-        props_.matrix(props_.numCells(), &pressure[0], NULL, &allcells_[0], &A_[0], NULL);
+        props_.viscosity(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &visc_[0], NULL);
+        props_.matrix(grid_.number_of_cells, &pressure0[0], NULL, &allcells_[0], &A0_[0], NULL);
+        props_.matrix(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &A_[0], NULL);
         computePorosity(grid_, porosity_standard_, rock_comp_, pressure0, porosity0_);
         computePorosity(grid_, porosity_standard_, rock_comp_, pressure, porosity_);
 
@@ -1124,7 +1124,8 @@ namespace Opm
         double dmob_ds[4];
         double dmob_dc[2];
 	double dmobwat_dc;
-        polyprops_.effectiveMobilitiesBoth(c, cmax, &visc_[cell], relperm, drelperm_ds,
+        const int np = props_.numPhases();
+        polyprops_.effectiveMobilitiesBoth(c, cmax, &visc_[np*cell], relperm, drelperm_ds,
                                            mob, dmob_ds, dmobwat_dc, if_with_der);
 	
  	ff = mob[0]/(mob[0] + mob[1]);
@@ -1192,7 +1193,7 @@ namespace Opm
           c0(tm.concentration_[cell]),
           cmax0(tm.cmax0_[cell]),
           porosity(tm.porosity_[cell]),
-          dtpv(tm.dt_/tm.porevolume_[cell]),
+          dtpv(tm.dt_/(tm.grid_.cell_volumes[cell]*porosity)),
           dps(tm.polyprops_.deadPoreVol()),
           rhor(tm.polyprops_.rockDensity())
 
@@ -1283,30 +1284,52 @@ namespace Opm
     {
 	double sat[2] = { s, 1.0 - s };
         double relperm[2];
+        const int np = props_.numPhases();
 	props_.relperm(1, sat, &cell, relperm, 0);
-        polyprops_.effectiveMobilities(c, cmax0_[cell], visc_, relperm, mob);
+        polyprops_.effectiveMobilities(c, cmax0_[cell], &visc_[np*cell], relperm, mob);
     }
-
 
     void TransportModelCompressiblePolymer::initGravity(const double* grav)
     {
-        // Set up gravflux_ = T_ij g (rho_w - rho_o) (z_i - z_j)
+        // Set up transmissibilities.
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
         const int nf = grid_.number_of_faces;
-        const int dim = grid_.dimensions;
+        trans_.resize(nf);
         gravflux_.resize(nf);
         tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid_), props_.permeability(), &htrans[0]);
-        tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &gravflux_[0]);
-        const double delta_rho = props_.density()[0] - props_.density()[1];
+        tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid_), &htrans[0], &trans_[0]);
+
+        // Remember gravity vector.
+        gravity_ = grav;
+    }
+
+    void TransportModelCompressiblePolymer::initGravityDynamic()
+    {
+        // Set up gravflux_ = T_ij g [   (b_w,i rho_w,S - b_o,i rho_o,S) (z_i - z_f)
+        //                             + (b_w,j rho_w,S - b_o,j rho_o,S) (z_f - z_j) ]
+        // But b_w,i * rho_w,S = rho_w,i, which we compute with a call to props_.density().
+        // We assume that we already have stored T_ij in trans_.
+        // We also assume that the A_ matrices are updated from an earlier call to solve().
+        const int nc = grid_.number_of_cells;
+        const int nf = grid_.number_of_faces;
+        const int np = props_.numPhases();
+        ASSERT(np == 2);
+        const int dim = grid_.dimensions;
+        density_.resize(nc*np);
+        props_.density(grid_.number_of_cells, &A_[0], &density_[0]);
+        std::fill(gravflux_.begin(), gravflux_.end(), 0.0);
         for (int f = 0; f < nf; ++f) {
             const int* c = &grid_.face_cells[2*f];
-            double gdz = 0.0;
+            const double signs[2] = { 1.0, -1.0 };
             if (c[0] != -1 && c[1] != -1) {
-                for (int d = 0; d < dim; ++d) {
-                    gdz += grav[d]*(grid_.cell_centroids[dim*c[0] + d] - grid_.cell_centroids[dim*c[1] + d]);
+                for (int ci = 0; ci < 2; ++ci) {
+                    double gdz = 0.0;
+                    for (int d = 0; d < dim; ++d) {
+                        gdz += gravity_[d]*(grid_.cell_centroids[dim*c[ci] + d] - grid_.face_centroids[dim*f + d]);
+                    }
+                    gravflux_[f] += signs[ci]*trans_[f]*gdz*(density_[2*c[ci]] - density_[2*c[ci] + 1]);
                 }
             }
-            gravflux_[f] *= delta_rho*gdz;
         }
     }
 
@@ -1400,14 +1423,17 @@ namespace Opm
 
 
     void TransportModelCompressiblePolymer::solveGravity(const std::vector<std::vector<int> >& columns,
-                                                         const double* porevolume,
                                                          const double dt,
                                                          std::vector<double>& saturation,
                                                          std::vector<double>& concentration,
                                                          std::vector<double>& cmax)
     {
+
+        // Assume that solve() has already been called, so that A_ and
+        // porosity_ are current.
+        initGravityDynamic();
+
         // initialize variables.
-        porevolume_ = porevolume;
         dt_ = dt;
         toWaterSat(saturation, saturation_);
         concentration_ = &concentration[0];

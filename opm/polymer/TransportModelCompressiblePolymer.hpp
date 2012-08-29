@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELPOLYMER_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELPOLYMER_HEADER_INCLUDED
+#ifndef OPM_TRANSPORTMODELCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
+#define OPM_TRANSPORTMODELCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 
 #include <opm/core/fluid/RockCompressibility.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
@@ -87,6 +87,10 @@ namespace Opm
                    std::vector<double>& concentration,
                    std::vector<double>& cmax);
 
+        /// Initialise quantities needed by gravity solver.
+        /// \param[in] grav    Gravity vector
+        void initGravity(const double* grav);
+
         /// Solve for gravity segregation.
         /// This uses a column-wise nonlinear Gauss-Seidel approach.
         /// It assumes that the input columns contain cells in a single
@@ -99,49 +103,20 @@ namespace Opm
 	/// \param[in, out] concentration  Polymer concentration.
 	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
         void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation,
                           std::vector<double>& concentration,
                           std::vector<double>& cmax);
 
-    public: // But should be made private...
-	virtual void solveSingleCell(const int cell);
-	virtual void solveMultiCell(const int num_cells, const int* cells);
-	void solveSingleCellBracketing(int cell);
-	void solveSingleCellNewton(int cell);
-	void solveSingleCellGradient(int cell);
-	void solveSingleCellNewtonSimple(int cell,bool use_sc);
-	class ResidualEquation;
-
-        void initGravity(const double* grav);
-        void solveSingleCellGravity(const std::vector<int>& cells,
-                                    const int pos,
-                                    const double* gravflux);
-        int solveGravityColumn(const std::vector<int>& cells);
+        
+        // This should be private:
+        class ResidualEquation;
+	friend class TransportModelCompressiblePolymer::ResidualEquation;
         void scToc(const double* x, double* x_c) const;
+        //
 
-        #ifdef PROFILING
-        class Newton_Iter {
-        public:
-            bool res_s;
-            int cell;
-            double s;
-            double c;
+    private: 
 
-            Newton_Iter(bool res_s_val, int cell_val, double s_val, double c_val) {
-                res_s = res_s_val;
-                cell = cell_val;
-                s = s_val;
-                c = c_val;
-            }
-        };
-
-        std::list<Newton_Iter> res_counts;
-        #endif
-
-
-    private:
 	const UnstructuredGrid& grid_;
         const double* porosity_standard_;
 	const BlackoilPropertiesInterface& props_;
@@ -162,7 +137,7 @@ namespace Opm
 	double* cmax_;
 	std::vector<double> fractionalflow_;  // one per cell
 	std::vector<double> mc_;  // one per cell
-        std::vector<double> visc_;
+        std::vector<double> visc_; // viscosity (without polymer, for given pressure)
         std::vector<double> A_;
         std::vector<double> A0_;
         std::vector<double> porosity0_;
@@ -171,6 +146,9 @@ namespace Opm
 	std::vector<double> smax_;
 	
         // For gravity segregation.
+        const double* gravity_;
+        std::vector<double> trans_;
+        std::vector<double> density_;
         std::vector<double> gravflux_;
         std::vector<double> mob_;
         std::vector<double> cmax0_;
@@ -183,6 +161,7 @@ namespace Opm
         std::vector<int> ja_upw_;
         std::vector<int> ia_downw_;
         std::vector<int> ja_downw_;
+        
 
 	struct ResidualC;
 	struct ResidualS;
@@ -190,6 +169,19 @@ namespace Opm
 	class ResidualCGrav;
 	class ResidualSGrav;
 
+	virtual void solveSingleCell(const int cell);
+	virtual void solveMultiCell(const int num_cells, const int* cells);
+	void solveSingleCellBracketing(int cell);
+	void solveSingleCellNewton(int cell);
+	void solveSingleCellGradient(int cell);
+	void solveSingleCellNewtonSimple(int cell,bool use_sc);
+
+        void solveSingleCellGravity(const std::vector<int>& cells,
+                                    const int pos,
+                                    const double* gravflux);
+        int solveGravityColumn(const std::vector<int>& cells);
+
+        void initGravityDynamic();
 
 	void fracFlow(double s, double c, double cmax, int cell, double& ff) const;
 	void fracFlowWithDer(double s, double c, double cmax, int cell, double& ff,
