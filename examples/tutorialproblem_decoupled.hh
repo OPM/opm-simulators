@@ -112,7 +112,7 @@ SET_INT_PROP(TutorialProblemDecoupled, CellsZ, 0);
 } /*@\label{tutorial-decoupled:propertysystem-end}@*/
 
 /*! \ingroup DecoupledProblems
- * @brief Problem class for the decoupled tutorial
+ * \brief Problem class for the decoupled tutorial
 */
 template<class TypeTag>
 class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutorial-decoupled:def-problem}@*/
