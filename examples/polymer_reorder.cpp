@@ -119,7 +119,7 @@ static void outputState(const UnstructuredGrid& grid,
         std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
     }
 
-    #ifdef PROFILING
+#ifdef PROFILING
     std::ostringstream fname;
     fname << output_dir << "/" << "residualcounts" << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
     std::ofstream file(fname.str().c_str());
@@ -134,9 +134,11 @@ static void outputState(const UnstructuredGrid& grid,
         file << it->res_s << "," << it->cell << "," << std::setprecision(15) << it->s << "," << std::setprecision(15) << it->c << "\n";
     }
     file.close();
-    #endif
+#else
+    (void) reorder_model; // to avoid compilator warning
+#endif
 
-    
+
 }
 
 
