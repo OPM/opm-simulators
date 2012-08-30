@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_POLYMERSTATE_HEADER_INCLUDED
-#define OPM_POLYMERSTATE_HEADER_INCLUDED
+#ifndef OPM_POLYMERBLACKOILSTATE_HEADER_INCLUDED
+#define OPM_POLYMERBLACKOILSTATE_HEADER_INCLUDED
 
 
 #include <opm/core/simulator/BlackoilState.hpp>

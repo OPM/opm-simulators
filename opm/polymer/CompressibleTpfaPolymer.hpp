@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_INCOMPTPFAPOLYMER_HEADER_INCLUDED
-#define OPM_INCOMPTPFAPOLYMER_HEADER_INCLUDED
+#ifndef OPM_COMPRESSIBLETPFAPOLYMER_HEADER_INCLUDED
+#define OPM_COMPRESSIBLETPFAPOLYMER_HEADER_INCLUDED
 
 
 #include <opm/core/pressure/CompressibleTpfa.hpp>
