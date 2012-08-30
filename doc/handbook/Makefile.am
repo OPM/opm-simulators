@@ -34,6 +34,8 @@ dumux-handbook.pdf: $(TEXSOURCE)
 	@LATEX@ dumux-handbook.tex <&-
 	@DVIPDF@ dumux-handbook <&-
 
+doc: dumux-handbook.pdf
+
 #dist-hook:
 #	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
 #	sed $(srcdir)/Makefile.dist.in -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.in
