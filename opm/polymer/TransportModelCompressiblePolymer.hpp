@@ -29,6 +29,11 @@
 
 class UnstructuredGrid;
 
+namespace {
+    class ResSOnCurve;
+    class ResCOnCurve;
+}
+
 namespace Opm
 {
 
@@ -109,11 +114,8 @@ namespace Opm
                           std::vector<double>& cmax);
 
         
-        // This should be private:
-        class ResidualEquation;
-	friend class TransportModelCompressiblePolymer::ResidualEquation;
-        void scToc(const double* x, double* x_c) const;
-        //
+
+
 
     private: 
 
@@ -162,12 +164,20 @@ namespace Opm
         std::vector<int> ia_downw_;
         std::vector<int> ja_downw_;
         
-
 	struct ResidualC;
 	struct ResidualS;
 
 	class ResidualCGrav;
 	class ResidualSGrav;
+
+        class ResidualEquation;
+        class ResSOnCurve;
+        class ResCOnCurve;
+
+	friend class TransportModelCompressiblePolymer::ResidualEquation;
+        friend class TransportModelCompressiblePolymer::ResSOnCurve;
+        friend class TransportModelCompressiblePolymer::ResCOnCurve;
+
 
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
@@ -191,6 +201,7 @@ namespace Opm
 	void computeMc(double c, double& mc) const;
 	void computeMcWithDer(double c, double& mc, double& dmc_dc) const;
         void mobility(double s, double c, int cell, double* mob) const;
+        void scToc(const double* x, double* x_c) const;
     };
 
 } // namespace Opm
