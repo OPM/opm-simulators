@@ -37,7 +37,7 @@ namespace Opm
     class RockCompressibility;
     class PolymerProperties;
     class LinearSolverInterface;
-    class PolymerState;
+    class PolymerBlackoilState;
     class WellState;
 
     /// Encapsulating a tpfa pressure solver for the compressible-fluid case  with polymer.

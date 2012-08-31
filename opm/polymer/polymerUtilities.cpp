@@ -18,6 +18,7 @@
 */
 
 #include <opm/polymer/polymerUtilities.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
 
 namespace Opm
 {
@@ -197,6 +198,37 @@ namespace Opm
             double c_ads;
             polyprops.simpleAdsorption(cmax[cell], c_ads);
             abs_mass += c_ads*pv[cell]*((1.0 - poro[cell])/poro[cell])*rhor;
+	}
+        return abs_mass;
+    }
+
+    /// @brief Computes total absorbed polymer mass over all grid cells.
+    /// With compressibility
+    /// @param[in]  grid      grid
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  state     fluid state variable
+    /// @param[in]  rock_comp rock compressibility (depends on pressure)
+    /// @return               total absorbed polymer mass.
+    double computePolymerAdsorbed(const UnstructuredGrid& grid,
+                                  const BlackoilPropertiesInterface& props,
+                                  const Opm::PolymerProperties& polyprops,
+                                  const PolymerBlackoilState& state,
+                                  const RockCompressibility& rock_comp
+                                  )
+    {
+	const int num_cells = props.numCells();
+        const double rhor = polyprops.rockDensity();
+        std::vector<double> porevolume;
+        std::vector<double> porosity;
+        computePorevolume(grid, props.porosity(), rock_comp, state.pressure(), porevolume);
+        computePorosity(grid, props.porosity(), rock_comp, state.pressure(), porosity);
+        double abs_mass = 0.0;
+        const std::vector<double>& cmax = state.maxconcentration();
+	for (int cell = 0; cell < num_cells; ++cell) {
+            double c_ads;
+            polyprops.simpleAdsorption(cmax[cell], c_ads);
+            abs_mass += c_ads*porevolume[cell]*((1.0 - porosity[cell])/porosity[cell])*rhor;
 	}
         return abs_mass;
     }

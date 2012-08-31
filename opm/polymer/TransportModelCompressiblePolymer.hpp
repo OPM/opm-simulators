@@ -74,7 +74,7 @@ namespace Opm
 	/// Solve for saturation, concentration and cmax at next timestep.
 	/// Using implicit Euler scheme, reordered.
 	/// \param[in] darcyflux           Array of signed face fluxes.
-	/// \param[in] pressure0           Array with pressure at start of timestep.
+	/// \param[in] initial_pressure    Array with pressure at start of timestep.
 	/// \param[in] pressure            Array with pressure.
 	/// \param[in] source              Transport source term.
 	/// \param[in] dt                  Time step.
@@ -83,7 +83,7 @@ namespace Opm
 	/// \param[in, out] concentration  Polymer concentration.
 	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
 	void solve(const double* darcyflux,
-                   const std::vector<double>& pressure0,
+                   const std::vector<double>& initial_pressure,
                    const std::vector<double>& pressure,
 		   const double* source,
 		   const double dt,
@@ -206,4 +206,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_TRANSPORTMODELCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
+#endif // OPM_TRANSPORTMODELCOMPRESSIBLEgPOLYMER_HEADER_INCLUDED

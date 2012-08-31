@@ -23,7 +23,10 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
+#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
+#include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/core/fluid/RockCompressibility.hpp>
 #include <vector>
 
 
@@ -115,6 +118,20 @@ namespace Opm
                                   const Opm::PolymerProperties& polyprops,
                                   const std::vector<double>& pv,
                                   const std::vector<double>& cmax);
+
+    /// @brief Computes total absorbed polymer mass over all grid cells.
+    /// With compressibility
+    /// @param[in]  grid      grid
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  state     State variables
+    /// @param[in]  rock_comp Rock compressibility
+    /// @return               total absorbed polymer mass.
+    double computePolymerAdsorbed(const UnstructuredGrid& grid,
+                                  const BlackoilPropertiesInterface& props,
+                                  const Opm::PolymerProperties& polyprops,
+                                  const PolymerBlackoilState& state,
+                                  const RockCompressibility& rock_comp);
 
 
     /// @brief Functor giving the injected amount of polymer as a function of time.

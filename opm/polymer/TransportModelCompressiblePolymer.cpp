@@ -202,7 +202,7 @@ namespace Opm
 
 
     void TransportModelCompressiblePolymer::solve(const double* darcyflux,
-                                                  const std::vector<double>& pressure0,
+                                                  const std::vector<double>& initial_pressure,
                                                   const std::vector<double>& pressure,
                                                   const double* source,
                                                   const double dt,
@@ -224,9 +224,9 @@ namespace Opm
 #endif
         
         props_.viscosity(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &visc_[0], NULL);
-        props_.matrix(grid_.number_of_cells, &pressure0[0], NULL, &allcells_[0], &A0_[0], NULL);
+        props_.matrix(grid_.number_of_cells, &initial_pressure[0], NULL, &allcells_[0], &A0_[0], NULL);
         props_.matrix(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &A_[0], NULL);
-        computePorosity(grid_, porosity_standard_, rock_comp_, pressure0, porosity0_);
+        computePorosity(grid_, porosity_standard_, rock_comp_, initial_pressure, porosity0_);
         computePorosity(grid_, porosity_standard_, rock_comp_, pressure, porosity_);
 
         // Check immiscibility requirement (only done for first cell).
