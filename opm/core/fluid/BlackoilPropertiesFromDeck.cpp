@@ -39,7 +39,8 @@ namespace Opm
                                                            const parameter::ParameterGroup& param)
     {
         rock_.init(deck, grid);
-        pvt_.init(deck);
+        int samples = param.getDefault("dead_tab_size", 1025);
+        pvt_.init(deck, samples);
         satprops_.init(deck, grid, param);
 
         if (pvt_.numPhases() != satprops_.numPhases()) {
