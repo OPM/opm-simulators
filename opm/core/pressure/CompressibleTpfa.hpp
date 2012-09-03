@@ -90,16 +90,15 @@ namespace Opm
         bool singularPressure() const;
 
     private:
-        void computePerSolveDynamicData(const double dt,
-                                        const BlackoilState& state,
-                                        const WellState& well_state);
-        void computeWellPotentials(const BlackoilState& state);
+        virtual void computePerSolveDynamicData(const double dt,
+                                                const BlackoilState& state,
+                                                const WellState& well_state);
         void computePerIterationDynamicData(const double dt,
                                             const BlackoilState& state,
                                             const WellState& well_state);
-        void computeCellDynamicData(const double dt,
-                                    const BlackoilState& state,
-                                    const WellState& well_state);
+        virtual void computeCellDynamicData(const double dt,
+                                            const BlackoilState& state,
+                                            const WellState& well_state);
         void computeFaceDynamicData(const double dt,
                                     const BlackoilState& state,
                                     const WellState& well_state);
@@ -114,6 +113,8 @@ namespace Opm
         double incrementNorm() const;
         void computeResults(BlackoilState& state,
                             WellState& well_state) const;
+    protected:
+        void computeWellPotentials(const BlackoilState& state);
 
         // ------ Data that will remain unmodified after construction. ------
         const UnstructuredGrid& grid_;

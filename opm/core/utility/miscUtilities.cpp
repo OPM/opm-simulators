@@ -70,6 +70,25 @@ namespace Opm
         }
     }
 
+    /// @brief Computes porosity of all cells in a grid, with rock compressibility effects.
+    /// @param[in]  grid               a grid
+    /// @param[in]  porosity_standard  array of grid.number_of_cells porosity values (at standard conditions)
+    /// @param[in]  rock_comp          rock compressibility properties
+    /// @param[in]  pressure           pressure by cell
+    /// @param[out] porosity           porosity (at reservoir condition)
+    void computePorosity(const UnstructuredGrid& grid,
+                         const double* porosity_standard,
+                         const RockCompressibility& rock_comp,
+                         const std::vector<double>& pressure,
+                         std::vector<double>& porosity)
+    {
+        int num_cells = grid.number_of_cells;
+        porosity.resize(num_cells);
+        for (int i = 0; i < num_cells; ++i) {
+            porosity[i] = porosity_standard[i]*rock_comp.poroMult(pressure[i]);
+        }
+    }
+
 
     /// @brief Computes total saturated volumes over all grid cells.
     /// @param[in]  pv        the pore volume by cell.
