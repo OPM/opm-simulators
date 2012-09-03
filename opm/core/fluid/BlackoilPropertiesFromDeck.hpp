@@ -45,9 +45,18 @@ namespace Opm
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                    const UnstructuredGrid& grid);        
+
+        /// Initialize from deck, grid and parameters.
+        /// \param  deck         Deck input parser
+        /// \param  grid         Grid to which property object applies, needed for the 
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        /// \param  param        Parameters. Accepted parameters include:
+        ///                        tab_size (200)   number of uniform sample points for saturation tables.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                    const UnstructuredGrid& grid,
                                    const parameter::ParameterGroup& param);
+
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
 
