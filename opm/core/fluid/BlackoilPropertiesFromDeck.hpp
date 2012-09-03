@@ -52,7 +52,8 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         /// \param  param        Parameters. Accepted parameters include:
-        ///                        tab_size (200)   number of uniform sample points for saturation tables.
+        ///                        dead_tab_size (1025)   number of uniform sample points for dead-oil pvt tables.
+        ///                        tab_size_kr    (200)   number of uniform sample points for saturation tables.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                    const UnstructuredGrid& grid,
                                    const parameter::ParameterGroup& param);
