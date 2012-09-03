@@ -172,7 +172,14 @@ namespace Opm
 	  concentration_(0),
 	  cmax_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
-	  mc_(grid.number_of_cells, -1.0)
+	  mc_(grid.number_of_cells, -1.0),
+          gravity_(0),
+          mob_(2*grid.number_of_cells, -1.0),
+          ia_upw_(grid.number_of_cells + 1, -1),
+          ja_upw_(grid.number_of_faces, -1),
+          ia_downw_(grid.number_of_cells + 1, -1),
+          ja_downw_(grid.number_of_faces, -1)
+
     {
         const int np = props.numPhases();
         const int num_cells = grid.number_of_cells;
