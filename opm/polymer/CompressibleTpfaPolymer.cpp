@@ -102,6 +102,7 @@ namespace Opm
         const int nc = grid_.number_of_cells;
         const int np = props_.numPhases();
         cell_relperm_.resize(nc*np);
+        cell_eff_viscosity_.resize(nc*np);
         const double* cell_s = &state.saturation()[0];
         props_.relperm(nc, cell_s, &allcells_[0], &cell_relperm_[0], 0);
         computeWellPotentials(state);
@@ -137,8 +138,8 @@ namespace Opm
         props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
         for (int cell = 0; cell < nc; ++cell) {
-            poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[nc + 0], cell_eff_viscosity_[nc + 0]);
-            poly_props_.effectiveMobilities((*c_)[cell], (*cmax_)[cell], &cell_viscosity_[nc + 0], &cell_relperm_[nc + 0], &cell_phasemob_[nc + 0]);
+            poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[cell + 0], cell_eff_viscosity_[cell + 0]);
+            poly_props_.effectiveMobilities((*c_)[cell], (*cmax_)[cell], &cell_viscosity_[cell + 0], &cell_relperm_[cell + 0], &cell_phasemob_[cell + 0]);
         }
 
         // Volume discrepancy: we have that
