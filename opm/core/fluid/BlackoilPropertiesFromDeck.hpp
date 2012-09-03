@@ -26,6 +26,7 @@
 #include <opm/core/fluid/blackoil/BlackoilPvtProperties.hpp>
 #include <opm/core/fluid/SaturationPropsFromDeck.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 struct UnstructuredGrid;
 
@@ -43,8 +44,10 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const UnstructuredGrid& grid);
-
+                                   const UnstructuredGrid& grid);        
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   const UnstructuredGrid& grid,
+                                   const parameter::ParameterGroup& param);
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
 

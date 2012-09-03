@@ -18,7 +18,7 @@
 */
 
 #include <opm/core/fluid/BlackoilPropertiesFromDeck.hpp>
-
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 namespace Opm
 {
 
@@ -32,6 +32,21 @@ namespace Opm
 	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
 		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
 	}
+    }
+
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                                           const UnstructuredGrid& grid,
+                                                           const parameter::ParameterGroup& param)
+    {
+        rock_.init(deck, grid);
+        int samples = param.getDefault("dead_tab_size", 1025);
+        pvt_.init(deck, samples);
+        satprops_.init(deck, grid, param);
+
+        if (pvt_.numPhases() != satprops_.numPhases()) {
+            THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+        }
     }
 
     BlackoilPropertiesFromDeck::~BlackoilPropertiesFromDeck()
