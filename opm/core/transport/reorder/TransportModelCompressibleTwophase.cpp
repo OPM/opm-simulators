@@ -124,7 +124,7 @@ namespace Opm
     //
     // [[ incompressible was: r(s) = s - s0 + dt/pv*( influx + outflux*f(s) ) ]]
     //
-    //     r(s) = s - B*z0 + dt/pv*( influx + outflux*f(s) )
+    //     r(s) = s - B*z0 + s*(poro - poro0)/poro0 + dt/pv*( influx + outflux*f(s) )
     //
     // @@@ What about the source term
     //
