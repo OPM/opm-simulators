@@ -44,7 +44,7 @@ namespace Opm
 
     /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
     /// @param[in]  grid      a grid
-    /// @param[in]  porosity  array of grid.number_of_cells porosity values
+    /// @param[in]  porosity  array of grid.number_of_cells porosity values (at reference pressure)
     /// @param[in]  rock_comp rock compressibility properties
     /// @param[in]  pressure  pressure by cell
     /// @param[out] porevol   the pore volume by cell.
