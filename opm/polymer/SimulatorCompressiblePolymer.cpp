@@ -332,15 +332,18 @@ namespace Opm
                 std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_.solve(&state.faceflux()[0], initial_pressure, 
+                tsolver_.solve(&state.faceflux()[0], initial_pressure,
                                state.pressure(), &transport_src[0], stepsize, inflow_c,
-                               state.saturation(), state.concentration(), state.maxconcentration());
+                               state.saturation(), state.surfacevol(),
+                               state.concentration(), state.maxconcentration());
+
+                // Computeinjectedproduced function does not take into account polymer.
                 Opm::computeInjectedProduced(props_,
                                              state.pressure(), state.surfacevol(), state.saturation(),
                                              transport_src, stepsize, injected, produced);
                 if (use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize,
-                                          state.saturation(), state.concentration(), 
+                                          state.saturation(), state.concentration(),
                                           state.maxconcentration());
                 }
             }
@@ -404,7 +407,7 @@ namespace Opm
                           tot_produced[0]/tot_porevol_init);
             if (wells_) {
             wellreport.push(props_, *wells_, state.pressure(), state.surfacevol(),
-                            state.saturation(), timer.currentTime() + timer.currentStepLength(), 
+                            state.saturation(), timer.currentTime() + timer.currentStepLength(),
                             well_state.bhp(), well_state.perfRates());
             }
         }

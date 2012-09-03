@@ -24,6 +24,7 @@
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/utility/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <cmath>
 #include <list>
@@ -208,6 +209,7 @@ namespace Opm
                                                   const double dt,
                                                   const double inflow_c,
                                                   std::vector<double>& saturation,
+                                                  std::vector<double>& surfacevol,
                                                   std::vector<double>& concentration,
                                                   std::vector<double>& cmax)
     {
@@ -248,6 +250,8 @@ namespace Opm
         reorderAndTransport(grid_, darcyflux);
         toBothSat(saturation_, saturation);
 
+        // Compute surface volume as a postprocessing step from saturation and A_
+        computeSurfacevol(grid_.number_of_cells, props_.numPhases(), &A_[0], &saturation[0], &surfacevol[0]);
     }
 
 

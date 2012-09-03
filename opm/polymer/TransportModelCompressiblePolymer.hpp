@@ -89,6 +89,7 @@ namespace Opm
 		   const double dt,
 		   const double inflow_c,
 		   std::vector<double>& saturation,
+		   std::vector<double>& surfacevol,
                    std::vector<double>& concentration,
                    std::vector<double>& cmax);
 
