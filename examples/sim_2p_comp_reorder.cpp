@@ -32,7 +32,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/core/fluid/BlackoilPropertiesBasic.hpp>
