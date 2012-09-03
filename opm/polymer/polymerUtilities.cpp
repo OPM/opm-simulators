@@ -219,16 +219,14 @@ namespace Opm
     {
 	const int num_cells = props.numCells();
         const double rhor = polyprops.rockDensity();
-        std::vector<double> porevolume;
         std::vector<double> porosity;
-        computePorevolume(grid, props.porosity(), rock_comp, state.pressure(), porevolume);
         computePorosity(grid, props.porosity(), rock_comp, state.pressure(), porosity);
         double abs_mass = 0.0;
         const std::vector<double>& cmax = state.maxconcentration();
 	for (int cell = 0; cell < num_cells; ++cell) {
             double c_ads;
             polyprops.simpleAdsorption(cmax[cell], c_ads);
-            abs_mass += c_ads*porevolume[cell]*((1.0 - porosity[cell])/porosity[cell])*rhor;
+            abs_mass += c_ads*grid.cell_volumes[cell]*(1.0 - porosity[cell])*rhor;
 	}
         return abs_mass;
     }
