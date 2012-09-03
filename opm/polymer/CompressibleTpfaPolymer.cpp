@@ -130,15 +130,13 @@ namespace Opm
         const int np = props_.numPhases();
         const double* cell_p = &state.pressure()[0];
         const double* cell_z = &state.surfacevol()[0];
-        const double* cell_s = &state.saturation()[0];
         cell_A_.resize(nc*np*np);
         cell_dA_.resize(nc*np*np);
         props_.matrix(nc, cell_p, cell_z, &allcells_[0], &cell_A_[0], &cell_dA_[0]);
         cell_viscosity_.resize(nc*np);
         props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
-        poly_props_.effective
-        for (int cell; cell < nc; ++cell) {
+        for (int cell = 0; cell < nc; ++cell) {
             poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[nc + 0], cell_eff_viscosity_[nc + 0]);
             poly_props_.effectiveMobilities((*c_)[cell], (*cmax_)[cell], &cell_viscosity_[nc + 0], &cell_relperm_[nc + 0], &cell_phasemob_[nc + 0]);
         }
