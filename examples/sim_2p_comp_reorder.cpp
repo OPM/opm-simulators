@@ -94,8 +94,7 @@ main(int argc, char** argv)
         // Grid init
         grid.reset(new GridManager(*deck));
         // Rock and fluid init
-        bool props_use_spline = param.getDefault("props_use_spline", true);
-        props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), props_use_spline));
+        props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
