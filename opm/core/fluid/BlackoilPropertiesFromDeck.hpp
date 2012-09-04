@@ -53,8 +53,9 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         /// \param[in]  param    Parameters. Accepted parameters include:
-        ///                        dead_tab_size (1025)   number of uniform sample points for dead-oil pvt tables.
-        ///                        tab_size_kr    (200)   number of uniform sample points for saturation tables.
+        ///                        pvt_tab_size (200)          number of uniform sample points for dead-oil pvt tables.
+        ///                        sat_tab_size (200)          number of uniform sample points for saturation tables.
+        ///                        threephase_model("simple")  three-phase relperm model (accepts "simple" and "stone2").
         ///                      For both parameters, a 0 or negative value indicates that no spline fitting is to
         ///                      be done, and the input fluid data used directly for linear interpolation.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
