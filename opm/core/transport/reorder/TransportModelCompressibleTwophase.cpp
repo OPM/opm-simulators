@@ -444,9 +444,8 @@ namespace Opm
         GravityResidual res(*this, cells, pos, gravflux);
         if (std::fabs(res(saturation_[cell])) > tol_) {
             int iters_used;
-            saturation_[cell] = RootFinder::solve(res, smin_[2*cell], smax_[2*cell], maxit_, tol_, iters_used);
+            saturation_[cell] = RootFinder::solve(res, 0.0, 1.0, maxit_, tol_, iters_used);
         }
-        saturation_[cell] = std::min(std::max(saturation_[cell], smin_[2*cell]), smax_[2*cell]);
         mobility(saturation_[cell], cell, &mob_[2*cell]);
     }
 
