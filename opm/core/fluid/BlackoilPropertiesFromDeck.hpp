@@ -56,7 +56,7 @@ namespace Opm
         ///                        pvt_tab_size (200)          number of uniform sample points for dead-oil pvt tables.
         ///                        sat_tab_size (200)          number of uniform sample points for saturation tables.
         ///                        threephase_model("simple")  three-phase relperm model (accepts "simple" and "stone2").
-        ///                      For both parameters, a 0 or negative value indicates that no spline fitting is to
+        ///                      For both size parameters, a 0 or negative value indicates that no spline fitting is to
         ///                      be done, and the input fluid data used directly for linear interpolation.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                    const UnstructuredGrid& grid,

@@ -549,9 +549,9 @@ namespace Opm
                 const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
                 for (int c = 0; c < num_cells; ++c) {
                     int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
-                    s[2*c] = sw_deck[c_deck];
-                    s[2*c + 1] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
-                    s[2*c + 2] = sg_deck[c_deck];
+                    s[3*c] = sw_deck[c_deck];
+                    s[3*c + 1] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
+                    s[3*c + 2] = sg_deck[c_deck];
                     p[c] = p_deck[c_deck];
                  }
             } else {

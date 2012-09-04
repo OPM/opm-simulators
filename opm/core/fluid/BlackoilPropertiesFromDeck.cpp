@@ -27,7 +27,7 @@ namespace Opm
                                                            const UnstructuredGrid& grid)
     {
         rock_.init(deck, grid);
-        pvt_.init(deck, 1025);
+        pvt_.init(deck, 200);
         SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
             = new SaturationPropsFromDeck<SatFuncStone2Uniform>();
         satprops_.reset(ptr);
