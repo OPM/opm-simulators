@@ -39,7 +39,7 @@ namespace Opm
                                                            const parameter::ParameterGroup& param)
     {
         rock_.init(deck, grid);
-        int samples = param.getDefault("dead_tab_size", 1025);
+        const int samples = param.getDefault("dead_tab_size", 1025);
         pvt_.init(deck, samples);
         satprops_.init(deck, grid, param);
 
