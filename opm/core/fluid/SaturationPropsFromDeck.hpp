@@ -21,8 +21,11 @@
 #define OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
 
 #include <opm/core/fluid/SaturationPropsInterface.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
+#include <opm/core/fluid/SatFuncStone2.hpp>
+#include <opm/core/fluid/SatFuncSimple.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -31,21 +34,14 @@ namespace Opm
 {
 
 
-    /// Class storing saturation functions in a uniform table,
-    /// densely sampled from a monotone spline,
-    /// using linear interpolation.
-    class SatFuncSetUniform;
-
-    /// Class storing saturation functions in a nonuniform table
-    /// using linear interpolation.
-    class SatFuncSetNonuniform;
-
 
     /// Interface to saturation functions from deck.
-    /// Possible values for template argument:
-    ///   SatFuncSetNonuniform,
-    ///   SatFuncSetUniform (default).
-    template <class SatFuncSet = SatFuncSetUniform>
+    /// Possible values for template argument (for now):
+    ///   SatFuncSetStone2Nonuniform,
+    ///   SatFuncSetStone2Uniform.
+    ///   SatFuncSetSimpleNonuniform,
+    ///   SatFuncSetSimpleUniform.
+    template <class SatFuncSet>
     class SaturationPropsFromDeck : public SaturationPropsInterface
     {
     public:
@@ -53,12 +49,15 @@ namespace Opm
         SaturationPropsFromDeck();
 
         /// Initialize from deck and grid.
-        /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the 
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the 
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
         void init(const EclipseGridParser& deck,
-                  const UnstructuredGrid& grid);
+                  const UnstructuredGrid& grid,
+                  const int samples);
 
         /// \return   P, the number of phases.
         int numPhases() const;

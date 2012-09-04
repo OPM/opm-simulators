@@ -47,7 +47,13 @@ namespace Opm
         BlackoilPvtProperties();
 
         /// Initialize from deck.
-	void init(const EclipseGridParser& deck, const bool use_spline);
+        /// \param deck     An input deck.
+        /// \param samples  If greater than zero, indicates the number of
+        ///                 uniform samples to be taken from monotone spline
+        ///                 curves interpolating the fluid data.
+        ///                 Otherwise, interpolate linearly in the original
+        ///                 data without fitting a spline.
+        void init(const EclipseGridParser& deck, const int samples);
 
         /// Number of active phases.
         int numPhases() const;

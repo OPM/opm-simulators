@@ -31,7 +31,7 @@ namespace Opm
     {
         rock_.init(deck, grid);
 	pvt_.init(deck);
-        satprops_.init(deck, grid);
+        satprops_.init(deck, grid, 200);
 	if (pvt_.numPhases() != satprops_.numPhases()) {
 	    THROW("IncompPropertiesFromDeck::IncompPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
 		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
