@@ -349,7 +349,7 @@ namespace Opm
                 gf[1] = gravflux[pos];
             }
             s0      = tm.saturation_[cell];
-            dtpv    = tm.dt_/tm.porevolume0_[cell];
+            dtpv    = tm.dt_/tm.porevolume_[cell];
 
         }
         double operator()(double s) const
