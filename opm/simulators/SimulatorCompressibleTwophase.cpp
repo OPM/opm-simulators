@@ -446,7 +446,7 @@ namespace Opm
             }
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], &state.pressure()[0],
-                               &porevol[0],  &initial_porevol[0], &transport_src[0], stepsize,
+                               &initial_porevol[0], &porevol[0], &transport_src[0], stepsize,
                                state.saturation(), state.surfacevol());
                 Opm::computeInjectedProduced(props_,
                                              state.pressure(), state.surfacevol(), state.saturation(),
