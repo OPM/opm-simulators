@@ -522,9 +522,7 @@ namespace Opm
             cells[c] = c;
         }
         mob_.resize(2*nc);
-        std::vector<double> boths;
-        Opm::toBothSat(saturation, boths);
-        props_.relperm(cells.size(), &boths[0], &cells[0], &mob_[0], 0);
+        props_.relperm(cells.size(), &saturation[0], &cells[0], &mob_[0], 0);
 
         props_.viscosity(props_.numCells(), pressure, NULL, &allcells_[0], &visc_[0], NULL);
         for (int c = 0; c < nc; ++c) {
