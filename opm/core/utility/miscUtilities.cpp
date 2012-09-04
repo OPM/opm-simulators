@@ -665,7 +665,8 @@ namespace Opm
             double well_rate_total = 0.0;
             double well_rate_water = 0.0;
             for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
-                const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
+                const double perf_rate = unit::convert::to(well_perfrates[perf],
+                                                           unit::cubic(unit::meter)/unit::day);
                 well_rate_total += perf_rate;
                 if (perf_rate > 0.0) {
                     // Injection.
@@ -674,9 +675,9 @@ namespace Opm
                     // Production.
                     const int cell = wells.well_cells[perf];
                     double mob[max_np];
-                    props.relperm(1, &s[2*cell], &cell, mob, 0);
+                    props.relperm(1, &s[np*cell], &cell, mob, 0);
                     double visc[max_np];
-                    props.viscosity(1, &p[cell], &z[2*cell], &cell, visc, 0);
+                    props.viscosity(1, &p[cell], &z[np*cell], &cell, visc, 0);
                     double tmob = 0;
                     for(int i = 0; i < np; ++i) {
                         mob[i] /= visc[i];
