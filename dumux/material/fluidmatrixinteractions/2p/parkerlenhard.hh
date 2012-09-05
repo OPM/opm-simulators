@@ -774,7 +774,6 @@ private:
     }
 };
 
-
-}; // namespace Dumux
+} // namespace Dumux
 
 #endif // PARKER_LENHARD_HH

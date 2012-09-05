@@ -67,18 +67,6 @@ public:
 
     HairSplittingFluidState()
     {
-        // set some fake values
-        BaseFluidState::setTemperature(293.15);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            BaseFluidState::setSaturation(phaseIdx, 1.0 / numPhases);
-            BaseFluidState::setDensity(phaseIdx, 1.0);
-
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                BaseFluidState::setMoleFraction(phaseIdx, compIdx, 1.0 / numComponents);
-
-            }
-        }
-
         // initially, do not allow anything
         allowTemperature(false);
         allowPressure(false);
@@ -108,99 +96,114 @@ public:
     {
         assert(allowTemperature_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::temperature(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::temperature(phaseIdx);
+        return 1e100;
     }
 
     Scalar pressure(int phaseIdx) const
     {
         assert(allowPressure_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::pressure(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::pressure(phaseIdx);
+        return 1e100;
     }
 
     Scalar moleFraction(int phaseIdx, int compIdx) const
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::moleFraction(phaseIdx, compIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::moleFraction(phaseIdx, compIdx);
+        return 1e100;
     }
 
     Scalar massFraction(int phaseIdx, int compIdx) const
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::massFraction(phaseIdx, compIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::massFraction(phaseIdx, compIdx);
+        return 1e100;
     }
 
     Scalar averageMolarMass(int phaseIdx) const
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::averageMolarMass(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::averageMolarMass(phaseIdx);
+        return 1e100;
     }
 
     Scalar molarity(int phaseIdx, int compIdx) const
     {
         assert(allowDensity_ && allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::molarity(phaseIdx, compIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::molarity(phaseIdx, compIdx);
+        return 1e100;
     }
 
     Scalar molarDensity(int phaseIdx) const
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::molarDensity(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::molarDensity(phaseIdx);
+        return 1e100;
     }
 
     Scalar molarVolume(int phaseIdx) const
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::molarVolume(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::molarVolume(phaseIdx);
+        return 1e100;
     }
 
     Scalar density(int phaseIdx) const
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        return BaseFluidState::density(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::density(phaseIdx);
+        return 1e100;
     }
 
     Scalar saturation(int phaseIdx) const
     {
         assert(false);
-        return BaseFluidState::saturation(phaseIdx);
+        DUNE_UNUSED Scalar tmp =  BaseFluidState::saturation(phaseIdx);
+        return 1e100;
     }
 
     Scalar fugacity(int phaseIdx, int compIdx) const
     {
         assert(false);
-        return BaseFluidState::fugacity(phaseIdx, compIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::fugacity(phaseIdx, compIdx);
+        return 1e100;
     }
 
     Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
     {
         assert(false);
-        return BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
+        return 1e100;
     }
 
     Scalar enthalpy(int phaseIdx) const
     {
         assert(false);
-        return BaseFluidState::enthalpy(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::enthalpy(phaseIdx);
+        return 1e100;
     }
 
     Scalar internalEnergy(int phaseIdx) const
     {
         assert(false);
-        return BaseFluidState::internalEnergy(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::internalEnergy(phaseIdx);
+        return 1e100;
     }
 
     Scalar viscosity(int phaseIdx) const
     {
         assert(false);
-        return BaseFluidState::viscosity(phaseIdx);
+        DUNE_UNUSED Scalar tmp = BaseFluidState::viscosity(phaseIdx);
+        return 1e100;
     }
 
 private:

@@ -187,6 +187,6 @@ private:
     mutable ScanningCurve *pisc_;
     mutable ScanningCurve *csc_;
 };
-}; // namespace Dumux
+} // namespace Dumux
 
 #endif
