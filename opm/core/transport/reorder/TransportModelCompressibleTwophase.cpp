@@ -380,8 +380,8 @@ namespace Opm
     {
         double sat[2] = { s, 1.0 - s };
         props_.relperm(1, sat, &cell, mob, 0);
-        mob[0] /= visc_[0];
-        mob[1] /= visc_[1];
+        mob[0] /= visc_[2*cell + 0];
+        mob[1] /= visc_[2*cell + 1];
     }
 
 
@@ -407,7 +407,7 @@ namespace Opm
     {
         // Set up gravflux_ = T_ij g [   (b_w,i rho_w,S - b_o,i rho_o,S) (z_i - z_f)
         //                             + (b_w,j rho_w,S - b_o,j rho_o,S) (z_f - z_j) ]
-        // But b_w,i * rho_w,S = rho_w,i, which we conmpute with a call to props_.density().
+        // But b_w,i * rho_w,S = rho_w,i, which we compute with a call to props_.density().
         // We assume that we already have stored T_ij in trans_.
         // We also assume that the A_ matrices are updated from an earlier call to solve().
         const int nc = grid_.number_of_cells;
@@ -437,8 +437,8 @@ namespace Opm
 
 
     void TransportModelCompressibleTwophase::solveSingleCellGravity(const std::vector<int>& cells,
-                                                        const int pos,
-                                                        const double* gravflux)
+                                                                    const int pos,
+                                                                    const double* gravflux)
     {
         const int cell = cells[pos];
         GravityResidual res(*this, cells, pos, gravflux);
@@ -505,8 +505,6 @@ namespace Opm
 
 
     void TransportModelCompressibleTwophase::solveGravity(const std::vector<std::vector<int> >& columns,
-                                                          const double* pressure,
-                                                          const double* porevolume0,
                                                           const double dt,
                                                           std::vector<double>& saturation,
                                                           std::vector<double>& surfacevol)
@@ -521,16 +519,22 @@ namespace Opm
             cells[c] = c;
         }
         mob_.resize(2*nc);
-        props_.relperm(cells.size(), &saturation[0], &cells[0], &mob_[0], 0);
 
-        props_.viscosity(props_.numCells(), pressure, NULL, &allcells_[0], &visc_[0], NULL);
-        for (int c = 0; c < nc; ++c) {
-            mob_[2*c + 0] /= visc_[2*c + 0];
-            mob_[2*c + 1] /= visc_[2*c + 1];
+
+        // props_.relperm(cells.size(), &saturation[0], &cells[0], &mob_[0], 0);
+
+        // props_.viscosity(props_.numCells(), pressure, NULL, &allcells_[0], &visc_[0], NULL);
+        // for (int c = 0; c < nc; ++c) {
+        //     mob_[2*c + 0] /= visc_[2*c + 0];
+        //     mob_[2*c + 1] /= visc_[2*c + 1];
+        // }
+
+        const int np = props_.numPhases();
+        for (int cell = 0; cell < nc; ++cell) {
+            mobility(saturation_[cell], cell, &mob_[np*cell]);
         }
 
         // Set up other variables.
-        porevolume0_ = porevolume0;
         dt_ = dt;
         toWaterSat(saturation, saturation_);
 

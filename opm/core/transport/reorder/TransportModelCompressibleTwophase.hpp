@@ -79,8 +79,6 @@ namespace Opm
         /// \param[in, out] saturation   Phase saturations.
         /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* pressure,
-                          const double* porevolume0,
                           const double dt,
                           std::vector<double>& saturation,
                           std::vector<double>& surfacevol);
