@@ -339,11 +339,11 @@ namespace Opm
                                &transport_src[0], stepsize, inflow_c,
                                state.saturation(), state.surfacevol(),
                                state.concentration(), state.maxconcentration());
-
-                // Computeinjectedproduced function does not take into account polymer.
-                Opm::computeInjectedProduced(props_,
+                Opm::computeInjectedProduced(props_, poly_props_,
                                              state.pressure(), state.surfacevol(), state.saturation(),
-                                             transport_src, stepsize, injected, produced);
+                                             state.concentration(), state.maxconcentration(),
+                                             transport_src, stepsize, inflow_c, injected, produced,
+                                             polyinj, polyprod);
                 if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize,
                                           state.saturation(), state.surfacevol(), 

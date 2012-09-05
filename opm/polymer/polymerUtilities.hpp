@@ -97,6 +97,44 @@ namespace Opm
                                  double& polyinj,
                                  double& polyprod);
 
+    /// @brief Computes injected and produced volumes of all phases,
+    ///        and injected and produced polymer mass - in the compressible case.
+    /// Note 1: assumes that only the first phase is injected.
+    /// Note 2: assumes that transport has been done with an
+    ///         implicit method, i.e. that the current state
+    ///         gives the mobilities used for the preceding timestep.
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  press     pressure (one value per cell)
+    /// @param[in]  z         surface-volume values (for all P phases)
+    /// @param[in]  s         saturation values (for all P phases)
+    /// @param[in]  c         polymer concentration
+    /// @param[in]  cmax      polymer maximum concentration
+    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  dt        timestep used
+    /// @param[in]  inj_c     injected concentration
+    ///
+    /// @param[out] injected  must point to a valid array with P elements,
+    ///                       where P = s.size()/src.size().
+    /// @param[out] produced  must also point to a valid array with P elements.
+    /// @param[out] polyinj   injected mass of polymer
+    /// @param[out] polyprod  produced mass of polymer
+
+    void computeInjectedProduced(const BlackoilPropertiesInterface& props,
+                                 const Opm::PolymerProperties& polyprops,
+                                 const std::vector<double>& press,
+                                 const std::vector<double>& z,
+                                 const std::vector<double>& s,
+				 const std::vector<double>& c,
+				 const std::vector<double>& cmax,
+                                 const std::vector<double>& src,
+                                 const double dt,
+                                 const double inj_c,
+                                 double* injected,
+                                 double* produced,
+                                 double& polyinj,
+                                 double& polyprod);
+
     /// @brief Computes total (free) polymer mass over all grid cells.
     /// @param[in]  pv        the pore volume by cell.
     /// @param[in]  s         saturation values (for all P phases)
