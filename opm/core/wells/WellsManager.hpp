@@ -41,7 +41,10 @@ namespace Opm
     {
     public:
 	/// Default constructor -- no wells.
-	WellsManager();
+    WellsManager();
+    /// Construct from mrst type output.
+    /// Wellmanger is not properly initialized
+    WellsManager(struct Wells* W);
 
 	/// Construct from input deck and grid.
 	/// The permeability argument may be zero if the input contain

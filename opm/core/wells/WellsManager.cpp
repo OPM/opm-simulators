@@ -223,6 +223,10 @@ namespace Opm
         : w_(0)
     {
     }
+    WellsManager::WellsManager(struct Wells* W)
+        : w_(W)
+    {
+    }
 
 
 
