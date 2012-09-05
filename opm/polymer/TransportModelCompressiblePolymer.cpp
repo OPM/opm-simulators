@@ -364,8 +364,8 @@ namespace Opm
         B_cell0 = 1.0/tm.A0_[np*np*cell + 0];
         B_cell = 1.0/tm.A_[np*np*cell + 0];
         // Not clear why we multiply by B_cell source terms.
-        influx  =  src_is_inflow ? B_cell*src_flux : 0.0;
-        outflux = !src_is_inflow ? B_cell*src_flux : 0.0;
+        influx  =  src_is_inflow ? src_flux : 0.0;
+        outflux = !src_is_inflow ? src_flux : 0.0;
         porevolume0 = tm.porevolume0_[cell];
         porevolume  = tm.porevolume_[cell];
         const double vol_cell = tm.grid_.cell_volumes[cell];
@@ -377,7 +377,7 @@ namespace Opm
         tm.polyprops_.adsorption(c0, cmax0, ads0);
         double mc;
         tm.computeMc(tm.inflow_c_, mc);
-	influx_polymer = src_is_inflow ? B_cell*src_flux*mc : 0.0;
+	influx_polymer = src_is_inflow ? src_flux*mc : 0.0;
 	for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
 	    int f = tm.grid_.cell_faces[i];
 	    double flux;
