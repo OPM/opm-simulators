@@ -35,9 +35,9 @@ namespace Opm
 
         /// Initialize with homogenous porosity and permeability.
         void init(const int dimensions,
-		  const int num_cells,
-		  const double poro,
-		  const double perm);
+                  const int num_cells,
+                  const double poro,
+                  const double perm);
 
         /// \return   D, the number of spatial dimensions.
         int numDimensions() const
@@ -66,7 +66,7 @@ namespace Opm
         }
 
     private:
-	int dimensions_;
+        int dimensions_;
         std::vector<double> porosity_;
         std::vector<double> permeability_;
     };

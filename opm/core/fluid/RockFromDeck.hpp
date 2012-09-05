@@ -24,6 +24,7 @@
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 #include <vector>
 
+struct UnstructuredGrid;
 
 namespace Opm
 {
@@ -34,12 +35,13 @@ namespace Opm
         /// Default constructor.
         RockFromDeck();
 
-        /// Initialize from deck and cell mapping.
+        /// Initialize from deck and grid.
         /// \param  deck         Deck input parser
-        /// \param  global_cell  mapping from cell indices (typically from a processed grid)
+        /// \param  grid         Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         void init(const EclipseGridParser& deck,
-                  const std::vector<int>& global_cell);
+                  const UnstructuredGrid& grid);
 
         /// \return   D, the number of spatial dimensions. Always 3 for deck input.
         int numDimensions() const
@@ -69,9 +71,9 @@ namespace Opm
 
     private:
         void assignPorosity(const EclipseGridParser& parser,
-                            const std::vector<int>& global_cell);
+                            const UnstructuredGrid& grid);
         void assignPermeability(const EclipseGridParser& parser,
-                                const std::vector<int>& global_cell,
+                                const UnstructuredGrid& grid,
                                 const double perm_threshold);
 
         std::vector<double> porosity_;

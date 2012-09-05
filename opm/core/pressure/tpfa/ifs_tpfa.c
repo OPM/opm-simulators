@@ -771,7 +771,7 @@ ifs_tpfa_assemble_comprock_increment(struct UnstructuredGrid      *G        ,
     assemble_incompressible(G, F, trans, gpress, h, &system_singular, &ok);
 
     /* We want to solve a Newton step for the residual
-     * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_imcompressible
+     * (porevol(pressure)-porevol(initial_pressure))/dt + residual_for_incompressible
      *
      */
 

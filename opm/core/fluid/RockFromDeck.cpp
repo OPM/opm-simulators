@@ -19,7 +19,7 @@
 
 
 #include <opm/core/fluid/RockFromDeck.hpp>
-
+#include <opm/core/grid.h>
 #include <tr1/array>
 
 namespace Opm
@@ -36,8 +36,6 @@ namespace Opm
         PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::tr1::array<int,9>&                     kmap);
-
-        int numGlobalCells(const EclipseGridParser& parser);
     } // anonymous namespace
 
 
@@ -53,28 +51,29 @@ namespace Opm
 
     /// Initialize from deck and cell mapping.
     /// \param  deck         Deck input parser
-    /// \param  global_cell  mapping from cell indices (typically from a processed grid)
+    /// \param  grid         grid to which property object applies, needed for the
+    ///                      mapping from cell indices (typically from a processed grid)
     ///                      to logical cartesian indices consistent with the deck.
     void RockFromDeck::init(const EclipseGridParser& deck,
-                            const std::vector<int>& global_cell)
+                            const UnstructuredGrid& grid)
     {
-        assignPorosity(deck, global_cell);
-        permfield_valid_.assign(global_cell.size(), false);
+        assignPorosity(deck, grid);
+        permfield_valid_.assign(grid.number_of_cells, false);
         const double perm_threshold = 0.0; // Maybe turn into parameter?
-        assignPermeability(deck, global_cell, perm_threshold);
+        assignPermeability(deck, grid, perm_threshold);
     }
 
 
     void RockFromDeck::assignPorosity(const EclipseGridParser& parser,
-                                      const std::vector<int>& global_cell)
+                                      const UnstructuredGrid& grid)
     {
-        porosity_.assign(global_cell.size(), 1.0);
-
+        porosity_.assign(grid.number_of_cells, 1.0);
+        const int* gc = grid.global_cell;
         if (parser.hasField("PORO")) {
             const std::vector<double>& poro = parser.getFloatingPointValue("PORO");
-
             for (int c = 0; c < int(porosity_.size()); ++c) {
-                porosity_[c] = poro[global_cell[c]];
+                const int deck_pos = (gc == NULL) ? c : gc[c];
+                porosity_[c] = poro[deck_pos];
             }
         }
     }
@@ -82,14 +81,16 @@ namespace Opm
 
 
     void RockFromDeck::assignPermeability(const EclipseGridParser& parser,
-                                          const std::vector<int>& global_cell,
+                                          const UnstructuredGrid& grid,
                                           double perm_threshold)
     {
         const int dim              = 3;
-        const int num_global_cells = numGlobalCells(parser);
+        const int num_global_cells = grid.cartdims[0]*grid.cartdims[1]*grid.cartdims[2];
+        const int nc = grid.number_of_cells;
+
         ASSERT (num_global_cells > 0);
 
-        permeability_.assign(dim * dim * global_cell.size(), 0.0);
+        permeability_.assign(dim * dim * nc, 0.0);
 
         std::vector<const std::vector<double>*> tensor;
         tensor.reserve(10);
@@ -111,13 +112,13 @@ namespace Opm
         // chosen) default value...
         //
         if (tensor.size() > 1) {
-            const int nc  = global_cell.size();
-            int       off = 0;
+            const int* gc = grid.global_cell;
+            int off = 0;
 
             for (int c = 0; c < nc; ++c, off += dim*dim) {
                 // SharedPermTensor K(dim, dim, &permeability_[off]);
                 int       kix  = 0;
-                const int glob = global_cell[c];
+                const int glob = (gc == NULL) ? c : gc[c];
 
                 for (int i = 0; i < dim; ++i) {
                     for (int j = 0; j < dim; ++j, ++kix) {
@@ -331,26 +332,6 @@ namespace Opm
             return kind;
         }
 
-        int numGlobalCells(const EclipseGridParser& parser)
-        {
-            int ngc = -1;
-
-            if (parser.hasField("DIMENS")) {
-                const std::vector<int>&
-                    dims = parser.getIntegerValue("DIMENS");
-
-                ngc = dims[0] * dims[1] * dims[2];
-            }
-            else if (parser.hasField("SPECGRID")) {
-                const SPECGRID& sgr = parser.getSPECGRID();
-
-                ngc  = sgr.dimensions[ 0 ];
-                ngc *= sgr.dimensions[ 1 ];
-                ngc *= sgr.dimensions[ 2 ];
-            }
-
-            return ngc;
-        }
     } // anonymous namespace
 
 } // namespace Opm

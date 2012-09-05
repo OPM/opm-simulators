@@ -26,6 +26,8 @@
 #include <opm/core/fluid/SaturationPropsFromDeck.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
 
+struct UnstructuredGrid;
+
 namespace Opm
 {
 
@@ -43,14 +45,15 @@ namespace Opm
     class IncompPropertiesFromDeck : public IncompPropertiesInterface
     {
     public:
-        /// Construct from deck and cell mapping.
-        /// \param  deck         eclipse input parser
-        /// \param  global_cell  mapping from cell indices (typically from a processed grid)
+        /// Initialize from deck and grid.
+        /// \param  deck         Deck input parser
+        /// \param  grid         Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         IncompPropertiesFromDeck(const EclipseGridParser& deck,
-				 const std::vector<int>& global_cell);
+                                 const UnstructuredGrid& grid);
 
-	/// Destructor.
+        /// Destructor.
         virtual ~IncompPropertiesFromDeck();
 
         // ---- Rock interface ----
@@ -118,9 +121,9 @@ namespace Opm
                               double* dpcds) const;
 
 
-	/// Obtain the range of allowable saturation values.
-	/// In cell cells[i], saturation of phase p is allowed to be
-	/// in the interval [smin[i*P + p], smax[i*P + p]].
+        /// Obtain the range of allowable saturation values.
+        /// In cell cells[i], saturation of phase p is allowed to be
+        /// in the interval [smin[i*P + p], smax[i*P + p]].
         /// \param[in]  n      Number of data points.
         /// \param[in]  cells  Array of n cell indices.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
@@ -131,8 +134,8 @@ namespace Opm
                               double* smax) const;
     private:
         RockFromDeck rock_;
-	PvtPropertiesIncompFromDeck pvt_;
-        SaturationPropsFromDeck satprops_;
+        PvtPropertiesIncompFromDeck pvt_;
+        SaturationPropsFromDeck<SatFuncStone2Uniform> satprops_;
     };
 
 

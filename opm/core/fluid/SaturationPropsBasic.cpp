@@ -29,64 +29,64 @@ namespace Opm
 
     namespace {
 
-	struct KrFunConstant
-	{
-	    double kr(double)
-	    {
-		return 1.0;
-	    }
-	    double dkrds(double)
-	    {
-		return 0.0;
-	    }
-	};
+        struct KrFunConstant
+        {
+            double kr(double)
+            {
+                return 1.0;
+            }
+            double dkrds(double)
+            {
+                return 0.0;
+            }
+        };
 
-	struct KrFunLinear
-	{
-	    double kr(double s)
-	    {
-		return s;
-	    }
-	    double dkrds(double)
-	    {
-		return 1.0;
-	    }
-	};
+        struct KrFunLinear
+        {
+            double kr(double s)
+            {
+                return s;
+            }
+            double dkrds(double)
+            {
+                return 1.0;
+            }
+        };
 
-	struct KrFunQuadratic
-	{
-	    double kr(double s)
-	    {
-		return s*s;
-	    }
-	    double dkrds(double s)
-	    {
-		return 2.0*s;
-	    }
-	};
+        struct KrFunQuadratic
+        {
+            double kr(double s)
+            {
+                return s*s;
+            }
+            double dkrds(double s)
+            {
+                return 2.0*s;
+            }
+        };
 
 
-	template <class Fun>
-	static inline void evalAllKrDeriv(const int n, const int np,
-					  const double* s, double* kr, double* dkrds, Fun fun)
-	{
-	    if (dkrds == 0) {
+        template <class Fun>
+        static inline void evalAllKrDeriv(const int n, const int np,
+                                          const double* s, double* kr, double* dkrds, Fun fun)
+        {
+            if (dkrds == 0) {
 // #pragma omp parallel for
-		for (int i = 0; i < n*np; ++i) {
-		    kr[i] = fun.kr(s[i]);
-		}
-		return;
-	    }
+                for (int i = 0; i < n*np; ++i) {
+                    kr[i] = fun.kr(s[i]);
+                }
+                return;
+            }
 // #pragma omp parallel for
-	    for (int i = 0; i < n; ++i) {
-		std::fill(dkrds + i*np*np, dkrds + (i+1)*np*np, 0.0);
-		for (int phase = 0; phase < np; ++phase) {
-		    kr[i*np + phase] = fun.kr(s[i*np + phase]);
-		    // Only diagonal elements in derivative.
-		    dkrds[i*np*np + phase*np + phase] = fun.dkrds(s[i*np + phase]);
-		}
-	    }
-	}
+            for (int i = 0; i < n; ++i) {
+                std::fill(dkrds + i*np*np, dkrds + (i+1)*np*np, 0.0);
+                for (int phase = 0; phase < np; ++phase) {
+                    kr[i*np + phase] = fun.kr(s[i*np + phase]);
+                    // Only diagonal elements in derivative.
+                    dkrds[i*np*np + phase*np + phase] = fun.dkrds(s[i*np + phase]);
+                }
+            }
+        }
 
 
     } // anon namespace
@@ -99,6 +99,7 @@ namespace Opm
 
     /// Default constructor.
     SaturationPropsBasic::SaturationPropsBasic()
+        : num_phases_(0), relperm_func_(Constant)
     {
     }
 
@@ -108,24 +109,25 @@ namespace Opm
     /// Initialize from parameters.
     void SaturationPropsBasic::init(const parameter::ParameterGroup& param)
     {
-	int num_phases = param.getDefault("num_phases", 2);
-	if (num_phases > 2 || num_phases < 1) {
-	    THROW("SaturationPropsBasic::init() illegal num_phases: " << num_phases);
-	}
+        int num_phases = param.getDefault("num_phases", 2);
+        if (num_phases > 2 || num_phases < 1) {
+            THROW("SaturationPropsBasic::init() illegal num_phases: " << num_phases);
+        }
         num_phases_ = num_phases;
-	std::string rpf = param.getDefault("relperm_func", std::string("Unset"));
-	if (rpf == "Constant") {
-	    relperm_func_ = Constant;
-	    if(num_phases!=1){
-		THROW("Constant relperm with more than one phase???");	
-	    }
-	} else if (rpf == "Linear") {
-	    relperm_func_ = Linear;
-	} else if (rpf == "Quadratic") {
-	    relperm_func_ = Quadratic;
-	} else {
-	    THROW("SaturationPropsBasic::init() illegal relperm_func: " << rpf);
-	}
+        //std::string rpf = param.getDefault("relperm_func", std::string("Unset"));
+        std::string rpf = param.getDefault("relperm_func", std::string("Linear"));
+        if (rpf == "Constant") {
+            relperm_func_ = Constant;
+            if(num_phases!=1){
+                THROW("Constant relperm with more than one phase???");
+            }
+        } else if (rpf == "Linear") {
+            relperm_func_ = Linear;
+        } else if (rpf == "Quadratic") {
+            relperm_func_ = Quadratic;
+        } else {
+            THROW("SaturationPropsBasic::init() illegal relperm_func: " << rpf);
+        }
     }
 
 
@@ -134,7 +136,7 @@ namespace Opm
     /// \return   P, the number of phases.
     int SaturationPropsBasic::numPhases() const
     {
-	return num_phases_;
+        return num_phases_;
     }
 
 
@@ -150,29 +152,29 @@ namespace Opm
     ///                           m_{ij} = \frac{dkr_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void SaturationPropsBasic::relperm(const int n,
-				       const double* s,
-				       double* kr,
-				       double* dkrds) const
+                                       const double* s,
+                                       double* kr,
+                                       double* dkrds) const
     {
-	switch (relperm_func_) {
-	case Constant:
-	    {
-		evalAllKrDeriv(n, num_phases_, s, kr, dkrds, KrFunConstant());
-		break;
-	    }
-	case Linear:
-	    {
-		evalAllKrDeriv(n, num_phases_, s, kr, dkrds, KrFunLinear());
-		break;
-	    }
-	case Quadratic:
-	    {
-		evalAllKrDeriv(n, num_phases_, s, kr, dkrds, KrFunQuadratic());
-		break;
-	    }
-	default:
-	    THROW("SaturationPropsBasic::relperm() unhandled relperm func type: " << relperm_func_);
-	}
+        switch (relperm_func_) {
+        case Constant:
+            {
+                evalAllKrDeriv(n, num_phases_, s, kr, dkrds, KrFunConstant());
+                break;
+            }
+        case Linear:
+            {
+                evalAllKrDeriv(n, num_phases_, s, kr, dkrds, KrFunLinear());
+                break;
+            }
+        case Quadratic:
+            {
+                evalAllKrDeriv(n, num_phases_, s, kr, dkrds, KrFunQuadratic());
+                break;
+            }
+        default:
+            THROW("SaturationPropsBasic::relperm() unhandled relperm func type: " << relperm_func_);
+        }
     }
 
 
@@ -188,13 +190,13 @@ namespace Opm
     ///                           m_{ij} = \frac{dpc_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void SaturationPropsBasic::capPress(const int n,
-					const double* /*s*/,
-					double* pc,
-					double* dpcds) const
+                                        const double* /*s*/,
+                                        double* pc,
+                                        double* dpcds) const
     {
-	std::fill(pc, pc + num_phases_*n, 0.0);
+        std::fill(pc, pc + num_phases_*n, 0.0);
         if (dpcds) {
-	    std::fill(dpcds, dpcds + num_phases_*num_phases_*n, 0.0);
+            std::fill(dpcds, dpcds + num_phases_*num_phases_*n, 0.0);
         }
     }
 
@@ -205,11 +207,11 @@ namespace Opm
     /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
     /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
     void SaturationPropsBasic::satRange(const int n,
-					double* smin,
-					double* smax) const
+                                        double* smin,
+                                        double* smax) const
     {
-	std::fill(smin, smin + num_phases_*n, 0.0);
-	std::fill(smax, smax + num_phases_*n, 1.0);
+        std::fill(smin, smin + num_phases_*n, 0.0);
+        std::fill(smax, smax + num_phases_*n, 1.0);
     }
 
 

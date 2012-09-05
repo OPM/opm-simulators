@@ -30,37 +30,42 @@ namespace Opm
 
     class BlackoilPropertiesInterface;
 
+    /// Implements a reordering transport solver for compressible,
+    /// non-miscible two-phase flow.
     class TransportModelCompressibleTwophase : public TransportModelInterface
     {
     public:
-	/// Construct solver.
-	/// \param[in] grid      A 2d or 3d grid.
-	/// \param[in] props     Rock and fluid properties.
-	/// \param[in] tol       Tolerance used in the solver.
-	/// \param[in] maxit     Maximum number of non-linear iterations used.
-	TransportModelCompressibleTwophase(const UnstructuredGrid& grid,
+        /// Construct solver.
+        /// \param[in] grid      A 2d or 3d grid.
+        /// \param[in] props     Rock and fluid properties.
+        /// \param[in] tol       Tolerance used in the solver.
+        /// \param[in] maxit     Maximum number of non-linear iterations used.
+        TransportModelCompressibleTwophase(const UnstructuredGrid& grid,
                                            const Opm::BlackoilPropertiesInterface& props,
                                            const double tol,
                                            const int maxit);
 
-	/// Solve for saturation at next timestep.
-	/// \param[in] darcyflux         Array of signed face fluxes.
-	/// \param[in] pressure          Array of cell pressures
-	/// \param[in] surfacevol0       Array of surface volumes at start of timestep
-	/// \param[in] porevolume        Array of pore volumes.
-	/// \param[in] source            Transport source term.
-	/// \param[in] dt                Time step.
-	/// \param[in, out] saturation   Phase saturations.
-	void solve(const double* darcyflux,
+        /// Solve for saturation at next timestep.
+        /// \param[in] darcyflux         Array of signed face fluxes.
+        /// \param[in] pressure          Array of cell pressures
+        /// \param[in] surfacevol0       Array of surface volumes at start of timestep
+        /// \param[in] porevolume0       Array of pore volumes at start of timestep.
+        /// \param[in] porevolume        Array of pore volumes at end of timestep.
+        /// \param[in] source            Transport source term.
+        /// \param[in] dt                Time step.
+        /// \param[in, out] saturation   Phase saturations.
+        /// \param[in, out] surfacevol   Surface volume densities for each phase.
+        void solve(const double* darcyflux,
                    const double* pressure,
-                   const double* surfacevol0,
+                   const double* porevolume0,
                    const double* porevolume,
-		   const double* source,
-		   const double dt,
-		   std::vector<double>& saturation);
+                   const double* source,
+                   const double dt,
+                   std::vector<double>& saturation,
+                   std::vector<double>& surfacevol);
 
         /// Initialise quantities needed by gravity solver.
-        /// \param[in] grav    gravity vector
+        /// \param[in] grav    Gravity vector
         void initGravity(const double* grav);
 
         /// Solve for gravity segregation.
@@ -68,52 +73,62 @@ namespace Opm
         /// It assumes that the input columns contain cells in a single
         /// vertical stack, that do not interact with other columns (for
         /// gravity segregation.
-        /// \TODO: Implement this.
+        /// \param[in] columns           Vector of cell-columns.
+        /// \param[in] porevolume0       Array of pore volumes at start of timestep.
+        /// \param[in] dt                Time step.
+        /// \param[in, out] saturation   Phase saturations.
+        /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* pressure,
-                          const double* porevolume,
+                          const double* porevolume0,
                           const double dt,
-                          std::vector<double>& saturation);
+                          std::vector<double>& saturation,
+                          std::vector<double>& surfacevol);
 
     private:
-	virtual void solveSingleCell(const int cell);
-	virtual void solveMultiCell(const int num_cells, const int* cells);
+        virtual void solveSingleCell(const int cell);
+        virtual void solveMultiCell(const int num_cells, const int* cells);
         void solveSingleCellGravity(const std::vector<int>& cells,
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
+        void initGravityDynamic();
 
     private:
-	const UnstructuredGrid& grid_;
-	const BlackoilPropertiesInterface& props_;
+        const UnstructuredGrid& grid_;
+        const BlackoilPropertiesInterface& props_;
         std::vector<int> allcells_;
         std::vector<double> visc_;
         std::vector<double> A_;
-	std::vector<double> smin_;
-	std::vector<double> smax_;
-	double tol_;
-	double maxit_;
+        std::vector<double> smin_;
+        std::vector<double> smax_;
+        double tol_;
+        double maxit_;
 
-	const double* darcyflux_;   // one flux per grid face
-	const double* surfacevol0_; // one per phase per cell
-	const double* porevolume_;  // one volume per cell
-	const double* source_;      // one source per cell
-	double dt_;
+        const double* darcyflux_;   // one flux per grid face
+        const double* surfacevol0_; // one per phase per cell
+        const double* porevolume0_; // one volume per cell
+        const double* porevolume_;  // one volume per cell
+        const double* source_;      // one source per cell
+        double dt_;
         std::vector<double> saturation_;        // P (= num. phases) per cell
-	std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
+        std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
         // For gravity segregation.
+        const double* gravity_;
+        std::vector<double> trans_;
+        std::vector<double> density_;
         std::vector<double> gravflux_;
         std::vector<double> mob_;
         std::vector<double> s0_;
 
-	// Storing the upwind and downwind graphs for experiments.
-	std::vector<int> ia_upw_;
-	std::vector<int> ja_upw_;
-	std::vector<int> ia_downw_;
-	std::vector<int> ja_downw_;
+        // Storing the upwind and downwind graphs for experiments.
+        std::vector<int> ia_upw_;
+        std::vector<int> ja_upw_;
+        std::vector<int> ia_downw_;
+        std::vector<int> ja_downw_;
 
-	struct Residual;
-	double fracFlow(double s, int cell) const;
+        struct Residual;
+        double fracFlow(double s, int cell) const;
 
         struct GravityResidual;
         void mobility(double s, int cell, double* mob) const;

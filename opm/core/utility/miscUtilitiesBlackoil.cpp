@@ -48,39 +48,39 @@ namespace Opm
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
                                  const std::vector<double>& press,
                                  const std::vector<double>& z,
-				 const std::vector<double>& s,
-				 const std::vector<double>& src,
-				 const double dt,
-				 double* injected,
-				 double* produced)
+                                 const std::vector<double>& s,
+                                 const std::vector<double>& src,
+                                 const double dt,
+                                 double* injected,
+                                 double* produced)
     {
-	const int num_cells = src.size();
-	const int np = s.size()/src.size();
-	if (int(s.size()) != num_cells*np) {
-	    THROW("Sizes of s and src vectors do not match.");
-	}
-	std::fill(injected, injected + np, 0.0);
-	std::fill(produced, produced + np, 0.0);
+        const int num_cells = src.size();
+        const int np = s.size()/src.size();
+        if (int(s.size()) != num_cells*np) {
+            THROW("Sizes of s and src vectors do not match.");
+        }
+        std::fill(injected, injected + np, 0.0);
+        std::fill(produced, produced + np, 0.0);
         std::vector<double> visc(np);
-	std::vector<double> mob(np);
-	for (int c = 0; c < num_cells; ++c) {
-	    if (src[c] > 0.0) {
-		injected[0] += src[c]*dt;
-	    } else if (src[c] < 0.0) {
-		const double flux = -src[c]*dt;
-		const double* sat = &s[np*c];
-		props.relperm(1, sat, &c, &mob[0], 0);
+        std::vector<double> mob(np);
+        for (int c = 0; c < num_cells; ++c) {
+            if (src[c] > 0.0) {
+                injected[0] += src[c]*dt;
+            } else if (src[c] < 0.0) {
+                const double flux = -src[c]*dt;
+                const double* sat = &s[np*c];
+                props.relperm(1, sat, &c, &mob[0], 0);
                 props.viscosity(1, &press[c], &z[np*c], &c, &visc[0], 0);
-		double totmob = 0.0;
-		for (int p = 0; p < np; ++p) {
-		    mob[p] /= visc[p];
-		    totmob += mob[p];
-		}
-		for (int p = 0; p < np; ++p) {
-		    produced[p] += (mob[p]/totmob)*flux;
-		}
-	    }
-	}
+                double totmob = 0.0;
+                for (int p = 0; p < np; ++p) {
+                    mob[p] /= visc[p];
+                    totmob += mob[p];
+                }
+                for (int p = 0; p < np; ++p) {
+                    produced[p] += (mob[p]/totmob)*flux;
+                }
+            }
+        }
     }
 
 
@@ -93,11 +93,11 @@ namespace Opm
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobilities.
     void computeTotalMobility(const Opm::BlackoilPropertiesInterface& props,
-			      const std::vector<int>& cells,
+                              const std::vector<int>& cells,
                               const std::vector<double>& press,
                               const std::vector<double>& z,
-			      const std::vector<double>& s,
-			      std::vector<double>& totmob)
+                              const std::vector<double>& s,
+                              std::vector<double>& totmob)
     {
         std::vector<double> pmobc;
 
@@ -126,12 +126,12 @@ namespace Opm
     /// @param[out] totmob    total mobility
     /// @param[out] omega     fractional-flow weighted fluid densities.
     void computeTotalMobilityOmega(const Opm::BlackoilPropertiesInterface& props,
-				   const std::vector<int>& cells,
+                                   const std::vector<int>& cells,
                                    const std::vector<double>& p,
                                    const std::vector<double>& z,
-				   const std::vector<double>& s,
-				   std::vector<double>& totmob,
-				   std::vector<double>& omega)
+                                   const std::vector<double>& s,
+                                   std::vector<double>& totmob,
+                                   std::vector<double>& omega)
     {
         std::vector<double> pmobc;
 
@@ -185,10 +185,10 @@ namespace Opm
         props.relperm(nc, &s[0], &cells[0],
                       &pmobc[0], dpmobc);
 
-	std::transform(pmobc.begin(), pmobc.end(),
-		       mu.begin(),
-		       pmobc.begin(),
-		       std::divides<double>());
+        std::transform(pmobc.begin(), pmobc.end(),
+                       mu.begin(),
+                       pmobc.begin(),
+                       std::divides<double>());
     }
 
     /// Computes the fractional flow for each cell in the cells argument
@@ -220,5 +220,35 @@ namespace Opm
         }
     }
 
+    /// Computes the surface volume densities from saturations by the formula
+    ///     z = A s
+    /// for a number of data points, where z is the surface volume density,
+    /// s is the saturation (both as column vectors) and A is the
+    /// phase-to-component relation matrix.
+    /// @param[in]  n            number of data points
+    /// @param[in]  np           number of phases, must be 2 or 3
+    /// @param[in]  A            array containing n square matrices of size num_phases^2,
+    ///                          in Fortran ordering, typically the output of a call
+    ///                          to the matrix() method of a BlackoilProperties* class.
+    /// @param[in]  saturation   concatenated saturation values (for all P phases)
+    /// @param[out] surfacevol   concatenated surface-volume values (for all P phases)
+    void computeSurfacevol(const int n,
+                           const int np,
+                           const double* A,
+                           const double* saturation,
+                           double* surfacevol)
+    {
+        // Note: since this is a simple matrix-vector product, it can
+        // be done by a BLAS call, but then we have to reorder the A
+        // matrix data.
+        std::fill(surfacevol, surfacevol + n*np, 0.0);
+        for (int i = 0; i < n; ++i) {
+            for (int col = 0; col < np; ++col) {
+                for (int row = 0; row < np; ++row) {
+                    surfacevol[i*np + row] += A[i*np*np + row + col*np] * saturation[i*np + col];
+                }
+            }
+        }
+    }
 
 } // namespace Opm

@@ -18,20 +18,69 @@
 */
 
 #include <opm/core/fluid/BlackoilPropertiesFromDeck.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm
 {
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                                           const std::vector<int>& global_cell)
+                                                           const UnstructuredGrid& grid)
     {
-        rock_.init(deck, global_cell);
-        pvt_.init(deck);
-        satprops_.init(deck, global_cell);
-	if (pvt_.numPhases() != satprops_.numPhases()) {
-	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
-	}
+        rock_.init(deck, grid);
+        pvt_.init(deck, 200);
+        SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
+            = new SaturationPropsFromDeck<SatFuncStone2Uniform>();
+        satprops_.reset(ptr);
+        ptr->init(deck, grid, 200);
+
+        if (pvt_.numPhases() != satprops_->numPhases()) {
+            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
+        }
+    }
+
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                                           const UnstructuredGrid& grid,
+                                                           const parameter::ParameterGroup& param)
+    {
+        rock_.init(deck, grid);
+        const int pvt_samples = param.getDefault("pvt_tab_size", 200);
+        pvt_.init(deck, pvt_samples);
+
+        // Unfortunate lack of pointer smartness here...
+        const int sat_samples = param.getDefault("sat_tab_size", 200);
+        std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
+        bool use_stone2 = (threephase_model == "stone2");
+        if (sat_samples > 1) {
+            if (use_stone2) {
+                SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncStone2Uniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else {
+                SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            }
+        } else {
+            if (use_stone2) {
+                SaturationPropsFromDeck<SatFuncStone2Nonuniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncStone2Nonuniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else {
+                SaturationPropsFromDeck<SatFuncSimpleNonuniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncSimpleNonuniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            }
+        }
+
+        if (pvt_.numPhases() != satprops_->numPhases()) {
+            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
+        }
     }
 
     BlackoilPropertiesFromDeck::~BlackoilPropertiesFromDeck()
@@ -235,7 +284,7 @@ namespace Opm
                                              double* kr,
                                              double* dkrds) const
     {
-        satprops_.relperm(n, s, cells, kr, dkrds);
+        satprops_->relperm(n, s, cells, kr, dkrds);
     }
 
 
@@ -254,7 +303,7 @@ namespace Opm
                                               double* pc,
                                               double* dpcds) const
     {
-        satprops_.capPress(n, s, cells, pc, dpcds);
+        satprops_->capPress(n, s, cells, pc, dpcds);
     }
 
 
@@ -270,7 +319,7 @@ namespace Opm
                                               double* smin,
                                               double* smax) const
     {
-	satprops_.satRange(n, cells, smin, smax);
+        satprops_->satRange(n, cells, smin, smax);
     }
 
 

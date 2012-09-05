@@ -23,7 +23,7 @@
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
 #include <map>
-
+#include <ostream>
 struct UnstructuredGrid;
 
 namespace Opm
@@ -35,27 +35,27 @@ namespace Opm
     class TransportModelTwophase : public TransportModelInterface
     {
     public:
-	/// Construct solver.
-	/// \param[in] grid      A 2d or 3d grid.
-	/// \param[in] props     Rock and fluid properties.
-	/// \param[in] tol       Tolerance used in the solver.
-	/// \param[in] maxit     Maximum number of non-linear iterations used.
-	TransportModelTwophase(const UnstructuredGrid& grid,
-			       const Opm::IncompPropertiesInterface& props,
-			       const double tol,
-			       const int maxit);
+        /// Construct solver.
+        /// \param[in] grid      A 2d or 3d grid.
+        /// \param[in] props     Rock and fluid properties.
+        /// \param[in] tol       Tolerance used in the solver.
+        /// \param[in] maxit     Maximum number of non-linear iterations used.
+        TransportModelTwophase(const UnstructuredGrid& grid,
+                               const Opm::IncompPropertiesInterface& props,
+                               const double tol,
+                               const int maxit);
 
-	/// Solve for saturation at next timestep.
-	/// \param[in] darcyflux         Array of signed face fluxes.
-	/// \param[in] porevolume        Array of pore volumes.
-	/// \param[in] source            Transport source term.
-	/// \param[in] dt                Time step.
-	/// \param[in, out] saturation   Phase saturations.
-	void solve(const double* darcyflux,
+        /// Solve for saturation at next timestep.
+        /// \param[in] darcyflux         Array of signed face fluxes.
+        /// \param[in] porevolume        Array of pore volumes.
+        /// \param[in] source            Transport source term.
+        /// \param[in] dt                Time step.
+        /// \param[in, out] saturation   Phase saturations.
+        void solve(const double* darcyflux,
                    const double* porevolume,
-		   const double* source,
-		   const double dt,
-		   std::vector<double>& saturation);
+                   const double* source,
+                   const double dt,
+                   std::vector<double>& saturation);
 
         /// Initialise quantities needed by gravity solver.
         /// \param[in] grav    gravity vector
@@ -66,52 +66,57 @@ namespace Opm
         /// It assumes that the input columns contain cells in a single
         /// vertical stack, that do not interact with other columns (for
         /// gravity segregation.
-	/// \param[in] columns           Vector of cell-columns.
-	/// \param[in] porevolume        Array of pore volumes.
-	/// \param[in] dt                Time step.
-	/// \param[in, out] saturation   Phase saturations.
+        /// \param[in] columns           Vector of cell-columns.
+        /// \param[in] porevolume        Array of pore volumes.
+        /// \param[in] dt                Time step.
+        /// \param[in, out] saturation   Phase saturations.
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double* porevolume,
                           const double dt,
                           std::vector<double>& saturation);
 
+        //// Return the number of iterations used by the reordering solver.
+        //// \return vector of iteration per cell
+        const std::vector<int>& getReorderIterations() const;
+
     private:
-	virtual void solveSingleCell(const int cell);
-	virtual void solveMultiCell(const int num_cells, const int* cells);
+        virtual void solveSingleCell(const int cell);
+        virtual void solveMultiCell(const int num_cells, const int* cells);
 
         void solveSingleCellGravity(const std::vector<int>& cells,
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
-
     private:
-	const UnstructuredGrid& grid_;
-	const IncompPropertiesInterface& props_;
-	const double* visc_;
-	std::vector<double> smin_;
-	std::vector<double> smax_;
-	double tol_;
-	double maxit_;
+        const UnstructuredGrid& grid_;
+        const IncompPropertiesInterface& props_;
+        const double* visc_;
+        std::vector<double> smin_;
+        std::vector<double> smax_;
+        double tol_;
+        double maxit_;
 
-	const double* darcyflux_;   // one flux per grid face
-	const double* porevolume_;  // one volume per cell
-	const double* source_;      // one source per cell
-	double dt_;
+        const double* darcyflux_;   // one flux per grid face
+        const double* porevolume_;  // one volume per cell
+        const double* source_;      // one source per cell
+        double dt_;
         std::vector<double> saturation_;        // one per cell, only water saturation!
-	std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
+        std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
+        std::vector<int> reorder_iterations_;
+        //std::vector<double> reorder_fval_;
         // For gravity segregation.
         std::vector<double> gravflux_;
         std::vector<double> mob_;
         std::vector<double> s0_;
 
-	// Storing the upwind and downwind graphs for experiments.
-	std::vector<int> ia_upw_;
-	std::vector<int> ja_upw_;
-	std::vector<int> ia_downw_;
-	std::vector<int> ja_downw_;
+        // Storing the upwind and downwind graphs for experiments.
+        std::vector<int> ia_upw_;
+        std::vector<int> ja_upw_;
+        std::vector<int> ia_downw_;
+        std::vector<int> ja_downw_;
 
-	struct Residual;
-	double fracFlow(double s, int cell) const;
+        struct Residual;
+        double fracFlow(double s, int cell) const;
 
         struct GravityResidual;
         void mobility(double s, int cell, double* mob) const;
