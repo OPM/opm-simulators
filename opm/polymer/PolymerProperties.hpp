@@ -38,6 +38,17 @@ namespace Opm
 
         enum AdsorptionBehaviour { Desorption = 1, NoDesorption = 2 };
 
+        /// Construct from parameters
+        /// \param[in] c_max          Maximum polymer concentration used in computation of effective viscosity
+        /// \param[in] mix_param      Mixing parameter
+        /// \param[in] rock_density   Rock density
+        /// \param[in] dead_pore_vol  Dead pore volume
+        /// \param[in] res_factor     Residual resistance factor
+        /// \param[in] c_max_ads      Maximum polymer adsorption value  used in computation of  the resistance factor
+        /// \param[in] c_vals_visc    Array of concentration for effective vicosity multiplier
+        /// \param[in] visc_mult_vals Array of effective vicosity multiplier
+        /// \param[in] c_vals_ads     Array of concentration for adsorption values
+        /// \param[in] ads_vals       Array of adsorption values
         PolymerProperties(double c_max,
                           double mix_param,
                           double rock_density,

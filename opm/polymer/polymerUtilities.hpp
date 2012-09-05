@@ -67,7 +67,7 @@ namespace Opm
 				   std::vector<double>& omega);
 
     /// @brief Computes injected and produced volumes of all phases,
-    ///        and injeced and produced polymer mass.
+    ///        and injected and produced polymer mass.
     /// Note 1: assumes that only the first phase is injected.
     /// Note 2: assumes that transport has been done with an
     ///         implicit method, i.e. that the current state

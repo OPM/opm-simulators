@@ -40,11 +40,9 @@ namespace Opm
     class PolymerBlackoilState;
     class WellState;
 
-    /// Encapsulating a tpfa pressure solver for the compressible-fluid case  with polymer.
+    /// Encapsulating a tpfa pressure solver for the compressible-fluid case with polymer.
     /// Supports gravity, wells controlled by bhp or reservoir rates,
     /// boundary conditions and simple sources as driving forces.
-    /// Rock compressibility can be included, and necessary nonlinear
-    /// iterations are handled.
     /// Below we use the shortcuts D for the number of dimensions, N
     /// for the number of cells and F for the number of faces.
     class CompressibleTpfaPolymer : public CompressibleTpfa

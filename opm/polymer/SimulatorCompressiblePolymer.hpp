@@ -61,6 +61,7 @@ namespace Opm
         ///
         /// \param[in] grid        grid data structure
         /// \param[in] props       fluid and rock properties
+        /// \param[in] poly_props  polymer properties
         /// \param[in] rock_comp   if non-null, rock compressibility properties
         /// \param[in] wells       if non-null, wells data structure
         /// \param[in] src         source terms
@@ -82,7 +83,7 @@ namespace Opm
         /// This will run succesive timesteps until timer.done() is true. It will
         /// modify the reservoir and well states.
         /// \param[in,out] timer       governs the requested reporting timesteps
-        /// \param[in,out] state       state of reservoir: pressure, fluxes
+        /// \param[in,out] state       state of reservoir: pressure, fluxes, polymer concentration
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,

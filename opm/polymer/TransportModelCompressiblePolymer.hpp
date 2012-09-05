@@ -76,10 +76,13 @@ namespace Opm
 	/// \param[in] darcyflux           Array of signed face fluxes.
 	/// \param[in] initial_pressure    Array with pressure at start of timestep.
 	/// \param[in] pressure            Array with pressure.
+	/// \param[in] porevolume0         Array with pore volume at start of timestep.
+	/// \param[in] porevolume          Array with pore volume.
 	/// \param[in] source              Transport source term.
 	/// \param[in] dt                  Time step.
 	/// \param[in] inflow_c            Inflow polymer.
 	/// \param[in, out] saturation     Phase saturations.
+	/// \param[in, out] surfacevol     Surface volumes.
 	/// \param[in, out] concentration  Polymer concentration.
 	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
 	void solve(const double* darcyflux,
@@ -105,9 +108,9 @@ namespace Opm
         /// vertical stack, that do not interact with other columns (for
         /// gravity segregation.
 	/// \param[in] columns             Vector of cell-columns.
-	/// \param[in] porevolume          Array of pore volumes.
 	/// \param[in] dt                  Time step.
 	/// \param[in, out] saturation     Phase saturations.
+	/// \param[in, out] surfacevol     Surface volumes.
 	/// \param[in, out] concentration  Polymer concentration.
 	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
         void solveGravity(const std::vector<std::vector<int> >& columns,
