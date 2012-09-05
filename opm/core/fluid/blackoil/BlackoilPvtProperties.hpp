@@ -47,7 +47,7 @@ namespace Opm
         BlackoilPvtProperties();
 
         /// Initialize from deck.
-	void init(const EclipseGridParser& deck);
+        void init(const EclipseGridParser& deck, const int samples = 16);
 
         /// Number of active phases.
         int numPhases() const;

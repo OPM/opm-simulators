@@ -26,6 +26,7 @@
 #include <opm/core/fluid/blackoil/BlackoilPvtProperties.hpp>
 #include <opm/core/fluid/SaturationPropsFromDeck.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 struct UnstructuredGrid;
 
@@ -38,12 +39,24 @@ namespace Opm
     {
     public:
         /// Initialize from deck and grid.
-        /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the 
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the 
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const UnstructuredGrid& grid);
+                                   const UnstructuredGrid& grid);        
+
+        /// Initialize from deck, grid and parameters.
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the 
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        /// \param[in]  param    Parameters. Accepted parameters include:
+        ///                        dead_tab_size (1025)   number of uniform sample points for dead-oil pvt tables.
+        ///                        tab_size_kr    (200)   number of uniform sample points for saturation tables.
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   const UnstructuredGrid& grid,
+                                   const parameter::ParameterGroup& param);
 
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
