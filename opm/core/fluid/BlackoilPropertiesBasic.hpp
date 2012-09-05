@@ -35,16 +35,16 @@ namespace Opm
     {
     public:
         /// Construct from parameters.
-	/// The following parameters are accepted (defaults):
-	///    num_phases         (2)         Must be 1 or 2.
-	///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
-	///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
-	///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
-	///    porosity           (1.0)       Porosity
-	///    permeability       (100.0)     Permeability in mD
+        /// The following parameters are accepted (defaults):
+        ///    num_phases         (2)         Must be 1 or 2.
+        ///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
+        ///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
+        ///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
+        ///    porosity           (1.0)       Porosity
+        ///    permeability       (100.0)     Permeability in mD
         BlackoilPropertiesBasic(const parameter::ParameterGroup& param,
-				const int dim,
-				const int num_cells);
+                                const int dim,
+                                const int num_cells);
 
         /// Destructor.
         virtual ~BlackoilPropertiesBasic();
@@ -151,7 +151,7 @@ namespace Opm
                               double* dpcds) const;
 
 
-	/// Obtain the range of allowable saturation values.
+/// Obtain the range of allowable saturation values.
 	/// In cell cells[i], saturation of phase p is allowed to be
 	/// in the interval [smin[i*P + p], smax[i*P + p]].
         /// \param[in]  n      Number of data points.

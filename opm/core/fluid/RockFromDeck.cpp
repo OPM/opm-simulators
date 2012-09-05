@@ -51,7 +51,7 @@ namespace Opm
 
     /// Initialize from deck and cell mapping.
     /// \param  deck         Deck input parser
-    /// \param  grid         grid to which property object applies, needed for the 
+    /// \param  grid         grid to which property object applies, needed for the
     ///                      mapping from cell indices (typically from a processed grid)
     ///                      to logical cartesian indices consistent with the deck.
     void RockFromDeck::init(const EclipseGridParser& deck,

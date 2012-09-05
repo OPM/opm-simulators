@@ -28,22 +28,22 @@ namespace Opm
 {
 
     IncompPropertiesBasic::IncompPropertiesBasic(const parameter::ParameterGroup& param,
-						 const int dim,
-						 const int num_cells)
+                                                 const int dim,
+                                                 const int num_cells)
     {
-	double poro = param.getDefault("porosity", 1.0);
-	using namespace Opm::unit;
-	using namespace Opm::prefix;
-	double perm = param.getDefault("permeability", 100.0)*milli*darcy;
+        double poro = param.getDefault("porosity", 1.0);
+        using namespace Opm::unit;
+        using namespace Opm::prefix;
+        double perm = param.getDefault("permeability", 100.0)*milli*darcy;
         rock_.init(dim, num_cells, poro, perm);
-	pvt_.init(param);
+        pvt_.init(param);
         satprops_.init(param);
-	if (pvt_.numPhases() != satprops_.numPhases()) {
-	    THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
-	}
-	viscosity_.resize(pvt_.numPhases());
-	pvt_.mu(1, 0, 0, &viscosity_[0]);
+        if (pvt_.numPhases() != satprops_.numPhases()) {
+            THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+        }
+        viscosity_.resize(pvt_.numPhases());
+        pvt_.mu(1, 0, 0, &viscosity_[0]);
     }
 
     IncompPropertiesBasic::IncompPropertiesBasic(const int num_phases,
@@ -56,14 +56,14 @@ namespace Opm
                                                  const int num_cells)
     {
         rock_.init(dim, num_cells, por, perm);
-	pvt_.init(num_phases, rho, mu);
+        pvt_.init(num_phases, rho, mu);
         satprops_.init(num_phases, relpermfunc);
-	if (pvt_.numPhases() != satprops_.numPhases()) {
-	    THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
-	}
-	viscosity_.resize(pvt_.numPhases());
-	pvt_.mu(1, 0, 0, &viscosity_[0]);
+        if (pvt_.numPhases() != satprops_.numPhases()) {
+            THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+        }
+        viscosity_.resize(pvt_.numPhases());
+        pvt_.mu(1, 0, 0, &viscosity_[0]);
     }
 
     IncompPropertiesBasic::~IncompPropertiesBasic()
@@ -109,7 +109,7 @@ namespace Opm
     /// \return Array of P viscosity values.
     const double* IncompPropertiesBasic::viscosity() const
     {
-	return &viscosity_[0];
+        return &viscosity_[0];
     }
 
     /// \return Array of P density values.
@@ -117,7 +117,7 @@ namespace Opm
     {
         // No difference between reservoir and surface densities
         // modelled by this class.
-	return pvt_.surfaceDensities();
+        return pvt_.surfaceDensities();
     }
 
     /// \return Array of P density values.
@@ -125,7 +125,7 @@ namespace Opm
     {
         // No difference between reservoir and surface densities
         // modelled by this class.
-	return pvt_.surfaceDensities();
+        return pvt_.surfaceDensities();
     }
 
     /// \param[in]  n      Number of data points.
@@ -138,10 +138,10 @@ namespace Opm
     ///                           m_{ij} = \frac{dkr_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
     void IncompPropertiesBasic::relperm(const int n,
-					const double* s,
-					const int* /*cells*/,
-					double* kr,
-					double* dkrds) const
+                                        const double* s,
+                                        const int* /*cells*/,
+                                        double* kr,
+                                        double* dkrds) const
     {
         satprops_.relperm(n, s, kr, dkrds);
     }
@@ -157,10 +157,10 @@ namespace Opm
     ///                           m_{ij} = \frac{dpc_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m_01 ...)
     void IncompPropertiesBasic::capPress(const int n,
-					 const double* s,
-					 const int* /*cells*/,
-					 double* pc,
-					 double* dpcds) const
+                                         const double* s,
+                                         const int* /*cells*/,
+                                         double* pc,
+                                         double* dpcds) const
     {
         satprops_.capPress(n, s, pc, dpcds);
     }
@@ -174,11 +174,11 @@ namespace Opm
     /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
     /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
     void IncompPropertiesBasic::satRange(const int n,
-					 const int* /*cells*/,
-					 double* smin,
-					 double* smax) const
+                                         const int* /*cells*/,
+                                         double* smin,
+                                         double* smax) const
     {
-	satprops_.satRange(n, smin, smax);
+        satprops_.satRange(n, smin, smax);
     }
 
 } // namespace Opm

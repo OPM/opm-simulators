@@ -19,9 +19,10 @@
 
 #ifndef OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
 #define OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
+
+#include <opm/core/fluid/SaturationPropsInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/eclipse/EclipseGridParser.hpp>
-#include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 #include <opm/core/fluid/SatFuncStone2.hpp>
 #include <opm/core/fluid/SatFuncSimple.hpp>
@@ -32,23 +33,31 @@ struct UnstructuredGrid;
 namespace Opm
 {
 
-    class SaturationPropsFromDeck : public BlackoilPhases
+
+
+    /// Interface to saturation functions from deck.
+    /// Possible values for template argument (for now):
+    ///   SatFuncSetStone2Nonuniform,
+    ///   SatFuncSetStone2Uniform.
+    ///   SatFuncSetSimpleNonuniform,
+    ///   SatFuncSetSimpleUniform.
+    template <class SatFuncSet>
+    class SaturationPropsFromDeck : public SaturationPropsInterface
     {
     public:
         /// Default constructor.
         SaturationPropsFromDeck();
 
         /// Initialize from deck and grid.
-        /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the 
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        void init(const EclipseGridParser& deck,
-                  const UnstructuredGrid& grid);
-
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
         void init(const EclipseGridParser& deck,
                   const UnstructuredGrid& grid,
-                  const parameter::ParameterGroup& param);
+                  const int samples);
 
         /// \return   P, the number of phases.
         int numPhases() const;
@@ -83,22 +92,23 @@ namespace Opm
                       double* pc,
                       double* dpcds) const;
 
-	/// Obtain the range of allowable saturation values.
+        /// Obtain the range of allowable saturation values.
         /// \param[in]  n      Number of data points.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-	void satRange(const int n,
+        void satRange(const int n,
                       const int* cells,
-		      double* smin,
-		      double* smax) const;
+                      double* smin,
+                      double* smax) const;
 
     private:
         PhaseUsage phase_usage_;
-        typedef SatFuncSimple satfunc_t;
-        std::vector<satfunc_t> satfuncset_;
+        std::vector<SatFuncSet> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
 
-        const satfunc_t& funcForCell(const int cell) const;
+        typedef SatFuncSet Funcs;
+
+        const Funcs& funcForCell(const int cell) const;
     };
 
 
@@ -106,6 +116,7 @@ namespace Opm
 } // namespace Opm
 
 
+#include <opm/core/fluid/SaturationPropsFromDeck_impl.hpp>
 
 
 #endif // OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED

@@ -34,41 +34,41 @@ namespace Opm
 
     void PvtPropertiesBasic::init(const parameter::ParameterGroup& param)
     {
-	int num_phases = param.getDefault("num_phases", 2);
-	if (num_phases > 3 || num_phases < 1) {
-	    THROW("PvtPropertiesBasic::init() illegal num_phases: " << num_phases);
-	}
-	density_.resize(num_phases);
-	viscosity_.resize(num_phases);
-	// We currently do not allow the user to set B.
-	formation_volume_factor_.clear();
-	formation_volume_factor_.resize(num_phases, 1.0);
+        int num_phases = param.getDefault("num_phases", 2);
+        if (num_phases > 3 || num_phases < 1) {
+            THROW("PvtPropertiesBasic::init() illegal num_phases: " << num_phases);
+        }
+        density_.resize(num_phases);
+        viscosity_.resize(num_phases);
+        // We currently do not allow the user to set B.
+        formation_volume_factor_.clear();
+        formation_volume_factor_.resize(num_phases, 1.0);
 
-	// Setting mu and rho from parameters
-	using namespace Opm::prefix;
-	using namespace Opm::unit;
-	const double kgpm3 = kilogram/cubic(meter);
-	const double cP = centi*Poise;
-	std::string rname[3] = { "rho1", "rho2", "rho3" };
-	double rdefault[3] = { 1.0e3, 1.0e3, 1.0e3 };
-	std::string vname[3] = { "mu1", "mu2", "mu3" };
-	double vdefault[3] = { 1.0, 1.0, 1.0 };
-	for (int phase = 0; phase < num_phases; ++phase) {
-	    density_[phase] = kgpm3*param.getDefault(rname[phase], rdefault[phase]);
-	    viscosity_[phase] = cP*param.getDefault(vname[phase], vdefault[phase]);
-	}
+        // Setting mu and rho from parameters
+        using namespace Opm::prefix;
+        using namespace Opm::unit;
+        const double kgpm3 = kilogram/cubic(meter);
+        const double cP = centi*Poise;
+        std::string rname[3] = { "rho1", "rho2", "rho3" };
+        double rdefault[3] = { 1.0e3, 1.0e3, 1.0e3 };
+        std::string vname[3] = { "mu1", "mu2", "mu3" };
+        double vdefault[3] = { 1.0, 1.0, 1.0 };
+        for (int phase = 0; phase < num_phases; ++phase) {
+            density_[phase] = kgpm3*param.getDefault(rname[phase], rdefault[phase]);
+            viscosity_[phase] = cP*param.getDefault(vname[phase], vdefault[phase]);
+        }
     }
 
     void PvtPropertiesBasic::init(const int num_phases,
                                   const std::vector<double>& rho,
                                   const std::vector<double>& visc)
     {
-	if (num_phases > 3 || num_phases < 1) {
-	    THROW("PvtPropertiesBasic::init() illegal num_phases: " << num_phases);
-	}
-	// We currently do not allow the user to set B.
-	formation_volume_factor_.clear();
-	formation_volume_factor_.resize(num_phases, 1.0);
+        if (num_phases > 3 || num_phases < 1) {
+            THROW("PvtPropertiesBasic::init() illegal num_phases: " << num_phases);
+        }
+        // We currently do not allow the user to set B.
+        formation_volume_factor_.clear();
+        formation_volume_factor_.resize(num_phases, 1.0);
         density_ = rho;
         viscosity_ = visc;
     }
@@ -87,69 +87,69 @@ namespace Opm
 
 
     void PvtPropertiesBasic::mu(const int n,
-				const double* /*p*/,
-				const double* /*z*/,
-				double* output_mu) const
+                                const double* /*p*/,
+                                const double* /*z*/,
+                                double* output_mu) const
     {
-	const int np = numPhases();
+        const int np = numPhases();
         for (int phase = 0; phase < np; ++phase) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 output_mu[np*i + phase] = viscosity_[phase];
             }
-	}
+        }
     }
 
     void PvtPropertiesBasic::B(const int n,
-			       const double* /*p*/,
-			       const double* /*z*/,
-			       double* output_B) const
+                               const double* /*p*/,
+                               const double* /*z*/,
+                               double* output_B) const
     {
-	const int np = numPhases();
+        const int np = numPhases();
         for (int phase = 0; phase < np; ++phase) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 output_B[np*i + phase] = formation_volume_factor_[phase];
             }
-	}
+        }
     }
 
     void PvtPropertiesBasic::dBdp(const int n,
-				  const double* /*p*/,
-				  const double* /*z*/,
-				  double* output_B,
-				  double* output_dBdp) const
+                                  const double* /*p*/,
+                                  const double* /*z*/,
+                                  double* output_B,
+                                  double* output_dBdp) const
     {
-	const int np = numPhases();
+        const int np = numPhases();
         for (int phase = 0; phase < np; ++phase) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
                 output_B[np*i + phase] = formation_volume_factor_[phase];
                 output_dBdp[np*i + phase] = 0.0;
             }
-	}
+        }
 
     }
 
 
     void PvtPropertiesBasic::R(const int n,
-			       const double* /*p*/,
-			       const double* /*z*/,
-			       double* output_R) const
+                               const double* /*p*/,
+                               const double* /*z*/,
+                               double* output_R) const
     {
-	const int np = numPhases();
-	std::fill(output_R, output_R + n*np, 0.0);
+        const int np = numPhases();
+        std::fill(output_R, output_R + n*np, 0.0);
     }
 
     void PvtPropertiesBasic::dRdp(const int n,
-				  const double* /*p*/,
-				  const double* /*z*/,
-				  double* output_R,
-				  double* output_dRdp) const
+                                  const double* /*p*/,
+                                  const double* /*z*/,
+                                  double* output_R,
+                                  double* output_dRdp) const
     {
-	const int np = numPhases();
-	std::fill(output_R, output_R + n*np, 0.0);
-	std::fill(output_dRdp, output_dRdp + n*np, 0.0);
+        const int np = numPhases();
+        std::fill(output_R, output_R + n*np, 0.0);
+        std::fill(output_dRdp, output_dRdp + n*np, 0.0);
     }
 
 } // namespace Opm
