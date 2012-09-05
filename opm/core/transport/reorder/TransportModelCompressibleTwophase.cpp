@@ -152,8 +152,8 @@ namespace Opm
             B_cell = 1.0/tm.A_[np*np*cell + 0];
             double src_flux       = -tm.source_[cell];
             bool src_is_inflow = src_flux < 0.0;
-            influx  =  src_is_inflow ? B_cell*src_flux : 0.0;
-            outflux = !src_is_inflow ? B_cell*src_flux : 0.0;
+            influx  =  src_is_inflow ? src_flux : 0.0;
+            outflux = !src_is_inflow ? src_flux : 0.0;
             comp_term = (tm.porevolume_[cell] - tm.porevolume0_[cell])/tm.porevolume0_[cell];
             dtpv    = tm.dt_/tm.porevolume0_[cell];
             for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
