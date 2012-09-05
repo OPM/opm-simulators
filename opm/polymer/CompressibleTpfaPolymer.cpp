@@ -138,8 +138,8 @@ namespace Opm
         props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
         for (int cell = 0; cell < nc; ++cell) {
-            poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[cell + 0], cell_eff_viscosity_[cell + 0]);
-            poly_props_.effectiveMobilities((*c_)[cell], (*cmax_)[cell], &cell_viscosity_[cell + 0], &cell_relperm_[cell + 0], &cell_phasemob_[cell + 0]);
+            poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[np*cell + 0], cell_eff_viscosity_[np*cell + 0]);
+            poly_props_.effectiveMobilities((*c_)[cell], (*cmax_)[cell], &cell_viscosity_[np*cell + 0], &cell_relperm_[np*cell + 0], &cell_phasemob_[np*cell + 0]);
         }
 
         // Volume discrepancy: we have that
