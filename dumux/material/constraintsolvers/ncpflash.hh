@@ -32,6 +32,7 @@
 
 #include <dumux/common/exceptions.hh>
 #include <dumux/common/valgrind.hh>
+#include <dumux/common/math.hh>
 
 namespace Dumux {
 
@@ -169,6 +170,10 @@ public:
             std::cout << globalMolarities[compIdx] << " ";
         std::cout << "\n";
         */
+        Scalar relError, lastError = 0;
+        Scalar tolerance = std::min(1e-10, 
+                                    Dumux::geometricMean(Scalar(1.0),
+                                                         std::numeric_limits<Scalar>::epsilon()));
 
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
@@ -216,13 +221,17 @@ public:
             */
 
             // update the fluid quantities.
-            Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
+            relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
 
             if (!std::isfinite(relError))
                 break;
-            else if (relError < 1e-9)
+            else if (relError < tolerance && lastError >= relError)
                 return;
+            lastError = relError;
         }
+
+        if (relError < tolerance)
+            return;
 
         /*
         printFluidState_(fluidState);
@@ -315,7 +324,9 @@ protected:
 
             // deviate the mole fraction of the i-th component
             Scalar x_i = getQuantity_(fluidState, pvIdx);
-            const Scalar eps = 1e-8/quantityWeight_(fluidState, pvIdx);
+            const Scalar eps =
+                std::max(1e-18, std::numeric_limits<Scalar>::epsilon() * 1e5)
+                / quantityWeight_(fluidState, pvIdx);
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
 
