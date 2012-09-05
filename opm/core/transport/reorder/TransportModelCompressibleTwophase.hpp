@@ -74,7 +74,6 @@ namespace Opm
         /// vertical stack, that do not interact with other columns (for
         /// gravity segregation.
         /// \param[in] columns           Vector of cell-columns.
-        /// \param[in] porevolume0       Array of pore volumes at start of timestep.
         /// \param[in] dt                Time step.
         /// \param[in, out] saturation   Phase saturations.
         /// \param[in, out] surfacevol   Surface volume densities for each phase.
