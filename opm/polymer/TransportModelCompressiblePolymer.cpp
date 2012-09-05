@@ -499,8 +499,8 @@ namespace Opm
 #endif
             }
             if (if_res_c) {
-                // Not clear if we the rockcompressibility should be
-                // considerede as a constant in the adsorption term.
+                // Not clear if the rock compressibility should be
+                // considered as a constant in the adsorption term.
                 res[1] = (1 - dps)*s*c - (1 - dps)*B_cell/B_cell0*porosity0/porosity*s0*c0
                     + rhor*B_cell/porosity*((1.0 - porosity)*ads - (1.0 - porosity0)*ads0)
                     + dtpv*(outflux*ff*mc + influx_polymer);
