@@ -17,46 +17,23 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SATURATIONPROPSBASIC_HEADER_INCLUDED
-#define OPM_SATURATIONPROPSBASIC_HEADER_INCLUDED
+#ifndef OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED
+#define OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED
 
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
+
 
 namespace Opm
 {
 
-
-    /// Class encapsulating basic saturation function behaviour,
-    /// by which we mean constant, linear or quadratic relative
-    /// permeability functions for a maximum of two phases,
-    /// and zero capillary pressure.
-    ///
-    /// TODO: This class can easily be extended to three phases,
-    /// by adding three-phase relperm behaviour.
-    class SaturationPropsBasic
+    class SaturationPropsInterface : public BlackoilPhases
     {
     public:
-        /// Default constructor.
-        SaturationPropsBasic();
-
-        /// Initialize from parameters.
-        /// The following parameters are accepted (defaults):
-        ///    num_phases   (2)          Must be 1 or 2.
-        ///    relperm_func ("Linear")   Must be "Constant", "Linear" or "Quadratic".
-        void init(const parameter::ParameterGroup& param);
-
-        enum RelPermFunc { Constant, Linear, Quadratic };
-
-        /// Initialize from arguments a basic Saturation property.
-        void init(const int num_phases,
-                  const RelPermFunc& relperm_func)
-        {
-            num_phases_ = num_phases;
-            relperm_func_ = relperm_func;
-        }
+        /// Virtual destructor.
+        virtual ~SaturationPropsInterface() {};
 
         /// \return   P, the number of phases.
-        int numPhases() const;
+        virtual int numPhases() const = 0;
 
         /// Relative permeability.
         /// \param[in]  n      Number of data points.
@@ -67,10 +44,11 @@ namespace Opm
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dkr_i}{ds^j},
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-        void relperm(const int n,
-                     const double* s,
-                     double* kr,
-                     double* dkrds) const;
+        virtual void relperm(const int n,
+                             const double* s,
+                             const int* cells,
+                             double* kr,
+                             double* dkrds) const = 0;
 
         /// Capillary pressure.
         /// \param[in]  n      Number of data points.
@@ -81,23 +59,21 @@ namespace Opm
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dpc_i}{ds^j},
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-        void capPress(const int n,
-                      const double* s,
-                      double* pc,
-                      double* dpcds) const;
+        virtual void capPress(const int n,
+                              const double* s,
+                              const int* cells,
+                              double* pc,
+                              double* dpcds) const = 0;
 
         /// Obtain the range of allowable saturation values.
         /// \param[in]  n      Number of data points.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-        void satRange(const int n,
-                      double* smin,
-                      double* smax) const;
+        virtual void satRange(const int n,
+                              const int* cells,
+                              double* smin,
+                              double* smax) const = 0;
 
-
-    private:
-        int num_phases_;
-        RelPermFunc relperm_func_;
     };
 
 
@@ -106,5 +82,4 @@ namespace Opm
 
 
 
-
-#endif // OPM_SATURATIONPROPSBASIC_HEADER_INCLUDED
+#endif // OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED

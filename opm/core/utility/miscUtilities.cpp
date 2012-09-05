@@ -40,14 +40,14 @@ namespace Opm
     /// @param[out] porevol   the pore volume by cell.
     void computePorevolume(const UnstructuredGrid& grid,
                            const double* porosity,
-			   std::vector<double>& porevol)
+                           std::vector<double>& porevol)
     {
-	int num_cells = grid.number_of_cells;
-	porevol.resize(num_cells);
-	std::transform(porosity, porosity + num_cells,
-		       grid.cell_volumes,
-		       porevol.begin(),
-		       std::multiplies<double>());
+        int num_cells = grid.number_of_cells;
+        porevol.resize(num_cells);
+        std::transform(porosity, porosity + num_cells,
+                       grid.cell_volumes,
+                       porevol.begin(),
+                       std::multiplies<double>());
     }
 
 
@@ -70,6 +70,25 @@ namespace Opm
         }
     }
 
+    /// @brief Computes porosity of all cells in a grid, with rock compressibility effects.
+    /// @param[in]  grid               a grid
+    /// @param[in]  porosity_standard  array of grid.number_of_cells porosity values (at standard conditions)
+    /// @param[in]  rock_comp          rock compressibility properties
+    /// @param[in]  pressure           pressure by cell
+    /// @param[out] porosity           porosity (at reservoir condition)
+    void computePorosity(const UnstructuredGrid& grid,
+                         const double* porosity_standard,
+                         const RockCompressibility& rock_comp,
+                         const std::vector<double>& pressure,
+                         std::vector<double>& porosity)
+    {
+        int num_cells = grid.number_of_cells;
+        porosity.resize(num_cells);
+        for (int i = 0; i < num_cells; ++i) {
+            porosity[i] = porosity_standard[i]*rock_comp.poroMult(pressure[i]);
+        }
+    }
+
 
     /// @brief Computes total saturated volumes over all grid cells.
     /// @param[in]  pv        the pore volume by cell.
@@ -79,20 +98,20 @@ namespace Opm
     ///                       For each phase p, we compute
     ///                       sat_vol_p = sum_i s_p_i pv_i
     void computeSaturatedVol(const std::vector<double>& pv,
-			     const std::vector<double>& s,
-			     double* sat_vol)
+                             const std::vector<double>& s,
+                             double* sat_vol)
     {
-	const int num_cells = pv.size();
-	const int np = s.size()/pv.size();
-	if (int(s.size()) != num_cells*np) {
-	    THROW("Sizes of s and pv vectors do not match.");
-	}
-	std::fill(sat_vol, sat_vol + np, 0.0);
-	for (int c = 0; c < num_cells; ++c) {
-	    for (int p = 0; p < np; ++p) {
-		sat_vol[p] += pv[c]*s[np*c + p];
-	    }
-	}
+        const int num_cells = pv.size();
+        const int np = s.size()/pv.size();
+        if (int(s.size()) != num_cells*np) {
+            THROW("Sizes of s and pv vectors do not match.");
+        }
+        std::fill(sat_vol, sat_vol + np, 0.0);
+        for (int c = 0; c < num_cells; ++c) {
+            for (int p = 0; p < np; ++p) {
+                sat_vol[p] += pv[c]*s[np*c + p];
+            }
+        }
     }
 
 
@@ -104,28 +123,28 @@ namespace Opm
     ///                       For each phase p, we compute
     ///                       aver_sat_p = (sum_i s_p_i pv_i) / (sum_i pv_i).
     void computeAverageSat(const std::vector<double>& pv,
-			   const std::vector<double>& s,
-			   double* aver_sat)
+                           const std::vector<double>& s,
+                           double* aver_sat)
     {
-	const int num_cells = pv.size();
-	const int np = s.size()/pv.size();
-	if (int(s.size()) != num_cells*np) {
-	    THROW("Sizes of s and pv vectors do not match.");
-	}
-	double tot_pv = 0.0;
-	// Note that we abuse the output array to accumulate the
-	// saturated pore volumes.
-	std::fill(aver_sat, aver_sat + np, 0.0);
-	for (int c = 0; c < num_cells; ++c) {
-	    tot_pv += pv[c];
-	    for (int p = 0; p < np; ++p) {
-		aver_sat[p] += pv[c]*s[np*c + p];
-	    }
-	}
-	// Must divide by pore volumes to get saturations.
-	for (int p = 0; p < np; ++p) {
-	    aver_sat[p] /= tot_pv;
-	}
+        const int num_cells = pv.size();
+        const int np = s.size()/pv.size();
+        if (int(s.size()) != num_cells*np) {
+            THROW("Sizes of s and pv vectors do not match.");
+        }
+        double tot_pv = 0.0;
+        // Note that we abuse the output array to accumulate the
+        // saturated pore volumes.
+        std::fill(aver_sat, aver_sat + np, 0.0);
+        for (int c = 0; c < num_cells; ++c) {
+            tot_pv += pv[c];
+            for (int p = 0; p < np; ++p) {
+                aver_sat[p] += pv[c]*s[np*c + p];
+            }
+        }
+        // Must divide by pore volumes to get saturations.
+        for (int p = 0; p < np; ++p) {
+            aver_sat[p] /= tot_pv;
+        }
     }
 
 
@@ -142,38 +161,38 @@ namespace Opm
     ///                       where P = s.size()/src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
     void computeInjectedProduced(const IncompPropertiesInterface& props,
-				 const std::vector<double>& s,
-				 const std::vector<double>& src,
-				 const double dt,
-				 double* injected,
-				 double* produced)
+                                 const std::vector<double>& s,
+                                 const std::vector<double>& src,
+                                 const double dt,
+                                 double* injected,
+                                 double* produced)
     {
-	const int num_cells = src.size();
-	const int np = s.size()/src.size();
-	if (int(s.size()) != num_cells*np) {
-	    THROW("Sizes of s and src vectors do not match.");
-	}
-	std::fill(injected, injected + np, 0.0);
-	std::fill(produced, produced + np, 0.0);
-	const double* visc = props.viscosity();
-	std::vector<double> mob(np);
-	for (int c = 0; c < num_cells; ++c) {
-	    if (src[c] > 0.0) {
-		injected[0] += src[c]*dt;
-	    } else if (src[c] < 0.0) {
-		const double flux = -src[c]*dt;
-		const double* sat = &s[np*c];
-		props.relperm(1, sat, &c, &mob[0], 0);
-		double totmob = 0.0;
-		for (int p = 0; p < np; ++p) {
-		    mob[p] /= visc[p];
-		    totmob += mob[p];
-		}
-		for (int p = 0; p < np; ++p) {
-		    produced[p] += (mob[p]/totmob)*flux;
-		}
-	    }
-	}
+        const int num_cells = src.size();
+        const int np = s.size()/src.size();
+        if (int(s.size()) != num_cells*np) {
+            THROW("Sizes of s and src vectors do not match.");
+        }
+        std::fill(injected, injected + np, 0.0);
+        std::fill(produced, produced + np, 0.0);
+        const double* visc = props.viscosity();
+        std::vector<double> mob(np);
+        for (int c = 0; c < num_cells; ++c) {
+            if (src[c] > 0.0) {
+                injected[0] += src[c]*dt;
+            } else if (src[c] < 0.0) {
+                const double flux = -src[c]*dt;
+                const double* sat = &s[np*c];
+                props.relperm(1, sat, &c, &mob[0], 0);
+                double totmob = 0.0;
+                for (int p = 0; p < np; ++p) {
+                    mob[p] /= visc[p];
+                    totmob += mob[p];
+                }
+                for (int p = 0; p < np; ++p) {
+                    produced[p] += (mob[p]/totmob)*flux;
+                }
+            }
+        }
     }
 
 
@@ -184,9 +203,9 @@ namespace Opm
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobilities.
     void computeTotalMobility(const Opm::IncompPropertiesInterface& props,
-			      const std::vector<int>& cells,
-			      const std::vector<double>& s,
-			      std::vector<double>& totmob)
+                              const std::vector<int>& cells,
+                              const std::vector<double>& s,
+                              std::vector<double>& totmob)
     {
         std::vector<double> pmobc;
 
@@ -212,10 +231,10 @@ namespace Opm
     /// @param[out] totmob    total mobility
     /// @param[out] omega     fractional-flow weighted fluid densities.
     void computeTotalMobilityOmega(const Opm::IncompPropertiesInterface& props,
-				   const std::vector<int>& cells,
-				   const std::vector<double>& s,
-				   std::vector<double>& totmob,
-				   std::vector<double>& omega)
+                                   const std::vector<int>& cells,
+                                   const std::vector<double>& s,
+                                   std::vector<double>& totmob,
+                                   std::vector<double>& omega)
     {
         std::vector<double> pmobc;
 
@@ -312,33 +331,33 @@ namespace Opm
     ///                           (+) positive  inflow of first phase (water)
     ///                           (-) negative  total outflow of both phases
     void computeTransportSource(const UnstructuredGrid& grid,
-				const std::vector<double>& src,
-				const std::vector<double>& faceflux,
-				const double inflow_frac,
+                                const std::vector<double>& src,
+                                const std::vector<double>& faceflux,
+                                const double inflow_frac,
                                 const Wells* wells,
                                 const std::vector<double>& well_perfrates,
-				std::vector<double>& transport_src)
+                                std::vector<double>& transport_src)
     {
-	int nc = grid.number_of_cells;
-	transport_src.resize(nc);
+        int nc = grid.number_of_cells;
+        transport_src.resize(nc);
         // Source term and boundary contributions.
-	for (int c = 0; c < nc; ++c) {
-	    transport_src[c] = 0.0;
-	    transport_src[c] += src[c] > 0.0 ? inflow_frac*src[c] : src[c];
-	    for (int hf = grid.cell_facepos[c]; hf < grid.cell_facepos[c + 1]; ++hf) {
-		int f = grid.cell_faces[hf];
-		const int* f2c = &grid.face_cells[2*f];
-		double bdy_influx = 0.0;
-		if (f2c[0] == c && f2c[1] == -1) {
-		    bdy_influx = -faceflux[f];
-		} else if (f2c[0] == -1 && f2c[1] == c) {
-		    bdy_influx = faceflux[f];
-		}
-		if (bdy_influx != 0.0) {
-		    transport_src[c] += bdy_influx > 0.0 ? inflow_frac*bdy_influx : bdy_influx;
-		}
-	    }
-	}
+        for (int c = 0; c < nc; ++c) {
+            transport_src[c] = 0.0;
+            transport_src[c] += src[c] > 0.0 ? inflow_frac*src[c] : src[c];
+            for (int hf = grid.cell_facepos[c]; hf < grid.cell_facepos[c + 1]; ++hf) {
+                int f = grid.cell_faces[hf];
+                const int* f2c = &grid.face_cells[2*f];
+                double bdy_influx = 0.0;
+                if (f2c[0] == c && f2c[1] == -1) {
+                    bdy_influx = -faceflux[f];
+                } else if (f2c[0] == -1 && f2c[1] == c) {
+                    bdy_influx = faceflux[f];
+                }
+                if (bdy_influx != 0.0) {
+                    transport_src[c] += bdy_influx > 0.0 ? inflow_frac*bdy_influx : bdy_influx;
+                }
+            }
+        }
 
         // Well contributions.
         if (wells) {
@@ -373,52 +392,52 @@ namespace Opm
     /// @param[in]  face_flux       signed per-face fluxes
     /// @param[out] cell_velocity   the estimated velocities.
     void estimateCellVelocity(const UnstructuredGrid& grid,
-			      const std::vector<double>& face_flux,
-			      std::vector<double>& cell_velocity)
+                              const std::vector<double>& face_flux,
+                              std::vector<double>& cell_velocity)
     {
-	const int dim = grid.dimensions;
-	cell_velocity.clear();
-	cell_velocity.resize(grid.number_of_cells*dim, 0.0);
-	for (int face = 0; face < grid.number_of_faces; ++face) {
-	    int c[2] = { grid.face_cells[2*face], grid.face_cells[2*face + 1] };
-	    const double* fc = &grid.face_centroids[face*dim];
-	    double flux = face_flux[face];
-	    for (int i = 0; i < 2; ++i) {
-		if (c[i] >= 0) {
-		    const double* cc = &grid.cell_centroids[c[i]*dim];
-		    for (int d = 0; d < dim; ++d) {
-			double v_contrib = fc[d] - cc[d];
-			v_contrib *= flux/grid.cell_volumes[c[i]];
-			cell_velocity[c[i]*dim + d] += (i == 0) ? v_contrib : -v_contrib;
-		    }
-		}
-	    }
-	}
+        const int dim = grid.dimensions;
+        cell_velocity.clear();
+        cell_velocity.resize(grid.number_of_cells*dim, 0.0);
+        for (int face = 0; face < grid.number_of_faces; ++face) {
+            int c[2] = { grid.face_cells[2*face], grid.face_cells[2*face + 1] };
+            const double* fc = &grid.face_centroids[face*dim];
+            double flux = face_flux[face];
+            for (int i = 0; i < 2; ++i) {
+                if (c[i] >= 0) {
+                    const double* cc = &grid.cell_centroids[c[i]*dim];
+                    for (int d = 0; d < dim; ++d) {
+                        double v_contrib = fc[d] - cc[d];
+                        v_contrib *= flux/grid.cell_volumes[c[i]];
+                        cell_velocity[c[i]*dim + d] += (i == 0) ? v_contrib : -v_contrib;
+                    }
+                }
+            }
+        }
     }
 
     /// Extract a vector of water saturations from a vector of
     /// interleaved water and oil saturations.
     void toWaterSat(const std::vector<double>& sboth,
-		    std::vector<double>& sw)
+                    std::vector<double>& sw)
     {
-	int num = sboth.size()/2;
-	sw.resize(num);
-	for (int i = 0; i < num; ++i) {
-	    sw[i] = sboth[2*i];
-	}
+        int num = sboth.size()/2;
+        sw.resize(num);
+        for (int i = 0; i < num; ++i) {
+            sw[i] = sboth[2*i];
+        }
     }
 
     /// Make a a vector of interleaved water and oil saturations from
     /// a vector of water saturations.
     void toBothSat(const std::vector<double>& sw,
-		   std::vector<double>& sboth)
+                   std::vector<double>& sboth)
     {
-	int num = sw.size();
-	sboth.resize(2*num);
-	for (int i = 0; i < num; ++i) {
-	    sboth[2*i] = sw[i];
-	    sboth[2*i + 1] = 1.0 - sw[i];
-	}
+        int num = sw.size();
+        sboth.resize(2*num);
+        for (int i = 0; i < num; ++i) {
+            sboth[2*i] = sw[i];
+            sboth[2*i + 1] = 1.0 - sw[i];
+        }
     }
 
 
@@ -431,30 +450,30 @@ namespace Opm
         if (np != 2) {
             THROW("wellsToSrc() requires a 2 phase case.");
         }
-	src.resize(num_cells);
-	for (int w = 0; w < wells.number_of_wells; ++w) {
+        src.resize(num_cells);
+        for (int w = 0; w < wells.number_of_wells; ++w) {
             const int cur = wells.ctrls[w]->current;
-	    if (wells.ctrls[w]->num != 1) {
-		MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
-	    }
-	    if (wells.ctrls[w]->type[cur] != RESERVOIR_RATE) {
-		THROW("In wellsToSrc(): well is something other than RESERVOIR_RATE.");
-	    }
-	    if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
-		THROW("In wellsToSrc(): well has multiple perforations.");
-	    }
+            if (wells.ctrls[w]->num != 1) {
+                MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
+            }
+            if (wells.ctrls[w]->type[cur] != RESERVOIR_RATE) {
+                THROW("In wellsToSrc(): well is something other than RESERVOIR_RATE.");
+            }
+            if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
+                THROW("In wellsToSrc(): well has multiple perforations.");
+            }
             for (int p = 0; p < np; ++p) {
                 if (wells.ctrls[w]->distr[np*cur + p] != 1.0) {
                     THROW("In wellsToSrc(): well not controlled on total rate.");
                 }
             }
-	    double flow = wells.ctrls[w]->target[cur];
+            double flow = wells.ctrls[w]->target[cur];
             if (wells.type[w] == INJECTOR) {
                 flow *= wells.comp_frac[np*w + 0]; // Obtaining water rate for inflow source.
             }
-	    const double cell = wells.well_cells[wells.well_connpos[w]];
-	    src[cell] = flow;
-	}
+            const double cell = wells.well_cells[wells.well_connpos[w]];
+            src[cell] = flow;
+        }
     }
 
 
@@ -574,8 +593,10 @@ namespace Opm
     {
         int nw = well_bhp.size();
         ASSERT(nw == wells.number_of_wells);
-        if (props.numPhases() != 2) {
-            THROW("WellReport for now assumes two phase flow.");
+        int np = props.numPhases();
+        const int max_np = 3;
+        if (np > max_np) {
+            THROW("WellReport for now assumes #phases <= " << max_np);
         }
         const double* visc = props.viscosity();
         std::vector<double> data_now;
@@ -586,7 +607,8 @@ namespace Opm
             double well_rate_total = 0.0;
             double well_rate_water = 0.0;
             for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
-                const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
+                const double perf_rate = unit::convert::to(well_perfrates[perf],
+                                                           unit::cubic(unit::meter)/unit::day);
                 well_rate_total += perf_rate;
                 if (perf_rate > 0.0) {
                     // Injection.
@@ -594,11 +616,14 @@ namespace Opm
                 } else {
                     // Production.
                     const int cell = wells.well_cells[perf];
-                    double mob[2];
+                    double mob[max_np];
                     props.relperm(1, &saturation[2*cell], &cell, mob, 0);
-                    mob[0] /= visc[0];
-                    mob[1] /= visc[1];
-                    const double fracflow = mob[0]/(mob[0] + mob[1]);
+                    double tmob = 0;
+                    for(int i = 0; i < np; ++i) {
+                        mob[i] /= visc[i];
+                        tmob += mob[i];
+                    }
+                    const double fracflow = mob[0]/tmob;
                     well_rate_water += perf_rate*fracflow;
                 }
             }
@@ -627,8 +652,10 @@ namespace Opm
         // TODO: refactor, since this is almost identical to the other push().
         int nw = well_bhp.size();
         ASSERT(nw == wells.number_of_wells);
-        if (props.numPhases() != 2) {
-            THROW("WellReport for now assumes two phase flow.");
+        int np = props.numPhases();
+        const int max_np = 3;
+        if (np > max_np) {
+            THROW("WellReport for now assumes #phases <= " << max_np);
         }
         std::vector<double> data_now;
         data_now.reserve(1 + 3*nw);
@@ -638,7 +665,8 @@ namespace Opm
             double well_rate_total = 0.0;
             double well_rate_water = 0.0;
             for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w + 1]; ++perf) {
-                const double perf_rate = well_perfrates[perf]*(unit::day/unit::second);
+                const double perf_rate = unit::convert::to(well_perfrates[perf],
+                                                           unit::cubic(unit::meter)/unit::day);
                 well_rate_total += perf_rate;
                 if (perf_rate > 0.0) {
                     // Injection.
@@ -646,13 +674,16 @@ namespace Opm
                 } else {
                     // Production.
                     const int cell = wells.well_cells[perf];
-                    double mob[2];
-                    props.relperm(1, &s[2*cell], &cell, mob, 0);
-                    double visc[2];
-                    props.viscosity(1, &p[cell], &z[2*cell], &cell, visc, 0);
-                    mob[0] /= visc[0];
-                    mob[1] /= visc[1];
-                    const double fracflow = mob[0]/(mob[0] + mob[1]);
+                    double mob[max_np];
+                    props.relperm(1, &s[np*cell], &cell, mob, 0);
+                    double visc[max_np];
+                    props.viscosity(1, &p[cell], &z[np*cell], &cell, visc, 0);
+                    double tmob = 0;
+                    for(int i = 0; i < np; ++i) {
+                        mob[i] /= visc[i];
+                        tmob += mob[i];
+                    }
+                    const double fracflow = mob[0]/(tmob);
                     well_rate_water += perf_rate*fracflow;
                 }
             }
