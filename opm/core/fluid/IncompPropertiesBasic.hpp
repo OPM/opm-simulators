@@ -42,29 +42,29 @@ namespace Opm
     {
     public:
         /// Construct from parameters.
-	/// The following parameters are accepted (defaults):
-	///    num_phases         (2)         Must be 1 or 2.
-	///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
-	///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
-	///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
-	///    porosity           (1.0)       Porosity
-	///    permeability       (100.0)     Permeability in mD
+        /// The following parameters are accepted (defaults):
+        ///    num_phases         (2)         Must be 1 or 2.
+        ///    relperm_func       ("Linear")  Must be "Constant", "Linear" or "Quadratic".
+        ///    rho1 [rho2, rho3]  (1.0e3)     Density in kg/m^3
+        ///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
+        ///    porosity           (1.0)       Porosity
+        ///    permeability       (100.0)     Permeability in mD
         IncompPropertiesBasic(const parameter::ParameterGroup& param,
-			      const int dim,
-			      const int num_cells);
+                              const int dim,
+                              const int num_cells);
 
 
         /// Construct from arguments a basic two phase fluid.
         IncompPropertiesBasic(const int num_phases,
                               const SaturationPropsBasic::RelPermFunc& relpermfunc,
                               const std::vector<double>& rho,
-			      const std::vector<double>& mu,
+                              const std::vector<double>& mu,
                               const double porosity,
                               const double permeability,
                               const int dim,
-			      const int num_cells);
+                              const int num_cells);
 
-	/// Destructor.
+        /// Destructor.
         virtual ~IncompPropertiesBasic();
 
         // ---- Rock interface ----
@@ -132,9 +132,9 @@ namespace Opm
                               double* dpcds) const;
 
 
-	/// Obtain the range of allowable saturation values.
-	/// In cell cells[i], saturation of phase p is allowed to be
-	/// in the interval [smin[i*P + p], smax[i*P + p]].
+        /// Obtain the range of allowable saturation values.
+        /// In cell cells[i], saturation of phase p is allowed to be
+        /// in the interval [smin[i*P + p], smax[i*P + p]].
         /// \param[in]  n      Number of data points.
         /// \param[in]  cells  Array of n cell indices.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
@@ -145,9 +145,9 @@ namespace Opm
                               double* smax) const;
     private:
         RockBasic rock_;
-	PvtPropertiesBasic pvt_;
+        PvtPropertiesBasic pvt_;
         SaturationPropsBasic satprops_;
-	std::vector<double> viscosity_;
+        std::vector<double> viscosity_;
     };
 
 
