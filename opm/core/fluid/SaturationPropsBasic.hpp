@@ -40,16 +40,16 @@ namespace Opm
         SaturationPropsBasic();
 
         /// Initialize from parameters.
-	/// The following parameters are accepted (defaults):
-	///    num_phases   (2)          Must be 1 or 2.
-	///    relperm_func ("Linear")   Must be "Constant", "Linear" or "Quadratic".
+        /// The following parameters are accepted (defaults):
+        ///    num_phases   (2)          Must be 1 or 2.
+        ///    relperm_func ("Linear")   Must be "Constant", "Linear" or "Quadratic".
         void init(const parameter::ParameterGroup& param);
 
-	enum RelPermFunc { Constant, Linear, Quadratic };
+        enum RelPermFunc { Constant, Linear, Quadratic };
 
         /// Initialize from arguments a basic Saturation property.
         void init(const int num_phases,
-                  const RelPermFunc& relperm_func) 
+                  const RelPermFunc& relperm_func)
         {
             num_phases_ = num_phases;
             relperm_func_ = relperm_func;
@@ -86,18 +86,18 @@ namespace Opm
                       double* pc,
                       double* dpcds) const;
 
-	/// Obtain the range of allowable saturation values.
+        /// Obtain the range of allowable saturation values.
         /// \param[in]  n      Number of data points.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-	void satRange(const int n,
-		      double* smin,
-		      double* smax) const;
+        void satRange(const int n,
+                      double* smin,
+                      double* smax) const;
 
 
     private:
-	int num_phases_;
-	RelPermFunc relperm_func_;
+        int num_phases_;
+        RelPermFunc relperm_func_;
     };
 
 

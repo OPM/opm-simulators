@@ -105,7 +105,7 @@ namespace Opm
     template <class SatFuncSet>
     int SaturationPropsFromDeck<SatFuncSet>::numPhases() const
     {
-	return phase_usage_.num_phases;
+        return phase_usage_.num_phases;
     }
 
 
@@ -191,18 +191,18 @@ namespace Opm
     template <class SatFuncSet>
     void SaturationPropsFromDeck<SatFuncSet>::satRange(const int n,
                                            const int* cells,
-					   double* smin,
-					   double* smax) const
+                                           double* smin,
+                                           double* smax) const
     {
         ASSERT (cells != 0);
 
-	const int np = phase_usage_.num_phases;
-	for (int i = 0; i < n; ++i) {
-	    for (int p = 0; p < np; ++p) {
-		smin[np*i + p] = funcForCell(cells[i]).smin_[p];
-		smax[np*i + p] = funcForCell(cells[i]).smax_[p];
-	    }
-	}
+        const int np = phase_usage_.num_phases;
+        for (int i = 0; i < n; ++i) {
+            for (int p = 0; p < np; ++p) {
+                smin[np*i + p] = funcForCell(cells[i]).smin_[p];
+                smax[np*i + p] = funcForCell(cells[i]).smax_[p];
+            }
+        }
     }
 
 

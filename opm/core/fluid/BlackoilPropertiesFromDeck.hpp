@@ -41,15 +41,15 @@ namespace Opm
     public:
         /// Initialize from deck and grid.
         /// \param[in]  deck     Deck input parser
-        /// \param[in]  grid     Grid to which property object applies, needed for the 
+        /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const UnstructuredGrid& grid);        
+                                   const UnstructuredGrid& grid);
 
         /// Initialize from deck, grid and parameters.
         /// \param[in]  deck     Deck input parser
-        /// \param[in]  grid     Grid to which property object applies, needed for the 
+        /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         /// \param[in]  param    Parameters. Accepted parameters include:
@@ -167,9 +167,9 @@ namespace Opm
                               double* dpcds) const;
 
 
-	/// Obtain the range of allowable saturation values.
-	/// In cell cells[i], saturation of phase p is allowed to be
-	/// in the interval [smin[i*P + p], smax[i*P + p]].
+        /// Obtain the range of allowable saturation values.
+        /// In cell cells[i], saturation of phase p is allowed to be
+        /// in the interval [smin[i*P + p], smax[i*P + p]].
         /// \param[in]  n      Number of data points.
         /// \param[in]  cells  Array of n cell indices.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.

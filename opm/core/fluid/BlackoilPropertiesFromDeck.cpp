@@ -33,10 +33,10 @@ namespace Opm
         satprops_.reset(ptr);
         ptr->init(deck, grid, 200);
 
-	if (pvt_.numPhases() != satprops_->numPhases()) {
-	    THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
-	}
+        if (pvt_.numPhases() != satprops_->numPhases()) {
+            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
+        }
     }
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
@@ -319,7 +319,7 @@ namespace Opm
                                               double* smin,
                                               double* smax) const
     {
-	satprops_->satRange(n, cells, smin, smax);
+        satprops_->satRange(n, cells, smin, smax);
     }
 
 

@@ -50,7 +50,7 @@ namespace Opm
 
         /// Initialize from deck and grid.
         /// \param[in]  deck     Deck input parser
-        /// \param[in]  grid     Grid to which property object applies, needed for the 
+        /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         /// \param[in]  samples  Number of uniform sample points for saturation tables.
@@ -92,14 +92,14 @@ namespace Opm
                       double* pc,
                       double* dpcds) const;
 
-	/// Obtain the range of allowable saturation values.
+        /// Obtain the range of allowable saturation values.
         /// \param[in]  n      Number of data points.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-	void satRange(const int n,
+        void satRange(const int n,
                       const int* cells,
-		      double* smin,
-		      double* smax) const;
+                      double* smin,
+                      double* smax) const;
 
     private:
         PhaseUsage phase_usage_;
