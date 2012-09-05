@@ -85,6 +85,8 @@ namespace Opm
 	void solve(const double* darcyflux,
                    const std::vector<double>& initial_pressure,
                    const std::vector<double>& pressure,
+                   const double* porevolume0,
+                   const double* porevolume,
 		   const double* source,
 		   const double dt,
 		   const double inflow_c,
@@ -111,6 +113,7 @@ namespace Opm
         void solveGravity(const std::vector<std::vector<int> >& columns,
                           const double dt,
                           std::vector<double>& saturation,
+                          std::vector<double>& surfacevol,
                           std::vector<double>& concentration,
                           std::vector<double>& cmax);
 
@@ -121,11 +124,12 @@ namespace Opm
     private: 
 
 	const UnstructuredGrid& grid_;
-        const double* porosity_standard_;
 	const BlackoilPropertiesInterface& props_;
 	const PolymerProperties& polyprops_;
         const RockCompressibility& rock_comp_;
 	const double* darcyflux_;   // one flux per grid face
+        const double* porevolume0_; // one volume per cell
+        const double* porevolume_;  // one volume per cell
 	const double* source_;      // one source per cell
 	double dt_;
 	double inflow_c_;
@@ -143,8 +147,6 @@ namespace Opm
         std::vector<double> visc_; // viscosity (without polymer, for given pressure)
         std::vector<double> A_;
         std::vector<double> A0_;
-        std::vector<double> porosity0_;
-        std::vector<double> porosity_;
 	std::vector<double> smin_;
 	std::vector<double> smax_;
 	
@@ -155,6 +157,7 @@ namespace Opm
         std::vector<double> gravflux_;
         std::vector<double> mob_;
         std::vector<double> cmax0_;
+
         // For gravity segregation, column variables
         std::vector<double> s0_;
         std::vector<double> c0_;

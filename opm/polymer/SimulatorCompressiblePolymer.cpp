@@ -219,7 +219,7 @@ namespace Opm
         tsolver_.setPreferredMethod(method);
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
         use_segregation_split_ = param.getDefault("use_segregation_split", false);
-        if (gravity != 0 && use_segregation_split_){
+        if (gravity_ != 0 && use_segregation_split_){
             tsolver_.initGravity(gravity);
             extractColumn(grid_, columns_);
         }
@@ -249,6 +249,7 @@ namespace Opm
             computePorevolume(grid_, props_.porosity(), porevol);
         }
         const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
+        std::vector<double> initial_porevol = porevol;
 
 
         // Main simulation loop.
@@ -308,6 +309,7 @@ namespace Opm
 
             // Update pore volumes if rock is compressible.
             if (rock_comp_props_ && rock_comp_props_->isActive()) {
+                initial_porevol = porevol;
                 computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
 
@@ -333,7 +335,8 @@ namespace Opm
             }
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], initial_pressure,
-                               state.pressure(), &transport_src[0], stepsize, inflow_c,
+                               state.pressure(), &initial_porevol[0], &porevol[0],
+                               &transport_src[0], stepsize, inflow_c,
                                state.saturation(), state.surfacevol(),
                                state.concentration(), state.maxconcentration());
 
@@ -341,10 +344,10 @@ namespace Opm
                 Opm::computeInjectedProduced(props_,
                                              state.pressure(), state.surfacevol(), state.saturation(),
                                              transport_src, stepsize, injected, produced);
-                if (use_segregation_split_) {
+                if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize,
-                                          state.saturation(), state.concentration(),
-                                          state.maxconcentration());
+                                          state.saturation(), state.surfacevol(), 
+                                          state.concentration(), state.maxconcentration());
                 }
             }
             transport_timer.stop();

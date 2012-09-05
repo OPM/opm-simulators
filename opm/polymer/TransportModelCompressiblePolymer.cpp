@@ -41,9 +41,11 @@ public:
     double s0;
     double c0;
     double cmax0;
-    double influx;  // sum_j min(v_ij, 0)*f(s_j)
-    double influx_polymer;  // sum_j min(v_ij, 0)*f(s_j)*mc(c_j)
-    double outflux; // sum_j max(v_ij, 0)
+    double influx;  // B_i sum_j b_j min(v_ij, 0)*f(s_j) - B_i q_w
+    double influx_polymer;   
+    double outflux; // sum_j max(v_ij, 0) - B_i q
+    double porevolume0;
+    double porevolume;
     double porosity0;
     double porosity;
     double B_cell0;
@@ -82,6 +84,7 @@ public:
     const double s0;
     const double c0;
     const double cmax0;
+    const double porevolume;
     const double porosity;
     const double dtpv;    // dt/pv(i)
     const double dps;
@@ -89,6 +92,7 @@ public:
     double c_ads0;
     double gf[2];
     int nbcell[2];
+    mutable double last_s;
 
     ResidualCGrav(const TransportModelCompressiblePolymer& tmodel,
                   const std::vector<int>& cells,
@@ -98,15 +102,15 @@ public:
     double operator()(double c) const;
     double computeGravResidualS(double s, double c) const;
     double computeGravResidualC(double s, double c) const;
+    double lastSaturation() const;
 };
 
 class Opm::TransportModelCompressiblePolymer::ResidualSGrav {
 public:
     const ResidualCGrav& res_c_eq_;
-    double c_;
+    double c;
 
-    ResidualSGrav(const ResidualCGrav& res_c_eq, const double c = 0.0);
-    double sOfc(double c);
+    ResidualSGrav(const ResidualCGrav& res_c_eq, const double c_init = 0.0);
     double operator()(double s) const;
 };
 
@@ -157,12 +161,13 @@ namespace Opm
                                                                          const double tol,
                                                                          const int maxit)
 	: grid_(grid),
-	  porosity_standard_(props.porosity()),
 	  props_(props),
 	  polyprops_(polyprops),
           rock_comp_(rock_comp),
 	  darcyflux_(0),
 	  source_(0),
+          porevolume0_(0),
+          porevolume_(0),
 	  dt_(0.0),
 	  inflow_c_(0.0),
 	  tol_(tol),
@@ -212,6 +217,8 @@ namespace Opm
     void TransportModelCompressiblePolymer::solve(const double* darcyflux,
                                                   const std::vector<double>& initial_pressure,
                                                   const std::vector<double>& pressure,
+                                                  const double* porevolume0,
+                                                  const double* porevolume,
                                                   const double* source,
                                                   const double dt,
                                                   const double inflow_c,
@@ -221,6 +228,8 @@ namespace Opm
                                                   std::vector<double>& cmax)
     {
 	darcyflux_ = darcyflux;
+        porevolume0_ = porevolume0;
+        porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
 	inflow_c_ = inflow_c;
@@ -235,8 +244,6 @@ namespace Opm
         props_.viscosity(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &visc_[0], NULL);
         props_.matrix(grid_.number_of_cells, &initial_pressure[0], NULL, &allcells_[0], &A0_[0], NULL);
         props_.matrix(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &A_[0], NULL);
-        computePorosity(grid_, porosity_standard_, rock_comp_, initial_pressure, porosity0_);
-        computePorosity(grid_, porosity_standard_, rock_comp_, pressure, porosity_);
 
         // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {
@@ -354,14 +361,17 @@ namespace Opm
 	cmax0   = tm.cmax_[cell];
         double src_flux  = -tm.source_[cell];
         bool src_is_inflow = src_flux < 0.0;
+        B_cell0 = 1.0/tm.A0_[np*np*cell + 0];
+        B_cell = 1.0/tm.A_[np*np*cell + 0];
         // Not clear why we multiply by B_cell source terms.
         influx  =  src_is_inflow ? B_cell*src_flux : 0.0;
         outflux = !src_is_inflow ? B_cell*src_flux : 0.0;
-        porosity0 = tm.porosity0_[cell];
-        porosity  = tm.porosity_[cell];
-        B_cell0 = 1.0/tm.A0_[np*np*cell + 0];
-        B_cell = 1.0/tm.A_[np*np*cell + 0];
-	dtpv  = tm.dt_/(tm.grid_.cell_volumes[cell]*porosity) ; 
+        porevolume0 = tm.porevolume0_[cell];
+        porevolume  = tm.porevolume_[cell];
+        const double vol_cell = tm.grid_.cell_volumes[cell];
+        porosity0 = porevolume0/vol_cell;
+        porosity  = porevolume/vol_cell;
+	dtpv  = tm.dt_/porevolume; 
 	dps = tm.polyprops_.deadPoreVol();
 	rhor = tm.polyprops_.rockDensity();
         tm.polyprops_.adsorption(c0, cmax0, ads0);
@@ -1170,7 +1180,7 @@ namespace Opm
             dmob_dc[0] = dmobwat_dc;
             dmob_dc[1] = 0.;
             //dff_dsdc[0] = (dmob_ds[0]*mob[1] + dmob_ds[3]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
-	    // at the moment the dmob_ds only have diagonal elements since the saturation is derivated out in effectiveMobilitiesBouth
+	    // at the moment the dmob_ds only have diagonal elements since the saturation is derivated out in effectiveMobilitiesBoth
 	    dff_dsdc[0] = ((dmob_ds[0]-dmob_ds[2])*mob[1] - (dmob_ds[1]-dmob_ds[3])*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s 
             dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
         }
@@ -1190,25 +1200,17 @@ namespace Opm
 
 
     TransportModelCompressiblePolymer::ResidualSGrav::ResidualSGrav(const ResidualCGrav& res_c_eq,
-                                                                    const double c)
+                                                                    const double c_init)
         : res_c_eq_(res_c_eq),
-          c_(c)
+          c(c_init)
     {
     }
 
     double TransportModelCompressiblePolymer::ResidualSGrav::operator()(double s) const
     {
-        return res_c_eq_.computeGravResidualS(s, c_);
+        return res_c_eq_.computeGravResidualS(s, c);
     }
 
-    double TransportModelCompressiblePolymer::ResidualSGrav::sOfc(double c)  // for a given c, returns the value of s for which residual in s vanishes.
-    {
-        c_ = c;
-        int iters_used;
-        return RootFinder::solve(*this, res_c_eq_.s0, 0.0, 1.0,
-                                 res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_,
-                                 iters_used);
-    }
 
 
 
@@ -1229,12 +1231,14 @@ namespace Opm
           s0(tm.saturation_[cell]),
           c0(tm.concentration_[cell]),
           cmax0(tm.cmax0_[cell]),
-          porosity(tm.porosity_[cell]),
-          dtpv(tm.dt_/(tm.grid_.cell_volumes[cell]*porosity)),
+          porevolume(tm.porevolume_[cell]),
+          porosity(porevolume/tm.grid_.cell_volumes[cell]),
+          dtpv(tm.dt_/porevolume),
           dps(tm.polyprops_.deadPoreVol()),
           rhor(tm.polyprops_.rockDensity())
 
     {
+        last_s = s0;
         nbcell[0] = -1;
         gf[0] = 0.0;
         if (pos > 0) {
@@ -1255,7 +1259,12 @@ namespace Opm
     {
 
         ResidualSGrav res_s(*this);
-        return computeGravResidualC(res_s.sOfc(c), c);
+        res_s.c = c;
+        int iters_used;
+        last_s =  RootFinder::solve(res_s, last_s, 0.0, 1.0,
+                                    tm.maxit_, tm.tol_,
+                                    iters_used);
+        return computeGravResidualC(last_s, c);
 
     }
 
@@ -1314,6 +1323,11 @@ namespace Opm
             }
         }
         return res;
+    }
+
+    double TransportModelCompressiblePolymer::ResidualCGrav::lastSaturation() const
+    {
+        return last_s;
     }
 
 
@@ -1390,11 +1404,10 @@ namespace Opm
 	const double a = 0.0;
 	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
         int iters_used;
-        concentration_[cell] = RootFinder::solve(res_c, a, b, maxit_, tol_, iters_used);
-        ResidualSGrav res_s(res_c);
-        saturation_[cell] = res_s.sOfc(concentration_[cell]);
+        concentration_[cell] = RootFinder::solve(res_c, concentration_[cell], 
+                                                 a, b, maxit_, tol_, iters_used);
+        saturation_[cell] = res_c.lastSaturation();
         cmax_[cell] = std::max(cmax0_[cell], concentration_[cell]);
-        saturation_[cell] = std::min(std::max(saturation_[cell], smin_[2*cell]), smax_[2*cell]);
         computeMc(concentration_[cell], mc_[cell]);
         mobility(saturation_[cell], concentration_[cell], cell, &mob_[2*cell]);
     }
@@ -1462,6 +1475,7 @@ namespace Opm
     void TransportModelCompressiblePolymer::solveGravity(const std::vector<std::vector<int> >& columns,
                                                          const double dt,
                                                          std::vector<double>& saturation,
+                                                         std::vector<double>& surfacevol,
                                                          std::vector<double>& concentration,
                                                          std::vector<double>& cmax)
     {
@@ -1480,10 +1494,11 @@ namespace Opm
         std::copy(cmax.begin(), cmax.end(), &cmax0_[0]);
 
         // Initialize mobilities.
-        mob_.resize(2*nc);
+        const int np = props_.numPhases();
+        mob_.resize(np*nc);
 
         for (int cell = 0; cell < nc; ++cell) {
-            mobility(saturation_[cell], concentration_[cell], cell, &mob_[2*cell]);
+            mobility(saturation_[cell], concentration_[cell], cell, &mob_[np*cell]);
         }
 
 
@@ -1498,6 +1513,9 @@ namespace Opm
                   << double(num_iters)/double(columns.size()) << std::endl;
 
         toBothSat(saturation_, saturation);
+        // Compute surface volume as a postprocessing step from saturation and A_
+        computeSurfacevol(grid_.number_of_cells, props_.numPhases(), &A_[0], &saturation[0], &surfacevol[0]);
+
     }
 
     void TransportModelCompressiblePolymer::scToc(const double* x, double* x_c) const {
