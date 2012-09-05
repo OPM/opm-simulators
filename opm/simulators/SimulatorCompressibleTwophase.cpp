@@ -452,8 +452,7 @@ namespace Opm
                                              state.pressure(), state.surfacevol(), state.saturation(),
                                              transport_src, stepsize, injected, produced);
                 if (gravity_ != 0 && use_segregation_split_) {
-                    tsolver_.solveGravity(columns_, &state.pressure()[0], &initial_porevol[0],
-                                          stepsize, state.saturation(), state.surfacevol());
+                    tsolver_.solveGravity(columns_, stepsize, state.saturation(), state.surfacevol());
                 }
             }
             transport_timer.stop();
