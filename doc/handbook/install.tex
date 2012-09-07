@@ -100,25 +100,26 @@ of the software revision control system to provide access to different versions 
 \paragraph{Obtaining the software by installing tar files}
 The slightly old-fashionedly named tape-archive-file, shortly named tar file or tarball, is a common file format for distributing collections of files contained within these archives.
 The extraction from the tar files is done as follows: 
-Download the tarballs from the respective \Dune (version 2.1.1) and \Dumux websites to a certain folder in your file system.
+Download the tarballs from the respective \Dune (version 2.2.0) and \Dumux websites to a certain folder in your file system.
 Create the {\Dune} root directory, named DUMUX in the example below. Then extract the content of the tar files, e.\,g. with the command-line program \texttt{tar}.
 This can be achieved by the following shell commands. Replace \texttt{path\_to\_tarball} with the directory name where the downloaded files are actually located.
-After extraction, the actual name of the \emph{dumux root directory} is \texttt{dumux-2.1}. 
+After extraction, the actual name of the \emph{dumux root directory} is \texttt{dumux-2.2}. 
 
 \begin{lstlisting}[style=Bash]
 $ mkdir DUMUX
 $ cd DUMUX
-$ tar xzvf path_to_tarball_of/dune-common-2.1.1.tar.gz 
-$ tar xzvf path_to_tarball_of/dune-grid-2.1.1.tar.gz 
-$ tar xzvf path_to_tarball_of/dune-istl-2.1.1.tar.gz 
-$ tar xzvf path_to_tarball_of/dune-localfunctions-2.1.1.tar.gz 
-$ tar xzvf path_to_tarball_of/dumux-2.1.0.tar.gz
+$ tar xzvf path_to_tarball_of/dune-common-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-grid-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-geometry-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-istl-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-localfunctions-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dumux-2.2.tar.gz
 \end{lstlisting}
 
 Furthermore, if you wish to install the optional \Dune Grid-Howto which provides a tutorial on the Dune grid interface:
 
 \begin{lstlisting}[style=Bash]
-$ tar xzvf path_to_tarball_of/dune-grid-howto-2.1.1.tar.gz
+$ tar xzvf path_to_tarball_of/dune-grid-howto-2.2.0.tar.gz
 \end{lstlisting}
 
 \paragraph{Obtaining \Dune and \Dumux from software repositories} 
@@ -137,15 +138,16 @@ The installation procedure is done as follows:
 Create a  {\Dune} root directory, named \texttt{DUMUX} in the lines below.
 Then, enter the previously created directory and check out the desired modules. 
 As you see below, the check-out uses two different servers for getting the sources, one for \Dune and one for {\Dumux}.
-The \Dune modules of the stable 2.1 release branch are checked out as described on the \Dune website \cite{DUNE-DOWNLOAD-SVN}:
+The \Dune modules of the stable 2.2 release branch are checked out as described on the \Dune website \cite{DUNE-DOWNLOAD-SVN}:
 
 \begin{lstlisting}[style=Bash]
 $ mkdir DUMUX
 $ cd DUMUX
-$ svn checkout https://svn.dune-project.org/svn/dune-common/branches/release-2.1 dune-common
-$ svn checkout https://svn.dune-project.org/svn/dune-istl/branches/release-2.1 dune-istl
-$ svn checkout https://svn.dune-project.org/svn/dune-grid/branches/release-2.1 dune-grid
-$ svn checkout https://svn.dune-project.org/svn/dune-localfunctions/branches/release-2.1 dune-localfunctions
+$ svn checkout https://svn.dune-project.org/svn/dune-common/branches/release-2.2 dune-common
+$ svn checkout https://svn.dune-project.org/svn/dune-istl/branches/release-2.2 dune-istl
+$ svn checkout https://svn.dune-project.org/svn/dune-grid/branches/release-2.2 dune-grid
+$ svn checkout https://svn.dune-project.org/svn/dune-geometry/branches/release-2.2 dune-geometry
+$ svn checkout https://svn.dune-project.org/svn/dune-localfunctions/branches/release-2.2 dune-localfunctions
 \end{lstlisting}
 
 The newest and maybe unstable developments are also provided in these repositories in a folder called \emph{trunk}. Please check the \Dune website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the current \Dumux release is based on the stable 2.1 release and it might not compile without further adaptations using the the newest versions of \Dune.
@@ -155,7 +157,7 @@ It may give you an idea of how some abstractions in \Dune are done.
 The installation of \texttt{dune-grid-howto} is optional and is not required by \Dumux. It is done by: 
 
 \begin{lstlisting}[style=Bash]
-$ svn checkout https://svn.dune-project.org/svn/dune-grid-howto/branches/release-2.1 dune-grid-howto
+$ svn checkout https://svn.dune-project.org/svn/dune-grid-howto/branches/release-2.2 dune-grid-howto
 \end{lstlisting}
 
 The \texttt{dumux} module is checked out as described below (see also the \Dumux website \cite{DUMUX-HP}).
@@ -187,7 +189,8 @@ $ svn co --username=joeuser svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk 
 Please choose either not to store the password by subversion in an insecure way or
 choose to store it by subversion in a secure way, e.\,g. together with KDE's KWallet or GNOME Keyring.
 Check the documentation of Subversion for info on how this is done.
-A leaked out password can be used by evil persons to abuse a software repository.
+A leaked out password can be used by evil persons to abuse a software repository. \\
+
 
 \section{Patching \Dune or external libraries}
 Patching of \Dune modules in order to work together with \Dumux can be necessary for several reasons.
@@ -201,7 +204,7 @@ that a release gets amendments (updates) and a formerly useful patch becomes obs
 \Dumux contains patches and documentation about their usage and application within the directory \texttt{dumux/patches}.
 Please check the README file in that directory for recent information. 
 In general, a patch can be applied as follows (the exact command or the used parameters may be slightly different).
-We include here an example of a patch against 2.0 release of \Dune for \Dumux release 2.0 for purpose of showing how a patch gets applied. Note this patch is no longer necessary for \Dune 2.1 releases.
+We include here an example of a patch against 2.0 release of \Dune for \Dumux release 2.0 for purpose of showing how a patch gets applied. Note this patch is no longer necessary for \Dune 2.2 releases.
 
 \begin{lstlisting}[style=Bash]
 $ # make sure you are in DUNE-Root
@@ -361,7 +364,11 @@ $ ./installExternal.sh --parallel alu
 
 The libraries are then compiled within that directory and are not installed in a different place. 
 A \Dune build may need to know their location. Thus, one may have to refer to them as options for \texttt{dunecontrol}, 
-for example via the options file \texttt{my-debug.opts}.
+for example via the options file \texttt{my-debug.opts}. Make sure you compile the required external libraries before 
+you run \texttt{dunecontrol}.
+
+
+
 
 %%% Local Variables: 
 %%% mode: latex
