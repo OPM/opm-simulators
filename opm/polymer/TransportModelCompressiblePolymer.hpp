@@ -209,6 +209,24 @@ namespace Opm
 	void computeMcWithDer(double c, double& mc, double& dmc_dc) const;
         void mobility(double s, double c, int cell, double* mob) const;
         void scToc(const double* x, double* x_c) const;
+        #ifdef PROFILING
+        class Newton_Iter {
+        public:
+            bool res_s;
+            int cell;
+            double s;
+            double c;
+
+            Newton_Iter(bool res_s_val, int cell_val, double s_val, double c_val) {
+                res_s = res_s_val;
+                cell = cell_val;
+                s = s_val;
+                c = c_val;
+            }
+        };
+
+        std::list<Newton_Iter> res_counts;
+        #endif
     };
 
 } // namespace Opm
