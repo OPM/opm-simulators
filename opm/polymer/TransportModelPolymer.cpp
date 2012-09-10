@@ -81,6 +81,7 @@ public:
     double c_ads0;
     double gf[2];
     int nbcell[2];
+    mutable double last_s;
 
     ResidualCGrav(const TransportModelPolymer& tmodel,
                   const std::vector<int>& cells,
@@ -90,15 +91,15 @@ public:
     double operator()(double c) const;
     double computeGravResidualS(double s, double c) const;
     double computeGravResidualC(double s, double c) const;
+    double lastSaturation() const;
 };
 
 class Opm::TransportModelPolymer::ResidualSGrav {
 public:
     const ResidualCGrav& res_c_eq_;
-    double c_;
+    double c;
 
-    ResidualSGrav(const ResidualCGrav& res_c_eq, const double c = 0.0);
-    double sOfc(double c);
+    ResidualSGrav(const ResidualCGrav& res_c_eq, const double c_init = 0.0);
     double operator()(double s) const;
 };
 
@@ -1124,26 +1125,16 @@ namespace Opm
 
 
     TransportModelPolymer::ResidualSGrav::ResidualSGrav(const ResidualCGrav& res_c_eq,
-                                                        const double c)
+                                                        const double c_init)
         : res_c_eq_(res_c_eq),
-          c_(c)
+          c(c_init)
     {
     }
 
     double TransportModelPolymer::ResidualSGrav::operator()(double s) const
     {
-        return res_c_eq_.computeGravResidualS(s, c_);
+        return res_c_eq_.computeGravResidualS(s, c);
     }
-
-    double TransportModelPolymer::ResidualSGrav::sOfc(double c)  // for a given c, returns the value of s for which residual in s vanishes.
-    {
-        c_ = c;
-        int iters_used;
-        return RootFinder::solve(*this, res_c_eq_.s0, 0.0, 1.0,
-                                 res_c_eq_.tm.maxit_, res_c_eq_.tm.tol_,
-                                 iters_used);
-    }
-
 
 
     // Residual for concentration equation for gravity segregation
@@ -1169,6 +1160,7 @@ namespace Opm
           rhor(tm.polyprops_.rockDensity())
 
     {
+        last_s = s0;
         nbcell[0] = -1;
         gf[0] = 0.0;
         if (pos > 0) {
@@ -1189,7 +1181,12 @@ namespace Opm
     {
 
         ResidualSGrav res_s(*this);
-        return computeGravResidualC(res_s.sOfc(c), c);
+        res_s.c = c;
+        int iters_used;
+        last_s =  RootFinder::solve(res_s, last_s, 0.0, 1.0,
+                                    tm.maxit_, tm.tol_,
+                                    iters_used);
+        return computeGravResidualC(last_s, c);
 
     }
 
@@ -1250,6 +1247,11 @@ namespace Opm
         return res;
     }
 
+    double TransportModelPolymer::ResidualCGrav::lastSaturation() const
+    {
+        return last_s;
+    }
+
 
     void TransportModelPolymer::mobility(double s, double c, int cell, double* mob) const
     {
@@ -1303,8 +1305,7 @@ namespace Opm
 	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
         int iters_used;
         concentration_[cell] = RootFinder::solve(res_c, a, b, maxit_, tol_, iters_used);
-        ResidualSGrav res_s(res_c);
-        saturation_[cell] = res_s.sOfc(concentration_[cell]);
+        saturation_[cell] = res_c.lastSaturation();
         cmax_[cell] = std::max(cmax0_[cell], concentration_[cell]);
         saturation_[cell] = std::min(std::max(saturation_[cell], smin_[2*cell]), smax_[2*cell]);
         computeMc(concentration_[cell], mc_[cell]);
