@@ -357,8 +357,8 @@ For the visualization of the results using paraview please refer to section \ref
   edge lengths of $\text{x} = \unit[400]{m}$ and $\text{y} = \unit[500]{m}$ and with
   discretization lengths of $\Delta \text{x} = \unit[20]{m}$ and $\Delta
   \text{y} = \unit[20]{m}$. For this you have to edit the parameter file (\texttt{tutorialproblem\_coupled.input}) 
-  and run the programme again.\\
-  Note, that you do not have to recompile the programme if you make changes to the parameter file.
+  and run the program again.\\
+  Note, that you do not have to recompile the program if you make changes to the parameter file.
 
   
   Change the boundary conditions in the file
@@ -372,37 +372,52 @@ For the visualization of the results using paraview please refer to section \ref
   \item \textbf{Changing  the Shape of the Discrete Elements} \\
   Change the types of elements used for discretizing the domain. In line \ref{tutorial-coupled:set-gridcreator} of the problem 
   file  the type of gridcreator is chosen. By choosing a different grid creator you can discretize the domain with different elements. 
-  Hint: You can find gridcreators in \texttt{dumux/common/}, change for example from \texttt{cubegridcreator.hh} to \texttt{simplexgridcreator.hh}. 
-  Besides having to change the grid creator it is also necessary to change the DUNE-grid module in line \ref{tutorial-coupled:set-grid} from \texttt{ALUCubeGrid} 
-  to \texttt{ALUSimplexGrid}.
-  The shape of the employed elements can be visualized in paraview by choosing \texttt{Surface with Edges}. 
+
+  Hint: You can find some pre-defined grid creators in
+  \texttt{dumux/common/}; For this excercise you can change the
+  include statement from \texttt{cubegridcreator.hh} to
+  \texttt{simplexgridcreator.hh} and the \texttt{GridCreator} property
+  from \texttt{CubeGridCreator} to \texttt{SimplexGridCreator}.
+
+  Besides having to change the grid creator it is also necessary to
+  change the type of a DUNE grid in line
+  \ref{tutorial-coupled:set-grid} to a grid which supports the types
+  of elements which the grid creator uses. In this example, you can
+  change the \texttt{Grid} property from \texttt{ALUCubeGrid} to
+  \texttt{ALUSimplexGrid}.  The resulting grid can be examined by
+  starting the simulation, loading the result in paraview, and
+  selecting \texttt{Surface with Edges} as the visualization mode.
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that, you have to select different components via the property system in the problem file:
 \begin{enumerate}
  \item Brine: Brine is thermodynamically very similar to pure water but also considers a fixed amount of salt in the liquid phase. 
-  Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, 
-  as a second template argument after the data type \texttt{<Scalar>}, i.e. \texttt{Dumux::Brine<Scalar, Dumux::H2O>}. The file is located in the folder \texttt{dumux/material/components/}.
+  Hence, the class \texttt{Dumux::Brine} calls back to a class which represents pure water. This can be, for example \texttt{Dumux::H2O}, or texttt{Dumux::SimpleH2O}.
+  The class which represents pure water is passed to
+  \texttt{Dumux::Brine} as the second template argument after the data
+  type for scalar values, i.e. the full definition of the brine
+  component is \texttt{Dumux::Brine<Scalar, Dumux::H2O>}. The file
+  which defines the brine component is located in the folder
+  \texttt{dumux/material/components/}.
   Try to include the file and select the component as the wetting phase via the property system.
  \item DNAPL:  
-  Now let's include a DNAPL (\textbf{d}ense \textbf{n}on-\textbf{a}queous \textbf{p}hase \textbf{l}iquid)
-  which is located in the folder \texttt{dumux/material/components/}. Try to include the file and select the component as the non-wetting phase via the property system.
+  Now let's include a component representing a DNAPL (\textbf{d}ense \textbf{n}on-\textbf{a}queous \textbf{p}hase \textbf{l}iquid)
+  which is also located in the folder \texttt{dumux/material/components/}. Try to include the file and select the component as the non-wetting phase via the property system.
 \end{enumerate}
 If you want to take a closer look on how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components} and read chapter~\ref{sec:fluidframework}.
 
 \item \textbf{Use a Full-Fledged Fluid System} \\
-\Dumux usually describes fluid mixtures via \textit{fluid systems}, see also chapter \ref{sec:fluidframework}. 
+In \Dumux, the canonical way to describe fluid mixtures is via \textit{fluid systems}\footnote{For a thorough introduction into fluid systems and the concenpts related to it, see chapter \ref{sec:fluidframework}}. 
 In order to include a fluid system, you first have to comment out lines \ref{tutorial-coupled:2p-system-start} 
-to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{Ctrl + Shift + 7} -- 
-the same as to cancel the comment later on.\\
+to \ref{tutorial-coupled:2p-system-end} in the problem file.\\
 Now include the file \texttt{fluidsystems/h2oairfluidsystem.hh} in the material folder, and set a type property \texttt{FluidSystem} (see line \ref{tutorial-coupled:set-fluidsystem})
 with the appropriate type, which is:\\
 \texttt{Dumux::FluidSystems::H2OAir<typename GET\_PROP\_TYPE(TypeTag, Scalar)>}.\\
 However, this is a rather complicated fluid system which 
 considers mixtures of components and also uses tabulated components that need to be initialized -- i.e. the tables need to be filled with values. 
 The initialization of the fluid system is normally done in the constructor of the problem by calling \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. 
-Remember that the constructor function always has the same name as the respective class, i.e. \texttt{TutorialProblemCoupled(..)}.\\
+Remember that in \Cplusplus, the constructor always the same name as the respective class, i.e. \texttt{TutorialProblemCoupled(..)}.\\
 As water flow replacing a gas is much faster, test your simulation only until $2000$ seconds and start with a time step of $1$ second.\\
 Please reverse the changes made in this part of the exercise, as we will continue to use immiscible phases from here on and hence do not need a complex fluid system.
 
@@ -462,13 +477,7 @@ in the header files (e.g. change
 \mbox{\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). 
 Besides adjusting the guardian macros, the new problem file should define and
 use a new type tag for the problem as well as a new problem class
-e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}. Similarly, adjust your new spatial parameters file. If you are using Eclipse there is 
-a very helpful function called \texttt{Refactor} which you can use to change
-all similar variables or types in your current file in one go. Just place the cursor at the variable or type you want to change
-and use the \texttt{Refactor} $\rightarrow$ \texttt{Rename} functionality. Make sure to assign your
-newly defined spatial parameter class to the
-\texttt{SpatialParams} property for the new
-type tag. 
+e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}.
 
 After this, change the run-time parameters so that they match the
 domain described by figure \ref{tutorial-coupled:ex2_Domain}. Adapt
