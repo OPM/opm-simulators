@@ -78,7 +78,7 @@ Required parameters for the start of the simulation,
 such as the initial time-step size, the simulation time or details of the grid,
 can be either specified by command line arguments of the form
 (\texttt{-ParameterName ParameterValue}), in the file specified by the
-\texttt{-parameterFile} argument, or if the latter is not specified,
+\texttt{-ParameterFile} argument, or if the latter is not specified,
 in the file \mbox{\texttt{tutorial\_coupled.input}}. 
 If a parameter is
 specified on the command line as well as in the parameter file, the
@@ -198,7 +198,7 @@ Methods which make statements about boundary segments of the grid
   over the boundary segment are specified.
 \item[element:] The element of the grid where the boundary segment
   is located.
-\item[fvElemGeometry:] The finite-volume geometry induced on the
+\item[fvElementGeometry:] The finite-volume geometry induced on the
   finite element by the box scheme.
 \item[isIt:] The \texttt{Intersection} of the boundary segment as given by the grid.
 \item[scvIdx:] The index of the sub-control volume in
@@ -209,7 +209,7 @@ Methods which make statements about boundary segments of the grid
 
 Similarly, the \texttt{initial()} and \texttt{source()} methods
 specify properties of control volumes and thus only get
-\texttt{values}, \texttt{element}, \texttt{fvElemGeom} and
+\texttt{values}, \texttt{element}, \texttt{fvGeometry} and
 \texttt{scvIdx} as arguments.
 
 In addition to these five methods, there might be some model-specific
@@ -255,9 +255,9 @@ class.
 
 If the box discretization is to used, the spatial parameters class
 should be derived from the base class
-\texttt{Dumux::BoxSpatialParameters<TypeTag>}. Listing
+\texttt{Dumux::BoxSpatialParams<TypeTag>}. Listing
 \ref{tutorial-coupled:spatialparametersfile} shows the file \\
-\verb+tutorialspatialparameters_coupled.hh+:
+\verb+tutorialspatialparams_coupled.hh+:
 
 %\begin{lst}[File tutorial/tutorialspatialparameters\_coupled.hh]\label{tutorial-coupled:spatialparametersfile} \mbox{}
 %\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=28]{../../tutorial/tutorialspatialparameters_coupled.hh}
@@ -299,7 +299,7 @@ to be called with three arguments:
   parameter describes the considered element by means of a \Dune
   entity. Elements provide information about their geometry and
   position and can be mapped to a global index.
-\item[\texttt{fvElemGeom}:] It holds information about the finite-volume
+\item[\texttt{fvElementGeomtry}:] It holds information about the finite-volume
   geometry of the element induced by the box method.
 \item[\texttt{scvIdx}:] This is the index of the sub-control volume of the
   element which is considered. It is equivalent to the local index
@@ -346,49 +346,79 @@ to make only some small changes in the tutorial files.
 \begin{enumerate}
 
 \item \textbf{Running the Program} \\
-  To get an impression what the results should look like you can first run the original version of the coupled tutorial model by typing  \texttt{./tutorial\_coupled}. Note, that the time-step size is automatically adapted during the simulation. For the visualization of the results using paraview please refer to section \ref{quick-start-guide}.
+  To get an impression what the results should look like you can first run the original version of 
+the coupled tutorial model by typing  \texttt{./tutorial\_coupled}. 
+Note, that the time-step size is automatically adapted during the simulation. 
+For the visualization of the results using paraview please refer to section \ref{quick-start-guide}.
+
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
   Change the size of the model domain so that you get a rectangle with
   edge lengths of $\text{x} = \unit[400]{m}$ and $\text{y} = \unit[500]{m}$ and with
   discretization lengths of $\Delta \text{x} = \unit[20]{m}$ and $\Delta
-  \text{y} = \unit[20]{m}$.
+  \text{y} = \unit[20]{m}$. For this you have to edit the parameter file (\texttt{tutorialproblem\_coupled.input}) 
+  and run the programme again.\\
+  Note, that you do not have to recompile the programme if you make changes to the parameter file.
+
   
   Change the boundary conditions in the file
   \texttt{tutorialproblem\_coupled.hh} so that water enters from the
   bottom and oil is extracted from the top boundary. The right and the
-  left boundary should be closed for water and oil fluxes. 
-
+  left boundary should be closed for water and oil fluxes. \\
+  Note, that the value has to be positive for outflow and negative for inflow.  
   Compile the main file by typing \texttt{make tutorial\_coupled} and
   run the model as explained above.
 
   \item \textbf{Changing  the Shape of the Discrete Elements} \\
-  Change the types of elements used for discretizing the domain. In line \ref{tutorial-coupled:set-gridcreator} of the problem file  the type of gridcreator is chosen. By choosing a different grid creator you can discretize the domain with different elements. Hint: You can find gridcreators in \texttt{dumux/common/}. The shape of the employed elements can be visualized in paraview by choosing \texttt{Surface with Edges}. 
+  Change the types of elements used for discretizing the domain. In line \ref{tutorial-coupled:set-gridcreator} of the problem 
+  file  the type of gridcreator is chosen. By choosing a different grid creator you can discretize the domain with different elements. 
+  Hint: You can find gridcreators in \texttt{dumux/common/}, change for example from \texttt{cubegridcreator.hh} to \texttt{simplexgridcreator.hh}. 
+  Besides having to change the grid creator it is also necessary to change the DUNE-grid module in line \ref{tutorial-coupled:set-grid} from \texttt{ALUCubeGrid} 
+  to \texttt{ALUSimplexGrid}.
+  The shape of the employed elements can be visualized in paraview by choosing \texttt{Surface with Edges}. 
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that, you have to select different components via the property system in the problem file:
 \begin{enumerate}
- \item Brine: Brine is thermodynamically very similar to pure water but also considers a fixed amount of salt in the liquid phase. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>}.
- \item DNAPL: A standard set of chemical substances, such as Oil and Brine, is already included in the problem (via a list of \texttt{\#include ..} statements) and hence easily accessible by default. However, this is not the case for the class \texttt{Dumux::SimpleDNAPL}, which describes a simple \textbf{d}ense \textbf{n}on-\textbf{a}queous \textbf{p}hase \textbf{l}iquid and is located in the folder \texttt{dumux/material/components/}. Try to include the file and select the component as the non-wetting phase via the property system.
+ \item Brine: Brine is thermodynamically very similar to pure water but also considers a fixed amount of salt in the liquid phase. 
+  Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, 
+  as a second template argument after the data type \texttt{<Scalar>}, i.e. \texttt{Dumux::Brine<Scalar, Dumux::H2O>}. The file is located in the folder \texttt{dumux/material/components/}.
+  Try to include the file and select the component as the wetting phase via the property system.
+ \item DNAPL:  
+  Now let's include a DNAPL (\textbf{d}ense \textbf{n}on-\textbf{a}queous \textbf{p}hase \textbf{l}iquid)
+  which is located in the folder \texttt{dumux/material/components/}. Try to include the file and select the component as the non-wetting phase via the property system.
 \end{enumerate}
 If you want to take a closer look on how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components} and read chapter~\ref{sec:fluidframework}.
 
 \item \textbf{Use a Full-Fledged Fluid System} \\
-\Dumux usually describes fluid mixtures via \textit{fluid systems}, see also chapter \ref{sec:fluidframework}. In order to include a fluid system, you first have to comment out lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{Ctrl + Shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2oairfluidsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, i.e. \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this is a rather complicated fluid system which considers mixtures of components and also uses tabulated components that need to be initialized -- i.e. the tables need to be filled with values. The initialization of the fluid system is normally done in the constructor of the problem by calling \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. As water flow replacing a gas is much faster, test your simulation only until $2000$ seconds and start with a time step of $1$ second.\\
+\Dumux usually describes fluid mixtures via \textit{fluid systems}, see also chapter \ref{sec:fluidframework}. 
+In order to include a fluid system, you first have to comment out lines \ref{tutorial-coupled:2p-system-start} 
+to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{Ctrl + Shift + 7} -- 
+the same as to cancel the comment later on.\\
+Now include the file \texttt{fluidsystems/h2oairfluidsystem.hh} in the material folder, and set a type property \texttt{FluidSystem} (see line \ref{tutorial-coupled:set-fluidsystem})
+with the appropriate type, which is:\\
+\texttt{Dumux::FluidSystems::H2OAir<typename GET\_PROP\_TYPE(TypeTag, Scalar)>}.\\
+However, this is a rather complicated fluid system which 
+considers mixtures of components and also uses tabulated components that need to be initialized -- i.e. the tables need to be filled with values. 
+The initialization of the fluid system is normally done in the constructor of the problem by calling \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. 
+Remember that the constructor function always has the same name as the respective class, i.e. \texttt{TutorialProblemCoupled(..)}.\\
+As water flow replacing a gas is much faster, test your simulation only until $2000$ seconds and start with a time step of $1$ second.\\
 Please reverse the changes made in this part of the exercise, as we will continue to use immiscible phases from here on and hence do not need a complex fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
   Use an unregularized linear law with an entry pressure of $p_e = 0.0\;\text{Pa}$ and maximal capillary pressure of e.g. $p_{c_{max}} = 2000.0\;\text{Pa}$ instead of using a
  regularized Brooks-Corey law for the
   relative permeability and for the capillary pressure saturation relationship. To do that you have
-  to change the file \texttt{tutorialspatialparameters\_coupled.hh}. 
+  to change the material law property (line \ref{tutorial-coupled:eff2abs}) in \texttt{tutorialspatialparams\_coupled.hh}. Leave the type definition of \texttt{Scalar} and remove
+ the type definition of \texttt{BrooksAndCorey} in the private section of the property definition. Exchange the \texttt{EffToAbsLaw} with the \texttt{LinearMaterial} law type in the 
+public section.
  You can find the material laws in the folder 
   \verb+dumux/material/fluidmatrixinteractions+. The necessary parameters
 of the linear law and the respective \texttt{set}-functions can be found
  in the file \\
- \verb+dumux/material/fluidmatrixinteractions/2p/linearmaterialparams.hh+.
+ \verb+dumux/material/fluidmatrixinteractions/2p/linearmaterialparams.hh+.\\
+Call the \texttt{set}-functions from the constructor of the \texttt{tutorialspatialparams\_coupled.hh}.
  
 \item \textbf{Heterogeneities}  \\
   Set up a model domain with the soil properties given in Figure
@@ -406,7 +436,8 @@ of the linear law and the respective \texttt{set}-functions can be found
 \caption{Exercise 1f: Set-up of a model domain with a heterogeneity. $\Delta x = 20 \;\text{m}$ $\Delta y = 20\;\text{m}$.}\label{tutorial-coupled:exercise1_d}
 \end{figure}
 domain. You can use the fluids of exercise 1c).\\
-\textbf{Hint:} The current position of the control volume can be obtained using \texttt{element\allowbreak.geometry()\allowbreak.corner(scvIdx)}.\\
+\textbf{Hint:} The current position of the control volume can be obtained using \texttt{element\allowbreak.geometry()\allowbreak.corner(scvIdx)}, which
+returns a vector of the global coordinates of the current position.\\
 When does the front cross the material border? In paraview, the
 animation view (\textit{View} $\rightarrow$ \textit{Animation
   View}) is a convenient way to get a rough feeling of the time-step
@@ -417,7 +448,7 @@ sizes.
 For this exercise you should create a new problem file analogous to
 the file \texttt{tutorialproblem\_coupled.hh} (e.g. with the name
 \texttt{ex2\_tutorialproblem\_coupled.hh} and new spatial parameters
-just like \texttt{tutorialspatialparameters\_coupled.hh}. The new
+just like \texttt{tutorialspatialparams\_coupled.hh}. The new
 problem file needs to
 be included in the file \texttt{tutorial\_coupled.cc}.
 
@@ -431,9 +462,12 @@ in the header files (e.g. change
 \mbox{\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). 
 Besides adjusting the guardian macros, the new problem file should define and
 use a new type tag for the problem as well as a new problem class
-e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}. Make sure to assign your
+e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}. Similarly, adjust your new spatial parameters file. If you are using Eclipse there is 
+a very helpful function called \texttt{Refactor} which you can use to change
+all similar variables or types in your current file in one go. Just place the cursor at the variable or type you want to change
+and use the \texttt{Refactor} $\rightarrow$ \texttt{Rename} functionality. Make sure to assign your
 newly defined spatial parameter class to the
-\texttt{SpatialParameters} property for the new
+\texttt{SpatialParams} property for the new
 type tag. 
 
 After this, change the run-time parameters so that they match the
@@ -495,10 +529,14 @@ via \textit{parameter input files}.
 
 In the code, parameters can be read via the macro
 \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar,
-  MyWonderfulGroup.MyWonderfulParameter);}. At the end of the
-simulation a list of parameters is printed if the command line option
-\texttt{-printParams 1} is passed to the simulation. Add some (for
-example \texttt{Newton.MaxSteps} and \texttt{EnableGravity}) to the
+MyWonderfulGroup.MyWonderfulParameter);}. In this exercise we will explore the possibilities of the 
+parameter file. For this we take a look at the file \texttt{ex3\_tutorial\_coupled.input} in the \texttt{solutions\_coupled} folder.
+Besides the parameters which you already used in the parameter file above, there are parameters which can be used to control the
+Newton and the Linear solver (groups: \texttt{Newton} and \texttt{LinearSolver}). Run-time parameters used in the problem or spatial parameters classes
+can also be set with the respective group names (\texttt{Problem} and \texttt{SpatialParams}) in the parameter file. For the latter parameters to be included in the program
+they have to be assigned in the problem or spatial parameters constructor. This can be done as shown in the files \texttt{ex3\_tutorialproblem\_coupled.diff}
+and \texttt{ex3\_tutorialspatialparams\_coupled.diff} in the \texttt{solutions\_coupled} folder. Add some (for
+example \texttt{Newton.MaxSteps} and \texttt{Problem.EnableGravity}) to the
 parameter file \texttt{tutorial\_coupled.input} and observe what
 happens if they are modified. For more information about the input file please refer to section \ref{sec:inputFiles}.
 
