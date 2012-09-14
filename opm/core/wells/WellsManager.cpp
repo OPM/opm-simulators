@@ -544,7 +544,7 @@ namespace Opm
                             cf[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
                         } else if (wci_line.injector_type_[0] == 'G') {
                             if (!pu.phase_used[BlackoilPhases::Vapour]) {
-                                THROW("Water phase not used, yet found water-injecting well.");
+                                THROW("Gas phase not used, yet found gas-injecting well.");
                             }
                             cf[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                         }
