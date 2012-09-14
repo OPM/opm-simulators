@@ -175,6 +175,7 @@ namespace Opm
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
+        dm["surfvolume"] = &state.surfacevol();
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
         dm["velocity"] = &cell_velocity;
