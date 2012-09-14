@@ -29,6 +29,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
+#include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
 #include <cmath>
 
 namespace Opm
@@ -512,15 +513,23 @@ namespace Opm
                            State& state)
     {
         const int num_phases = props.numPhases();
+        const PhaseUsage pu = phaseUsageFromDeck(deck);
+        if (num_phases != pu.num_phases) {
+            THROW("initStateFromDeck():  Uuser specified property object with " << num_phases << " phases, "
+                  "found " << pu.num_phases << " phases in deck.");
+        }
         state.init(grid, num_phases);
         if (deck.hasField("EQUIL")) {
             if (num_phases != 2) {
                 THROW("initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
             }
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                THROW("initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
+            }
             // Set saturations depending on oil-water contact.
             const EQUIL& equil= deck.getEQUIL();
             if (equil.equil.size() != 1) {
-                THROW("No region support yet.");
+                THROW("initStateFromDeck(): No region support yet.");
             }
             const double woc = equil.equil[0].water_oil_contact_depth_;
             initWaterOilContact(grid, props, woc, WaterBelow, state);
@@ -528,37 +537,64 @@ namespace Opm
             const double datum_z = equil.equil[0].datum_depth_;
             const double datum_p = equil.equil[0].datum_depth_pressure_;
             initHydrostaticPressure(grid, props, woc, gravity, datum_z, datum_p, state);
-        } else if (deck.hasField("SWAT") && deck.hasField("PRESSURE")) {
-            // Set saturations from SWAT, pressure from PRESSURE.
+        } else if (deck.hasField("PRESSURE")) {
+            // Set saturations from SWAT/SGAS, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
             std::vector<double>& p = state.pressure();
-            const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
             const std::vector<double>& p_deck = deck.getFloatingPointValue("PRESSURE");
             const int num_cells = grid.number_of_cells;
             if (num_phases == 2) {
-                for (int c = 0; c < num_cells; ++c) {
-                    int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
-                    s[2*c] = sw_deck[c_deck];
-                    s[2*c + 1] = 1.0 - s[2*c];
-                    p[c] = p_deck[c_deck];
+                if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                    // oil-gas: we require SGAS
+                    if (!deck.hasField("SGAS")) {
+                        THROW("initStateFromDeck(): missing SGAS keyword in 2-phase init");
+                    }
+                    const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");                
+                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                    const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                    for (int c = 0; c < num_cells; ++c) {
+                        int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                        s[2*c + gpos] = sg_deck[c_deck];
+                        s[2*c + opos] = 1.0 - sg_deck[c_deck];
+                        p[c] = p_deck[c_deck];
+                    }
+                } else {
+                    // water-oil or water-gas: we require SWAT
+                    if (!deck.hasField("SWAT")) {
+                        THROW("initStateFromDeck(): missing SWAT keyword in 2-phase init");
+                    }
+                    const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
+                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+                    const int nwpos = (wpos + 1) % 2;
+                    for (int c = 0; c < num_cells; ++c) {
+                        int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                        s[2*c + wpos] = sw_deck[c_deck];
+                        s[2*c + nwpos] = 1.0 - sw_deck[c_deck];
+                        p[c] = p_deck[c_deck];
+                    }
                 }
             } else if (num_phases == 3) {
-                if (!deck.hasField("SGAS")) {
-                    THROW("initStateFromDeck(): missing SGAS keyword in 3-phase init (only SWAT and PRESSURE found).");
+                const bool has_swat_sgas = deck.hasField("SWAT") && deck.hasField("SGAS");
+                if (!has_swat_sgas) {
+                    THROW("initStateFromDeck(): missing SGAS or SWAT keyword in 3-phase init.");
                 }
+                const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+                const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
                 const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
                 for (int c = 0; c < num_cells; ++c) {
                     int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
-                    s[3*c] = sw_deck[c_deck];
-                    s[3*c + 1] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
-                    s[3*c + 2] = sg_deck[c_deck];
+                    s[3*c + wpos] = sw_deck[c_deck];
+                    s[3*c + opos] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
+                    s[3*c + gpos] = sg_deck[c_deck];
                     p[c] = p_deck[c_deck];
                  }
             } else {
                 THROW("initStateFromDeck(): init with SWAT etc. only available with 2 or 3 phases.");
             }
         } else {
-            THROW("initStateFromDeck(): we must either have EQUIL, or both SWAT and PRESSURE.");
+            THROW("initStateFromDeck(): we must either have EQUIL, or PRESSURE and SWAT/SOIL/SGAS.");
         }
 
         // Finally, init face pressures.
