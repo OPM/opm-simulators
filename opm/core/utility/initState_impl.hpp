@@ -515,7 +515,7 @@ namespace Opm
         const int num_phases = props.numPhases();
         const PhaseUsage pu = phaseUsageFromDeck(deck);
         if (num_phases != pu.num_phases) {
-            THROW("initStateFromDeck():  Uuser specified property object with " << num_phases << " phases, "
+            THROW("initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
         }
         state.init(grid, num_phases);
