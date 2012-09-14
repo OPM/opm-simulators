@@ -307,10 +307,9 @@ public:
      * University of Stuttgart, 2008
      *
      *
-     * \param phaseIdx index of the phase
-     * \param temperature phase temperature in [K]
-     * \param pressure phase pressure in [Pa]
-     * \param fluidState the fluid state
+     * \param phaseIdx Index of the phase
+     * \param fluidState The fluid state
+     * \param paramCache The fluid system's parameter cache
      *
      * \tparam FluidState the fluid state class
      */
@@ -385,6 +384,7 @@ public:
      * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
      *
      * \param fluidState An abitrary fluid state
+     * \param paramCache The fluid system's parameter cache
      * \param phaseIdx The index of the fluid phase to consider
      */
     template <class FluidState>
@@ -499,6 +499,7 @@ public:
      *        \f$i\f$ and \f$j\f$ in this phase.
      *
      * \param fluidState An arbitrary fluid state
+     * \param paramCache The fluid system's parameter cache
      * \param phaseIdx The index of the fluid phase to consider
      * \param compIIdx The index of the first component to consider
      * \param compJIdx The index of the second component to consider
@@ -607,6 +608,7 @@ public:
      * \brief Thermal conductivity of a fluid phase [W/(m K)].
      *
      * \param fluidState An abitrary fluid state
+     * \param paramCache The fluid system's parameter cache
      * \param phaseIdx The index of the fluid phase to consider
      */
     template <class FluidState>
