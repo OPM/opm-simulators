@@ -20,7 +20,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Components
  * \brief Component for Mesitylene
  */
 #ifndef DUMUX_MESITYLENE_HH

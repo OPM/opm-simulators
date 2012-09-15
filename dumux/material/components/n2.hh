@@ -24,8 +24,6 @@
 /*!
  * \file
  *
- * \ingroup Components
- *
  * \brief Properties of pure molecular nitrogen \f$N_2\f$.
  */
 #ifndef DUMUX_N2_HH

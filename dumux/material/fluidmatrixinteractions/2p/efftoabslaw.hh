@@ -20,7 +20,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief This material law takes a material law defined for effective
  *        saturations and converts it to a material law defined on
@@ -32,8 +31,7 @@
 
 #include "efftoabslawparams.hh"
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  *

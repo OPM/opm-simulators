@@ -22,7 +22,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief   Regularized linear capillary pressure and
  *          relative permeability <-> saturation relations.
@@ -35,8 +34,7 @@
 
 #include <dumux/common/spline.hh>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  * \brief Implements a linear saturation-capillary pressure relation

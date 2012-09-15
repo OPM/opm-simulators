@@ -22,8 +22,6 @@
 /*!
  * \file
  *
- * \ingroup IAPWS
- *
  * \brief Implements relations common for all regions of the IAPWS '97
  *        formulation.
  *
@@ -40,10 +38,8 @@
 
 #include <cmath>
 
-namespace Dumux
-{
-namespace IAPWS
-{
+namespace Dumux {
+namespace IAPWS {
 
 /*!
  *

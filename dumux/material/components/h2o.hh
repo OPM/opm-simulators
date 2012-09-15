@@ -27,8 +27,6 @@
 /*!
  * \file
  *
- * \ingroup Components
- *
  * \brief Material properties of pure water \f$H_2O\f$.
  */
 #ifndef DUMUX_H2O_HH

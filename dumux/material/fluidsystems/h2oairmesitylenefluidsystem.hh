@@ -19,10 +19,9 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Fluidsystems
  *
  * \brief A fluid system with water, gas and NAPL as phases and
- *        \f$H_2O\f$ and \f$Air\f$ and \f$NAPL (contaminant)\f$ as components.
+ *        water, air and mesitylene (DNAPL) as components.
  */
 #ifndef DUMUX_H2O_AIR_MESITYLENE_FLUID_SYSTEM_HH
 #define DUMUX_H2O_AIR_MESITYLENE_FLUID_SYSTEM_HH
@@ -51,8 +50,8 @@ namespace FluidSystems
 
 /*!
  * \ingroup Fluidsystems
- * \brief A compositional fluid with water and molecular nitrogen as
- *        components in both, the liquid and the gas phase.
+ * \brief A fluid system with water, gas and NAPL as phases and
+ *        water, air and mesitylene (DNAPL) as components.
  */
 template <class Scalar>
 class H2OAirMesitylene
@@ -65,35 +64,40 @@ class H2OAirMesitylene
     typedef Dumux::TabulatedComponent<Scalar, IapwsH2O, /*alongVaporPressure=*/false> TabulatedH2O;
 
 public:
+    //! \copydoc BaseFluidSystem::ParameterCache
     typedef NullParameterCache ParameterCache;
 
+    //! The type of the mesithylene/napl component
     typedef Dumux::Mesitylene<Scalar> NAPL;
+
+    //! The type of the air component
     typedef Dumux::Air<Scalar> Air;
+
+    //! The type of the water component
     //typedef SimpleH2O H2O;
     typedef TabulatedH2O H2O;
     //typedef IapwsH2O H2O;
     
+    //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 3;
+    //! \copydoc BaseFluidSystem::numComponents
     static const int numComponents = 3;
 
-    static const int wPhaseIdx = 0; // index of the water phase
-    static const int nPhaseIdx = 1; // index of the NAPL phase
-    static const int gPhaseIdx = 2; // index of the gas phase
+    //! The index of the water phase
+    static const int wPhaseIdx = 0; 
+    //! The index of the NAPL phase
+    static const int nPhaseIdx = 1;
+    //! The index of the gas phase
+    static const int gPhaseIdx = 2;
 
+    //! The index of the water component
     static const int H2OIdx = 0;
+    //! The index of the NAPL component
     static const int NAPLIdx = 1;
+    //! The index of the air pseudo-component
     static const int airIdx = 2;
 
-    static const int wCompIdx = H2OIdx;
-    static const int cCompIdx = NAPLIdx;
-    static const int aCompIdx = airIdx;
-
-    /*!
-     * \brief Initialize the fluid system's static parameters generically
-     *
-     * If a tabulated H2O component is used, we do our best to create
-     * tables that always work.
-     */
+    //! \copydoc BaseFluidSystem::init
     static void init()
     {
         init(/*tempMin=*/273.15,
@@ -128,56 +132,18 @@ public:
         }
     }
 
-
-    /*!
-     * \brief Return whether a phase is liquid
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(int phaseIdx)
     { 
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx; 
     }
 
-    /*!
-     * \brief Returns true iff a fluid is considered an ideal gas
-     */
+    //! \copydoc BaseFluidSystem::isIdealGas
     static constexpr bool isIdealGas(int phaseIdx)
     { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal mixture.
-     *
-     * We define an ideal mixture as a fluid phase where the fugacity
-     * coefficients of all components times the pressure of the phase
-     * are indepent on the fluid composition. This assumtion is true
-     * if Henry's law and Rault's law apply. If you are unsure what
-     * this function should return, it is safe to return false. The
-     * only damage done will be (slightly) increased computation times
-     * in some cases.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
-    static constexpr bool isIdealMixture(int phaseIdx)
-    {
-        //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        // we assume Henry's and Rault's laws for the water phase and
-        // and no interaction between gas molecules of different
-        // components, so all phases are ideal mixtures!
-        return true;
-    }
-
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be compressible.
-     *
-     * Compressible means that the partial derivative of the density
-     * to the fluid pressure is always larger than zero.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isCompressible
     static constexpr bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -189,9 +155,17 @@ public:
             : NAPL::liquidIsCompressible();
     }
 
-    /*!
-     * \brief Return the human readable name of a phase (used in indices)
-     */
+    //! \copydoc BaseFluidSystem::isIdealMixture
+    static constexpr bool isIdealMixture(int phaseIdx)
+    {
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+        // we assume Henry's and Rault's laws for the water phase and
+        // and no interaction between gas molecules of different
+        // components, so all phases are ideal mixtures!
+        return true;
+    }
+
+    //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
     {
         switch (phaseIdx) {
@@ -202,9 +176,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
 
-    /*!
-     * \brief Return the human readable name of a component (used in indices)
-     */
+    //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
     {
         switch (compIdx) {
@@ -215,9 +187,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
-    /*!
-     * \brief Return the molar mass of a component in [kg/mol].
-     */
+    //! \copydoc BaseFluidSystem::molarMass
     static constexpr Scalar molarMass(int compIdx)
     {
         return
@@ -231,10 +201,7 @@ public:
         //DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
     }
 
-    /*!
-     * \brief Given all mole fractions in a phase, return the phase
-     *        density [kg/m^3].
-     */
+    //! \copydoc BaseFluidSystem::density
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
@@ -280,9 +247,7 @@ public:
             NAPL::gasDensity(T, pNAPL);
     }
 
-    /*!
-     * \brief Return the viscosity of a phase.
-     */
+    //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
@@ -352,11 +317,7 @@ public:
         return muResult;
     }
 
-
-    /*!
-     * \brief Given all mole fractions, return the diffusion
-     *        coefficent of a component in a phase.
-     */
+    //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState>
     static Scalar diffusionCoefficient(const FluidState &fluidState,
                                        const ParameterCache &paramCache,
@@ -415,16 +376,7 @@ public:
 #endif
     }
 
-    /*!
-     * \brief Returns the fugacity coefficient [-] of a component in a
-     *        phase.
-     *
-     * In this case, things are actually pretty simple. We have an ideal
-     * solution. Thus, the fugacity coefficient is 1 in the gas phase
-     * (fugacity equals the partial pressure of the component in the gas phase
-     * respectively in the liquid phases it is the inverse of the
-     * Henry coefficients scaled by pressure
-     */
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
@@ -471,15 +423,7 @@ public:
     }
 
 
-    /*!
-     * \brief Given all mole fractions in a phase, return the specific
-     *        phase enthalpy [J/kg].
-     *
-     * \todo This system neglects the contribution of gas-molecules in
-     *       the liquid phase.  This contribution is probably not
-     *       big. Somebody would have to find out the enthalpy of
-     *       solution for this system. ...
-     */
+    //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
                            const ParameterCache &paramCache,
@@ -506,14 +450,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
     
-    /*!
-     * \brief Thermal conductivity of a fluid phase [W/(m K)].
-     *
-     * Use the conductivity of air and water as a approximation.
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
                                       const ParameterCache &paramCache,

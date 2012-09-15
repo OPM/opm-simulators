@@ -19,61 +19,90 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Fluidsystems
  *
- * \brief The base class of the parameter cache classes for fluid systems
+ * \brief The base class of the parameter caches of fluid systems
  */
 #ifndef DUMUX_PARAMETER_CACHE_BASE_HH
 #define DUMUX_PARAMETER_CACHE_BASE_HH
 
-namespace Dumux
-{
+namespace Dumux {
+
 /*!
  * \ingroup Fluidsystems
- * \brief The base class of the parameter cache classes for fluid systems
+ * \brief The base class of the parameter caches of fluid systems
  */
 template <class Implementation>
 class ParameterCacheBase
 {
 public:
+    /*!
+     * \brief Constants for ORing the quantities of the fluid state that have not changed since the last update.
+     */
     enum ExceptQuantities {
-        None = 0,
-        Temperature = 1,
-        Pressure = 2,
-        Composition = 4
+        None = 0, //!< All quantities have been (potentially) modified.
+        Temperature = 1, //< The temperature has not been modified
+        Pressure = 2, //< The pressures have not been modified
+        Composition = 4  //< The compositions have not been modified
     };
 
     ParameterCacheBase()
     {}
 
+    /*!
+     * \brief Update the quantities of the parameter cache for all phases 
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     * \param exceptQuantities The quantities of the fluid state that have not changed since the last update.
+     */
     template <class FluidState>
-    void updateAll(const FluidState &fs, int exceptQuantities = None)
+    void updateAll(const FluidState &fluidState, int exceptQuantities = None)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
-            asImp_().updatePhase(fs, phaseIdx);
+            asImp_().updatePhase(fluidState, phaseIdx);
     }
 
-
+    /*!
+     * \brief Update pressure dependent quantities of the parameter
+     *        cache for all phases
+     *
+     * This method should be called if _only_ the phase pressures
+     * changed since the last call to an update() method.
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     */
     template <class FluidState>
-    void updateAllPressures(const FluidState &fs)
+    void updateAllPressures(const FluidState &fluidState)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
-            asImp_().updatePhase(fs, phaseIdx);
+            asImp_().updatePhase(fluidState, phaseIdx);
     }
 
+    /*!
+     * \brief Update temperature dependent quantities of the parameter
+     *        cache for all phases
+     *
+     * This method should be called if _only_ the phase temperatures
+     * changed since the last call to an update() method.
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     */
     template <class FluidState>
-    void updateAllTemperatures(const FluidState &fs)
+    void updateAllTemperatures(const FluidState &fluidState)
     {
         for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
-            asImp_().updatePhase(fs, phaseIdx);
+            asImp_().updatePhase(fluidState, phaseIdx);
     }
 
 
     /*!
-     * \brief Update all cached parameters of a specific fluid phase
+     * \brief Update all cached parameters of a specific fluid phase.
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     * \param phaseIdx The index of the fluid phase of interest.
+     * \param exceptQuantities The quantities of the fluid state that have not changed since the last update.
      */
     template <class FluidState>
-    void updatePhase(const FluidState &fs, int phaseIdx, int exceptQuantities = None)
+    void updatePhase(const FluidState &fluidState, int phaseIdx, int exceptQuantities = None)
     {}
 
     /*!
@@ -83,11 +112,14 @@ public:
      * *Only* use this method if only the temperature of a phase
      * changed between two update*() calls. If more changed, call
      * updatePhase()!
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     * \param phaseIdx The index of the fluid phase of interest.
      */
     template <class FluidState>
-    void updateTemperature(const FluidState &fs, int phaseIdx)
+    void updateTemperature(const FluidState &fluidState, int phaseIdx)
     {
-        asImp_().updatePhase(fs, phaseIdx);
+        asImp_().updatePhase(fluidState, phaseIdx);
     }
 
     /*!
@@ -97,11 +129,14 @@ public:
      * *Only* use this method if only the pressure of a phase changed
      * between two update*() calls. If more changed, call
      * updatePhase()!
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     * \param phaseIdx The index of the fluid phase of interest.
      */
     template <class FluidState>
-    void updatePressure(const FluidState &fs, int phaseIdx)
+    void updatePressure(const FluidState &fluidState, int phaseIdx)
     {
-        asImp_().updatePhase(fs, phaseIdx);
+        asImp_().updatePhase(fluidState, phaseIdx);
     }
 
     /*!
@@ -111,11 +146,14 @@ public:
      * *Only* use this method if neither the pressure nor the
      * temperature of the phase changed between two update*()
      * calls. If more changed, call updatePhase()!
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     * \param phaseIdx The index of the fluid phase of interest.
      */
     template <class FluidState>
-    void updateComposition(const FluidState &fs, int phaseIdx)
+    void updateComposition(const FluidState &fluidState, int phaseIdx)
     {
-        asImp_().updatePhase(fs, phaseIdx, /*except=*/Temperature | Pressure);
+        asImp_().updatePhase(fluidState, phaseIdx, /*except=*/Temperature | Pressure);
     }
 
     /*!
@@ -126,13 +164,17 @@ public:
      * concentration changed between two update*() calls. If more than
      * one concentration changed, call updatePhaseComposition() of
      * updatePhase()!
+     *
+     * \param fluidState The representation of the thermodynamic system of interest.
+     * \param phaseIdx The index of the fluid phase of interest.
+     * \param compIdx The component index of the component for which the mole fraction was modified in the fluid phase of interest.
      */
     template <class FluidState>
-    void updateSingleMoleFraction(const FluidState &fs,
+    void updateSingleMoleFraction(const FluidState &fluidState,
                                   int phaseIdx,
                                   int compIdx)
     {
-        asImp_().updateComposition(fs, phaseIdx);
+        asImp_().updateComposition(fluidState, phaseIdx);
     }
 
 private:

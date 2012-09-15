@@ -19,7 +19,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Fluidsystems
  *
  * \brief The fluid system for the oil, gas and water phases of the
  *        SPE5 problem.
@@ -43,10 +42,8 @@
 #include <dumux/material/constants.hh>
 #include <dumux/material/eos/pengrobinsonmixture.hh>
 
-namespace Dumux
-{
-namespace FluidSystems
-{
+namespace Dumux {
+namespace FluidSystems {
 /*!
  * \ingroup Fluidsystems
  * \brief The fluid system for the oil, gas and water phases of the
@@ -73,13 +70,14 @@ class Spe5
     static constexpr Scalar R = Dumux::Constants<Scalar>::R;
 
 public:
+    //! \copydoc BaseFluidSystem::ParameterCache
     typedef Dumux::Spe5ParameterCache<Scalar, ThisType> ParameterCache;
 
     /****************************************
      * Fluid phase parameters
      ****************************************/
 
-    //! Number of phases in the fluid system
+    //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 3;
 
     //! Index of the gas phase
@@ -92,9 +90,7 @@ public:
     //! The component for pure water to be used
     typedef Dumux::H2O<Scalar> H2O;
 
-    /*!
-     * \brief Return the human readable name of a fluid phase
-     */
+    //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
     {
         static const char *name[] = {
@@ -107,9 +103,7 @@ public:
         return name[phaseIdx];
     }
 
-    /*!
-     * \brief Return whether a phase is liquid
-     */
+    //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -117,7 +111,7 @@ public:
     }
 
     /*!
-     * \brief Return whether a phase is compressible
+     * \copydoc BaseFluidSystem::isCompressible
      *
      * In the SPE-5 problems all fluids are compressible...
      */
@@ -127,18 +121,14 @@ public:
         return true;
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal mixture.
-     *
-     * We define an ideal mixture as a fluid phase where the fugacity
-     * coefficients of all components times the pressure of the phase
-     * are indepent on the fluid composition. This assumtion is true
-     * if Henry's law and Rault's law apply. If you are unsure what
-     * this function should return, it is safe to return false. The
-     * only damage done will be (slightly) increased computation times
-     * in some cases.
-     */
+    //! \copydoc BaseFluidSystem::isIdealGas
+    static constexpr bool isIdealGas(int phaseIdx)
+    {
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+        return false; // gas is not ideal here!
+    }
+
+    //! \copydoc BaseFluidSystem::isIdealMixture
     static constexpr bool isIdealMixture(int phaseIdx)
     {
         // always use the reference oil for the fugacity coefficents,
@@ -147,36 +137,22 @@ public:
         return phaseIdx == wPhaseIdx;
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal gas.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
-    static constexpr bool isIdealGas(int phaseIdx)
-    {
-        //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return false; // gas is not ideal here!
-    }
-
     /****************************************
      * Component related parameters
      ****************************************/
 
-    //! Number of components in the fluid system
+    //! \copydoc BaseFluidSystem::numComponents
     static const int numComponents = 7;
 
-    static const int H2OIdx = 0;
-    static const int C1Idx = 1;
-    static const int C3Idx = 2;
-    static const int C6Idx = 3;
-    static const int C10Idx = 4;
-    static const int C15Idx = 5;
-    static const int C20Idx = 6;
+    static const int H2OIdx = 0; //!< Index of the water component
+    static const int C1Idx = 1; //!< Index of the C1 component
+    static const int C3Idx = 2; //!< Index of the C3 component
+    static const int C6Idx = 3; //!< Index of the C6 component
+    static const int C10Idx = 4; //!< Index of the C10 component
+    static const int C15Idx = 5; //!< Index of the C15 component
+    static const int C20Idx = 6; //!< Index of the C20 component
 
-    /*!
-     * \brief Return the human readable name of a component
-     */
+    //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
     {
         static const char *name[] = {
@@ -193,9 +169,7 @@ public:
         return name[compIdx];
     }
 
-    /*!
-     * \brief Return the molar mass of a component in [kg/mol].
-     */
+    //! \copydoc BaseFluidSystem::molarMass
     static constexpr Scalar molarMass(int compIdx)
     {
         return 
@@ -330,9 +304,7 @@ public:
      * Methods which compute stuff
      ****************************************/
 
-    /*!
-     * \brief Initialize the fluid system's static parameters
-     */
+    //! \copydoc BaseFluidSystem::init
     static void init()
     {
         Dumux::PengRobinsonParamsMixture<Scalar, ThisType, gPhaseIdx, /*useSpe5=*/true> prParams;
@@ -384,14 +356,7 @@ public:
                            /*bMin=*/minB, /*bMax=*/maxB, /*nb=*/200);
     }
 
-    /*!
-     * \brief Calculate the density [kg/m^3] of a fluid phase
-     *
-     *
-     * \param fluidState An abitrary fluid state
-     * \param paramCache Container for cache parameters
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::density
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
@@ -402,11 +367,9 @@ public:
         return fluidState.averageMolarMass(phaseIdx)/paramCache.molarVolume(phaseIdx);
     }
 
-    /*!
-     * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
-     */
+    //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState>
-    static Scalar viscosity(const FluidState &fs,
+    static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
@@ -428,19 +391,9 @@ public:
         }
     }
 
-    /*!
-     * \brief Calculate the fugacity coefficient [Pa] of an individual
-     *        component in a fluid phase
-     *
-     * The fugacity coefficient \f$\phi^\kappa_\alpha\f$ is connected
-     * to the fugacity \f$f^\kappa_\alpha\f$ and the component's mole
-     * fraction in a phase \f$x^\kappa_\alpha\f$ by means of the
-     * relation
-     *
-     * \f[ f^\kappa_\alpha = \phi^\kappa_\alpha \cdot x^\kappa_\alpha \cdot p_alpha \f]
-     */
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState>
-    static Scalar fugacityCoefficient(const FluidState &fs,
+    static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
                                       int phaseIdx,
                                       int compIdx)
@@ -449,15 +402,15 @@ public:
         assert(0 <= compIdx  && compIdx <= numComponents);
 
         if (phaseIdx == oPhaseIdx || phaseIdx == gPhaseIdx)
-            return PengRobinsonMixture::computeFugacityCoefficient(fs,
+            return PengRobinsonMixture::computeFugacityCoefficient(fluidState,
                                                                    paramCache,
                                                                    phaseIdx,
                                                                    compIdx);
         else {
             assert(phaseIdx == wPhaseIdx);
             return
-                henryCoeffWater_(compIdx, fs.temperature(wPhaseIdx))
-                / fs.pressure(wPhaseIdx);
+                henryCoeffWater_(compIdx, fluidState.temperature(wPhaseIdx))
+                / fluidState.pressure(wPhaseIdx);
         }
     }
 

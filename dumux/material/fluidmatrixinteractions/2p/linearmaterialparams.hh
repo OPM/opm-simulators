@@ -20,7 +20,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionsparams
  *
  * \brief Reference implementation of the parameter object for the
  *        linear material law.
@@ -28,8 +27,7 @@
 #ifndef LINEAR_MATERIAL_PARAMS_HH
 #define LINEAR_MATERIAL_PARAMS_HH
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionsparams
  *

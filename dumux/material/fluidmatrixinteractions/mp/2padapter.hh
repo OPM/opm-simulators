@@ -19,7 +19,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  * \brief Provides an adapter class to use two-phase material laws
  *        with the generalized M-phase API.
  */
@@ -28,8 +27,7 @@
 
 #include <algorithm>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  * \brief Provides an adapter class to use two-phase material laws

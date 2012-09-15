@@ -21,13 +21,12 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief   Implementation of the capillary pressure and
  *          relative permeability <-> saturation relations according to van Genuchten.
  */
-#ifndef VAN_GENUCHTEN_HH
-#define VAN_GENUCHTEN_HH
+#ifndef DUMUX_VAN_GENUCHTEN_HH
+#define DUMUX_VAN_GENUCHTEN_HH
 
 #include "vangenuchtenparams.hh"
 
@@ -35,8 +34,7 @@
 #include <cmath>
 #include <cassert>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  *

@@ -21,8 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Components
- * \brief Components where all quantities are fixed at 1.0
+ * \brief A component where all quantities are fixed at 1.0
  *
  * This component is meant as a debugging tool. Do not use it in
  * real-life applications!
@@ -37,7 +36,10 @@ namespace Dumux
 /*!
  * \ingroup Components
  *
- * \brief Rough estimate for testing purposes of water.
+ * \brief A component where all quantities are fixed at 1.0
+ *
+ * This component is meant as a debugging tool. Do not use it in
+ * real-life applications!
  *
  * \tparam Scalar  The type used for scalar values
  */
@@ -47,39 +49,136 @@ class Unit : public Component<Scalar, Unit<Scalar> >
 
 public:
     /*!
-     * \brief A human readable name for the water.
+     * \copydoc Component::name
      */
     static const char *name()
     { return "Unit"; }
 
     /*!
-     * \brief Returns true iff the liquid phase is assumed to be compressible
+     * \copydoc Component::molarMass
+     */
+    static Scalar molarMass()
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::criticalTemperature
+     */
+    static Scalar criticalTemperature()
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::criticalPressure
+     */
+    static Scalar criticalPressure()
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::tripleTemperature
+     */
+    static Scalar tripleTemperature()
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::triplePressure
+     */
+    static Scalar triplePressure()
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::liquidIsCompressible
+     */
+    static Scalar vaporPressure(Scalar T)
+    { return 1.0; }
+    /*!
+     * \copydoc Component::liquidIsCompressible
      */
     static constexpr bool liquidIsCompressible()
     { return false; }
 
     /*!
-     * \brief Rough estimate of the density of water \f$\mathrm{[kg/m^3]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \copydoc Component::gasIsCompressible
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    {
-        return 1.0;
-    }
+    static constexpr bool gasIsCompressible()
+    { return false; }
 
     /*!
-     * \brief Rough estimate of the viscosity of water in \f$\mathrm{[Pa*s]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \copydoc Component::gasIsIdeal
+     */
+    static bool gasIsIdeal()
+    { return false; }
+
+    /*!
+     * \copydoc Component::liquidDensity
+     */
+    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::liquidViscosity
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    {
-        return 1.0;
-    }
+    { return 1.0; }
 
+    /*!
+     * \copydoc Component::gasDensity
+     */
+    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::gasViscosity
+     */
+    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+
+    /*!
+     * \copydoc Component::gasEnthalpy
+     */
+    static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::liquidEnthalpy
+     */
+    static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::gasInternalEnergy
+     */
+    static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::liquidInternalEnergy
+     */
+    static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::gasThermalConductivity
+     */
+    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::liquidThermalConductivity
+     */
+    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::gasHeatCapacity
+     */
+    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
+
+    /*!
+     * \copydoc Component::liquidHeatCapacity
+     */
+    static Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    { return 1.0; }
 };
 
 } // end namepace

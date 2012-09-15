@@ -22,7 +22,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Components
  * \brief A simple implementation of a dense non-aqueous phase liquid (DNAPL).
  *
  * The parameters are chosen to roughly correspond to those of
@@ -37,7 +36,11 @@
 namespace Dumux {
 /*!
  * \ingroup Components
- * \brief A much simple component for an exemplary dense NAPL (TCE).
+ *
+ * \brief A simple implementation of a dense non-aqueous phase liquid (DNAPL).
+ *
+ * The parameters are chosen to roughly correspond to those of
+ * trichloroethylene (TCE) at standard conditions.
  *
  * \tparam Scalar The type used for scalar values
  */

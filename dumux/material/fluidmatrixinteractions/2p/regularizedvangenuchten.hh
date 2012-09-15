@@ -22,13 +22,12 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of the regularized version of the van Genuchten's
  *        capillary pressure / relative permeability  <-> saturation relation.
  */
-#ifndef REGULARIZED_VAN_GENUCHTEN_HH
-#define REGULARIZED_VAN_GENUCHTEN_HH
+#ifndef DUMUX_REGULARIZED_VAN_GENUCHTEN_HH
+#define DUMUX_REGULARIZED_VAN_GENUCHTEN_HH
 
 #include "vangenuchten.hh"
 #include "regularizedvangenuchtenparams.hh"
@@ -37,8 +36,8 @@
 
 #include <algorithm>
 
-namespace Dumux
-{
+namespace Dumux {
+
 /*!
  * \ingroup fluidmatrixinteractionslaws
  * \brief Implementation of the regularized  van Genuchten's

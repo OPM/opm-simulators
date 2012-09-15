@@ -18,7 +18,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Components
  * \brief A component that only throws exceptions.
  *
  * Its main purpose is to make things compile and give runtime errors

@@ -19,7 +19,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionsparams
  *
  * \brief A default implementation of the parameters for the adapter
  *        class to convert material laws from effective to absolute
@@ -28,8 +27,7 @@
 #ifndef DUMUX_EFF_TO_ABS_LAW_PARAMS_HH
 #define DUMUX_EFF_TO_ABS_LAW_PARAMS_HH
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionsparams
  *

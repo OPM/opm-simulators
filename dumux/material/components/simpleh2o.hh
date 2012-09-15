@@ -22,9 +22,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Components
- * \brief A much simpler (and thus potentially less buggy) version of
- *        pure water.
+ * \brief A simple version of pure water.
  */
 #ifndef DUMUX_SIMPLE_H2O_HH
 #define DUMUX_SIMPLE_H2O_HH
@@ -40,10 +38,16 @@ namespace Dumux
 /*!
  * \ingroup Components
  *
- * \brief A much simpler (and thus potentially less buggy) version of
- *        pure water.
+ * \brief A simple version of  pure water.
  *
- * \tparam Scalar The type used for scalar values
+ * Compared to the water formulation of IAPWS'97, this class provides
+ * a much simpler component that represents the thermodynamic
+ * properties of of pure water. This implies that the likelyhood for
+ * bugs in this class is reduced and the numerical performance is
+ * increased. (At the cost of accuracy for the representation of the
+ * physical quantities, of course.)
+ *
+ * \tparam Scalar The type used for representing scalar values
  */
 template <class Scalar>
 class SimpleH2O : public Component<Scalar, SimpleH2O<Scalar> >

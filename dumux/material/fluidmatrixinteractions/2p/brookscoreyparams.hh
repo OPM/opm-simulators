@@ -21,7 +21,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionsparams
  *
  * \brief Specification of the material parameters for the Brooks
  *        Corey constitutive relations.
@@ -31,8 +30,7 @@
 
 #include <dumux/common/valgrind.hh>
 
-namespace Dumux
-{
+namespace Dumux {
 
 /*!
  * \ingroup fluidmatrixinteractionsparams

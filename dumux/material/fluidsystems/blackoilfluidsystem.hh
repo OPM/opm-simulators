@@ -49,12 +49,14 @@ class BlackOil
     typedef std::vector<std::pair<Scalar, Scalar> > SplineSamplingPoints;
 
 public:
+    //! \copydoc BaseFluidSystem::ParameterCache
     typedef Dumux::NullParameterCache ParameterCache;
 
     /****************************************
      * Fluid phase parameters
      ****************************************/
-    //! Number of phases in the fluid system
+
+    //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 3;
 
     //! Index of the oil phase
@@ -64,6 +66,19 @@ public:
     //! Index of the gas phase
     static const int gPhaseIdx = 2;
     
+    /*!
+     * \copydoc BaseFluidSystem::init
+     * 
+     * \attention For this fluid system, this method just throws a
+     *            <tt>Dune::InvalidStateException</tt> as there is no
+     *            way to generically calculate the required black oil
+     *            parameters. Instead of this method, use
+     * \code
+     * FluidSystem::initBegin();
+     * // set the black oil parameters 
+     * FluidSystem::initEnd();
+     * \endcode
+     */
     static void init()
     {
         DUNE_THROW(Dune::InvalidStateException, "No generic init() method for this fluid system. The black-oil fluid system must be initialized with:\n"
@@ -72,11 +87,24 @@ public:
                    << "    FluidSystem::initEnd()\n");
     }
 
+    /*!
+     * \brief Begin the initialization of the black oil fluid system.
+     *
+     * After calling this method the surface densities, all formation
+     * and volume factors, the oil bubble pressure, all viscosities
+     * and the water compressibility must be set. Before the fluid
+     * system can be used, initEnd() must be called to finalize the
+     * initialization.
+     */
     static void initBegin()
     {}
     
     /*!
      * \brief Initialize the values of the surface densities
+     *
+     * \param rhoOil The surface density of (gas saturated) oil phase.
+     * \param rhoWater The surface density of the water phase.
+     * \param rhoGas The surface density of the gas phase.
      */
     static void setSurfaceDensities(Scalar rhoOil, 
                                     Scalar rhoWater, 
@@ -89,6 +117,8 @@ public:
    
     /*!
      * \brief Initialize the spline for the gas formation volume factor
+     *
+     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setGasFormationFactor(const SplineSamplingPoints &samplePoints)
     { 
@@ -101,6 +131,8 @@ public:
 
     /*!
      * \brief Initialize the spline for the oil formation volume factor
+     *
+     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setOilFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
     { 
@@ -108,6 +140,15 @@ public:
         assert(oilFormationVolumeFactorSpline_.monotonic());
     }
 
+    /*!
+     * \brief Set the volume factor of a phase at reference pressure.
+     *
+     * This should usually be 1, but some codes like ECLiPSE also
+     * allow different values for unknown reasons.
+     *
+     * \param phaseIdx The index of the fluid phase.
+     * \param val The value of the reference volume factor.
+     */
     static void setReferenceVolumeFactor(int phaseIdx, 
                                          Scalar val)
     { 
@@ -118,12 +159,16 @@ public:
      * \brief Set the bubble pressure of the oil in the reservoir [Pa]
      *
      * (That's the pressure below which gas starts to appear.)
+     *
+     * \param val The value of the bubble pressure [Pa].
      */
     static void setBubblePressure(Scalar val)
     { bubblePressure_ = val; }
 
     /*!
      * \brief Initialize the spline for the oil viscosity
+     *
+     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setOilViscosity(const SplineSamplingPoints &samplePoints)
     { 
@@ -133,6 +178,8 @@ public:
 
     /*!
      * \brief Initialize the spline for the gas formation volume factor
+     *
+     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setGasFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
     {
@@ -150,6 +197,8 @@ public:
 
     /*!
      * \brief Initialize the spline for the gas viscosity
+     *
+     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setGasViscosity(const SplineSamplingPoints &samplePoints)
     {
@@ -159,18 +208,22 @@ public:
 
     /*!
      * \brief Set the water viscosity [Pa s]
+     *
+     * \param muWater The dynamic viscosity of the water phase.
      */
     static void setWaterViscosity(Scalar muWater)
     { waterViscosityScalar_ = muWater; }
 
     /*!
      * \brief Set the water compressibility [1 / Pa]
+     *
+     * \param cWater The compressibility of the water phase.
      */
     static void setWaterCompressibility(Scalar cWater)
     { waterCompressibilityScalar_ = cWater; }
 
     /*!
-     * \brief Finish initializing the SPE-9 fluid system.
+     * \brief Finish initializing the black oil fluid system.
      */
     static void initEnd()
     {
@@ -273,10 +326,7 @@ public:
 #endif
     }
 
-    
-    /*!
-     * \brief Return the human readable name of a fluid phase
-     */
+    //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(const int phaseIdx)
     {
         static const char *name[] = { "o", "w", "g" };
@@ -284,6 +334,7 @@ public:
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
         return name[phaseIdx];
     }
+
     /*!
      * \brief Returns the pressure [Pa] at which the oil started to
      *        degas in the flash experiment which determined the
@@ -292,9 +343,7 @@ public:
     static Scalar bubblePressure()
     { return bubblePressure_; }
 
-    /*!
-     * \brief Return whether a phase is liquid
-     */
+    //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(const int phaseIdx)
     {
         // assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -305,7 +354,7 @@ public:
      * Component related parameters
      ****************************************/
 
-    //! Number of components in the fluid system
+    //! \copydoc BaseFluidSystem::numComponents
     static const int numComponents = 3;
 
     //! Index of the oil component
@@ -315,9 +364,7 @@ public:
     //! Index of the gas component
     static const int gCompIdx = 2;
 
-    /*!
-     * \brief Return the human readable name of a component
-     */
+    //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(const int compIdx)
     {
         static const char *name[] = { "O", "W", "G" };
@@ -326,24 +373,11 @@ public:
         return name[compIdx];
     }
     
-    /*!
-     * \brief Return the molar mass of a component in [kg/mol].
-     */
+    //! \copydoc BaseFluidSystem::molarMass
     static Scalar molarMass(const int compIdx)
     { return molarMass_[compIdx]; }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal mixture.
-     *
-     * We define an ideal mixture as a fluid phase where the fugacity
-     * coefficients of all components times the pressure of the phase
-     * are independent on the fluid composition. This assumption is true
-     * if Henry's law and Rault's law apply. If you are unsure what
-     * this function should return, it is safe to return false. The
-     * only damage done will be (slightly) increased computation times
-     * in some cases.
-     */
+    //! \copydoc BaseFluidSystem::isIdealMixture
     static constexpr bool isIdealMixture(int phaseIdx)
     {
         // fugacity coefficients are only pressure dependent -> we
@@ -351,29 +385,18 @@ public:
         return true;
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be compressible.
-     *
-     * Compressible means that the partial derivative of the density
-     * to the fluid pressure is always larger than zero.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isCompressible
     static constexpr bool isCompressible(int phaseIdx)
-    {
-        return true; // all phases are compressible
-    }
+    { return true; /* all phases are compressible */ }
     
-    /*!
-     * \brief Returns true iff a fluid is considered an ideal gas
-     */
+    //! \copydoc BaseFluidSystem::isIdealGas
     static constexpr bool isIdealGas(int phaseIdx)
     { return false; }
 
-    /*!
-     * \brief Calculate the densityy [kg/m^3] of a fluid phase
-     */
+    /****************************************
+     * thermodynamic relations
+     ****************************************/
+    //! \copydoc BaseFluidSystem::density
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
                           ParameterCache &paramCache,
@@ -434,16 +457,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
 
-    /*!
-     * \brief Calculate the fugacity coefficient [Pa] of an individual
-     *        component in a fluid phase
-     *
-     * The fugacity coefficient \f$\phi_\kappa\f$ is connected to the
-     * fugacity \f$f_\kappa\f$ and the component's molarity
-     * \f$x_\kappa\f$ by means of the relation
-     *
-     * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
-     */
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
@@ -463,9 +477,7 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase or component index");
     }
     
-    /*!
-     * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
-     */
+    //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
@@ -484,15 +496,30 @@ public:
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
 
+    /*!
+     * \brief Returns the density of a fluid phase at surface pressure [kg/m^3]
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
     static Scalar surfaceDensity(int phaseIdx)
     { return surfaceDensity_[phaseIdx]; }
 
+    /*!
+     * \brief Returns the oil formation volume factor \f$B_o\f$ for a given pressure
+     *
+     * \param pressure The pressure of interest [Pa]
+     */
     static Scalar oilFormationVolumeFactor(Scalar pressure)
     { 
         return oilFormationVolumeFactorSpline_.eval(pressure,
                                                   /*extrapolate=*/true);
     }
 
+    /*!
+     * \brief Returns the gas formation volume factor \f$B_g\f$ for a given pressure
+     *
+     * \param pressure The pressure of interest [Pa]
+     */
     static Scalar gasFormationVolumeFactor(Scalar pressure)
     { 
         if (pressure < gasFormationVolumeFactorSpline_.xMin()) {
@@ -502,12 +529,23 @@ public:
                                                     /*extrapolate=*/true);
     }
 
+    /*!
+     * \brief Returns the gas formation factor \f$R_s\f$ for a given pressure
+     *
+     * \param pressure The pressure of interest [Pa]
+     */
     static Scalar gasFormationFactor(Scalar pressure)
     { 
         return gasFormationFactorSpline_.eval(pressure,
                                               /*extrapolate=*/true);
     }
 
+    /*!
+     * \brief Returns the fugacity coefficient of a given component in the water phase
+     *
+     * \param compIdx The index of the component of interest
+     * \param pressure The pressure of interest [Pa]
+     */
     static Scalar fugCoefficientInWater(int compIdx, Scalar pressure)
     {
         // set the affinity of the gas and oil components to the water
@@ -525,12 +563,24 @@ public:
         return pvWater / pressure;
     }
 
+    /*!
+     * \brief Returns the fugacity coefficient of a given component in the gas phase
+     *
+     * \param compIdx The index of the component of interest
+     * \param pressure The pressure of interest [Pa]
+     */
     static Scalar fugCoefficientInGas(int compIdx, Scalar pressure)
     {
         // assume an ideal gas
         return 1.0;
     }
 
+    /*!
+     * \brief Returns the fugacity coefficient of a given component in the oil phase
+     *
+     * \param compIdx The index of the component of interest
+     * \param pressure The pressure of interest [Pa]
+     */
     static Scalar fugCoefficientInOil(int compIdx, Scalar pressure)
     {
         // set the oil component fugacity coefficient in oil phase
@@ -561,7 +611,9 @@ public:
         return phi_gG / x_oGf;
     }
 
-    // oil phase compressibility at _constant_ composition
+    /*!
+     * \brief Return the oil phase compressibility at _constant_ composition
+     */
     static Scalar oilCompressibility()
     {
         return

@@ -23,7 +23,6 @@
 /*!
  * \file
  *
- * \ingroup Components
  * \brief Abstract base class of a pure chemical species.
  */
 #ifndef DUMUX_COMPONENT_HH

@@ -20,7 +20,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of a regularized version of the Brooks-Corey
  *        capillary pressure / relative permeability  <-> saturation relation.
@@ -33,8 +32,7 @@
 
 #include <dumux/common/spline.hh>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  * \brief Implementation of the regularized  Brooks-Corey

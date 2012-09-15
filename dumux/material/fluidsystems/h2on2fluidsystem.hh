@@ -22,9 +22,8 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Fluidsystems
  *
- * \brief A twophase fluid system with water and nitrogen as components.
+ * \brief A two-phase fluid system with water and nitrogen as components.
  */
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH
@@ -50,7 +49,7 @@ namespace FluidSystems {
 /*!
  * \ingroup Fluidsystems
  *
- * \brief A twophase fluid system with water and nitrogen as components.
+ * \brief A two-phase fluid system with water and nitrogen as components.
  *
  * This FluidSystem can be used without the PropertySystem that is applied in Dumux,
  * as all Parameters are defined via template parameters. Hence it is in an
@@ -70,27 +69,22 @@ class H2ON2
     typedef Dumux::N2<Scalar> SimpleN2;
 
 public:
+    //! \copydoc BaseFluidSystem::ParameterCache
     typedef NullParameterCache ParameterCache;
 
     /****************************************
      * Fluid phase related static parameters
      ****************************************/
 
-    //! Number of phases in the fluid system
+    //! \copydoc BaseFluidSystem::numPhases
     static constexpr int numPhases = 2;
 
     //! Index of the liquid phase
     static constexpr int lPhaseIdx = 0;
-    static constexpr int wPhaseIdx = lPhaseIdx;
     //! Index of the gas phase
     static constexpr int gPhaseIdx = 1;
-    static constexpr int nPhaseIdx = gPhaseIdx;
 
-    /*!
-     * \brief Return the human readable name of a fluid phase
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
     {
         static const char *name[] = {
@@ -102,49 +96,14 @@ public:
         return name[phaseIdx];
     }
 
-    /*!
-     * \brief Return whether a phase is liquid
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal mixture.
-     *
-     * We define an ideal mixture as a fluid phase where the fugacity
-     * coefficients of all components times the pressure of the phase
-     * are indepent on the fluid composition. This assumtion is true
-     * if Henry's law and Rault's law apply. If you are unsure what
-     * this function should return, it is safe to return false. The
-     * only damage done will be (slightly) increased computation times
-     * in some cases.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
-    static constexpr bool isIdealMixture(int phaseIdx)
-    {
-        //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        // we assume Henry's and Rault's laws for the water phase and
-        // and no interaction between gas molecules of different
-        // components, so all phases are ideal mixtures!
-        return true;
-    }
-
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be compressible.
-     *
-     * Compressible means that the partial derivative of the density
-     * to the fluid pressure is always larger than zero.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isCompressible
     static constexpr bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -155,12 +114,7 @@ public:
             :H2O::liquidIsCompressible();// the water component decides for the liquid phase...
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal gas.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isIdealGas
     static constexpr bool isIdealGas(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -171,29 +125,37 @@ public:
             : false; // not a gas
     }
 
+    //! \copydoc BaseFluidSystem::isIdealMixture
+    static constexpr bool isIdealMixture(int phaseIdx)
+    {
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+        // we assume Henry's and Rault's laws for the water phase and
+        // and no interaction between gas molecules of different
+        // components, so all phases are ideal mixtures!
+        return true;
+    }
+
     /****************************************
      * Component related static parameters
      ****************************************/
 
-    //! Number of components in the fluid system
+    //! \copydoc BaseFluidSystem::numComponents
     static constexpr int numComponents = 2;
 
+    //! The component index of water
     static constexpr int H2OIdx = 0;
+    //! The component index of molecular nitrogen
     static constexpr int N2Idx = 1;
 
-    //! The components for pure water
+    //! The component for pure water
     typedef TabulatedH2O H2O;
     //typedef SimpleH2O H2O;
     //typedef IapwsH2O H2O;
 
-    //! The components for pure nitrogen
+    //! The component for pure nitrogen
     typedef SimpleN2 N2;
 
-    /*!
-     * \brief Return the human readable name of a component
-     *
-     * \param compIdx The index of the component to consider
-     */
+    //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
     {
         static const char *name[] = {
@@ -205,11 +167,7 @@ public:
         return name[compIdx];
     }
 
-    /*!
-     * \brief Return the molar mass of a component in [kg/mol].
-     *
-     * \param compIdx The index of the component to consider
-     */
+    //! \copydoc BaseFluidSystem::molarMass
     static constexpr Scalar molarMass(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
@@ -223,7 +181,7 @@ public:
     /*!
      * \brief Critical temperature of a component [K].
      *
-     * \param compIdx The index of the component to consider
+     * \copydetails Doxygen::compIdxParam
      */
     static constexpr Scalar criticalTemperature(int compIdx)
     {
@@ -237,7 +195,7 @@ public:
     /*!
      * \brief Critical pressure of a component [Pa].
      *
-     * \param compIdx The index of the component to consider
+     * \copydetails Doxygen::compIdxParam
      */
     static constexpr Scalar criticalPressure(int compIdx)
     {
@@ -251,7 +209,7 @@ public:
     /*!
      * \brief The acentric factor of a component [].
      *
-     * \param compIdx The index of the component to consider
+     * \copydetails Doxygen::compIdxParam
      */
     static constexpr Scalar acentricFactor(int compIdx)
     {
@@ -267,7 +225,7 @@ public:
      ****************************************/
 
     /*!
-     * \brief Initialize the fluid system's static parameters generically
+     * \copydoc BaseFluidSystem::init
      *
      * If a tabulated H2O component is used, we do our best to create
      * tables that always work.
@@ -312,16 +270,13 @@ public:
     }
 
     /*!
-     * \brief Calculate the density [kg/m^3] of a fluid phase
+     * \copydoc BaseFluidSystem::density
      *
      * If useComplexRelations == true, we apply
      * Formula (2.6) from S.O.Ochs:
      * "Development of a multiphase multicomponent
      * model for PEMFC - Technical report: IRTG-NUPUS",
      * University of Stuttgart, 2008
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
      */
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
@@ -375,12 +330,7 @@ public:
         return (rho_gH2O + rho_gN2) / std::max(1e-5, sumMoleFrac);
     }
 
-    /*!
-     * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
@@ -436,33 +386,7 @@ public:
         }
     }
 
-    /*!
-     * \brief Calculate the fugacity coefficient [Pa] of an individual
-     *        component in a fluid phase
-     *
-     * The fugacity coefficient \f$\phi^\kappa_\alpha\f$ of
-     * component \f$\kappa\f$ in phase \f$\alpha\f$ is connected to
-     * the fugacity \f$f^\kappa_\alpha\f$ and the component's mole
-     * fraction \f$x^\kappa_\alpha\f$ by means of the relation
-     *
-     * \f[
-     f^\kappa_\alpha = \phi^\kappa_\alpha\;x^\kappa_\alpha\;p_\alpha
-     \f]
-     * where \f$p_\alpha\f$ is the pressure of the fluid phase.
-     *
-     * The quantity "fugacity" itself is just an other way to express
-     * the chemical potential \f$\zeta^\kappa_\alpha\f$ of the
-     * component. It is defined via
-     *
-     * \f[
-     f^\kappa_\alpha := \exp\left\{\frac{\zeta^\kappa_\alpha}{k_B T_\alpha} \right\}
-     \f]
-     * where \f$k_B = 1.380\cdot10^{-23}\;J/K\f$ is the Boltzmann constant.
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     * \param compIdx The index of the component to consider
-     */
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
@@ -487,16 +411,7 @@ public:
         return 1.0;
     }
 
-    /*!
-     * \brief Given a phase's composition, temperature and pressure,
-     *        return the binary diffusion coefficient for components
-     *        \f$i\f$ and \f$j\f$ in this phase.
-     *
-     * \param fluidState An arbitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     * \param compIIdx The index of the first component to consider
-     * \param compJIdx The index of the second component to consider
-     */
+    //! \copydoc BaseFluidSystem::binaryDiffusionCoefficient
     template <class FluidState>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
@@ -539,18 +454,7 @@ public:
         return undefined;
     }
 
-    /*!
-     * \brief Given a phase's composition, temperature, pressure and
-     *        density, calculate its specific enthalpy [J/kg].
-     *
-     *  \todo This fluid system neglects the contribution of
-     *        gas-molecules in the liquid phase. This contribution is
-     *        probably not big. Somebody would have to find out the
-     *        enthalpy of solution for this system. ...
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
                            const ParameterCache &paramCache,
@@ -584,14 +488,7 @@ public:
         }
     }
 
-    /*!
-     * \brief Thermal conductivity of a fluid phase [W/(m K)].
-     *
-     * Use the conductivity of air and water as a approximation.
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
@@ -627,13 +524,7 @@ public:
         }
     }
 
-    /*!
-     * \brief Specific isobaric heat capacity of a fluid phase.
-     *        \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param fluidState An abitrary fluid state
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::heatCapacity
     template <class FluidState>
     static Scalar heatCapacity(const FluidState &fluidState,
                                const ParameterCache &paramCache,

@@ -20,7 +20,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionsparams
  *
  * \brief Specification of the material parameters for the van
  *        Genuchten constitutive relations.
@@ -28,8 +27,7 @@
 #ifndef VAN_GENUCHTEN_PARAMS_HH
 #define VAN_GENUCHTEN_PARAMS_HH
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionsparams
  *

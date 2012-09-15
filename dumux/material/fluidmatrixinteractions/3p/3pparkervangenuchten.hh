@@ -21,7 +21,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of the three-phase van Genuchten's capillary
  *        pressure <-> saturation relation

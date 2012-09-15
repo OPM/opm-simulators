@@ -20,7 +20,6 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \ingroup fluidmatrixinteractionslaws
  * \file
  *
  * \brief Implementation of the capillary pressure and relative permeability <-> saturation relations according to Brooks and Corey.
@@ -33,8 +32,7 @@
 
 #include <algorithm>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  *

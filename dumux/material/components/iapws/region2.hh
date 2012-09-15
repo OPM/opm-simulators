@@ -22,8 +22,6 @@
 /*!
  * \file
  *
- * \ingroup IAPWS
- *
  * \brief Implements the equations for region 2 of the IAPWS '97 formulation.
  *
  * See:
@@ -37,10 +35,8 @@
 
 #include <cmath>
 
-namespace Dumux
-{
-namespace IAPWS
-{
+namespace Dumux {
+namespace IAPWS {
 /*!
  *
  * \ingroup IAPWS

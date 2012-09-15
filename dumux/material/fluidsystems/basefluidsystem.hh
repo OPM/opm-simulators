@@ -21,29 +21,146 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Fluidsystems
  *
- * \brief Fluid system base class.
+ * \brief The base class for all fluid systems.
  */
 #ifndef DUMUX_BASE_FLUID_SYSTEM_HH
 #define DUMUX_BASE_FLUID_SYSTEM_HH
 
-#include <dune/common/classname.hh>
+#include "nullparametercache.hh"
 
 #include <dumux/common/exceptions.hh>
 
-namespace Dumux
-{
+#include <dune/common/classname.hh>
+
+namespace Dumux {
+
 /*!
  * \ingroup Fluidsystems
- * \brief Fluid system base class.
+ * \brief The base class for all fluid systems.
  */
 template <class Scalar, class Implementation>
 class BaseFluidSystem
 {
 public:
     /*!
+     * \brief The type of the fluid system's parameter cache
+     *
+     * The parameter cache can be used to avoid re-calculating
+     * expensive parameters for multiple quantities. Be aware that
+     * what the parameter cache actually does is specific for each
+     * fluid system and that it is opaque outside the fluid system.
+     */
+    typedef NullParameterCache ParameterCache;
+
+    //! Number of chemical species in the fluid system
+    static const int numComponents = -1000;
+
+    //! Number of fluid phases in the fluid system
+    static const int numPhases = -2000;
+
+    /*!
+     * \brief Return the human readable name of a fluid phase
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
+    static char *phaseName(int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a phaseName() method!");
+    }
+
+    /*!
+     * \brief Return whether a phase is liquid
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
+    static bool isLiquid(int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isLiquid() method!");
+    }
+        
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal mixture.
+     *
+     * We define an ideal mixture as a fluid phase where the fugacity
+     * coefficients of all components times the pressure of the phase
+     * are indepent on the fluid composition. This assumtion is true
+     * if Henry's law and Rault's law apply. If you are unsure what
+     * this function should return, it is safe to return false. The
+     * only damage done will be (slightly) increased computation times
+     * in some cases.
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
+    static bool isIdealMixture(int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isIdealMixture() method!");
+    }
+
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be compressible.
+     *
+     * Compressible means that the partial derivative of the density
+     * to the fluid pressure is always larger than zero.
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
+    static bool isCompressible(int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isCompressible() method!");
+    }
+
+    /*!
+     * \brief Returns true if and only if a fluid phase is assumed to
+     *        be an ideal gas.
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
+    static bool isIdealGas(int phaseIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isIdealGas() method!");
+    }
+
+    /*!
+     * \brief Return the human readable name of a component
+     *
+     * \copydoc Doxygen::compIdxParam
+     */
+    static const char *componentName(int compIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a componentName() method!");
+    }
+
+    /*!
+     * \brief Return the molar mass of a component in [kg/mol].
+     *
+     * \copydoc Doxygen::compIdxParam
+     */
+    static Scalar molarMass(int compIdx)
+    {
+        DUNE_THROW(Dune::NotImplemented,
+                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a molarMass() method!");
+    }
+
+    /*!
+     * \brief Initialize the fluid system's static parameters
+     */
+    static void init()
+    { }
+
+    /*!
      * \brief Calculate the density [kg/m^3] of a fluid phase
+     *
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar density(const FluidState &fluidState,
@@ -62,7 +179,11 @@ public:
      * fugacity \f$f_\kappa\f$ and the component's molarity
      * \f$x_\kappa\f$ by means of the relation
      *
-     * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
+     * \f[ f_\kappa = \phi_\kappa\,x_{\kappa} \f]
+     *
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
+     * \copydoc Doxygen::compIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
@@ -75,6 +196,9 @@ public:
 
     /*!
      * \brief Calculate the dynamic viscosity of a fluid phase [Pa*s]
+     *
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar viscosity(const FluidState &fluidState,
@@ -102,6 +226,10 @@ public:
      *
      * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
      * pressure and temperature.
+     *
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
+     * \copydoc Doxygen::compIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar diffusionCoefficient(const FluidState &fluidState,
@@ -116,6 +244,11 @@ public:
      * \brief Given a phase's composition, temperature and pressure,
      *        return the binary diffusion coefficient for components
      *        \f$i\f$ and \f$j\f$ in this phase.
+     *
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
+     * \copydoc Doxygen::compIIdxParam
+     * \copydoc Doxygen::compJIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
@@ -132,10 +265,8 @@ public:
      * \brief Given a phase's composition, temperature, pressure and
      *        density, calculate its specific enthalpy [J/kg].
      *
-     *  \todo This fluid system neglects the contribution of
-     *        gas-molecules in the liquid phase. This contribution is
-     *        probably not big. Somebody would have to find out the
-     *        enthalpy of solution for this system. ...
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar enthalpy(const FluidState &fluidState,
@@ -148,9 +279,8 @@ public:
     /*!
      * \brief Thermal conductivity of a fluid phase [W/(m K)].
      *
-     * Use the conductivity of air and water as a first approximation.
-     * Source:
-     * http://en.wikipedia.org/wiki/List_of_thermal_conductivities
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
      */
     template <class FluidState, class ParameterCache>
     static Scalar thermalConductivity(const FluidState &fluidState,
@@ -163,11 +293,9 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of a fluid phase [J/kg].
      *
-     * \param paramCache   mutable parameters
-     * \param phaseIdx  for which phase to give back the heat capacity
-     * \param fluidState represents all relevant thermodynamic quantities of a
-     *  fluid system
-     * */
+     * \copydoc Doxygen::fluidSystemBaseParams
+     * \copydoc Doxygen::phaseIdxParam
+     */
     template <class FluidState, class ParameterCache>
     static Scalar heatCapacity(const FluidState &fluidState,
                                const ParameterCache &paramCache,

@@ -20,7 +20,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionsparams
  *
  * \brief Specification of the material params for the three-phase van
  *        Genuchten capillary pressure model.
@@ -32,8 +31,7 @@
 
 #include <dumux/common/valgrind.hh>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionsparams
  *

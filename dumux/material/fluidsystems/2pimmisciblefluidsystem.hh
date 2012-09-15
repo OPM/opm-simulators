@@ -20,13 +20,9 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Fluidsystems
  *
  * \brief A fluid system for two-phase models assuming immiscibility and
  *        thermodynamic equilibrium
- *
- * The wetting and the non-wetting phase can be defined via their
- * individual components.
  */
 #ifndef DUMUX_2P_IMMISCIBLE_FLUID_SYSTEM_HH
 #define DUMUX_2P_IMMISCIBLE_FLUID_SYSTEM_HH
@@ -54,8 +50,8 @@ namespace FluidSystems {
  *        thermodynamic equilibrium
  *
  * The wetting and the non-wetting phase can be defined individually
- * via Dumux::LiquidPhase<Component> and
- * Dumux::GasPhase<Component>. These phases consist of one pure
+ * via <tt>Dumux::LiquidPhase<Component></tt> and
+ * <tt>Dumux::GasPhase<Component></tt>. These phases consist of one pure
  * component. With the help of this adapter class, the phase
  * properties can be accessed. This is suitable for pure two-phase
  * systems without compositional effects.
@@ -71,13 +67,14 @@ class TwoPImmiscible
     typedef TwoPImmiscible<Scalar, WettingPhase, NonwettingPhase> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 public:
+    //! \copydoc BaseFluidSystem::ParameterCache
     typedef NullParameterCache ParameterCache;
 
     /****************************************
      * Fluid phase related static parameters
      ****************************************/
 
-    //! Number of phases in the fluid system
+    //! \copydoc BaseFluidSystem::numPhases
     static constexpr int numPhases = 2;
 
     //! Index of the wetting phase
@@ -85,9 +82,7 @@ public:
     //! Index of the non-wetting phase
     static constexpr int nPhaseIdx = 1;
 
-    /*!
-     * \brief Return the human readable name of a fluid phase
-     */
+    //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -99,9 +94,7 @@ public:
         return name[phaseIdx];
     }
 
-    /*!
-     * \brief Return whether a phase is liquid
-     */
+    //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -111,35 +104,7 @@ public:
             : NonwettingPhase::isLiquid();
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal mixture.
-     *
-     * We define an ideal mixture as a fluid phase where the fugacity
-     * coefficients of all components times the pressure of the phase
-     * are indepent on the fluid composition. This assumtion is true
-     * if immiscibility is assumed. If you are unsure what
-     * this function should return, it is safe to return false. The
-     * only damage done will be (slightly) increased computation times
-     * in some cases.
-     */
-    static constexpr bool isIdealMixture(int phaseIdx)
-    {
-        //assert(0 <= phaseIdx && phaseIdx < numPhases);
-
-        // we assume immisibility
-        return true;
-    }
-
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be compressible.
-     *
-     * Compressible means. that the partial derivative of the density
-     * to the fluid pressure is always larger than zero.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isCompressible
     static constexpr bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -150,12 +115,7 @@ public:
             : NonwettingPhase::isCompressible();
     }
 
-    /*!
-     * \brief Returns true if and only if a fluid phase is assumed to
-     *        be an ideal gas.
-     *
-     * \param phaseIdx The index of the fluid phase to consider
-     */
+    //! \copydoc BaseFluidSystem::isIdealGas
     static constexpr bool isIdealGas(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
@@ -167,11 +127,20 @@ public:
             : NonwettingPhase::isIdealGas();
     }
 
+    //! \copydoc BaseFluidSystem::isIdealMixture
+    static constexpr bool isIdealMixture(int phaseIdx)
+    {
+        //assert(0 <= phaseIdx && phaseIdx < numPhases);
+
+        // we assume immisibility
+        return true;
+    }
+
     /****************************************
      * Component related static parameters
      ****************************************/
 
-    //! Number of components in the fluid system
+    //! \copydoc BaseFluidSystem::numComponents
     static constexpr int numComponents = 2;
 
     //! Index of the wetting phase's component
@@ -179,11 +148,7 @@ public:
     //! Index of the non-wetting phase's component
     static constexpr int nCompIdx = 1;
 
-    /*!
-     * \brief Return the human readable name of a component
-     *
-     * \param compIdx index of the component
-     */
+    //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
     {
         assert(0 <= compIdx && compIdx < numComponents);
@@ -193,11 +158,7 @@ public:
         return NonwettingPhase::name();
     }
 
-    /*!
-     * \brief Return the molar mass of a component in [kg/mol].
-     *
-     * \param compIdx index of the component
-     */
+    //! \copydoc BaseFluidSystem::molarMass
     static constexpr Scalar molarMass(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
@@ -252,9 +213,7 @@ public:
      * thermodynamic relations
      ****************************************/
 
-    /*!
-     * \brief Initialize the fluid system's static parameters
-     */
+    //! \copydoc BaseFluidSystem::init
     static void init()
     {
         // two gaseous phases at once do not make sense physically!
@@ -262,14 +221,7 @@ public:
         assert(WettingPhase::isLiquid() || NonwettingPhase::isLiquid());
     }
 
-    /*!
-     * \brief Return the density of a phase [kg/m^3].
-     *
-     * \param fluidState The fluid state of the two-phase model
-     * \param phaseIdx Index of the fluid phase
-     *
-     * \tparam FluidState the fluid state class of the two-phase model
-     */
+    //! \copydoc BaseFluidSystem::density
     template <class FluidState>
     static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
@@ -284,10 +236,7 @@ public:
         return NonwettingPhase::density(temperature, pressure);
     }
 
-    /*!
-     * \brief Return the viscosity of a phase [Pa*s].
-     *
-     */
+    //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
@@ -302,16 +251,7 @@ public:
         return NonwettingPhase::viscosity(temperature, pressure);
     }
 
-    /*!
-     * \brief Calculate the fugacity coefficient [Pa] of an individual
-     *        component in a fluid phase
-     *
-     * The fugacity coefficient \f$\phi_\kappa\f$ is connected to the
-     * fugacity \f$f_\kappa\f$ and the component's molarity
-     * \f$x_\kappa\f$ by means of the relation
-     *
-     * \f[ f_\kappa = \phi_\kappa * x_{\kappa} \f]
-     */
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
@@ -330,25 +270,7 @@ public:
         return std::numeric_limits<Scalar>::infinity();
     }
 
-    /*!
-     * \brief Calculate the binary molecular diffusion coefficient for
-     *        a component in a fluid phase [mol^2 * s / (kg*m^3)]
-     *
-     * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
-     * gradient of the chemical potential and follows the law
-     *
-     * \f[ J = - D \mathbf{grad} \mu_\kappa \f]
-     *
-     * where \f$\mu_\kappa\f$ is the component's chemical potential,
-     * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
-     * diffusive flux. \f$\mu_\kappa\f$ is connected to the component's
-     * fugacity \f$f_\kappa\f$ by the relation
-     *
-     * \f[ \mu_\kappa = R T_\alpha \mathrm{ln} \frac{f_\kappa}{p_\alpha} \f]
-     *
-     * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
-     * pressure and temperature.
-     */
+    //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState>
     static Scalar diffusionCoefficient(const FluidState &fluidState,
                                        const ParameterCache &paramCache,
@@ -360,11 +282,7 @@ public:
                    " immiscibility is assumed");
     }
 
-    /*!
-     * \brief Given a phase's composition, temperature and pressure,
-     *        return the binary diffusion coefficient for components
-     *        \f$i\f$ and \f$j\f$ in this phase.
-     */
+    //! \copydoc BaseFluidSystem::binaryDiffusionCoefficient
     template <class FluidState>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
@@ -378,9 +296,7 @@ public:
                    " immiscibility is assumed");
     }
 
-    /*!
-     * \brief Return the specific enthalpy of a fluid phase [J/kg].
-     */
+    //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,
                            const ParameterCache &paramCache,
@@ -395,9 +311,7 @@ public:
         return NonwettingPhase::enthalpy(temperature, pressure);
     }
 
-    /*!
-     * \brief Thermal conductivity of a fluid phase [W/(m^2 K/m)].
-     */
+    //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
@@ -411,14 +325,8 @@ public:
             return WettingPhase::thermalConductivity(temperature, pressure);
         return NonwettingPhase::thermalConductivity(temperature, pressure);
     }
-
-    /*!
-     * \brief Specific isobaric heat capacity of a fluid phase.
-     *        \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param params    mutable parameters
-     * \param phaseIdx  for which phase to give back the heat capacity
-     */
+    
+    //! \copydoc BaseFluidSystem::heatCapacity
     template <class FluidState>
     static Scalar heatCapacity(const FluidState &fluidState,
                                const ParameterCache &paramCache,

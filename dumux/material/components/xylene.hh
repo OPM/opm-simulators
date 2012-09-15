@@ -21,7 +21,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup Components
  * \brief Component for Xylene
  */
 #ifndef DUMUX_XYLENE_HH

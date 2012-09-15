@@ -19,7 +19,6 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionsparams
  *
  * \brief   Parameters that are necessary for the \em regularization of
  *          the linear constitutive relations.
@@ -29,8 +28,7 @@
 
 #include "linearmaterialparams.hh"
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionsparams
  *

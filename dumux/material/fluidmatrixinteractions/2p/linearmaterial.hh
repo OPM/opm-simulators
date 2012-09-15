@@ -21,20 +21,18 @@
  *****************************************************************************/
 /*!
  * \file
- * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Linear capillary pressure and relative permeability <->
  *        saturation relations
  */
-#ifndef LINEAR_MATERIAL_HH
-#define LINEAR_MATERIAL_HH
+#ifndef DUMUX_LINEAR_MATERIAL_HH
+#define DUMUX_LINEAR_MATERIAL_HH
 
 #include "linearmaterialparams.hh"
 
 #include <algorithm>
 
-namespace Dumux
-{
+namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  *

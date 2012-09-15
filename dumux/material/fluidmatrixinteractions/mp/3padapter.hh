@@ -17,7 +17,6 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \ingroup fluidmatrixinteractionslaws
  * \file
  * \brief Makes the three-phase capillary pressure-saturation
  *        relations available under the M-phase API for material laws.
