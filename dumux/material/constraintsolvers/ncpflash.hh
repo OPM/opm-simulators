@@ -139,9 +139,16 @@ public:
     static void solve(FluidState &fluidState,
                       ParameterCache &paramCache,
                       const typename MaterialLaw::Params &matParams,
-                      const ComponentVector &globalMolarities)
+                      const ComponentVector &globalMolarities,
+                      Scalar tolerance = 0.0)
     {
-        Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-25);
+        Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-35);
+
+        if (tolerance <= 0.0) {
+            tolerance = std::min(1e-10, 
+                                 Dumux::geometricMean(Scalar(1.0),
+                                                      std::numeric_limits<Scalar>::epsilon()));
+        }
 
         /////////////////////////
         // Newton method
@@ -171,10 +178,6 @@ public:
         std::cout << "\n";
         */
         Scalar relError, lastError = 0;
-        Scalar tolerance = std::min(1e-10, 
-                                    Dumux::geometricMean(Scalar(1.0),
-                                                         std::numeric_limits<Scalar>::epsilon()));
-
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
