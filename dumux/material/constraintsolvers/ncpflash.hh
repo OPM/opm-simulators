@@ -367,8 +367,8 @@ protected:
                 // physically correct for non-zero capillary
                 // pressures
                 b[eqIdx] =
-                    fluidState.fugacity(/*phaseIdx=*/0, compIdx)/fluidState.pressure(/*phaseIdx=*/0) -
-                    fluidState.fugacity(phaseIdx, compIdx)/fluidState.pressure(phaseIdx);
+                    fluidState.fugacity(/*phaseIdx=*/0, compIdx) 
+                    - fluidState.fugacity(phaseIdx, compIdx);
                 ++eqIdx;
             }
         }
