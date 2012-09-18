@@ -353,12 +353,6 @@ public:
     {
         Scalar Swe = SwToSwe_(params, Sw);
 
-        // if the effective saturation is smaller than zero we let
-        // the underlying material law decide what to do.
-        if (Swe < 0) {
-            return VanGenuchten::pC(params.mdcParams(), Swe);
-        }
-
         // calculate the current apparent saturation
         ScanningCurve *sc = findScanningCurve_Swe_(params, Swe);
 
