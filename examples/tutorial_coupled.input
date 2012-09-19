@@ -1,5 +1,5 @@
 EndTime = 100e3 # duration of the simulation [s]
-InitialTimeStepSize = 1000 # initial time step size [s]
+InitialTimeStepSize = 50 # initial time step size [s]
 DomainSizeX = 300 # x-coordinate of the upper-right corner of the physical domain [m]
 DomainSizeY = 60 # y-coordinate of the upper-right corner of the physical domain [m]
 CellsX = 100 # x-resolution of the grid
