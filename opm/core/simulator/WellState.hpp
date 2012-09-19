@@ -37,10 +37,17 @@ namespace Opm
             if (wells) {
                 const int nw = wells->number_of_wells;
                 bhp_.resize(nw);
-                // Initialize bhp to be pressure in first perforation cell.
+                // Initialize bhp to be target pressure
+                // if bhp-controlled well, otherwise set
+                // to pressure in first perforation cell.
                 for (int w = 0; w < nw; ++w) {
-                    const int cell = wells->well_cells[wells->well_connpos[w]];
-                    bhp_[w] = state.pressure()[cell];
+                    const WellControls* ctrl = wells->ctrls[w];
+                    if (ctrl->type[ctrl->current] == BHP) {
+                        bhp_[w] = ctrl->target[ctrl->current];
+                    } else {
+                        const int cell = wells->well_cells[wells->well_connpos[w]];
+                        bhp_[w] = state.pressure()[cell];
+                    }
                 }
                 perfrates_.resize(wells->well_connpos[nw]);
             }

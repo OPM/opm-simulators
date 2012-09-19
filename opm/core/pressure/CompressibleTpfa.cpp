@@ -36,6 +36,7 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <numeric>
 
 namespace Opm
 {
@@ -446,7 +447,7 @@ namespace Opm
     /// Compute per-iteration dynamic properties for wells.
     void CompressibleTpfa::computeWellDynamicData(const double /*dt*/,
                                                   const BlackoilState& /*state*/,
-                                                  const WellState& /*well_state*/)
+                                                  const WellState& well_state)
     {
         // These are the variables that get computed by this function:
         //
@@ -458,18 +459,42 @@ namespace Opm
         wellperf_A_.resize(nperf*np*np);
         wellperf_phasemob_.resize(nperf*np);
         // The A matrix is set equal to the perforation grid cells'
-        // matrix, for both injectors and producers.
+        // matrix for producers, computed from bhp and injection
+        // component fractions from
         // The mobilities are set equal to the perforation grid cells'
-        // mobilities, for both injectors and producers.
+        // mobilities for producers.
+        std::vector<double> mu(np);
         for (int w = 0; w < nw; ++w) {
+            bool producer = (wells_->type[w] == PRODUCER);
+            const double* comp_frac = &wells_->comp_frac[np*w];
             for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w+1]; ++j) {
                 const int c = wells_->well_cells[j];
-                const double* cA = &cell_A_[np*np*c];
                 double* wpA = &wellperf_A_[np*np*j];
-                std::copy(cA, cA + np*np, wpA);
-                const double* cM = &cell_phasemob_[np*c];
                 double* wpM = &wellperf_phasemob_[np*j];
-                std::copy(cM, cM + np, wpM);
+                if (producer) {
+                    const double* cA = &cell_A_[np*np*c];
+                    std::copy(cA, cA + np*np, wpA);
+                    const double* cM = &cell_phasemob_[np*c];
+                    std::copy(cM, cM + np, wpM);
+                } else {
+                    const double bhp = well_state.bhp()[w];
+                    double perf_p = bhp;
+                    for (int phase = 0; phase < np; ++phase) {
+                        perf_p += wellperf_gpot_[np*j + phase]*comp_frac[phase];
+                    }
+                    // Hack warning: comp_frac is used as a component
+                    // surface-volume variable in calls to matrix() and
+                    // viscosity(), but as a saturation in the call to
+                    // relperm(). This is probably ok as long as injectors
+                    // only inject pure fluids.
+                    props_.matrix(1, &perf_p, comp_frac, &c, wpA, NULL);
+                    props_.viscosity(1, &perf_p, comp_frac, &c, &mu[0], NULL);
+                    ASSERT(std::fabs(std::accumulate(comp_frac, comp_frac + np, 0.0) - 1.0) < 1e-6);
+                    props_.relperm  (1, comp_frac, &c, wpM , NULL);
+                    for (int phase = 0; phase < np; ++phase) {
+                        wpM[phase] /= mu[phase];
+                    }
+                }
             }
         }
     }
