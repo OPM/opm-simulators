@@ -142,7 +142,7 @@ impl_allocate(struct UnstructuredGrid   *G       ,
     nnu    = G->number_of_cells;
     nwperf = 0;
 
-    if (wells != NULL) {                    assert (wells->W != NULL);
+    if ((wells != NULL) && (wells->W != NULL)) {
         nnu    += wells->W->number_of_wells;
         nwperf  = wells->W->well_connpos[ wells->W->number_of_wells ];
     }
@@ -185,13 +185,15 @@ construct_matrix(struct UnstructuredGrid   *G    ,
 /* ---------------------------------------------------------------------- */
 {
     int    f, c1, c2, w, i, nc, nnu;
+    int    wells_present;
     size_t nnz;
 
     struct CSRMatrix *A;
 
     nc = nnu = G->number_of_cells;
-    if (wells != NULL) {
-        assert (wells->W != NULL);
+
+    wells_present = (wells != NULL) && (wells->W != NULL);
+    if (wells_present) {
         nnu += wells->W->number_of_wells;
     }
 
@@ -214,7 +216,7 @@ construct_matrix(struct UnstructuredGrid   *G    ,
             }
         }
 
-        if (wells != NULL) {
+        if (wells_present) {
             /* Well <-> cell connections */
             struct Wells *W = wells->W;
 
@@ -252,7 +254,7 @@ construct_matrix(struct UnstructuredGrid   *G    ,
             }
         }
 
-        if (wells != NULL) {
+        if (wells_present) {
             /* Fill well <-> cell connections */
             struct Wells *W = wells->W;
 
@@ -1127,8 +1129,7 @@ cfs_tpfa_res_construct(struct UnstructuredGrid   *G      ,
         nf     = G->number_of_faces;
         nwperf = 0;
 
-        if (wells != NULL) {
-            assert (wells->W != NULL);
+        if ((wells != NULL) && (wells->W != NULL)) {
             nwperf = wells->W->well_connpos[ wells->W->number_of_wells ];
         }
 
@@ -1194,7 +1195,9 @@ cfs_tpfa_res_assemble(struct UnstructuredGrid     *G        ,
         assemble_cell_contrib(G, c, h);
     }
 
-    if ((forces != NULL) && (forces->wells != NULL)) {
+    if ((forces           != NULL) &&
+        (forces->wells    != NULL) &&
+        (forces->wells->W != NULL)) {
         compute_well_compflux_and_deriv(forces->wells, cq->nphases,
                                         cpress, wpress, h->pimpl);
 
@@ -1297,8 +1300,9 @@ cfs_tpfa_res_flux(struct UnstructuredGrid    *G        ,
 {
     compute_flux(G, np, trans, pmobf, gravcap_f, cpress, fflux);
 
-    if ((forces != NULL) && (forces->wells != NULL) &&
-        (wpress != NULL) && (wflux         != NULL)) {
+    if ((forces           != NULL) &&
+        (forces->wells    != NULL) &&
+        (forces->wells->W != NULL) && (wpress != NULL) && (wflux != NULL)) {
 
         compute_wflux(np, forces->wells, pmobc, cpress, wpress, wflux);
     }
