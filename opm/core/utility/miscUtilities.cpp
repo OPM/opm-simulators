@@ -374,7 +374,10 @@ namespace Opm
                     if (perf_rate > 0.0) {
                         // perf_rate is a total inflow rate, we want a water rate.
                         if (wells->type[w] != INJECTOR) {
-                            std::cout << "**** Warning: crossflow in well with index " << w << " ignored." << std::endl;
+                            std::cout << "**** Warning: crossflow in well "
+                                      << w << " perf " << perf - wells->well_connpos[w]
+                                      << " ignored. Rate was "
+                                      << perf_rate/Opm::unit::day << " m^3/day." << std::endl;
                             perf_rate = 0.0;
                         } else {
                             ASSERT(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
