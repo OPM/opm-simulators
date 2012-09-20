@@ -175,11 +175,16 @@ public:
             std::cout << globalMolarities[compIdx] << " ";
         std::cout << "\n";
         */
-        Scalar relError, lastError = 0;
+        Scalar absError, lastError = 0;
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
-            linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities);
+            absError = linearize_<MaterialLaw>(J,
+                                               b,
+                                               fluidState,
+                                               paramCache,
+                                               matParams,
+                                               globalMolarities);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
 
@@ -222,17 +227,20 @@ public:
             */
 
             // update the fluid quantities.
-            relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
+            update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
+            //relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
 
-            if (!std::isfinite(relError))
+            if (!std::isfinite(absError))
                 break;
-            else if (relError < tolerance && lastError >= relError)
+            else if (absError < tolerance && lastError >= absError) {
                 return;
-            lastError = relError;
+            }
+            lastError = absError;
         }
 
-        if (relError < tolerance)
+        if (absError < tolerance) {
             return;
+        }
 
         /*
         printFluidState_(fluidState);
@@ -296,12 +304,12 @@ protected:
     }
 
     template <class MaterialLaw, class FluidState>
-    static void linearize_(Matrix &J,
-                           Vector &b,
-                           FluidState &fluidState,
-                           ParameterCache &paramCache,
-                           const typename MaterialLaw::Params &matParams,
-                           const ComponentVector &globalMolarities)
+    static Scalar linearize_(Matrix &J,
+                             Vector &b,
+                             FluidState &fluidState,
+                             ParameterCache &paramCache,
+                             const typename MaterialLaw::Params &matParams,
+                             const ComponentVector &globalMolarities)
     {
         FluidState origFluidState(fluidState);
         ParameterCache origParamCache(paramCache);
@@ -315,6 +323,10 @@ protected:
         calculateDefect_(b, fluidState, fluidState, globalMolarities);
         Valgrind::CheckDefined(b);
 
+        Scalar absError = 0;
+        for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+            absError = std::max(std::abs(b[compIdx]), absError);
+
         // assemble jacobian matrix
         for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             ////////
@@ -325,9 +337,8 @@ protected:
 
             // deviate the mole fraction of the i-th component
             Scalar x_i = getQuantity_(fluidState, pvIdx);
-            const Scalar eps =
-                std::max(1e-18, std::numeric_limits<Scalar>::epsilon() * 1e5)
-                / quantityWeight_(fluidState, pvIdx);
+            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7/(quantityWeight_(fluidState, pvIdx));
+
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
 
@@ -347,6 +358,8 @@ protected:
             // end forward differences
             ////////
         }
+
+        return absError;
     }
 
     template <class FluidState>
@@ -671,7 +684,7 @@ protected:
     {
         // first pressure
         if (pvIdx < 1)
-            return 1.0/1e5;
+            return 1/std::max(1e5, fluidState.pressure(/*phaseIdx=*/0));
         // first M - 1 saturations
         else if (pvIdx < numPhases)
             return 1.0;
