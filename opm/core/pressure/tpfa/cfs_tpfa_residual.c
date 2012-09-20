@@ -743,6 +743,29 @@ assemble_completion_to_cell(int c, int wdof, int np, double dt,
 
 /* ---------------------------------------------------------------------- */
 static void
+welleq_coeff_shut(int np, struct cfs_tpfa_res_data *h,
+                  double *res, double *w2c, double *w2w)
+/* ---------------------------------------------------------------------- */
+{
+    int           p;
+    double        fwi;
+    const double *dpflux_w;
+
+    /* Sum reservoir phase flux derivatives set by
+     * compute_darcyflux_and_deriv(). */
+    dpflux_w = h->pimpl->flux_work + (1 * np);
+    for (p = 0, fwi = 0.0; p < np; p++) {
+        fwi += dpflux_w[ p ];
+    }
+
+    *res = 0.0;
+    *w2c = 0.0;
+    *w2w = fwi;
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
 welleq_coeff_bhp(int np, double dp, struct cfs_tpfa_res_data *h,
                  double *res, double *w2c, double *w2w)
 /* ---------------------------------------------------------------------- */
@@ -815,23 +838,25 @@ assemble_completion_to_well(int w, int c, int nc, int np,
     ctrl = W->ctrls[ w ];
 
     if (ctrl->current < 0) {
-        assert (0);             /* Shut wells currently not supported */
+        /* Interpreting a negative current control index to mean a shut well */
+        welleq_coeff_shut(np, h, &res, &w2c, &w2w);
     }
+    else {
+        switch (ctrl->type[ ctrl->current ]) {
+        case BHP :
+            welleq_coeff_bhp(np, pw - ctrl->target[ ctrl->current ],
+                             h, &res, &w2c, &w2w);
+            break;
 
-    switch (ctrl->type[ ctrl->current ]) {
-    case BHP :
-        welleq_coeff_bhp(np, pw - ctrl->target[ ctrl->current ],
-                         h, &res, &w2c, &w2w);
-        break;
+        case RESERVOIR_RATE:
+            assert (W->number_of_phases == np);
+            welleq_coeff_resv(np, h, ctrl, &res, &w2c, &w2w);
+            break;
 
-    case RESERVOIR_RATE:
-        assert (W->number_of_phases == np);
-        welleq_coeff_resv(np, h, ctrl, &res, &w2c, &w2w);
-        break;
-
-    case SURFACE_RATE:
-        assert (0);             /* Surface rate currently not supported */
-        break;
+        case SURFACE_RATE:
+            assert (0);             /* Surface rate currently not supported */
+            break;
+        }
     }
 
     /* Assemble completion contributions */
@@ -854,7 +879,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
                       struct cfs_tpfa_res_data    *h     )
 {
     int           w, i, c, np, np2, nc;
-    int           is_neumann;
+    int           is_neumann, is_open;
     double        pw, dp;
     double       *WI, *gpot, *pmobp;
     const double *Ac, *dAc;
@@ -876,6 +901,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
 
     for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[ w ];
+        is_open = W->ctrls[w]->current >= 0;
 
         for (; i < W->well_connpos[w + 1];
              i++, gpot += np, pmobp += np) {
@@ -888,7 +914,9 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
 
             init_completion_contrib(i, np, Ac, dAc, h->pimpl);
 
-            assemble_completion_to_cell(c, nc + w, np, dt, h);
+            if (is_open) {
+                assemble_completion_to_cell(c, nc + w, np, dt, h);
+            }
 
             /* Prepare for RESV controls */
             compute_darcyflux_and_deriv(np, WI[i], dp, pmobp, gpot,
