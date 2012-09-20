@@ -79,7 +79,7 @@ public:
      * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
      *        medium.
      *
-     * The Somerton law is given by:
+     * For two phases, the Somerton law is given by:
      * \f[
      \lambda_{pm} =
      \lambda_{ful,g} +
