@@ -151,6 +151,7 @@ class TutorialProblemCoupled
     enum { contiNEqIdx = Indices::conti0EqIdx + nPhaseIdx };
 
 public:
+    //! The constructor of the problem
     TutorialProblemCoupled(TimeManager &timeManager)
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
         , eps_(3e-6)
@@ -191,51 +192,31 @@ public:
     Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 283.15; }
 
-    /*! Intrinsic permeability tensor K \f$[m^2]\f$ depending
-     *  on the position in the domain
-     *
-     *  \param context The execution context
-     *  \param scvIdx The local index of the degree of freedom
-     *
-     *  Alternatively, the function intrinsicPermeabilityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
-     */
+    //! Returns the intrinsic permeability tensor K \f$[m^2]\f$
+    //!  depending on the position in the domain.
     template <class Context>
     const DimMatrix &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
-                                        int spaceIdx, int timeIdx) const
+                                           int spaceIdx, int timeIdx) const
     { return K_; }
-
-    /*! Define the porosity \f$[-]\f$ of the porous medium depending
-     *  on the position in the domain
-     *
-     *  \param context The execution context
-     *  \param scvIdx The local index of the degree of freedom
-     *
-     *  Alternatively, the function porosityAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
-     */
+    
+    //! Defines the porosity \f$[-]\f$ of the porous medium depending
+    //!  on the position in the domain.
     template <class Context>
     Scalar porosity(const Context &context,                    /*@\label{tutorial-coupled:porosity}@*/
                     int spaceIdx, int timeIdx) const
     { return 0.2; }
 
-    /*! Return the parameter object for the material law (i.e. Brooks-Corey)
-     *  depending on the position in the domain
-     *
-     *  \param context The execution context
-     *  \param scvIdx The local index of the degree of freedom
-     *
-     *  Alternatively, the function materialLawParamsAtPos(const GlobalPosition& globalPos) could be defined, where globalPos
-     *  is the vector including the global coordinates of the finite volume.
-     */
+    //! Returns the parameter object for the material law (i.e. Brooks-Corey)
+    //! depending on the position in the domain
     template <class Context>
     const MaterialLawParams& materialLawParams(const Context &context,            /*@\label{tutorial-coupled:matLawParams}@*/
                                                int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
-    //! Evaluate the boundary conditions.
+    //! Evaluates the boundary conditions.
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, 
+                  const Context &context, int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (pos[0] < eps_) {
@@ -268,10 +249,9 @@ public:
             values.setNoFlow();
     }
 
-    //! Evaluates the source term for all phases within a given
-    //! sub-control-volume. In this case, the 'values' parameter
-    //! stores the rate mass generated or annihilated per volume unit
-    //! in [kg / (m^3 * s)]. Positive values mean that mass is created.
+    //! Evaluates the source term for all conserved quantities at a
+    //! given position in the pysical domain [(m^3 * s)]. Positive
+    //! values mean that mass is created.
     template <class Context>
     void source(RateVector &values, const Context &context, int spaceIdx, int timeIdx) const
     {
@@ -279,8 +259,7 @@ public:
         values[contiNEqIdx]= 0.0;
     }
 
-    // Evaluates the initial value for a control volume. For this
-    // method, the 'values' parameter stores primary variables.
+    //! Evaluates the initial value at a given position in the domain.
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
