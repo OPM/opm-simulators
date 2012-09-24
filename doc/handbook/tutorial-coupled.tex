@@ -370,6 +370,8 @@ For the visualization of the results using paraview please refer to section \ref
   run the model as explained above.
 
   \item \textbf{Changing  the Shape of the Discrete Elements} \\
+  In order to complete this exercise you need a grid module capable of handling
+  simplex grids, like \texttt{ALUSimplexGrid}. If this is not the case please skip this exercise.
   Change the types of elements used for discretizing the domain. In line \ref{tutorial-coupled:set-gridcreator} of the problem 
   file  the type of gridcreator is chosen. By choosing a different grid creator you can discretize the domain with different elements. 
 
@@ -450,7 +452,7 @@ Call the \texttt{set}-functions from the constructor of the \texttt{tutorialspat
 \includegraphics[width=0.5\linewidth,keepaspectratio]{EPS/exercise1_c.eps}
 \caption{Exercise 1f: Set-up of a model domain with a heterogeneity. $\Delta x = 20 \;\text{m}$ $\Delta y = 20\;\text{m}$.}\label{tutorial-coupled:exercise1_d}
 \end{figure}
-domain. You can use the fluids of exercise 1c).\\
+domain. You can use the fluids of exercise 1b).\\
 \textbf{Hint:} The current position of the control volume can be obtained using \texttt{element\allowbreak.geometry()\allowbreak.corner(scvIdx)}, which
 returns a vector of the global coordinates of the current position.\\
 When does the front cross the material border? In paraview, the
@@ -474,10 +476,13 @@ guardian macros in lines \ref{tutorial-coupled:guardian1} and
 \ref{tutorial-coupled:guardian1}
 in the header files (e.g. change
 \mbox{\texttt{DUMUX\_TUTORIALPROBLEM\_COUPLED\_HH}} to\\
-\mbox{\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). 
+\mbox{\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). Include the new problem file in \texttt{tutorial\_coupled.cc}.
 Besides adjusting the guardian macros, the new problem file should define and
 use a new type tag for the problem as well as a new problem class
-e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}.
+e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}. The type tag for the problem 
+should be adjusted, too. For this, modify line \ref{tutorial-coupled:set-type-tag}
+in the problem file and the adapt the \texttt{main} function in the
+file \texttt{tutorial\_coupled.cc}.
 
 After this, change the run-time parameters so that they match the
 domain described by figure \ref{tutorial-coupled:ex2_Domain}. Adapt
