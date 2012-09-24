@@ -50,8 +50,7 @@
 // provides Dune::FieldVector
 #include <dune/common/fvector.hh>
 
-namespace Dumux
-{
+namespace Dumux {
 
 template<class TypeTag>
 class TutorialProblemDecoupled;
@@ -59,16 +58,14 @@ class TutorialProblemDecoupled;
 //////////
 // Specify the properties for the lens problem
 //////////
-namespace Properties
-{
+namespace Properties {
 // create a new type tag for the problem
 NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(FVPressureTwoP, FVTransportTwoP, IMPESTwoP, TutorialSpatialParamsDecoupled)); /*@\label{tutorial-decoupled:create-type-tag}@*/
 
 // Set the problem property
-SET_PROP(TutorialProblemDecoupled, Problem) /*@\label{tutorial-decoupled:set-problem}@*/
-{
-    typedef Dumux::TutorialProblemDecoupled<TypeTag> type;
-};
+SET_TYPE_PROP(TutorialProblemDecoupled, /*@\label{tutorial-decoupled:set-problem}@*/
+              Problem, 
+              Dumux::TutorialProblemDecoupled<TypeTag>);
 
 // Set the grid type
 SET_TYPE_PROP(TutorialProblemDecoupled, Grid, Dune::YaspGrid<2>); /*@\label{tutorial-decoupled:set-grid-type}@*/
@@ -99,6 +96,9 @@ SET_SCALAR_PROP(TutorialProblemDecoupled, ImpetCflFactor, 0.95); /*@\label{tutor
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutorial-decoupled:gravity}@*/
+
+// define how long the simulation should run [s]
+SET_SCALAR_PROP(TutorialProblemDecoupled, EndTime, 100e3);
 
 // define the properties required by the cube grid creator
 SET_SCALAR_PROP(TutorialProblemDecoupled, DomainSizeX, 300.0);

@@ -98,6 +98,12 @@ public:
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
 
+// define how long the simulation should run [s]
+SET_SCALAR_PROP(TutorialProblemCoupled, EndTime, 100e3);
+
+// define the size of the initial time step [s]
+SET_SCALAR_PROP(TutorialProblemCoupled, InitialTimeStepSize, 500.0);
+
 // define the properties required by the cube grid creator
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX, 300.0);
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeY, 60.0);
