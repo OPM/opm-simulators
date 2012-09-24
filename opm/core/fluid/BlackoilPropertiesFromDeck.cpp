@@ -66,6 +66,8 @@ namespace Opm
                     = new SaturationPropsFromDeck<SatFuncGwsegUniform>();
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
+            } else {
+                THROW("Unknown threephase_model: " << threephase_model);
             }
         } else {
             if (threephase_model == "stone2") {
@@ -83,6 +85,8 @@ namespace Opm
                     = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
+            } else {
+                THROW("Unknown threephase_model: " << threephase_model);
             }
         }
 
