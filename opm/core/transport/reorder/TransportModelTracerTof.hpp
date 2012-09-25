@@ -40,11 +40,13 @@ namespace Opm
         TransportModelTracerTof(const UnstructuredGrid& grid);
 
         /// Solve for time-of-flight at next timestep.
-        /// \param[in] darcyflux         Array of signed face fluxes.
-        /// \param[in] porevolume        Array of pore volumes.
-        /// \param[in, out] tof          Array of time-of-flight values.
+        /// \param[in]  darcyflux         Array of signed face fluxes.
+        /// \param[in]  porevolume        Array of pore volumes.
+        /// \param[in]  source            Transport source term.
+        /// \param[out] tof               Array of time-of-flight values.
         void solveTof(const double* darcyflux,
                       const double* porevolume,
+                      const double* source,
                       std::vector<double>& tof);
 
     private:
@@ -55,6 +57,7 @@ namespace Opm
         const UnstructuredGrid& grid_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
+        const double* source_;      // one volumetric source term per cell
         double* tof_;
     };
 

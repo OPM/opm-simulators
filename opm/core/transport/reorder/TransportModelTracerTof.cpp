@@ -21,6 +21,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
+#include <numeric>
+#include <cmath>
 
 namespace Opm
 {
@@ -37,15 +39,25 @@ namespace Opm
 
 
     /// Solve for time-of-flight at next timestep.
-    /// \param[in] darcyflux         Array of signed face fluxes.
-    /// \param[in] porevolume        Array of pore volumes.
-    /// \param[in, out] tof          Array of time-of-flight values.
+    /// \param[in]  darcyflux         Array of signed face fluxes.
+    /// \param[in]  porevolume        Array of pore volumes.
+    /// \param[in]  source            Transport source term.
+    /// \param[out] tof               Array of time-of-flight values.
     void TransportModelTracerTof::solveTof(const double* darcyflux,
                                            const double* porevolume,
+                                           const double* source,
                                            std::vector<double>& tof)
     {
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
+        source_ = source;
+#ifndef NDEBUG
+        // Sanity check for sources.
+        const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
+        if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
+            THROW("Sources do not sum to zero: " << cum_src);
+        }
+#endif
         tof.resize(grid_.number_of_cells);
         std::fill(tof.begin(), tof.end(), 0.0);
         tof_ = &tof[0];
@@ -58,8 +70,13 @@ namespace Opm
     void TransportModelTracerTof::solveSingleCell(const int cell)
     {
         // Compute flux terms.
+        // Sources have zero tof, and therefore do not contribute
+        // to upwind_term. Sinks on the other hand, must be added
+        // to the downwind_flux (note sign change resulting from
+        // different sign conventions: pos. source is injection,
+        // pos. flux is outflow).
         double upwind_term = 0.0;
-        double downwind_flux = 0.0;
+        double downwind_flux = std::max(-source_[cell], 0.0);
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
             int f = grid_.cell_faces[i];
             double flux;
