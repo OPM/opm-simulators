@@ -28,31 +28,11 @@
 #include "tutorialproblem_decoupled.hh" /*@\label{tutorial-decoupled:include-problem-header}@*/
 #include <dumux/common/start.hh> /*@\label{tutorial-decoupled:include-end}@*/
 
-//! Prints a usage/help message if something goes wrong or the user asks for help
-void usage(const char *progName, const std::string &errorMsg)  /*@\label{tutorial-decoupled:usage-function}@*/
-{
-    std::cout
-        <<  "\nUsage: " << progName << " [options]\n";
-    if (errorMsg.size() > 0)
-        std::cout << errorMsg << "\n";
-    std::cout
-        << "\n"
-        << "The List of Mandatory arguments for this program is:\n"
-        << "\t-tEnd                The end of the simulation [s]\n"
-        << "\t-dtInitial           The initial timestep size [s]\n"
-        << "\t-Grid.upperRightX    The x-coordinate of the grid's upper-right corner [m]\n"
-        << "\t-Grid.upperRightY    The y-coordinate of the grid's upper-right corner [m]\n"
-        << "\t-Grid.numberOfCellsX The grid's x-resolution\n"
-        << "\t-Grid.numberOfCellsY The grid's y-resolution\n"
-        << "\n";
-}
-
-
 ////////////////////////
 // the main function
 ////////////////////////
 int main(int argc, char** argv)
 {
     typedef TTAG(TutorialProblemDecoupled) TypeTag; /*@\label{tutorial-decoupled:set-type-tag}@*/
-    return Dumux::start<TypeTag>(argc, argv, usage); /*@\label{tutorial-decoupled:call-start}@*/
+    return Dumux::start<TypeTag>(argc, argv); /*@\label{tutorial-decoupled:call-start}@*/
 }
