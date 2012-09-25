@@ -36,6 +36,7 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <numeric>
 
 namespace Opm
 {
@@ -122,7 +123,7 @@ namespace Opm
                                  WellState& well_state)
     {
         const int nc = grid_.number_of_cells;
-        const int nw = wells_->number_of_wells;
+        const int nw = (wells_ != 0) ? wells_->number_of_wells : 0;
 
         // Set up dynamic data.
         computePerSolveDynamicData(dt, state, well_state);
@@ -446,30 +447,54 @@ namespace Opm
     /// Compute per-iteration dynamic properties for wells.
     void CompressibleTpfa::computeWellDynamicData(const double /*dt*/,
                                                   const BlackoilState& /*state*/,
-                                                  const WellState& /*well_state*/)
+                                                  const WellState& well_state)
     {
         // These are the variables that get computed by this function:
         //
         // std::vector<double> wellperf_A_;
         // std::vector<double> wellperf_phasemob_;
         const int np = props_.numPhases();
-        const int nw = wells_->number_of_wells;
-        const int nperf = wells_->well_connpos[nw];
+        const int nw = (wells_ != 0) ? wells_->number_of_wells : 0;
+        const int nperf = (wells_ != 0) ? wells_->well_connpos[nw] : 0;
         wellperf_A_.resize(nperf*np*np);
         wellperf_phasemob_.resize(nperf*np);
         // The A matrix is set equal to the perforation grid cells'
-        // matrix, for both injectors and producers.
+        // matrix for producers, computed from bhp and injection
+        // component fractions from
         // The mobilities are set equal to the perforation grid cells'
-        // mobilities, for both injectors and producers.
+        // mobilities for producers.
+        std::vector<double> mu(np);
         for (int w = 0; w < nw; ++w) {
+            bool producer = (wells_->type[w] == PRODUCER);
+            const double* comp_frac = &wells_->comp_frac[np*w];
             for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w+1]; ++j) {
                 const int c = wells_->well_cells[j];
-                const double* cA = &cell_A_[np*np*c];
                 double* wpA = &wellperf_A_[np*np*j];
-                std::copy(cA, cA + np*np, wpA);
-                const double* cM = &cell_phasemob_[np*c];
                 double* wpM = &wellperf_phasemob_[np*j];
-                std::copy(cM, cM + np, wpM);
+                if (producer) {
+                    const double* cA = &cell_A_[np*np*c];
+                    std::copy(cA, cA + np*np, wpA);
+                    const double* cM = &cell_phasemob_[np*c];
+                    std::copy(cM, cM + np, wpM);
+                } else {
+                    const double bhp = well_state.bhp()[w];
+                    double perf_p = bhp;
+                    for (int phase = 0; phase < np; ++phase) {
+                        perf_p += wellperf_gpot_[np*j + phase]*comp_frac[phase];
+                    }
+                    // Hack warning: comp_frac is used as a component
+                    // surface-volume variable in calls to matrix() and
+                    // viscosity(), but as a saturation in the call to
+                    // relperm(). This is probably ok as long as injectors
+                    // only inject pure fluids.
+                    props_.matrix(1, &perf_p, comp_frac, &c, wpA, NULL);
+                    props_.viscosity(1, &perf_p, comp_frac, &c, &mu[0], NULL);
+                    ASSERT(std::fabs(std::accumulate(comp_frac, comp_frac + np, 0.0) - 1.0) < 1e-6);
+                    props_.relperm  (1, comp_frac, &c, wpM , NULL);
+                    for (int phase = 0; phase < np; ++phase) {
+                        wpM[phase] /= mu[phase];
+                    }
+                }
             }
         }
     }
@@ -487,9 +512,9 @@ namespace Opm
         const double* z = &state.surfacevol()[0];
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
-        completion_data.gpot = &wellperf_gpot_[0];
-        completion_data.A = &wellperf_A_[0];
-        completion_data.phasemob = &wellperf_phasemob_[0];
+        completion_data.gpot = ! wellperf_gpot_.empty() ? &wellperf_gpot_[0] : 0;
+        completion_data.A = ! wellperf_A_.empty() ? &wellperf_A_[0] : 0;
+        completion_data.phasemob = ! wellperf_phasemob_.empty() ? &wellperf_phasemob_[0] : 0;
         cfs_tpfa_res_wells wells_tmp;
         wells_tmp.W = const_cast<Wells*>(wells_);
         wells_tmp.data = &completion_data;
@@ -574,15 +599,18 @@ namespace Opm
     {
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
-        completion_data.gpot = const_cast<double*>(&wellperf_gpot_[0]);
-        completion_data.A = const_cast<double*>(&wellperf_A_[0]);
-        completion_data.phasemob = const_cast<double*>(&wellperf_phasemob_[0]);
+        completion_data.gpot = ! wellperf_gpot_.empty() ? const_cast<double*>(&wellperf_gpot_[0]) : 0;
+        completion_data.A = ! wellperf_A_.empty() ? const_cast<double*>(&wellperf_A_[0]) : 0;
+        completion_data.phasemob = ! wellperf_phasemob_.empty() ? const_cast<double*>(&wellperf_phasemob_[0]) : 0;
         cfs_tpfa_res_wells wells_tmp;
         wells_tmp.W = const_cast<Wells*>(wells_);
         wells_tmp.data = &completion_data;
         cfs_tpfa_res_forces forces;
         forces.wells = &wells_tmp;
         forces.src = NULL;
+
+        double* wpress = ! well_state.bhp      ().empty() ? & well_state.bhp      ()[0] : 0;
+        double* wflux  = ! well_state.perfRates().empty() ? & well_state.perfRates()[0] : 0;
 
         cfs_tpfa_res_flux(gg,
                           &forces,
@@ -592,9 +620,9 @@ namespace Opm
                           &face_phasemob_[0],
                           &face_gravcap_[0],
                           &state.pressure()[0],
-                          &well_state.bhp()[0],
+                          wpress,
                           &state.faceflux()[0],
-                          &well_state.perfRates()[0]);
+                          wflux);
         cfs_tpfa_res_fpress(gg,
                             props_.numPhases(),
                             &htrans_[0],
