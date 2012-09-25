@@ -28,8 +28,8 @@ namespace Opm
     {
         rock_.init(deck, grid);
         pvt_.init(deck, 200);
-        SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
-            = new SaturationPropsFromDeck<SatFuncStone2Uniform>();
+        SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
+            = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
         satprops_.reset(ptr);
         ptr->init(deck, grid, 200);
 
@@ -50,30 +50,43 @@ namespace Opm
         // Unfortunate lack of pointer smartness here...
         const int sat_samples = param.getDefault("sat_tab_size", 200);
         std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
-        bool use_stone2 = (threephase_model == "stone2");
         if (sat_samples > 1) {
-            if (use_stone2) {
+            if (threephase_model == "stone2") {
                 SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
                     = new SaturationPropsFromDeck<SatFuncStone2Uniform>();
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
-            } else {
+            } else if (threephase_model == "simple") {
                 SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
                     = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
+            } else if (threephase_model == "gwseg") {
+                SaturationPropsFromDeck<SatFuncGwsegUniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncGwsegUniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else {
+                THROW("Unknown threephase_model: " << threephase_model);
             }
         } else {
-            if (use_stone2) {
+            if (threephase_model == "stone2") {
                 SaturationPropsFromDeck<SatFuncStone2Nonuniform>* ptr
                     = new SaturationPropsFromDeck<SatFuncStone2Nonuniform>();
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
-            } else {
+            } else if (threephase_model == "simple") {
                 SaturationPropsFromDeck<SatFuncSimpleNonuniform>* ptr
                     = new SaturationPropsFromDeck<SatFuncSimpleNonuniform>();
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
+            } else if (threephase_model == "gwseg") {
+                SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else {
+                THROW("Unknown threephase_model: " << threephase_model);
             }
         }
 
