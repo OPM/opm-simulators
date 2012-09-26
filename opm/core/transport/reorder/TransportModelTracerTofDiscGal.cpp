@@ -20,6 +20,7 @@
 #include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/linalg/blas_lapack.h>
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -103,12 +104,105 @@ namespace Opm
 
 
 
-    /// A class providing numerical quadrature functions.
-    struct Quadrature
+    /// A class providing numerical quadrature for cells.
+    class CellQuadrature
     {
-        static void x(){}
+    public:
+        CellQuadrature(const UnstructuredGrid& grid,
+                       const int cell,
+                       const int degree)
+            : grid_(grid), cell_(cell), degree_(degree)
+        {
+            if (degree > 1) {
+                THROW("Only quadrature degree up to 1 for now.");
+            }
+        }
+
+        int numQuadPts() const
+        {
+            return 1;
+        }
+
+        void quadPtCoord(int /*index*/, double* coord) const
+        {
+            const double* cc = grid_.cell_centroids + grid_.dimensions*cell_;
+            std::copy(cc, cc + grid_.dimensions, coord);
+        }
+
+        double quadPtWeight(int /*index*/) const
+        {
+            return 1.0;
+        }
+
+    private:
+        const UnstructuredGrid& grid_;
+        const int cell_;
+        const int degree_;
     };
 
+
+
+    /// A class providing numerical quadrature for faces.
+    class FaceQuadrature
+    {
+    public:
+        FaceQuadrature(const UnstructuredGrid& grid,
+                       const int face,
+                       const int degree)
+            : grid_(grid), face_(face), degree_(degree)
+        {
+            if (degree > 1) {
+                THROW("Only quadrature degree up to 1 for now.");
+            }
+        }
+
+        int numQuadPts() const
+        {
+            return 1;
+        }
+
+        void quadPtCoord(int /*index*/, double* coord) const
+        {
+            const double* fc = grid_.face_centroids + grid_.dimensions*face_;
+            std::copy(fc, fc + grid_.dimensions, coord);
+        }
+
+        double quadPtWeight(int /*index*/) const
+        {
+            return 1.0;
+        }
+
+    private:
+        const UnstructuredGrid& grid_;
+        const int face_;
+        const int degree_;
+    };
+
+
+    // Initial version: only a constant interpolation.
+    static void interpolateVelocity(const UnstructuredGrid& grid,
+                                    const int cell,
+                                    const double* darcyflux,
+                                    const double* /*x*/,
+                                    double* v)
+    {
+        const int dim = grid.dimensions;
+        std::fill(v, v + dim, 0.0);
+        const double* cc = grid.cell_centroids + cell*dim;
+        for (int hface = grid.cell_facepos[cell]; hface < grid.cell_facepos[cell+1]; ++hface) {
+            const int face = grid.cell_faces[hface];
+            const double* fc = grid.face_centroids + face*dim;
+            double flux = 0.0;
+            if (cell == grid.face_cells[2*face]) {
+                flux = darcyflux[face];
+            } else {
+                flux = -darcyflux[face];
+            }
+            for (int dd = 0; dd < dim; ++dd) {
+                v[dd] += flux * (fc[dd] - cc[dd]) / grid.cell_volumes[cell];
+            }
+        }
+    }
 
 
 
@@ -116,7 +210,9 @@ namespace Opm
     /// Construct solver.
     /// \param[in] grid      A 2d or 3d grid.
     TransportModelTracerTofDiscGal::TransportModelTracerTofDiscGal(const UnstructuredGrid& grid)
-        : grid_(grid)
+        : grid_(grid),
+          coord_(grid.dimensions),
+          velocity_(grid.dimensions)
     {
     }
 
@@ -151,9 +247,15 @@ namespace Opm
         }
 #endif
         degree_ = degree;
-        tof_coeff.resize(grid_.number_of_cells);
+        const int num_basis = DGBasis::numBasisFunc(grid_.dimensions, degree_);
+        tof_coeff.resize(num_basis*grid_.number_of_cells);
         std::fill(tof_coeff.begin(), tof_coeff.end(), 0.0);
         tof_coeff_ = &tof_coeff[0];
+        rhs_.resize(num_basis);
+        jac_.resize(num_basis*num_basis);
+        basis_.resize(num_basis);
+        basis_nb_.resize(num_basis);
+        grad_basis_.resize(num_basis*grid_.dimensions);
         reorderAndTransport(grid_, darcyflux);
     }
 
@@ -168,7 +270,121 @@ namespace Opm
         //  Res = - \int_K \sum_i c_i b_i v(x) \cdot \grad b_j dx
         //        + \int_{\partial K} F(u_h, u_h^{ext}, v(x) \cdot n) b_j ds
         //        - \int_K \phi b_j
-        THROW("Not implemented yet!");
+        // This is linear in c_i, so we do not need any nonlinear iterations.
+        // We assemble the jacobian and the right-hand side. The residual is
+        // equal to Res = Jac*c - rhs, and we compute rhs directly.
+
+        const int dim = grid_.dimensions;
+        const int num_basis = DGBasis::numBasisFunc(degree_, dim);
+
+        std::fill(rhs_.begin(), rhs_.end(), 0.0);
+        std::fill(jac_.begin(), jac_.end(), 0.0);
+
+        // Compute cell residual contribution.
+        // Note: Assumes that \int_K b_j = 0 for all j > 0
+        rhs_[0] += porevolume_[cell];
+
+        // Compute upstream residual contribution.
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            int upstream_cell = -1;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+                upstream_cell = grid_.face_cells[2*face+1];
+            } else {
+                flux = -darcyflux_[face];
+                upstream_cell = grid_.face_cells[2*face];
+            }
+            if (upstream_cell < 0) {
+                // This is an outer boundary. Assumed tof = 0 on inflow, so no contribution.
+                continue;
+            }
+            if (flux >= 0.0) {
+                // This is an outflow boundary.
+                continue;
+            }
+            // Do quadrature over the face to compute
+            // \int_{\partial K} u_h^{ext} (v(x) \cdot n) b_j ds
+            // (where u_h^{ext} is the upstream unknown (tof)).
+            FaceQuadrature quad(grid_, face, degree_);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // u^ext flux B   (B = {b_j})
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                DGBasis::eval(grid_, upstream_cell, degree_, &coord_[0], &basis_nb_[0]);
+                const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
+                                                               tof_coeff_ + num_basis*upstream_cell, 0.0);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    rhs_[j] -= w * tof_upstream * flux * basis_[j];
+                }
+            }
+        }
+
+        // Compute cell jacobian contribution. We use Fortran ordering
+        // for jac_, i.e. rows cycling fastest.
+        {
+            CellQuadrature quad(grid_, cell, degree_);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // b_i (v \cdot \grad b_j)
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                DGBasis::evalGrad(grid_, cell, degree_, &coord_[0], &grad_basis_[0]);
+                interpolateVelocity(grid_, cell, darcyflux_, &coord_[0], &velocity_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    for (int i = 0; i < num_basis; ++i) {
+                        for (int dd = 0; dd < dim; ++dd) {
+                            jac_[j*num_basis + i] += w * basis_[i] * grad_basis_[dim*j + dd] * velocity_[dd];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Compute downstream jacobian contribution.
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+            } else {
+                flux = -darcyflux_[face];
+            }
+            if (flux <= 0.0) {
+                // This is an inflow boundary.
+                continue;
+            }
+            // Do quadrature over the face to compute
+            // \int_{\partial K} b_i (v(x) \cdot n) b_j ds
+            FaceQuadrature quad(grid_, face, degree_);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // u^ext flux B   (B = {b_j})
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    for (int i = 0; i < num_basis; ++i) {
+                        jac_[j*num_basis + i] += w * basis_[i] * flux * basis_[j];
+                    }
+                }
+            }
+        }
+
+        // Solve linear equation.
+        MAT_SIZE_T n = num_basis;
+        MAT_SIZE_T nrhs = 1;
+        MAT_SIZE_T lda = num_basis;
+        std::vector<MAT_SIZE_T> piv(num_basis);
+        MAT_SIZE_T ldb = num_basis;
+        MAT_SIZE_T info = 0;
+        dgesv_(&n, &nrhs, &jac_[0], &lda, &piv[0], &rhs_[0], &ldb, &info);
+        if (info != 0) {
+            THROW("Lapack error: " << info);
+        }
+        // The solution ends up in rhs_, so we must copy it.
+        std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);
     }
 
 

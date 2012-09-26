@@ -67,6 +67,14 @@ namespace Opm
         const double* source_;      // one volumetric source term per cell
         int degree_;
         double* tof_coeff_;
+        std::vector<double> rhs_;   // single-cell right-hand-side
+        std::vector<double> jac_;   // single-cell jacobian
+        // Below: storage for quantities needed by solveSingleCell().
+        std::vector<double> coord_;
+        std::vector<double> basis_;
+        std::vector<double> basis_nb_;
+        std::vector<double> grad_basis_;
+        std::vector<double> velocity_;
     };
 
 } // namespace Opm
