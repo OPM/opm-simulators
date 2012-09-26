@@ -123,7 +123,7 @@ namespace Opm
                                  WellState& well_state)
     {
         const int nc = grid_.number_of_cells;
-        const int nw = wells_->number_of_wells;
+        const int nw = (wells_ != 0) ? wells_->number_of_wells : 0;
 
         // Set up dynamic data.
         computePerSolveDynamicData(dt, state, well_state);
@@ -454,8 +454,8 @@ namespace Opm
         // std::vector<double> wellperf_A_;
         // std::vector<double> wellperf_phasemob_;
         const int np = props_.numPhases();
-        const int nw = wells_->number_of_wells;
-        const int nperf = wells_->well_connpos[nw];
+        const int nw = (wells_ != 0) ? wells_->number_of_wells : 0;
+        const int nperf = (wells_ != 0) ? wells_->well_connpos[nw] : 0;
         wellperf_A_.resize(nperf*np*np);
         wellperf_phasemob_.resize(nperf*np);
         // The A matrix is set equal to the perforation grid cells'
@@ -512,9 +512,9 @@ namespace Opm
         const double* z = &state.surfacevol()[0];
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
-        completion_data.gpot = &wellperf_gpot_[0];
-        completion_data.A = &wellperf_A_[0];
-        completion_data.phasemob = &wellperf_phasemob_[0];
+        completion_data.gpot = ! wellperf_gpot_.empty() ? &wellperf_gpot_[0] : 0;
+        completion_data.A = ! wellperf_A_.empty() ? &wellperf_A_[0] : 0;
+        completion_data.phasemob = ! wellperf_phasemob_.empty() ? &wellperf_phasemob_[0] : 0;
         cfs_tpfa_res_wells wells_tmp;
         wells_tmp.W = const_cast<Wells*>(wells_);
         wells_tmp.data = &completion_data;
@@ -599,15 +599,18 @@ namespace Opm
     {
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
-        completion_data.gpot = const_cast<double*>(&wellperf_gpot_[0]);
-        completion_data.A = const_cast<double*>(&wellperf_A_[0]);
-        completion_data.phasemob = const_cast<double*>(&wellperf_phasemob_[0]);
+        completion_data.gpot = ! wellperf_gpot_.empty() ? const_cast<double*>(&wellperf_gpot_[0]) : 0;
+        completion_data.A = ! wellperf_A_.empty() ? const_cast<double*>(&wellperf_A_[0]) : 0;
+        completion_data.phasemob = ! wellperf_phasemob_.empty() ? const_cast<double*>(&wellperf_phasemob_[0]) : 0;
         cfs_tpfa_res_wells wells_tmp;
         wells_tmp.W = const_cast<Wells*>(wells_);
         wells_tmp.data = &completion_data;
         cfs_tpfa_res_forces forces;
         forces.wells = &wells_tmp;
         forces.src = NULL;
+
+        double* wpress = ! well_state.bhp      ().empty() ? & well_state.bhp      ()[0] : 0;
+        double* wflux  = ! well_state.perfRates().empty() ? & well_state.perfRates()[0] : 0;
 
         cfs_tpfa_res_flux(gg,
                           &forces,
@@ -617,9 +620,9 @@ namespace Opm
                           &face_phasemob_[0],
                           &face_gravcap_[0],
                           &state.pressure()[0],
-                          &well_state.bhp()[0],
+                          wpress,
                           &state.faceflux()[0],
-                          &well_state.perfRates()[0]);
+                          wflux);
         cfs_tpfa_res_fpress(gg,
                             props_.numPhases(),
                             &htrans_[0],
