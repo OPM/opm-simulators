@@ -343,7 +343,7 @@ namespace Opm
             }
         }
 
-        // Compute downstream jacobian contribution.
+        // Compute downstream jacobian contribution from faces.
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
             const int face = grid_.cell_faces[hface];
             double flux = 0.0;
@@ -361,6 +361,25 @@ namespace Opm
             FaceQuadrature quad(grid_, face, degree_);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // u^ext flux B   (B = {b_j})
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    for (int i = 0; i < num_basis; ++i) {
+                        jac_[j*num_basis + i] += w * basis_[i] * flux * basis_[j];
+                    }
+                }
+            }
+        }
+
+        // Compute downstream jacobian contribution from sink terms.
+        if (source_[cell] < 0.0) {
+            // A sink.
+            const double flux = -source_[cell]; // Sign convention for flux: outflux > 0.
+            // Do quadrature over the cell to compute
+            // \int_{K} b_i flux b_j dx
+            CellQuadrature quad(grid_, cell, degree_);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
