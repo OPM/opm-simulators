@@ -275,7 +275,7 @@ namespace Opm
         // equal to Res = Jac*c - rhs, and we compute rhs directly.
 
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(degree_, dim);
+        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
 
         std::fill(rhs_.begin(), rhs_.end(), 0.0);
         std::fill(jac_.begin(), jac_.end(), 0.0);
