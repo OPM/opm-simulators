@@ -820,7 +820,34 @@ welleq_coeff_resv(int np, struct cfs_tpfa_res_data *h,
 
 /* ---------------------------------------------------------------------- */
 static void
-assemble_completion_to_well(int w, int c, int nc, int np,
+welleq_coeff_surfrate(int i, int np, struct cfs_tpfa_res_data *h,
+                      struct WellControls *ctrl,
+                      double *res, double *w2c, double *w2w)
+/* ---------------------------------------------------------------------- */
+{
+    int           p;
+    double        f;
+    const double *pflux, *dpflux_w, *dpflux_c, *distr;
+
+    pflux    = h->pimpl->compflux_p       + (i             * (1 * np));
+    dpflux_w = h->pimpl->compflux_deriv_p + (i             * (2 * np));
+    dpflux_c = dpflux_w                   + (1             * (1 * np));
+    distr    = ctrl->distr                + (ctrl->current * (1 * np));
+
+    *res = *w2c = *w2w = 0.0;
+    for (p = 0; p < np; p++) {
+        f = distr[ p ];
+
+        *res += f * pflux   [ p ];
+        *w2w += f * dpflux_w[ p ];
+        *w2c += f * dpflux_c[ p ];
+    }
+}
+
+
+/* ---------------------------------------------------------------------- */
+static void
+assemble_completion_to_well(int i, int w, int c, int nc, int np,
                             double pw, double dt,
                             struct cfs_tpfa_res_wells *wells,
                             struct cfs_tpfa_res_data  *h    )
@@ -856,7 +883,7 @@ assemble_completion_to_well(int w, int c, int nc, int np,
             break;
 
         case SURFACE_RATE:
-            assert (0);             /* Surface rate currently not supported */
+            welleq_coeff_surfrate(i, np, h, ctrl, &res, &w2c, &w2w);
             break;
         }
     }
@@ -925,7 +952,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
                                         h->pimpl->flux_work,
                                         h->pimpl->flux_work + np);
 
-            assemble_completion_to_well(w, c, nc, np, pw, dt, wells, h);
+            assemble_completion_to_well(i, w, c, nc, np, pw, dt, wells, h);
         }
 
         ctrl = W->ctrls[ w ];
