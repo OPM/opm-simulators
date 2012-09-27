@@ -325,6 +325,7 @@ namespace Opm
         // Compute cell jacobian contribution. We use Fortran ordering
         // for jac_, i.e. rows cycling fastest.
         {
+            const double cvol = grid_.cell_volumes[cell];
             CellQuadrature quad(grid_, cell, degree_);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
@@ -336,7 +337,7 @@ namespace Opm
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
                         for (int dd = 0; dd < dim; ++dd) {
-                            jac_[j*num_basis + i] += w * basis_[i] * grad_basis_[dim*j + dd] * velocity_[dd];
+                            jac_[j*num_basis + i] += w * basis_[i] * grad_basis_[dim*j + dd] * velocity_[dd] * cvol;
                         }
                     }
                 }
