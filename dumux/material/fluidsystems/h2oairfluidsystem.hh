@@ -220,12 +220,13 @@ public:
      */
     static void init()
     {
-        init(/*tempMin=*/273.15,
-             /*tempMax=*/623.15,
-             /*numTemp=*/100,
-             /*pMin=*/-10,
-             /*pMax=*/20e6,
-             /*numP=*/200);
+        if (H2O::isTabulated)
+            init(/*tempMin=*/273.15,
+                 /*tempMax=*/623.15,
+                 /*numTemp=*/100,
+                 /*pMin=*/-10,
+                 /*pMax=*/20e6,
+                 /*numP=*/200);
     }
 
     /*!
@@ -308,7 +309,7 @@ public:
                     IdealGas::molarDensity(T, p)
                     * fluidState.averageMolarMass(gPhaseIdx)
                     / std::max(1e-5, sumMoleFrac);
-
+            
             Scalar partialPressureH2O =
                 fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
                 fluidState.pressure(gPhaseIdx);
