@@ -245,82 +245,39 @@ public:
         
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
-        int i = 0;
         int n = gasFormationFactorSpline_.numSamples()*5;
         int delta = 
-            1.0/(n - 1)
-            * (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin());
+            (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin())
+            /(n + 1);
+
         SplineSamplingPoints pSatSamplePoints;
-        while (true) {
+        Scalar X_oG = 0;
+        for (int i=0; i <= n && X_oG < 0.7; ++ i) {
             Scalar pSat = i*delta + gasFormationFactorSpline_.xMin();
-            Scalar X_oG = flashGasMassFracInOil_(pSat);
+            X_oG = flashGasMassFracInOil_(pSat);
 
             std::pair<Scalar, Scalar> val(X_oG, pSat);
             pSatSamplePoints.push_back(val);;
-
-            if (i > n && X_oG > 0.7)
-                break;
-            ++i;
         };
+        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints);
 
 #if 0
         {
-            Scalar p = 15e6;
-            Scalar xoG = 0.01;
-            Scalar xoO = 1 - xoG;
-            FluidState fs;
-
-            /*
-            int n = 1000;
-            Scalar xMin = 1 - 0.10;
-            Scalar xMax = 1 - 0.00;
-            for (int i = 0; i < n; ++i) {
-                Scalar x = Scalar(i)/n*(xMax - xMin) + xMin;
-                Scalar xoO = x;
-            */
-            
-            int n = 20;
-            Scalar xMin = 0.00;
-            Scalar xMax = 0.05;
-            for (int i = 0; i < n; ++i) {
-                Scalar x = Scalar(i)/n*(xMax - xMin) + xMin;
-                Scalar xoG = x;
-                Scalar xoO = 1 - xoG;
-
             int n = 1000;
             Scalar pMin = 10e6;
             Scalar pMax = 35e6;
             for (int i = 0; i < n; ++i) {
-                Scalar x = Scalar(i)/n*(pMax - pMin) + pMin;
-                Scalar p = x;                
-                
-                mp.setPressure(oPhaseIdx, p);
-                mp.setMoleFraction(oPhaseIdx, oCompIdx, xoO);
-                mp.setMoleFraction(oPhaseIdx, gCompIdx, xoG);
-                mp.setMoleFraction(oPhaseIdx, wCompIdx, 0);
+                Scalar p = Scalar(i)/n*(pMax - pMin) + pMin;
 
-                /*
-                Scalar pBeta = p;
-                Scalar x_oGBeta = 1.0*flashGasMoleFracInOil_(pBeta);
-                Scalar x_oOBeta = 1 - x_oGBeta;
-                mp.setMoleFraction(oPhaseIdx, gCompIdx, x_oGBeta);
-                mp.setMoleFraction(oPhaseIdx, oCompIdx, x_oOBeta);
-                */
-
-                mp.updateMeanMolarMass(oPhaseIdx);
-                Scalar Vm = density(mp, oPhaseIdx);
-                mp.setMolarVolume(oPhaseIdx,
-                                  Vm);
+                Scalar Bg = gasFormationVolumeFactor(p);
+                Scalar Bo = oilFormationVolumeFactor(p);
                 
                 std::cerr.precision(16);
-                std::cerr << x << " "
-                          << mp.density(oPhaseIdx) << " "
-                          << flashOilDensity_(p) << " "
-                          << mp.molarDensity(oPhaseIdx) << " "
+                std::cerr << p << " "
+                          << Bo << " "
+                          << Bg << " "
                           << "\n";
             };
-            std::cerr << "\n";
-            }
             exit(1);
         }
 #endif
@@ -417,10 +374,8 @@ public:
                          fluidState.massFraction(oPhaseIdx, oCompIdx)
                          + fluidState.massFraction(oPhaseIdx, wCompIdx)
                          + fluidState.massFraction(oPhaseIdx, gCompIdx));
-
-
-            
-            Scalar pAlpha = oilSaturationPressure_(X_oG/sumX, p);
+           
+            Scalar pAlpha = oilSaturationPressure(X_oG/sumX);
             Scalar X_oGAlpha = fluidState.massFraction(oPhaseIdx, gCompIdx) / sumX;
             //Scalar X_oOAlpha = 1 - X_oGAlpha;
             Scalar rho_oAlpha = 
@@ -620,6 +575,15 @@ public:
             (1.1200 - 1.1189)/((5000 - 4000)*6894.76); // [kg/m^3 / Pa)]
     }
 
+    /*!
+     * \brief Returns the saturation pressure of the oil phase [Pa]
+     *        depending on its mass fraction of the gas component
+     *
+     * \param X_oG The mass fraction of the gas component in the oil phase [-]
+     */
+    static Scalar oilSaturationPressure(Scalar X_oG)
+    { return saturationPressureSpline_.eval(X_oG, /*extrapolate=*/true); }
+
 private:
     static Scalar gasDensity_(Scalar pressure)
     {
@@ -654,34 +618,27 @@ private:
         return rhoRef * BoRef/Bo;
     }
 
-    static Scalar oilSaturationPressure_(Scalar X_oG, Scalar pInit)
-    {
-        X_oG = std::max(saturationPressureSpline_.xMin(), 
-                        std::min(saturationPressureSpline_.xMax(), 
-                                 X_oG));
-        return saturationPressureSpline_.eval(X_oG);
-    }
-
     // the mass fraction of the gas component in the oil phase in a
     // flash experiment
     static Scalar flashGasMassFracInOil_(Scalar pressure)
     {
         // first, we calculate the total reservoir oil phase density
         // [kg/m^3]
-        Scalar rho_oRef = surfaceDensity_[oPhaseIdx];
         Scalar rho_gRef = surfaceDensity_[gPhaseIdx];
+
+        Scalar B_o = oilFormationVolumeFactor(pressure);
+        Scalar rho_o = surfaceDensity(oPhaseIdx)/B_o;
+
 
         // then, we calculate the mass of the gas component [kg/m^3]
         // in the oil phase. This is equivalent to the gas formation
         // factor [m^3/m^3] at current pressure times the gas density
         // [kg/m^3] at standard pressure
-        Scalar rho_G =
-            gasFormationFactor(pressure) 
-            * rho_gRef;
+        Scalar rho_oG = gasFormationFactor(pressure) * rho_gRef;
 
         // with these quantities it is pretty easy to calculate to the
         // composition of the oil phase in terms of mass fractions
-        return rho_G/(rho_oRef + rho_G);
+        return rho_oG/rho_o;
     }
 
     // the mole fraction of the gas component in the oil phase in a
