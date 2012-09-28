@@ -29,6 +29,10 @@ namespace Opm
 {
 
 
+    // ---------------   Helpers for TransportModelTracerTofDiscGal ---------------
+
+
+
     /// A class providing discontinuous Galerkin basis functions.
     struct DGBasis
     {
@@ -103,8 +107,83 @@ namespace Opm
 
 
 
+    static void cross(const double* a, const double* b, double* res)
+    {
+	res[0] = a[1]*b[2] - a[2]*b[1];
+	res[1] = a[2]*b[0] - a[0]*b[2];
+	res[2] = a[0]*b[1] - a[1]*b[0];
+    }
+
+
+
+
+    static double triangleArea3d(const double* p0,
+                                 const double* p1,
+                                 const double* p2)
+    {
+        double a[3] = { p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2] };
+        double b[3] = { p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2] };
+        double cr[3];
+        cross(a, b, cr);
+        return 0.5*std::sqrt(cr[0]*cr[0] + cr[1]*cr[1] + cr[2]*cr[2]);
+    }
+
+
+
+
+    /// Calculates the determinant of a 3 x 3 matrix, represented as
+    /// three three-dimensional arrays.
+    static double determinantOf(const double* a0,
+                                const double* a1,
+                                const double* a2) 
+    {
+	return 
+	    a0[0] * (a1[1] * a2[2] - a2[1] * a1[2]) -
+	    a0[1] * (a1[0] * a2[2] - a2[0] * a1[2]) +
+	    a0[2] * (a1[0] * a2[1] - a2[0] * a1[1]);
+    }
+
+
+
+
+    /// Computes the volume of a tetrahedron consisting of 4 vertices
+    /// with 3-dimensional coordinates
+    static double tetVolume(const double* p0,
+                            const double* p1,
+                            const double* p2,
+                            const double* p3)
+    {
+        double a[3] = { p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2] };
+        double b[3] = { p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2] };
+        double c[3] = { p3[0] - p0[0], p3[1] - p0[1], p3[2] - p0[2] };
+	return std::fabs(determinantOf(a, b, c) / 6.0);
+    }
+
+
+
 
     /// A class providing numerical quadrature for cells.
+    /// In general: \int_{cell} g(x) dx = \sum_{i=0}^{n-1} w_i g(x_i).
+    /// Note that this class does multiply weights by cell volume,
+    /// so weights always sum to cell volume.
+    /// Degree 1 method:
+    ///     Midpoint (centroid) method.
+    ///         n = 1, w_0 = cell volume, x_0 = cell centroid
+    /// Degree 2 method:
+    ///    Based on subdivision of each cell face into triangles
+    ///    with the face centroid as a common vertex, and then
+    ///    subdividing the cell into tetrahedra with the cell
+    ///    centroid as a common vertex. Then apply the tetrahedron
+    ///    rule with the following 4 nodes (uniform weights):
+    ///        a = 0.138196601125010515179541316563436
+    ///        x_i has all barycentric coordinates = a, except for
+    ///            the i'th coordinate which is = 1 - 3a.
+    ///    This rule is from http://nines.cs.kuleuven.be/ecf,
+    ///    it is the second degree 2 4-point rule for tets,
+    ///    referenced to Stroud(1971).
+    ///    The tetrahedra are numbered T_{i,j}, and are given by the
+    ///    cell centroid C, the face centroid FC_i, and two nodes
+    ///    of face i: FN_{i,j}, FN_{i,j+1}.
     class CellQuadrature
     {
     public:
@@ -113,25 +192,93 @@ namespace Opm
                        const int degree)
             : grid_(grid), cell_(cell), degree_(degree)
         {
-            if (degree > 1) {
-                THROW("Only quadrature degree up to 1 for now.");
+            if (degree > 2) {
+                THROW("CellQuadrature exact for polynomial degrees > 1 not implemented.");
+            }
+            if (degree == 2) {
+                // Prepare subdivision.
             }
         }
 
         int numQuadPts() const
         {
-            return 1;
+            if (degree_ < 2) {
+                return 1;
+            }
+            // Degree 2 case.
+            int sumnodes = 0;
+            for (int hf = grid_.cell_facepos[cell_]; hf < grid_.cell_facepos[cell_ + 1]; ++hf) {
+                const int face = grid_.cell_faces[hf];
+                sumnodes += grid_.face_nodepos[face + 1] - grid_.face_nodepos[face];
+            }
+            return 4*sumnodes;
         }
 
-        void quadPtCoord(int /*index*/, double* coord) const
+        void quadPtCoord(const int index, double* coord) const
         {
-            const double* cc = grid_.cell_centroids + grid_.dimensions*cell_;
-            std::copy(cc, cc + grid_.dimensions, coord);
+            const int dim = grid_.dimensions;
+            const double* cc = grid_.cell_centroids + dim*cell_;
+            if (degree_ < 2) {
+                std::copy(cc, cc + dim, coord);
+                return;
+            }
+            // Degree 2 case.
+            int tetindex = index / 4;
+            const int subindex = index % 4;
+            const double* nc = grid_.node_coordinates;
+            for (int hf = grid_.cell_facepos[cell_]; hf < grid_.cell_facepos[cell_ + 1]; ++hf) {
+                const int face = grid_.cell_faces[hf];
+                const int nfn = grid_.face_nodepos[face + 1] - grid_.face_nodepos[face];
+                if (nfn <= tetindex) {
+                    // Our tet is not associated with this face.
+                    tetindex -= nfn;
+                    continue;
+                }
+                const double* fc = grid_.face_centroids + dim*face;
+                const int* fnodes = grid_.face_nodes + grid_.face_nodepos[face];
+                const int node0 = fnodes[tetindex];
+                const int node1 = fnodes[(tetindex + 1) % nfn];
+                const double* n0c = nc + dim*node0;
+                const double* n1c = nc + dim*node1;
+                const double a = 0.138196601125010515179541316563436;
+                // Barycentric coordinates of our point in the tet.
+                double baryc[4] = { a, a, a, a };
+                baryc[subindex] = 1.0 - 3.0*a;
+                for (int dd = 0; dd < dim; ++dd) {
+                    coord[dd] = baryc[0]*cc[dd] + baryc[1]*fc[dd] + baryc[2]*n0c[dd] + baryc[3]*n1c[dd];
+                }
+                return;
+            }
+            THROW("Should never reach this point.");
         }
 
-        double quadPtWeight(int /*index*/) const
+        double quadPtWeight(const int index) const
         {
-            return 1.0;
+            if (degree_ < 2) {
+                return grid_.cell_volumes[cell_];
+            }
+            // Degree 2 case.
+            const int dim = grid_.dimensions;
+            const double* cc = grid_.cell_centroids + dim*cell_;
+            int tetindex = index / 4;
+            const double* nc = grid_.node_coordinates;
+            for (int hf = grid_.cell_facepos[cell_]; hf < grid_.cell_facepos[cell_ + 1]; ++hf) {
+                const int face = grid_.cell_faces[hf];
+                const int nfn = grid_.face_nodepos[face + 1] - grid_.face_nodepos[face];
+                if (nfn <= tetindex) {
+                    // Our tet is not associated with this face.
+                    tetindex -= nfn;
+                    continue;
+                }
+                const double* fc = grid_.face_centroids + dim*face;
+                const int* fnodes = grid_.face_nodes + grid_.face_nodepos[face];
+                const int node0 = fnodes[tetindex];
+                const int node1 = fnodes[(tetindex + 1) % nfn];
+                const double* n0c = nc + dim*node0;
+                const double* n1c = nc + dim*node1;
+                return 0.25*tetVolume(cc, fc, n0c, n1c);
+            }
+            THROW("Should never reach this point.");
         }
 
     private:
@@ -142,7 +289,28 @@ namespace Opm
 
 
 
+
+
     /// A class providing numerical quadrature for faces.
+    /// In general: \int_{face} g(x) dx = \sum_{i=0}^{n-1} w_i g(x_i).
+    /// Note that this class does multiply weights by face area,
+    /// so weights always sum to face area.
+    /// Degree 1 method:
+    ///     Midpoint (centroid) method.
+    ///         n = 1, w_0 = face area, x_0 = face centroid
+    /// Degree 2 method:
+    ///    Based on subdivision of the face into triangles,
+    ///    with the centroid as a common vertex, and the triangle
+    ///    edge midpoint rule.
+    ///    Triangle i consists of the centroid C, nodes N_i and N_{i+1}.
+    ///    Its area is A_i.
+    ///        n = 2 * nn  (nn = num nodes in face)
+    ///        For i = 0..(nn-1):
+    ///        w_i      = 1/3 A_i.
+    ///        w_{nn+i} = 1/3 A_{i-1} + 1/3 A_i
+    ///        x_i      = (N_i + N_{i+1})/2
+    ///        x_{nn+i} = (C + N_i)/2
+    ///    All N and A indices are interpreted cyclic, modulus nn.
     class FaceQuadrature
     {
     public:
@@ -151,25 +319,79 @@ namespace Opm
                        const int degree)
             : grid_(grid), face_(face), degree_(degree)
         {
-            if (degree > 1) {
-                THROW("Only quadrature degree up to 1 for now.");
+            if (grid_.dimensions != 3) {
+                THROW("FaceQuadrature only implemented for 3D case.");
+            }
+            if (degree_ > 2) {
+                THROW("FaceQuadrature exact for polynomial degrees > 2 not implemented.");
             }
         }
 
         int numQuadPts() const
         {
-            return 1;
+            if (degree_ < 2) {
+                return 1;
+            }
+            // Degree 2 case.
+            return 2 * (grid_.face_nodepos[face_ + 1] - grid_.face_nodepos[face_]);
         }
 
-        void quadPtCoord(int /*index*/, double* coord) const
+        void quadPtCoord(const int index, double* coord) const
         {
-            const double* fc = grid_.face_centroids + grid_.dimensions*face_;
-            std::copy(fc, fc + grid_.dimensions, coord);
+            const int dim = grid_.dimensions;
+            const double* fc = grid_.face_centroids + dim*face_;
+            if (degree_ < 2) {
+                std::copy(fc, fc + dim, coord);
+                return;
+            }
+            // Degree 2 case.
+            const int nn = grid_.face_nodepos[face_ + 1] - grid_.face_nodepos[face_];
+            const int* fnodes = grid_.face_nodes + grid_.face_nodepos[face_];
+            const double* nc = grid_.node_coordinates;
+            if (index < nn) {
+                // Boundary edge midpoint.
+                const int node0 = fnodes[index];
+                const int node1 = fnodes[(index + 1)%nn];
+                for (int dd = 0; dd < dim; ++dd) {
+                    coord[dd] = 0.5*(nc[dim*node0 + dd] + nc[dim*node1 + dd]);
+                }
+            } else {
+                // Interiour edge midpoint.
+                // Recall that index is now in [nn, 2*nn).
+                const int node = fnodes[index - nn];
+                for (int dd = 0; dd < dim; ++dd) {
+                    coord[dd] = 0.5*(nc[dim*node + dd] + fc[dd]);
+                }
+            }
         }
 
-        double quadPtWeight(int /*index*/) const
+        double quadPtWeight(const int index) const
         {
-            return 1.0;
+            if (degree_ < 2) {
+                return grid_.face_areas[face_];
+            }
+            // Degree 2 case.
+            const int dim = grid_.dimensions;
+            const double* fc = grid_.face_centroids + dim*face_;
+            const int nn = grid_.face_nodepos[face_ + 1] - grid_.face_nodepos[face_];
+            const int* fnodes = grid_.face_nodes + grid_.face_nodepos[face_];
+            const double* nc = grid_.node_coordinates;
+            if (index < nn) {
+                // Boundary edge midpoint.
+                const int node0 = fnodes[index];
+                const int node1 = fnodes[(index + 1)%nn];
+                const double area = triangleArea3d(nc + dim*node1, nc + dim*node0, fc);
+                return area / 3.0;
+            } else {
+                // Interiour edge midpoint.
+                // Recall that index is now in [nn, 2*nn).
+                const int node0 = fnodes[(index - 1) % nn];
+                const int node1 = fnodes[index - nn];
+                const int node2 = fnodes[(index + 1) % nn];
+                const double area0 = triangleArea3d(nc + dim*node1, nc + dim*node0, fc);
+                const double area1 = triangleArea3d(nc + dim*node2, nc + dim*node1, fc);
+                return (area0 + area1) / 3.0;
+            }
         }
 
     private:
@@ -177,6 +399,8 @@ namespace Opm
         const int face_;
         const int degree_;
     };
+
+
 
 
     // Initial version: only a constant interpolation.
@@ -204,6 +428,9 @@ namespace Opm
         }
     }
 
+
+
+    // ---------------   Methods of TransportModelTracerTofDiscGal ---------------
 
 
 
@@ -307,9 +534,9 @@ namespace Opm
             // Do quadrature over the face to compute
             // \int_{\partial K} u_h^{ext} (v(x) \cdot n) b_j ds
             // (where u_h^{ext} is the upstream unknown (tof)).
+            const double normal_velocity = flux / grid_.face_areas[face];
             FaceQuadrature quad(grid_, face, degree_);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
-                // u^ext flux B   (B = {b_j})
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
                 DGBasis::eval(grid_, upstream_cell, degree_, &coord_[0], &basis_nb_[0]);
@@ -317,7 +544,7 @@ namespace Opm
                                                                tof_coeff_ + num_basis*upstream_cell, 0.0);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
-                    rhs_[j] -= w * tof_upstream * flux * basis_[j];
+                    rhs_[j] -= w * tof_upstream * normal_velocity * basis_[j];
                 }
             }
         }
@@ -325,8 +552,7 @@ namespace Opm
         // Compute cell jacobian contribution. We use Fortran ordering
         // for jac_, i.e. rows cycling fastest.
         {
-            const double cvol = grid_.cell_volumes[cell];
-            CellQuadrature quad(grid_, cell, degree_);
+            CellQuadrature quad(grid_, cell, 2*degree_ - 1);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
                 quad.quadPtCoord(quad_pt, &coord_[0]);
@@ -337,7 +563,7 @@ namespace Opm
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
                         for (int dd = 0; dd < dim; ++dd) {
-                            jac_[j*num_basis + i] += w * basis_[i] * grad_basis_[dim*j + dd] * velocity_[dd] * cvol;
+                            jac_[j*num_basis + i] -= w * basis_[j] * grad_basis_[dim*i + dd] * velocity_[dd];
                         }
                     }
                 }
@@ -359,7 +585,8 @@ namespace Opm
             }
             // Do quadrature over the face to compute
             // \int_{\partial K} b_i (v(x) \cdot n) b_j ds
-            FaceQuadrature quad(grid_, face, degree_);
+            const double normal_velocity = flux / grid_.face_areas[face];
+            FaceQuadrature quad(grid_, face, 2*degree_);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // u^ext flux B   (B = {b_j})
                 quad.quadPtCoord(quad_pt, &coord_[0]);
@@ -367,26 +594,31 @@ namespace Opm
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
-                        jac_[j*num_basis + i] += w * basis_[i] * flux * basis_[j];
+                        jac_[j*num_basis + i] += w * basis_[i] * normal_velocity * basis_[j];
                     }
                 }
             }
         }
 
         // Compute downstream jacobian contribution from sink terms.
+        // Contribution from inflow sources would be
+        // similar to the contribution from upstream faces, but
+        // it is zero since we let all external inflow be associated
+        // with a zero tof.
         if (source_[cell] < 0.0) {
             // A sink.
             const double flux = -source_[cell]; // Sign convention for flux: outflux > 0.
+            const double flux_density = flux / grid_.cell_volumes[cell];
             // Do quadrature over the cell to compute
             // \int_{K} b_i flux b_j dx
-            CellQuadrature quad(grid_, cell, degree_);
+            CellQuadrature quad(grid_, cell, 2*degree_);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
-                        jac_[j*num_basis + i] += w * basis_[i] * flux * basis_[j];
+                        jac_[j*num_basis + i] += w * basis_[i] * flux_density * basis_[j];
                     }
                 }
             }
