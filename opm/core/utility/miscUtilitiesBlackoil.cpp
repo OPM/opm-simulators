@@ -21,7 +21,10 @@
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/newwells.h>
 #include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
+#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <functional>
@@ -31,16 +34,20 @@
 namespace Opm
 {
 
-    /// @brief Computes injected and produced volumes of all phases.
+    /// @brief Computes injected and produced surface volumes of all phases.
     /// Note 1: assumes that only the first phase is injected.
     /// Note 2: assumes that transport has been done with an
     ///         implicit method, i.e. that the current state
     ///         gives the mobilities used for the preceding timestep.
+    /// Note 3: Gives surface volume values, not reservoir volumes
+    ///         (as the incompressible version of the function does).
+    ///         Also, assumes that src is given in surface volumes
+    ///         for injector terms!
     /// @param[in]  props     fluid and rock properties.
     /// @param[in]  p         pressure (one value per cell)
     /// @param[in]  z         surface-volume values (for all P phases)
     /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow
     /// @param[in]  dt        timestep used
     /// @param[out] injected  must point to a valid array with P elements,
     ///                       where P = s.size()/src.size().
@@ -63,6 +70,9 @@ namespace Opm
         std::fill(produced, produced + np, 0.0);
         std::vector<double> visc(np);
         std::vector<double> mob(np);
+        std::vector<double> A(np*np);
+        std::vector<double> prod_resv_phase(np);
+        std::vector<double> prod_surfvol(np);
         for (int c = 0; c < num_cells; ++c) {
             if (src[c] > 0.0) {
                 injected[0] += src[c]*dt;
@@ -71,13 +81,21 @@ namespace Opm
                 const double* sat = &s[np*c];
                 props.relperm(1, sat, &c, &mob[0], 0);
                 props.viscosity(1, &press[c], &z[np*c], &c, &visc[0], 0);
+                props.matrix(1, &press[c], &z[np*c], &c, &A[0], 0);
                 double totmob = 0.0;
                 for (int p = 0; p < np; ++p) {
                     mob[p] /= visc[p];
                     totmob += mob[p];
                 }
+                std::fill(prod_surfvol.begin(), prod_surfvol.end(), 0.0);
                 for (int p = 0; p < np; ++p) {
-                    produced[p] += (mob[p]/totmob)*flux;
+                    prod_resv_phase[p] = (mob[p]/totmob)*flux;
+                    for (int q = 0; q < np; ++q) {
+                        prod_surfvol[q] += prod_resv_phase[p]*A[q + np*p];
+                    }
+                }
+                for (int p = 0; p < np; ++p) {
+                    produced[p] += prod_surfvol[p];
                 }
             }
         }
@@ -250,5 +268,59 @@ namespace Opm
             }
         }
     }
+
+
+    /// Compute two-phase transport source terms from well terms.
+    /// Note: Unlike the incompressible version of this function,
+    ///       this version computes surface volume injection rates,
+    ///       production rates are still total reservoir volumes.
+    /// \param[in]  props         Fluid and rock properties.
+    /// \param[in]  wells         Wells data structure.
+    /// \param[in]  well_state    Well pressures and fluxes.
+    /// \param[out] transport_src The transport source terms. They are to be interpreted depending on sign:
+    ///                           (+) positive  inflow of first (water) phase (surface volume),
+    ///                           (-) negative  total outflow of both phases (reservoir volume).
+    void computeTransportSource(const BlackoilPropertiesInterface& props,
+                                const Wells* wells,
+                                const WellState& well_state,
+                                std::vector<double>& transport_src)
+    {
+        int nc = props.numCells();
+        transport_src.clear();
+        transport_src.resize(nc, 0.0);
+        // Well contributions.
+        if (wells) {
+            const int nw = wells->number_of_wells;
+            const int np = wells->number_of_phases;
+            if (np != 2) {
+                THROW("computeTransportSource() requires a 2 phase case.");
+            }
+            std::vector<double> A(np, np);
+            for (int w = 0; w < nw; ++w) {
+                const double* comp_frac = wells->comp_frac + np*w;
+                for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
+                    const int perf_cell = wells->well_cells[perf];
+                    double perf_rate = well_state.perfRates()[perf];
+                    if (perf_rate > 0.0) {
+                        // perf_rate is a total inflow reservoir rate, we want a surface water rate.
+                        if (wells->type[w] != INJECTOR) {
+                            std::cout << "**** Warning: crossflow in well "
+                                      << w << " perf " << perf - wells->well_connpos[w]
+                                      << " ignored. Reservoir rate was "
+                                      << perf_rate/Opm::unit::day << " m^3/day." << std::endl;
+                            perf_rate = 0.0;
+                        } else {
+                            ASSERT(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
+                            perf_rate *= comp_frac[0]; // Water reservoir volume rate.
+                            props.matrix(1, &well_state.perfPress()[perf], comp_frac, &perf_cell, &A[0], 0);
+                            perf_rate *= A[0];         // Water surface volume rate.
+                        }
+                    }
+                    transport_src[perf_cell] += perf_rate;
+                }
+            }
+        }
+    }
+
 
 } // namespace Opm

@@ -22,12 +22,13 @@
 
 #include <vector>
 
-struct UnstructuredGrid;
+struct Wells;
 
 namespace Opm
 {
 
     class BlackoilPropertiesInterface;
+    class WellState;
 
     /// @brief Computes injected and produced volumes of all phases.
     /// Note 1: assumes that only the first phase is injected.
@@ -130,6 +131,22 @@ namespace Opm
                            const double* A,
                            const double* saturation,
                            double* surfacevol);
+
+
+    /// Compute two-phase transport source terms from well terms.
+    /// Note: Unlike the incompressible version of this function,
+    ///       this version computes surface volume injection rates,
+    ///       production rates are still total reservoir volumes.
+    /// \param[in]  props         Fluid and rock properties.
+    /// \param[in]  wells         Wells data structure.
+    /// \param[in]  well_state    Well pressures and fluxes.
+    /// \param[out] transport_src The transport source terms. They are to be interpreted depending on sign:
+    ///                           (+) positive  inflow of first (water) phase (surface volume),
+    ///                           (-) negative  total outflow of both phases (reservoir volume).
+    void computeTransportSource(const BlackoilPropertiesInterface& props,
+                                const Wells* wells,
+                                const WellState& well_state,
+                                std::vector<double>& transport_src);
 
 } // namespace Opm
 
