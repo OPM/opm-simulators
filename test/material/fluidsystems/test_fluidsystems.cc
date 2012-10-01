@@ -25,16 +25,15 @@
  */
 #include "config.h"
 
-// include the property system just to make sure that all fluid system
-// type tag adapter behave nicely together
-#include <dumux/common/propertysystem.hh>
-
 #include "checkfluidsystem.hh"
+
+#include <dune/common/mpihelper.hh>
 
 // include all fluid systems in dumux-stable
 #include <dumux/material/fluidsystems/1pfluidsystem.hh>
 #include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
 #include <dumux/material/fluidsystems/blackoilfluidsystem.hh>
+#include <dumux/material/fluidsystems/brineco2fluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
 #include <dumux/material/fluidsystems/h2on2liquidphasefluidsystem.hh>
 #include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
@@ -49,7 +48,15 @@
 #include <dumux/material/fluidstates/nonequilibriumfluidstate.hh>
 #include <dumux/material/fluidstates/immisciblefluidstate.hh>
 
-int main()
+// include the tables for CO2 which are delivered with eWoms by
+// default
+#include <dumux/common/statictabulated2dfunction.hh>
+namespace Dumux {
+namespace FluidSystemsTest {
+#include <dumux/material/components/co2tables.inc>
+} }
+
+int main(int argc, char **argv)
 {
     typedef double Scalar;
     typedef Dumux::H2O<Scalar> H2O;
@@ -57,6 +64,9 @@ int main()
 
     typedef Dumux::LiquidPhase<Scalar, H2O> Liquid;
     typedef Dumux::GasPhase<Scalar, N2> Gas;
+
+    // initialize MPI, finalize is done automatically on exit
+    Dune::MPIHelper::instance(argc, argv);
 
     // check all fluid states
     {
@@ -94,13 +104,17 @@ int main()
     {   typedef Dumux::FluidSystems::BlackOil<Scalar> FluidSystem;
         if (false) checkFluidSystem<Scalar, FluidSystem>(); }
 
+    // Brine -- CO2
+    {   typedef Dumux::FluidSystems::BrineCO2<Scalar, Dumux::FluidSystemsTest::CO2Tables> FluidSystem;
+        checkFluidSystem<Scalar, FluidSystem>(); }
+
     // H2O -- N2
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/true> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
-
+ 
     // H2O -- N2 -- liquid phase
     {   typedef Dumux::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/false> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }

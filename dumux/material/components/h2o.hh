@@ -4,7 +4,6 @@
  *   Copyright (C) 2009-2012 by Andreas Lauser                               *
  *   Copyright (C) 2010 by Jochen Fritz                                      *
  *   Copyright (C) 2010 by Felix Bode                                        *
- *   Copyright (C) 2012 by Philipp Nuske                                     *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *
@@ -812,12 +811,18 @@ public:
      */
     static Scalar liquidThermalConductivity(Scalar temperature,  Scalar pressure)
     {
+#ifndef NDEBUG
         // Thermal conductivity of water is empirically fit.
         // Evaluating that fitting-function outside the area of validity does not make sense.
-        assert( (pressure <= 400e6 and ((273.15<=temperature) and (temperature<=398.15)) )
-                or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
-                or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
-                or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
+        if ((pressure > 400e6 || ((273.15  < temperature) || (temperature > 398.15)) )
+            && (pressure <= 200e6 || ((398.15<temperature) || (temperature<=523.15)) )
+            && (pressure <= 150e6 || ((523.15<temperature) || (temperature<=673.15)) )
+            && (pressure <= 100e6 || ((673.15<temperature) || (temperature<=1073.15)) ) )
+        {
+            DUNE_THROW(Dune::NotImplemented,
+                       "liquidThermalConductivity() of H2O for T="<<temperature<<" p="<<pressure);
+        }
+#endif
 
         Scalar rho = liquidDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);
@@ -838,12 +843,18 @@ public:
      */
     static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
     {
+#ifndef NDEBUG
         // Thermal conductivity of water is empirically fit.
         // Evaluating that fitting-function outside the area of validity does not make sense.
-        assert( (pressure <= 400e6 and ((273.15<=temperature) and (temperature<=398.15)) )
-                or (pressure <= 200e6 and ((398.15<temperature) and (temperature<=523.15)) )
-                or (pressure <= 150e6 and ((523.15<temperature) and (temperature<=673.15)) )
-                or (pressure <= 100e6 and ((673.15<temperature) and (temperature<=1073.15)) ) );
+        if ((pressure > 400e6 || ((273.15  < temperature) || (temperature > 398.15)) )
+            && (pressure <= 200e6 || ((398.15<temperature) || (temperature<=523.15)) )
+            && (pressure <= 150e6 || ((523.15<temperature) || (temperature<=673.15)) )
+            && (pressure <= 100e6 || ((673.15<temperature) || (temperature<=1073.15)) ) )
+        {
+            DUNE_THROW(Dune::NotImplemented,
+                       "gasThermalConductivity() of H2O for T="<<temperature<<" p="<<pressure);
+        }
+#endif
 
         Scalar rho = gasDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);

@@ -134,7 +134,7 @@ public:
         return IdealGas::density(molarMass(), temperature, pressure);
     }
 
-    /*!
+     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
     static constexpr bool gasIsCompressible()

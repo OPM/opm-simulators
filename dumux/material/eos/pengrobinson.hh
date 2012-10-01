@@ -38,7 +38,7 @@
 #include <dumux/material/idealgas.hh>
 #include <dumux/common/exceptions.hh>
 #include <dumux/common/math.hh>
-#include <dumux/common/tabulated2dfunction.hh>
+#include <dumux/common/dynamictabulated2dfunction.hh>
 
 namespace Dumux
 {
@@ -193,7 +193,7 @@ public:
             Scalar VmCubic = Z[0]*RT/p;
             Vm = VmCubic;
 
-            if (T > criticalTemperature_(a, b)) {
+            if (T > criticalTemperature_.eval(a, b)) {
                 // if the EOS does not exhibit any extrema, the fluid
                 // is critical...
                 Vm = VmCubic;
@@ -278,7 +278,7 @@ protected:
                                      int phaseIdx,
                                      bool isGasPhase)
     {
-        Scalar Vcrit = criticalMolarVolume_(params.a(phaseIdx), params.b(phaseIdx));
+        Scalar Vcrit = criticalMolarVolume_.eval(params.a(phaseIdx), params.b(phaseIdx));
 
         if (isGasPhase)
             Vm = std::max(Vm, Vcrit);
@@ -490,19 +490,19 @@ protected:
                                       Scalar VmGas)
     { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); }
 
-    static Tabulated2DFunction<Scalar> criticalTemperature_;
-    static Tabulated2DFunction<Scalar> criticalPressure_;
-    static Tabulated2DFunction<Scalar> criticalMolarVolume_;
+    static DynamicTabulated2DFunction<Scalar> criticalTemperature_;
+    static DynamicTabulated2DFunction<Scalar> criticalPressure_;
+    static DynamicTabulated2DFunction<Scalar> criticalMolarVolume_;
 };
 
 template <class Scalar>
-Tabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalTemperature_;
+DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalTemperature_;
 
 template <class Scalar>
-Tabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalPressure_;
+DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalPressure_;
 
 template <class Scalar>
-Tabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
+DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
 
 } // end namepace
 

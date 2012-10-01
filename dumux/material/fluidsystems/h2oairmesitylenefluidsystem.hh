@@ -207,11 +207,10 @@ public:
                           int phaseIdx)
     {
         Scalar T = fluidState.temperature(phaseIdx) ;
-        Scalar p = fluidState.pressure(phaseIdx);
 
         if (phaseIdx == wPhaseIdx) {
             // See: Ochs 2008
-            // \todo: proper citation
+            Scalar p = H2O::liquidIsCompressible()?fluidState.pressure(phaseIdx):1e100;
             Scalar rholH2O = H2O::liquidDensity(T, p);
             Scalar clH2O = rholH2O/H2O::molarMass();
 

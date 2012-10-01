@@ -292,14 +292,14 @@ void checkFluidSystem()
         fs.allowComposition(true);
         fs.allowDensity(false);
         try { val = FluidSystem::density(fs, paramCache, phaseIdx); } catch (...) {};
-
+            
         fs.allowPressure(true);
         fs.allowDensity(true);
         try { val = FluidSystem::viscosity(fs, paramCache, phaseIdx); } catch (...) {};
         try { val = FluidSystem::enthalpy(fs, paramCache, phaseIdx); } catch (...) {};
         try { val = FluidSystem::heatCapacity(fs, paramCache, phaseIdx); } catch (...) {};
         try { val = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx); } catch (...) {};
-
+            
         for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
             fs.allowComposition(!FluidSystem::isIdealMixture(phaseIdx));
             try { val = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
@@ -309,6 +309,7 @@ void checkFluidSystem()
                 try { val = FluidSystem::binaryDiffusionCoefficient(fs, paramCache, phaseIdx, compIdx, comp2Idx); } catch (...) {};
             }
         }
+            
     }
 
     // test for phaseName(), isLiquid() and isIdealGas()

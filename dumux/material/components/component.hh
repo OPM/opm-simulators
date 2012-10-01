@@ -71,7 +71,7 @@ public:
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
     static bool gasIsIdeal()
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasIsCompressible()"); }
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasIsIdeal()"); }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
@@ -131,7 +131,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::density()"); }
+    { DUNE_THROW(Dune::NotImplemented, "Component::gasDensity()"); }
 
     /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of the liquid component at a given pressure in \f$\mathrm{[Pa]}\f$ and temperature in \f$\mathrm{[K]}\f$.
@@ -140,7 +140,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::density()"); }
+    { DUNE_THROW(Dune::NotImplemented, "Component::liquidDensity()"); }
 
     /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of the pure component in gas.
