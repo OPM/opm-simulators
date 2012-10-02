@@ -70,7 +70,7 @@ using
 NEW_PROP_TAG(NewPropTagName);
 \end{lstlisting}
 A property tag can be declared arbitrarily often, in fact it is
-recomended that all properties are declared in each file where they
+recommended that all properties are declared in each file where they
 are used.
 
 \vskip1ex\noindent
@@ -162,7 +162,7 @@ UNSET_PROP(DerivedTypeTag, TestProp);
 
 For the \Cplusplus compiler, property and type tags are like ordinary
 types. Both can thus be used as template arguments. To convert a
-property tag name or a type tag name into the corrosponding type, the
+property tag name or a type tag name into the corresponding type, the
 macros \texttt{TTAG(TypeTagName)} and \texttt{PTAG(PropertyTagName)}
 ought to be used.
 
@@ -248,11 +248,11 @@ diagram for the car types above might look like outlined in Figure
     \includegraphics[width=.35\linewidth, keepaspectratio]{EPS/car-propertynames.eps}
     \label{fig:car-propertynames}
   }
-  \caption{ \textbf{(a)}~~A possible property inheritance graph for
+  \caption{\textbf{(a)}~A possible property inheritance graph for
     various kinds of cars.  The lower nodes inherit from higher ones;
     Inherited properties from nodes on the right take precedence over the
-    properties defined on the left. ~~\textbf{(b)}~~Property names
-    which make sense for at least one of the car types of (a).  }
+    properties defined on the left. \textbf{(b)}~Property names
+    which make sense for at least one of the car types of (a).}
 \end{figure}
 
 Using the \Dumux property system, this inheritance hierarchy is
@@ -290,18 +290,18 @@ separate. What is missing is setting some values for the property
 names on specific nodes of the inheritance hierarchy. Let us assume
 the following:
 \begin{itemize}
-\item For a compact car, the top speed is the gas usage in $l/100km$
+\item For a compact car, the top speed is the gas usage in $\unitfrac{l}{100km}$
   times $30$, the number of seats is $5$ and the gas usage is
-  $4\;l/100km$.
-\item A truck is by law limited to $100\;km/h$ top speed, the number
-  of seats is $2$, it uses $18\;l/100km$ and has a cargo payload of
-  $35\;t$.
-\item A tank exhibits a top speed of $60\;km/h$, uses $65\;l/100km$
-  and features a $120\;mm$ diameter canon 
-\item A sedan has a gas usage of $7\;l/100km$, as well as an automatic
+  $\unitfrac[4]{l}{100km}$.
+\item A truck is by law limited to $\unitfrac[100]{km}{h}$ top speed, the number
+  of seats is $2$, it uses $\unitfrac[18]{l}{100km}$ and has a cargo payload of
+  $\unit[35]{t}$.
+\item A tank exhibits a top speed of $\unitfrac[60]{km}{h}$, uses $\unitfrac[65]{l}{100km}$
+  and features a $\unit[120]{mm}$ diameter canon 
+\item A sedan has a gas usage of $\unitfrac[7]{l}{100km}$, as well as an automatic
   transmission, in every other aspect it is like a compact car.
-\item A pick-up truck has a top speed of $120\;km/h$ and a payload of
-  $5\;t$. In every other aspect it is like a sedan or a truck but if in
+\item A pick-up truck has a top speed of $\unitfrac[120]{km}{h}$ and a payload of
+  $\unit[5]{t}$. In every other aspect it is like a sedan or a truck but if in
   doubt, it is more like a truck.
 \item The Hummer-H1 SUV exhibits the same top speed as a pick-up
   truck.  In all other aspects it is similar to a pickup and a tank,
@@ -335,7 +335,7 @@ SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), TopSpeed));
 \end{lstlisting}
 
 \noindent
-At this point, the Hummer-H1 has a $120\;mm$ canon which it inherited
+At this point, the Hummer-H1 has a $\unit[120]{mm}$ canon which it inherited
 from its military ancestor. It can be removed by
 \begin{lstlisting}[name=propsyscars,style=DumuxCode]
 UNSET_PROP(HummerH1, CanonCaliber);
@@ -374,4 +374,4 @@ Properties for Sedan:
 %%% Local Variables: 
 %%% mode: latex
 %%% TeX-master: "dumux-handbook"
-%%% End: 
+%%% End:
