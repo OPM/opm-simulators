@@ -77,8 +77,12 @@ namespace Opm
         std::vector<double> prod_surfvol(np);
         for (int c = 0; c < num_cells; ++c) {
             if (transport_src[c] > 0.0) {
+                // Inflowing transport source is a surface volume flux
+                // for the first phase.
                 injected[0] += transport_src[c]*dt;
             } else if (transport_src[c] < 0.0) {
+                // Outflowing transport source is a total reservoir
+                // volume flux.
                 const double flux = -transport_src[c]*dt;
                 const double* sat = &s[np*c];
                 props.relperm(1, sat, &c, &mob[0], 0);
