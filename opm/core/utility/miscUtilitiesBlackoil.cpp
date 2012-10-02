@@ -297,7 +297,7 @@ namespace Opm
             if (np != 2) {
                 THROW("computeTransportSource() requires a 2 phase case.");
             }
-            std::vector<double> A(np, np);
+            std::vector<double> A(np*np);
             for (int w = 0; w < nw; ++w) {
                 const double* comp_frac = wells->comp_frac + np*w;
                 for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
