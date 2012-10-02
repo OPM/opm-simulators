@@ -44,13 +44,13 @@ They are used as follows: \lstinline{Dune::dinfo << "message";} or \lstinline{Du
 The debug streams are switched on/off via  setting \lstinline{#define DUNE_MINIMAL_DEBUG_LEVEL 4}
 in the source your application. If the value is set to i.\,g. 4 the output generated after \lstinline{Dune::dinfo} (level 4 and 5) will printed anywhere.
 
-\paragraph{Filename and line number by predefined macro}
+\paragraph{File name and line number by predefined macro}
 
 If you want to  know where some output or debug information came from, you can use the predefined macros \lstinline{__FILE__} and \lstinline{__LINE__}
 which are used like\\
-\lstinline{dataFile << "# This was written from "<< __FILE__ << ", line " <<__LINE__ << "\n";}\\
+\lstinline{dataFile << "# This was written from "<< __FILE__ << ", line " << __LINE__ << "\n";}\\
 which translates into a line in the output file reading\\
-\lstinline{# This was written from [..]/DUMUX_kila/dumux/dumux/io/outputToFile.hh, line 261}\\
+\lstinline{# This was written from [..]/dumux/dumux/io/outputToFile.hh, line 261}\\
 This can also be very useful, if you want to have information about where some warning or debug information was issued. 
 
 \paragraph{Option files optim.opts and debug.opts}
@@ -82,3 +82,13 @@ A complete build using \texttt{dunecontrol} takes some time. If there were just 
 
 An other possibility to speed up dunecontrol is caching of configure results. Add to the configure flags the line \texttt{--cache-file=/tmp/dune-config.cache} in you options file.
 
+\paragraph{Error messages related to the property system}
+The property system is a powerful tool and internally does some template and macro magic. 
+The price for it are sometimes unintuitive compiler error messages. For example if the
+definition of a property could not be found, the error is:
+\begin{lstlisting}[style=DumuxCode,numbers=none]
+error: no type named 'p' in 'struct Dumux::Properties::GetProperty<Dumux::Properties::TTag::TestProblem, Dumux::Properties::PTag::Scalar, Dumux::Properties::TTag::TestProblem, -1000>'
+\end{lstlisting}
+
+So check whether you did not misspelled any name related to the property system in the 
+line of the error message and whether you really declared the type tag you use there.
