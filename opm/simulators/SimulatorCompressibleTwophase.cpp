@@ -434,9 +434,8 @@ namespace Opm
                 computePorevolume(grid_, props_.porosity(), *rock_comp_, state.pressure(), porevol);
             }
 
-            // Process transport sources (to include bdy terms and well flows).
-            Opm::computeTransportSource(grid_, src_, state.faceflux(), 1.0,
-                                        wells_, well_state.perfRates(), transport_src);
+            // Process transport sources from well flows.
+            Opm::computeTransportSource(props_, wells_, well_state, transport_src);
 
             // Solve transport.
             transport_timer.start();
@@ -449,9 +448,7 @@ namespace Opm
                 tsolver_.solve(&state.faceflux()[0], &state.pressure()[0],
                                &initial_porevol[0], &porevol[0], &transport_src[0], stepsize,
                                state.saturation(), state.surfacevol());
-                Opm::computeInjectedProduced(props_,
-                                             state.pressure(), state.surfacevol(), state.saturation(),
-                                             transport_src, stepsize, injected, produced);
+                Opm::computeInjectedProduced(props_, state, transport_src, stepsize, injected, produced);
                 if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize, state.saturation(), state.surfacevol());
                 }
