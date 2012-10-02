@@ -28,30 +28,33 @@ namespace Opm
 {
 
     class BlackoilPropertiesInterface;
+    class BlackoilState;
     class WellState;
 
-    /// @brief Computes injected and produced volumes of all phases.
+
+    /// @brief Computes injected and produced surface volumes of all phases.
     /// Note 1: assumes that only the first phase is injected.
     /// Note 2: assumes that transport has been done with an
     ///         implicit method, i.e. that the current state
     ///         gives the mobilities used for the preceding timestep.
-    /// @param[in]  props     fluid and rock properties.
-    /// @param[in]  p         pressure (one value per cell)
-    /// @param[in]  z         surface-volume values (for all P phases)
-    /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
-    /// @param[in]  dt        timestep used
-    /// @param[out] injected  must point to a valid array with P elements,
-    ///                       where P = s.size()/src.size().
-    /// @param[out] produced  must also point to a valid array with P elements.
+    /// Note 3: Gives surface volume values, not reservoir volumes
+    ///         (as the incompressible version of the function does).
+    ///         Also, assumes that transport_src is given in surface volumes
+    ///         for injector terms!
+    /// @param[in]  props           fluid and rock properties.
+    /// @param[in]  state           state variables (pressure, sat, surfvol)
+    /// @param[in]  transport_src   if < 0: total resv outflow, if > 0: first phase surfv inflow
+    /// @param[in]  dt              timestep used
+    /// @param[out] injected        must point to a valid array with P elements,
+    ///                             where P = s.size()/src.size().
+    /// @param[out] produced        must also point to a valid array with P elements.
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
-                                 const std::vector<double>& p,
-                                 const std::vector<double>& z,
-                                 const std::vector<double>& s,
-                                 const std::vector<double>& src,
+                                 const BlackoilState& state,
+                                 const std::vector<double>& transport_src,
                                  const double dt,
                                  double* injected,
                                  double* produced);
+
 
     /// @brief Computes total mobility for a set of saturation values.
     /// @param[in]  props     rock and fluid properties
@@ -66,6 +69,7 @@ namespace Opm
                               const std::vector<double>& z,
                               const std::vector<double>& s,
                               std::vector<double>& totmob);
+
 
     /// @brief Computes total mobility and omega for a set of saturation values.
     /// @param[in]  props     rock and fluid properties

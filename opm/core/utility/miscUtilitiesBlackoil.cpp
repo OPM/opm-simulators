@@ -41,31 +41,33 @@ namespace Opm
     ///         gives the mobilities used for the preceding timestep.
     /// Note 3: Gives surface volume values, not reservoir volumes
     ///         (as the incompressible version of the function does).
-    ///         Also, assumes that src is given in surface volumes
+    ///         Also, assumes that transport_src is given in surface volumes
     ///         for injector terms!
-    /// @param[in]  props     fluid and rock properties.
-    /// @param[in]  p         pressure (one value per cell)
-    /// @param[in]  z         surface-volume values (for all P phases)
-    /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow
-    /// @param[in]  dt        timestep used
-    /// @param[out] injected  must point to a valid array with P elements,
-    ///                       where P = s.size()/src.size().
-    /// @param[out] produced  must also point to a valid array with P elements.
+    /// @param[in]  props           fluid and rock properties.
+    /// @param[in]  state           state variables (pressure, sat, surfvol)
+    /// @param[in]  transport_src   if < 0: total resv outflow, if > 0: first phase surfv inflow
+    /// @param[in]  dt              timestep used
+    /// @param[out] injected        must point to a valid array with P elements,
+    ///                             where P = s.size()/src.size().
+    /// @param[out] produced        must also point to a valid array with P elements.
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
-                                 const std::vector<double>& press,
-                                 const std::vector<double>& z,
-                                 const std::vector<double>& s,
-                                 const std::vector<double>& src,
+                                 const BlackoilState& state,
+                                 const std::vector<double>& transport_src,
                                  const double dt,
                                  double* injected,
                                  double* produced)
     {
-        const int num_cells = src.size();
-        const int np = s.size()/src.size();
-        if (int(s.size()) != num_cells*np) {
-            THROW("Sizes of s and src vectors do not match.");
+        const int num_cells = transport_src.size();
+        if (props.numCells() != num_cells) {
+            THROW("Size of transport_src vector does not match number of cells in props.");
         }
+        const int np = props.numPhases();
+        if (int(state.saturation().size()) != num_cells*np) {
+            THROW("Sizes of state vectors do not match number of cells.");
+        }
+        const std::vector<double>& press = state.pressure();
+        const std::vector<double>& s = state.saturation();
+        const std::vector<double>& z = state.surfacevol();
         std::fill(injected, injected + np, 0.0);
         std::fill(produced, produced + np, 0.0);
         std::vector<double> visc(np);
@@ -74,10 +76,10 @@ namespace Opm
         std::vector<double> prod_resv_phase(np);
         std::vector<double> prod_surfvol(np);
         for (int c = 0; c < num_cells; ++c) {
-            if (src[c] > 0.0) {
-                injected[0] += src[c]*dt;
-            } else if (src[c] < 0.0) {
-                const double flux = -src[c]*dt;
+            if (transport_src[c] > 0.0) {
+                injected[0] += transport_src[c]*dt;
+            } else if (transport_src[c] < 0.0) {
+                const double flux = -transport_src[c]*dt;
                 const double* sat = &s[np*c];
                 props.relperm(1, sat, &c, &mob[0], 0);
                 props.viscosity(1, &press[c], &z[np*c], &c, &visc[0], 0);
