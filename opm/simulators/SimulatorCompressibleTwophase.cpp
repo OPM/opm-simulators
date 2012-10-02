@@ -196,6 +196,7 @@ namespace Opm
             if (!file) {
                 THROW("Failed to open " << fname.str());
             }
+            file.precision(15);
             const std::vector<double>& d = *(it->second);
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
