@@ -320,15 +320,11 @@ namespace Opm
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        double init_satvol[2] = { 0.0 };
-        double satvol[2] = { 0.0 };
-        double injected[2] = { 0.0 };
-        double produced[2] = { 0.0 };
+        double init_surfvol[2] = { 0.0 };
+        double inplace_surfvol[2] = { 0.0 };
         double tot_injected[2] = { 0.0 };
         double tot_produced[2] = { 0.0 };
-        Opm::computeSaturatedVol(porevol, state.saturation(), init_satvol);
-        std::cout << "\nInitial saturations are    " << init_satvol[0]/tot_porevol_init
-                  << "    " << init_satvol[1]/tot_porevol_init << std::endl;
+        Opm::computeSaturatedVol(porevol, state.surfacevol(), init_surfvol);
         Opm::Watercut watercut;
         watercut.push(0.0, 0.0, 0.0);
         Opm::WellReport wellreport;
@@ -445,11 +441,20 @@ namespace Opm
                 stepsize /= double(num_transport_substeps_);
                 std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
+            double injected[2] = { 0.0 };
+            double produced[2] = { 0.0 };
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], &state.pressure()[0],
                                &initial_porevol[0], &porevol[0], &transport_src[0], stepsize,
                                state.saturation(), state.surfacevol());
-                Opm::computeInjectedProduced(props_, state, transport_src, stepsize, injected, produced);
+                double substep_injected[2] = { 0.0 };
+                double substep_produced[2] = { 0.0 };
+                Opm::computeInjectedProduced(props_, state, transport_src, stepsize,
+                                             substep_injected, substep_produced);
+                injected[0] += substep_injected[0];
+                injected[1] += substep_injected[1];
+                produced[0] += substep_produced[0];
+                produced[1] += substep_produced[1];
                 if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize, state.saturation(), state.surfacevol());
                 }
@@ -460,35 +465,35 @@ namespace Opm
             std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
             ttime += tt;
             // Report volume balances.
-            Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
+            Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
             tot_injected[0] += injected[0];
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
             tot_produced[1] += produced[1];
             std::cout.precision(5);
             const int width = 18;
-            std::cout << "\nVolume balance report (all numbers relative to total pore volume).\n";
-            std::cout << "    Saturated volumes:     "
-                      << std::setw(width) << satvol[0]/tot_porevol_init
-                      << std::setw(width) << satvol[1]/tot_porevol_init << std::endl;
-            std::cout << "    Injected volumes:      "
-                      << std::setw(width) << injected[0]/tot_porevol_init
-                      << std::setw(width) << injected[1]/tot_porevol_init << std::endl;
-            std::cout << "    Produced volumes:      "
-                      << std::setw(width) << produced[0]/tot_porevol_init
-                      << std::setw(width) << produced[1]/tot_porevol_init << std::endl;
-            std::cout << "    Total inj volumes:     "
-                      << std::setw(width) << tot_injected[0]/tot_porevol_init
-                      << std::setw(width) << tot_injected[1]/tot_porevol_init << std::endl;
-            std::cout << "    Total prod volumes:    "
-                      << std::setw(width) << tot_produced[0]/tot_porevol_init
-                      << std::setw(width) << tot_produced[1]/tot_porevol_init << std::endl;
-            std::cout << "    In-place + prod - inj: "
-                      << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol_init
-                      << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol_init << std::endl;
-            std::cout << "    Init - now - pr + inj: "
-                      << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol_init
-                      << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol_init
+            std::cout << "\nMass balance report.\n";
+            std::cout << "    Injected surface volumes:      "
+                      << std::setw(width) << injected[0]
+                      << std::setw(width) << injected[1] << std::endl;
+            std::cout << "    Produced surface volumes:      "
+                      << std::setw(width) << produced[0]
+                      << std::setw(width) << produced[1] << std::endl;
+            std::cout << "    Total inj surface volumes:     "
+                      << std::setw(width) << tot_injected[0]
+                      << std::setw(width) << tot_injected[1] << std::endl;
+            std::cout << "    Total prod surface volumes:    "
+                      << std::setw(width) << tot_produced[0]
+                      << std::setw(width) << tot_produced[1] << std::endl;
+            const double balance[2] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
+                                        init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1] };
+            std::cout << "    Initial - inplace + inj - prod: "
+                      << std::setw(width) << balance[0]
+                      << std::setw(width) << balance[1]
+                      << std::endl;
+            std::cout << "    Relative mass error:            "
+                      << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
+                      << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
                       << std::endl;
             std::cout.precision(8);
 

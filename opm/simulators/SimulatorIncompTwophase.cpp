@@ -399,8 +399,6 @@ namespace Opm
         total_timer.start();
         double init_satvol[2] = { 0.0 };
         double satvol[2] = { 0.0 };
-        double injected[2] = { 0.0 };
-        double produced[2] = { 0.0 };
         double tot_injected[2] = { 0.0 };
         double tot_produced[2] = { 0.0 };
         Opm::computeSaturatedVol(porevol, state.saturation(), init_satvol);
@@ -522,10 +520,19 @@ namespace Opm
                 stepsize /= double(num_transport_substeps_);
                 std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
+            double injected[2] = { 0.0 };
+            double produced[2] = { 0.0 };
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], &initial_porevol[0], &transport_src[0],
                               stepsize, state.saturation());
-                Opm::computeInjectedProduced(props_, state.saturation(), transport_src, stepsize, injected, produced);
+                double substep_injected[2] = { 0.0 };
+                double substep_produced[2] = { 0.0 };
+                Opm::computeInjectedProduced(props_, state.saturation(), transport_src, stepsize,
+                                             substep_injected, substep_produced);
+                injected[0] += substep_injected[0];
+                injected[1] += substep_injected[1];
+                produced[0] += substep_produced[0];
+                produced[1] += substep_produced[1];
                 if (use_segregation_split_) {
                     tsolver_.solveGravity(columns_, &initial_porevol[0], stepsize, state.saturation());
                 }
