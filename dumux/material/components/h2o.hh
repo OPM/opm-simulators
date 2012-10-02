@@ -814,10 +814,10 @@ public:
 #ifndef NDEBUG
         // Thermal conductivity of water is empirically fit.
         // Evaluating that fitting-function outside the area of validity does not make sense.
-        if ((pressure > 400e6 || ((273.15  < temperature) || (temperature > 398.15)) )
-            && (pressure <= 200e6 || ((398.15<temperature) || (temperature<=523.15)) )
-            && (pressure <= 150e6 || ((523.15<temperature) || (temperature<=673.15)) )
-            && (pressure <= 100e6 || ((673.15<temperature) || (temperature<=1073.15)) ) )
+        if ((pressure > 400e6 && ((273.15  < temperature) || (temperature > 398.15)) )
+            || (pressure <= 200e6 && ((398.15 < temperature) || (temperature > 523.15)) )
+            || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
+            || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
         {
             DUNE_THROW(Dune::NotImplemented,
                        "liquidThermalConductivity() of H2O for T="<<temperature<<" p="<<pressure);
@@ -846,10 +846,10 @@ public:
 #ifndef NDEBUG
         // Thermal conductivity of water is empirically fit.
         // Evaluating that fitting-function outside the area of validity does not make sense.
-        if ((pressure > 400e6 || ((273.15  < temperature) || (temperature > 398.15)) )
-            && (pressure <= 200e6 || ((398.15<temperature) || (temperature<=523.15)) )
-            && (pressure <= 150e6 || ((523.15<temperature) || (temperature<=673.15)) )
-            && (pressure <= 100e6 || ((673.15<temperature) || (temperature<=1073.15)) ) )
+        if ((pressure > 400e6 && ((273.15  < temperature) || (temperature > 398.15)) )
+            || (pressure <= 200e6 && ((398.15 < temperature) || (temperature > 523.15)) )
+            || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
+            || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
         {
             DUNE_THROW(Dune::NotImplemented,
                        "gasThermalConductivity() of H2O for T="<<temperature<<" p="<<pressure);
