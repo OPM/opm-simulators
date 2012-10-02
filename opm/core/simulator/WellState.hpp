@@ -49,7 +49,8 @@ namespace Opm
                         bhp_[w] = state.pressure()[cell];
                     }
                 }
-                perfrates_.resize(wells->well_connpos[nw]);
+                perfrates_.resize(wells->well_connpos[nw], 0.0);
+                perfpress_.resize(wells->well_connpos[nw], -1e100);
             }
         }
 
@@ -61,9 +62,14 @@ namespace Opm
         std::vector<double>& perfRates() { return perfrates_; }
         const std::vector<double>& perfRates() const { return perfrates_; }
 
+        /// One pressure per well connection.
+        std::vector<double>& perfPress() { return perfpress_; }
+        const std::vector<double>& perfPress() const { return perfpress_; }
+
     private:
         std::vector<double> bhp_;
         std::vector<double> perfrates_;
+        std::vector<double> perfpress_;
     };
 
 } // namespace Opm
