@@ -365,7 +365,7 @@ namespace Opm
             Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
             polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
             polymass_adsorbed = Opm::computePolymerAdsorbed(grid_, props_, poly_props_,
-                                                            state, *rock_comp_props_);
+                                                            state, rock_comp_props_);
             tot_injected[0] += injected[0];
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
