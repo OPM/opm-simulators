@@ -173,7 +173,7 @@ namespace Opm
 	  tol_(tol),
 	  maxit_(maxit),
 	  method_(method),
-	  adhoc_safety_(1.0),
+	  adhoc_safety_(1.1),
 	  concentration_(0),
 	  cmax_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
