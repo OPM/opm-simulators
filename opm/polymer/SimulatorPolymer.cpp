@@ -329,13 +329,24 @@ namespace Opm
                 stepsize /= double(num_transport_substeps_);
                 std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
+            double substep_injected[2] = { 0.0 };
+            double substep_produced[2] = { 0.0 };
+            double substep_polyinj = 0.0;
+            double substep_polyprod = 0.0;
+            injected[0] = injected[1] = produced[0] = produced[1] = polyinj = polyprod = 0.0;
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], &porevol[0], &transport_src[0], stepsize, inflow_c,
                                state.saturation(), state.concentration(), state.maxconcentration());
                 Opm::computeInjectedProduced(props_, poly_props_,
                                              state.saturation(), state.concentration(), state.maxconcentration(),
-                                             transport_src, timer.currentStepLength(), inflow_c,
-                                             injected, produced, polyinj, polyprod);
+                                             transport_src, stepsize, inflow_c,
+                                             substep_injected, substep_produced, substep_polyinj, substep_polyprod);
+                injected[0] += substep_injected[0];
+                injected[1] += substep_injected[1];
+                produced[0] += substep_produced[0];
+                produced[1] += substep_produced[1];
+                polyinj += substep_polyinj;
+                polyprod += substep_polyprod;
                 if (use_segregation_split_) {
                     tsolver_.solveGravity(columns_, &porevol[0], stepsize,
                                           state.saturation(), state.concentration(), state.maxconcentration());
