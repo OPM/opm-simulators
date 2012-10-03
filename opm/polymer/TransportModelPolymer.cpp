@@ -196,7 +196,7 @@ namespace Opm
 	  fractionalflow_(grid.number_of_cells, -1.0),
 	  mc_(grid.number_of_cells, -1.0),
 	  method_(method),
-	  adhoc_safety_(1.0) 
+	  adhoc_safety_(1.1) 
     {
 	if (props.numPhases() != 2) {
 	    THROW("Property object must have 2 phases");
