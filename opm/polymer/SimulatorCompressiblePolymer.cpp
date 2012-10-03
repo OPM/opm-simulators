@@ -66,10 +66,14 @@ namespace Opm
 
     namespace
     {
-        void outputState(const UnstructuredGrid& grid,
-                         const Opm::PolymerBlackoilState& state,
-                         const int step,
-                         const std::string& output_dir);
+        void outputStateVtk(const UnstructuredGrid& grid,
+                            const Opm::PolymerBlackoilState& state,
+                            const int step,
+                            const std::string& output_dir);
+        void outputStateMatlab(const UnstructuredGrid& grid,
+                               const Opm::PolymerBlackoilState& state,
+                               const int step,
+                               const std::string& output_dir);
         void outputWaterCut(const Opm::Watercut& watercut,
                             const std::string& output_dir);
         void outputWellReport(const Opm::WellReport& wellreport,
@@ -102,6 +106,7 @@ namespace Opm
 
         // Parameters for output.
         bool output_;
+        bool output_vtk_;
         std::string output_dir_;
         int output_interval_;
         // Parameters for transport solver.
@@ -194,6 +199,7 @@ namespace Opm
         // For output.
         output_ = param.getDefault("output", true);
         if (output_) {
+            output_vtk_ = param.getDefault("output_vtk", true);
             output_dir_ = param.getDefault("output_dir", std::string("output"));
             // Ensure that output dir exists
             boost::filesystem::path fpath(output_dir_);
@@ -289,13 +295,13 @@ namespace Opm
             // Report timestep and (optionally) write state to disk.
             timer.report(std::cout);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
-                outputState(grid_, state, timer.currentStepNum(), output_dir_);
+                if (output_vtk_) {
+                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+                }
+                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             }
 
-            if (rock_comp_props_ && rock_comp_props_->isActive()) {
-                initial_pressure = state.pressure();
-            }
-
+            initial_pressure = state.pressure();
 
             // Solve pressure.
             do {
@@ -416,7 +422,10 @@ namespace Opm
         }
 
         if (output_) {
-            outputState(grid_, state, timer.currentStepNum(), output_dir_);
+            if (output_vtk_) {
+                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+            }
+            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);
@@ -441,14 +450,22 @@ namespace Opm
     namespace
     {
 
-        void outputState(const UnstructuredGrid& grid,
-                         const Opm::PolymerBlackoilState& state,
-                         const int step,
-                         const std::string& output_dir)
+        void outputStateVtk(const UnstructuredGrid& grid,
+                            const Opm::PolymerBlackoilState& state,
+                            const int step,
+                            const std::string& output_dir)
         {
             // Write data in VTK format.
             std::ostringstream vtkfilename;
-            vtkfilename << output_dir << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
+            vtkfilename << output_dir << "/vtk_files";
+            boost::filesystem::path fpath(vtkfilename.str());
+            try {
+                create_directories(fpath);
+            }
+            catch (...) {
+                THROW("Creating directories failed: " << fpath);
+            }
+            vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
             std::ofstream vtkfile(vtkfilename.str().c_str());
             if (!vtkfile) {
                 THROW("Failed to open " << vtkfilename.str());
@@ -458,15 +475,40 @@ namespace Opm
             dm["pressure"] = &state.pressure();
             dm["concentration"] = &state.concentration();
             dm["cmax"] = &state.maxconcentration();
+            dm["surfvol"] = &state.surfacevol();
             std::vector<double> cell_velocity;
             Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
             dm["velocity"] = &cell_velocity;
             Opm::writeVtkData(grid, dm, vtkfile);
+        }
+
+        void outputStateMatlab(const UnstructuredGrid& grid,
+                               const Opm::PolymerBlackoilState& state,
+                               const int step,
+                               const std::string& output_dir)
+        {
+            Opm::DataMap dm;
+            dm["saturation"] = &state.saturation();
+            dm["pressure"] = &state.pressure();
+            dm["concentration"] = &state.concentration();
+            dm["cmax"] = &state.maxconcentration();
+            dm["surfvol"] = &state.surfacevol();
+            std::vector<double> cell_velocity;
+            Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+            dm["velocity"] = &cell_velocity;
 
             // Write data (not grid) in Matlab format
             for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
                 std::ostringstream fname;
-                fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+                fname << output_dir << "/" << it->first;
+                boost::filesystem::path fpath = fname.str();
+                try {
+                    create_directories(fpath);
+                }
+                catch (...) {
+                    THROW("Creating directories failed: " << fpath);
+                }
+                fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
                 std::ofstream file(fname.str().c_str());
                 if (!file) {
                     THROW("Failed to open " << fname.str());
@@ -475,7 +517,6 @@ namespace Opm
                 std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
             }
         }
-
 
         void outputWaterCut(const Opm::Watercut& watercut,
                             const std::string& output_dir)
