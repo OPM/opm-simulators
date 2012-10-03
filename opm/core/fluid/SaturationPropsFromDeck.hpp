@@ -26,6 +26,7 @@
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 #include <opm/core/fluid/SatFuncStone2.hpp>
 #include <opm/core/fluid/SatFuncSimple.hpp>
+#include <opm/core/fluid/SatFuncGwseg.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
