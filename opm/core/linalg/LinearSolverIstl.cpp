@@ -69,7 +69,9 @@ namespace Opm
           linsolver_verbosity_(0),
           linsolver_type_(CG_AMG),
           linsolver_save_system_(false),
-          linsolver_max_iterations_(0)
+          linsolver_max_iterations_(0),
+          linsolver_smooth_steps_(2),
+          linsolver_prolongate_factor_(1.6)
     {
     }
 
@@ -81,7 +83,9 @@ namespace Opm
           linsolver_verbosity_(0),
           linsolver_type_(CG_AMG),
           linsolver_save_system_(false),
-          linsolver_max_iterations_(0)
+          linsolver_max_iterations_(0),
+          linsolver_smooth_steps_(2),
+          linsolver_prolongate_factor_(1.6)
     {
         linsolver_residual_tolerance_ = param.getDefault("linsolver_residual_tolerance", linsolver_residual_tolerance_);
         linsolver_verbosity_ = param.getDefault("linsolver_verbosity", linsolver_verbosity_);
@@ -91,6 +95,9 @@ namespace Opm
             linsolver_save_filename_ = param.getDefault("linsolver_save_filename", std::string("linsys"));
         }
         linsolver_max_iterations_ = param.getDefault("linsolver_max_iterations", linsolver_max_iterations_);
+        linsolver_smooth_steps_ = param.getDefault("linsolver_smooth_steps", linsolver_smooth_steps_);
+        linsolver_prolongate_factor_ = param.getDegfault("linsolver_prolongate_factor", linsolver_prolongate_factor_);
+        
     }
 
 
@@ -250,7 +257,9 @@ namespace Opm
 #if ANISOTROPIC_3D
         criterion.setDefaultValuesAnisotropic(3, 2);
 #endif
-        Precond precond(opA, criterion, smootherArgs);
+        criterion.setProlongateDampingFactor(linsolve_prolongate_factor_);
+        Precond precond(opA, criterion, smootherArgs, 1, linsolve_smooth_steps_,
+                        linsolve_smooth_steps_);
 
         // Construct linear solver.
         CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);

@@ -88,6 +88,11 @@ namespace Opm
         bool linsolver_save_system_;
         std::string linsolver_save_filename_;
         int linsolver_max_iterations_;
+        /** \brief The number smoothing steps to apply in AMG. */
+        int linsolver_smooth_steps_;
+        /** \brief The factor to scale the coarse grid correction with. */
+        linsolver_prolongate_factor_;
+      
     };
 
 
