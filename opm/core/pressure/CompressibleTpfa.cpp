@@ -632,6 +632,23 @@ namespace Opm
                             &state.pressure()[0],
                             &state.faceflux()[0],
                             &state.facepressure()[0]);
+
+        // Compute well perforation pressures (not done by the C code).
+        if (wells_ != 0) {
+            const int nw = wells_->number_of_wells;
+            const int np = props_.numPhases();
+            for (int w = 0; w < nw; ++w) {
+                const double* comp_frac = &wells_->comp_frac[np*w];
+                for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w+1]; ++j) {
+                    const double bhp = well_state.bhp()[w];
+                    double perf_p = bhp;
+                    for (int phase = 0; phase < np; ++phase) {
+                        perf_p += wellperf_gpot_[np*j + phase]*comp_frac[phase];
+                    }
+                    well_state.perfPress()[j] = perf_p;
+                }
+            }
+        }
     }
 
 } // namespace Opm
