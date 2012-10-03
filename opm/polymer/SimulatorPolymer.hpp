@@ -83,7 +83,8 @@ namespace Opm
         /// This will run succesive timesteps until timer.done() is true. It will
         /// modify the reservoir and well states.
         /// \param[in,out] timer       governs the requested reporting timesteps
-        /// \param[in,out] state       state of reservoir: pressure, fluxes
+        /// \param[in,out] state       state of reservoir: pressure, fluxes, polymer concentration,
+        ///                            saturations.
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
