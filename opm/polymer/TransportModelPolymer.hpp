@@ -67,17 +67,21 @@ namespace Opm
 	/// Using implicit Euler scheme, reordered.
 	/// \param[in] darcyflux           Array of signed face fluxes.
 	/// \param[in] porevolume          Array of pore volumes.
-	/// \param[in] source              Transport source term.
+	/// \param[in] source              Transport source term, to be interpreted by sign:
+        ///                                 (+) Inflow, value is first phase flow (water)
+        ///                                     per second, in reservoir volumes.
+        ///                                 (-) Outflow, value is total flow of all phases
+        ///                                     per second, in reservoir volumes.
+	/// \param[in] polymer_inflow_c    Array of inflow polymer concentrations per cell.
 	/// \param[in] dt                  Time step.
-	/// \param[in] inflow_c            Time step.
 	/// \param[in, out] saturation     Phase saturations.
 	/// \param[in, out] concentration  Polymer concentration.
 	/// \param[in, out] cmax           Highest concentration that has occured in a given cell.
 	void solve(const double* darcyflux,
                    const double* porevolume,
 		   const double* source,
+                   const double* polymer_inflow_c,
 		   const double dt,
-		   const double inflow_c,
 		   std::vector<double>& saturation,
                    std::vector<double>& concentration,
                    std::vector<double>& cmax);
@@ -149,8 +153,8 @@ namespace Opm
 
 	const double* darcyflux_;   // one flux per grid face
 	const double* source_;      // one source per cell
+	const double* polymer_inflow_c_;
 	double dt_;
-	double inflow_c_;
         std::vector<double> saturation_; // one per cell, only water saturation!
 	double* concentration_;
 	double* cmax_;

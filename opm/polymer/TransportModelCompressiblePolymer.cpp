@@ -168,8 +168,8 @@ namespace Opm
           porevolume0_(0),
           porevolume_(0),
 	  source_(0),
+	  polymer_inflow_c_(0),
 	  dt_(0.0),
-	  inflow_c_(0.0),
 	  tol_(tol),
 	  maxit_(maxit),
 	  method_(method),
@@ -220,8 +220,8 @@ namespace Opm
                                                   const double* porevolume0,
                                                   const double* porevolume,
                                                   const double* source,
+                                                  const double* polymer_inflow_c,
                                                   const double dt,
-                                                  const double inflow_c,
                                                   std::vector<double>& saturation,
                                                   std::vector<double>& surfacevol,
                                                   std::vector<double>& concentration,
@@ -232,7 +232,7 @@ namespace Opm
         porevolume_ = porevolume;
 	source_ = source;
 	dt_ = dt;
-	inflow_c_ = inflow_c;
+	polymer_inflow_c_ = polymer_inflow_c;
         toWaterSat(saturation, saturation_);
 	concentration_ = &concentration[0];
 	cmax_ = &cmax[0];
@@ -363,7 +363,7 @@ namespace Opm
         bool src_is_inflow = src_flux < 0.0;
         B_cell0 = 1.0/tm.A0_[np*np*cell + 0];
         B_cell = 1.0/tm.A_[np*np*cell + 0];
-        // Not clear why we multiply by B_cell source terms.
+        // influx  =  src_is_inflow ? B_cell*src_flux : 0.0; // Use this after changing transport source.
         influx  =  src_is_inflow ? src_flux : 0.0;
         outflux = !src_is_inflow ? src_flux : 0.0;
         porevolume0 = tm.porevolume0_[cell];
@@ -376,7 +376,7 @@ namespace Opm
 	rhor = tm.polyprops_.rockDensity();
         tm.polyprops_.adsorption(c0, cmax0, ads0);
         double mc;
-        tm.computeMc(tm.inflow_c_, mc);
+        tm.computeMc(tm.polymer_inflow_c_[cell_index], mc);
 	influx_polymer = src_is_inflow ? src_flux*mc : 0.0;
 	for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
 	    int f = tm.grid_.cell_faces[i];

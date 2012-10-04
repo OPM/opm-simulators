@@ -189,8 +189,8 @@ namespace Opm
 	  maxit_(maxit),
 	  darcyflux_(0),
 	  source_(0),
+	  polymer_inflow_c_(0),
 	  dt_(0.0),
-	  inflow_c_(0.0),
 	  concentration_(0),
 	  cmax_(0),
 	  fractionalflow_(grid.number_of_cells, -1.0),
@@ -232,8 +232,8 @@ namespace Opm
     void TransportModelPolymer::solve(const double* darcyflux,
                                       const double* porevolume,
 				      const double* source,
+				      const double* polymer_inflow_c,
 				      const double dt,
-				      const double inflow_c,
 				      std::vector<double>& saturation,
 				      std::vector<double>& concentration,
 				      std::vector<double>& cmax)
@@ -241,8 +241,8 @@ namespace Opm
 	darcyflux_ = darcyflux;
         porevolume_ = porevolume;
 	source_ = source;
+	polymer_inflow_c_ = polymer_inflow_c;
 	dt_ = dt;
-	inflow_c_ = inflow_c;
         toWaterSat(saturation, saturation_);
 	concentration_ = &concentration[0];
 	cmax_ = &cmax[0];
@@ -350,7 +350,7 @@ namespace Opm
 	bool src_is_inflow = dflux < 0.0;
 	influx  =  src_is_inflow ? dflux : 0.0;
         double mc;
-        tm.computeMc(tm.inflow_c_, mc);
+        tm.computeMc(tm.polymer_inflow_c_[cell_index], mc);
 	influx_polymer = src_is_inflow ? dflux*mc : 0.0;
 	outflux = !src_is_inflow ? dflux : 0.0;
 	comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.

@@ -78,9 +78,14 @@ namespace Opm
 	/// \param[in] pressure            Array with pressure.
 	/// \param[in] porevolume0         Array with pore volume at start of timestep.
 	/// \param[in] porevolume          Array with pore volume.
-	/// \param[in] source              Transport source term.
+	/// \param[in] source              Transport source term, to be interpreted by sign:
+        ///                                 (+) Inflow, value is first phase flow (water)
+        ///                                     per second, in *surface* volumes (unlike the
+        ///                                     incompressible version).
+        ///                                 (-) Outflow, value is total flow of all phases
+        ///                                     per second, in reservoir volumes.
+	/// \param[in] polymer_inflow_c    Array of inflow polymer concentrations per cell.
 	/// \param[in] dt                  Time step.
-	/// \param[in] inflow_c            Inflow polymer.
 	/// \param[in, out] saturation     Phase saturations.
 	/// \param[in, out] surfacevol     Surface volumes.
 	/// \param[in, out] concentration  Polymer concentration.
@@ -91,8 +96,8 @@ namespace Opm
                    const double* porevolume0,
                    const double* porevolume,
 		   const double* source,
+		   const double* polymer_inflow_c,
 		   const double dt,
-		   const double inflow_c,
 		   std::vector<double>& saturation,
 		   std::vector<double>& surfacevol,
                    std::vector<double>& concentration,
@@ -134,8 +139,8 @@ namespace Opm
         const double* porevolume0_; // one volume per cell
         const double* porevolume_;  // one volume per cell
 	const double* source_;      // one source per cell
+	const double* polymer_inflow_c_;
 	double dt_;
-	double inflow_c_;
 	double tol_;
 	double maxit_;
 	SingleCellMethod method_;

@@ -77,8 +77,8 @@ namespace Opm
     /// @param[in]  s         saturation values (for all P phases)
     /// @param[in]  c         polymer concentration
     /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
-    /// @param[in]  inj_c     injected concentration
     /// @param[out] injected  must point to a valid array with P elements,
     ///                       where P = s.size()/src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
@@ -90,8 +90,8 @@ namespace Opm
 				 const std::vector<double>& c,
                                  const std::vector<double>& cmax,
 				 const std::vector<double>& src,
+				 const std::vector<double>& inj_c,
 				 const double dt,
-                                 const double inj_c,
 				 double* injected,
 				 double* produced,
                                  double& polyinj,
@@ -111,8 +111,8 @@ namespace Opm
     /// @param[in]  c         polymer concentration
     /// @param[in]  cmax      polymer maximum concentration
     /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
-    /// @param[in]  inj_c     injected concentration
     ///
     /// @param[out] injected  must point to a valid array with P elements,
     ///                       where P = s.size()/src.size().
@@ -127,9 +127,9 @@ namespace Opm
                                  const std::vector<double>& s,
 				 const std::vector<double>& c,
 				 const std::vector<double>& cmax,
-                                 const std::vector<double>& src,
-                                 const double dt,
-                                 const double inj_c,
+				 const std::vector<double>& src,
+				 const std::vector<double>& inj_c,
+				 const double dt,
                                  double* injected,
                                  double* produced,
                                  double& polyinj,
@@ -172,28 +172,44 @@ namespace Opm
                                   const RockCompressibility* rock_comp);
 
 
-    /// @brief Functor giving the injected amount of polymer as a function of time.
-    class PolymerInflow
+    class PolymerInflowInterface
+    {
+    public:
+        virtual ~PolymerInflowInterface() {}
+        virtual void getInflowValues(const double step_start,
+                                     const double step_end,
+                                     std::vector<double>& poly_inflow_c) = 0;
+    };
+
+
+
+    /// @brief Functor giving the injected amount of polymer per cell as a function of time.
+    class PolymerInflowBasic : public PolymerInflowInterface
     {
     public:
         /// Constructor.
         /// @param[in]  starttime  Start time of injection in seconds.
         /// @param[in]  endtime    End time of injection in seconds.
         /// @param[in]  amount     Amount to be injected per second.
-        PolymerInflow(const double starttime,
-                      const double endtime,
-                      const double amount)
+        PolymerInflowBasic(const double starttime,
+                           const double endtime,
+                           const double amount)
             : stime_(starttime), etime_(endtime), amount_(amount)
         {
         }
-        /// Get the current injection rate.
-        /// @param[in]  time   Current time in seconds.
-        double operator()(double time)
+
+        virtual void getInflowValues(const double step_start,
+                                     const double step_end,
+                                     std::vector<double>& poly_inflow_c)
         {
-            if (time >= stime_ && time < etime_) {
-                return amount_;
+            const double eps = 1e-5*(step_end - step_start);
+            if (step_start + eps >= stime_ && step_end - eps <= etime_) {
+                std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
+            } else if (step_start + eps <= etime_ && step_end - eps >= stime_) {
+                MESSAGE("Warning: polymer injection set to change inside timestep. Using value at start of step.");
+                std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
             } else {
-                return 0.0;
+                std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), 0.0);
             }
         }
     private:

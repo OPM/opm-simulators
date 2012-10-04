@@ -103,8 +103,8 @@ namespace Opm
     /// @param[in]  c         polymer concentration
     /// @param[in]  cmax      polymer maximum concentration
     /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
-    /// @param[in]  inj_c     injected concentration
     /// @param[out] injected  must point to a valid array with P elements,
     ///                       where P = s.size()/src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
@@ -116,8 +116,8 @@ namespace Opm
 				 const std::vector<double>& c,
 				 const std::vector<double>& cmax,
 				 const std::vector<double>& src,
+                                 const std::vector<double>& inj_c,
 				 const double dt,
-                                 const double inj_c,
 				 double* injected,
 				 double* produced,
                                  double& polyinj,
@@ -139,7 +139,7 @@ namespace Opm
         for (int cell = 0; cell < num_cells; ++cell) {
             if (src[cell] > 0.0) {
                 injected[0] += src[cell]*dt;
-                polyinj += src[cell]*dt*inj_c;
+                polyinj += src[cell]*dt*inj_c[cell];
             } else if (src[cell] < 0.0) {
                 const double flux = -src[cell]*dt;
                 const double* sat = &s[np*cell];
@@ -170,15 +170,13 @@ namespace Opm
     /// @param[in]  c         polymer concentration
     /// @param[in]  cmax      polymer maximum concentration
     /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
-    /// @param[in]  inj_c     injected concentration
-    ///
     /// @param[out] injected  must point to a valid array with P elements,
     ///                       where P = s.size()/src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
     /// @param[out] polyinj   injected mass of polymer
     /// @param[out] polyprod  produced mass of polymer
-
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
                                  const Opm::PolymerProperties& polyprops,
                                  const std::vector<double>& press,
@@ -187,8 +185,8 @@ namespace Opm
 				 const std::vector<double>& c,
 				 const std::vector<double>& cmax,
                                  const std::vector<double>& src,
+                                 const std::vector<double>& inj_c,
                                  const double dt,
-                                 const double inj_c,
                                  double* injected,
                                  double* produced,
                                  double& polyinj,
@@ -210,7 +208,7 @@ namespace Opm
         for (int cell = 0; cell < num_cells; ++cell) {
             if (src[cell] > 0.0) {
                 injected[0] += src[cell]*dt;
-                polyinj += src[cell]*dt*inj_c;
+                polyinj += src[cell]*dt*inj_c[cell];
             } else if (src[cell] < 0.0) {
                 const double flux = -src[cell]*dt;
                 const double* sat = &s[np*cell];
