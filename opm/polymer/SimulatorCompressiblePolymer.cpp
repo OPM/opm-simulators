@@ -318,8 +318,7 @@ namespace Opm
             }
 
             // Process transport sources (to include bdy terms and well flows).
-            Opm::computeTransportSource(grid_, src_, state.faceflux(), 1.0,
-                                        wells_, well_state.perfRates(), transport_src);
+            Opm::computeTransportSource(props_, wells_, well_state, transport_src);
 
             // Find inflow rate.
             const double current_time = timer.currentTime();
@@ -347,8 +346,7 @@ namespace Opm
                 double substep_polyinj = 0.0;
                 double substep_polyprod = 0.0;
                 Opm::computeInjectedProduced(props_, poly_props_,
-                                             state.pressure(), state.surfacevol(), state.saturation(),
-                                             state.concentration(), state.maxconcentration(),
+                                             state,
                                              transport_src, polymer_inflow_c, stepsize,
                                              substep_injected, substep_produced,
                                              substep_polyinj, substep_polyprod);

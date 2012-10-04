@@ -337,7 +337,7 @@ namespace Opm
                 tsolver_.solve(&state.faceflux()[0], &porevol[0], &transport_src[0], &polymer_inflow_c[0], stepsize,
                                state.saturation(), state.concentration(), state.maxconcentration());
                 Opm::computeInjectedProduced(props_, poly_props_,
-                                             state.saturation(), state.concentration(), state.maxconcentration(),
+                                             state,
                                              transport_src, polymer_inflow_c, stepsize,
                                              substep_injected, substep_produced, substep_polyinj, substep_polyprod);
                 injected[0] += substep_injected[0];

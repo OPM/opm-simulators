@@ -363,8 +363,7 @@ namespace Opm
         bool src_is_inflow = src_flux < 0.0;
         B_cell0 = 1.0/tm.A0_[np*np*cell + 0];
         B_cell = 1.0/tm.A_[np*np*cell + 0];
-        // influx  =  src_is_inflow ? B_cell*src_flux : 0.0; // Use this after changing transport source.
-        influx  =  src_is_inflow ? src_flux : 0.0;
+        influx  =  src_is_inflow ? B_cell*src_flux : 0.0;
         outflux = !src_is_inflow ? src_flux : 0.0;
         porevolume0 = tm.porevolume0_[cell];
         porevolume  = tm.porevolume_[cell];
