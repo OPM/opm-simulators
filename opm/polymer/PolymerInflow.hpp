@@ -46,7 +46,7 @@ namespace Opm
         ///                            Must be properly sized before calling.
         virtual void getInflowValues(const double step_start,
                                      const double step_end,
-                                     std::vector<double>& poly_inflow_c) = 0;
+                                     std::vector<double>& poly_inflow_c) const = 0;
     };
 
 
@@ -72,7 +72,7 @@ namespace Opm
         ///                            Must be properly sized before calling.
         virtual void getInflowValues(const double step_start,
                                      const double step_end,
-                                     std::vector<double>& poly_inflow_c);
+                                     std::vector<double>& poly_inflow_c) const;
     private:
         double stime_;
         double etime_;
@@ -101,7 +101,7 @@ namespace Opm
         ///                            Must be properly sized before calling.
         virtual void getInflowValues(const double /*step_start*/,
                                      const double /*step_end*/,
-                                     std::vector<double>& poly_inflow_c);
+                                     std::vector<double>& poly_inflow_c) const;
     private:
         SparseVector<double> sparse_inflow_;
     };

@@ -40,7 +40,7 @@ namespace Opm
 
     void PolymerInflowBasic::getInflowValues(const double step_start,
                                              const double step_end,
-                                             std::vector<double>& poly_inflow_c)
+                                             std::vector<double>& poly_inflow_c) const
     {
         const double eps = 1e-5*(step_end - step_start);
         if (step_start + eps >= stime_ && step_end - eps <= etime_) {
@@ -66,7 +66,8 @@ namespace Opm
         : sparse_inflow_(num_cells)
     {
         if (!deck.hasField("WPOLYMER")) {
-            THROW("PolymerInflowFromDeck requires WPOLYMER in deck.");
+            MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
+            return;
         }
 
         // Extract concentrations and put into cell->concentration map.
@@ -102,7 +103,7 @@ namespace Opm
 
     void PolymerInflowFromDeck::getInflowValues(const double /*step_start*/,
                                                 const double /*step_end*/,
-                                                std::vector<double>& poly_inflow_c)
+                                                std::vector<double>& poly_inflow_c) const
     {
         // This method does not depend on the given time,
         // instead one would have a new epoch (and create a new
