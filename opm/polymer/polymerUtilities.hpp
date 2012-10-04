@@ -27,6 +27,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/utility/SparseVector.hpp>
 #include <vector>
 
 
@@ -172,51 +173,6 @@ namespace Opm
                                   const RockCompressibility* rock_comp);
 
 
-    class PolymerInflowInterface
-    {
-    public:
-        virtual ~PolymerInflowInterface() {}
-        virtual void getInflowValues(const double step_start,
-                                     const double step_end,
-                                     std::vector<double>& poly_inflow_c) = 0;
-    };
-
-
-
-    /// @brief Functor giving the injected amount of polymer per cell as a function of time.
-    class PolymerInflowBasic : public PolymerInflowInterface
-    {
-    public:
-        /// Constructor.
-        /// @param[in]  starttime  Start time of injection in seconds.
-        /// @param[in]  endtime    End time of injection in seconds.
-        /// @param[in]  amount     Amount to be injected per second.
-        PolymerInflowBasic(const double starttime,
-                           const double endtime,
-                           const double amount)
-            : stime_(starttime), etime_(endtime), amount_(amount)
-        {
-        }
-
-        virtual void getInflowValues(const double step_start,
-                                     const double step_end,
-                                     std::vector<double>& poly_inflow_c)
-        {
-            const double eps = 1e-5*(step_end - step_start);
-            if (step_start + eps >= stime_ && step_end - eps <= etime_) {
-                std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
-            } else if (step_start + eps <= etime_ && step_end - eps >= stime_) {
-                MESSAGE("Warning: polymer injection set to change inside timestep. Using value at start of step.");
-                std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
-            } else {
-                std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), 0.0);
-            }
-        }
-    private:
-        double stime_;
-        double etime_;
-        double amount_;
-    };
 
 
 } // namespace Opm

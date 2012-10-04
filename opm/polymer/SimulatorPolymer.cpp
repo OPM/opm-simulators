@@ -46,6 +46,7 @@
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/TransportModelPolymer.hpp>
+#include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
 

@@ -48,6 +48,7 @@
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/TransportModelCompressiblePolymer.hpp>
+#include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
 
