@@ -163,13 +163,13 @@ namespace Opm
     /// @param[in]  props     fluid and rock properties.
     /// @param[in]  polyprops polymer properties
     /// @param[in]  state     State variables
-    /// @param[in]  rock_comp Rock compressibility
+    /// @param[in]  rock_comp Rock compressibility (optional)
     /// @return               total absorbed polymer mass.
     double computePolymerAdsorbed(const UnstructuredGrid& grid,
                                   const BlackoilPropertiesInterface& props,
                                   const Opm::PolymerProperties& polyprops,
                                   const PolymerBlackoilState& state,
-                                  const RockCompressibility& rock_comp);
+                                  const RockCompressibility* rock_comp);
 
 
     /// @brief Functor giving the injected amount of polymer as a function of time.

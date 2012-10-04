@@ -294,13 +294,17 @@ namespace Opm
                                   const BlackoilPropertiesInterface& props,
                                   const Opm::PolymerProperties& polyprops,
                                   const PolymerBlackoilState& state,
-                                  const RockCompressibility& rock_comp
+                                  const RockCompressibility* rock_comp
                                   )
     {
 	const int num_cells = props.numCells();
         const double rhor = polyprops.rockDensity();
         std::vector<double> porosity;
-        computePorosity(grid, props.porosity(), rock_comp, state.pressure(), porosity);
+        if (rock_comp && rock_comp->isActive()) {
+            computePorosity(grid, props.porosity(), *rock_comp, state.pressure(), porosity);
+        } else {
+            porosity.assign(props.porosity(), props.porosity() + num_cells);
+        }
         double abs_mass = 0.0;
         const std::vector<double>& cmax = state.maxconcentration();
 	for (int cell = 0; cell < num_cells; ++cell) {

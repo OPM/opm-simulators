@@ -66,10 +66,14 @@ namespace Opm
 
     namespace
     {
-        void outputState(const UnstructuredGrid& grid,
-                         const Opm::PolymerBlackoilState& state,
-                         const int step,
-                         const std::string& output_dir);
+        void outputStateVtk(const UnstructuredGrid& grid,
+                            const Opm::PolymerBlackoilState& state,
+                            const int step,
+                            const std::string& output_dir);
+        void outputStateMatlab(const UnstructuredGrid& grid,
+                               const Opm::PolymerBlackoilState& state,
+                               const int step,
+                               const std::string& output_dir);
         void outputWaterCut(const Opm::Watercut& watercut,
                             const std::string& output_dir);
         void outputWellReport(const Opm::WellReport& wellreport,
@@ -102,6 +106,7 @@ namespace Opm
 
         // Parameters for output.
         bool output_;
+        bool output_vtk_;
         std::string output_dir_;
         int output_interval_;
         // Parameters for transport solver.
@@ -194,6 +199,7 @@ namespace Opm
         // For output.
         output_ = param.getDefault("output", true);
         if (output_) {
+            output_vtk_ = param.getDefault("output_vtk", true);
             output_dir_ = param.getDefault("output_dir", std::string("output"));
             // Ensure that output dir exists
             boost::filesystem::path fpath(output_dir_);
@@ -259,22 +265,16 @@ namespace Opm
         double ttime = 0.0;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        double init_satvol[2] = { 0.0 };
+        double init_surfvol[2] = { 0.0 };
         double init_polymass = 0.0;
-        double satvol[2] = { 0.0 };
+        double inplace_surfvol[2] = { 0.0 };
         double polymass = 0.0;
         double polymass_adsorbed = 0.0;
-        double injected[2] = { 0.0 };
-        double produced[2] = { 0.0 };
-        double polyinj = 0.0;
-        double polyprod = 0.0;
         double tot_injected[2] = { 0.0 };
         double tot_produced[2] = { 0.0 };
         double tot_polyinj = 0.0;
         double tot_polyprod = 0.0;
-        Opm::computeSaturatedVol(porevol, state.saturation(), init_satvol);
-        std::cout << "\nInitial saturations are    " << init_satvol[0]/tot_porevol_init
-                  << "    " << init_satvol[1]/tot_porevol_init << std::endl;
+        Opm::computeSaturatedVol(porevol, state.surfacevol(), init_surfvol);
         Opm::Watercut watercut;
         watercut.push(0.0, 0.0, 0.0);
         Opm::WellReport wellreport;
@@ -289,13 +289,13 @@ namespace Opm
             // Report timestep and (optionally) write state to disk.
             timer.report(std::cout);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
-                outputState(grid_, state, timer.currentStepNum(), output_dir_);
+                if (output_vtk_) {
+                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+                }
+                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             }
 
-            if (rock_comp_props_ && rock_comp_props_->isActive()) {
-                initial_pressure = state.pressure();
-            }
-
+            initial_pressure = state.pressure();
 
             // Solve pressure.
             do {
@@ -333,17 +333,32 @@ namespace Opm
                 stepsize /= double(num_transport_substeps_);
                 std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
+            double injected[2] = { 0.0 };
+            double produced[2] = { 0.0 };
+            double polyinj = 0.0;
+            double polyprod = 0.0;
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
                 tsolver_.solve(&state.faceflux()[0], initial_pressure,
                                state.pressure(), &initial_porevol[0], &porevol[0],
                                &transport_src[0], stepsize, inflow_c,
                                state.saturation(), state.surfacevol(),
                                state.concentration(), state.maxconcentration());
+                double substep_injected[2] = { 0.0 };
+                double substep_produced[2] = { 0.0 };
+                double substep_polyinj = 0.0;
+                double substep_polyprod = 0.0;
                 Opm::computeInjectedProduced(props_, poly_props_,
                                              state.pressure(), state.surfacevol(), state.saturation(),
                                              state.concentration(), state.maxconcentration(),
-                                             transport_src, stepsize, inflow_c, injected, produced,
-                                             polyinj, polyprod);
+                                             transport_src, stepsize, inflow_c,
+                                             substep_injected, substep_produced,
+                                             substep_polyinj, substep_polyprod);
+                injected[0] += substep_injected[0];
+                injected[1] += substep_injected[1];
+                produced[0] += substep_produced[0];
+                produced[1] += substep_produced[1];
+                polyinj += substep_polyinj;
+                polyprod += substep_polyprod;
                 if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize,
                                           state.saturation(), state.surfacevol(), 
@@ -356,10 +371,10 @@ namespace Opm
             ttime += tt;
 
             // Report volume balances.
-            Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
+            Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
             polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
             polymass_adsorbed = Opm::computePolymerAdsorbed(grid_, props_, poly_props_,
-                                                            state, *rock_comp_props_);
+                                                            state, rock_comp_props_);
             tot_injected[0] += injected[0];
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
@@ -368,40 +383,44 @@ namespace Opm
             tot_polyprod += polyprod;
             std::cout.precision(5);
             const int width = 18;
-            std::cout << "\nVolume and polymer mass balance: "
-                "   water(pv)           oil(pv)       polymer(kg)\n";
-            std::cout << "    Saturated volumes:     "
-                      << std::setw(width) << satvol[0]/tot_porevol_init
-                      << std::setw(width) << satvol[1]/tot_porevol_init
+            std::cout << "\nMass balance:        "
+                "                   water(surfvol)      oil(surfvol)       polymer(kg)\n";
+            std::cout << "    In-place:                       "
+                      << std::setw(width) << inplace_surfvol[0]
+                      << std::setw(width) << inplace_surfvol[1]
                       << std::setw(width) << polymass << std::endl;
-            std::cout << "    Adsorbed volumes:      "
+            std::cout << "    Adsorbed:                       "
                       << std::setw(width) << 0.0
                       << std::setw(width) << 0.0
                       << std::setw(width) << polymass_adsorbed << std::endl;
-            std::cout << "    Injected volumes:      "
-                      << std::setw(width) << injected[0]/tot_porevol_init
-                      << std::setw(width) << injected[1]/tot_porevol_init
+            std::cout << "    Injected:                       "
+                      << std::setw(width) << injected[0]
+                      << std::setw(width) << injected[1]
                       << std::setw(width) << polyinj << std::endl;
-            std::cout << "    Produced volumes:      "
-                      << std::setw(width) << produced[0]/tot_porevol_init
-                      << std::setw(width) << produced[1]/tot_porevol_init
+            std::cout << "    Produced:                       "
+                      << std::setw(width) << produced[0]
+                      << std::setw(width) << produced[1]
                       << std::setw(width) << polyprod << std::endl;
-            std::cout << "    Total inj volumes:     "
-                      << std::setw(width) << tot_injected[0]/tot_porevol_init
-                      << std::setw(width) << tot_injected[1]/tot_porevol_init
+            std::cout << "    Total inj:                      "
+                      << std::setw(width) << tot_injected[0]
+                      << std::setw(width) << tot_injected[1]
                       << std::setw(width) << tot_polyinj << std::endl;
-            std::cout << "    Total prod volumes:    "
-                      << std::setw(width) << tot_produced[0]/tot_porevol_init
-                      << std::setw(width) << tot_produced[1]/tot_porevol_init
+            std::cout << "    Total prod:                     "
+                      << std::setw(width) << tot_produced[0]
+                      << std::setw(width) << tot_produced[1]
                       << std::setw(width) << tot_polyprod << std::endl;
-            std::cout << "    In-place + prod - inj: "
-                      << std::setw(width) << (satvol[0] + tot_produced[0] - tot_injected[0])/tot_porevol_init
-                      << std::setw(width) << (satvol[1] + tot_produced[1] - tot_injected[1])/tot_porevol_init
-                      << std::setw(width) << (polymass + tot_polyprod - tot_polyinj + polymass_adsorbed) << std::endl;
-            std::cout << "    Init - now - pr + inj: "
-                      << std::setw(width) << (init_satvol[0] - satvol[0] - tot_produced[0] + tot_injected[0])/tot_porevol_init
-                      << std::setw(width) << (init_satvol[1] - satvol[1] - tot_produced[1] + tot_injected[1])/tot_porevol_init
-                      << std::setw(width) << (init_polymass - polymass - tot_polyprod + tot_polyinj - polymass_adsorbed)
+            const double balance[3] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
+                                        init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1],
+                                        init_polymass - polymass - tot_polyprod + tot_polyinj - polymass_adsorbed };
+            std::cout << "    Initial - inplace + inj - prod: "
+                      << std::setw(width) << balance[0]
+                      << std::setw(width) << balance[1]
+                      << std::setw(width) << balance[2]
+                      << std::endl;
+            std::cout << "    Relative mass error:            "
+                      << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
+                      << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
+                      << std::setw(width) << balance[2]/(init_polymass + tot_polyinj)
                       << std::endl;
             std::cout.precision(8);
 
@@ -416,7 +435,10 @@ namespace Opm
         }
 
         if (output_) {
-            outputState(grid_, state, timer.currentStepNum(), output_dir_);
+            if (output_vtk_) {
+                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+            }
+            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);
@@ -441,14 +463,22 @@ namespace Opm
     namespace
     {
 
-        void outputState(const UnstructuredGrid& grid,
-                         const Opm::PolymerBlackoilState& state,
-                         const int step,
-                         const std::string& output_dir)
+        void outputStateVtk(const UnstructuredGrid& grid,
+                            const Opm::PolymerBlackoilState& state,
+                            const int step,
+                            const std::string& output_dir)
         {
             // Write data in VTK format.
             std::ostringstream vtkfilename;
-            vtkfilename << output_dir << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
+            vtkfilename << output_dir << "/vtk_files";
+            boost::filesystem::path fpath(vtkfilename.str());
+            try {
+                create_directories(fpath);
+            }
+            catch (...) {
+                THROW("Creating directories failed: " << fpath);
+            }
+            vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
             std::ofstream vtkfile(vtkfilename.str().c_str());
             if (!vtkfile) {
                 THROW("Failed to open " << vtkfilename.str());
@@ -458,15 +488,40 @@ namespace Opm
             dm["pressure"] = &state.pressure();
             dm["concentration"] = &state.concentration();
             dm["cmax"] = &state.maxconcentration();
+            dm["surfvol"] = &state.surfacevol();
             std::vector<double> cell_velocity;
             Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
             dm["velocity"] = &cell_velocity;
             Opm::writeVtkData(grid, dm, vtkfile);
+        }
+
+        void outputStateMatlab(const UnstructuredGrid& grid,
+                               const Opm::PolymerBlackoilState& state,
+                               const int step,
+                               const std::string& output_dir)
+        {
+            Opm::DataMap dm;
+            dm["saturation"] = &state.saturation();
+            dm["pressure"] = &state.pressure();
+            dm["concentration"] = &state.concentration();
+            dm["cmax"] = &state.maxconcentration();
+            dm["surfvol"] = &state.surfacevol();
+            std::vector<double> cell_velocity;
+            Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+            dm["velocity"] = &cell_velocity;
 
             // Write data (not grid) in Matlab format
             for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
                 std::ostringstream fname;
-                fname << output_dir << "/" << it->first << "-" << std::setw(3) << std::setfill('0') << step << ".dat";
+                fname << output_dir << "/" << it->first;
+                boost::filesystem::path fpath = fname.str();
+                try {
+                    create_directories(fpath);
+                }
+                catch (...) {
+                    THROW("Creating directories failed: " << fpath);
+                }
+                fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
                 std::ofstream file(fname.str().c_str());
                 if (!file) {
                     THROW("Failed to open " << fname.str());
@@ -475,7 +530,6 @@ namespace Opm
                 std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
             }
         }
-
 
         void outputWaterCut(const Opm::Watercut& watercut,
                             const std::string& output_dir)
