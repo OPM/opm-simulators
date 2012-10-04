@@ -270,10 +270,10 @@ namespace Opm
         Opm::time::StopWatch total_timer;
         total_timer.start();
         double init_surfvol[2] = { 0.0 };
-        double init_polymass = 0.0;
         double inplace_surfvol[2] = { 0.0 };
-        double polymass = 0.0;
-        double polymass_adsorbed = 0.0;
+        double polymass = computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
+        double polymass_adsorbed = computePolymerAdsorbed(grid_, props_, poly_props_, state, rock_comp_props_);
+        double init_polymass = polymass + polymass_adsorbed;
         double tot_injected[2] = { 0.0 };
         double tot_produced[2] = { 0.0 };
         double tot_polyinj = 0.0;
@@ -318,8 +318,7 @@ namespace Opm
             }
 
             // Process transport sources (to include bdy terms and well flows).
-            Opm::computeTransportSource(grid_, src_, state.faceflux(), 1.0,
-                                        wells_, well_state.perfRates(), transport_src);
+            Opm::computeTransportSource(props_, wells_, well_state, transport_src);
 
             // Find inflow rate.
             const double current_time = timer.currentTime();
@@ -347,8 +346,7 @@ namespace Opm
                 double substep_polyinj = 0.0;
                 double substep_polyprod = 0.0;
                 Opm::computeInjectedProduced(props_, poly_props_,
-                                             state.pressure(), state.surfacevol(), state.saturation(),
-                                             state.concentration(), state.maxconcentration(),
+                                             state,
                                              transport_src, polymer_inflow_c, stepsize,
                                              substep_injected, substep_produced,
                                              substep_polyinj, substep_polyprod);

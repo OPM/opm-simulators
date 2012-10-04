@@ -99,10 +99,9 @@ namespace Opm
     ///         gives the mobilities used for the preceding timestep.
     /// @param[in]  props     fluid and rock properties.
     /// @param[in]  polyprops polymer properties
-    /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  c         polymer concentration
-    /// @param[in]  cmax      polymer maximum concentration
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  state     state variables (pressure, fluxes etc.)
+    /// @param[in]  src       if < 0: total reservoir volume outflow,
+    ///                       if > 0: first phase reservoir volume inflow.
     /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
     /// @param[out] injected  must point to a valid array with P elements,
@@ -112,22 +111,27 @@ namespace Opm
     /// @param[out] polyprod  produced mass of polymer
     void computeInjectedProduced(const IncompPropertiesInterface& props,
                                  const Opm::PolymerProperties& polyprops,
-				 const std::vector<double>& s,
-				 const std::vector<double>& c,
-				 const std::vector<double>& cmax,
-				 const std::vector<double>& src,
-                                 const std::vector<double>& inj_c,
+                                 const PolymerState& state,
+				 const std::vector<double>& transport_src,
+				 const std::vector<double>& inj_c,
 				 const double dt,
 				 double* injected,
 				 double* produced,
                                  double& polyinj,
                                  double& polyprod)
     {
-        const int num_cells = src.size();
-        const int np = s.size()/src.size();
-        if (int(s.size()) != num_cells*np) {
-            THROW("Sizes of s and src vectors do not match.");
+
+        const int num_cells = transport_src.size();
+        if (props.numCells() != num_cells) {
+            THROW("Size of transport_src vector does not match number of cells in props.");
         }
+        const int np = props.numPhases();
+        if (int(state.saturation().size()) != num_cells*np) {
+            THROW("Sizes of state vectors do not match number of cells.");
+        }
+        const std::vector<double>& s = state.saturation();
+        const std::vector<double>& c = state.concentration();
+        const std::vector<double>& cmax = state.maxconcentration();
         std::fill(injected, injected + np, 0.0);
         std::fill(produced, produced + np, 0.0);
         polyinj = 0.0;
@@ -137,11 +141,11 @@ namespace Opm
         double mob[2];
         double mc;
         for (int cell = 0; cell < num_cells; ++cell) {
-            if (src[cell] > 0.0) {
-                injected[0] += src[cell]*dt;
-                polyinj += src[cell]*dt*inj_c[cell];
-            } else if (src[cell] < 0.0) {
-                const double flux = -src[cell]*dt;
+            if (transport_src[cell] > 0.0) {
+                injected[0] += transport_src[cell]*dt;
+                polyinj += transport_src[cell]*dt*inj_c[cell];
+            } else if (transport_src[cell] < 0.0) {
+                const double flux = -transport_src[cell]*dt;
                 const double* sat = &s[np*cell];
                 props.relperm(1, sat, &cell, &kr_cell[0], 0);
                 polyprops.effectiveMobilities(c[cell], cmax[cell], visc,
@@ -164,27 +168,20 @@ namespace Opm
     ///         gives the mobilities used for the preceding timestep.
     /// @param[in]  props     fluid and rock properties.
     /// @param[in]  polyprops polymer properties
-    /// @param[in]  press     pressure (one value per cell)
-    /// @param[in]  z         surface-volume values (for all P phases)
-    /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  c         polymer concentration
-    /// @param[in]  cmax      polymer maximum concentration
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  state     state variables (pressure, fluxes etc.)
+    /// @param[in]  transport_src  if < 0: total reservoir volume outflow,
+    ///                       if > 0: first phase *surface volume* inflow.
     /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
     /// @param[out] injected  must point to a valid array with P elements,
-    ///                       where P = s.size()/src.size().
+    ///                       where P = s.size()/transport_src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
     /// @param[out] polyinj   injected mass of polymer
     /// @param[out] polyprod  produced mass of polymer
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
                                  const Opm::PolymerProperties& polyprops,
-                                 const std::vector<double>& press,
-                                 const std::vector<double>& z,
-                                 const std::vector<double>& s,
-				 const std::vector<double>& c,
-				 const std::vector<double>& cmax,
-                                 const std::vector<double>& src,
+                                 const PolymerBlackoilState& state,
+                                 const std::vector<double>& transport_src,
                                  const std::vector<double>& inj_c,
                                  const double dt,
                                  double* injected,
@@ -192,11 +189,19 @@ namespace Opm
                                  double& polyinj,
                                  double& polyprod)
     {
-        const int num_cells = src.size();
-        const int np = s.size()/src.size();
-        if (int(s.size()) != num_cells*np) {
-            THROW("Sizes of s and src vectors do not match.");
+        const int num_cells = transport_src.size();
+        if (props.numCells() != num_cells) {
+            THROW("Size of transport_src vector does not match number of cells in props.");
         }
+        const int np = props.numPhases();
+        if (int(state.saturation().size()) != num_cells*np) {
+            THROW("Sizes of state vectors do not match number of cells.");
+        }
+        const std::vector<double>& press = state.pressure();
+        const std::vector<double>& s = state.saturation();
+        const std::vector<double>& z = state.surfacevol();
+        const std::vector<double>& c = state.concentration();
+        const std::vector<double>& cmax = state.maxconcentration();
         std::fill(injected, injected + np, 0.0);
         std::fill(produced, produced + np, 0.0);
         polyinj = 0.0;
@@ -204,27 +209,42 @@ namespace Opm
         std::vector<double> visc(np);
         std::vector<double> kr_cell(np);
         std::vector<double> mob(np);
+        std::vector<double> A(np*np);
+        std::vector<double> prod_resv_phase(np);
+        std::vector<double> prod_surfvol(np);
         double mc;
         for (int cell = 0; cell < num_cells; ++cell) {
-            if (src[cell] > 0.0) {
-                injected[0] += src[cell]*dt;
-                polyinj += src[cell]*dt*inj_c[cell];
-            } else if (src[cell] < 0.0) {
-                const double flux = -src[cell]*dt;
+            if (transport_src[cell] > 0.0) {
+                // Inflowing transport source is a surface volume flux
+                // for the first phase.
+                injected[0] += transport_src[cell]*dt;
+                polyinj += transport_src[cell]*dt*inj_c[cell];
+            } else if (transport_src[cell] < 0.0) {
+                // Outflowing transport source is a total reservoir
+                // volume flux.
+                const double flux = -transport_src[cell]*dt;
                 const double* sat = &s[np*cell];
                 props.relperm(1, sat, &cell, &kr_cell[0], 0);
                 props.viscosity(1, &press[cell], &z[np*cell], &cell, &visc[0], 0);
+                props.matrix(1, &press[cell], &z[np*cell], &cell, &A[0], 0);
                 polyprops.effectiveMobilities(c[cell], cmax[cell], &visc[0],
                                               &kr_cell[0], &mob[0]);
                 double totmob = 0.0;
                 for (int p = 0; p < np; ++p) {
                     totmob += mob[p];
                 }
+                std::fill(prod_surfvol.begin(), prod_surfvol.end(), 0.0);
                 for (int p = 0; p < np; ++p) {
-                    produced[p] += (mob[p]/totmob)*flux;
+                    prod_resv_phase[p] = (mob[p]/totmob)*flux;
+                    for (int q = 0; q < np; ++q) {
+                        prod_surfvol[q] += prod_resv_phase[p]*A[q + np*p];
+                    }
+                }
+                for (int p = 0; p < np; ++p) {
+                    produced[p] += prod_surfvol[p];
                 }
                 polyprops.computeMc(c[cell], mc);
-                polyprod += (mob[0]/totmob)*flux*mc;
+                polyprod += produced[0]*mc;
             }
         }
     }

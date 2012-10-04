@@ -25,6 +25,7 @@
 #include <opm/core/fluid/IncompPropertiesInterface.hpp>
 #include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
+#include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
 #include <opm/core/utility/SparseVector.hpp>
@@ -75,9 +76,9 @@ namespace Opm
     ///         gives the mobilities used for the preceding timestep.
     /// @param[in]  props     fluid and rock properties.
     /// @param[in]  polyprops polymer properties
-    /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  c         polymer concentration
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  state     state variables (pressure, fluxes etc.)
+    /// @param[in]  src       if < 0: total reservoir volume outflow,
+    ///                       if > 0: first phase reservoir volume inflow.
     /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
     /// @param[out] injected  must point to a valid array with P elements,
@@ -87,10 +88,8 @@ namespace Opm
     /// @param[out] polyprod  produced mass of polymer
     void computeInjectedProduced(const IncompPropertiesInterface& props,
                                  const Opm::PolymerProperties& polyprops,
-				 const std::vector<double>& s,
-				 const std::vector<double>& c,
-                                 const std::vector<double>& cmax,
-				 const std::vector<double>& src,
+                                 const PolymerState& state,
+				 const std::vector<double>& transport_src,
 				 const std::vector<double>& inj_c,
 				 const double dt,
 				 double* injected,
@@ -106,29 +105,20 @@ namespace Opm
     ///         gives the mobilities used for the preceding timestep.
     /// @param[in]  props     fluid and rock properties.
     /// @param[in]  polyprops polymer properties
-    /// @param[in]  press     pressure (one value per cell)
-    /// @param[in]  z         surface-volume values (for all P phases)
-    /// @param[in]  s         saturation values (for all P phases)
-    /// @param[in]  c         polymer concentration
-    /// @param[in]  cmax      polymer maximum concentration
-    /// @param[in]  src       if < 0: total outflow, if > 0: first phase inflow.
+    /// @param[in]  state     state variables (pressure, fluxes etc.)
+    /// @param[in]  src       if < 0: total reservoir volume outflow,
+    ///                       if > 0: first phase *surface volume* inflow.
     /// @param[in]  inj_c     injected concentration by cell
     /// @param[in]  dt        timestep used
-    ///
     /// @param[out] injected  must point to a valid array with P elements,
     ///                       where P = s.size()/src.size().
     /// @param[out] produced  must also point to a valid array with P elements.
     /// @param[out] polyinj   injected mass of polymer
     /// @param[out] polyprod  produced mass of polymer
-
     void computeInjectedProduced(const BlackoilPropertiesInterface& props,
                                  const Opm::PolymerProperties& polyprops,
-                                 const std::vector<double>& press,
-                                 const std::vector<double>& z,
-                                 const std::vector<double>& s,
-				 const std::vector<double>& c,
-				 const std::vector<double>& cmax,
-				 const std::vector<double>& src,
+                                 const PolymerBlackoilState& state,
+				 const std::vector<double>& transport_src,
 				 const std::vector<double>& inj_c,
 				 const double dt,
                                  double* injected,
