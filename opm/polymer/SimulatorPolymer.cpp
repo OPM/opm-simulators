@@ -46,6 +46,7 @@
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/TransportModelPolymer.hpp>
+#include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
 
@@ -89,6 +90,7 @@ namespace Opm
              const PolymerProperties& poly_props,
              const RockCompressibility* rock_comp_props,
              const Wells* wells,
+             const PolymerInflowInterface& polymer_inflow,
              const std::vector<double>& src,
              const FlowBoundaryConditions* bcs,
              LinearSolverInterface& linsolver,
@@ -115,6 +117,7 @@ namespace Opm
         const PolymerProperties& poly_props_;
         const RockCompressibility* rock_comp_props_;
         const Wells* wells_;
+        const PolymerInflowInterface& polymer_inflow_;
         const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
         const LinearSolverInterface& linsolver_;
@@ -126,7 +129,6 @@ namespace Opm
         std::vector< std::vector<int> > columns_;
         // Misc. data
         std::vector<int> allcells_;
-        PolymerInflow poly_inflow_;
     };
 
 
@@ -138,12 +140,14 @@ namespace Opm
                                        const PolymerProperties& poly_props,
                                        const RockCompressibility* rock_comp_props,
                                        const Wells* wells,
+                                       const PolymerInflowInterface& polymer_inflow,
                                        const std::vector<double>& src,
                                        const FlowBoundaryConditions* bcs,
                                        LinearSolverInterface& linsolver,
                                        const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, poly_props, rock_comp_props, wells, src, bcs, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, poly_props, rock_comp_props,
+                              wells, polymer_inflow, src, bcs, linsolver, gravity));
     }
 
 
@@ -167,6 +171,7 @@ namespace Opm
                                  const PolymerProperties& poly_props,
                                  const RockCompressibility* rock_comp_props,
                                  const Wells* wells,
+                                 const PolymerInflowInterface& polymer_inflow,
                                  const std::vector<double>& src,
                                  const FlowBoundaryConditions* bcs,
                                  LinearSolverInterface& linsolver,
@@ -176,6 +181,7 @@ namespace Opm
           poly_props_(poly_props),
           rock_comp_props_(rock_comp_props),
           wells_(wells),
+          polymer_inflow_(polymer_inflow),
           src_(src),
           bcs_(bcs),
           linsolver_(linsolver),
@@ -187,10 +193,7 @@ namespace Opm
                    gravity, wells, src, bcs),
           tsolver_(grid, props, poly_props, TransportModelPolymer::Bracketing,
                    param.getDefault("nl_tolerance", 1e-9),
-                   param.getDefault("nl_maxiter", 30)),
-          poly_inflow_(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
-                       param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
-                       param.getDefault("poly_amount", poly_props.cMax()))
+                   param.getDefault("nl_maxiter", 30))
     {
         // For output.
         output_ = param.getDefault("output", true);
@@ -240,7 +243,8 @@ namespace Opm
                                                 PolymerState& state,
                                                 WellState& well_state)
     {
-        std::vector<double> transport_src;
+        std::vector<double> transport_src(grid_.number_of_cells);
+        std::vector<double> polymer_inflow_c(grid_.number_of_cells);
 
         // Initialisation.
         std::vector<double> porevol;
@@ -316,12 +320,7 @@ namespace Opm
             // Find inflow rate.
             const double current_time = timer.currentTime();
             double stepsize = timer.currentStepLength();
-            const double inflowc0 = poly_inflow_(current_time + 1e-5*stepsize);
-            const double inflowc1 = poly_inflow_(current_time + (1.0 - 1e-5)*stepsize);
-            if (inflowc0 != inflowc1) {
-                std::cout << "**** Warning: polymer inflow rate changes during timestep. Using rate near start of step.";
-            }
-            const double inflow_c = inflowc0;
+            polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
 
             // Solve transport.
             transport_timer.start();
@@ -335,11 +334,11 @@ namespace Opm
             double substep_polyprod = 0.0;
             injected[0] = injected[1] = produced[0] = produced[1] = polyinj = polyprod = 0.0;
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_.solve(&state.faceflux()[0], &porevol[0], &transport_src[0], stepsize, inflow_c,
+                tsolver_.solve(&state.faceflux()[0], &porevol[0], &transport_src[0], &polymer_inflow_c[0], stepsize,
                                state.saturation(), state.concentration(), state.maxconcentration());
                 Opm::computeInjectedProduced(props_, poly_props_,
                                              state.saturation(), state.concentration(), state.maxconcentration(),
-                                             transport_src, stepsize, inflow_c,
+                                             transport_src, polymer_inflow_c, stepsize,
                                              substep_injected, substep_produced, substep_polyinj, substep_polyprod);
                 injected[0] += substep_injected[0];
                 injected[1] += substep_injected[1];

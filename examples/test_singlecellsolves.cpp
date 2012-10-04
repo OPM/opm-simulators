@@ -211,6 +211,7 @@ main(int argc, char** argv)
         const double ff = s; // Simplified a lot...
         for (int conc = 0; conc < num_concs; ++conc) {
             const double c = poly_props.cMax()*double(conc)/double(num_concs - 1);
+            std::vector<double> polymer_inflow_c(num_cells, c);
             // std::cout << "(s, c) = (" << s << ", " << c << ")\n";
             transport_src[0] = src[0]*ff;
             // Resetting the state for next run.
@@ -223,8 +224,8 @@ main(int argc, char** argv)
             reorder_model.solve(&state.faceflux()[0],
                                 &porevol[0],
                                 &transport_src[0],
+                                &polymer_inflow_c[0],
                                 dt,
-                                c,
                                 state.saturation(),
                                 state.concentration(),
                                 state.maxconcentration());
