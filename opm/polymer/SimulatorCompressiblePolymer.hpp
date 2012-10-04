@@ -33,6 +33,7 @@ namespace Opm
     class BlackoilPropertiesInterface;
     class PolymerProperties;
     class RockCompressibility;
+    class PolymerInflowInterface;
     class LinearSolverInterface;
     class SimulatorTimer;
     class PolymerBlackoilState;
@@ -64,6 +65,7 @@ namespace Opm
         /// \param[in] poly_props  polymer properties
         /// \param[in] rock_comp   if non-null, rock compressibility properties
         /// \param[in] wells       if non-null, wells data structure
+        /// \param[in] polymer_inflow  polymer inflow controls
         /// \param[in] src         source terms
         /// \param[in] bcs         boundary conditions, treat as all noflow if null
         /// \param[in] linsolver   linear solver
@@ -74,6 +76,7 @@ namespace Opm
                                      const PolymerProperties& poly_props,
                                      const RockCompressibility* rock_comp_props,
                                      const Wells* wells,
+                                     const PolymerInflowInterface& polymer_inflow,
                                      const std::vector<double>& src,
                                      const FlowBoundaryConditions* bcs,
                                      LinearSolverInterface& linsolver,

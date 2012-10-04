@@ -44,6 +44,7 @@
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/SimulatorPolymer.hpp>
+#include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -241,12 +242,16 @@ main(int argc, char** argv)
     SimulatorReport rep;
     if (!use_deck) {
         // Simple simulation without a deck.
+        PolymerInflowBasic polymer_inflow(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
+                                          param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
+                                          param.getDefault("poly_amount", poly_props.cMax()));
         SimulatorPolymer simulator(param,
                                    *grid->c_grid(),
                                    *props,
                                    poly_props,
                                    rock_comp->isActive() ? rock_comp.get() : 0,
                                    0, // wells
+                                   polymer_inflow,
                                    src,
                                    bcs.c_bcs(),
                                    linsolver,
@@ -266,6 +271,15 @@ main(int argc, char** argv)
         deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
         simtimer.init(*deck);
         const double total_time = simtimer.totalTime();
+        // Check for WPOLYMER presence in last epoch to decide
+        // polymer injection control type.
+        const bool use_wpolymer = deck->hasField("WPOLYMER");
+        if (use_wpolymer) {
+            if (param.has("poly_start_days")) {
+                MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
+                        "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
+            }
+        }
         for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
             // Set epoch index.
             deck->setCurrentEpoch(epoch);
@@ -287,8 +301,20 @@ main(int argc, char** argv)
                       << "\n                  (number of steps: "
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
-            // Create new wells, well_state
+            // Create new wells, polymer inflow controls.
             WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+            boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
+            if (use_wpolymer) {
+                if (wells.c_wells() == 0) {
+                    THROW("Cannot control polymer injection via WPOLYMER without wells.");
+                }
+                polymer_inflow.reset(new PolymerInflowFromDeck(*deck, *wells.c_wells(), props->numCells()));
+            } else {
+                polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
+                                                            param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
+                                                            param.getDefault("poly_amount", poly_props.cMax())));
+            }
+
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
             // since number of wells may change etc.
@@ -303,6 +329,7 @@ main(int argc, char** argv)
                                        poly_props,
                                        rock_comp->isActive() ? rock_comp.get() : 0,
                                        wells.c_wells(),
+                                       *polymer_inflow,
                                        src,
                                        bcs.c_bcs(),
                                        linsolver,

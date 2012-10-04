@@ -90,6 +90,7 @@ namespace Opm
              const PolymerProperties& poly_props,
              const RockCompressibility* rock_comp_props,
              const Wells* wells,
+             const PolymerInflowInterface& polymer_inflow,
              const std::vector<double>& src,
              const FlowBoundaryConditions* bcs,
              LinearSolverInterface& linsolver,
@@ -116,6 +117,7 @@ namespace Opm
         const PolymerProperties& poly_props_;
         const RockCompressibility* rock_comp_props_;
         const Wells* wells_;
+        const PolymerInflowInterface& polymer_inflow_;
         const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
         const LinearSolverInterface& linsolver_;
@@ -127,7 +129,6 @@ namespace Opm
         std::vector< std::vector<int> > columns_;
         // Misc. data
         std::vector<int> allcells_;
-        boost::scoped_ptr<PolymerInflowInterface> poly_inflow_;
     };
 
 
@@ -139,12 +140,14 @@ namespace Opm
                                        const PolymerProperties& poly_props,
                                        const RockCompressibility* rock_comp_props,
                                        const Wells* wells,
+                                       const PolymerInflowInterface& polymer_inflow,
                                        const std::vector<double>& src,
                                        const FlowBoundaryConditions* bcs,
                                        LinearSolverInterface& linsolver,
                                        const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, poly_props, rock_comp_props, wells, src, bcs, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, poly_props, rock_comp_props,
+                              wells, polymer_inflow, src, bcs, linsolver, gravity));
     }
 
 
@@ -168,6 +171,7 @@ namespace Opm
                                  const PolymerProperties& poly_props,
                                  const RockCompressibility* rock_comp_props,
                                  const Wells* wells,
+                                 const PolymerInflowInterface& polymer_inflow,
                                  const std::vector<double>& src,
                                  const FlowBoundaryConditions* bcs,
                                  LinearSolverInterface& linsolver,
@@ -177,6 +181,7 @@ namespace Opm
           poly_props_(poly_props),
           rock_comp_props_(rock_comp_props),
           wells_(wells),
+          polymer_inflow_(polymer_inflow),
           src_(src),
           bcs_(bcs),
           linsolver_(linsolver),
@@ -223,11 +228,6 @@ namespace Opm
             tsolver_.initGravity(gravity);
             extractColumn(grid_, columns_);
         }
-
-        // Polymer inflow control.
-        poly_inflow_.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
-                                                  param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
-                                                  param.getDefault("poly_amount", poly_props.cMax())));
 
         // Misc init.
         const int num_cells = grid.number_of_cells;
@@ -320,7 +320,7 @@ namespace Opm
             // Find inflow rate.
             const double current_time = timer.currentTime();
             double stepsize = timer.currentStepLength();
-            poly_inflow_->getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
+            polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
 
             // Solve transport.
             transport_timer.start();
