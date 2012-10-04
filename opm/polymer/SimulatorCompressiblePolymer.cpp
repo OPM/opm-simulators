@@ -270,10 +270,10 @@ namespace Opm
         Opm::time::StopWatch total_timer;
         total_timer.start();
         double init_surfvol[2] = { 0.0 };
-        double init_polymass = 0.0;
         double inplace_surfvol[2] = { 0.0 };
-        double polymass = 0.0;
-        double polymass_adsorbed = 0.0;
+        double polymass = computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
+        double polymass_adsorbed = computePolymerAdsorbed(grid_, props_, poly_props_, state, rock_comp_props_);
+        double init_polymass = polymass + polymass_adsorbed;
         double tot_injected[2] = { 0.0 };
         double tot_produced[2] = { 0.0 };
         double tot_polyinj = 0.0;

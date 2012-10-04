@@ -264,10 +264,10 @@ namespace Opm
         Opm::time::StopWatch total_timer;
         total_timer.start();
         double init_satvol[2] = { 0.0 };
-        double init_polymass = 0.0;
         double satvol[2] = { 0.0 };
-        double polymass = 0.0;
-        double polymass_adsorbed = 0.0;
+        double polymass = computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
+        double polymass_adsorbed = computePolymerAdsorbed(props_, poly_props_, porevol, state.maxconcentration());
+        double init_polymass = polymass + polymass_adsorbed;
         double injected[2] = { 0.0 };
         double produced[2] = { 0.0 };
         double polyinj = 0.0;
