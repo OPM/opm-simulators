@@ -27,6 +27,7 @@
 #include <cmath>
 #include <dumux/material/idealgas.hh>
 #include <dumux/material/components/component.hh>
+#include <dumux/material/constants.hh>
 
 
 namespace Dumux
@@ -40,6 +41,7 @@ namespace Dumux
 template <class Scalar>
 class Xylene : public Component<Scalar, Xylene<Scalar> >
 {
+    typedef Constants<Scalar> Consts;
 
 public:
     /*!
@@ -51,37 +53,41 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of xylene
      */
-    static constexpr Scalar molarMass()
+    constexpr static Scalar molarMass()
     { return 0.106; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of xylene
      */
-    static constexpr Scalar criticalTemperature()
+    constexpr static Scalar criticalTemperature()
     { return 617.1; }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of xylene
      */
-    static constexpr Scalar criticalPressure()
+    constexpr static Scalar criticalPressure()
     { return 35.4e5; }
+
+    /*!
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at xylene's boiling point (1 atm).
+     */
+    constexpr static Scalar boilingTemperature()
+    { return 412.3; }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at xylene's triple point.
      */
-    static constexpr Scalar tripleTemperature()
+    static const Scalar tripleTemperature()
     {
-        //DUNE_THROW(Dune::NotImplemented, "tripleTemperature for xylene");
-        return 1e100;
+        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for xylene");
     }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at xylene's triple point.
      */
-    static constexpr Scalar triplePressure()
+    static const Scalar triplePressure()
     {
-        //DUNE_THROW(Dune::NotImplemented, "triplePressure for xylene");
-        return 1e100;
+        DUNE_THROW(Dune::NotImplemented, "triplePressure for xylene");
     }
 
     /*!
@@ -106,6 +112,8 @@ public:
     /*!
      * \brief Specific heat cap of liquid xylene \f$\mathrm{[J/kg]}\f$.
      *
+     * source : Reid et al. (fourth edition): Missenard group contrib. method (chap 5-7, Table 5-11, s. example 5-8)
+     *
      * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
@@ -116,28 +124,28 @@ public:
         // Xylene: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was too much!)
         // linear interpolation between table values [J/(mol K)]
 
-        if(temp < 298.0){                          // take care: extrapolation for Temp<273
-            H = 13.4 + 1.2*(temp - 273.0)/25.0;
-            CH3 = 40.0 + 1.6*(temp - 273.0)/25.0;
-            C6H5 = 113.0 + 4.2*(temp - 273.0)/25.0;
+        if(temp < 298.0){                          	// take care: extrapolation for Temp<273
+            H = 13.4 + 1.2*(temp - 273.0)/25.0;		// 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
+            CH3 = 40.0 + 1.6*(temp - 273.0)/25.0;	// 40 + 1.6 = 41.6 = CH3(T=298K)
+            C6H5 = 113.0 + 4.2*(temp - 273.0)/25.0; // 113 + 4.2 = 117.2 = C6H5(T=298K)
         }
         else if(temp < 323.0){
-            H = 14.6 + 0.9*(temp - 298.0)/25.0;
+            H = 14.6 + 0.9*(temp - 298.0)/25.0;		// i.e. interpolation of table values 298<T<323
             CH3 = 41.6 + 1.9*(temp - 298.0)/25.0;
             C6H5 = 117.2 + 6.2*(temp - 298.0)/25.0;
         }
         else if(temp < 348.0){
-            H = 15.5 + 1.2*(temp - 323.0)/25.0;
+            H = 15.5 + 1.2*(temp - 323.0)/25.0;		// i.e. interpolation of table values 323<T<348
             CH3 = 43.5 + 2.3*(temp - 323.0)/25.0;
             C6H5 = 123.4 + 6.3*(temp - 323.0)/25.0;
         }
-        else {                        // take care: extrapolation for Temp>373
-            H = 16.7 + 2.1*(temp - 348.0)/25.0;          // most likely leads to underestimation
-            CH3 = 45.8 + 2.5*(temp - 348.0)/25.0;
-            C6H5 = 129.7 + 6.3*(temp - 348.0)/25.0;
+        else {
+            H = 16.7 + 2.1*(temp - 348.0)/25.0;         // i.e. interpolation of table values 348<T<373
+            CH3 = 45.8 + 2.5*(temp - 348.0)/25.0;		// take care: extrapolation for Temp>373
+            C6H5 = 129.7 + 6.3*(temp - 348.0)/25.0;		// most likely leads to underestimation
         }
 
-        return (C6H5 + 2*CH3 - H)/molarMass();
+        return (C6H5 + 2*CH3 - H)/molarMass();// J/(mol K) -> J/(kg K)
     }
 
 
@@ -150,37 +158,57 @@ public:
     static Scalar liquidEnthalpy(Scalar temp,
                                  Scalar pressure)
     {
-        const Scalar T_ref = 273.0;  // typically T_ref=0 C, but not necessarily
-        const Scalar DTemp = temp - T_ref;
+    	// Gauss quadrature rule:
+    	// Interval: [0K; temperature (K)]
+    	// Gauss-Legendre-Integration with variable transformation:
+    	// \int_a^b f(T) dT  \approx (b-a)/2 \sum_i=1^n \alpha_i f( (b-a)/2 x_i + (a+b)/2 )
+    	// with: n=2, legendre -> x_i = +/- \sqrt(1/3), \apha_i=1
+    	// here: a=0, b=actual temperature in Kelvin
+    	// \leadsto h(T) = \int_0^T c_p(T) dT
+    	// 				\approx 0.5 T * (cp( (0.5-0.5*\sqrt(1/3)) T) + cp((0.5+0.5*\sqrt(1/3)) T))
+    	//				= 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
 
-        // numerical integration using 2-point Gauss */
-        return 0.5*DTemp*(spHeatCapLiquidPhase(0.2113*DTemp,pressure)
-                          + spHeatCapLiquidPhase(0.7887*DTemp,pressure));
+    	// enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
+        return 0.5*temp*(spHeatCapLiquidPhase(0.2113*temp,pressure)
+                          + spHeatCapLiquidPhase(0.7887*temp,pressure));
     }
 
     /*!
-     * \brief latent heat of vaporization for xylene \f$\mathrm{[J/kg]}\f$.
+     * \brief Latent heat of vaporization for xylene \f$\mathrm{[J/kg]}\f$.
+     *
+     * source : Reid et al. (fourth edition): Chen method (chap. 7-11, Delta H_v = Delta H_v (T) according to chap. 7-12)
      *
      * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar heatVap(Scalar temp, Scalar pressure)
+    static Scalar heatVap(Scalar temperature,
+    				const Scalar pressure)
     {
-        // Variation with Temp according to Watson relation
-        temp = std::min(temp, criticalTemperature()); // regularization
-        temp = std::max(temp, 0.0); // regularization
+        temperature = std::min(temperature, criticalTemperature()); // regularization
+        temperature = std::max(temperature, 0.0); // regularization
 
-        const Scalar DH_v_b = 36195.0;       // [J/mol] Chen method (at boiling point 437.9 K
-        const Scalar Tr1 = 0.668;            // Tb/T_crit
-        const Scalar Tr2 = temp/criticalTemperature();
+        constexpr Scalar T_crit = criticalTemperature();
+        constexpr Scalar Tr1 = boilingTemperature()/criticalTemperature();
+        constexpr Scalar p_crit = criticalPressure();
+
+        //        Chen method, eq. 7-11.4 (at boiling)
+        const Scalar DH_v_boil = Consts::R * T_crit * Tr1
+            * (3.978 * Tr1 - 3.958 + 1.555*std::log(p_crit * 1e-5 /*Pa->bar*/ ) )
+            / (1.07 - Tr1); /* [J/mol] */
+        
+    	/* Variation with temp according to Watson relation eq 7-12.1*/
+        const Scalar Tr2 = temperature/criticalTemperature();
         const Scalar n = 0.375;
-        const Scalar DH_vap = DH_v_b * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
+        const Scalar DH_vap = DH_v_boil * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
 
         return (DH_vap/molarMass());          // we need [J/kg]
     }
 
     /*!
      * \brief Specific enthalpy of xylene vapor \f$\mathrm{[J/kg]}\f$.
+     *
+     *		This relation is true on the vapor pressure curve, i.e. as long
+     *		as there is a liquid phase present.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
@@ -191,7 +219,7 @@ public:
     }
 
     /*!
-     * \brief
+     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of xylene gas at a given pressure and temperature.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
@@ -203,14 +231,22 @@ public:
                                          pressure);
     }
 
+    /*!
+     * \brief The density \f$\mathrm{[mol/m^3]}\f$ of xylene gas at a given pressure and temperature.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+    */
     static Scalar molarGasDensity(Scalar temperature, Scalar pressure)
     {
-        return gasDensity(temperature, pressure)*molarMass();
+        return gasDensity(temperature, pressure) / molarMass();
     }
 
     /*!
      * \brief The molar density of pure xylene at a given pressure and temperature
      * \f$\mathrm{[mol/m^3]}\f$.
+     *
+     * source : Reid et al. (fourth edition): Modified Racket technique (chap. 3-11, eq. 3-11.9)
      *
      * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$

@@ -39,7 +39,7 @@ namespace Dumux
 template <class Scalar>
 class Mesitylene : public Component<Scalar, Mesitylene<Scalar> >
 {
-    typedef Dumux::Constants<Scalar> Constants;
+    typedef Dumux::Constants<Scalar> Consts;
 
 public:
     /*!
@@ -51,20 +51,26 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of mesitylene
      */
-    static constexpr Scalar molarMass()
+    constexpr static Scalar molarMass()
     { return 0.120; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of mesitylene
      */
-    static constexpr Scalar criticalTemperature()
+    constexpr static Scalar criticalTemperature()
     { return 637.3; }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of mesitylene
      */
-    static constexpr Scalar criticalPressure()
+    constexpr static Scalar criticalPressure()
     { return 31.3e5; }
+
+    /*!
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at mesitylene's boiling point (1 atm).
+     */
+    constexpr static Scalar boilingTemperature()
+    { return 437.9; }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at mesitylene's triple point.
@@ -105,19 +111,65 @@ public:
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     {
-        Scalar DTemp = temperature-273.0; // K -> degC
-        return 0.5*DTemp*(spHeatCapLiquidPhase_(0.2113*DTemp) + spHeatCapLiquidPhase_(0.7887*DTemp));
+    	// Gauss quadrature rule:
+    	// Interval: [0K; temperature (K)]
+    	// Gauss-Legendre-Integration with variable transformation:
+    	// \int_a^b f(T) dT  \approx (b-a)/2 \sum_i=1^n \alpha_i f( (b-a)/2 x_i + (a+b)/2 )
+    	// with: n=2, legendre -> x_i = +/- \sqrt(1/3), \apha_i=1
+    	// here: a=0, b=actual temperature in Kelvin
+    	// \leadsto h(T) = \int_0^T c_p(T) dT
+    	// 				\approx 0.5 T * (cp( (0.5-0.5*\sqrt(1/3)) T) + cp((0.5+0.5*\sqrt(1/3)) T))
+    	//				= 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
+
+    	// enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
+        return 0.5*temperature*(spHeatCapLiquidPhase_(0.2113*temperature) + spHeatCapLiquidPhase_(0.7887*temperature));
     }
 
     /*!
+     * \brief Latent heat of vaporization for mesitylene \f$\mathrm{[J/kg]}\f$.
+     *
+     * source : Reid et al. (fourth edition): Chen method (chap. 7-11, Delta H_v = Delta H_v (T) according to chap. 7-12)
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static Scalar heatVap(Scalar temperature,
+    			  Scalar pressure)
+    {
+        temperature = std::min(temperature, criticalTemperature()); // regularization
+        temperature = std::max(temperature, 0.0); // regularization
+
+        constexpr Scalar T_crit = criticalTemperature();
+        constexpr Scalar Tr1 = boilingTemperature()/criticalTemperature();
+        constexpr Scalar p_crit = criticalPressure();
+
+        //        Chen method, eq. 7-11.4 (at boiling)
+        const Scalar DH_v_boil =
+            Consts::R * T_crit * Tr1
+            * (3.978 * Tr1 - 3.958 + 1.555*std::log(p_crit * 1e-5 /*Pa->bar*/ ) )
+            / (1.07 - Tr1); /* [J/mol] */
+
+    	/* Variation with temp according to Watson relation eq 7-12.1*/
+        const Scalar Tr2 = temperature/criticalTemperature();
+        const Scalar n = 0.375;
+        const Scalar DH_vap = DH_v_boil * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
+
+        return (DH_vap/molarMass());          // we need [J/kg]
+    }
+
+
+    /*!
      * \brief Specific enthalpy of mesitylene vapor \f$\mathrm{[J/kg]}\f$.
+     *
+     * This relation is true on the vapor pressure curve, i.e. as long
+     * as there is a liquid phase present.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
     {
-        return liquidEnthalpy(temperature,pressure) + vaporizationHeat_(temperature);
+        return liquidEnthalpy(temperature,pressure) + heatVap(temperature, pressure);
     }
 
     /*!
@@ -208,6 +260,8 @@ protected:
      * \brief The molar density of pure mesitylene at a given pressure and temperature
      * \f$\mathrm{[mol/m^3]}\f$.
      *
+     * source : Reid et al. (fourth edition): Modified Racket technique (chap. 3-11, eq. 3-11.9)
+     *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar molarLiquidDensity_(Scalar temperature)
@@ -217,39 +271,15 @@ protected:
 
         const Scalar Z_RA = 0.2556;
         const Scalar expo = 1.0 + std::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
-        // liquid molar volume [cm^3/mol]
-        Scalar V = 
-            Constants::R
-            * criticalTemperature()
-            / criticalPressure()
-            * std::pow(Z_RA, expo);
+        Scalar V = Consts::R*criticalTemperature()/criticalPressure()*std::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
 
         return 1.0/V; // convert to molar density [mol/m^3]
     }
 
     /*!
-     * \brief latent heat of vaporization for mesitylene \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     */
-    static Scalar vaporizationHeat_(Scalar temperature)
-    {
-        // regularization
-        temperature = std::min(temperature, criticalTemperature());
-        temperature = std::max(temperature, 250.0);
-
-        const Scalar DH_v_b = 39086.0; // [J/mol] Chen method (at boiling point 437.9 K */
-        // Variation with Temp according to Watson relation
-        const Scalar Tr1 = 0.687;
-        const Scalar Tr2 = temperature/criticalTemperature();
-        const Scalar n = 0.375;
-        const Scalar DH_vap = DH_v_b * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
-
-        return DH_vap/molarMass(); // convert to [J/kg]
-    }
-
-    /*!
      * \brief Specific heat cap of liquid mesitylene \f$\mathrm{[J/kg]}\f$.
+     *
+     * source : Reid et al. (fourth edition): Missenard group contrib. method (chap 5-7, Table 5-11, s. example 5-8)
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
@@ -261,16 +291,16 @@ protected:
         Scalar H, CH3, C6H5;
         if(temperature<298.) {
             // extrapolation for temperature < 273K
-            H = 13.4+1.2*(temperature-273.0)/25.;
-            CH3 = 40.0+1.6*(temperature-273.0)/25.;
-            C6H5 = 113.0+4.2*(temperature-273.0)/25.;
+            H = 13.4+1.2*(temperature-273.0)/25.; 		// 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
+            CH3 = 40.0+1.6*(temperature-273.0)/25.;		// 40 + 1.6 = 41.6 = CH3(T=298K)
+            C6H5 = 113.0+4.2*(temperature-273.0)/25.;	// 113 + 4.2 =117.2 = C6H5(T=298K)
         }
-        else if((temperature>=298.0)&&(temperature<323.)){
+        else if((temperature>=298.0)&&(temperature<323.)){ // i.e. interpolation of table values 298<T<323
             H = 14.6+0.9*(temperature-298.0)/25.;
             CH3 = 41.6+1.9*(temperature-298.0)/25.;
             C6H5 = 117.2+6.2*(temperature-298.0)/25.;
         }
-        else if((temperature>=323.0)&&(temperature<348.)){
+        else if((temperature>=323.0)&&(temperature<348.)){// i.e. interpolation of table values 323<T<348
             H = 15.5+1.2*(temperature-323.0)/25.;
             CH3 = 43.5+2.3*(temperature-323.0)/25.;
             C6H5 = 123.4+6.3*(temperature-323.0)/25.;
@@ -284,7 +314,7 @@ protected:
             C6H5 = 129.7+6.3*(temperature-348.0)/25.;
         }
 
-        return (C6H5 + 3*CH3 - 2*H)/molarMass();
+        return (C6H5 + 3*CH3 - 2*H)/molarMass(); // J/(mol K) -> J/(kg K)
     }
 };
 
