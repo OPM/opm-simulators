@@ -33,7 +33,7 @@ effects are neglected.
 \psfrag{S_n = 0}{$S_w = 1$}
 \psfrag{S_n_initial = 0}{\textcolor{white}{$\mathbf{S_{w_{initial}} = 0}$}}
 \psfrag{q_w = 0 [kg/m^2s]}{$q_w = 0$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
-\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^-2$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
+\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = 3 \times 10^-2$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
 \centering
 \includegraphics[width=0.9\linewidth,keepaspectratio]{EPS/tutorial-problemconfiguration}
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-decoupled:problemfigure}
@@ -191,21 +191,23 @@ As you can see, the simulation creates many output files. To reduce these in ord
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\
 Change the size of the model domain so that you get a rectangle
 with edge lengths of x = 300 m \\  and y = 300 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 10$ m. \\
-Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes.
+Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes. The Neumannn Boundary conditions are multiplied by the normal (pointing outwards), so an influx is negative, an outflux always positive. Such information can easily be found in the documentation of the functions (also look into base classes).
 
 \item \textbf{Changing Fluids} \\
 Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
 \begin{enumerate}
  \item Brine: The class \texttt{Dumux::Brine} acts as an adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be sure to use the complete water class with its own template parameter).
- \item DNAPL: A standard set of chemical substances, such as Oil and Brine, is already included (via a list of \texttt{\#include ..} commandos) and hence easily accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
+ \item DNAPL: A standard set of chemical substances, such as Water and Brine, is already included (via a list of \texttt{\#include ..} commandos) and hence easily accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
 \end{enumerate}
 If you want to take a closer look at how the fluid classes are defined and which substances are already available please browse through the files in the directory
 \texttt{/dumux/material/components}.
 
 \item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
 \Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}, see also chapter \ref{sec:fluidframework}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this rather complicated fluidsystem uses tabularized fluid data, which need to be initialized (i.e. the tables need to be filled with values) in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}.\\ 
-As an alternative, use a simpler version of water, e.g. \texttt{Dumux::SimpleH2O}, and apply it for the property \texttt{Components} with type \texttt{H2O}. The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^-4$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simulation duration to 2e4 seconds.\\
+Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this rather complicated fluidsystem uses tabularized fluid data, which need to be initialized (i.e. the tables need to be filled with values) in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. Remember that the constructor function always has the same name as the respective class, i.e. \texttt{TutorialProblemDecoupled(..)}.\\
+To avoid the initialization, use the simpler version of water \texttt{Dumux::SimpleH2O} or a non-tabulated version \texttt{Dumux::H2O}. This can be done by setting the property \texttt{Components} type \texttt{H2O},
+as is done in all the test problems of the decoupled 2p2c model.\\
+The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^{-4}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simulation duration to 2e4 seconds.\\
 Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
  
 \item \textbf{Heterogeneities}  \\
@@ -300,9 +302,6 @@ If you look at the Application in \texttt{/test/boxmodels/2p/}, you see that the
 In the code, parameters can be read via the macro \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar, MyWonderfulGroup.MyWonderfulParameter);}. In \texttt{test\_2p}, \texttt{MyWonderfulGroup} is the group \texttt{SpatialParams} - any type of groups is applicable, if the group definition in the parameter file is enclosed in square brackets. The parameters are then listed thereafter. Try and use as much parameters as possible via the input file, such as lens dimension, grid resolution, soil properties etc. In addition, certain parameters that are specific to the model, such as the \texttt{CFL}-factor, can be assigned in the parameter file without any further action.
 
 \subsubsection{Exercise 4}
-If both the coupled and the decoupled tutorial are completed, one should have noticed that the function arguments in the problem function differ slighty, as the numerical models differ. However, both are functions that depend on space, so both models can also work with functions based ond \mbox{\texttt{...AtPos(GlobalPosition \& globalPos)}}, no matter if we model coupled or decoupled. Try to formulate a spatial parameters file that works with both problems, the coupled and the decoupled. Therein, only use functions at the position.
-
-\subsubsection{Exercise 5}
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new fluid system. (You may get a hint by looking at existing fluid 
 systems in the directory \verb+/dumux/material/fluidsystems+.)
@@ -310,6 +309,10 @@ systems in the directory \verb+/dumux/material/fluidsystems+.)
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
+
+
+\subsubsection{Exercise 5}
+If both the coupled and the decoupled tutorial are completed, one should have noticed that the function arguments in the problem function differ slighty, as the numerical models differ. However, both are functions that depend on space, so both models can also work with functions based ond \mbox{\texttt{...AtPos(GlobalPosition \& globalPos)}}, no matter if we model coupled or decoupled. Try to formulate a spatial parameters file that works with both problems, the coupled and the decoupled. Therein, only use functions at the position.
 
 %%% Local Variables: 
 %%% mode: latex

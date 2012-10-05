@@ -23,7 +23,7 @@ Water infiltrates from the left side into the domain and replaces the oil. Gravi
 \psfrag{S_n = 0}{$S_n = 0$}
 \psfrag{S_n_initial = 0}{\textcolor{white}{$\mathbf{S_{n_{initial}} = 1}$}}
 \psfrag{q_w = 0 [kg/m^2s]}{$q_w = 0$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
-\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = -3 \times 10^{-2}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
+\psfrag{q_n = -3 x 10^-4 [kg/m^2s]}{$q_n = 3 \times 10^{-2}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$}
 \centering
 \includegraphics[width=0.9\linewidth,keepaspectratio]{EPS/tutorial-problemconfiguration}
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-coupled:problemfigure}
@@ -365,7 +365,8 @@ For the visualization of the results using paraview please refer to section \ref
   \texttt{tutorialproblem\_coupled.hh} so that water enters from the
   bottom and oil is extracted from the top boundary. The right and the
   left boundary should be closed for water and oil fluxes. \\
-  Note, that the value has to be positive for outflow and negative for inflow.  
+  The Neumannn Boundary conditions are multiplied by the normal (pointing outwards), so an influx is negative, an outflux always positive. 
+  Such information can easily be found in the documentation of the functions (also look into base classes).
   Compile the main file by typing \texttt{make tutorial\_coupled} and
   run the model as explained above.
 

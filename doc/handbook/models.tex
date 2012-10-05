@@ -195,11 +195,13 @@ subdirectories of \texttt{dumux/boxmodels} of the \Dumux distribution.
 %
 The basic idea the so-called decoupled models have in common is to reformulate the equations of multi-phase flow (e.g. Eq. \ref{A3:eqmass1}) into one equation for pressure and equations for phase-/component-/etc. transport. The pressure equation is the sum of the mass balance equations and thus considers the total flow of the fluid system. The new set of equations is considered as decoupled (or weakly coupled) and can thus be solved sequentially. The most popular decoupled model is the so-called fractional flow formulation for two-phase flow which is usually implemented applying an IMplicit Pressure Explicit Saturation algorithm (IMPES).
 In comparison to a fully implicit model, the decoupled structure allows the use of different discretization methods for the different equations. The standard method used in the decoupled models is a cell centered finite volume method. Further schemes, so far only available for the two-phase pressure equation, are cell centered finite volumes with multi-point flux approximation (MPFA O-method) and mimetic finite differences.
+
+An h-adaptive implementation of both \nameref{ch:2p_decoupled} and \nameref{ch:2p2c_decoupled} is provided for two dimensions.
 %
 \subsubsection{The one-phase model}
 \input{ModelDescriptions/1pdecoupledmodel}
 
-\subsubsection{The two-phase model}
+\subsubsection{The two-phase model}\label{ch:2p_decoupled}
 
 \paragraph{Pressure model}
 \input{ModelDescriptions/2pdecoupledpressuremodel}
@@ -207,7 +209,7 @@ In comparison to a fully implicit model, the decoupled structure allows the use 
 \paragraph{Saturation model}
 \input{ModelDescriptions/2pdecoupledsaturationmodel}
 
-\subsubsection{The two-phase, two-component model}
+\subsubsection{The two-phase, two-component model}\label{ch:2p2c_decoupled}
 \input{ModelDescriptions/decoupled2p2c}
 
 %%% Local Variables: 
