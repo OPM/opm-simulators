@@ -197,10 +197,18 @@ public:
     }
 
     /*!
-     * \copydoc H2ON2::init(Scalar, Scalar, int, Scalar, Scalar, int)
+     * \brief Initialize the fluid system's static parameters using
+     *        problem specific temperature and pressure ranges
+     *
+     * \param tempMin The minimum temperature used for tabulation of water [K]
+     * \param tempMax The maximum temperature used for tabulation of water [K]
+     * \param nTemp The number of ticks on the temperature axis of the  table of water
+     * \param pressMin The minimum pressure used for tabulation of water [Pa]
+     * \param pressMax The maximum pressure used for tabulation of water [Pa]
+     * \param nPress The number of ticks on the pressure axis of the  table of water
      */
-    static void init(Scalar startTemp, Scalar endTemp, int tempSteps,
-                     Scalar startPressure, Scalar endPressure, int pressureSteps)
+    static void init(Scalar tempMin, Scalar tempMax, int nTemp,
+                     Scalar pressMin, Scalar pressMax, int nPress)
     {
         int myRank = 0;
 #if HAVE_MPI
@@ -209,8 +217,8 @@ public:
         if (H2O::isTabulated) {
             if (myRank == 0)
                 std::cout << "Initializing tables for the pure-water properties.\n";
-            H2O_Tabulated::init(startTemp, endTemp, tempSteps,
-                                startPressure, endPressure, pressureSteps);
+            H2O_Tabulated::init(tempMin, tempMax, nTemp,
+                                pressMin, pressMax, nPress);
         }
 
         // set the salinity of brine to the one used by the CO2 tables
@@ -219,8 +227,8 @@ public:
         if (Brine::isTabulated) {
             if (myRank == 0)
                 std::cout << "Initializing tables for the brine fluid properties.\n";
-            Brine_Tabulated::init(startTemp, endTemp, tempSteps,
-                                  startPressure, endPressure, pressureSteps);
+            Brine_Tabulated::init(tempMin, tempMax, nTemp,
+                                  pressMin, pressMax, nPress);
         }
     }
 

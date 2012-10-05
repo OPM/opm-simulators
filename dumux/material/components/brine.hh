@@ -109,8 +109,8 @@ public:
      * - Michaelides 1981
      * - Daubert & Danner 1989
      */
-    static const Scalar liquidEnthalpy(Scalar T,
-                                       Scalar p)
+    static const Scalar liquidEnthalpy(Scalar temperature,
+                                       Scalar pressure)
     {
         /*Numerical coefficents from PALLISER*/
         static const Scalar f[] = {
@@ -131,7 +131,7 @@ public:
         int i, j;
         Scalar hw;
 
-        theta = T - 273.15;
+        theta = temperature - 273.15;
 
         Scalar S = salinity;
         S_lSAT = f[0] + f[1]*theta + f[2]*std::pow(theta,2) + f[3]*std::pow(theta,3);
@@ -140,11 +140,11 @@ public:
             S = S_lSAT;
         }
 
-        hw = H2O::liquidEnthalpy(T, p)/1E3; /* kJ/kg */
+        hw = H2O::liquidEnthalpy(temperature, pressure)/1E3; /* kJ/kg */
 
         /*DAUBERT and DANNER*/
-        /*U=*/h_NaCl = (3.6710E4*T + 0.5*(6.2770E1)*T*T - ((6.6670E-2)/3)*T*T*T
-                        +((2.8000E-5)/4)*std::pow(T,4))/(58.44E3)- 2.045698e+02; /* kJ/kg */
+        /*U=*/h_NaCl = (3.6710E4*temperature + 0.5*(6.2770E1)*temperature*temperature - ((6.6670E-2)/3)*temperature*temperature*temperature
+                        +((2.8000E-5)/4)*std::pow(temperature,4))/(58.44E3)- 2.045698e+02; /* kJ/kg */
 
         m = (1E3/58.44)*(S/(1-S));
         i = 0;

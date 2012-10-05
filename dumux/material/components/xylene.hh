@@ -150,13 +150,9 @@ public:
 
 
     /*!
-     * \brief Specific enthalpy of liquid xylene \f$\mathrm{[J/kg]}\f$.
-     *
-     * \param temp temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \copydoc Component::liquidEnthalpy
      */
-    static Scalar liquidEnthalpy(Scalar temp,
-                                 Scalar pressure)
+    static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     {
     	// Gauss quadrature rule:
     	// Interval: [0K; temperature (K)]
@@ -169,8 +165,8 @@ public:
     	//				= 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
 
     	// enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
-        return 0.5*temp*(spHeatCapLiquidPhase(0.2113*temp,pressure)
-                          + spHeatCapLiquidPhase(0.7887*temp,pressure));
+        return 0.5*temperature*(spHeatCapLiquidPhase(0.2113*temperature,pressure)
+                          + spHeatCapLiquidPhase(0.7887*temperature,pressure));
     }
 
     /*!
@@ -178,11 +174,11 @@ public:
      *
      * source : Reid et al. (fourth edition): Chen method (chap. 7-11, Delta H_v = Delta H_v (T) according to chap. 7-12)
      *
-     * \param temp temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar heatVap(Scalar temperature,
-    				const Scalar pressure)
+                          Scalar pressure)
     {
         temperature = std::min(temperature, criticalTemperature()); // regularization
         temperature = std::max(temperature, 0.0); // regularization
@@ -205,13 +201,10 @@ public:
     }
 
     /*!
-     * \brief Specific enthalpy of xylene vapor \f$\mathrm{[J/kg]}\f$.
+     * \copydoc Component::gasEnthalpy
      *
-     *		This relation is true on the vapor pressure curve, i.e. as long
-     *		as there is a liquid phase present.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * The relation used here is true on the vapor pressure curve, i.e. as long
+     * as there is a liquid phase present.
      */
     static Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
     {
@@ -219,10 +212,7 @@ public:
     }
 
     /*!
-     * \brief The density \f$\mathrm{[kg/m^3]}\f$ of xylene gas at a given pressure and temperature.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \copydoc Component::gasDensity
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -268,10 +258,7 @@ public:
     }
 
     /*!
-     * \brief The density of pure xylene at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \copydoc Component::liquidDensity
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -279,36 +266,32 @@ public:
     }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be compressible
+     * \copydoc Component::gasIsCompressible
      */
     static constexpr bool gasIsCompressible()
     { return true; }
 
     /*!
-     * \brief Returns true iff the gas phase is assumed to be ideal
+     * \copydoc Component::gasIsIdeal
      */
     static constexpr bool gasIsIdeal()
     { return true; }
 
     /*!
-     * \brief Returns true iff the liquid phase is assumed to be compressible
+     * \copydoc Component::liquidIsCompressible
      */
     static constexpr bool liquidIsCompressible()
     { return false; }
 
     /*!
-     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of xylene vapor
-     *
-     * \param temp temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     * \param regularize defines, if the functions is regularized or not, set to true by default
+     * \copydoc Component::gasViscosity
      */
-    static Scalar gasViscosity(Scalar temp, Scalar pressure, bool regularize=true)
+    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
-        temp = std::min(temp, 500.0); // regularization
-        temp = std::max(temp, 250.0); // regularization
+        temperature = std::min(temperature, 500.0); // regularization
+        temperature = std::max(temperature, 250.0); // regularization
 
-        const Scalar Tr = std::max(temp/criticalTemperature(), 1e-10);
+        const Scalar Tr = std::max(temperature/criticalTemperature(), 1e-10);
         const Scalar Fp0 = 1.0;
         const Scalar xi = 0.004623;
         const Scalar eta_xi = Fp0*(0.807*std::pow(Tr, 0.618)
@@ -322,22 +305,19 @@ public:
     }
 
     /*!
-     * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure xylene.
-     *
-     * \param temp temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \copydoc Component::liquidViscosity
      */
-    static Scalar liquidViscosity(Scalar temp, Scalar pressure)
+    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
-        temp = std::min(temp, 500.0); // regularization
-        temp = std::max(temp, 250.0); // regularization
+        temperature = std::min(temperature, 500.0); // regularization
+        temperature = std::max(temperature, 250.0); // regularization
 
         const Scalar A = -3.82;
         const Scalar B = 1027.0;
         const Scalar C = -6.38e-4;
         const Scalar D = 4.52e-7;
 
-        Scalar r = std::exp(A + B/temp + C*temp + D*temp*temp); // in [cP]
+        Scalar r = std::exp(A + B/temperature + C*temperature + D*temperature*temperature); // in [cP]
         r *= 1.0e-3; // in [Pa s]
 
         return r; // [Pa s]

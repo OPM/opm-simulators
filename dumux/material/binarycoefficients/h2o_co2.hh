@@ -64,7 +64,7 @@ public:
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for molecular water and CO2.
      *
-     * \copybody fullerMethod()
+     * To calculate the values, the \ref fullerMethod is used.
      */
     template <class Scalar>
     static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)

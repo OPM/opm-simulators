@@ -130,15 +130,6 @@ public:
     }
 
     /*!
-     * \copydoc Component::gasPressure
-     */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
-    {
-        // Assume an ideal gas
-        return IdealGas::pressure(temperature, density/molarMass());
-    }
-
-    /*!
      * \copydoc Component::gasViscosity
      *
      * See:
