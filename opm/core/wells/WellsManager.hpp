@@ -41,7 +41,14 @@ namespace Opm
     {
     public:
 	/// Default constructor -- no wells.
-	WellsManager();
+    WellsManager();
+
+    /// Construct from existing wells object.
+    /// WellsManager is not properly initialised in the sense that the logic to
+    /// manage control switching does not exist.
+    ///
+    /// @param[in] W Existing wells object.
+    WellsManager(struct Wells* W);
 
 	/// Construct from input deck and grid.
 	/// The permeability argument may be zero if the input contain
