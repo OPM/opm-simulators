@@ -628,7 +628,10 @@ namespace Opm
 	    solveSingleCellBracketing(cell);
 	    break;
 	case Newton:
-	    solveSingleCellNewton(cell);
+	    solveSingleCellNewton(cell, true);
+	    break;
+	case NewtonC:
+	    solveSingleCellNewton(cell, false);
 	    break;
 	case Gradient:
 	    solveSingleCellGradient(cell);
@@ -828,7 +831,8 @@ namespace Opm
         }
     }
     
-    void TransportModelCompressiblePolymer::solveSingleCellNewton(int cell)
+    void TransportModelCompressiblePolymer::solveSingleCellNewton(int cell, bool use_sc, 
+                                                                  bool use_explicit_step)
     {
         const int max_iters_split = maxit_;
 	int iters_used_split = 0;
@@ -845,46 +849,85 @@ namespace Opm
  	    fractionalflow_[cell] = ff;
 	    mc_[cell] = mc;
 	    return;
-	} else  if (0.99 < x[0]) {
-            // x[0] = 0.5; 
-            // x[1] = polyprops_.cMax()/2.0;
-            // res_eq.computeResidual(x, res, mc, ff);
+	} 
+
+        if (use_explicit_step) {
+            // x is updated to an explicit step.
+	    x[0] = saturation_[cell]-res[0];
+	    if ((x[0]>1) || (x[0]<0)) {
+                // If we are outside the allowed domain for s, we
+                // reset s to 0.5, which should not far from the
+                // inflexion point of the residual, that is, the point
+                // where Newton's method performs best.
+		x[0] = 0.5;
+	        x[1] = x[1];
+	    }
+	    if (x[0]>0) { 
+                x[1] =  concentration_[cell]*saturation_[cell]-res[1];
+                x[1] = x[1]/x[0];
+                if(x[1]> polyprops_.cMax()){
+                    x[1]= polyprops_.cMax()/2.0;		
+                }
+                if(x[1]<0){
+                    x[1]=0;
+                }
+	    } else {
+		x[1]=0;
+	    }	    	    
+	    res_eq.computeResidual(x, res, mc, ff);
 	}
 
         const double x_min[2] = { 0.0, 0.0 };
 	const double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
 	bool successfull_newton_step = true;
+
         // initialize x_new to avoid warning
 	double x_new[2] = {0.0, 0.0};
 	double res_new[2];
-	ResSOnCurve res_s_on_curve(res_eq);
-	ResCOnCurve res_c_on_curve(res_eq);
 
-        // We switch to s-sc variable
-        x[1] = x[0]*x[1];
-        // x_c will contain the s-c variable 
+        if (use_sc) {
+            // We switch to variables x[0] = s, x[1] = sc. 
+            x[1] = x[0]*x[1];
+        }
+
+        // x_c will contain the s-c  variable when use_sc = true
         double x_c[2];
+
+        // Variables to store the Jacobian.
+        double dFx_dx;
+        double dFx_dy;
+        double dFy_dx;
+        double dFy_dy;
 	
  	while ((norm(res) > tol_) &&
 	       (iters_used_split < max_iters_split)  &&
 	       successfull_newton_step) {
             double dres_s_dsdc[2];
             double dres_c_dsdc[2];
-            scToc(x, x_c);
-            double x_c_app[2];
-            // The computation of the Jacobi fails for s=0 (we have an undetermined fraction 0/0).
-            // When s is close to zero we replace x_c with x_c_app.
-            x_c_app[1] = x_c[1];
-            if (x_c[0] < 1e-2*tol_) {
-                x_c_app[0] = 1e-2*tol_;
+            if (use_sc) {
+                // Convert from (s, c) to (s, sc) variables.
+                scToc(x, x_c);
+                double x_c_app[2];
+                // The computation of the Jacobi fails for s=0 (we have an undetermined fraction 0/0).
+                // When s is close to zero we replace x_c with x_c_app as defined now.
+                x_c_app[1] = x_c[1];
+                if (x_c[0] < 1e-2*tol_) {
+                    x_c_app[0] = 1e-2*tol_;
+                } else {
+                    x_c_app[0] = x_c[0];
+                }
+                res_eq.computeJacobiRes(x_c_app, dres_s_dsdc, dres_c_dsdc);
+                dFx_dx = (dres_s_dsdc[0]-x_c_app[1]*dres_s_dsdc[1]);
+                dFx_dy = (dres_s_dsdc[1]/x_c_app[0]);
+                dFy_dx = (dres_c_dsdc[0]-x_c_app[1]*dres_c_dsdc[1]);
+                dFy_dy = (dres_c_dsdc[1]/x_c_app[0]);
             } else {
-                x_c_app[0] = x_c[0];
+                res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
+                dFx_dx= dres_s_dsdc[0];
+		dFx_dy= dres_s_dsdc[1];
+		dFy_dx= dres_c_dsdc[0];
+		dFy_dy= dres_c_dsdc[1];
             }
-            res_eq.computeJacobiRes(x_c_app, dres_s_dsdc, dres_c_dsdc);
-            double dFx_dx = (dres_s_dsdc[0]-x_c_app[1]*dres_s_dsdc[1]);
-            double dFx_dy = (dres_s_dsdc[1]/x_c_app[0]);
-            double dFy_dx = (dres_c_dsdc[0]-x_c_app[1]*dres_c_dsdc[1]);
-            double dFy_dy = (dres_c_dsdc[1]/x_c_app[0]);
             double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
             double alpha = 1.0;
             int max_lin_it = 100;
@@ -894,18 +937,26 @@ namespace Opm
             while((norm(res_new)>norm(res)) && (lin_it<max_lin_it)) {
                 x_new[0] = x[0] - alpha*(res[0]*dFy_dy - res[1]*dFx_dy)/det;
                 x_new[1] = x[1] - alpha*(res[1]*dFx_dx - res[0]*dFy_dx)/det;
-                check_interval(x_min, x_max, x_new);
-                scToc(x_new, x_c);
-                res_eq.computeResidual(x_c, res_new, mc, ff);
+                if (use_sc) {
+                    scToc(x_new, x_c);
+                    check_interval(x_min, x_max, x_c);
+                    res_eq.computeResidual(x_c, res_new, mc, ff);
+                } else {
+                    check_interval(x_min, x_max, x);
+                    res_eq.computeResidual(x, res_new, mc, ff);
+                }
                 alpha = alpha/2.0;
                 lin_it = lin_it + 1;
             }
             if (lin_it>=max_lin_it) {
                 successfull_newton_step = false;
             } else  {
-                scToc(x_new, x_c);
-                x[0] = x_c[0];
-                x[1] = x_c[1];
+                if (use_sc) {
+                    scToc(x_new, x);
+                } else {
+                    x[0] = x_new[0];
+                    x[1] = x_new[1];
+                }
                 res[0] = res_new[0];
                 res[1] = res_new[1];
                 iters_used_split += 1;

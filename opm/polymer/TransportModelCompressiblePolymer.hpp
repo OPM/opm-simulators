@@ -46,7 +46,7 @@ namespace Opm
     {
     public:
 
-	enum SingleCellMethod { Bracketing, Newton, Gradient, NewtonSimpleSC, NewtonSimpleC};
+	enum SingleCellMethod { Bracketing, Newton, NewtonC, Gradient};
         enum GradientMethod { Analytic, FinDif }; // Analytic is chosen (hard-coded)
 
 	/// Construct solver.
@@ -194,10 +194,8 @@ namespace Opm
 	virtual void solveSingleCell(const int cell);
 	virtual void solveMultiCell(const int num_cells, const int* cells);
 	void solveSingleCellBracketing(int cell);
-	void solveSingleCellNewton(int cell);
+	void solveSingleCellNewton(int cell, bool use_sc, bool use_explicit_step = false);
 	void solveSingleCellGradient(int cell);
-	void solveSingleCellNewtonSimple(int cell,bool use_sc);
-
         void solveSingleCellGravity(const std::vector<int>& cells,
                                     const int pos,
                                     const double* gravflux);
