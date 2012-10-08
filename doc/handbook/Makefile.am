@@ -46,6 +46,6 @@ else
 doc:
 	echo -n ""
 endif
-
+EXTRA_DIST= dumux-handbook.pdf
 include $(top_srcdir)/am/global-rules
 include $(top_srcdir)/am/latex
