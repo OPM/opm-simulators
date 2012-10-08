@@ -42,7 +42,7 @@ public:
     double c0;
     double cmax0;
     double influx;  // B_i sum_j b_j min(v_ij, 0)*f(s_j) - B_i q_w
-    double influx_polymer;   
+    double influx_polymer;
     double outflux; // sum_j max(v_ij, 0) - B_i q
     double porevolume0;
     double porevolume;
@@ -66,7 +66,7 @@ public:
     void computeGradientResC(const double* x, double* res, double* gradient) const;
     void computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const;
 
-    
+
 
 private:
     void computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
@@ -119,7 +119,7 @@ namespace
 
     double norm(double* res)
     {
-	return std::max(std::abs(res[0]), std::abs(res[1]));
+        return std::max(std::abs(res[0]), std::abs(res[1]));
     }
 
     // Define a piecewise linear curve along which we will look for zero of the "s" or "r" residual.
@@ -128,22 +128,22 @@ namespace
     // Then it joins in a straight line the point "end_point".
     class CurveInSCPlane{
     public:
-	CurveInSCPlane();
-	void setup(const double* x, const double* direction,
-		   const double* end_point, const double* x_min,
-		   const double* x_max, const double tol,
+        CurveInSCPlane();
+        void setup(const double* x, const double* direction,
+                   const double* end_point, const double* x_min,
+                   const double* x_max, const double tol,
                    double& t_max_out, double& t_out_out);
-	void computeXOfT(double*, const double) const;
+        void computeXOfT(double*, const double) const;
 
     private:
-	double direction_[2];
-	double end_point_[2];
-	double x_max_[2];
-	double x_min_[2];
-	double t_out_;
-	double t_max_; // t_max = t_out + 1
-	double x_out_[2];
-	double x_[2];
+        double direction_[2];
+        double end_point_[2];
+        double x_max_[2];
+        double x_min_[2];
+        double t_out_;
+        double t_max_; // t_max = t_out + 1
+        double x_out_[2];
+        double x_[2];
     };
 
 }
@@ -158,24 +158,24 @@ namespace Opm
                                                                          const SingleCellMethod method,
                                                                          const double tol,
                                                                          const int maxit)
-	: grid_(grid),
-	  props_(props),
-	  polyprops_(polyprops),
+        : grid_(grid),
+          props_(props),
+          polyprops_(polyprops),
           rock_comp_(rock_comp),
-	  darcyflux_(0),
+          darcyflux_(0),
           porevolume0_(0),
           porevolume_(0),
-	  source_(0),
-	  polymer_inflow_c_(0),
-	  dt_(0.0),
-	  tol_(tol),
-	  maxit_(maxit),
-	  method_(method),
-	  adhoc_safety_(1.1),
-	  concentration_(0),
-	  cmax_(0),
-	  fractionalflow_(grid.number_of_cells, -1.0),
-	  mc_(grid.number_of_cells, -1.0),
+          source_(0),
+          polymer_inflow_c_(0),
+          dt_(0.0),
+          tol_(tol),
+          maxit_(maxit),
+          method_(method),
+          adhoc_safety_(1.1),
+          concentration_(0),
+          cmax_(0),
+          fractionalflow_(grid.number_of_cells, -1.0),
+          mc_(grid.number_of_cells, -1.0),
           gravity_(0),
           mob_(2*grid.number_of_cells, -1.0),
           ia_upw_(grid.number_of_cells + 1, -1),
@@ -225,20 +225,20 @@ namespace Opm
                                                   std::vector<double>& concentration,
                                                   std::vector<double>& cmax)
     {
-	darcyflux_ = darcyflux;
+        darcyflux_ = darcyflux;
         porevolume0_ = porevolume0;
         porevolume_ = porevolume;
-	source_ = source;
-	dt_ = dt;
-	polymer_inflow_c_ = polymer_inflow_c;
+        source_ = source;
+        dt_ = dt;
+        polymer_inflow_c_ = polymer_inflow_c;
         toWaterSat(saturation, saturation_);
-	concentration_ = &concentration[0];
-	cmax_ = &cmax[0];
+        concentration_ = &concentration[0];
+        cmax_ = &cmax[0];
 
 #if PROFILING
         res_counts.clear();
 #endif
-        
+
         props_.viscosity(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &visc_[0], NULL);
         props_.matrix(grid_.number_of_cells, &initial_pressure[0], NULL, &allcells_[0], &A0_[0], NULL);
         props_.matrix(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &A_[0], NULL);
@@ -278,21 +278,21 @@ namespace Opm
     struct TransportModelCompressiblePolymer::ResidualS
     {
         TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
-	const double c_;
-	explicit ResidualS(TransportModelCompressiblePolymer::ResidualEquation& res_eq,
-			   const double c)
-	    : res_eq_(res_eq),
-	      c_(c)
-	{
-	}
+        const double c_;
+        explicit ResidualS(TransportModelCompressiblePolymer::ResidualEquation& res_eq,
+                           const double c)
+            : res_eq_(res_eq),
+              c_(c)
+        {
+        }
 
-	double operator()(double s) const
-	{
+        double operator()(double s) const
+        {
             double x[2];
             x[0] = s;
             x[1] = c_;
             return res_eq_.computeResidualS(x);
-	}
+        }
     };
 
     // Residual for concentration equation, single-cell implicit Euler transport
@@ -302,14 +302,14 @@ namespace Opm
     // Influxes are negative, outfluxes positive.
     struct TransportModelCompressiblePolymer::ResidualC
     {
-	mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
+        mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
         TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
-	explicit ResidualC(TransportModelCompressiblePolymer::ResidualEquation& res_eq)
-	    : res_eq_(res_eq)
-	{}
+        explicit ResidualC(TransportModelCompressiblePolymer::ResidualEquation& res_eq)
+            : res_eq_(res_eq)
+        {}
 
-	void computeBothResiduals(const double s_arg, const double c_arg, double& res_s, double& res_c, double& mc, double& ff) const
-	{
+        void computeBothResiduals(const double s_arg, const double c_arg, double& res_s, double& res_c, double& mc, double& ff) const
+        {
             double x[2];
             double res[2];
             x[0] = s_arg;
@@ -317,31 +317,31 @@ namespace Opm
             res_eq_.computeResidual(x, res, mc, ff);
             res_s = res[0];
             res_c = res[1];
-	}
+        }
 
-	double operator()(double c) const
-	{
-	    ResidualS res_s(res_eq_, c);
-	    int iters_used;
-	    // Solve for s first.
-	    // s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
-	    //     		    tm.maxit_, tm.tol_, iters_used);
-	    s = RootFinder::solve(res_s, res_eq_.s0, 0.0, 1.0,
+        double operator()(double c) const
+        {
+            ResidualS res_s(res_eq_, c);
+            int iters_used;
+            // Solve for s first.
+            // s = modifiedRegulaFalsi(res_s, std::max(tm.smin_[2*cell], dps), tm.smax_[2*cell],
+            //                      tm.maxit_, tm.tol_, iters_used);
+            s = RootFinder::solve(res_s, res_eq_.s0, 0.0, 1.0,
                                   res_eq_.tm.maxit_, res_eq_.tm.tol_, iters_used);
             double x[2];
             x[0] = s;
             x[1] = c;
             double res = res_eq_.computeResidualC(x);
 #ifdef EXTRA_DEBUG_OUTPUT
-	    std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
+            std::cout << "c = " << c << "    s = " << s << "    c-residual = " << res << std::endl;
 #endif
- 	    return res;
-	}
+            return res;
+        }
 
-	double lastSaturation() const
-	{
-	    return s;
-	}
+        double lastSaturation() const
+        {
+            return s;
+        }
     };
 
 
@@ -349,14 +349,14 @@ namespace Opm
     // value and the values of its derivatives.
 
     TransportModelCompressiblePolymer::ResidualEquation::ResidualEquation(TransportModelCompressiblePolymer& tmodel, int cell_index)
-	: tm(tmodel)
+        : tm(tmodel)
     {
-	gradient_method = Analytic;
-	cell    = cell_index;
+        gradient_method = Analytic;
+        cell    = cell_index;
         const int np = tm.props_.numPhases();
-	s0      = tm.saturation_[cell];
-	c0      = tm.concentration_[cell];
-	cmax0   = tm.cmax_[cell];
+        s0      = tm.saturation_[cell];
+        c0      = tm.concentration_[cell];
+        cmax0   = tm.cmax_[cell];
         double src_flux  = -tm.source_[cell];
         bool src_is_inflow = src_flux < 0.0;
         B_cell0 = 1.0/tm.A0_[np*np*cell + 0];
@@ -368,36 +368,36 @@ namespace Opm
         const double vol_cell = tm.grid_.cell_volumes[cell];
         porosity0 = porevolume0/vol_cell;
         porosity  = porevolume/vol_cell;
-	dtpv  = tm.dt_/porevolume; 
-	dps = tm.polyprops_.deadPoreVol();
-	rhor = tm.polyprops_.rockDensity();
+        dtpv  = tm.dt_/porevolume;
+        dps = tm.polyprops_.deadPoreVol();
+        rhor = tm.polyprops_.rockDensity();
         tm.polyprops_.adsorption(c0, cmax0, ads0);
         double mc;
         tm.computeMc(tm.polymer_inflow_c_[cell_index], mc);
-	influx_polymer = src_is_inflow ? src_flux*mc : 0.0;
-	for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
-	    int f = tm.grid_.cell_faces[i];
-	    double flux;
-	    int other;
-	    // Compute cell flux
-	    if (cell == tm.grid_.face_cells[2*f]) {
-		flux  = tm.darcyflux_[f];
-		other = tm.grid_.face_cells[2*f+1];
-	    } else {
-		flux  =-tm.darcyflux_[f];
-		other = tm.grid_.face_cells[2*f];
-	    }
-	    // Add flux to influx or outflux, if interior.
-	    if (other != -1) {
-		if (flux < 0.0) {
-		    const double b_face =tm.A_[np*np*other+ 0];
+        influx_polymer = src_is_inflow ? src_flux*mc : 0.0;
+        for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
+            int f = tm.grid_.cell_faces[i];
+            double flux;
+            int other;
+            // Compute cell flux
+            if (cell == tm.grid_.face_cells[2*f]) {
+                flux  = tm.darcyflux_[f];
+                other = tm.grid_.face_cells[2*f+1];
+            } else {
+                flux  =-tm.darcyflux_[f];
+                other = tm.grid_.face_cells[2*f];
+            }
+            // Add flux to influx or outflux, if interior.
+            if (other != -1) {
+                if (flux < 0.0) {
+                    const double b_face =tm.A_[np*np*other+ 0];
                     influx  += B_cell*b_face*flux*tm.fractionalflow_[other];
-		    influx_polymer += flux*tm.fractionalflow_[other]*tm.mc_[other];
-		} else {
-		    outflux += flux; // Because B_cell*b_face = 1 for outflow faces
-		}
-	    }
-	}
+                    influx_polymer += flux*tm.fractionalflow_[other]*tm.mc_[other];
+                } else {
+                    outflux += flux; // Because B_cell*b_face = 1 for outflow faces
+                }
+            }
+        }
     }
 
 
@@ -538,12 +538,12 @@ namespace Opm
             }
         }
 
-	if ((if_dres_c_dsdc || if_dres_s_dsdc) && gradient_method == FinDif) {
-	    double epsi = 1e-8;
-	    double res_epsi[2];
+        if ((if_dres_c_dsdc || if_dres_s_dsdc) && gradient_method == FinDif) {
+            double epsi = 1e-8;
+            double res_epsi[2];
             double res_0[2];
-	    double x_epsi[2];
-	    computeResidual(x, res_0);
+            double x_epsi[2];
+            computeResidual(x, res_0);
             if (if_dres_s_dsdc) {
                 x_epsi[0] = x[0] + epsi;
                 x_epsi[1] = x[1];
@@ -572,11 +572,11 @@ namespace Opm
     class TransportModelCompressiblePolymer::ResSOnCurve
     {
     public:
-	ResSOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq);
-	double operator()(const double t) const;
-	CurveInSCPlane curve;
+        ResSOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq);
+        double operator()(const double t) const;
+        CurveInSCPlane curve;
     private:
-	const TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
+        const TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
     };
 
     // Compute the "c" residual along the curve "curve" for a given residual equation "res_eq".
@@ -584,89 +584,89 @@ namespace Opm
     class TransportModelCompressiblePolymer::ResCOnCurve
     {
     public:
-	ResCOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq);
-	double operator()(const double t) const;
-	CurveInSCPlane curve;
+        ResCOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq);
+        double operator()(const double t) const;
+        CurveInSCPlane curve;
     private:
-	const TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
+        const TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
     };
 
     TransportModelCompressiblePolymer::ResSOnCurve::ResSOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq)
-	: res_eq_(res_eq)
+        : res_eq_(res_eq)
     {
     }
 
     double TransportModelCompressiblePolymer::ResSOnCurve::operator()(const double t) const
     {
-	double x_of_t[2];
+        double x_of_t[2];
         double x_c[2];
-	curve.computeXOfT(x_of_t, t);
+        curve.computeXOfT(x_of_t, t);
         res_eq_.tm.scToc(x_of_t, x_c);
-	return res_eq_.computeResidualS(x_c);
+        return res_eq_.computeResidualS(x_c);
     }
 
     TransportModelCompressiblePolymer::ResCOnCurve::ResCOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq)
-	: res_eq_(res_eq)
+        : res_eq_(res_eq)
     {
     }
 
     double TransportModelCompressiblePolymer::ResCOnCurve::operator()(const double t) const
     {
-	double x_of_t[2];
+        double x_of_t[2];
         double x_c[2];
-	curve.computeXOfT(x_of_t, t);
+        curve.computeXOfT(x_of_t, t);
         res_eq_.tm.scToc(x_of_t, x_c);
-	return res_eq_.computeResidualC(x_c);
+        return res_eq_.computeResidualC(x_c);
     }
 
 
 
     void TransportModelCompressiblePolymer::solveSingleCell(const int cell)
     {
-	switch (method_) {
-	case Bracketing:
-	    solveSingleCellBracketing(cell);
-	    break;
-	case Newton:
-	    solveSingleCellNewton(cell, true);
-	    break;
-	case NewtonC:
-	    solveSingleCellNewton(cell, false);
-	    break;
-	case Gradient:
-	    solveSingleCellGradient(cell);
-	    break;
-	default:
-	    THROW("Unknown method " << method_);
-	}
+        switch (method_) {
+        case Bracketing:
+            solveSingleCellBracketing(cell);
+            break;
+        case Newton:
+            solveSingleCellNewton(cell, true);
+            break;
+        case NewtonC:
+            solveSingleCellNewton(cell, false);
+            break;
+        case Gradient:
+            solveSingleCellGradient(cell);
+            break;
+        default:
+            THROW("Unknown method " << method_);
+        }
     }
 
 
     void TransportModelCompressiblePolymer::solveSingleCellBracketing(int cell)
     {
-        
-	ResidualEquation res_eq(*this, cell);
-	ResidualC res(res_eq);
-	const double a = 0.0;
-	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
-	int iters_used;
 
-	// Check if current state is an acceptable solution.
-	double res_sc[2];
-	double mc, ff;
-	res.computeBothResiduals(saturation_[cell], concentration_[cell], res_sc[0], res_sc[1], mc, ff);
-	if (norm(res_sc) < tol_) {
-	    fractionalflow_[cell] = ff;
-	    mc_[cell] = mc;
-	    return;
-	}
+        ResidualEquation res_eq(*this, cell);
+        ResidualC res(res_eq);
+        const double a = 0.0;
+        const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
+        int iters_used;
 
-	concentration_[cell] = RootFinder::solve(res, a, b, maxit_, tol_, iters_used);
-	cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
-	saturation_[cell] = res.lastSaturation();
-	fracFlow(saturation_[cell], concentration_[cell], cmax_[cell], cell,
+        // Check if current state is an acceptable solution.
+        double res_sc[2];
+        double mc, ff;
+        res.computeBothResiduals(saturation_[cell], concentration_[cell], res_sc[0], res_sc[1], mc, ff);
+        if (norm(res_sc) < tol_) {
+            fractionalflow_[cell] = ff;
+            mc_[cell] = mc;
+            return;
+        }
+
+        concentration_[cell] = RootFinder::solve(res, a, b, maxit_, tol_, iters_used);
+        cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+        saturation_[cell] = res.lastSaturation();
+        fracFlow(saturation_[cell], concentration_[cell], cmax_[cell], cell,
                  fractionalflow_[cell]);
-	computeMc(concentration_[cell], mc_[cell]);
+        computeMc(concentration_[cell], mc_[cell]);
     }
 
 
@@ -676,43 +676,43 @@ namespace Opm
     // curve. In these cases, we can use a robust 1d solver.
     void TransportModelCompressiblePolymer::solveSingleCellGradient(int cell)
     {
-	int iters_used_falsi = 0;
-	const int max_iters_split = maxit_;
-	int iters_used_split = 0;
+        int iters_used_falsi = 0;
+        const int max_iters_split = maxit_;
+        int iters_used_split = 0;
 
-	// Check if current state is an acceptable solution.
-	ResidualEquation res_eq(*this, cell);
-	double x[2] = {saturation_[cell], saturation_[cell]*concentration_[cell]};
-	double res[2];
-	double mc;
-	double ff;
+        // Check if current state is an acceptable solution.
+        ResidualEquation res_eq(*this, cell);
+        double x[2] = {saturation_[cell], saturation_[cell]*concentration_[cell]};
+        double res[2];
+        double mc;
+        double ff;
         double x_c[2];
         scToc(x, x_c);
-	res_eq.computeResidual(x_c, res, mc, ff);
-	if (norm(res) <= tol_) {
-	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
- 	    fractionalflow_[cell] = ff;
-	    mc_[cell] = mc;
-	    return;
-	} 
+        res_eq.computeResidual(x_c, res, mc, ff);
+        if (norm(res) <= tol_) {
+            cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+            fractionalflow_[cell] = ff;
+            mc_[cell] = mc;
+            return;
+        }
 
         double x_min[2] = { 0.0, 0.0 };
-	double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
+        double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
         double x_min_res_s[2] = { x_min[0], x_min[1] };
         double x_max_res_s[2] = { x_max[0], x_min[0] };
         double x_min_res_sc[2] = { x_min[0], x_min[1] };
         double x_max_res_sc[2] = { x_max[0], x_max[1] };
-	double t;
-	double t_max;
-	double t_out;
-	double direction[2];
-	double end_point[2];
+        double t;
+        double t_max;
+        double t_out;
+        double direction[2];
+        double end_point[2];
         double gradient[2];
-	ResSOnCurve res_s_on_curve(res_eq);
-	ResCOnCurve res_c_on_curve(res_eq);
-	bool if_res_s;
+        ResSOnCurve res_s_on_curve(res_eq);
+        ResCOnCurve res_c_on_curve(res_eq);
+        bool if_res_s;
 
- 	while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
+        while ((norm(res) > tol_) && (iters_used_split < max_iters_split)) {
             if (std::abs(res[0]) < std::abs(res[1])) {
                 if (res[0] < -tol_) {
                     direction[0] = x_max_res_s[0] - x[0];
@@ -815,7 +815,7 @@ namespace Opm
             res_eq.computeResidual(x_c, res, mc, ff);
             iters_used_split += 1;
         }
-	    
+
 
 
         if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
@@ -830,63 +830,63 @@ namespace Opm
             mc_[cell] = mc;
         }
     }
-    
-    void TransportModelCompressiblePolymer::solveSingleCellNewton(int cell, bool use_sc, 
+
+    void TransportModelCompressiblePolymer::solveSingleCellNewton(int cell, bool use_sc,
                                                                   bool use_explicit_step)
     {
         const int max_iters_split = maxit_;
-	int iters_used_split = 0;
+        int iters_used_split = 0;
 
-	// Check if current state is an acceptable solution.
-	ResidualEquation res_eq(*this, cell);
-	double x[2] = {saturation_[cell], concentration_[cell]};
-	double res[2];
-	double mc;
-	double ff;
-	res_eq.computeResidual(x, res, mc, ff);
-	if (norm(res) <= tol_) {
-	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
- 	    fractionalflow_[cell] = ff;
-	    mc_[cell] = mc;
-	    return;
-	} 
+        // Check if current state is an acceptable solution.
+        ResidualEquation res_eq(*this, cell);
+        double x[2] = {saturation_[cell], concentration_[cell]};
+        double res[2];
+        double mc;
+        double ff;
+        res_eq.computeResidual(x, res, mc, ff);
+        if (norm(res) <= tol_) {
+            cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+            fractionalflow_[cell] = ff;
+            mc_[cell] = mc;
+            return;
+        }
 
         if (use_explicit_step) {
             // x is updated to an explicit step.
-	    x[0] = saturation_[cell]-res[0];
-	    if ((x[0]>1) || (x[0]<0)) {
+            x[0] = saturation_[cell]-res[0];
+            if ((x[0]>1) || (x[0]<0)) {
                 // If we are outside the allowed domain for s, we
                 // reset s to 0.5, which should not far from the
                 // inflexion point of the residual, that is, the point
                 // where Newton's method performs best.
-		x[0] = 0.5;
-	        x[1] = x[1];
-	    }
-	    if (x[0]>0) { 
+                x[0] = 0.5;
+                x[1] = x[1];
+            }
+            if (x[0]>0) {
                 x[1] =  concentration_[cell]*saturation_[cell]-res[1];
                 x[1] = x[1]/x[0];
                 if(x[1]> polyprops_.cMax()){
-                    x[1]= polyprops_.cMax()/2.0;		
+                    x[1]= polyprops_.cMax()/2.0;
                 }
                 if(x[1]<0){
                     x[1]=0;
                 }
-	    } else {
-		x[1]=0;
-	    }	    	    
-	    res_eq.computeResidual(x, res, mc, ff);
-	}
+            } else {
+                x[1]=0;
+            }
+            res_eq.computeResidual(x, res, mc, ff);
+        }
 
         const double x_min[2] = { 0.0, 0.0 };
-	const double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
-	bool successfull_newton_step = true;
+        const double x_max[2] = { 1.0, polyprops_.cMax()*adhoc_safety_ };
+        bool successfull_newton_step = true;
 
         // initialize x_new to avoid warning
-	double x_new[2] = {0.0, 0.0};
-	double res_new[2];
+        double x_new[2] = {0.0, 0.0};
+        double res_new[2];
 
         if (use_sc) {
-            // We switch to variables x[0] = s, x[1] = sc. 
+            // We switch to variables x[0] = s, x[1] = sc.
             x[1] = x[0]*x[1];
         }
 
@@ -898,10 +898,10 @@ namespace Opm
         double dFx_dy;
         double dFy_dx;
         double dFy_dy;
-	
- 	while ((norm(res) > tol_) &&
-	       (iters_used_split < max_iters_split)  &&
-	       successfull_newton_step) {
+
+        while ((norm(res) > tol_) &&
+               (iters_used_split < max_iters_split)  &&
+               successfull_newton_step) {
             double dres_s_dsdc[2];
             double dres_c_dsdc[2];
             if (use_sc) {
@@ -924,9 +924,9 @@ namespace Opm
             } else {
                 res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
                 dFx_dx= dres_s_dsdc[0];
-		dFx_dy= dres_s_dsdc[1];
-		dFy_dx= dres_c_dsdc[0];
-		dFy_dy= dres_c_dsdc[1];
+                dFx_dy= dres_s_dsdc[1];
+                dFy_dx= dres_c_dsdc[0];
+                dFy_dy= dres_c_dsdc[1];
             }
             double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
             double alpha = 1.0;
@@ -960,78 +960,78 @@ namespace Opm
                 res[0] = res_new[0];
                 res[1] = res_new[1];
                 iters_used_split += 1;
-                successfull_newton_step = true;;		    
+                successfull_newton_step = true;;
             }
-	}
-		
-	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
-	    MESSAGE("Newton for single cell did not work in cell number " << cell);
-	    solveSingleCellBracketing(cell);
-	} else {
-	    concentration_[cell] = x[1];
-	    cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
-	    saturation_[cell] = x[0];
-	    fractionalflow_[cell] = ff;
-	    mc_[cell] = mc;
-	}
+        }
+
+        if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
+            MESSAGE("Newton for single cell did not work in cell number " << cell);
+            solveSingleCellBracketing(cell);
+        } else {
+            concentration_[cell] = x[1];
+            cmax_[cell] = std::max(cmax_[cell], concentration_[cell]);
+            saturation_[cell] = x[0];
+            fractionalflow_[cell] = ff;
+            mc_[cell] = mc;
+        }
     }
 
 
     void TransportModelCompressiblePolymer::solveMultiCell(const int num_cells, const int* cells)
     {
-	double max_s_change = 0.0;
-	double max_c_change = 0.0;
-	int num_iters = 0;
-	// Must store state variables before we start.
-	std::vector<double> s0(num_cells);
-	std::vector<double> c0(num_cells);
-	std::vector<double> cmax0(num_cells);
-	// Must set initial fractional flows etc. before we start.
-	for (int i = 0; i < num_cells; ++i) {
-	    const int cell = cells[i];
-	    fracFlow(saturation_[cell], concentration_[cell], cmax_[cell],
+        double max_s_change = 0.0;
+        double max_c_change = 0.0;
+        int num_iters = 0;
+        // Must store state variables before we start.
+        std::vector<double> s0(num_cells);
+        std::vector<double> c0(num_cells);
+        std::vector<double> cmax0(num_cells);
+        // Must set initial fractional flows etc. before we start.
+        for (int i = 0; i < num_cells; ++i) {
+            const int cell = cells[i];
+            fracFlow(saturation_[cell], concentration_[cell], cmax_[cell],
                      cell, fractionalflow_[cell]);
             computeMc(concentration_[cell], mc_[cell]);
-	    s0[i] = saturation_[cell];
-	    c0[i] = concentration_[cell];
-	    cmax0[i] = cmax_[i];
-	}
-	do {
-	    // int max_s_change_cell = -1;
-	    // int max_c_change_cell = -1;
-	    max_s_change = 0.0;
-	    max_c_change = 0.0;
-	    for (int i = 0; i < num_cells; ++i) {
-		const int cell = cells[i];
-		const double old_s = saturation_[cell];
-		const double old_c = concentration_[cell];
-		saturation_[cell] = s0[i];
-		concentration_[cell] = c0[i];
-		cmax_[cell] = cmax0[i];
-		solveSingleCell(cell);
-		// std::cout << "cell = " << cell << "    delta s = " << saturation_[cell] - old_s << std::endl;
-		// if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
-		//     max_s_change_cell = cell;
-		// }
-		// if (max_c_change < std::fabs(concentration_[cell] - old_c)) {
-		//     max_c_change_cell = cell;
-		// }
-		max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
-		max_c_change = std::max(max_c_change, std::fabs(concentration_[cell] - old_c));
-	    }
-	    // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change
-	    // 	      << "    in cell " << max_change_cell << std::endl;
-	} while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
-	if (max_s_change > tol_) {
-	    THROW("In solveMultiCell(), we did not converge after "
-		  << num_iters << " iterations. Delta s = " << max_s_change);
-	}
-	if (max_c_change > tol_) {
-	    THROW("In solveMultiCell(), we did not converge after "
-		  << num_iters << " iterations. Delta c = " << max_c_change);
-	}
-	std::cout << "Solved " << num_cells << " cell multicell problem in "
-		  << num_iters << " iterations." << std::endl;
+            s0[i] = saturation_[cell];
+            c0[i] = concentration_[cell];
+            cmax0[i] = cmax_[i];
+        }
+        do {
+            // int max_s_change_cell = -1;
+            // int max_c_change_cell = -1;
+            max_s_change = 0.0;
+            max_c_change = 0.0;
+            for (int i = 0; i < num_cells; ++i) {
+                const int cell = cells[i];
+                const double old_s = saturation_[cell];
+                const double old_c = concentration_[cell];
+                saturation_[cell] = s0[i];
+                concentration_[cell] = c0[i];
+                cmax_[cell] = cmax0[i];
+                solveSingleCell(cell);
+                // std::cout << "cell = " << cell << "    delta s = " << saturation_[cell] - old_s << std::endl;
+                // if (max_s_change < std::fabs(saturation_[cell] - old_s)) {
+                //     max_s_change_cell = cell;
+                // }
+                // if (max_c_change < std::fabs(concentration_[cell] - old_c)) {
+                //     max_c_change_cell = cell;
+                // }
+                max_s_change = std::max(max_s_change, std::fabs(saturation_[cell] - old_s));
+                max_c_change = std::max(max_c_change, std::fabs(concentration_[cell] - old_c));
+            }
+            // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change
+            //        << "    in cell " << max_change_cell << std::endl;
+        } while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
+        if (max_s_change > tol_) {
+            THROW("In solveMultiCell(), we did not converge after "
+                  << num_iters << " iterations. Delta s = " << max_s_change);
+        }
+        if (max_c_change > tol_) {
+            THROW("In solveMultiCell(), we did not converge after "
+                  << num_iters << " iterations. Delta c = " << max_c_change);
+        }
+        std::cout << "Solved " << num_cells << " cell multicell problem in "
+                  << num_iters << " iterations." << std::endl;
     }
 
     void TransportModelCompressiblePolymer::fracFlow(double s, double c, double cmax,
@@ -1052,8 +1052,8 @@ namespace Opm
                                                          double& ff, double* dff_dsdc,
                                                          bool if_with_der) const
     {
-	double relperm[2];
-	double drelperm_ds[4];
+        double relperm[2];
+        double drelperm_ds[4];
         double sat[2] = {s, 1 - s};
         if (if_with_der) {
             props_.relperm(1, sat, &cell, relperm, drelperm_ds);
@@ -1063,18 +1063,18 @@ namespace Opm
         double mob[2];
         double dmob_ds[4];
         double dmob_dc[2];
-	double dmobwat_dc;
+        double dmobwat_dc;
         const int np = props_.numPhases();
         polyprops_.effectiveMobilitiesBoth(c, cmax, &visc_[np*cell], relperm, drelperm_ds,
                                            mob, dmob_ds, dmobwat_dc, if_with_der);
-	
- 	ff = mob[0]/(mob[0] + mob[1]);
+
+        ff = mob[0]/(mob[0] + mob[1]);
         if (if_with_der) {
             dmob_dc[0] = dmobwat_dc;
             dmob_dc[1] = 0.;
             //dff_dsdc[0] = (dmob_ds[0]*mob[1] + dmob_ds[3]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
-	    // at the moment the dmob_ds only have diagonal elements since the saturation is derivated out in effectiveMobilitiesBoth
-	    dff_dsdc[0] = ((dmob_ds[0]-dmob_ds[2])*mob[1] - (dmob_ds[1]-dmob_ds[3])*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s 
+            // at the moment the dmob_ds only have diagonal elements since the saturation is derivated out in effectiveMobilitiesBoth
+            dff_dsdc[0] = ((dmob_ds[0]-dmob_ds[2])*mob[1] - (dmob_ds[1]-dmob_ds[3])*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to s
             dff_dsdc[1] = (dmob_dc[0]*mob[1] - dmob_dc[1]*mob[0])/((mob[0] + mob[1])*(mob[0] + mob[1])); // derivative with respect to c
         }
     }
@@ -1226,10 +1226,10 @@ namespace Opm
 
     void TransportModelCompressiblePolymer::mobility(double s, double c, int cell, double* mob) const
     {
-	double sat[2] = { s, 1.0 - s };
+        double sat[2] = { s, 1.0 - s };
         double relperm[2];
         const int np = props_.numPhases();
-	props_.relperm(1, sat, &cell, relperm, 0);
+        props_.relperm(1, sat, &cell, relperm, 0);
         polyprops_.effectiveMobilities(c, cmax0_[cell], &visc_[np*cell], relperm, mob);
     }
 
@@ -1286,18 +1286,18 @@ namespace Opm
         ResidualCGrav res_c(*this, cells, pos, gravflux);
 
         // Check if current state is an acceptable solution.
-	double res_sc[2];
-	res_sc[0]=res_c.computeGravResidualS(saturation_[cell], concentration_[cell]);
-	res_sc[1]=res_c.computeGravResidualC(saturation_[cell], concentration_[cell]);
+        double res_sc[2];
+        res_sc[0]=res_c.computeGravResidualS(saturation_[cell], concentration_[cell]);
+        res_sc[1]=res_c.computeGravResidualC(saturation_[cell], concentration_[cell]);
 
         if (norm(res_sc) < tol_) {
             return;
         }
 
-	const double a = 0.0;
-	const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
+        const double a = 0.0;
+        const double b = polyprops_.cMax()*adhoc_safety_; // Add 10% to account for possible non-monotonicity of hyperbolic system.
         int iters_used;
-        concentration_[cell] = RootFinder::solve(res_c, concentration_[cell], 
+        concentration_[cell] = RootFinder::solve(res_c, concentration_[cell],
                                                  a, b, maxit_, tol_, iters_used);
         saturation_[cell] = res_c.lastSaturation();
         cmax_[cell] = std::max(cmax0_[cell], concentration_[cell]);
@@ -1311,17 +1311,17 @@ namespace Opm
         const int nc = cells.size();
         std::vector<double> col_gravflux(nc - 1);
         for (int ci = 0; ci < nc - 1; ++ci) {
-	    const int cell = cells[ci];
-	    const int next_cell = cells[ci + 1];
-	    for (int j = grid_.cell_facepos[cell]; j < grid_.cell_facepos[cell+1]; ++j) {
-		const int face = grid_.cell_faces[j];
-		const int c1 = grid_.face_cells[2*face + 0];
+            const int cell = cells[ci];
+            const int next_cell = cells[ci + 1];
+            for (int j = grid_.cell_facepos[cell]; j < grid_.cell_facepos[cell+1]; ++j) {
+                const int face = grid_.cell_faces[j];
+                const int c1 = grid_.face_cells[2*face + 0];
                 const int c2 = grid_.face_cells[2*face + 1];
-		if (c1 == next_cell || c2 == next_cell) {
+                if (c1 == next_cell || c2 == next_cell) {
                     const double gf = gravflux_[face];
                     col_gravflux[ci] = (c1 == cell) ? gf : -gf;
-		}
-	    }
+                }
+            }
         }
 
         // Store initial saturation s0
@@ -1333,7 +1333,7 @@ namespace Opm
         }
 
         // Solve single cell problems, repeating if necessary.
-	double max_sc_change = 0.0;
+        double max_sc_change = 0.0;
         int num_iters = 0;
         do {
             max_sc_change = 0.0;
@@ -1349,18 +1349,18 @@ namespace Opm
                 saturation_[cells[ci2]] = s0_[ci2];
                 concentration_[cells[ci2]] = c0_[ci2];
                 solveSingleCellGravity(cells, ci2, &col_gravflux[0]);
-                max_sc_change = std::max(max_sc_change, 0.25*(std::fabs(saturation_[cells[ci]] - old_s[0]) + 
+                max_sc_change = std::max(max_sc_change, 0.25*(std::fabs(saturation_[cells[ci]] - old_s[0]) +
                                                               std::fabs(concentration_[cells[ci]] - old_c[0]) +
                                                               std::fabs(saturation_[cells[ci2]] - old_s[1]) +
                                                               std::fabs(concentration_[cells[ci2]] - old_c[1])));
             }
             // std::cout << "Iter = " << num_iters << "    max_s_change = " << max_s_change << std::endl;
-	} while (max_sc_change > tol_ && ++num_iters < maxit_);
+        } while (max_sc_change > tol_ && ++num_iters < maxit_);
 
-	if (max_sc_change > tol_) {
-	    THROW("In solveGravityColumn(), we did not converge after "
-	    	  << num_iters << " iterations. Delta s = " << max_sc_change);
-	}
+        if (max_sc_change > tol_) {
+            THROW("In solveGravityColumn(), we did not converge after "
+                  << num_iters << " iterations. Delta s = " << max_sc_change);
+        }
         return num_iters + 1;
     }
 
@@ -1458,70 +1458,70 @@ namespace
                                const double* x_max, const double tol,
                                double& t_max_out, double& t_out_out)
     {
-	x_[0] = x[0];
-	x_[1] = x[1];
-	x_max_[0] = x_max[0];
-	x_max_[1] = x_max[1];
-	x_min_[0] = x_min[0];
-	x_min_[1] = x_min[1];
-	direction_[0] = direction[0];
-	direction_[1] = direction[1];
-	end_point_[0] = end_point[0];
-	end_point_[1] = end_point[1];
+        x_[0] = x[0];
+        x_[1] = x[1];
+        x_max_[0] = x_max[0];
+        x_max_[1] = x_max[1];
+        x_min_[0] = x_min[0];
+        x_min_[1] = x_min[1];
+        direction_[0] = direction[0];
+        direction_[1] = direction[1];
+        end_point_[0] = end_point[0];
+        end_point_[1] = end_point[1];
         const double size_direction = std::abs(direction_[0]) + std::abs(direction_[1]);
-	if (size_direction < tol) {
-	    direction_[0] = end_point_[0]-x_[0];
-	    direction_[1] = end_point_[1]-x_[1];
-	} else if ((end_point_[0]-x_[0])*direction_[0] + (end_point_[1]-x_[1])*direction_[1] < 0) {
+        if (size_direction < tol) {
+            direction_[0] = end_point_[0]-x_[0];
+            direction_[1] = end_point_[1]-x_[1];
+        } else if ((end_point_[0]-x_[0])*direction_[0] + (end_point_[1]-x_[1])*direction_[1] < 0) {
             direction_[0] *= -1.0;
             direction_[1] *= -1.0;
         }
-	bool t0_exists = true;
-	double t0 = 0; // dummy default value (so that compiler does not complain).
-	if (direction_[0] > 0) {
-	    t0 = (x_max_[0] - x_[0])/direction_[0];
-	} else if (direction_[0] < 0) {
-	    t0 = (x_min_[0] - x_[0])/direction_[0];
-	} else {
-	    t0_exists = false;
-	}
-	bool t1_exists = true;
-	double t1 = 0; // dummy default value.
-	if (direction_[1] > 0) {
-	    t1 = (x_max_[1] - x_[1])/direction_[1];
-	} else if (direction_[1] < 0) {
-	    t1 = (x_min_[1] - x_[1])/direction_[1];
-	} else {
-	    t1_exists = false;
-	}
-	if (t0_exists) {
-	    if (t1_exists) {
-		t_out_ = std::min(t0, t1);
-	    } else {
-		t_out_ = t0;
-	    }
-	} else if (t1_exists) {
-	    t_out_ = t1;
-	} else {
-	    THROW("Direction illegal: is a zero vector.");
-	}
-	x_out_[0] = x_[0] + t_out_*direction_[0];
-	x_out_[1] = x_[1] + t_out_*direction_[1];
-	t_max_ = t_out_ + 1;
-	t_max_out = t_max_;
-	t_out_out = t_out_;
+        bool t0_exists = true;
+        double t0 = 0; // dummy default value (so that compiler does not complain).
+        if (direction_[0] > 0) {
+            t0 = (x_max_[0] - x_[0])/direction_[0];
+        } else if (direction_[0] < 0) {
+            t0 = (x_min_[0] - x_[0])/direction_[0];
+        } else {
+            t0_exists = false;
+        }
+        bool t1_exists = true;
+        double t1 = 0; // dummy default value.
+        if (direction_[1] > 0) {
+            t1 = (x_max_[1] - x_[1])/direction_[1];
+        } else if (direction_[1] < 0) {
+            t1 = (x_min_[1] - x_[1])/direction_[1];
+        } else {
+            t1_exists = false;
+        }
+        if (t0_exists) {
+            if (t1_exists) {
+                t_out_ = std::min(t0, t1);
+            } else {
+                t_out_ = t0;
+            }
+        } else if (t1_exists) {
+            t_out_ = t1;
+        } else {
+            THROW("Direction illegal: is a zero vector.");
+        }
+        x_out_[0] = x_[0] + t_out_*direction_[0];
+        x_out_[1] = x_[1] + t_out_*direction_[1];
+        t_max_ = t_out_ + 1;
+        t_max_out = t_max_;
+        t_out_out = t_out_;
     }
 
 
     // Compute x=(s,c) for a given t (t is the parameter for the piecewise linear curve)
     void CurveInSCPlane::computeXOfT(double* x_of_t, const double t) const {
-	if (t <= t_out_) {
-	    x_of_t[0] = x_[0] + t*direction_[0];
+        if (t <= t_out_) {
+            x_of_t[0] = x_[0] + t*direction_[0];
             x_of_t[1] = x_[1] + t*direction_[1];
-	} else {
-	    x_of_t[0] = 1/(t_max_-t_out_)*((t_max_ - t)*x_out_[0] + end_point_[0]*(t - t_out_));
-	    x_of_t[1] = 1/(t_max_-t_out_)*((t_max_ - t)*x_out_[1] + end_point_[1]*(t - t_out_));
-	}
+        } else {
+            x_of_t[0] = 1/(t_max_-t_out_)*((t_max_ - t)*x_out_[0] + end_point_[0]*(t - t_out_));
+            x_of_t[1] = 1/(t_max_-t_out_)*((t_max_ - t)*x_out_[1] + end_point_[1]*(t - t_out_));
+        }
     }
 
 } // Anonymous namespace
