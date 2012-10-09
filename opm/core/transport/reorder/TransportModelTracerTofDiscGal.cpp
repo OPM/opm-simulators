@@ -109,9 +109,9 @@ namespace Opm
 
     static void cross(const double* a, const double* b, double* res)
     {
-	res[0] = a[1]*b[2] - a[2]*b[1];
-	res[1] = a[2]*b[0] - a[0]*b[2];
-	res[2] = a[0]*b[1] - a[1]*b[0];
+        res[0] = a[1]*b[2] - a[2]*b[1];
+        res[1] = a[2]*b[0] - a[0]*b[2];
+        res[2] = a[0]*b[1] - a[1]*b[0];
     }
 
 
@@ -135,12 +135,12 @@ namespace Opm
     /// three three-dimensional arrays.
     static double determinantOf(const double* a0,
                                 const double* a1,
-                                const double* a2) 
+                                const double* a2)
     {
-	return 
-	    a0[0] * (a1[1] * a2[2] - a2[1] * a1[2]) -
-	    a0[1] * (a1[0] * a2[2] - a2[0] * a1[2]) +
-	    a0[2] * (a1[0] * a2[1] - a2[0] * a1[1]);
+        return
+            a0[0] * (a1[1] * a2[2] - a2[1] * a1[2]) -
+            a0[1] * (a1[0] * a2[2] - a2[0] * a1[2]) +
+            a0[2] * (a1[0] * a2[1] - a2[0] * a1[1]);
     }
 
 
@@ -156,7 +156,7 @@ namespace Opm
         double a[3] = { p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2] };
         double b[3] = { p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2] };
         double c[3] = { p3[0] - p0[0], p3[1] - p0[1], p3[2] - p0[2] };
-	return std::fabs(determinantOf(a, b, c) / 6.0);
+        return std::fabs(determinantOf(a, b, c) / 6.0);
     }
 
 
