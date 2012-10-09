@@ -189,7 +189,7 @@ public:
         Dune::FieldVector<Scalar, numEq> b(0.0);
 
         // assemble the equations expressing the fact that the
-        // fugacities of each component is equal in all phases
+        // fugacities of each component are equal in all phases
         // (assuming thermal equilibrium, that is)
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             Scalar entryCol1 =
