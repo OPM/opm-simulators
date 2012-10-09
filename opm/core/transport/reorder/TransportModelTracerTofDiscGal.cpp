@@ -446,10 +446,12 @@ namespace Opm
 
 
 
-    /// Solve for time-of-flight at next timestep.
+    /// Solve for time-of-flight.
     /// \param[in]  darcyflux         Array of signed face fluxes.
     /// \param[in]  porevolume        Array of pore volumes.
-    /// \param[in]  source            Transport source term.
+    /// \param[in]  source            Source term. Sign convention is:
+    ///                                 (+) inflow flux,
+    ///                                 (-) outflow flux.
     /// \param[in]  degree            Polynomial degree of DG basis functions used.
     /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
     ///                               The values are ordered by cell, meaning that
@@ -633,7 +635,20 @@ namespace Opm
         MAT_SIZE_T info = 0;
         dgesv_(&n, &nrhs, &jac_[0], &lda, &piv[0], &rhs_[0], &ldb, &info);
         if (info != 0) {
-            THROW("Lapack error: " << info);
+            // Print the local matrix and rhs.
+            std::cerr << "Failed solving single-cell system Ax = b in cell " << cell
+                      << " with A = \n";
+            for (int row = 0; row < n; ++row) {
+                for (int col = 0; col < n; ++col) {
+                    std::cerr << "    " << jac_[row + n*col];
+                }
+                std::cerr << '\n';
+            }
+            std::cerr << "and b = \n";
+            for (int row = 0; row < n; ++row) {
+                std::cerr << "    " << rhs_[row] << '\n';
+            }
+            THROW("Lapack error: " << info << " encountered in cell " << cell);
         }
         // The solution ends up in rhs_, so we must copy it.
         std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);

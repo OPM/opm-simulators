@@ -38,10 +38,12 @@ namespace Opm
 
 
 
-    /// Solve for time-of-flight at next timestep.
+    /// Solve for time-of-flight.
     /// \param[in]  darcyflux         Array of signed face fluxes.
     /// \param[in]  porevolume        Array of pore volumes.
-    /// \param[in]  source            Transport source term.
+    /// \param[in]  source            Source term. Sign convention is:
+    ///                                 (+) inflow flux,
+    ///                                 (-) outflow flux.
     /// \param[out] tof               Array of time-of-flight values.
     void TransportModelTracerTof::solveTof(const double* darcyflux,
                                            const double* porevolume,

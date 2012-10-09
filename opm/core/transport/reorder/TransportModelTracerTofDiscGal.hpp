@@ -31,7 +31,15 @@ namespace Opm
 
     class IncompPropertiesInterface;
 
-    /// Implements a reordering transport solver for incompressible two-phase flow.
+    /// Implements a discontinuous Galerkin solver for
+    /// (single-phase) time-of-flight using reordering.
+    /// The equation solved is:
+    ///     v \cdot \grad\tau = \phi
+    /// where v is the fluid velocity, \tau is time-of-flight and
+    /// \phi is the porosity. This is a boundary value problem, where
+    /// \tau is specified to be zero on all inflow boundaries.
+    /// The user may specify the polynomial degree of the basis function space
+    /// used, but only degrees 0 and 1 are supported so far.
     class TransportModelTracerTofDiscGal : public TransportModelInterface
     {
     public:
@@ -39,10 +47,13 @@ namespace Opm
         /// \param[in] grid      A 2d or 3d grid.
         TransportModelTracerTofDiscGal(const UnstructuredGrid& grid);
 
-        /// Solve for time-of-flight at next timestep.
+
+        /// Solve for time-of-flight.
         /// \param[in]  darcyflux         Array of signed face fluxes.
         /// \param[in]  porevolume        Array of pore volumes.
-        /// \param[in]  source            Transport source term.
+        /// \param[in]  source            Source term. Sign convention is:
+        ///                                 (+) inflow flux,
+        ///                                 (-) outflow flux.
         /// \param[in]  degree            Polynomial degree of DG basis functions used.
         /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
         ///                               The values are ordered by cell, meaning that

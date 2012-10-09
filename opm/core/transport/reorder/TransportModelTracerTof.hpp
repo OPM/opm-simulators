@@ -31,7 +31,13 @@ namespace Opm
 
     class IncompPropertiesInterface;
 
-    /// Implements a reordering transport solver for incompressible two-phase flow.
+    /// Implements a first-order finite volume solver for
+    /// (single-phase) time-of-flight using reordering.
+    /// The equation solved is:
+    ///     v \cdot \grad\tau = \phi
+    /// where v is the fluid velocity, \tau is time-of-flight and
+    /// \phi is the porosity. This is a boundary value problem, where
+    /// \tau is specified to be zero on all inflow boundaries.
     class TransportModelTracerTof : public TransportModelInterface
     {
     public:
@@ -39,10 +45,12 @@ namespace Opm
         /// \param[in] grid      A 2d or 3d grid.
         TransportModelTracerTof(const UnstructuredGrid& grid);
 
-        /// Solve for time-of-flight at next timestep.
+        /// Solve for time-of-flight.
         /// \param[in]  darcyflux         Array of signed face fluxes.
         /// \param[in]  porevolume        Array of pore volumes.
-        /// \param[in]  source            Transport source term.
+        /// \param[in]  source            Source term. Sign convention is:
+        ///                                 (+) inflow flux,
+        ///                                 (-) outflow flux.
         /// \param[out] tof               Array of time-of-flight values.
         void solveTof(const double* darcyflux,
                       const double* porevolume,
