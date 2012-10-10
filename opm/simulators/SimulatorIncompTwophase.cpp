@@ -485,8 +485,8 @@ namespace Opm
                 // Optionally, check if well controls are satisfied.
                 if (check_well_controls_) {
                     Opm::computePhaseFlowRatesPerWell(*wells_,
-                                                      fractional_flows,
                                                       well_state.perfRates(),
+                                                      fractional_flows,
                                                       well_resflows_phase);
                     std::cout << "Checking well conditions." << std::endl;
                     // For testing we set surface := reservoir
