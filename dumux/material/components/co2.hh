@@ -165,7 +165,7 @@ public:
 #ifndef NDEBUG
         if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
         {
-            Dune::dwarn << "The CO2 exhibits subcritical values: Be aware "
+            Dune::dwarn << "The CO2 exhibits subcritical values: Make sure "
                         << "to use tables with sufficient resolution!\n";
             warningPrinted=true;
         }
@@ -194,8 +194,8 @@ public:
 #ifndef NDEBUG
         if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
         {
-            Dune::dwarn << "Subcritical values: Be aware to use "
-                        <<"Tables with sufficient resolution!"<< std::endl;
+            Dune::dwarn << "The CO2 exhibits subcritical values: Make sure "
+                        << "to use tables with sufficient resolution!\n";
             warningPrinted=true;
         }
 #endif
