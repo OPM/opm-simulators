@@ -863,7 +863,7 @@ namespace Opm
             return;
         }
         // We're a producer, so we need to negate the input
-        double ntarget = target;
+        double ntarget = -target;
         
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;

@@ -20,6 +20,7 @@
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/grid.h>
+#include <opm/core/utility/StopWatch.hpp>
 
 #include <vector>
 #include <cassert>
@@ -31,7 +32,11 @@ void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& g
     std::vector<int> sequence(grid.number_of_cells);
     std::vector<int> components(grid.number_of_cells + 1);
     int ncomponents;
+    time::StopWatch clock;
+    clock.start();
     compute_sequence(&grid, darcyflux, &sequence[0], &components[0], &ncomponents);
+    clock.stop();
+    std::cout << "Topological sort took: " << clock.secsSinceStart() << " seconds." << std::endl;
 
     // Invoke appropriate solve method for each interdependent component.
     for (int comp = 0; comp < ncomponents; ++comp) {

@@ -235,6 +235,19 @@ void
 destroy_wells(struct Wells *W);
 
 
+/**
+ * Create a deep-copy (i.e., clone) of an existing Wells object, including its
+ * controls.
+ *
+ * @param[in] W Existing Wells object.
+ * @return Complete clone of the input object.  Dispose of resources using
+ * function destroy_wells() when no longer needed.  Returns @c NULL in case of
+ * allocation failure.
+ */
+struct Wells *
+clone_wells(const struct Wells *W);
+
+
 #ifdef __cplusplus
 }
 #endif
