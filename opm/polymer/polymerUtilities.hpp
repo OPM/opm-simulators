@@ -56,6 +56,7 @@ namespace Opm
     /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  s         saturation values (for all phases)
     /// @param[in]  c         polymer concentration
+    /// @param[in]  cmax      max polymer concentration experienced by cell
     /// @param[out] totmob    total mobility
     /// @param[out] omega     mobility-weighted (or fractional-flow weighted)
     ///                       fluid densities.
@@ -67,6 +68,22 @@ namespace Opm
                                    const std::vector<double>& cmax,
 				   std::vector<double>& totmob,
 				   std::vector<double>& omega);
+
+    /// Computes the fractional flow for each cell in the cells argument
+    /// @param[in]  props            rock and fluid properties
+    /// @param[in]  polyprops        polymer properties
+    /// @param[in]  cells            cells with which the saturation values are associated
+    /// @param[in]  s                saturation values (for all phases)
+    /// @param[in]  c                concentration values
+    /// @param[in]  cmax             max polymer concentration experienced by cell
+    /// @param[out] fractional_flow  the fractional flow for each phase for each cell.
+    void computeFractionalFlow(const Opm::IncompPropertiesInterface& props,
+                               const Opm::PolymerProperties& polyprops,
+                               const std::vector<int>& cells,
+                               const std::vector<double>& s,
+                               const std::vector<double>& c,
+                               const std::vector<double>& cmax,
+                               std::vector<double>& fractional_flows);
 
     /// @brief Computes injected and produced volumes of all phases,
     ///        and injected and produced polymer mass.

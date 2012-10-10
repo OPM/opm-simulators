@@ -33,6 +33,7 @@ namespace Opm
     class IncompPropertiesInterface;
     class PolymerProperties;
     class RockCompressibility;
+    class WellsManager;
     class PolymerInflowInterface;
     class LinearSolverInterface;
     class SimulatorTimer;
@@ -63,8 +64,9 @@ namespace Opm
         /// \param[in] grid        grid data structure
         /// \param[in] props       fluid and rock properties
         /// \param[in] poly_props  polymer properties
-        /// \param[in] rock_comp   if non-null, rock compressibility properties
+        /// \param[in] rock_comp_props   if non-null, rock compressibility properties
         /// \param[in] wells       if non-null, wells data structure
+        /// \param[in] well_manager  well manager, may manage no (null) wells
         /// \param[in] polymer_inflow  polymer inflow controls
         /// \param[in] src         source terms
         /// \param[in] bcs         boundary conditions, treat as all noflow if null
@@ -75,7 +77,7 @@ namespace Opm
                         const IncompPropertiesInterface& props,
                         const PolymerProperties& poly_props,
                         const RockCompressibility* rock_comp_props,
-                        const Wells* wells,
+                        WellsManager& wells_manager,
                         const PolymerInflowInterface& polymer_inflow,
                         const std::vector<double>& src,
                         const FlowBoundaryConditions* bcs,
