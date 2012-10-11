@@ -572,6 +572,7 @@ namespace Opm
                 break;
             }
             const double total_produced = getTotalProductionFlow(well_surfacerates_phase, phase);
+            const double total_reinjected = - total_produced; // Production negative, injection positive
             const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
                 // Apply for all children. 
@@ -580,11 +581,11 @@ namespace Opm
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
 #ifdef DIRTY_WELLCTRL_HACK
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().reinjection_fraction_target_,
+                        (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
                         false);
 #else
                 children_[i]->applyInjGroupControl(InjectionSpecification::RATE,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().reinjection_fraction_target_,
+                        (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
                         false);
 #endif
             }
@@ -600,15 +601,15 @@ namespace Opm
             if (phaseUsage().phase_used[BlackoilPhases::Vapour]) {
                 total_produced += getTotalProductionFlow(well_reservoirrates_phase, BlackoilPhases::Vapour);
             }
-            
-                  const double my_guide_rate = injectionGuideRate(true);
+            const double total_reinjected = - total_produced; // Production negative, injection positive
+            const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().voidage_replacment_fraction_,
+                        (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
                         false);
             }
             
