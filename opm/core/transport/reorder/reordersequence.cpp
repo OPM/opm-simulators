@@ -1,11 +1,11 @@
 /* Copyright 2011 (c) Jostein R. Natvig <Jostein.R.Natvig at sintef.no> */
 
+#include <opm/core/grid.h>
+
 #ifdef MATLAB_MEX_FILE
-#include "grid.h"
 #include "reordersequence.h"
 #include "tarjan.h"
 #else
-#include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/transport/reorder/tarjan.h>
 #endif
