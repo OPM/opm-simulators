@@ -65,7 +65,7 @@ namespace Opm
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
              const BlackoilPropertiesInterface& props,
-             const RockCompressibility* rock_comp,
+             const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              const std::vector<double>& src,
              const FlowBoundaryConditions* bcs,
@@ -93,7 +93,7 @@ namespace Opm
         // Observed objects.
         const UnstructuredGrid& grid_;
         const BlackoilPropertiesInterface& props_;
-        const RockCompressibility* rock_comp_;
+        const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
         const std::vector<double>& src_;
@@ -114,14 +114,14 @@ namespace Opm
     SimulatorCompressibleTwophase::SimulatorCompressibleTwophase(const parameter::ParameterGroup& param,
                                                                  const UnstructuredGrid& grid,
                                                                  const BlackoilPropertiesInterface& props,
-                                                                 const RockCompressibility* rock_comp,
+                                                                 const RockCompressibility* rock_comp_props,
                                                                  WellsManager& wells_manager,
                                                                  const std::vector<double>& src,
                                                                  const FlowBoundaryConditions* bcs,
                                                                  LinearSolverInterface& linsolver,
                                                                  const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp, wells_manager, src, bcs, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, src, bcs, linsolver, gravity));
     }
 
 
@@ -234,7 +234,7 @@ namespace Opm
     SimulatorCompressibleTwophase::Impl::Impl(const parameter::ParameterGroup& param,
                                               const UnstructuredGrid& grid,
                                               const BlackoilPropertiesInterface& props,
-                                              const RockCompressibility* rock_comp,
+                                              const RockCompressibility* rock_comp_props,
                                               WellsManager& wells_manager,
                                               const std::vector<double>& src,
                                               const FlowBoundaryConditions* bcs,
@@ -242,13 +242,13 @@ namespace Opm
                                               const double* gravity)
         : grid_(grid),
           props_(props),
-          rock_comp_(rock_comp),
+          rock_comp_props_(rock_comp_props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
           src_(src),
           bcs_(bcs),
           gravity_(gravity),
-          psolver_(grid, props, rock_comp, linsolver,
+          psolver_(grid, props, rock_comp_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
@@ -304,8 +304,8 @@ namespace Opm
 
         // Initialisation.
         std::vector<double> porevol;
-        if (rock_comp_ && rock_comp_->isActive()) {
-            computePorevolume(grid_, props_.porosity(), *rock_comp_, state.pressure(), porevol);
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
         } else {
             computePorevolume(grid_, props_.porosity(), porevol);
         }
@@ -426,9 +426,9 @@ namespace Opm
             } while (!well_control_passed);
 
             // Update pore volumes if rock is compressible.
-            if (rock_comp_ && rock_comp_->isActive()) {
+            if (rock_comp_props_ && rock_comp_props_->isActive()) {
                 initial_porevol = porevol;
-                computePorevolume(grid_, props_.porosity(), *rock_comp_, state.pressure(), porevol);
+                computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
 
             // Process transport sources from well flows.

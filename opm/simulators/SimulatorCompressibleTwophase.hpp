@@ -61,7 +61,7 @@ namespace Opm
         ///
         /// \param[in] grid          grid data structure
         /// \param[in] props         fluid and rock properties
-        /// \param[in] rock_comp     if non-null, rock compressibility properties
+        /// \param[in] rock_comp_props     if non-null, rock compressibility properties
         /// \param[in] well_manager  well manager, may manage no (null) wells
         /// \param[in] src           source terms
         /// \param[in] bcs           boundary conditions, treat as all noflow if null
@@ -70,7 +70,7 @@ namespace Opm
        SimulatorCompressibleTwophase(const parameter::ParameterGroup& param,
                                      const UnstructuredGrid& grid,
                                      const BlackoilPropertiesInterface& props,
-                                     const RockCompressibility* rock_comp,
+                                     const RockCompressibility* rock_comp_props,
                                      WellsManager& wells_manager,
                                      const std::vector<double>& src,
                                      const FlowBoundaryConditions* bcs,
