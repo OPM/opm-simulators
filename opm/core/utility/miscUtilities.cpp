@@ -553,6 +553,7 @@ namespace Opm
     {
         const int np = wells.number_of_phases;
         const int nw = wells.number_of_wells;
+        ASSERT(int(flow_rates_per_well_cell.size()) == wells.well_connpos[nw]);
         phase_flow_per_well.resize(nw * np);
         for (int wix = 0; wix < nw; ++wix) {
             for (int phase = 0; phase < np; ++phase) {
