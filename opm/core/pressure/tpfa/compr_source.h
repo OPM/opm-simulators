@@ -36,28 +36,112 @@
 #ifndef OPM_COMPR_SOURCE_H_HEADER
 #define OPM_COMPR_SOURCE_H_HEADER
 
+/**
+ * \file
+ * Data structures and support routines needed to represent explicit,
+ * compressible source terms.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * Collection of explicit, compressible source terms.
+ */
 struct compr_src {
-    int     nsrc;
-    int     cpty;
+    /**
+     * Number of source terms.
+     */
+    int nsrc;
 
-    int     nphases;
+    /**
+     * Source term capacity.  Client code should treat this member as read-only.
+     * The field is used in internal memory management.
+     */
+    int cpty;
 
-    int    *cell;
+    /**
+     * Number of fluid phases.
+     */
+    int nphases;
+
+    /**
+     * Cells influenced by explicit source terms.  Array of size @c cpty, the
+     * @c nsrc first elements (only) of which are valid.
+     */
+    int *cell;
+
+    /**
+     * Total Darcy rate of inflow (measured at reservoir conditions) of each
+     * individual source term.  Sign convention: Positive rate into reservoir
+     * (i.e., injection) and negative rate out of reservoir (production).
+     * Array of size @c cpty, the @c nsrc first elements (only) of which are
+     * valid.
+     */
     double *flux;
+
+    /**
+     * Injection composition for all explicit source terms.  Not referenced for
+     * production sources (i.e., those terms for which <CODE>->flux[]</CODE> is
+     * negative).  Array of size <CODE>nphases * cpty</CODE>, the
+     * <CODE>nphases * nsrc</CODE> of which (only) are valid.
+     */
     double *saturation;
 };
 
 
+/**
+ * Create a management structure that is, initially, capable of storing a
+ * specified number of sources defined by a particular number a fluid phases.
+ *
+ * @param[in] np    Number of fluid phases.  Must be positive to actually
+ *                  allocate any sources.
+ * @param[in] nsrc  Initial management capacity.  If positive, attempt to
+ *                  allocate that number of source terms.  Otherwise, the
+ *                  initial capacity is treated as (and set to) zero.
+ * @return Fully formed management structure if <CODE>np > 0</CODE> and
+ * allocation success.  @c NULL otherwise.  The resources must be released using
+ * destructor function compr_src_deallocate().
+ */
 struct compr_src *
 compr_src_allocate(int np, int nsrc);
 
+
+/**
+ * Release memory resources acquired in a previous call to constructor function
+ * compr_src_allocate() and, possibly, source term insertion function
+ * append_compr_source_term().
+ *
+ * @param[in,out] src On input - source term management structure obtained
+ * through a previous call to construction function compr_src_allocate().
+ * On output - invalid pointer.
+ */
 void
 compr_src_deallocate(struct compr_src *src);
 
+
+/**
+ * Insert a new explicit source term into an existing collection.
+ *
+ * @param[in]     c   Cell influenced by this source term.
+ * @param[in]     np  Number of fluid phases.  Used for consistency checking
+ *                    only.
+ * @param[in]     v   Source term total reservoir volume Darcy flux.  Positive
+ *                    if the source term is to be interpreted as an injection
+ *                    source and negative otherwise.
+ * @param[in]     sat Injection composition for this source term.  Array of size
+ *                    @c np.  Copied to internal storage, but the actual numbers
+ *                    are not inspected unless <CODE>v > 0.0</CODE>.
+ * @param[in,out] src On input - source term management structure obtained
+ * through a previous call to construction function compr_src_allocate() and,
+ * possibly, another call to function append_compr_source_term().  On output -
+ * source term collection that includes the new source term if successful and
+ * unchanged if not.
+ *
+ * @return One (1, true) if successful (i.e., if the new source term could be
+ * included in the existing collection) and zero (0, false) if not.
+ */
 int
 append_compr_source_term(int               c  ,
                          int               np ,
@@ -65,6 +149,15 @@ append_compr_source_term(int               c  ,
                          const double     *sat,
                          struct compr_src *src);
 
+
+/**
+ * Empty source term collection while maintaining existing capacity.
+ *
+ * @param[in,out] src On input - an existing source term collection with a
+ * given number of sources and source capacity.  On output - an empty source
+ * term collection (i.e., <CODE>src->nsrc == 0</CODE>) with an unchanged
+ * capacity.
+ */
 void
 clear_compr_source_term(struct compr_src *src);
 
