@@ -33,6 +33,7 @@ namespace Opm
     class BlackoilPropertiesInterface;
     class PolymerProperties;
     class RockCompressibility;
+    class WellsManager;
     class PolymerInflowInterface;
     class LinearSolverInterface;
     class SimulatorTimer;
@@ -60,22 +61,22 @@ namespace Opm
         ///     use_segregation_split (false)  solve for gravity segregation (if false,
         ///                                    segregation is ignored).
         ///
-        /// \param[in] grid        grid data structure
-        /// \param[in] props       fluid and rock properties
-        /// \param[in] poly_props  polymer properties
-        /// \param[in] rock_comp   if non-null, rock compressibility properties
-        /// \param[in] wells       if non-null, wells data structure
-        /// \param[in] polymer_inflow  polymer inflow controls
-        /// \param[in] src         source terms
-        /// \param[in] bcs         boundary conditions, treat as all noflow if null
-        /// \param[in] linsolver   linear solver
-        /// \param[in] gravity     if non-null, gravity vector
+        /// \param[in] grid             grid data structure
+        /// \param[in] props            fluid and rock properties
+        /// \param[in] poly_props       polymer properties
+        /// \param[in] rock_comp_props  if non-null, rock compressibility properties
+        /// \param[in] wells_manager    well manager, may manage no (null) wells
+        /// \param[in] polymer_inflow   polymer inflow controls
+        /// \param[in] src              source terms
+        /// \param[in] bcs              boundary conditions, treat as all noflow if null
+        /// \param[in] linsolver        linear solver
+        /// \param[in] gravity          if non-null, gravity vector
         SimulatorCompressiblePolymer(const parameter::ParameterGroup& param,
                                      const UnstructuredGrid& grid,
                                      const BlackoilPropertiesInterface& props,
                                      const PolymerProperties& poly_props,
                                      const RockCompressibility* rock_comp_props,
-                                     const Wells* wells,
+                                     WellsManager& wells_manager,
                                      const PolymerInflowInterface& polymer_inflow,
                                      const std::vector<double>& src,
                                      const FlowBoundaryConditions* bcs,

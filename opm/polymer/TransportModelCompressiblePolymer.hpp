@@ -20,7 +20,6 @@
 #ifndef OPM_TRANSPORTMODELCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 #define OPM_TRANSPORTMODELCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 
-#include <opm/core/fluid/RockCompressibility.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
@@ -63,7 +62,6 @@ namespace Opm
 	TransportModelCompressiblePolymer(const UnstructuredGrid& grid,
                                           const BlackoilPropertiesInterface& props,
                                           const PolymerProperties& polyprops,
-                                          const RockCompressibility& rock_comp,
                                           const SingleCellMethod method,
                                           const double tol,
                                           const int maxit);
@@ -134,7 +132,6 @@ namespace Opm
 	const UnstructuredGrid& grid_;
 	const BlackoilPropertiesInterface& props_;
 	const PolymerProperties& polyprops_;
-        const RockCompressibility& rock_comp_;
 	const double* darcyflux_;   // one flux per grid face
         const double* porevolume0_; // one volume per cell
         const double* porevolume_;  // one volume per cell

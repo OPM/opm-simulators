@@ -127,6 +127,48 @@ namespace Opm
     }
 
 
+    /// Computes the fractional flow for each cell in the cells argument
+    /// @param[in]  props            rock and fluid properties
+    /// @param[in]  polyprops        polymer properties
+    /// @param[in]  cells            cells with which the saturation values are associated
+    /// @param[in]  p                pressure (one value per cell)
+    /// @param[in]  z                surface-volume values (for all P phases)
+    /// @param[in]  s                saturation values (for all phases)
+    /// @param[in]  c                concentration values
+    /// @param[in]  cmax             max polymer concentration experienced by cell
+    /// @param[out] fractional_flow  the fractional flow for each phase for each cell.
+    void computeFractionalFlow(const Opm::BlackoilPropertiesInterface& props,
+                               const Opm::PolymerProperties& polyprops,
+                               const std::vector<int>& cells,
+                               const std::vector<double>& p,
+                               const std::vector<double>& z,
+                               const std::vector<double>& s,
+                               const std::vector<double>& c,
+                               const std::vector<double>& cmax,
+                               std::vector<double>& fractional_flows)
+    {
+	int num_cells = cells.size();
+	int num_phases = props.numPhases();
+        if (num_phases != 2) {
+            THROW("computeFractionalFlow() assumes 2 phases.");
+        }
+	fractional_flows.resize(num_cells*num_phases);
+	ASSERT(int(s.size()) == num_cells*num_phases);
+	std::vector<double> kr(num_cells*num_phases);
+	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
+	std::vector<double> mu(num_cells*num_phases);
+	props.viscosity(num_phases, &p[0], &z[0], &cells[0], &mu[0], 0);
+        double mob[2]; // here we assume num_phases=2
+	for (int cell = 0; cell < num_cells; ++cell) {
+            double* kr_cell = &kr[2*cell];
+            double* mu_cell = &mu[2*cell];
+            polyprops.effectiveMobilities(c[cell], cmax[cell], mu_cell, kr_cell, mob);
+            fractional_flows[2*cell]     = mob[0] / (mob[0] + mob[1]);
+            fractional_flows[2*cell + 1] = mob[1] / (mob[0] + mob[1]);
+        }
+    }
+
+
     /// @brief Computes injected and produced volumes of all phases,
     ///        and injected and produced polymer mass.
     /// Note 1: assumes that only the first phase is injected.

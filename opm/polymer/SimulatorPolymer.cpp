@@ -52,7 +52,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
 
-#include <boost/filesystem/convenience.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -129,7 +129,6 @@ namespace Opm
         const PolymerInflowInterface& polymer_inflow_;
         const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
-        const LinearSolverInterface& linsolver_;
         const double* gravity_;
         // Solvers
         IncompTpfaPolymer psolver_;
@@ -194,7 +193,6 @@ namespace Opm
           polymer_inflow_(polymer_inflow),
           src_(src),
           bcs_(bcs),
-          linsolver_(linsolver),
           gravity_(gravity),
           psolver_(grid, props, rock_comp_props, poly_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
@@ -238,7 +236,7 @@ namespace Opm
         tsolver_.setPreferredMethod(method);
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
         use_segregation_split_ = param.getDefault("use_segregation_split", false);
-        if (gravity != 0 && use_segregation_split_){
+        if (gravity != 0 && use_segregation_split_) {
             tsolver_.initGravity(gravity);
             extractColumn(grid_, columns_);
         }
