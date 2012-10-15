@@ -17,7 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
@@ -39,6 +38,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
+#include <opm/core/wells/WellsManager.hpp>
 
 #include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
 #include <opm/core/fluid/RockCompressibility.hpp>
@@ -52,7 +52,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
 
-#include <boost/filesystem/convenience.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -92,7 +92,7 @@ namespace Opm
              const BlackoilPropertiesInterface& props,
              const PolymerProperties& poly_props,
              const RockCompressibility* rock_comp_props,
-             const Wells* wells,
+             WellsManager& wells_manager,
              const PolymerInflowInterface& polymer_inflow,
              const std::vector<double>& src,
              const FlowBoundaryConditions* bcs,
@@ -111,6 +111,9 @@ namespace Opm
         bool output_vtk_;
         std::string output_dir_;
         int output_interval_;
+        // Parameters for well control
+        bool check_well_controls_;
+        int max_well_control_iterations_;
         // Parameters for transport solver.
         int num_transport_substeps_;
         bool use_segregation_split_;
@@ -119,11 +122,11 @@ namespace Opm
         const BlackoilPropertiesInterface& props_;
         const PolymerProperties& poly_props_;
         const RockCompressibility* rock_comp_props_;
+        WellsManager& wells_manager_;
         const Wells* wells_;
         const PolymerInflowInterface& polymer_inflow_;
         const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
-        const LinearSolverInterface& linsolver_;
         const double* gravity_;
         // Solvers
         CompressibleTpfaPolymer psolver_;
@@ -142,7 +145,7 @@ namespace Opm
                                                                const BlackoilPropertiesInterface& props,
                                                                const PolymerProperties& poly_props,
                                                                const RockCompressibility* rock_comp_props,
-                                                               const Wells* wells,
+                                                               WellsManager& wells_manager,
                                                                const PolymerInflowInterface& polymer_inflow,
                                                                const std::vector<double>& src,
                                                                const FlowBoundaryConditions* bcs,
@@ -150,7 +153,7 @@ namespace Opm
                                                                const double* gravity)
     {
         pimpl_.reset(new Impl(param, grid, props, poly_props, rock_comp_props,
-                              wells, polymer_inflow, src, bcs, linsolver, gravity));
+                              wells_manager, polymer_inflow, src, bcs, linsolver, gravity));
     }
 
 
@@ -173,7 +176,7 @@ namespace Opm
                                              const BlackoilPropertiesInterface& props,
                                              const PolymerProperties& poly_props,
                                              const RockCompressibility* rock_comp_props,
-                                             const Wells* wells,
+                                             WellsManager& wells_manager,
                                              const PolymerInflowInterface& polymer_inflow,
                                              const std::vector<double>& src,
                                              const FlowBoundaryConditions* bcs,
@@ -183,18 +186,18 @@ namespace Opm
           props_(props),
           poly_props_(poly_props),
           rock_comp_props_(rock_comp_props),
-          wells_(wells),
+          wells_manager_(wells_manager),
+          wells_(wells_manager.c_wells()),
           polymer_inflow_(polymer_inflow),
           src_(src),
           bcs_(bcs),
-          linsolver_(linsolver),
           gravity_(gravity),
           psolver_(grid, props, rock_comp_props, poly_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
-                   gravity, wells),
-          tsolver_(grid, props, poly_props, *rock_comp_props,
+                   gravity, wells_manager.c_wells()),
+          tsolver_(grid, props, poly_props,
                    TransportModelCompressiblePolymer::Bracketing,
                    param.getDefault("nl_tolerance", 1e-9),
                    param.getDefault("nl_maxiter", 30))
@@ -215,6 +218,10 @@ namespace Opm
             output_interval_ = param.getDefault("output_interval", 1);
         }
 
+        // Well control related init.
+        check_well_controls_ = param.getDefault("check_well_controls", false);
+        max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
+
         // Transport related init.
         TransportModelCompressiblePolymer::SingleCellMethod method;
         std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
@@ -228,7 +235,7 @@ namespace Opm
         tsolver_.setPreferredMethod(method);
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
         use_segregation_split_ = param.getDefault("use_segregation_split", false);
-        if (gravity_ != 0 && use_segregation_split_){
+        if (gravity != 0 && use_segregation_split_) {
             tsolver_.initGravity(gravity);
             extractColumn(grid_, columns_);
         }
@@ -260,7 +267,6 @@ namespace Opm
         }
         const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
         std::vector<double> initial_porevol = porevol;
-
 
         // Main simulation loop.
         Opm::time::StopWatch pressure_timer;
@@ -301,15 +307,75 @@ namespace Opm
 
             initial_pressure = state.pressure();
 
-            // Solve pressure.
+            // Solve pressure equation.
+            if (check_well_controls_) {
+                computeFractionalFlow(props_, poly_props_, allcells_,
+                                      state.pressure(), state.surfacevol(), state.saturation(),
+                                      state.concentration(), state.maxconcentration(),
+                                      fractional_flows);
+                wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
+            }
+            bool well_control_passed = !check_well_controls_;
+            int well_control_iteration = 0;
             do {
+                // Run solver
                 pressure_timer.start();
                 psolver_.solve(timer.currentStepLength(), state, well_state);
+
+                // Renormalize pressure if both fluids and rock are
+                // incompressible, and there are no pressure
+                // conditions (bcs or wells).  It is deemed sufficient
+                // for now to renormalize using geometric volume
+                // instead of pore volume.
+                if (psolver_.singularPressure()) {
+                    // Compute average pressures of previous and last
+                    // step, and total volume.
+                    double av_prev_press = 0.0;
+                    double av_press = 0.0;
+                    double tot_vol = 0.0;
+                    const int num_cells = grid_.number_of_cells;
+                    for (int cell = 0; cell < num_cells; ++cell) {
+                        av_prev_press += initial_pressure[cell]*grid_.cell_volumes[cell];
+                        av_press      += state.pressure()[cell]*grid_.cell_volumes[cell];
+                        tot_vol       += grid_.cell_volumes[cell];
+                    }
+                    // Renormalization constant
+                    const double ren_const = (av_prev_press - av_press)/tot_vol;
+                    for (int cell = 0; cell < num_cells; ++cell) {
+                        state.pressure()[cell] += ren_const;
+                    }
+                    const int num_wells = (wells_ == NULL) ? 0 : wells_->number_of_wells;
+                    for (int well = 0; well < num_wells; ++well) {
+                        well_state.bhp()[well] += ren_const;
+                    }
+                }
+
+                // Stop timer and report
                 pressure_timer.stop();
                 double pt = pressure_timer.secsSinceStart();
                 std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
                 ptime += pt;
-            } while (false);
+
+                // Optionally, check if well controls are satisfied.
+                if (check_well_controls_) {
+                    Opm::computePhaseFlowRatesPerWell(*wells_,
+                                                      well_state.perfRates(),
+                                                      fractional_flows,
+                                                      well_resflows_phase);
+                    std::cout << "Checking well conditions." << std::endl;
+                    // For testing we set surface := reservoir
+                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
+                    ++well_control_iteration;
+                    if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
+                        THROW("Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
+                    }
+                    if (!well_control_passed) {
+                        std::cout << "Well controls not passed, solving again." << std::endl;
+                    } else {
+                        std::cout << "Well conditions met." << std::endl;
+                    }
+                }
+            } while (!well_control_passed);
 
             // Update pore volumes if rock is compressible.
             if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -358,7 +424,7 @@ namespace Opm
                 polyprod += substep_polyprod;
                 if (gravity_ != 0 && use_segregation_split_) {
                     tsolver_.solveGravity(columns_, stepsize,
-                                          state.saturation(), state.surfacevol(), 
+                                          state.saturation(), state.surfacevol(),
                                           state.concentration(), state.maxconcentration());
                 }
             }

@@ -76,7 +76,7 @@ main(int argc, char** argv)
 {
     using namespace Opm;
 
-    std::cout << "\n================    Test program for incompressible two-phase flow with polymer    ===============\n\n";
+    std::cout << "\n================    Test program for weakly compressible two-phase flow with polymer    ===============\n\n";
     parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
@@ -241,12 +241,13 @@ main(int argc, char** argv)
         PolymerInflowBasic polymer_inflow(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                           param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
                                           param.getDefault("poly_amount", poly_props.cMax()));
+        WellsManager wells;
         SimulatorCompressiblePolymer simulator(param,
                                                *grid->c_grid(),
                                                *props,
                                                poly_props,
                                                rock_comp->isActive() ? rock_comp.get() : 0,
-                                               0, // wells
+                                               wells,
                                                polymer_inflow,
                                                src,
                                                bcs.c_bcs(),
@@ -324,7 +325,7 @@ main(int argc, char** argv)
                                                    *props,
                                                    poly_props,
                                                    rock_comp->isActive() ? rock_comp.get() : 0,
-                                                   wells.c_wells(),
+                                                   wells,
                                                    *polymer_inflow,
                                                    src,
                                                    bcs.c_bcs(),
