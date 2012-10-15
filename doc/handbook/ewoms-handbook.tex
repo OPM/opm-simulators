@@ -29,8 +29,8 @@
  aboveskip=\bigskipamount,
  belowskip=\bigskipamount
 }
-% for listings of DuMuX code
-\lstdefinestyle{DumuxCode}
+% for listings of eWoms code
+\lstdefinestyle{eWomsCode}
  {language=C++,
  basicstyle=\ttfamily\scriptsize,
  numbers=left,
@@ -73,10 +73,12 @@
 
 \DeclareGraphicsExtensions{.eps, .jpg}
 
-% Dune logo
+% Dune occuring in text
 \newcommand{\Dune}{{DUNE}\xspace}
-% DuMuX logo
+% dumux occuring in text
 \newcommand{\Dumux}{\texorpdfstring{Du\-Mu$^\text{x}$\xspace}{DuMuX}}
+% eWoms occuring in text
+\newcommand{\eWoms}{eWoms\xspace}
 % beautify C++
 \DeclareRobustCommand\Cplusplus{\texorpdfstring{C\raisebox{2pt}{{\relsize{-3}++}}\xspace}{C++}}
 
@@ -131,9 +133,9 @@
 
 \title{
 \begin{center}
-\includegraphics[width=0.7\textwidth]{../logo/dumux_logo_hires_whitebg.eps}
-\\[3cm]
-{\Huge Handbook}
+%\includegraphics[width=0.7\textwidth]{../logo/dumux_logo_hires_whitebg.eps}
+%\\[3cm]
+{\Huge The \eWoms Handbook}
 \end{center}
 }
 
@@ -142,12 +144,7 @@
 \date{\today}
 
 \publishers{%
-\vspace{10mm}
-{\normalsize Lehrstuhl f\"ur Hydromechanik und Hydrosystemmodellierung, \\
-Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
-%
-\bigskip
-{\normalsize \texttt{\url{http://dumux.org}}}\\
+{\normalsize \texttt{\url{http://opm-project.org/ewoms}}}\\
 }
 
 \makeindex
@@ -170,12 +167,10 @@ Universit\"at Stuttgart, Paffenwaldring 61, D-70569 Stuttgart, Germany}\\
 \input{propertysystem}
 \input{fluidframework}
 \input{models}
-\input{DumuxFlow}
 \input{NewtonInANutshell}
-\input{TipsNTricks}
 \input{install}
 
 \bibliographystyle{plain}
-\bibliography{dumux-handbook}
+\bibliography{ewoms-handbook}
 \printindex
 \end{document}

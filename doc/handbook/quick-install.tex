@@ -1,64 +1,63 @@
-\section{Quick Installation of \Dumux} \label{quick-install}
+\section{Quick Installation of \eWoms} \label{quick-install}
 
-This only provides one quick way of installing \Dumux. 
-You should have a recent working Linux environment, no \Dune core modules should be installed. 
-If you need more information, 
-have \Dune already installed, please have a look at the detailed installation 
-instructions in Section \ref{install}. 
+This only provides one quick way of installing \eWoms.  As a
+pre-requisite it is assumed that you are using \eWoms with a recent
+Linux distribution that has the appropriate development packages
+installed, but without the distribution packages of the \Dune core
+modules installed.  If you need more information, or if you have \Dune
+already installed, please have a look at the detailed installation
+instructions in Section \ref{install}.
 
-\subsection{Obtaining the code with the script \texttt{checkout-dumux}}
+\subsection{Retrieving the code}
 
-The shell-script \texttt{checkout-dumux} facilitates setting up a {\Dune}/{\Dumux} directory tree (currently for the trunk version).
-It is contained in the download section of the \Dumux web page \cite{DUMUX-HP}.
-For example the second line below will check out the required \Dune modules and \texttt{dumux}, 
-\texttt{dumux-devel} and the \texttt{external} folder, which contains some useful external software and libraries.
-Again,  \texttt{joeuser} needs to be replaced by the actual user name.
+
+You can download all \Dune modules by either downloading and unpacking
+the tarballs for the \Dune-2.2 release as well as downloading and
+unpacking the tarball for the \eWoms 2.2 release, or by retrieving the
+code directly from their respective source-code repositories. If you
+decide to use the first method, make sure to unpack all tarballs into
+the same directory, for the second method you can enter the following
+code snipplet into a terminal:
 \begin{lstlisting}[style=Bash]
-$ checkout-dumux -h      # show help,
-$ checkout-dumux -gme -u joeuser -p password -d DUMUX 
+for DUNE_MODULE in common geometry grid istl localfunctions; do \
+     git svn clone https://svn.dune-project.org/svn/dune-$DUNE_MODULE/branches/release-2.2 $DUNE_MODULE \
+done
+git clone --branch "release-2.2" git://github.com/OPM/ewoms.git
 \end{lstlisting}
 
-
-\subsection{Build of \Dune and \Dumux}
+\subsection{Building \Dune and \eWoms}
 \label{buildIt}
-Building of \Dune and \Dumux is done by the command-line script \texttt{dunecontrol} as described in \Dune Installation Notes \cite{DUNE-INST}
-and in much more comprehensive form in the \Dune Buildsystem Howto \cite{DUNE-BS}.
-If something fails during the execution of \texttt{dunecontrol} feel free to report it to the \Dune or \Dumux developer mailing list,
-but also try to include error details.
 
-It is possible to compile \Dumux with nearly no explicit options to the build system.
-However, for the successful compilation of \Dune and \Dumux, it is currently necessary to pass the
-the option \texttt{-fno-strict-aliasing} to the \Cplusplus compiler
-\cite{WIKIPED-ALIASING}, which is done here via a command-line argument to \texttt{dunecontrol}:
+\eWoms is (almost) a standard \Dune module and is recommended to be
+build using the \Dune build system~\cite{DUNE-BS}. \eWoms ships with a
+few option files for \Dune's build script, \texttt{dunecontrol}. For
+the first time compilation we recommend to use the options optimized
+for the debugging experience, \texttt{debug.opts}:
+
 \begin{lstlisting}[style=Bash]
-$ # make sure you are in the directory DUNE-Root
-$ ./dune-common/bin/dunecontrol --configure-opts="CXXFLAGS=-fno-strict-aliasing"  all
+# make sure you are in the DUNE's root directory 
+./dune-common/bin/dunecontrol --opts=ewoms/debug.opts all
 \end{lstlisting}
 
-Too many options can make life hard. That's why usually option files are being used together with \texttt{dunecontrol} and its sub-tools.
-Larger sets of options are kept in them. If you are going to compile with options suited for debugging the code, the following
-can be a starting point:
+If you finished with developing and testing your own code on
+small-scale problems, re-compile everything with compiler
+optimizations enabled before a production run:
+
 \begin{lstlisting}[style=Bash]
-$ # make sure you are in the directory DUNE-Root
-$ cp dumux/debug.opts my-debug.opts      # create a personal version
-$ gedit my-debug.opts                    # optional editing the options file 
-$ ./dune-common/bin/dunecontrol --opts=my-debug.opts all 
+# make sure you are in the DUNE's root directory
+./dune-common/bin/dunecontrol --opts=ewoms/optim.opts all
 \end{lstlisting}
 
-More optimized code, which is typically not usable for standard debugging tasks, can be produced by 
-\begin{lstlisting}[style=Bash]
-$ cp dumux/optim.opts my-optim.opts 
-$ ./dune-common/bin/dunecontrol --opts=my-optim.opts all
-\end{lstlisting}
+Sometimes it is necessary to have additional options which are
+specific to the concrete operating system you use or you might also
+have special needs.  For this reason, the option files mentioned above
+are to be rather understood as a starting point for specifying the own
+options than as something which is fixed; feel free to copy and modify
+them.  For example, if you need external libraries, you might need to
+add or modify quite many options.  To avoid confusion, it can also be
+helpful to use a different name for your customized option files.
 
-Sometimes it is necessary to have additional options which
-are specific to a package set of an operating system or
-sometimes you have your own preferences.
-Feel free to work with your own set of options, which may evolve over time.
-The option files above are to be understood more as a starting point
-for setting up an own customization than as something which is fixed.
-The use of external libraries can make it necessary to add quite many options in an option-file.
-It can be helpful to give your customized option file its own name, as done above.
-One avoids confusing it with the option files which came out of the distribution
-and which can be possibly updated by subversion later on.
-
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "ewoms-handbook"
+%%% End: 

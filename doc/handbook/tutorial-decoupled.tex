@@ -42,7 +42,7 @@ effects are neglected.
 Listing \ref{tutorial-decoupled:mainfile} shows how the main file, which has to be executed, has to be set up, if the problem described above is to be solved using a decoupled model. This main file can be found in the directory \texttt{/tutorial} of the stable part of \Dumux.
 
 \begin{lst}[File tutorial/tutorial\_decoupled.cc]\label{tutorial-decoupled:mainfile} \mbox{}
-\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorial_decoupled.cc}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorial_decoupled.cc}
 \end{lst}
 
 First, from line \ref{tutorial-decoupled:include-begin} to line
@@ -70,7 +70,7 @@ precedence. Listing~\ref{tutorial-decoupled:parameter-file} shows the
 default parameter file for the tutorial problem.
 
 %\begin{lst}[File tutorial/tutorial\_decoupled.input]\label{tutorial-decoupled:parameter-file} \mbox{}
-%\lstinputlisting[style=DumuxCode]{../../tutorial/tutorial_decoupled.input}
+%\lstinputlisting[style=eWomsCode]{../../tutorial/tutorial_decoupled.input}
 %\end{lst}
 
 To provide an error message, the usage message which is displayed to
@@ -89,7 +89,7 @@ so-called \textit{problem file} as shown in listing
 \texttt{tutorialproblem\_decoupled.hh}.
 
 \begin{lst}[File tutorial/tutorialproblem\_decoupled.hh]\label{tutorial-decoupled:problemfile} \mbox{}
-\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialproblem_decoupled.hh}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialproblem_decoupled.hh}
 \end{lst}
 
 First, both \Dune  grid handlers and the decoupled model of \Dumux 
@@ -165,7 +165,7 @@ Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
 \verb+tutorialspatialparams_decoupled.hh+:
 
 \begin{lst}[File tutorial/tutorialspatialparams\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
-\lstinputlisting[style=DumuxCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialspatialparams_decoupled.hh}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialspatialparams_decoupled.hh}
 \end{lst}
 As this file only slightly differs from the coupled version, consult 
 chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
@@ -316,5 +316,5 @@ If both the coupled and the decoupled tutorial are completed, one should have no
 
 %%% Local Variables: 
 %%% mode: latex
-%%% TeX-master: "dumux-handbook"
+%%% TeX-master: "ewoms-handbook"
 %%% End: 

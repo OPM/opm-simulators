@@ -4,8 +4,8 @@ if BUILD_HANDBOOK
 
 #EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 TEXSOURCE = *.tex ./EPS/*.eps
-MAINDOCS = dumux-handbook.dvi dumux-handbook.pdf dumux-handbook.ps
-EXTRA_DIST = dumux-handbook.pdf $(TEXSOURCE) dumux-handbook.bib ModelDescriptions/*.tex
+MAINDOCS = ewoms-handbook.dvi ewoms-handbook.pdf ewoms-handbook.ps
+EXTRA_DIST = ewoms-handbook.pdf $(TEXSOURCE) ewoms-handbook.bib ModelDescriptions/*.tex
 #Makefile.dist.in Makefile.dist.am
 
 DOCS = $(HTDOCS) $(MAINDOCS)
@@ -15,26 +15,26 @@ BASEDIR=../..
 CURDIR=doc/handbook
 
 handbookdir=$(docdir)/handbook
-handbook_DATA = dumux-handbook.pdf
+handbook_DATA = ewoms-handbook.pdf
 
 CLEANFILES = *.aux *.bbl *.blg *.log *.out *.toc *.dvi *.ps
 CLEANFILES += *.4ct *.4tc *.css *.idv *.idx *.lg *.tid *.tmp *.tms *.xref
-CLEANFILES += dumux-handbook*.png 
+CLEANFILES += ewoms-handbook*.png 
 CLEANFILES += $(DOCS)
 CLEANFILES += $(EPS_FILES)
 
 %.eps: $(srcdir)/%.jpg
 	$CONVERT $< $@
-dumux-handbook.tex: $(EPS_FILES)
+ewoms-handbook.tex: $(EPS_FILES)
 
-dumux-handbook.pdf: $(TEXSOURCE)
-	@LATEX@ dumux-handbook.tex <&-
-	@BIBTEX@ dumux-handbook <&-
-	@LATEX@ dumux-handbook.tex <&-
-	@LATEX@ dumux-handbook.tex <&-
-	@DVIPDF@ dumux-handbook <&-
+ewoms-handbook.pdf: $(TEXSOURCE)
+	@LATEX@ ewoms-handbook.tex <&-
+	@BIBTEX@ ewoms-handbook <&-
+	@LATEX@ ewoms-handbook.tex <&-
+	@LATEX@ ewoms-handbook.tex <&-
+	@DVIPDF@ ewoms-handbook <&-
 
-doc: dumux-handbook.pdf
+doc: ewoms-handbook.pdf
 
 #dist-hook:
 #	sed $(srcdir)/Makefile.dist.am -e 's/Makefile\.dist/Makefile/g' > $(distdir)/Makefile.am
@@ -46,6 +46,6 @@ else
 doc:
 	echo -n ""
 endif
-EXTRA_DIST= dumux-handbook.pdf
+EXTRA_DIST= ewoms-handbook.pdf
 include $(top_srcdir)/am/global-rules
 include $(top_srcdir)/am/latex

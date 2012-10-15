@@ -1,12 +1,87 @@
-\section[Quick start guide]{Quick start guide: The first run of a test application}\label{quick-start-guide}
+\section[Quick start guide]{Quick start guide: The first run of a test application}
+\label{quick-start-guide}
 
-The previous section showed how to install and compile \Dumux. This chapter shall give a very brief introduction how to run a first test application and how to visualize the first output files. Only the rough steps will be described here. More detailed explanations can be found in the tutorials in the following chapter.
+The previous section showed how to install and compile \eWoms. This
+chapter gives you a very brief introduction how to run a first test
+application and how to visualize the output files it produces. Only the
+rough steps will be described here; More detailed explanations can be
+found in the tutorials in the following chapter.
 
 \begin{enumerate}
- \item Go to the directory \texttt{/test}. There, various test application folders can be found. Let us consider as example \texttt{boxmodels/test{\_}2p}:
- \item Enter the folder \texttt{boxmodels/2p}. If everything was compiled correctly, there should be an executable \texttt{test{\_}2p}. Otherwise, type \texttt{make test{\_}2p} in order to compile the application. To run the simulation, type\\ 
-\texttt{./test{\_}2p -parameterFile ./test\_2p.input}\\
-into the console. The parameter \texttt{-parameterFile} specifies that all important parameters (like first timestep size, end of simulation and location of the grid file) can be found in a text file in the same directory  with the name \texttt{test\_2p.input}. 
- \item The simulation starts and produces some .vtu output files and also a .pvd file. The .pvd file can be used to examine time series and summarizes the .vtu files. It is possible to stop a running application by pressing $<$Ctrl$><$c$>$.
- \item You can display the results using the visualization tool ParaView (or alternatively VisIt). Just type \texttt{paraview} in the console and open the .pvd file. On the left hand side, you can choose the desired parameter to be displayed.
+\item Go to the directory \texttt{/test}. There, various test
+  application folders can be found. Let us consider as example
+  \texttt{boxmodels/lens{\_}immiscible}:
+\item Enter the folder \texttt{boxmodels/}. 
+\item By default, the \texttt{dunecontrol} command only compiles the
+  parts of \Dune modules that are necessary to build modules depending
+  on the given module. For \eWoms, \texttt{dunecontrol} does not build
+  anything by default, because \eWoms only provides \Cplusplus
+  template classes but no libraries that need compilation. To compile
+  the test simulation for the "lens" problem which uses the immiscible
+  box model, enter
+\begin{lstlisting}[style=Bash]
+make lens_immiscible
+\end{lstlisting}
+
+You may also compile all available tests which use the box scheme by entering
+\begin{lstlisting}[style=Bash]
+make check
+\end{lstlisting}
+
+This takes quite some time, but if you have a multi-core processor
+with \$N cores, you can considerably speed up compilation by using all
+of available cores by using
+\begin{lstlisting}[style=Bash]
+make -j $N check
+\end{lstlisting}
+%$
+
+\item If everything was compiled correctly, there should be an
+  executable \texttt{lens{\_}immiscible}. To run the simulation,
+  simply run it, i.e. enter
+\begin{lstlisting}[style=Bash]
+./lens_immiscible
+\end{lstlisting}
+
+You may also want to change some parameters from the command line. For
+example, if you want to change the time up to which the simulation is
+run to $30.000$ seconds, use
+\begin{lstlisting}[style=Bash]
+./lens_immiscible --end-time=30e3
+\end{lstlisting}
+
+You can also get a list of parameters recognized by the
+simulation together with a brief description, by running
+\begin{lstlisting}[style=Bash]
+./lens_immiscible --help
+\end{lstlisting}
+
+\item After this, the simulation should start and produce some output
+  on the terminal. It is possible to interrupt it at any time by
+  pressing \texttt{<Ctrl>+<C>}.
+
+\item The actual output files produced by the simulation are a series
+  of \texttt{.vtu} files and a \texttt{.pvd} file. The \texttt{.vtu}
+  contain "visualization ready" data which is produced during the
+  simulation, while the \texttt{.pvd} file "stitches" these together
+  into a coherent data set. For example, the \texttt{.pvd} holds the
+  simulation time at which a given data-set is produced which can
+  later be used for visualization.
+\item You can now display the result of the simulation using the
+  visualization tool ParaView (or, if you prefer, VisIt). Just type
+  \texttt{paraview} in the console and open the \texttt{.pvd} file. On
+  the left hand side, you should now be able to click the green
+  ``Apply'' button. Once you have done this, the visualization of the
+  simulation result appears on the screen and you can click the
+  ``play'' button in the toolbar to view display its evolution over
+  time.  Also note that you can choose the output quantity to be
+  displayed in the toolbar. For the lens problem, the most insight can
+  be gained by looking at one of the saturations.
+\item Play a bit around to make your self familiar with the
+  visualization tool of your choice as you will be using it a lot.
 \end{enumerate}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "ewoms-handbook"
+%%% End: 
