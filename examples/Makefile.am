@@ -2,7 +2,7 @@
 check_PROGRAMS = tutorial_decoupled tutorial_coupled
 
 noinst_HEADERS= *.hh
-EXTRA_DIST = CMakeLists.txt *.input
+EXTRA_DIST = CMakeLists.txt
 
 tutorial_decoupleddir = $(datadir)/dumux/tutorial
 tutorial_decoupled_SOURCES = tutorial_decoupled.cc
