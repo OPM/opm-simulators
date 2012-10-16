@@ -1,10 +1,13 @@
-\section{Quick Installation of \eWoms} \label{quick-install}
+\section{Installation of \eWoms} \label{quick-install}
 
-This only provides one quick way of installing \eWoms.  As a
-pre-requisite it is assumed that you are using \eWoms with a recent
-Linux distribution that has the appropriate development packages
-installed, but without the distribution packages of the \Dune core
-modules installed.  If you need more information, or if you have \Dune
+This section describes a way of installing \eWoms that works in most
+cases, but depending on your operating system of choice, \Cplusplus
+compiler and features which you need, some tweaks are possibly. As a
+pre-requisite it is assumed, that you are using a recent Linux
+distribution that has the appropriate development packages (\Cplusplus
+compiler, autoconf, automake, libtool and pkg-config amongst possibly
+others) installed, but that you did not install \Dune via distribution
+provided packages.  If you need more information, or if you have \Dune
 already installed, please have a look at the detailed installation
 instructions in Section \ref{install}.
 
@@ -16,46 +19,52 @@ the tarballs for the \Dune-2.2 release as well as downloading and
 unpacking the tarball for the \eWoms 2.2 release, or by retrieving the
 code directly from their respective source-code repositories. If you
 decide to use the first method, make sure to unpack all tarballs into
-the same directory, for the second method you can enter the following
-code snipplet into a terminal:
+the same directory; if you prefer the second method, make sure that
+you have the \texttt{git} version control system with the SVN plug-in
+installed on your computer and enter the following code snipplet into
+a terminal:
 \begin{lstlisting}[style=Bash]
+cd $YOUR_DUNE_ROOT_DIRECTORY
 for DUNE_MODULE in common geometry grid istl localfunctions; do \
      git svn clone https://svn.dune-project.org/svn/dune-$DUNE_MODULE/branches/release-2.2 $DUNE_MODULE \
 done
 git clone --branch "release-2.2" git://github.com/OPM/ewoms.git
 \end{lstlisting}
+%$
 
 \subsection{Building \Dune and \eWoms}
 \label{buildIt}
 
-\eWoms is (almost) a standard \Dune module and is recommended to be
-build using the \Dune build system~\cite{DUNE-BS}. \eWoms ships with a
-few option files for \Dune's build script, \texttt{dunecontrol}. For
-the first time compilation we recommend to use the options optimized
-for the debugging experience, \texttt{debug.opts}:
+\eWoms is \Dune module and is recommended to build it using the \Dune
+build system~\cite{DUNE-BS}. To simplify things, \eWoms ships with a
+few option files for \Dune's build script, \texttt{dunecontrol}. If
+you are using \eWoms the first time, we recommend to use the one
+optimized for the debugging experience, \texttt{debug.opts}:
 
 \begin{lstlisting}[style=Bash]
-# make sure you are in the DUNE's root directory 
+cd $YOUR_DUNE_ROOT_DIRECTORY
 ./dune-common/bin/dunecontrol --opts=ewoms/debug.opts all
 \end{lstlisting}
+%$
 
-If you finished with developing and testing your own code on
+Once you have finished developing and testing your own code on
 small-scale problems, re-compile everything with compiler
-optimizations enabled before a production run:
+optimizations enabled before a production run in order to speed things
+up by a factor of approximately 10:
 
 \begin{lstlisting}[style=Bash]
-# make sure you are in the DUNE's root directory
+cd $YOUR_DUNE_ROOT_DIRECTORY
 ./dune-common/bin/dunecontrol --opts=ewoms/optim.opts all
 \end{lstlisting}
+%$
 
 Sometimes it is necessary to have additional options which are
-specific to the concrete operating system you use or you might also
-have special needs.  For this reason, the option files mentioned above
-are to be rather understood as a starting point for specifying the own
-options than as something which is fixed; feel free to copy and modify
-them.  For example, if you need external libraries, you might need to
-add or modify quite many options.  To avoid confusion, it can also be
-helpful to use a different name for your customized option files.
+specific to the operating system of your choice, or if you have
+special requirements.  For this reason, the option files mentioned
+above should be rather understood as a starting point for your own
+option files than as something fixed; feel free to copy and modify
+them. To avoid confusion, it is usually helpful to rename your
+customized option files, though.
 
 %%% Local Variables: 
 %%% mode: latex

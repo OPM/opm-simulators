@@ -1,7 +1,7 @@
-
-
 \chapter{Newton in a Nutshell}
-Coming back to the example of chapter \ref{flow} the following mass conservation equation is to be solved: 
+
+For the isothermal immiscible multi-phase model for flow in porous
+media, the following mass conservation equation needs to be solved:
 \begin{align}
 \underbrace{
   \phi \frac{\partial \varrho_\alpha S_\alpha}{\partial t}
@@ -59,3 +59,8 @@ Comparing (\ref{GenSysEq}) with (\ref{NewtonAsUsed}) leads to:
 This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more \textsc{Newton-}iteration (do not confuse with timestep!).
 
 In the rest of Dumux (everywhere besides in the solver), not the change of the solution is looked for, but the actual solution is used. Therefore the outcome of the linear solver needs to be reformulated as done in \verb+updateMethod.update(*this, u, *uOld, model);+. In this function the ``change in solution'' is changed to ``solution''. Afterwards the quantity \verb+*u+ stands for the solution.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "ewoms-handbook"
+%%% End: 

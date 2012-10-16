@@ -61,25 +61,11 @@ with parsing the command line arguments, reading the parameter file,
 setting up the infrastructure necessary for \Dune, loading the grid, and
 starting the simulation. All parameters can
 be either specified by command line arguments of the form
-(\texttt{-ParameterName ParameterValue}), in the file specified by the
-\texttt{-parameterFile} argument, or if the latter is not specified,
-in the file \texttt{tutorial\_decoupled.input}. If a parameter is
+(\texttt{--ParameterName=ParameterValue}), in the file specified by the
+\texttt{--ParameterFile=filename.ini} argument. If a parameter is
 specified on the command line as well as in the parameter file, the
 values provided in the command line have
-precedence. Listing~\ref{tutorial-decoupled:parameter-file} shows the
-default parameter file for the tutorial problem.
-
-%\begin{lst}[File tutorial/tutorial\_decoupled.input]\label{tutorial-decoupled:parameter-file} \mbox{}
-%\lstinputlisting[style=eWomsCode]{../../tutorial/tutorial_decoupled.input}
-%\end{lst}
-
-To provide an error message, the usage message which is displayed to
-the user if the simulation is called incorrectly, is printed via the
-custom function which is defined on
-line~\ref{tutorial-decoupled:usage-function}. In this function the usage
-message is customized to the problem at hand. This means that at least
-the necessary parameters are listed here.  For more information about
-the input file please refer to section \ref{sec:inputFiles}.
+precedence.
 
 \subsection{The problem class} \label{decoupled_problem}
 
@@ -167,10 +153,7 @@ Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
 \begin{lst}[File tutorial/tutorialspatialparams\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
 \lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialspatialparams_decoupled.hh}
 \end{lst}
-As this file only slightly differs from the coupled version, consult 
-chapter \ref{tutorial-coupled:description-spatialParameters} for explanations.
-However, as a standard Finite-Volume--scheme is used, in contrast to the box-method
-in the coupled case, the argument list here is the same as for the problem 
+The argument list here is the same as for the problem 
 functions: Either an \texttt{element}, or only the global position if the function is called \texttt{...AtPos(...)}.
 
 \subsection{Exercises}
@@ -185,7 +168,7 @@ For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
 
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. The runtime parameters which are set can be found in the input file (listing~\ref{tutorial-decoupled:parameter-file}). If the input file has the same name than the main file (e.g. \texttt{tutorial\_decoupled.cc} and \texttt{tutorial\_decoupled.input}), it is automatically chosen. If the name differs the program has to be started typing \texttt{./tutorial\_decoupled -parameterFile <filename>.input}. For more options you can also type \texttt{./tutorial\_decoupled -h}. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
+To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. The runtime parameters which are set printed at the start of the simulation. If the input file has the same name than the main file (e.g. \texttt{tutorial\_decoupled.cc} and \texttt{tutorial\_decoupled.input}), it is automatically chosen. If the name differs the program has to be started typing \texttt{./tutorial\_decoupled -parameterFile <filename>.input}. For more options you can also type \texttt{./tutorial\_decoupled -h}. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
 As you can see, the simulation creates many output files. To reduce these in order to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:outputinterval} in the file \texttt{tutorialproblem\_decoupled}) as to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
 
 \item \textbf{Changing the Model Domain and the Boundary Conditions} \\

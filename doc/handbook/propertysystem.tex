@@ -1,25 +1,25 @@
-\chapter{The \Dumux Property System}
+\chapter{The \eWoms property system}
 \label{sec:propertysystem}
 
-This section is dedicated to the \Dumux property system. First, a high
+This section is dedicated to the \eWoms property system. First, a high
 level overview over its design and principle ideas is given, then
 follows a short reference and a short self-contained example.
 
-\section{Concepts and Features of the \Dumux Property System}
+\section{Concepts and features of the \eWoms property system}
 
-The \Dumux property system was designed as an attempt to mitigate the
+The \eWoms property system was designed as an attempt to mitigate the
 problems of traits classes. In fact, it can be seen as a traits system
 which allows easy inheritance and any acyclic dependency of parameter
-definitions. Just like traits, the \Dumux property system is a compile
+definitions. Just like traits, the \eWoms property system is a compile
 time mechanism, which means that there are no run-time performance
 penalties associated with it. It is based on the following concepts:
 \begin{description}
-\item[Property:] In the context of the \Dumux property system, a
+\item[Property:] In the context of the \eWoms property system, a
   property is an arbitrary class body which may contain type
   definitions, values and methods. Each property has a so-called
   \textbf{property tag} which can be seen as a label with its name.
 \item[Property Inheritance:] Just like normal classes, properties can
-  be arranged in hierarchies. In the context of the \Dumux property
+  be arranged in hierarchies. In the context of the \eWoms property
   system, nodes of the inheritance hierarchy are called \textbf{type
     tags}.
 \end{description}
@@ -32,15 +32,15 @@ introspection denotes the ability to generate diagnostic messages
 which can be used to find out where a certain property was defined and
 how it was inherited.
 
-\section{\Dumux Property System Reference}
+\section{\eWoms property system reference}
 
-All source files which use the \Dumux property system should include
+All source files which use the \eWoms property system should include
 the header file \texttt{dumux/ \hskip-1ex{}common/
   \hskip-1ex{}propertysystem.hh}.  Declaration of type tags and
 property tags as well as defining properties must be done inside the
 namespace \texttt{Dumux::Properties}.
 
-\subsection*{Defining Type Tags}
+\subsection*{Defining type tags}
 
 New nodes in the type tag hierarchy can be defined using
 \begin{lstlisting}[style=eWomsCode]
@@ -62,7 +62,7 @@ NEW_TYPE_TAG(MyDerivedTypeTag, INHERITS_FROM(MyBaseTypeTag1, MyBaseTypeTag2));
 }}
 \end{lstlisting}
 
-\subsection*{Declaring Property Tags}
+\subsection*{Declaring property tags}
 
 New property tags -- i.e. labels for properties -- are declared
 using
@@ -82,7 +82,7 @@ NEW_PROP_TAG(MyPropertyTag);
 }}
 \end{lstlisting}
 
-\subsection*{Defining Properties}
+\subsection*{Defining properties}
 
 The value of a property on a given node of the type tag hierarchy is
 defined using
@@ -130,7 +130,7 @@ SET_SCALAR_PROP(MyTypeTag, MyScalarValue, 12345.67890);
 }}
 \end{lstlisting}
 
-\subsection*{Un-setting Properties}
+\subsection*{Un-setting properties}
 
 Sometimes some inherited properties do not make sense for a certain
 node in the type tag hierarchy. These properties can be explicitly
@@ -158,15 +158,14 @@ UNSET_PROP(DerivedTypeTag, TestProp);
 }}
 \end{lstlisting}
 
-\subsection*{Converting Tag Names to Tag Types}
+\subsection*{Converting type tag names to \Cplusplus types}
 
-For the \Cplusplus compiler, property and type tags are like ordinary
-types. Both can thus be used as template arguments. To convert a
-property tag name or a type tag name into the corresponding type, the
-macros \texttt{TTAG(TypeTagName)} and \texttt{PTAG(PropertyTagName)}
+For the \Cplusplus compiler, type tags are like ordinary types. Both
+can thus be used as template arguments. To convert a type tag name
+into the corresponding type, the macro \texttt{TTAG(TypeTagName)}
 ought to be used.
 
-\subsection*{Retrieving Property Values}
+\subsection*{Retrieving property values}
 
 The value of a property can be retrieved using
 \begin{lstlisting}[style=eWomsCode]
@@ -209,7 +208,7 @@ class MyClass {
 };
 \end{lstlisting}
 
-\subsection*{Nesting Property Definitions}
+\subsection*{Nesting property definitions}
 
 Inside property definitions there is access to all other properties
 which are defined somewhere on the type tag hierarchy. The node for
@@ -228,7 +227,7 @@ public: typedef std::vector<Scalar> type;
 \end{lstlisting}
 
 
-\section{A Self-Contained Example}
+\section{A self-contained example}
 
 As a concrete example, let us consider some kinds of cars: Compact
 cars, sedans, trucks, pickups, military tanks and the Hummer-H1 sports
@@ -255,7 +254,7 @@ diagram for the car types above might look like outlined in Figure
     which make sense for at least one of the car types of (a).}
 \end{figure}
 
-Using the \Dumux property system, this inheritance hierarchy is
+Using the \eWoms property system, this inheritance hierarchy is
 defined by:
 \begin{lstlisting}[name=propsyscars,style=eWomsCode]
 #include <dumux/common/propertysystem.hh>
@@ -309,7 +308,7 @@ the following:
 \end{itemize}
 
 \noindent
-Using the \Dumux property system, these assumptions are formulated
+Using the \eWoms property system, these assumptions are formulated
 using
 \begin{lstlisting}[name=propsyscars,style=eWomsCode]
 SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, GasUsage) * 30);

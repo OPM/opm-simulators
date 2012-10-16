@@ -1,10 +1,42 @@
 \chapter[Tutorial]{Tutorial}\label{chp:tutorial}
 
-In \Dumux two sorts of models are implemented: Fully-coupled models and decoupled models. In the fully-coupled models a flow system is described by a system of strongly coupled equations, which can be for example mass balance equations for phases, mass balance equations for components or energy balance equations. In contrast, a decoupled model consists of a pressure equation, which is iteratively coupled to a saturation equation, concentration equations, energy balance equations, etc.
+\eWoms provides two sorts of models: Models which use a fully-implicit
+discretization in space and time and models that are
+semi-implicit. 
 
-Examples for different kinds of both, coupled and decoupled models, are isothermal two-phase models, isothermal two-phase two-component models, non-isothermal two-phase models and non-isothermal two-phase two-component models.
+The semi-implicit solve the combined mass balance equation for all
+phases implicitly -- which yields a pressure -- and then transport the
+conserved quantities in an explicit step based on the result of the
+(implicit) pressure step. For this reason these models are also called
+to be based on the IMPES approach (\textbf{i}mplicit \textbf{p}ressure
+\textbf{e}xplicit \textbf{s}aturation) or, more generally, on the
+IMPET approach (IMPES (\textbf{i}mplicit \textbf{p}ressure
+\textbf{e}xplicit \textbf{t}ransport).
 
-In section \ref{box} a short introduction to the box method is given. The box method is used in the fully-coupled models for the spatial discretization of the system of equations. The decoupled models employ usually a cell-centered finite volume scheme. The following two sections of the tutorial demonstrate how to solve problems using, first, a fully-coupled model (section \ref{tutorial-coupled}) and, second, using a decoupled model (section \ref{tutorial-decoupled}). Being the easiest case, an isothermal two-phase system (two fluid phases, one solid phase) will be considered.
+The fully-implicit models, describe the conservation quantities of a
+flow system as a system of strongly coupled partial differential
+equations. Physically, these conservation quantities are mass,
+momentum and energy; Although the momentum is usually not explicitly
+conserved in the context of flow models for porous media.
+
+In section \ref{box} a short introduction to the vertex centered
+finite volume scheme (VCFV or box method) used by \eWoms as the
+spatial discretization of the fully-implicit models is given. The
+decoupled models usually employ a cell-centered finite volume scheme
+which is quite similar to the VCFV discretization, except that this
+scheme does not require to construct a dual grid centered around the
+primary grid's vertices.
+
+
+The following two sections of the tutorial first introduce how to
+solve flow problems using a fully-coupled model (section
+\ref{tutorial-coupled}) and then how to solve the same problem using a
+semi-implicit model (section \ref{tutorial-decoupled}). Being the
+easiest case, an isothermal two-phase system (two fluid phases, one
+solid phase) will be considered. The source code of these tutorials is
+shipped with the \eWoms source package and can be found in the
+\texttt{tutorial} directory.
+
 \input{tutorial-coupled}
 \input{tutorial-decoupled}
 %\input{tutorial-newmodel}

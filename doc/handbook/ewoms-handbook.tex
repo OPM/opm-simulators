@@ -8,6 +8,10 @@
 \usepackage{theorem}
 \usepackage{color}
 \usepackage{listings}
+
+\definecolor{bashgray}{gray}{0.92}
+\definecolor{cppgray}{gray}{0.95}
+
 \lstset{language=C++, basicstyle=\ttfamily, 
   keywordstyle=\color{black}\bfseries, tabsize=4, stringstyle=\ttfamily,
   commentstyle=\it, extendedchars=true, escapeinside={/*@}{@*/}}
@@ -15,14 +19,14 @@
 % for listings of bash code in install.tex
 \lstdefinestyle{Bash}
  {language=Bash,
- backgroundcolor=\color{lightgray},
+ backgroundcolor=\color{bashgray},
  basicstyle=\ttfamily\small,
  numbers=none,
  captionpos=b,
  tabsize=4,
  breaklines=true,
  frame=single,
- rulecolor=\color{lightgray},
+ rulecolor=\color{bashgray},
  framerule=1pt,
  framesep=1pt,
  rulesep=0pt,
@@ -33,6 +37,8 @@
 \lstdefinestyle{eWomsCode}
  {language=C++,
  basicstyle=\ttfamily\scriptsize,
+ backgroundcolor=\color{bashgray},
+ rulecolor=\color{bashgray},
  numbers=left,
  numberstyle=\tiny,
  numbersep=5pt,
@@ -159,16 +165,26 @@
 
 \tableofcontents
 
+\part{Getting Familiar}
+
 \input{intro}
 \input{getting-started}
 \input{tutorial}
-\input{structure}
+
+\part{Concepts and Software Architecture}
+
 \input{designpatterns}
 \input{propertysystem}
 \input{fluidframework}
-\input{models}
-\input{NewtonInANutshell}
+
+\part{Guides}
+
+\input{structure}
 \input{install}
+\input{guidelines}
+\input{new-folder}
+\input{newton-in-a-nutshell}
+\input{models}
 
 \bibliographystyle{plain}
 \bibliography{ewoms-handbook}

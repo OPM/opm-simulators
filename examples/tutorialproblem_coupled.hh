@@ -20,7 +20,7 @@
 /*!
  * \file
  *
- * \brief Tutorial problem for a fully coupled twophase box model.
+ * \copydoc Dumux::TutorialProblemCoupled
  */
 #ifndef DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
 #define DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
@@ -37,12 +37,11 @@
 #include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 #include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
 
-// The DUNE grid used
+// For the DUNE grid
 #include <dune/grid/yaspgrid.hh>
-#include <dumux/common/cubegridcreator.hh>
+#include <dumux/common/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
 
-// Dune::FieldVector and Dune::FieldMatrix
-#include <dune/common/fvector.hh>
+// For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>
 
 namespace Dumux {
@@ -63,62 +62,56 @@ SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem
 SET_TYPE_PROP(TutorialProblemCoupled, Grid, Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial-coupled:set-grid}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Dumux::CubeGridCreator<TypeTag>); /*@\label{tutorial-coupled:set-gridcreator}@*/
 
-// Set the wetting phase
-SET_PROP(TutorialProblemCoupled, WettingPhase) /*@\label{tutorial-coupled:2p-system-start}@*/
-{
-private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-public: typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{tutorial-coupled:wettingPhase}@*/
-};
+// Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
+              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar), Dumux::H2O<Scalar> >); 
 
 // Set the non-wetting phase
-SET_PROP(TutorialProblemCoupled, NonwettingPhase)
-{
-private: typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-public: typedef Dumux::LiquidPhase<Scalar, Dumux::LNAPL<Scalar> > type; /*@\label{tutorial-coupled:nonwettingPhase}@*/
-}; /*@\label{tutorial-coupled:2p-system-end}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
+              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar), Dumux::LNAPL<Scalar> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
 
 // Set the material law
 SET_PROP(TutorialProblemCoupled, MaterialLaw)
 {
 private:
-    // material law typedefs
+    // Retrieve the C++ type used to represent scalar values
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    // select material law to be used
+    // Select the base material law to be used
     typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
-    // adapter for absolute law
+    // Converts absolute saturations into effective ones before
+    // passing it to the base material law
     typedef EffToAbsLaw<RawMaterialLaw> TwoPMaterialLaw;   /*@\label{tutorial-coupled:eff2abs}@*/
 
+    // Retrieve the index of the wetting phase
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     enum { wPhaseIdx = FluidSystem::wPhaseIdx };
 
 public:
+    // Convert two-phase material law into a general M-phase one.
     typedef TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
 };
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-coupled:gravity}@*/
 
-// define how long the simulation should run [s]
+// define how long the simulation should run [s]  /*@\label{tutorial-coupled:default-params-begin}@*/
 SET_SCALAR_PROP(TutorialProblemCoupled, EndTime, 100e3);
 
 // define the size of the initial time step [s]
 SET_SCALAR_PROP(TutorialProblemCoupled, InitialTimeStepSize, 500.0);
 
-// define the properties required by the cube grid creator
+// define the physical size of the problem's domain [m]
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX, 300.0);
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeY, 60.0);
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeZ, 0.0);
 
+// // define the number of cells used for discretizing the physical domain
 SET_INT_PROP(TutorialProblemCoupled, CellsX, 100);
 SET_INT_PROP(TutorialProblemCoupled, CellsY, 1);
-SET_INT_PROP(TutorialProblemCoupled, CellsZ, 0);
-}
+SET_INT_PROP(TutorialProblemCoupled, CellsZ, 1);   /*@\label{tutorial-coupled:default-params-end}@*/
+} // namespace Properties
 
-/*!
- * \ingroup TwoPBoxModel
- *
- * \brief  Tutorial problem for a fully coupled twophase box model.
- */
+//! Tutorial problem using the fully-implicit immiscible model.
 template <class TypeTag>
 class TutorialProblemCoupled
     : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\label{tutorial-coupled:def-problem}@*/
@@ -130,21 +123,17 @@ class TutorialProblemCoupled
     // Grid dimension
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    // The type of the intrinsic permeability tensor
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
-    // Dumux specific types
+    // eWoms specific types are specified via the property system
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    
-    // get material law from property system
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    // determine type of the parameter objects depening on selected material law
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;    /*@\label{tutorial-coupled:matLawObjectType}@*/
 
     // phase indices
@@ -152,7 +141,7 @@ class TutorialProblemCoupled
     enum { wPhaseIdx = FluidSystem::wPhaseIdx };
     enum { nPhaseIdx = FluidSystem::nPhaseIdx };
 
-    // indices of the conservation equations
+    // Indices of the conservation equations
     enum { contiWEqIdx = Indices::conti0EqIdx + wPhaseIdx };
     enum { contiNEqIdx = Indices::conti0EqIdx + nPhaseIdx };
 
@@ -162,58 +151,39 @@ public:
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
         , eps_(3e-6)
     {
-        // set main diagonal entries of the permeability tensor to a value
-        // setting to a single value means: isotropic, homogeneous
+        // Use an isotropic and homogeneous intrinsic permeability 
         K_ = this->toDimMatrix_(1e-7);
+        
+        // Parameters of the Brooks-Corey law
+        materialParams_.setPe(500.0); // entry pressure [Pa]  /*@\label{tutorial-coupled:setLawParams}@*/
+        materialParams_.setLambda(2); // shape parameter
 
-        //set residual saturations
-        materialParams_.setSwr(0.0);                /*@\label{tutorial-coupled:setLawParams}@*/
+        // Set the residual saturations
+        materialParams_.setSwr(0.0);
         materialParams_.setSnr(0.0);
-
-        //parameters of Brooks & Corey Law
-        materialParams_.setPe(500.0);
-        materialParams_.setLambda(2);
     }
 
-    //! Specifies the problem name. This is used as a prefix for files
-    //! generated by the simulation.
+    //! Specifies the problem name. This is used for files generated by the simulation.
     const char *name() const
     { return "tutorial_coupled"; }
 
-    //! Returns true if a restart file should be written.
-    bool shouldWriteRestartFile() const /*@\label{tutorial-coupled:restart}@*/
-    { return false; }
-
-    //! Returns true if the current solution should be written to disk
-    //! as a VTK file
-    bool shouldWriteOutput() const /*@\label{tutorial-coupled:output}@*/
-    { 
-        return (this->timeManager().timeStepIndex() % 5 == 0) ||
-            this->timeManager().willBeFinished() ;
-    }
-
-    //! Returns the temperature within a finite volume. We use constant
-    //! 10 degrees Celsius.
+    //! Returns the temperature at a given position.
     template <class Context>
     Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 283.15; }
 
-    //! Returns the intrinsic permeability tensor K \f$[m^2]\f$
-    //!  depending on the position in the domain.
+    //! Returns the intrinsic permeability tensor [m^2] at a position.
     template <class Context>
     const DimMatrix &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
                                            int spaceIdx, int timeIdx) const
     { return K_; }
     
-    //! Defines the porosity \f$[-]\f$ of the porous medium depending
-    //!  on the position in the domain.
+    //! Defines the porosity [-] of the medium at a given position
     template <class Context>
-    Scalar porosity(const Context &context,                    /*@\label{tutorial-coupled:porosity}@*/
-                    int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const  /*@\label{tutorial-coupled:porosity}@*/
     { return 0.2; }
 
-    //! Returns the parameter object for the material law (i.e. Brooks-Corey)
-    //! depending on the position in the domain
+    //! Returns the parameter object for the material law at a given position
     template <class Context>
     const MaterialLawParams& materialLawParams(const Context &context,            /*@\label{tutorial-coupled:matLawParams}@*/
                                                int spaceIdx, int timeIdx) const
@@ -224,13 +194,13 @@ public:
     void boundary(BoundaryRateVector &values, 
                   const Context &context, int spaceIdx, int timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const auto &pos = context.pos(spaceIdx, timeIdx);
         if (pos[0] < eps_) {
             // Free-flow conditions on left boundary
             const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
             
-            Scalar Sw = 1.0;
             ImmiscibleFluidState<Scalar, FluidSystem> fs;
+            Scalar Sw = 1.0;
             fs.setSaturation(wPhaseIdx, Sw);
             fs.setSaturation(nPhaseIdx, 1.0 - Sw);
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
@@ -255,19 +225,19 @@ public:
             values.setNoFlow();
     }
 
-    //! Evaluates the source term for all conserved quantities at a
-    //! given position in the pysical domain [(m^3 * s)]. Positive
-    //! values mean that mass is created.
+    //! Evaluates the source term for all conserved quantities at a given position
+    //! of the domain [kg/(m^3 * s)]. Positive values mean that mass is created.
     template <class Context>
-    void source(RateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void source(RateVector &source, const Context &context, int spaceIdx, int timeIdx) const
     {
-        values[contiWEqIdx] = 0.0;
-        values[contiNEqIdx]= 0.0;
+        source[contiWEqIdx] = 0.0;
+        source[contiNEqIdx] = 0.0;
     }
 
     //! Evaluates the initial value at a given position in the domain.
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values,
+                 const Context &context, int spaceIdx, int timeIdx) const
     {
         ImmiscibleFluidState<Scalar, FluidSystem> fs;
 
@@ -296,6 +266,6 @@ private:
     // small epsilon value
     Scalar eps_;
 };
-}
+} // namespace Dumux
 
 #endif
