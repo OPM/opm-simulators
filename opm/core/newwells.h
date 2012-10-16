@@ -179,7 +179,7 @@ struct Wells
  * All arrays in this structure contain data for each perforation, ordered the
  * same as Wells::well_cells and Wells:WI.  The array sizes are, respectively,
  *
- *     gpot       n*NP
+ *     wdp        NP
  *     A          n²*NP (matrix in column-major (i.e., Fortran) order).
  *     phasemob   n*NP
  *
