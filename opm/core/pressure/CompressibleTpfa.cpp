@@ -218,7 +218,7 @@ namespace Opm
         const double grav = gravity_ ? gravity_[dim - 1] : 0.0;
         wellperf_wdp_.clear();
         wellperf_wdp_.resize(np*nperf, 0.0);
-        if (grav == 0.0) {
+        if (not (std::abs(grav) > 0.0)) {
             return;
         }
 
