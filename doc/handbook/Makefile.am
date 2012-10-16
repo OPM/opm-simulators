@@ -5,8 +5,6 @@ if BUILD_HANDBOOK
 #EPS_FILES = EPS/tutorial-problemconfiguration.eps 
 TEXSOURCE = *.tex ./EPS/*.eps
 MAINDOCS = ewoms-handbook.dvi ewoms-handbook.pdf ewoms-handbook.ps
-EXTRA_DIST = ewoms-handbook.pdf $(TEXSOURCE) ewoms-handbook.bib ModelDescriptions/*.tex
-#Makefile.dist.in Makefile.dist.am
 
 DOCS = $(HTDOCS) $(MAINDOCS)
 
