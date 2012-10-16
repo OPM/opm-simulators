@@ -134,7 +134,7 @@ namespace Opm
         struct cfs_tpfa_res_data* h_;
 
         // ------ Data that will be modified for every solve. ------
-        std::vector<double> wellperf_gpot_;
+        std::vector<double> wellperf_wdp_;
         std::vector<double> initial_porevol_;
 
         // ------ Data that will be modified for every solver iteration. ------

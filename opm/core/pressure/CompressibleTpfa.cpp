@@ -216,8 +216,8 @@ namespace Opm
         const int nperf = wells_->well_connpos[nw];
         const int dim = grid_.dimensions;
         const double grav = gravity_ ? gravity_[dim - 1] : 0.0;
-        wellperf_gpot_.clear();
-        wellperf_gpot_.resize(np*nperf, 0.0);
+        wellperf_wdp_.clear();
+        wellperf_wdp_.resize(np*nperf, 0.0);
         if (grav == 0.0) {
             return;
         }
@@ -239,7 +239,7 @@ namespace Opm
                 props_.matrix(1, &state.pressure()[cell], &state.surfacevol()[np*cell], &cell, &A[0], 0);
                 props_.density(1, &A[0], &rho[0]);
                 for (int phase = 0; phase < np; ++phase) {
-                    wellperf_gpot_[np*j + phase] = rho[phase]*grav*(cell_depth - ref_depth);
+                    wellperf_wdp_[np*j + phase] = rho[phase]*grav*(cell_depth - ref_depth);
                 }
             }
         }
@@ -480,7 +480,7 @@ namespace Opm
                     const double bhp = well_state.bhp()[w];
                     double perf_p = bhp;
                     for (int phase = 0; phase < np; ++phase) {
-                        perf_p += wellperf_gpot_[np*j + phase]*comp_frac[phase];
+                        perf_p += wellperf_wdp_[np*j + phase]*comp_frac[phase];
                     }
                     // Hack warning: comp_frac is used as a component
                     // surface-volume variable in calls to matrix() and
@@ -512,7 +512,7 @@ namespace Opm
         const double* z = &state.surfacevol()[0];
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
-        completion_data.gpot = ! wellperf_gpot_.empty() ? &wellperf_gpot_[0] : 0;
+        completion_data.wdp = ! wellperf_wdp_.empty() ? &wellperf_wdp_[0] : 0;
         completion_data.A = ! wellperf_A_.empty() ? &wellperf_A_[0] : 0;
         completion_data.phasemob = ! wellperf_phasemob_.empty() ? &wellperf_phasemob_[0] : 0;
         cfs_tpfa_res_wells wells_tmp;
@@ -599,7 +599,7 @@ namespace Opm
     {
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         CompletionData completion_data;
-        completion_data.gpot = ! wellperf_gpot_.empty() ? const_cast<double*>(&wellperf_gpot_[0]) : 0;
+        completion_data.wdp = ! wellperf_wdp_.empty() ? const_cast<double*>(&wellperf_wdp_[0]) : 0;
         completion_data.A = ! wellperf_A_.empty() ? const_cast<double*>(&wellperf_A_[0]) : 0;
         completion_data.phasemob = ! wellperf_phasemob_.empty() ? const_cast<double*>(&wellperf_phasemob_[0]) : 0;
         cfs_tpfa_res_wells wells_tmp;
@@ -643,7 +643,7 @@ namespace Opm
                     const double bhp = well_state.bhp()[w];
                     double perf_p = bhp;
                     for (int phase = 0; phase < np; ++phase) {
-                        perf_p += wellperf_gpot_[np*j + phase]*comp_frac[phase];
+                        perf_p += wellperf_wdp_[np*j + phase]*comp_frac[phase];
                     }
                     well_state.perfPress()[j] = perf_p;
                 }

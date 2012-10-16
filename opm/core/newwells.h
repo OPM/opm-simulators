@@ -192,7 +192,7 @@ struct CompletionData
     /**
      * Gravity potentials.
      */
-    double *gpot;
+    double *wdp;
 
     /**
      * Volumes to surface-components matrix, A = RB^{-1}.
