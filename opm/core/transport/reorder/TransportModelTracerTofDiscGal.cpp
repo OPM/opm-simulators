@@ -20,10 +20,11 @@
 #include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/VelocityInterpolation.hpp>
 #include <opm/core/linalg/blas_lapack.h>
 #include <algorithm>
-#include <numeric>
 #include <cmath>
+#include <numeric>
 
 namespace Opm
 {
@@ -403,32 +404,6 @@ namespace Opm
 
 
 
-    // Initial version: only a constant interpolation.
-    static void interpolateVelocity(const UnstructuredGrid& grid,
-                                    const int cell,
-                                    const double* darcyflux,
-                                    const double* /*x*/,
-                                    double* v)
-    {
-        const int dim = grid.dimensions;
-        std::fill(v, v + dim, 0.0);
-        const double* cc = grid.cell_centroids + cell*dim;
-        for (int hface = grid.cell_facepos[cell]; hface < grid.cell_facepos[cell+1]; ++hface) {
-            const int face = grid.cell_faces[hface];
-            const double* fc = grid.face_centroids + face*dim;
-            double flux = 0.0;
-            if (cell == grid.face_cells[2*face]) {
-                flux = darcyflux[face];
-            } else {
-                flux = -darcyflux[face];
-            }
-            for (int dd = 0; dd < dim; ++dd) {
-                v[dd] += flux * (fc[dd] - cc[dd]) / grid.cell_volumes[cell];
-            }
-        }
-    }
-
-
 
     // ---------------   Methods of TransportModelTracerTofDiscGal ---------------
 
@@ -436,11 +411,19 @@ namespace Opm
 
     /// Construct solver.
     /// \param[in] grid      A 2d or 3d grid.
-    TransportModelTracerTofDiscGal::TransportModelTracerTofDiscGal(const UnstructuredGrid& grid)
+    /// \param[in] use_cvi   If true, use corner point velocity interpolation.
+    ///                      Otherwise, use the basic constant interpolation.
+    TransportModelTracerTofDiscGal::TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
+                                                                   const bool use_cvi)
         : grid_(grid),
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
     {
+        if (use_cvi) {
+            velocity_interpolation_.reset(new VelocityInterpolationECVI(grid));
+        } else {
+            velocity_interpolation_.reset(new VelocityInterpolationConstant(grid));
+        }
     }
 
 
@@ -485,6 +468,7 @@ namespace Opm
         basis_.resize(num_basis);
         basis_nb_.resize(num_basis);
         grad_basis_.resize(num_basis*grid_.dimensions);
+        velocity_interpolation_->setupFluxes(darcyflux);
         reorderAndTransport(grid_, darcyflux);
     }
 
@@ -560,7 +544,7 @@ namespace Opm
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
                 DGBasis::evalGrad(grid_, cell, degree_, &coord_[0], &grad_basis_[0]);
-                interpolateVelocity(grid_, cell, darcyflux_, &coord_[0], &velocity_[0]);
+                velocity_interpolation_->interpolate(cell, &coord_[0], &velocity_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
