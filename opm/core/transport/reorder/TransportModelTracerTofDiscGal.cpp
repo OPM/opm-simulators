@@ -465,6 +465,7 @@ namespace Opm
         tof_coeff_ = &tof_coeff[0];
         rhs_.resize(num_basis);
         jac_.resize(num_basis*num_basis);
+        orig_jac_.resize(num_basis*num_basis);
         basis_.resize(num_basis);
         basis_nb_.resize(num_basis);
         grad_basis_.resize(num_basis*grid_.dimensions);
@@ -617,6 +618,7 @@ namespace Opm
         std::vector<MAT_SIZE_T> piv(num_basis);
         MAT_SIZE_T ldb = num_basis;
         MAT_SIZE_T info = 0;
+        orig_jac_ = jac_;
         dgesv_(&n, &nrhs, &jac_[0], &lda, &piv[0], &rhs_[0], &ldb, &info);
         if (info != 0) {
             // Print the local matrix and rhs.
@@ -624,7 +626,7 @@ namespace Opm
                       << " with A = \n";
             for (int row = 0; row < n; ++row) {
                 for (int col = 0; col < n; ++col) {
-                    std::cerr << "    " << jac_[row + n*col];
+                    std::cerr << "    " << orig_jac_[row + n*col];
                 }
                 std::cerr << '\n';
             }
