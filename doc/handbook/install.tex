@@ -1,60 +1,86 @@
-\chapter{Detailed Installation Instructions} \label{install}
+\chapter{Detailed Installation Instructions}
+\label{install}
+
 \section{Preliminary remarks}
 
-In this section about the installation of \Dumux it is assumed that you work on a Unix or Linux compatible operating system
-and that you are familiar with the use of a command line shell. Installation means that you unpack \Dune together with \Dumux in a certain directory.
-Then, you compile it in that directory tree in which you do the further work, too. You also should know how to install new software packages
-or you should have a person on hand who can give you assistance with that. In section \ref{sec:prerequisites} we list some prerequisites for running \Dune and \Dumux. 
-Please check in said paragraph whether you can fulfill them. In addition, section \ref{sec:external-modules-libraries} provides some details on optional libraries and modules.
+In this section about the installation of \eWoms it is assumed that
+you work on a Unix or Linux compatible operating system and that you
+are familiar with the use of a command line shell. Installation means
+that you unpack \Dune together with \eWoms in a certain directory.
+Then, you compile it in that directory tree in which you do the
+further work, too. You also should know how to install new software
+packages or you should have a person on hand who assist you with
+that. In section \ref{sec:prerequisites} we list some prerequisites
+for running \Dune and \eWoms.  Please make sure to fulfill them before
+you proceed. In addition, section \ref{sec:external-modules-libraries}
+provides some details on optional libraries and modules.
 
-In a technical sense \Dumux is a module of \Dune. 
-Thus, the installation procedure of \Dumux is the same as that of \Dune. 
-Details regarding the installation of \Dune are provided on the \Dune website \cite{DUNE-INST}. 
-If you are interested in more details about the build system that is used,
-they can be found in the {\Dune} Buildsystem Howto \cite{DUNE-BS}.
+In a technical sense \eWoms is a module of \Dune.  Thus, the
+installation procedure of \eWoms is the same as that of \Dune (besides
+using different locations to retieve the source code).  Details
+regarding the installation of \Dune are provided on the \Dune
+website~\cite{DUNE-INST}. If you are interested in more details about
+the build system that is used, they can be found in the {\Dune}
+build system howto \cite{DUNE-BS}.
 
+All \Dune modules, including \eWoms, get extracted into a common
+directory. In the following, we refer to that directory as {\Dune}
+base directory or, in short, as {\Dune}-base.  If it is used as
+directory path of a shell command it is typed as
+\texttt{dune-base}.  For the actual location of the {\Dune} base
+directory on your file system, you may chose any valid directory name for
+which you have write permissions.
 
-All \Dune modules, including \Dumux, get extracted into a common directory, as it is done in an ordinary \Dune installation. 
-We refer to that directory abstractly as {\Dune} root directory or, in short, as {\Dune}-Root. 
-If it is used as directory's path of a shell command it is typed as \texttt{\Dune-Root}. 
-For the real {\Dune} root directory on your file system any valid directory name can be chosen.
+Source code files for each \Dune module are contained in their own
+subdirectory within {\Dune}-base.  We name this directory of a certain
+module \emph{module base directory} or \texttt{module-base}
+if it is a directory path, e.\,g. for the module \texttt{ewoms} these
+names are \emph{ewoms base directory} respective
+\texttt{ewoms-base}.  The real directory names for the
+modules can be chosen arbitrarily. In this manual they are the same as
+the module name or the module name extended by a version number
+suffix.  The name of each \Dune module is defined in the file
+\texttt{dune.module}, which is in the base directory of the respective
+module. This should not be changed by the user.  It is allowed to have
+own files and directories in \Dune-base, which are not related to
+\Dune's needs.
 
-Source code files for each \Dune module are contained in their own subdirectory within {\Dune}-Root.
-We name this directory of a certain module \emph{module root directory} or \texttt{module-root-directory} if it is a directory path,
-e.\,g. for the module \texttt{dumux} these names are  \emph{dumux root directory} respective \texttt{dumux-root-directory}.
-The real directory names for the modules can be chosen arbitrarily. In this manual they are the same as the
-module name or the module name extended by a version number suffix.
-The name of each \Dune module is defined in the file \texttt{dune.module}, which is in the root
-directory of the respective module. This should not be changed by the user. 
-It is allowed to have own files and directories in \Dune-Root, which are not related to \Dune's needs.
-
-After installing source code for all relevant \Dune modules including \Dumux, \Dune is being built by the shell-command \texttt{dunecontrol} which is part of the \Dune build system. The \Dune build system is a front-end of to the GNU build system adapted to the needs of \Dune.
+After installing source code for all relevant \Dune modules including
+\eWoms, \Dune is being built by the shell-command \texttt{dunecontrol}
+which is part of the \Dune build system. The \Dune build system is a
+front-end of to the GNU build system adapted to the needs of \Dune.
 
 \section{Prerequisites} \label{sec:prerequisites}
-The GNU tool chain of \texttt{g++}  and the tools of the GNU build system \cite{GNU-BS}, also known as GNU autotools
-(\texttt{autoconf}, \texttt{automake}, \texttt{autogen}, \texttt{libtool}), as well as the GNU variant of \texttt{make}
-called gmake must be available in a recent version. For example Ubuntu Linux provides these tools with the
-packages \texttt{autoconf}, \texttt{automake}, \texttt{libtool}
-and the \Cplusplus compiler \texttt{g++} and \texttt{make} are contained in \texttt{build-essential}.
 
-At the time of writing this manual, it is expected that \texttt{g++} of version $\geqslant$ 4.5.0, \texttt{automake} of version $\geqslant$ 1.9,
-\texttt{autoconf} of version $\geqslant$ 2.65, \texttt{autogen} of version $\geqslant$ 5.9.7,  \texttt{libtool} of version $\geqslant$ 2.2.6
-and GNU \texttt{make} version $\geqslant$ 3.81 should do their job for building \Dumux.
+The GNU compiler collection with \Cplusplus support (\texttt{g++}) and
+the tools of the GNU build system \cite{GNU-BS}, also known as GNU
+autotools (\texttt{autoconf}, \texttt{automake}, \texttt{autogen},
+\texttt{libtool}), as well as the GNU variant of \texttt{make} called
+gmake must be available in a recent enough version. For example Ubuntu
+Linux provides these tools by means of the packages \texttt{autoconf},
+\texttt{automake}, \texttt{libtool} and the  package 
+\texttt{build-essential} includes the \Cplusplus compiler
+\texttt{g++} and \texttt{make}.
 
-The building of included documentation like this handbook requires \LaTeX\  and auxiliary tools
-like \texttt{dvipdf} and \texttt{bibtex}. One usually chooses a \LaTeX\  distribution like \texttt{texlive} for this purpose.
-It is possible to switch off the building of the documentation by setting the switch \texttt{--disable-documentation} 
-in the \texttt{CONFIGURE\_FLAGS} of the building options (see Chapter \ref{buildIt}).
-Additional parts of documentation are contained within the source code files as special formatted comments.
-Extracting them can be done using \texttt{doxygen} (version $\geqslant$ 1.7.2 works). 
-See for this optional step Section \ref{sec:build-doxy-doc}.
+At the time of writing this manual, the minumum version required for
+\texttt{g++} is 4.4.0, \texttt{automake}  the documentation by setting the switch
+\texttt{--disable-documentation} in the \texttt{CONFIGURE\_FLAGS} of
+the building options (see Chapter \ref{buildIt}).  Additional parts of
+documentation are contained within the source code files as specially
+formatted comments.  Extracting them can be done using the tool
+\texttt{doxygen} (version $\geqslant$ 1.8.2 works).  See for this
+optional step section \ref{sec:build-doxy-doc}.
 
-Depending on whether you are going to use external libraries and modules for additional \Dune features, 
-additional software packages may be required. Some hints on that are given in Section \ref{sec:external-modules-libraries}.
+Depending on whether you are going to use external libraries and
+modules for additional \Dune features, additional software packages
+may be required. Some hints on that are given in Section
+\ref{sec:external-modules-libraries}.
 
-For the extraction of the content of tar files, the GNU version of \texttt{tar} is used.
-The subversion (svn) software repositories can be accessed with help of a subversion client. We recommend the Apache Subversion command-line client \texttt{svn}
-contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERSION-HP}.
+For the extraction of the content of tar files, the GNU version of
+\texttt{tar} is used.  To access the git or subversion software
+repositories, a git and subversion clients are required. We recommend
+to use the git command-line client \texttt{git} version 1.7.12 or
+newer with the subversion integration plugin \texttt{git-svn} enabled~\cite{GIT-HP}.
 
 \begin{table}
 \centering
@@ -63,18 +89,18 @@ contained in Apache Subversion of version $\geqslant$ 1.6.0 \cite{APACHE-SUBVERS
 \toprule
 \textbf{purpose} & \textbf{package names} \\
 \midrule
-general: & subversion & git & libtool \\
+general: & git & git-svn & libtool \\
 & automake & build-essential & libboost-all-dev \\
 & texlive-latex-base & doxygen & csh\\
-& gfortran & ? libpthread-stubs0 ?\\
+& gfortran & \\
 \midrule
 for alberta: & freeglut3-dev &  \\
 \midrule
 for parallel use: & openmpi-common & mpi-default-bin & mpi-default-dev \\
 \midrule
-for ug parallel: & flex & bison & \\
+for parallel UG: & flex & bison & \\
 \midrule
-for alberta parallel: & libblas-dev &\\
+for parallel alberta: & libblas-dev &\\
 \midrule
 for debugging: & valgrind &\\
 \bottomrule
@@ -82,292 +108,257 @@ for debugging: & valgrind &\\
 \label{tbl:ubuntu-pkg}
 \end{table}
 
-\section{Obtaining source code for \Dune and \Dumux}
-As stated above, the \Dumux release 2.1.0 and trunk (developer tree) are based on the \Dune release 2.1.1, 
-comprising the core modules \texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl} and \texttt{dune-localfunctions}.
-% and the external dune module \texttt{dune-pdelab}.
-For working with \Dumux, these modules are required.
+\section{Obtaining source code for \Dune and \eWoms}
 
-Two possibilities exist to get the source code of \Dune and \Dumux.
-Firstly, \Dune and \Dumux can be downloaded as tar files from the respective \Dune and \Dumux website. They have to be extracted as described in the next paragraph.
-Secondly, a method to obtain the most recent source code (or, more generally, any of its previous revisions) by direct access 
-via Internet to the software repositories of the revision control system is described in the subsequent part. 
+As stated above, the \eWoms is based on the \Dune release 2.2,
+comprising the core modules \texttt{dune-common},
+\texttt{dune-geometry}, \texttt{dune-grid}, \texttt{dune-istl} and
+\texttt{dune-localfunctions}.  For working with \eWoms, these modules
+are required.
 
-However, if a user does not want to use the most recent version,
-certain version tags (i.\,e. special names), version numbers and even software branches are means 
-of the software revision control system to provide access to different versions of the software.
+Two possibilities exist to get the source code of \Dune and \eWoms.
+Firstly, released versions \Dune and \eWoms can be downloaded as tar
+files from the \Dune and \eWoms websites. They have to be extracted as
+described in the next paragraph.  Secondly, the most recent source
+code can be obtained by directly downloading it from its respective
+source-code repository. This method is described in the subsequent
+section.
 
 \paragraph{Obtaining the software by installing tar files}
-The slightly old-fashionedly named tape-archive-file, shortly named tar file or tarball, is a common file format for distributing collections of files contained within these archives.
-The extraction from the tar files is done as follows: 
-Download the tarballs from the respective \Dune (version 2.2.0) and \Dumux websites to a certain folder in your file system.
-Create the {\Dune} root directory, named DUMUX in the example below. Then extract the content of the tar files, e.\,g. with the command-line program \texttt{tar}.
-This can be achieved by the following shell commands. Replace \texttt{path\_to\_tarball} with the directory name where the downloaded files are actually located.
-After extraction, the actual name of the \emph{dumux root directory} is \texttt{dumux-2.2}. 
+
+The slightly old-fashionedly named tape-archive-file, shortly named
+tar file or tarball, is a common file format for distributing
+collections of files contained within these archives.  The extraction
+from the tar files is done as follows: Download the tarballs from the
+respective \Dune~\cite{DUNE-HP} (version 2.2.0) and
+\eWoms~\cite{EWOMS-HP} websites.  Then, create the {\Dune} base
+directory, named \texttt{~/src} in the example below. Then, extract the
+content of the tar files, e.\,g. with the command-line program
+\texttt{tar}.  This can be achieved by the following shell
+commands. Replace \texttt{path\_to\_tarball} with the directory name
+where the downloaded files are actually located.  After extraction,
+the actual name of the \emph{ewoms base directory} is
+\texttt{ewoms-2.2}.
 
 \begin{lstlisting}[style=Bash]
-$ mkdir DUMUX
-$ cd DUMUX
+$ mkdir ~/src
+$ cd ~/src
 $ tar xzvf path_to_tarball_of/dune-common-2.2.0.tar.gz 
 $ tar xzvf path_to_tarball_of/dune-grid-2.2.0.tar.gz 
 $ tar xzvf path_to_tarball_of/dune-geometry-2.2.0.tar.gz 
 $ tar xzvf path_to_tarball_of/dune-istl-2.2.0.tar.gz 
 $ tar xzvf path_to_tarball_of/dune-localfunctions-2.2.0.tar.gz 
-$ tar xzvf path_to_tarball_of/dumux-2.2.tar.gz
+$ tar xzvf path_to_tarball_of/ewoms-2.2.0.tar.gz
 \end{lstlisting}
 
-Furthermore, if you wish to install the optional \Dune Grid-Howto which provides a tutorial on the Dune grid interface:
+\paragraph{Obtaining \Dune and \eWoms from software repositories} 
+
+Direct access to a software repositories for downloading code can be
+convenient to always follow the changes of done to the software
+project. Usually, source code repositories are structured in
+branches. One of these branches is commonly used to include the latest
+features of the software, and there is normally one branch for each
+release which only receives fixes for bug which have been discovered
+after the software was released. The following text describes how to
+retrieve the source code of \Dune and \eWoms from such release
+branches.
+
+The \Dune project uses Apache Subversion~\cite{APACHE-SUBVERSION-HP}
+to manage its software repositories, while \eWoms -- being part of the
+open porous media project -- opted to use the git source code
+management system~\cite{GIT-HP}. Fortunately, git ships with a
+subversion plugin, so all modules can be managed using git.
+
+In the technical language of Apache Subversion \emph{cloning a certain
+  software repository} means nothing more then fetching a local copy
+of the software repository and placing it on the local file system.
+In addition to the software some more files for the use of the
+software revision control system itself are created. They are kept in
+a directory named \texttt{.git} at the base directory of the cloned
+software repository.
+
+The installation procedure is structured as follows: Create a {\Dune} base
+directory (named \texttt{~/src} in the lines below).  Then, enter the
+previously created directory and check out the desired modules.  As
+you see below, the check-out uses two different servers for getting
+the sources, one for \Dune and one for \eWoms.  The \Dune modules of
+the stable 2.2 release branch are cloned similarly as described on the
+\Dune website~\cite{DUNE-DOWNLOAD-SVN}:
 
 \begin{lstlisting}[style=Bash]
-$ tar xzvf path_to_tarball_of/dune-grid-howto-2.2.0.tar.gz
+mkdir ~/src
+cd ~/src
+for DUNE_MODULE in common geometry grid istl localfunctions; do
+  git svn clone \
+   https://svn.dune-project.org/svn/dune-$DUNE_MODULE/branches/release-2.2 \
+   dune-$DUNE_MODULE
+done
 \end{lstlisting}
 
-\paragraph{Obtaining \Dune and \Dumux from software repositories} 
+The newest and maybe unstable developments are also provided in these
+repositories in a folder called \emph{trunk}. Please check the \Dune
+website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the
+current \eWoms release is based on the stable 2.2 \Dune release and it
+might misbehave using the the newest version of \Dune.
 
-Direct access to a software revision control system for downloading code can be of advantage for the user later on. 
-It can be easier for him to keep up with code changes and to receive important bug fixes using the update command of the revision control system. 
-\Dune and \Dumux use Apache Subversion for their software repositories. To access them a certain program is needed which is referred to here shortly as subversion client. 
-In our description, we use the subversion client of the Apache Subversion software itself, which is a command-line tool named \texttt{svn}. 
-It is available for most Linux and Unix distributions as software package.
-
-In the technical language of Apache Subversion \emph{checking out a certain software version} means nothing more then fetching 
-a local copy from the software repository and laying it out in the file system.  In addition to the software some more files for the use of the software revision control system itself are created. They are kept in directories named \texttt{.svn} and can be found in each subfolder which is under version control.
-If you have developer access to \Dumux, it is also possible to do the opposite, i.\,e. to load up a modified revision of software into the software repository. This is usually termed as \emph{software commit}.
-
-The installation procedure is done as follows:
-Create a  {\Dune} root directory, named \texttt{DUMUX} in the lines below.
-Then, enter the previously created directory and check out the desired modules. 
-As you see below, the check-out uses two different servers for getting the sources, one for \Dune and one for {\Dumux}.
-The \Dune modules of the stable 2.2 release branch are checked out as described on the \Dune website \cite{DUNE-DOWNLOAD-SVN}:
+The \eWoms module is checked out as described below (see also the
+\eWoms website \cite{EWOMS-HP}).  Its source tree has to be created in
+the \Dune-base directory, where the \Dune modules have also been
+cloned into. Subsequently, the next command is executed there,
+too. The directory which holds the \eWoms module is called
+\texttt{ewoms} here.
 
 \begin{lstlisting}[style=Bash]
-$ mkdir DUMUX
-$ cd DUMUX
-$ svn checkout https://svn.dune-project.org/svn/dune-common/branches/release-2.2 dune-common
-$ svn checkout https://svn.dune-project.org/svn/dune-istl/branches/release-2.2 dune-istl
-$ svn checkout https://svn.dune-project.org/svn/dune-grid/branches/release-2.2 dune-grid
-$ svn checkout https://svn.dune-project.org/svn/dune-geometry/branches/release-2.2 dune-geometry
-$ svn checkout https://svn.dune-project.org/svn/dune-localfunctions/branches/release-2.2 dune-localfunctions
+cd ~/src
+git clone git://github.com/OPM/ewoms.git ewoms
 \end{lstlisting}
 
-The newest and maybe unstable developments are also provided in these repositories in a folder called \emph{trunk}. Please check the \Dune website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the current \Dumux release is based on the stable 2.1 release and it might not compile without further adaptations using the the newest versions of \Dune.
+\section{Building the doxygen documentation}
+\label{sec:build-doxy-doc}
 
-The additional module \texttt{dune-grid-howto} is a tutorial which provides information about the \Dune grid interface.
-It may give you an idea of how some abstractions in \Dune are done.
-The installation of \texttt{dune-grid-howto} is optional and is not required by \Dumux. It is done by: 
+Doxygen documentation is done by especially formatted comments
+integrated in the source code, which can get extracted by the program
+\texttt{doxygen}. Beside extracting these comments, \texttt{doxygen}
+builds up a web-browsable code structure documentation like class
+hierarchy of code displayed as graphs, see \cite{DOXYGEN-HP}.
+
+Building the doxygen documentation of a module is done as follows,
+provided the program \texttt{doxygen} is installed: Set in building
+options the \texttt{--enable-doxygen} switch.  This is either
+accomplished by adding it in \texttt{dunecontrol} options-file to
+\texttt{CONFIGURE\_FLAGS}, or by adding it to \texttt{dunecontrol}'s
+command-line-argument \texttt{--configure-opts}.  After running
+\texttt{dunecontrol} enter in module's base directory the subdirectory
+\texttt{doc/doxygen}.  You then run the command \texttt{doxygen}
+within that directory. Point your web browser to the file
+\texttt{module-base-directory/doc/doxygen/html/index.html} to read the
+generated documentation.  For all \Dune-modules that described here,
+the doxygen documentation can be generated analogously.
 
 \begin{lstlisting}[style=Bash]
-$ svn checkout https://svn.dune-project.org/svn/dune-grid-howto/branches/release-2.2 dune-grid-howto
+cd ~/src/ewoms/doc/doxygen
+doxygen
+firefox html/index.html
 \end{lstlisting}
 
-The \texttt{dumux} module is checked out as described below (see also the \Dumux website \cite{DUMUX-HP}).
-Its file tree has to be created in the \Dune-Root directory, where the \Dune modules have also been checked out to. Subsequently, the next command
-is executed there, too. The dumux root directory is called \texttt{dumux} here.
-
-\begin{lstlisting}[style=Bash]
-$ # make sure you are in DUNE-Root
-$ svn checkout --username=anonymous --password='' svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux
-\end{lstlisting}
-
-\paragraph{Hints for \Dumux-Developers}
-If you also want to actively participate in the development of \Dumux, you can apply either for full developer
-access or for developer access on certain parts of \Dumux. Granted developer access means that
-you are allowed to commit own code and that you can access the \texttt{dumux-devel} module.
-This enhances \texttt{dumux} by providing maybe unstable code from the developer group.
-A developer usually checks out non-anonymously the modules \texttt{dumux} and \texttt{dumux-devel}. 
-\texttt{Dumux-devel} itself makes use of the stable part \texttt{dumux}. Hence, the two parts have to be checked out together.
-This is done using the commands below. But \texttt{joeuser} needs to be replaced by
-the actual user name of the developer for accessing the software repository. 
-One can omit the \texttt{--username} option in the commands above if the user name for the repository access is
-identical to the one for the system account.
-
-\begin{lstlisting}[style=Bash]
-$ svn co --username=joeuser svn://svn.iws.uni-stuttgart.de/DUMUX/dumux/trunk dumux
-$ svn co --username=joeuser svn://svn.iws.uni-stuttgart.de/DUMUX/dune-mux/trunk dumux-devel
-\end{lstlisting}
-
-Please choose either not to store the password by subversion in an insecure way or
-choose to store it by subversion in a secure way, e.\,g. together with KDE's KWallet or GNOME Keyring.
-Check the documentation of Subversion for info on how this is done.
-A leaked out password can be used by evil persons to abuse a software repository.
-
-\section{Patching \Dune or external libraries}
-Patching of \Dune modules in order to work together with \Dumux can be necessary for several reasons.
-Software like a compiler or even a standard library
-changes at times. But, for example, a certain release of a software component that we depend on, may not reflect that change and thus it has to be modified.
-In the dynamic developing process of software which depends on other modules it is not always feasible 
-to adapt everything to the most recent version of each module. Consequently, patches exist or they will be brought into existence. They may fix problems with a certain module
-of a certain release without introducing too much structural change. It can also happen 
-that a release gets amendments (updates) and a formerly useful patch becomes obsolete.
-
-\Dumux contains patches and documentation about their usage and application within the directory \texttt{dumux/patches}.
-Please check the README file in that directory for recent information. 
-In general, a patch can be applied as follows (the exact command or the used parameters may be slightly different).
-We include here an example of a patch against 2.0 release of \Dune for \Dumux release 2.0 for purpose of showing how a patch gets applied. Note this patch is no longer necessary for \Dune 2.2 releases.
-
-\begin{lstlisting}[style=Bash]
-$ # make sure you are in DUNE-Root
-$ cd dune-istl
-$ patch -p1 < ../dumux/patches/dune-istl-2.0.patch
-\end{lstlisting}
-
-It can be removed by 
-\begin{lstlisting}[style=Bash]
-$ path -p1 -R < ../dumux/patches/dune-istl-2.0.patch
-\end{lstlisting}
-
-The \texttt{checkout-dumux} script also applies patches, if not explicitly requested not to do so.
-
-
-\section{Building doxygen documentation} \label{sec:build-doxy-doc}
-
-Doxygen documentation is done by especially formatted comments integrated in the source code, which can get extracted by the program 
-\texttt{doxygen}. Beside extracting these comments, \texttt{doxygen} builds up a web-browsable code structure documentation
-like class hierarchy of code displayed as graphs, see \cite{DOXYGEN-HP}.
-
-Building the doxygen documentation of a module is done as follows, provided the program \texttt{doxygen} is installed:
-Set in building options the \texttt{--enable-doxygen} switch.
-This is either accomplished by adding it in \texttt{dunecontrol} options-file to  \texttt{CONFIGURE\_FLAGS}, or by adding
-it to  \texttt{dunecontrol}'s command-line-argument \texttt{--configure-opts}. 
-After running \texttt{dunecontrol} enter in module's root directory the subdirectory \texttt{doc/doxygen}.
-You then run the command \texttt{doxygen} within that directory. Point your web browser to the file 
-\texttt{module-root-directory/doc/doxygen/html/index.html} to read the generated documentation.
-All  \Dune-modules that are used here except \texttt{dune-grid-howto}  including also \texttt{dumux} contain some doxygen documentation, which can be extracted as
-described in the following lines. The external library UG has also a \texttt{doc/doxygen} directory for building its doxygen documentation.
-
-\begin{lstlisting}[style=Bash]
-$ # change before next command your directory to DUNE-Root
-$ cd dumux/doc/doxygen
-$ doxygen
-$ firefox html/index.html
-\end{lstlisting}
-
-\section{Building documentation of other \Dune modules}
+\section{Building the \eWoms handbook}
 
 If the \texttt{--enable-documentation} switch has been set in the configure flags of
-\texttt{dunecontrol}, this does not necessarily mean that for every 
-\Dune module the documentation is being built.
-However, at least Makefiles for building the documentation are generated.
-Provided you run \texttt{dunecontrol} with the option above,
-it should be possible to build documentation if available.
-Check the targets you can build in \texttt{module-root-directory/doc/Makefile.am}.
-For example in the module \texttt{dune-istl} you can build the documentation \texttt{istl.pdf} by typing the following into the console, when you are in the \Dune-Root:
-
+\texttt{dunecontrol}, watch for a summary line of the build script that reads
 \begin{lstlisting}[style=Bash]
-$ # change before next command your directory to DUNE-Root
-$ cd dune-istl/doc
-$ make istl.pdf
+Build eWoms handbook....: yes
 \end{lstlisting}
 
-Or for module \texttt{dune-grid-howto} the documentation can be build by: 
+If this is the case, the handbook should be automatically build by
+\texttt{dunecontrol} and can be found at
+\texttt{\$EWOMS\_BASE/doc/handbook/ewoms-handbook.pdf}.
 
-\begin{lstlisting}[style=Bash]
-$ # change before next command your directory to DUNE-Root
-$ cd dune-grid-howto/doc
-$ make grid-howto.pdf
-\end{lstlisting}
+If the summary line says that the handbook is not going to be build,
+then you usually have to install additional \LaTeX packages.
 
-This applies for \Dumux, too. Rebuilding the handbook can be done as follows:
+\section{External libraries and modules}
+\label{sec:external-modules-libraries}
 
-\begin{lstlisting}[style=Bash]
-$ cd dumux/doc/handbook
-$ make ewoms-handbook.pdf
-\end{lstlisting}
+The libraries described below provide additional functionality but are
+not generally required to use \eWoms.  If you are going to use an
+external library, also check the information provided on the \Dune
+website~\cite{DUNE-EXT-LIB} for additional hints.  If you are going to
+use an external \Dune module, the website listing external
+modules~\cite{DUNE-EXT-MOD} can also be helpful.
 
+Some external libraries have additional dependencies which can also be
+used by \Dune.  Also, some libraries, such as BLAS or MPI might have
+multiple versions installed on the system.  To avoid problems, you
+should make sure that all external libraries use the same dependencies
+as \Dune.
 
-%As of writing this, no general method of building documentation contained in \Dune's modules is known to the author.
-
-%Alternatively, the tool CMake can be used to build \Dumux. Please check the file \texttt{INSTALL.cmake} for details.
-
-\section{External libraries and modules} \label{sec:external-modules-libraries}
-
-The libraries described below provide additional functionality but are not generally required to run \Dumux. 
-If you are going to use an external library check the information provided on the \Dune website \cite{DUNE-EXT-LIB}.
-If you are going to use an external \Dune module the website on external modules \cite{DUNE-EXT-MOD} can be helpful.
-
-Installing an external library can require additional libraries which are also used by \Dune. 
-For some libraries, such as BLAS or MPI, multiple versions can be installed on the system.
-Make sure that it uses the same library as \Dune when configuring the external library.
-
-In the following list, you can find some external modules and external libraries, and some more libraries and tools which are prerequisites for their use.
+In the following list, you can find some external modules and external
+libraries, and some more libraries and tools which are prerequisites
+for their use.
 
 \begin{itemize}
-\item \textbf{ALBERTA}: External library for use as grid. Adaptive multi Level finite element toolbox using Bisectioning refinement and Error control by Residual Techniques for scientific Applications. Building it requires a Fortran compiler \texttt{gfortran}. Download: \texttt{\url{http://www.alberta-fem.de}}.
+\item \textbf{ALBERTA}: External library which can be used as an
+  additional grid manager. ALBERTA stands for ``\textbf{A}daptive multi \textbf{L}evel finite element toolbox
+  using \textbf{B}isectioning refinement and \textbf{E}rror control by \textbf{R}esidual
+  \textbf{T}echniques for scientific \textbf{A}pplications''. Building it requires a
+  Fortran compiler, for example \texttt{gfortran}. It can be downloaded at:
+  \texttt{\url{http://www.alberta-fem.de}}.
 
-\item \textbf{ALUGrid}: External library for use as grid. ALUGrid is built by a \Cplusplus compiler like \texttt{g++}. If you want to build a parallel version, you will need \texttt{MPI}. It was successfully run with \texttt{openmpi}. The parallel version needs also a graph partitioner, such as \texttt{METIS}. It was run successfully in combination with \Dune using \texttt{METIS}. \\
-Download: \texttt{\url{http://aam.mathematik.uni-freiburg.de/IAM/Research/alugrid}}
+\item \textbf{ALUGrid}: External library for use as grid. ALUGrid
+  requires by a \Cplusplus compiler like \texttt{g++} to be build. If
+  you want to build a parallel version, you will need an MPI library
+  like, for example \texttt{openmpi}, installed on your system. The
+  parallel version needs also a graph partitioner, such as
+  \texttt{METIS}.
 
-\item \textbf{\Dune-multidomaingrid}: External module. If you going to run on the same grid different domains or subdomains,
-this can be the package of choice. This is done by providing a meta grid. It can be useful for multi-physics approaches or domain decomposition methods. Download: \texttt{\url{http://gitorious.org/dune-multidomaingrid}}. 
-%Furthermore, the external module \textbf{\Dune-multidomain} can be useful for solving heterogenous problems on spatial subdomains. These subdomains are managed using another DUNE module called dune-multidomaingrid.
+  Download:
+  \texttt{\url{http://aam.mathematik.uni-freiburg.de/IAM/Research/alugrid}}
 
-\item \textbf{\Dune-PDELab}: External module to write more easily discretizations. PDELab provides already a sound number of discretizations like FEM or discontinuous Galerkin methods. Download: \texttt{\url{http://www.dune-project.org/pdelab}}. 
+\item \textbf{SuperLU}: External library for solving linear
+  equations. SuperLU is a general purpose library for the direct
+  solution of large, sparse, non-symmetric systems of linear
+  equations.
 
-\item \textbf{PARDISO}: External library for solving linear equations. The package PARDISO is a thread-safe, high-performance, robust, memory efficient and easy to use software for solving large sparse symmetric and asymmetric linear systems of equations on shared memory multiprocessors. The precompiled binary can be downloaded after personal registration from the PARDISO website (\texttt{\url{http://www.pardiso-project.org}}).
+  Download:
+  \texttt{\url{http://crd.lbl.gov/~xiaoye/SuperLU}}.
 
-\item \textbf{SuperLU}: External library for solving linear equations. SuperLU is a general purpose library for the direct solution of large, sparse, non-symmetric systems of linear equations. Be aware that the version 4.3 is not supported by \Dune prior to 2.1.0. \\ (\texttt{\url{http://crd.lbl.gov/~xiaoye/SuperLU}}).
+\item \textbf{UG}: External library which can be used as an additional
+  grid manager. UG is a toolbox for \textbf{U}nstructured
+  \textbf{G}rids: For \eWoms it has to be build by GNU buildsystem and
+  a \Cplusplus compiler. That's why \Dune specific patches need
+  applied before use. Building it makes use of the tools
+  \texttt{lex}/\texttt{yacc} or the GNU variants
+  \texttt{flex}/\texttt{bison}.
 
-\item \textbf{UG}: External library for use as grid. UG is a toolbox for Unstructured Grids: For \Dumux it has to be build by GNU buildsystem and a \Cplusplus compiler. That's why \Dune specific patches need applied before use. Building it makes use of the tools \texttt{lex}/\texttt{yacc} or the GNU variants \texttt{flex}/\texttt{bison}. 
+  Website:
+  \texttt{\url{http://atlas.gcsc.uni-frankfurt.de/~ug/}}\\
+  Further information:
+  \texttt{\url{http://www.dune-project.org/external_libraries/install_ug.html}}\\
 
 \end{itemize}
 
-The following are dependencies of some of the used libraries. You will need them depending on which modules of \Dune and which external libraries you use.
+The following are dependencies of some of the external libraries. You
+will need them depending on which modules of \Dune and which external
+libraries you use.
 
 \begin{itemize}
-\item \textbf{MPI}: The parallel version of \Dune and also some of the external dependencies need MPI when they are going to be built for parallel computing. \texttt{Openmpi} version $\geqslant$ 1.4.2 and \texttt{MPICH} in a recent version have been reported to work. 
+\item \textbf{MPI}: The parallel version of \Dune and also some of the
+  external dependencies need MPI when they are going to be built for
+  parallel computing. \texttt{Openmpi} version $\geqslant$ 1.4.2 and
+  \texttt{MPICH} in a recent version have been reported to work.
 
-\item \textbf{lex/yacc} or \textbf{flex/bison}: These are quite common developing tools, code generators for lexical analyzers and parsers. This is a prerequisite for UG.
+\item \textbf{lex/yacc} or \textbf{flex/bison}: These are quite common
+  developing tools, code generators for lexical analyzers and
+  parsers. This is a prerequisite for compiling UG.
 
-\item \textbf{BLAS}: Alberta makes use of BLAS. Thus install GotoBLAS2, ATLAS, non-optimized BLAS or BLAS provided by a chip manufacturer. Take care that the installation scripts select the intended version of BLAS. See \texttt{\url{http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms}}.
+\item \textbf{BLAS}: Alberta makes use of BLAS (acronym for
+  ``\textbf{B}asic \textbf{L}inear \textbf{A}lgebra
+  \textbf{S}ubprograms). Thus install GotoBLAS2, ATLAS,
+  non-optimized BLAS or a BLAS library provided by a computer
+  vendor. Take care that the installation scripts select the intended
+  version of BLAS. For further information, see
+  \texttt{\url{http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms}}.
 
-\item \textbf{GotoBLAS2}: This is an optimized version of BLAS. It covers not  all processors of the day, but quite a broad range. Its license is now very open.  A Fortran compiler like \texttt{gfortran} is needed to compile it.\\
-Available by \texttt{\url{http://www.tacc.utexas.edu/tacc-projects/gotoblas2/}}.
+\item \textbf{GotoBLAS2}: This is an optimized BLAS library. It does
+  not provide optimized routines for all modern processors, but quite
+  a broad range. Also, its license is now open. A Fortran compiler
+  like \texttt{gfortran} is needed to compile it.
 
-\item \textbf{METIS}: This is a dependency of ALUGrid, if you are going to run it parallel.
+  Available at
+  \texttt{\url{http://www.tacc.utexas.edu/tacc-projects/gotoblas2/}}.
 
-\item \textbf{Compilers}: Beside \texttt{g++} it has been reported that \Dune was successfully built with \texttt{Clang++} from the LLVM project and the Intel \Cplusplus compiler. 
-C and Fortran compiler is needed for some external libraries. As code of different compilers is linked together they have to be be compatible with each other. A good choice is the GNU compiler suite \texttt{gcc}, \texttt{g++} and \texttt{gfortran}.
+\item \textbf{METIS}: This is a dependency of ALUGrid, if you are
+  going to run it parallel.
+  
+  Available for non-commercial use at
+  \texttt{\url{http://glaros.dtc.umn.edu/gkhome/metis/metis/overview}}
 
-\item \textbf{libgomp}: External libraries, such as ALUGrid, can make use of OpenMP when used together with METIS. For that purpose it can be necessary to install the \texttt{libgomp} library.
-% http://openmp.org/
-
-%\item \textbf{libgmp}: The Gnu Multiple Precision Arithmetic Library (GMP) is also a prerequisite for \Dune. It may be necessary to install it.
-% http://gmplib.org/
+\item \textbf{Compilers}: Besides \texttt{g++} \Dune and \eWoms can
+  also be built with the \texttt{clang++} compiler originating from
+  the LLVM project. If you try other compilers, be aware that in addition to a
+  \Cplusplus compiler, C and Fortran compilers are needed to compile
+  some external libraries.
 \end{itemize}
-
-\section{Hints for Users from IWS}
-We provide some features to make life a little bit easier for
-users from the Institute for Modelling Hydraulic and Environmental Systems, University of Stuttgart.
-
-There exists internally a SVN repository made for several external libraries.
-If you are allowed to access it, go to the {\Dune}-Root, then the following.
-
-Prepared external directory:
-\begin{lstlisting}[style=Bash]
-$ # Make sure you are in DUNE-Root
-$ svn checkout svn://svn.iws.uni-stuttgart.de/DUMUX/external/trunk external
-\end{lstlisting}
-
-This directory \texttt{external} contains a script to install external libraries, such as 
-ALBERTA, ALUGrid, UG, METIS and GotoBLAS2:
-\begin{lstlisting}[style=Bash]
-$ cd external
-$ ./installExternal.sh all
-\end{lstlisting}
-
-It is also possible to install only the actually needed external libraries:
-\begin{lstlisting}[style=Bash]
-$ ./installExternal.sh -h      # show, what options this script provide
-$ ./installExternal.sh --parallel alu
-\end{lstlisting}
-
-The libraries are then compiled within that directory and are not installed in a different place. 
-A \Dune build may need to know their location. Thus, one may have to refer to them as options for \texttt{dunecontrol}, 
-for example via the options file \texttt{my-debug.opts}. Make sure you compile the required external libraries before 
-you run \texttt{dunecontrol}.
-
-
-
 
 %%% Local Variables: 
 %%% mode: latex

@@ -1,54 +1,87 @@
-\section{Setup of a New Folder}
+\chapter{Creating a new directory for source code}
 
-In this section setting up a new folder is described. In fact it is very easy to create a new folder, but getting \Dumux to know the new folder takes some steps which will be explained in more detail below:
+In this section, we describe how setting up a new directory for source
+code. In fact, it is very easy to create a new directory, but getting
+\Dune build system to recognize the new folder takes some steps which
+will be explained in more detail below:
 
 \begin{itemize}
- \item create new folder with content
- \item adapt \verb+Makefile.am+
- \item insert new folder in \verb+Makefile.am+ of the directory above
- \item adapt \verb+configure.ac+ in the \verb+$DUMUX_ROOT+ (the directory you checked out, probably dumux)
- \item newly compile \Dumux
+\item Create new directory with content. Quite often an existing
+  directory can be used as a base for the new one.
+\item Adapt \texttt{Makefile.am} in the new directory and add this
+  direcory to the \texttt{SUBDIRS} list of the \texttt{Makefile.am} in
+  the directory above the one which you just created.
+\item Adapt \texttt{configure.ac} in the \eWoms base directory (the
+  directory to which you checked out or unpacked the \eWoms source
+  code, probably \texttt{ewoms})
+\item Run the command \texttt{automake} in the \eWoms base directory.
+\item Re-compile \eWoms by typing \texttt{make} in the \eWoms base
+  directory.
 \end{itemize}
 
 \noindent In more detail:
 
-\textbf{First} of all, the new folder including all relevant files needs to be created (see Section \ref{tutorial-coupled} and \ref{tutorial-decoupled} for description of a problem). 
+\textbf{First} of all, the new directory including all relevant files
+needs to be created (see section \ref{tutorial-coupled} and
+\ref{tutorial-decoupled} for description of how to define problems).
 
-\textbf{Second}, a new \verb+Makefile.am+ for the new Folder needs to be created. It is good practice to simply copy an existing file. For example the file \verb+$DUMUX_ROOT/test/2p/Makefile.am+ looks as follows:
+\textbf{Second}, a new \texttt{Makefile.am} for the new directory
+needs to be created. It is good practice to simply copy and modify an
+existing file. For example, the file \texttt{tutorial/Makefile.am}
+looks as follows:
 \begin{verbatim}
-bin_PROGRAMS = test_2p
+# programs just to build when "make check" is used
+check_PROGRAMS = tutorial_decoupled tutorial_coupled
 
-test_2p_SOURCES = test_2p.cc
-test_2p_CXXFLAGS = $(MPI_CPPFLAGS) 
-test_2p_LDADD = $(MPI_LDFLAGS) 
+noinst_HEADERS= *.hh
+EXTRA_DIST = CMakeLists.txt
+
+tutorial_coupleddir = $(datadir)/dumux/tutorial
+tutorial_coupled_SOURCES = tutorial_coupled.cc
+tutorial_coupled_DATA = $(tutorial_coupled_SOURCES)
 
 include $(top_srcdir)/am/global-rules
 \end{verbatim}
 
-All occurrences of \verb+test_2p+ need to be replaced by the name of the new project, e.g. \verb+New_Project+. At least if the name of the source file as well as the name of the new project are \verb+New_Project+.
+All occurrences of \texttt{tutorial\_coupled} need to be replaced by
+the name of the new project, e.g. \texttt{new\_project}. At least if
+the name of the source file as well as the name of the new project are
+\texttt{new\_project}.
 
-\textbf{Third}: In the directory above your new Project there is also a \verb+Makefile.am+ . In this file the subdirectories are listed. As you introduced a new subdirectory, it needs to be included here. In this case the name of the new Folder is \verb+New_Project+ . Don't forget the trailing backslash.
+\textbf{Third}: In the parent directory of the directory which you
+created, there is also a \texttt{Makefile.am}. In this file the
+sub-directories are listed. As you introduced a new sub-directory, it
+needs to be included there. In this case, the name of the new
+directory is \texttt{new\_project}.
 
 \begin{verbatim}
- SUBDIRS = . \
-	  1p \
-	  1p2c \
-	  2p \
-	  2p2c \
-	  2p2cni \
-	  2pni \
-	New_Project \
+...
+SUBDIRS = doc dumux m4 test tutorial new_project
 ...
 \end{verbatim}
 
-\textbf{Fourth}: In \verb+$DUMUX_ROOT+ there is a file \verb+configure.ac+. In this file, the respective Makefiles are listed. After a line reading
+\textbf{Fourth}: In \eWoms base directory there is a file
+\texttt{configure.ac}. In this file, the respective Makefiles are
+listed. After a line reading
 
- \verb+AC_CONFIG_FILES([Makefile+ 
+ \texttt{AC\_CONFIG\_FILES([Makefile} 
 
- \noindent a line, declaring a new Makefile, needs to be included. The Makefile itself will be generated automatically. For keeping track of the included files, inserting in alphabetical order is good practice. The new line could read: \verb+test/New_Project/Makefile+ 
+ \noindent a line, declaring a new Makefile, needs to be added. The
+ Makefile itself will be generated automatically from the
+ \texttt{Makefile.am} file which you just generated. For keeping track
+ of the included files, it is adviced to insert new Makefiles in
+ alphabetical order. The new line could read:
+ \texttt{new\_project/Makefile}
 
-\textbf{Fifth}: Compile \Dumux as described in Section \ref{install}.
+ \textbf{Fifth}: Run the command \texttt{automake} in the \eWoms base
+ directory.
 
+ \textbf{Sixth}: Re-compile \eWoms as described in Section \ref{install}.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "ewoms-handbook"
+%%% End: 
 
 
 

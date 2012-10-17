@@ -1,13 +1,6 @@
-\section[Decoupled model]{Solving a problem using a Decoupled Model}\label{tutorial-decoupled}
-The process of solving a problem using \Dumux can be roughly divided into four parts: 
-\begin{enumerate}
- \item The geometry of the problem and correspondingly a grid have to be defined.
- \item Material properties and constitutive relationships have to be defined.
- \item Boundary conditions as well as initial conditions have to be defined.
- \item A suitable model has to be chosen.
-\end{enumerate}
+\section[Semi-implicit model]{Solving a problem using a Semi-implicit Model}\label{tutorial-decoupled}
 
-In contrast to the last section, we now apply a decoupled solution procedure, a
+In contrast to the last section, we now apply a semi-implicit solution procedure, a
 so-called \textit{IMPET} (\textit{IM}plicit \textit{P}ressure \textit{E}xplicit 
 \textit{T}ransport) algorithm. This means that the pressure equation is first 
 solved using an implicit method. The resulting velocities are then used to solve
@@ -16,8 +9,8 @@ In this tutorial, pure fluid phases are solved with a finite volume discretizati
 of both pressure- and transport step. Primary variables, according to default
 settings of the model, are the pressure and the saturation of the wetting phase.
 
-The problem which is solved in this tutorial is illustrated in figure 
-\ref{tutorial-decoupled:problemfigure}. A rectangular domain with no flow 
+The problem which is solved in this tutorial is the same as for the previous tutorial and is illustrated in figure 
+\ref{tutorial-decoupled:problemfigure}: A rectangular domain with no flow 
 boundaries on the top and at the bottom, which is initially saturated with oil, 
 is considered. Water infiltrates from the left side into the domain. Gravity 
 effects are neglected.
@@ -39,46 +32,46 @@ effects are neglected.
 \caption{Geometry of the tutorial problem with initial and boundary conditions.}\label{tutorial-decoupled:problemfigure}
 \end{figure}
 
-Listing \ref{tutorial-decoupled:mainfile} shows how the main file, which has to be executed, has to be set up, if the problem described above is to be solved using a decoupled model. This main file can be found in the directory \texttt{/tutorial} of the stable part of \Dumux.
+Listing \ref{tutorial-decoupled:mainfile} shows how the main file, which has to be executed, has to be set up, if the problem described above is to be solved using a semi-implicit model. This main file can be found in the directory \texttt{/tutorial} below the \eWoms base directory.
 
 \begin{lst}[File tutorial/tutorial\_decoupled.cc]\label{tutorial-decoupled:mainfile} \mbox{}
-\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorial_decoupled.cc}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=26, firstnumber=26]{../../tutorial/tutorial_decoupled.cc}
 \end{lst}
 
 First, from line \ref{tutorial-decoupled:include-begin} to line
-\ref{tutorial-decoupled:include-end} the \Dune and \Dumux files containing
+\ref{tutorial-decoupled:include-end} the \Dune and \eWoms files containing
 essential functions and classes are included.
 
 At line \ref{tutorial-decoupled:set-type-tag} the type tag of the
 problem which is going to be simulated is set. All other data types
-can be retrieved by the \Dumux property system and only depend on this
+can be retrieved by the \eWoms property system and only depend on this
 single type tag. For an introduction to the
 property system, see section \ref{sec:propertysystem}.
 
-After this \Dumux' default startup routine \texttt{Dumux::start()} is
+After this, \eWoms' default startup routine \texttt{Dumux::start()} is
 called in line \ref{tutorial-decoupled:call-start}. This function deals
-with parsing the command line arguments, reading the parameter file,
+with parsing the command line arguments, 
 setting up the infrastructure necessary for \Dune, loading the grid, and
 starting the simulation. All parameters can
 be either specified by command line arguments of the form
-(\texttt{--ParameterName=ParameterValue}), in the file specified by the
+(\texttt{--ParameterName=ParameterValue}), or in the file specified by the
 \texttt{--ParameterFile=filename.ini} argument. If a parameter is
 specified on the command line as well as in the parameter file, the
-values provided in the command line have
+values provided in the command line takes
 precedence.
 
 \subsection{The problem class} \label{decoupled_problem}
 
-When solving a problem using \Dumux, the most important file is the
+When solving a problem using \eWoms, the most important file is the
 so-called \textit{problem file} as shown in listing
 \ref{tutorial-decoupled:problemfile} of
 \texttt{tutorialproblem\_decoupled.hh}.
 
 \begin{lst}[File tutorial/tutorialproblem\_decoupled.hh]\label{tutorial-decoupled:problemfile} \mbox{}
-\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialproblem_decoupled.hh}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=27, firstnumber=27]{../../tutorial/tutorialproblem_decoupled.hh}
 \end{lst}
 
-First, both \Dune  grid handlers and the decoupled model of \Dumux 
+First, both \Dune  grid handlers and the semi-implicit model of \eWoms 
 have to be included. Then, a new type tag is created for the problem 
 in line \ref{tutorial-decoupled:create-type-tag}.  In this case, the 
 new type tag inherits all properties defined for the \texttt{DecoupledTwoP} 
@@ -88,13 +81,13 @@ is chosen as discretization scheme (defined via the include in line
 a problem class is attached to the new type tag, while the grid which
 is going to be used is defined in line \ref{tutorial-decoupled:set-grid-type} --
 in this case an \texttt{YaspGrid} is created. Since there's no uniform mechanism to
-allocate grids in \Dune, \Dumux features the concept of grid creators.
+allocate grids in \Dune, \eWoms features the concept of grid creators.
 In this case the generic \texttt{CubeGridCreator} (line \ref{tutorial-decoupled:set-gridcreator}) which creates a
 structured hexahedron grid of a specified size and resolution. For
 this grid creator the  physical domain of the grid is specified via the
-run-time parameters \texttt{Grid.upperRightX},
-\texttt{Grid.upperRightY}, \texttt{Grid.numberOfCellsX} and
-\texttt{Grid.numberOfCellsY}. These parameters can be specified via
+run-time parameters \texttt{DomanSizeX},
+\texttt{DomanSizeY}, \texttt{CellsX} and
+\texttt{CellsY}. These parameters can be specified via
 the command-line or in a parameter file.
 For more information about the \Dune grid interface, the different grid types 
 that are supported and the generation of different grids consult 
@@ -102,45 +95,45 @@ the \textit{Dune Grid Interface HOWTO} \cite{DUNE-HP}.
 
 Next, we select the material of the simulation: In the case of a pure two-phase
 model, each phase is a bulk fluid, and the complex (compositional) fluidsystems
-do not need to be used. However, they can be used (see exercise 1 \ref{dec-ex1-fluidsystem}). 
-Instead, we use a simplified fluidsystem container that provides classes 
-for liquid and gas phases, line \ref{tutorial-decoupled:2p-system-start} to 
-\ref{tutorial-decoupled:2p-system-end}. These are linked to the appropriate 
-chemical species in line \ref{tutorial-decoupled:wettingPhase} and 
+do not need to be used. However, they can be used (see exercise 1e). 
+Instead, we use a simplified fluidsystem that wraps pure component classes 
+for the liquid and gas phases. This is done from line \ref{tutorial-decoupled:2p-system-start} to 
+\ref{tutorial-decoupled:2p-system-end}. These components represent fluids made of pure 
+chemical species, but given the fact, that a even pure chemical species can assume two phases, only their respective liquid phase is selected on lines \ref{tutorial-decoupled:wettingPhase} and 
 \ref{tutorial-decoupled:nonwettingPhase}. For all parameters that depend 
 on space, such as the properties of the soil, the specific spatial parameters 
 for the problem of interest are specified in line
 \ref{tutorial-decoupled:set-spatialparameters}. 
 
-Now we arrive at some model parameters of the applied two-phase decoupled 
-model. First, in line  \ref{tutorial-decoupled:cflflux} a flux function for the evaluation of the cfl-criterion is defined. This is optional as there exists also a default flux function. The choice depends on the problem which has to be solved. For cases which are not advection dominated the one chosen here is more reasonable.
+Now we arrive at some model parameters of the applied two-phase semi-implicit 
+model. First, in line  \ref{tutorial-decoupled:cflflux} a flux function for the evaluation of the CFL-criterion is defined. This is optional as there exists also a default flux function. The choice depends on the problem which has to be solved. For cases which are not advection dominated, the one chosen here is more reasonable.
 Line \ref{tutorial-decoupled:cflfactor} assigns the CFL-factor to be used in the
-simulation run, which scales the time step size (kind of security factor). The last property in line \ref{tutorial-decoupled:gravity} 
-is optional and tells the model not to use gravity.
+simulation run, which scales the time step size (kind of security factor). The next property, defined on line \ref{tutorial-decoupled:gravity} 
+is optional and tells the model to disregard gravity.
+Finally, the default dimensions of the size of the physical and temporal
+domains are defined on lines
+\ref{tutorial-decoupled:domain-defaults-begin} to
+\ref{tutorial-decoupled:domain-defaults-end}.
 
-After all necessary information is written into the property system and 
-its namespace is closed in line \ref{tutorial-decoupled:propertysystem-end},
+After all necessary properties are defined and 
+its \texttt{Properties} namespace is closed in line \ref{tutorial-decoupled:propertysystem-end},
 the problem class is defined in line \ref{tutorial-decoupled:def-problem}. 
 As its property, the problem class itself is also derived from a parent, 
-\texttt{IMPESProblem2P}. The class constructor (line 
-\ref{tutorial-decoupled:constructor-problem}) is able to hold two vectors,
-which is not needed in this tutorial.
+\texttt{IMPESProblem2P}.
 
-Beside the definition of the boundary and initial conditions (discussed in 
-subsection \label{decoupled-problem:boundary}), the problem class also contains
-general information about the current simulation. First, the name used by
-the \texttt{VTK-writer} to generate output is defined in the method of line
+Beside the definition of the boundary and initial conditions, the problem class also provides
+general information about the current simulation. First, the name used by for the
+resulting VTK output files is defined by the \texttt{name()} method of line
 \ref{tutorial-decoupled:name}, and line \ref{tutorial-decoupled:restart} indicates
-whether restart files are written. As decoupled schemes usually feature small 
-timesteps, it can be usefull to set an output interval larger than 1. The respective function is called in line \ref{tutorial-decoupled:outputinterval}, which gets the output interval as argument.
+when and whether restart files are written. As semi-implicit schemes usually feature small 
+timesteps, it can be useful to set an output interval larger than 1. The respective function is called in line \ref{tutorial-decoupled:outputinterval}, which gets the output interval as argument.
 
 The following methods all have in common that they may be dependent on space.
 Hence, they all have either an \texttt{element} or an \texttt{intersection} as their
 function argument: Both are \Dune entities, depending on whether the parameter of the method is defined in an element, such as 
-    initial values, or on an intersection, such as a boundary condition. As it may be sufficient to return values only based on a position, \Dumux models can also access functions in the problem with the form \mbox{\texttt{...AtPos(GlobalPosition\& globalPos)}}, without an \Dune entity, as one can see in line \ref{tutorial-decoupled:bctype}.
+    initial values, or on an intersection, such as a boundary condition. As it may be sufficient to return values only based on a position, \eWoms models can also access functions in the problem with the form \mbox{\texttt{...AtPos(GlobalPosition\& globalPos)}}, without an \Dune entity, as one can see in line \ref{tutorial-decoupled:bctype}.
 
-There are the methods for general parameters, source- or
-sinkterms, boundary conditions (lines \ref{tutorial-decoupled:bctype} to
+There are also methods for terms of the partial differential equations which must be provided such as the source term, boundary conditions (lines \ref{tutorial-decoupled:bctype} to
 \ref{tutorial-decoupled:neumann}) and initial values for the transported
 quantity in line \ref{tutorial-decoupled:initial}. For more information
 on the functions, consult the documentation in the code.
@@ -151,16 +144,17 @@ Listing \ref{tutorial-decoupled:spatialparametersfile} shows the file
 \verb+tutorialspatialparams_decoupled.hh+:
 
 \begin{lst}[File tutorial/tutorialspatialparams\_decoupled.hh]\label{tutorial-decoupled:spatialparametersfile} \mbox{}
-\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=24, firstnumber=24]{../../tutorial/tutorialspatialparams_decoupled.hh}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=27, firstnumber=27]{../../tutorial/tutorialspatialparams_decoupled.hh}
 \end{lst}
-The argument list here is the same as for the problem 
+The argument list for its methods here is the same as for the problem 
 functions: Either an \texttt{element}, or only the global position if the function is called \texttt{...AtPos(...)}.
 
 \subsection{Exercises}
 \label{tutorial-deoucpled:exercises}
-The following exercises will give you the opportunity to learn how you can change 
-soil parameters, boundary conditions and fluid properties in \Dumux and to play along 
-with the decoupled modelling framework.
+The following exercises will give you the opportunity to learn how you
+can change soil parameters, boundary conditions and fluid properties
+in \eWoms and is intended to give you an opportunity to play with the
+semi-implicit modelling framework.
 
 \subsubsection{Exercise 1}
 \renewcommand{\labelenumi}{\alph{enumi})}
@@ -168,33 +162,71 @@ For Exercise 1 you only have to make some small changes in the tutorial files.
 \begin{enumerate}
 \item \textbf{Altering output}
 
-To get an impression what the results should look like you can first run the original version of the decoupled tutorial model by typing  \texttt{./tutorial\_decoupled}. The runtime parameters which are set printed at the start of the simulation. If the input file has the same name than the main file (e.g. \texttt{tutorial\_decoupled.cc} and \texttt{tutorial\_decoupled.input}), it is automatically chosen. If the name differs the program has to be started typing \texttt{./tutorial\_decoupled -parameterFile <filename>.input}. For more options you can also type \texttt{./tutorial\_decoupled -h}. For the visualisation with paraview please refer to \ref{quick-start-guide}.\\
-As you can see, the simulation creates many output files. To reduce these in order to perform longer simulations, change the method responsible for output (line \ref{tutorial-decoupled:outputinterval} in the file \texttt{tutorialproblem\_decoupled}) as to write an output only every 20 timesteps. Compile the main file by typing \texttt{make tutorial\_decoupled} and run the model. Now, run the simulation for 5e5 seconds.
+  To get an impression what the results should look like, you can run
+  the unmodified version of the semi-implicit tutorial problem by
+  typing \texttt{./tutorial\_decoupled}. The runtime parameters which
+  are set printed at the start of the simulation. You may either
+  specify values for them on the command line by passing the program
+  \texttt{--ParameterName=Value} arguments, or by putting parameters
+  into a filie and instructing the program to load it by adding the
+  command line option \texttt{--ParameterFile=filename}. For a
+  description of the available parameters options you add the
+  \texttt{--help} command line argument to the program. For the
+  visualizing the output using paraview please refer to
+  \ref{quick-start-guide}.
 
-\item \textbf{Changing the Model Domain and the Boundary Conditions} \\
+  As you can see, the simulation creates many output files. To reduce
+  these in order to perform longer simulations, change the method
+  responsible for output (line \ref{tutorial-decoupled:outputinterval}
+  in the file \texttt{tutorialproblem\_decoupled}) so that it only
+  writes an output file every 20 time steps. Re-compile the program by
+  typing \texttt{make tutorial\_decoupled} and run it again. Now, run
+  the simulation for $500\;000$ seconds.
+
+\item \textbf{Changing the Model Domain} \\
 Change the size of the model domain so that you get a rectangle
 with edge lengths of x = 300 m \\  and y = 300 m and with discretisation lengths of  $\Delta \text{x} = 20$ m and $\Delta \text{y} = 10$ m. \\
+
+
+\item \textbf{Changing the Boundary Conditions} \\
 Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh} so that water enters from the bottom and oil flows out at the top boundary. The right and the left boundary should be closed for water and oil fluxes. The Neumannn Boundary conditions are multiplied by the normal (pointing outwards), so an influx is negative, an outflux always positive. Such information can easily be found in the documentation of the functions (also look into base classes).
 
 \item \textbf{Changing Fluids} \\
-Now you can change the fluids. Use DNAPL instead of Oil and Brine instead of Water. To do that you have to select different components via the property system in the problem file:
+Now change the fluids: Use DNAPL instead of LNAPL and brine instead of water. To do that you have to select different components:
 \begin{enumerate}
- \item Brine: The class \texttt{Dumux::Brine} acts as an adapter to the fluid system that alters a pure water class by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument (be sure to use the complete water class with its own template parameter).
- \item DNAPL: A standard set of chemical substances, such as Water and Brine, is already included (via a list of \texttt{\#include ..} commandos) and hence easily accessible by default. This is not the case for the class \texttt{Dumux::SimpleDNAPL}, however, which is located in the folder \texttt{dumux/material/components/}. Try to include the file as well as select the component via the property system.
+ \item Brine: First, you need to add an \texttt{\#include} directive for \texttt{brine.hh}. The class \texttt{Dumux::Brine} is an adapter class that slightly adapts the thermodynamic properties of pure water by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument.
+ \item DNAPL: First, you need to change \texttt{\#include} directive from \texttt{lnapl.hh} to \texttt{dnapl.hh}. Then change the fluid used for the non-wetting phase from \texttt{LNAPL<Scalar>} to \texttt{DNAPL<Scalar>}
 \end{enumerate}
-If you want to take a closer look at how the fluid classes are defined and which substances are already available please browse through the files in the directory
+If you want to take a closer look at how the fluid classes are defined and which substances are already available you may browse the files in the directory
 \texttt{/dumux/material/components}.
 
-\item \textbf{Use the \Dumux fluid system}\label{dec-ex1-fluidsystem} \\
-\Dumux usually organizes fluid mixtures via a \texttt{fluidsystem}, see also chapter \ref{sec:fluidframework}. In order to include a fluidsystem you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file. If you use eclipse, this can easily be done by pressing \textit{str + shift + 7} -- the same as to cancel the comment later on.\\
-Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the material folder, and set a property \texttt{FluidSystem} with the appropriate type, \texttt{Dumux::H2OAirFluidSystem<TypeTag>}. However, this rather complicated fluidsystem uses tabularized fluid data, which need to be initialized (i.e. the tables need to be filled with values) in the constructor body of the current problem by adding \texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. Remember that the constructor function always has the same name as the respective class, i.e. \texttt{TutorialProblemDecoupled(..)}.\\
-To avoid the initialization, use the simpler version of water \texttt{Dumux::SimpleH2O} or a non-tabulated version \texttt{Dumux::H2O}. This can be done by setting the property \texttt{Components} type \texttt{H2O},
-as is done in all the test problems of the decoupled 2p2c model.\\
-The density of the gas is magnitudes smaller than that of oil, so please decrease the injection rate to $q_n = -3 \times 10^{-4}$ $\left[\frac{\textnormal{kg}}{\textnormal{m}^2 \textnormal{s}}\right]$. Also reduce the simulation duration to 2e4 seconds.\\
-Please reverse the changes of this example, as we still use bulk phases and hence do not need such an extensive fluid system.
+\item \textbf{Use an \eWoms fluid system}\label{dec-ex1-fluidsystem} \\
+\eWoms usually organizes fluid mixtures via a \textit{fluid system}, see also chapter \ref{sec:fluidframework}. In order to include a fluid system you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file.\\
+
+Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the
+material folder, and set a property \texttt{FluidSystem} with the
+appropriate type,
+\texttt{Dumux::FluidSystems::H2OAir<Scalar>}. However, this rather
+complicated fluidsystem uses tabularized fluid data, which need to be
+initialized at startup (i.e. the tables need to be filled with values)
+in the constructor body of the current problem by adding
+\texttt{GET\_PROP\_TYPE(TypeTag, FluidSystem)::init();}. Remember that
+the constructor function always has the same name as the respective
+class, i.e. \texttt{TutorialProblemDecoupled(..)}.
+
+The density of the gas is magnitudes smaller than that of oil, so it
+is advisable to decrease the injection rate to $q_n = -3 \cdot 10^{-4}
+\frac{\text{kg}}{\text{m}^2 \text{s}}$. Also reduce the simulation
+duration to $20\;000$ seconds.
+
+Before you proceed, please revert the changes made in this exercise,
+as we still use bulk phases and hence do not need such an extensive
+fluid system.
  
 \item \textbf{Heterogeneities}  \\
-Set up a model domain with the soil properties given in Figure \ref{tutorial-deoucpled:exercise1_d}. Adjust the boundary conditions so that water is again flowing from left to right.
+  Set up a model domain with the soil properties given in Figure
+  \ref{tutorial-deoucpled:exercise1_d}. Adjust the boundary conditions
+  so that water is again flowing from left to right.
 \begin{figure}[ht]
 \psfrag{K1 =}{K $= 10^{-8}\text{ m}^2$}
 \psfrag{phi1 =}{$\phi = 0.15$}
@@ -232,7 +264,7 @@ After this, change the domain size (parameter input file) to match the domain de
 by figure \ref{tutorial-decoupled:ex2_Domain}. Adapt the problem class
 so that the boundary conditions are consistent with figure
 \ref{tutorial-decoupled:ex2_BC}. Initially, the domain is fully saturated
-with water and the pressure is $p_w = 2 \times 10^5 \text{Pa}$ . Oil
+with water and the pressure is $p_w = 2 \cdot 10^5 \text{Pa}$ . Oil
 infiltrates from the left side. Create a grid with $20$ cells in
 $x$-direction and $10$ cells in $y$-direction. The simulation time
 should be set to $2e4 \text{s}$.
@@ -279,23 +311,14 @@ compile the program.
  \item Further increase the CFL-factor to 2 and investigate the saturation.
 \end{itemize}
 
-\subsubsection{Exercise 3: Parameter file input.}
-As you have experienced, compilation takes quite some time. Therefore, \Dumux 2.1 provides a simple method to read in parameters (such as simulation end time or modelling parameters) via \texttt{Paramter Input Files}. The tests in the Test-folder \texttt{/test/} already use this system.\\
-If you look at the Application in \texttt{/test/boxmodels/2p/}, you see that the main file looks rather empty: The parameter file \texttt{test\_2p.input} is read by a standard start procedure, which is called in the main function. This should be adapted for your problem at hand. The program run has to be called with the parameter file as argument. As this is a basic \Dumux feature, the procedure is the equivalent in the decoupled as in the box models.
-In the code, parameters can be read via the macro \texttt{GET\_RUNTIME\_PARAM(TypeTag, Scalar, MyWonderfulGroup.MyWonderfulParameter);}. In \texttt{test\_2p}, \texttt{MyWonderfulGroup} is the group \texttt{SpatialParams} - any type of groups is applicable, if the group definition in the parameter file is enclosed in square brackets. The parameters are then listed thereafter. Try and use as much parameters as possible via the input file, such as lens dimension, grid resolution, soil properties etc. In addition, certain parameters that are specific to the model, such as the \texttt{CFL}-factor, can be assigned in the parameter file without any further action.
-
-\subsubsection{Exercise 4}
+\subsubsection{Exercise 3}
 Create a new file for benzene called \texttt{benzene.hh} and implement
-a new fluid system. (You may get a hint by looking at existing fluid 
-systems in the directory \verb+/dumux/material/fluidsystems+.)
+a new component. (You may get a hint by looking at existing components
+in the directory \verb+/dumux/material/components+.)
 
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$. 
-
-
-\subsubsection{Exercise 5}
-If both the coupled and the decoupled tutorial are completed, one should have noticed that the function arguments in the problem function differ slighty, as the numerical models differ. However, both are functions that depend on space, so both models can also work with functions based ond \mbox{\texttt{...AtPos(GlobalPosition \& globalPos)}}, no matter if we model coupled or decoupled. Try to formulate a spatial parameters file that works with both problems, the coupled and the decoupled. Therein, only use functions at the position.
 
 %%% Local Variables: 
 %%% mode: latex

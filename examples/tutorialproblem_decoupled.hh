@@ -96,7 +96,7 @@ SET_SCALAR_PROP(TutorialProblemDecoupled, ImpetCflFactor, 0.95); /*@\label{tutor
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutorial-decoupled:gravity}@*/
 
-// define how long the simulation should run [s]
+// define how long the simulation should run [s] /*@\label{tutorial-decoupled:domain-defaults-begin}@*/
 SET_SCALAR_PROP(TutorialProblemDecoupled, EndTime, 100e3);
 
 // define the properties required by the cube grid creator
@@ -106,7 +106,7 @@ SET_SCALAR_PROP(TutorialProblemDecoupled, DomainSizeZ, 0.0);
 
 SET_INT_PROP(TutorialProblemDecoupled, CellsX, 100);
 SET_INT_PROP(TutorialProblemDecoupled, CellsY, 1);
-SET_INT_PROP(TutorialProblemDecoupled, CellsZ, 0);
+SET_INT_PROP(TutorialProblemDecoupled, CellsZ, 0); /*@\label{tutorial-decoupled:domain-defaults-end}@*/
 } /*@\label{tutorial-decoupled:propertysystem-end}@*/
 
 /*! \ingroup DecoupledProblems

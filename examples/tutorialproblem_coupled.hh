@@ -28,7 +28,7 @@
 // The numerical model
 #include <dumux/boxmodels/immiscible/immisciblemodel.hh>
 
-// The components that are used
+// The chemical species that are used
 #include <dumux/material/components/h2o.hh>
 #include <dumux/material/components/lnapl.hh>
 
@@ -64,11 +64,13 @@ SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Dumux::CubeGridCreator<TypeTa
 
 // Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
-              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar), Dumux::H2O<Scalar> >); 
+              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+              Dumux::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >); 
 
 // Set the non-wetting phase
 SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
-              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar), Dumux::LNAPL<Scalar> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
+              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar), 
+              Dumux::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
 
 // Set the material law
 SET_PROP(TutorialProblemCoupled, MaterialLaw)

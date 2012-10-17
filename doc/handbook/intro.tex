@@ -1,12 +1,22 @@
 \chapter{Introduction}
 
-\eWoms aims to be a generic framework for the simulation of multiphase
+\eWoms~\cite{EWOMS-HP} aims to be a generic framework for the simulation of multi-phase
 fluid flow and transport processes in porous media using continuum
 mechanical approaches.  At the same time, \eWoms aims to deliver
 top-notch computational performance, high flexibility, a sound
 software architecture and the ability to run on anything from single
 processor systems to highly parallel supercomputers with specialized
 hardware architectures.
+
+\eWoms is an integral part of the open porous media
+initiative~\cite{OPM-HP} where it provides the fully-implicit
+models. \eWoms is based on the source code of the
+\Dumux~\cite{DUMUX-HP} simulation framework and aims to be a proper
+superset of \Dumux when it comes to features, while at the same time
+it aims to deliver better performance and quality of the source
+code. To ease porting features from \Dumux to \eWoms and vice-versa,
+all classes provided by \eWoms are currently located in the namespace
+\texttt{Dumux}.
 
 The means to achieve these somewhat contradictory goals are the
 thorough use of object oriented design in conjunction with template

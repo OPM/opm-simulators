@@ -1,4 +1,4 @@
-\section{Guidelines} 
+\chapter{Coding Style Guidelines}
 \label{guidelines}
 
 An important characteristic of source code is that it is written only
@@ -6,49 +6,85 @@ once but usually it is read many times (e.g. when debugging things,
 adding features, etc.). For this reason, good programming frameworks
 always aim to be as readable as possible, even if comes with higher
 effort to write them in the first place. The remainder of this section
-is almost a verbatim copy of the DUNE coding guidelines found at
-\cite{DUNE-HP}. These guidelines are also recommended for coding with
-\Dumux as developer and user.
-
-In order to keep the code maintainable we have decided upon a set of
-coding rules.  Some of them may seem like splitting hairs to you, but
-they do make it much easier for everybody to work on code that hasn't
-been written by oneself.
+is very similar to the \Dune coding guidelines found at the \Dune
+website~\cite{DUNE-HP}. These guidelines are also strongly recommended
+for working with \eWoms. Some of these coding style rules may seem
+like splitting hairs to you, but they do make it much easier for
+everybody to work on code that has not been written by oneself.
 
 \begin{itemize}
 \item Naming: 
 \begin{itemize}
-\item Comments: they are helpful! Please document freely what each part of your code does. 
-\item all comments / documentation is in English
-\item Variables: Names for variables should only consist of letters and digits. The first letter should be a lower case one. If your variable names consists of several words, then the first letter of each new word should be capital. As we decided on the only exception are the begin and end methods.
-\item Variables should be named as self-explaining as possible: especially abbreviations should be avoided (saturation in stead of S)
+\item Comments: They are helpful! Use comments extensively to explain
+  what your code does, but please refrain from adding trivial
+  comments. Trivial comments are, for example comments that only
+  parrot the source code (``this method sets a'' as the comment for a
+  method called \texttt{setA()}), or comments that explain language
+  features (``if b is true then a is c else d'' for the statement
+  \texttt{a = b?c:d}).
+\item All comments, documentation and variable or type names are
+  exclusivly using the English language.
+\item Variables: Names for variables should only feature letters and
+  digits. The first letter should be lower case. If your variable
+  names consists of several words, then the first letter of each new
+  word should be capitalized.
+\item Variables and methods should be named as self-explanatory as
+  possible. Especially, this means abbreviations should be avoided
+  (for example, use 'saturation' in stead of 'S')
 \item Method parameters which are not self-explanatory should always
   have a meaningful comment a at calling sites. Example:
 \begin{lstlisting}[style=eWomsCode]
    localResidual.eval(/*includeBoundaries=*/true);
 \end{lstlisting}
-\item Private Data Variables: Names of private data variables end with an underscore and are the only variables that contain underscores. 
-\item Typenames: For typenames, the same rules as for variables apply. The only difference is that the first letter should be a capital one.
-\item Macros: The use of preprocessor macros is strongly discouraged. If you have to use them for whatever reason, please use capital letters only.
-\item The Exlusive-Access Macro: Every header file traditionally begins with the definition of a preprocessor constant that is used to make sure that each header file is only included once. If your header file is called 'myheaderfile.hh', this constant should be DUNE\_MYHEADERFILE\_HH.
-\item Files: Filenames should consist of lower case letters exclusively. Header files get the suffix .hh, implementation files the suffix .cc
+\item Private attributes: Names of private attributes should end with
+  an underscore and are supposed to be the only variables that contain
+  underscores.
+\item Typenames: For typenames (classes, structures, typedefs, etc),
+  the same rules as for variables apply. The only difference is that
+  the first letter should be a capital one.
+\item Macros: The use of preprocessor macros is strongly
+  discouraged. If you have to use them for whatever reason, please use
+  capital letters only.
+\item Guardian macros: Every header file traditionally begins with the
+  definition of a preprocessor macro that is used to make sure that
+  the header file is only included once. If your header file is
+  called 'myheaderfile.hh', this constant should be named
+  \texttt{DUMUX\_MYHEADERFILE\_HH}.
+\item Files: File names should exclusively consist of lower case
+  letters. Header files get the suffix .hh, implementation files the
+  suffix .cc
 \end{itemize}
-\item Documentation:
-      Dune, as any software project of similar complexity, will stand and fall with the quality of its documentation.
-Therefore it is of paramount importance that you document well everything you do! We use the doxygen system to extract easily-readable documentation from the source code. Please use its syntax everywhere. In particular, please comment \textbf{all}
+
+\item Documentation: \eWoms, as any software project of similar
+  complexity, will stand and fall with the quality of its
+  documentation.  Therefore, it is of paramount importance that you
+  document everything you do well! We use the doxygen system to
+  extract easily-readable documentation from the source code. Please
+  use its syntax everywhere. In particular, please comment
+  \textbf{all}
 \begin{itemize}
-\item Method Parameters (in / out)
-\item Template Parameters
-\item Return Values 
+\item Method parameters
+\item Template parameters
+\item Return values 
 \item Exceptions thrown by a method
  \end{itemize}
-     Since we all know that writing documentation is not well-liked and is frequently defered to some vague 
-'next week', we herewith proclaim the Doc-Me Dogma . It goes like this: Whatever you do, and in whatever hurry you 
-happen to be, please document everything at least with a {\verb /** $\backslash$todo Please doc me! */}. That way at least the absence 
-of documentation is documented, and it is easier to get rid of it systematically.
-\item Exceptions:
-      The use of exceptions for error handling is encouraged. Until further notice, all exceptions thrown are DuneEx.
-\item Debugging Code:
-      Global debugging code is switched off by setting the symbol NDEBUG. In particular, all asserts are 
-automatically removed. Use those asserts freely!
+ Since we all know that writing documentation is not well-liked and is
+ frequently defered to some vague 'next week', we herewith proclaim
+ the Doc-Me Dogma . It goes like this: Whatever you do, and in
+ whatever hurry you happen to be, please document everything at least
+ with a {\verb /** $\backslash$todo Please doc me! */}. That way at
+ least the absence of documentation is documented, and it is easier to
+ get rid of it systematically.
+\item Exceptions: The use of exceptions for error handling is
+  encouraged. Until further notice, all exceptions thrown are derived
+  from \texttt{Dune::Exception}.
+\item Debugging code: Code which is only there to ease the debugging
+  process should always be switched off if the preprocessor macro
+  NDEBUG is defined. In particular, all assertations are automatically
+  removed. Use those assertations freely!
 \end{itemize}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "ewoms-handbook"
+%%% End: 

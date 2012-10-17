@@ -1,64 +1,72 @@
-\chapter{Newton in a Nutshell}
+\chapter{The Newton-Raphson method}
 
-For the isothermal immiscible multi-phase model for flow in porous
-media, the following mass conservation equation needs to be solved:
+For the isothermal immiscible multi-phase model, the following mass
+conservation equation needs to be solved:
 \begin{align}
 \underbrace{
-  \phi \frac{\partial \varrho_\alpha S_\alpha}{\partial t}
+  \frac{\partial \phi \varrho_\alpha S_\alpha}{\partial t}
  -
  \text{div} \left\{
  \varrho_\alpha \frac{k_{r\alpha}}{\mu_\alpha} \mbox{\bf K} \left(\text{grad}\, p_\alpha - \varrho_{\alpha} \mbox{\bf g} \right)
  \right\} - q_\alpha} _
-{\textbf{f}(\textbf{u}^r)}
+{\textbf{f}(\textbf{u})}
 = 0 \; .
 \end{align}
 
-Because of the nonlinear dependencies (even in this comparativly simple equation) in there, this is a really difficult task. However, for finding roots of of difficult equations there is a really handy method out there: \textsc{Newton}'s method. 
+Because of the nonlinear dependencies even solving this comparatively
+simple equation is a quite challenging task. However, for
+finding roots of non-linear systems equations the
+\textsc{Newton}-\textsc{Raphson} method can be used.
 
-When using a fully coupled numerical model, one timestep essentially consists of the application of the \textsc{Newton} algorithm to solve the nonlinear system.
+When using a fully-implicit numerical model, each time step essentially
+consists of the application of the \textsc{Newton} algorithm to solve
+the nonlinear system.
 
-One step of the \textsc{Newton} method can be formalized as follows:
+The idea of this algorithm is to linearize the non-linear system of
+equation at a given solution, and then solving the resulting linear
+system of equations. The hope is, that the solution of this linear
+system is closer to the root of the non-linear system of
+equations. This process is repeated until either convergence is
+reached (a pre-determined accuracy is reached), or divergence of the
+algorithm is detected (either by trespassing the maximum number of
+iterations or by failure to linearize). This method can be formalized
+as follows:
 
-\textsc{Newton} method: 
 \begin{subequations}
 \begin{align}
 \label{NewtonGen}
-\textbf{u}^{r+1} &= \textbf{u}^r -  \left(\textbf{f}^\prime (\textbf{u}^r) \right)^{-1} \textbf{f}(\textbf{u}^r) \\
-\Leftrightarrow {\textbf{f}^{\prime}(\textbf{u}^r)}  ( \textbf{u}^{r+1}-\textbf{u}^r) &= -\textbf{f}(\textbf{u}^r) \\
-\Leftrightarrow \underbrace{\textbf{f}^{\prime}(\textbf{u}^r)}_{\textnormal{Jacobian}} ( \textbf{u}^r - \textbf{u}^{r+1}) &= \textbf{f}(\textbf{u}^r) \label{NewtonAsUsed}
+\textbf{u}^{r+1} &= \textbf{u}^r + \Delta \textbf{u}^r \\
+\Delta \textbf{u}^r & = - \left\{\text{grad}\,\textbf{f} (\textbf{u}^r) \right\}^{-1} \textbf{f}(\textbf{u}^r) \\
 \end{align}
 \end{subequations}
 
 \noindent with
 \begin{itemize}
+\item $\textbf{u}$: Vector of unknowns
+\item $\textbf{f}(\textbf{u}^r)$: Residual (Function of the vector of unknowns which ought to be set to $0$)
 \item $\phantom{a}^r$: last iteration, $\phantom{a}^{r+1}$: current iteration,
-\item $\phantom{a}^\prime$: derivative
-\item $\textbf{u}$: vector of unknowns, the actual primary variables
-\item $\textbf{f}(\textbf{u}^r)$: function of vector of unknowns
+\item $\text{grad}\,\phantom{a}$: \textsc{Jacobian} matrix of
+  $\textbf{f}$, i.e. matrix of the derivatives of \textbf{f} regarding
+  all components of $\textbf{u}$
 \end{itemize}
 
-1-D example with slope $m$:
-\begin{equation}
- m= \frac{y(u^{r+1})-y(u^{r})}{u^{r+1}-u^{r}} \textnormal{ for a root of a function: } m= - \frac{y(u^{r})}{u^{r+1}-u^{r}}
-\end{equation}
-The value of u (generally a vector of unknowns) for which f becomes zero is searched for. Therefore the quantity of interest is $\textbf{u}^{r+1}$.
-
-But the (BiCGSTAB / Pardiso / ...) linear solver solves systems of the form:
+The value of $\textbf{u}$ for which $\textbf{f}$ becomes zero is
+searched for. Bringing \eqref{NewtonGen} into the form used the linear
+solvers
 \begin{equation}
 \label{GenSysEq}
- A\textbf{x} = \textbf{b} .
+ \textbf{A}\textbf{x} - \textbf{b} = 0 
 \end{equation}
-
-Comparing (\ref{GenSysEq}) with (\ref{NewtonAsUsed}) leads to:
+leads to
 \begin{itemize}
-\item $\textbf{b} = \textbf{f}(\textbf{u}^r)$ r.h.s. as it is known from the last iteration. Here, $\textbf{f}(\textbf{u}^r)$ is called residual. It is obtained by evaluating the balance equations with the primary variables, as obtained from the last iteration step.
-\item $A=\textbf{f}^{\prime}(\textbf{u}^r)$ coefficient matrix or \textsc{Jacobian}. It is obtained by numerical differentiation. Evaluating the balance equations at the last solution + eps, then evaluating the balance equations at the last solution - eps, division by 2eps: numerical differentiation complete.
-\item $\textbf{x} = (\textbf{u}^{r+1} - \textbf{u}^{r})$ this is what the linear solver finds as an solution. 
+\item $\textbf{A} = \text{grad}\,\textbf{f} (\textbf{u}^r)$
+\item $\textbf{x} = \textbf{u}^{r} - \textbf{u}^{r+1}$
+\item $\textbf{b} = \textbf{f}(\textbf{u}^{r})$
 \end{itemize}
 
-This is equivalent to stating that the implemented algorithm solves for the change of the solution. Or in other words: until the $\textbf{u}$ does not change with one more \textsc{Newton-}iteration (do not confuse with timestep!).
-
-In the rest of Dumux (everywhere besides in the solver), not the change of the solution is looked for, but the actual solution is used. Therefore the outcome of the linear solver needs to be reformulated as done in \verb+updateMethod.update(*this, u, *uOld, model);+. In this function the ``change in solution'' is changed to ``solution''. Afterwards the quantity \verb+*u+ stands for the solution.
+Once $\textbf{u}^{r} - \textbf{u}^{r+1}$ has been calculated, \eWoms
+updates the current solution in \texttt{NewtonController::update()}
+and starts the next iteration if the scheme has not yet converged.
 
 %%% Local Variables: 
 %%% mode: latex
