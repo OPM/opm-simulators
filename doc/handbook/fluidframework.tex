@@ -1,7 +1,7 @@
-\chapter{The \Dumux Fluid Framework}
+\chapter{The \eWoms Fluid Framework}
 \label{sec:fluidframework}
 
-This chapter discusses the \Dumux fluid framework. \Dumux users who
+This chapter discusses the \eWoms fluid framework. \eWoms users who
 do not want to write new models and who do not need new fluid
 configurations may skip this chapter.
 
@@ -10,7 +10,7 @@ is provided first, then some implementation details follow.
 
 \section{Overview of the Fluid Framework}
 
-The \Dumux fluid framework currently features the following concepts
+The \eWoms fluid framework currently features the following concepts
 (listed roughly in their order of importance):
 
 \begin{description}
@@ -42,7 +42,7 @@ The \Dumux fluid framework currently features the following concepts
   input variables and make sure that the resulting fluid state is
   consistent with a given set of thermodynamic equations. See section
   \ref{sec:constraint_solvers} for a detailed description of the
-  constraint solvers which are currently available in \Dumux.
+  constraint solvers which are currently available in \eWoms.
 \item[Equation of state:] Equations of state (EOS) are auxiliary
   classes which provide relations between a fluid phase's temperature,
   pressure, composition and density. Since these classes are only used
@@ -58,7 +58,7 @@ The \Dumux fluid framework currently features the following concepts
   of a mixture of two components. Typical binary coefficients are
   \textsc{Henry} coefficients or binary molecular diffusion
   coefficients. So far, the programming interface for accessing binary
-  coefficients has not been standardized in \Dumux.
+  coefficients has not been standardized in \eWoms.
 \end{description}
 
 \section{Fluid States}
@@ -133,15 +133,22 @@ Also, {\bf all} fluid states {\bf must} provide the following methods:
     coefficient}~\cite{reid1987}.  The physical meaning of fugacity
   becomes clear from the equation
   \[
-  f_\alpha^\kappa = p_\alpha \exp\left\{\frac{\zeta^\kappa_\alpha}{R T_\alpha} \right\} \;,
+  f_\alpha^\kappa = f_\alpha^{\kappa,0} \exp\left\{\frac{\zeta^\kappa_\alpha - \zeta^{\kappa,0}_\alpha}{R T_\alpha} \right\} \;,
   \]
   where $\zeta^\kappa_\alpha$ represents the $\kappa$'s chemical
   potential in phase $\alpha$, $R$ stands for the ideal gas constant,
-  and $T_\alpha$ for the absolute temperature of phase
-  $\alpha$. Assuming thermal equilibrium, there is a one-to-one
-  mapping between a component's chemical potential
-  $\zeta^\kappa_\alpha$ and its fugacity $f^\kappa_\alpha$. In this
-  case chemical equilibrium can thus be expressed by
+  $\zeta^{\kappa,0}_\alpha$ is the chemical potential in a reference
+  state, $f_\alpha^{\kappa,0}$ is the fugacity in the reference state
+  and $T_\alpha$ for the absolute temperature of phase $\alpha$. The
+  fugacity in the reference state $f_\alpha^{\kappa,0}$ is in princle
+  arbitrary, but in the context of the \eWoms fluid framework, we
+  assume that it is the same for all fluid phases, i.e.
+  $f_\alpha^{\kappa,0} = f_\beta^{\kappa,0}$.
+  
+  Assuming thermal equilibrium, there is a one-to-one mapping between
+  a component's chemical potential $\zeta^\kappa_\alpha$ and its
+  fugacity $f^\kappa_\alpha$. With the above assumptions, chemical
+  equilibrium can thus be expressed by
   \[
   f^\kappa := f^\kappa_\alpha = f^\kappa_\beta\quad\forall \alpha, \beta
   \]
@@ -160,7 +167,7 @@ Also, {\bf all} fluid states {\bf must} provide the following methods:
 \end{description}
   
 \subsection{Available Fluid States}
-Currently, the following fluid states are provided by \Dumux:
+Currently, the following fluid states are provided by \eWoms:
 \begin{description}
 \item[NonEquilibriumFluidState:] This is the most general fluid state
   supplied. It does not assume thermodynamic equilibrium and thus
@@ -203,7 +210,7 @@ All fluid systems must export a type for their \texttt{ParameterCache}
 objects. Parameter caches can be used to cache parameter that are
 expensive to compute and are required in multiple thermodynamic
 relations. For fluid systems which do need to cache parameters,
-\Dumux provides a \texttt{NullParameterCache} class.
+\eWoms provides a \texttt{NullParameterCache} class.
 
 The actual quantities stored by parameter cache objects are specific
 to the fluid system and no assumptions on what they provide should be
@@ -265,7 +272,7 @@ methods:
 \item[isLiquid():] Return whether the phase is a liquid, given the
   index of a phase.
 \item[isIdealMixture():] Return whether the phase is an ideal mixture,
-  given the phase index. In the context of the \Dumux fluid
+  given the phase index. In the context of the \eWoms fluid
   framework a phase $\alpha$ is an ideal mixture if, and only if, all
   its fugacity coefficients $\Phi^\kappa_\alpha$ do not depend on the
   phase composition. (Although they might very well depend on
@@ -350,42 +357,6 @@ throw an exception of type \lstinline{Dune::NotImplemented} instead. Obviously,
 such fluid systems cannot be used for models that depend on those
 methods.
 
-\subsection{Available Fluid Systems}
-
-Currently, the following fluid systems are available in \Dumux:
-\begin{description}
-\item[Dumux::FluidSystems::TwoPImmiscible:] A two-phase fluid system
-  which assumes immiscibility of the fluid phases. The fluid phases
-  are thus completely specified by means of their constituting
-  components. This fluid system is intended to be used with models
-  that assume immiscibility.
-\item[Dumux::FluidSystems::H2ON2:] A two-phase fluid system featuring
-  gas and liquid phases and distilled water ($H_2O$) and pure
-  molecular Nitrogen ($N_2$) as components.
-\item[Dumux::FluidSystems::H2OAir:] A two-phase fluid system
-  featuring gas and liquid phases and distilled water ($H_2O$) and
-  air (Pseudo component composed of $79\%\;N_2$, $20\%\;O_2$ and
-  $1\%\;Ar$) as components.
-\item[Dumux::FluidSystems::H2OAirMesitylene:] A three-phase fluid
-  system featuring gas, NAPL and water phases and distilled water, air
-  and Mesitylene ($C_6H_3(CH_3)_3$) as components. This fluid system
-  assumes all phases to be ideal mixtures.
-\item[Dumux::FluidSystems::H2OAirXylene:] A three-phase fluid system
-  featuring gas, NAPL and water as phases and distilled water, air and
-  Xylene ($C_8H_{10}$) as components. This fluid system assumes all
-  phases to be ideal mixtures.
-\item[Dumux::FluidSystems::Spe5:] A three-phase fluid system featuring
-  gas, oil and water as phases and the seven components distilled
-  water, Methane ($C_1$), Propane ($C_3$), Pentane ($C_5$), Heptane
-  ($C_7$), Decane ($C_{10}$), Pentadecane ($C_{15}$) and Icosane
-  ($C_{20}$). For the water phase the IAPWS-97 formulation is used as
-  equation of state, while for the gas and oil phases a
-  \textsc{Peng}-\textsc{Robinson} equation of state with slightly
-  modified parameters is used. This fluid system is highly non-linear,
-  and the gas and oil phases also cannot be considered ideal
-  mixtures\cite{SPE5}.
-\end{description}
-
 \section{Constraint Solvers}
 \label{sec:constraint_solvers}
 
@@ -393,7 +364,7 @@ Constraint solvers connect the thermodynamic relations expressed by
 fluid systems with the thermodynamic quantities stored by fluid
 states. Using them is not mandatory for models, but given the fact
 that some thermodynamic constraints can be quite complex to solve,
-sharing this code between models makes sense. Currently, \Dumux
+sharing this code between models makes sense. Currently, \eWoms
 provides the following constraint solvers:
 \begin{description}
 \item[CompositionFromFugacities:] This constraint solver takes all

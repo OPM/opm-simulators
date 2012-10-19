@@ -2,7 +2,7 @@
 \label{chap:DesignPatterns}
 
 This chapter tries to give a high-level understanding of some of the
-fundamental techniques which are used by \Dune and \Dumux and the
+fundamental techniques which are used by \Dune and \eWoms and the
 motivation behind these design decisions. It is assumed that the
 reader already has basic experience in object oriented programming
 with \Cplusplus.
@@ -83,10 +83,11 @@ preprocessor -- as done for example by the UG framework~\cite{UG-HP}
   templates. This is due to the fact that the debugger always knows
   the ``real'' source file and line number.
 \end{description}
-For these reasons \Dune and \Dumux extensively use the template
+For these reasons \Dune and \eWoms extensively use the template
 mechanism. Both projects also try to avoid duplicating functionality
 provided by the Standard Template Library (STL,~\cite{STL-REF-HP})
-which is part of the \Cplusplus standard and was improved in the \Cplusplus11 standard.
+which is part of the \Cplusplus-2003 standard and was further extended
+in the \Cplusplus11 standard.
 
 \section{Polymorphism}
 
@@ -120,18 +121,19 @@ executed is dynamically determined at run time.
 
 \begin{example}
   \label{example:DynPoly}
-  A class called \texttt{Car} could feature the methods
-  \texttt{gasUsage}, which by default corresponds to the current
-  $CO_2$ emission goal of the European Union -- line \ref{designpatterns:virtual-usage} -- but can be changed by
-  classes representing actual cars. Also, a method called
-  \texttt{fuelTankSize} makes sense for all cars, but since there is
-  no useful default, its \texttt{vtable} entry is set to $0$ -- line \ref{designpatterns:totally-virtual} -- in the
-  base class. This tells the compiler that it is mandatory for this
-  method to be defined in derived classes. Finally, the method
-  \texttt{range} may calculate the expected remaining kilometers the
-  car can drive given a fill level of the fuel tank. Since the
-  \texttt{range} method can retrieve the information it needs, it does not
-  need to be polymorphic.
+  A class called \texttt{Car} may feature the methods
+  \texttt{gasUsage} (on line \ref{designpatterns:virtual-usage), which
+    by default roughly corresponds to the current $CO_2$ emission goal
+    of the European Union, but can be changed by classes representing
+    actual cars. Also, a method called \texttt{fuelTankSize} makes
+    sense for all cars, but since there is no useful default, its
+    \texttt{vtable} entry is set to $0$ in the base class on line
+    \ref{designpatterns:totally-virtual}. This tells the compiler that
+    it is mandatory for this method to be defined in derived
+    classes. Finally, the method \texttt{range} may calculate the
+    expected remaining kilometers the car can drive given a fill level
+    of the fuel tank. Since the \texttt{range} method can retrieve the
+    information it needs, it does not need to be polymorphic.
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny, numbersep=5pt]
 // The base class
 class Car
@@ -204,7 +206,7 @@ What happens if \dots
 \subsection*{Static Polymorphism}
 
 Dynamic polymorphism has a few disadvantages. The most relevant in the
-context of \Dumux is that the compiler can not see ``inside'' the
+context of \eWoms is that the compiler can not see ``inside'' the
 called methods and thus cannot optimize properly. For example, modern
 \Cplusplus compilers 'inline' short methods, i.e. they copy the method's body
 to where it is called. First, inlining allows to save a few
@@ -220,7 +222,7 @@ executed is only determined at run time for \texttt{virtual}
 methods. To overcome this issue, template programming can be used to
 achive polymorphism at compile time. This works by supplying the type
 of the derived class as an additional template parameter to the base
-class. Whenever the base class needs to call back the derived class, \texttt{this} pointer of the base class is reinterpreted as
+class. Whenever the base class needs to call back the derived class, the \texttt{this} pointer of the base class is reinterpreted as
 being a pointer to an object of the derived class and the method is
 then called on the reinterpreted pointer. This scheme gives the \Cplusplus
 compiler complete transparency of the code executed and thus opens
@@ -306,7 +308,7 @@ canonical identifier names for types and methods quickly become really
 long and unintelligible. For example, a typical error message
 generated using GCC 4.5 and \Dune-PDELab looks like this
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize, numbersep=5pt]
-test_pdelab.cc:171:9: error: no matching function for call to ‘Dune::\
+test_pdelab.cc:171:9: error: no matching function for call to Dune::\
 PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
 PDELab::GridFunctionSpace<Dune::GridView<Dune::DefaultLeafGridViewTraits\
 <const Dune::UGGrid<3>, (Dune::PartitionIteratorType)4u> >, Dune::\
@@ -322,7 +324,7 @@ PDELab::GridFunctionSpaceBlockwiseMapper>, Dumux::PDELab::BoxLocalOperator\
 <Dumux::Properties::TTag::LensProblem>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
-ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()’
+ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()
 \end{lstlisting}
 This seriously complicates diagnostics. Although there is no full
 solution to this problem yet, an effective way of dealing with such
