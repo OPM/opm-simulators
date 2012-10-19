@@ -4,9 +4,9 @@
 % file instead!!                                                %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\-This model implements laminar \-Stokes flow of a single fluid, solving a momentum balance\-: \[ \frac{\partial \left(\varrho_g {\boldsymbol{v}}_g\right)}{\partial t} + \boldsymbol{\nabla} \boldsymbol{\cdot} \left(p_g {\bf {I}} - \mu_g \left(\boldsymbol{\nabla} \boldsymbol{v}_g + \boldsymbol{\nabla} \boldsymbol{v}_g^T\right)\right) - \varrho_g {\bf g} = 0, \]
+This model implements Navier-\/\-Stokes flow of a single fluid. By default, it solves the momentum balance of the time-\/dependent Stokes equations, i.\-e. \[ \frac{\partial \left(\varrho\,\mathbf{v}\right)}{\partial t} + \boldsymbol{\nabla} p - \nabla \cdot \left( \mu \left(\boldsymbol{\nabla} \mathbf{v} + \boldsymbol{\nabla} \mathbf{v}^T\right) \right) - \varrho\,\mathbf{g} = 0\;, \] and the mass balance equation \[ \frac{\partial \varrho}{\partial t} + \nabla \cdot\left(\varrho\,\mathbf{v}\right) - q = 0 \;. \]
 
-and the mass balance equation\-: \[ \frac{\partial \varrho_g}{\partial t} + \boldsymbol{\nabla}\boldsymbol{\cdot}\left(\varrho_g {\boldsymbol{v}}_g\right) - q_g = 0 \]
+If the property {\ttfamily Enable\-Navier\-Stokes} is set to {\ttfamily true}, an additional convective momentum flux term (Navier term) gets included into the momentum conservation equations which allows to capture turbolent flow regimes. This additional term is given by \[ \varrho \left(\mathbf{v} \cdot \boldsymbol{\nabla} \right) \mathbf{v} \;. \]
 
-\-This is discretized by a fully-\/coupled vertex-\/centered finite volume (box) scheme in space and by the implicit \-Euler method in time.
+These equations are discretized by a fully-\/coupled vertex-\/centered finite volume (box) scheme in space and using the implicit Euler method in time. Be aware, that this discretization scheme is quite unstable for the Navier-\/\-Stokes equations and quickly leads to unphysical oscillations in the calculated solution. We intend to use a more appropriate discretization scheme in the future, though.
 
