@@ -1,71 +1,61 @@
+#! /usr/bin/python
+
 import argparse
-from xml.dom import minidom
+import re
 
-# fuzzy compare XML tree from XML strings
-def isFuzzyEqualXml(xml1, xml2, absolute, relative):
-    dom1 = minidom.parseString(xml1)
-    dom2 = minidom.parseString(xml2)
-    return isFuzzyEqualNode(dom1.documentElement, dom2.documentElement, absolute, relative)
+# fuzzy compare two VTK files
+def isFuzzyEqual(vtkFile1, vtkFile2, absTol, relTol):
+    inField = False
+    curFieldName = ""
+    for curLine1 in vtkFile1.xreadlines():
+        curLine2 = vtkFile2.readline()
 
-# fuzzy compare of XML nodes
-def isFuzzyEqualNode(node1, node2, absolute, relative):
-    if node1.tagName != node2.tagName:
-        print 'The name of the node differs in ', node1.tagName, ' and ', node2.tagName
-        return False
-    if sorted(node1.attributes.items()) != sorted(node2.attributes.items()):
-        print 'Attributs differ in node ', node1.tagName
-        return False
-    if len(node1.childNodes) != len(node2.childNodes):
-        print 'Number of children differs in node ', node1.tagName
-        return False
-    for node1child, node2child in zip(node1.childNodes, node2.childNodes):
-        if node1child.nodeType != node2child.nodeType:
-            print 'Node type differs in ', note1.tagName
-            return False
-        if node1child.nodeType == node1child.TEXT_NODE and not isFuzzyEqualText(node1child.data, node2child.data, absolute, relative):
-            print 'Data differs in node ', node1.tagName
-            return False
-        if node1child.nodeType == node1child.ELEMENT_NODE and not isFuzzyEqualNode(node1child, node2child, absolute, relative):
-            return False
-    return True
+        if curLine1.find("</DataArray>"):
+            inField = False
+            continue
 
-# fuzzy compare of text consisting of whitespace separated numbers
-def isFuzzyEqualText(text1, text2, absolute, relative):
-    list1 = text1.split()
-    list2 = text2.split()
-    # difference only in whitespace?
-    if (list1 == list2):
-        return True
-    # compare number by number
-    for number1, number2 in zip(list1, list2):
-        number1 = float(number1)
-        number2 = float(number2)
-        if abs(number1 - number2) > absolute:
-            print 'Absolute difference between %f and %f too large (%f)'%(number1,number2,abs(number1 - number2))
-        else number2 != 0 \
-            and abs(number1/number2 - 1) > relative)):
-            print 'Relative difference between %f and %f too large (%f%%)'%(number1,number2,abs(number1/number2 - 1)*100)
+        m = re.match('Name="\([a-zA-Z0-9 _\-]*\)"', curLine1)
+        if m:
+            curFieldName = m.group(1)
+            inField = True
+            continue
+
+        curVals1 = map(float, curLine1.split())
+        curVals2 = map(float, curLine2.split())
+        
+        if len(curVals1) != len(curVals2):
+            print "Length of field '%s' is different"%curFieldName
             return False
+        
+        for i in range(0, len(curVals1)):
+            number1 = curVals1[i]
+            number2 = curVals2[i]
+            if abs(number1 - number2) > absTol:
+                print 'Absolute difference between %f and %f too large (%f) in data field "%s"'%(number1,number2,abs(number1 - number2), curFieldName)
+                return False
+            elif number2 != 0 and abs(number1/number2 - 1) > relTol:
+                print 'Relative difference between %f and %f too large (%f%%) in data field "%s"'%(number1,number2,abs(number1/number2 - 1)*100, curFieldName)
+                return False
     return True
 
 # main programm
 # handle arguments and print help message
 parser = argparse.ArgumentParser(description='Fuzzy compare two VTK\
     (Visualization Toolkit) files. The files are accepted if for every\
-    value the difference is below the absolute error or below the\
-    relative error or below both.')
+    value the difference is below the absTol error or below the\
+    relTol error or below both.')
 parser.add_argument('vtu_file_1', type=open,
     help='first file to compare')
 parser.add_argument('vtu_file_2', type=open,
     help='second file to compare')
-parser.add_argument('-r', '--relative', type=float, default=1e-2,
-    help='maximum relative error (default=1e-2)')
-parser.add_argument('-a', '--absolute', type=float, default=1e-9,
-    help='maximum relative error (default=1e-9)')
+parser.add_argument('-r', '--relTol', type=float, default=1e-2,
+    help='maximum tolerated absolute error (default=1e-2)')
+parser.add_argument('-a', '--absTol', type=float, default=1e-9,
+    help='maximum tolerated relative error (default=1e-9)')
 args = parser.parse_args()
 
 # fuzzy compare
-if isFuzzyEqualXml(args.vtu_file_1.read(), args.vtu_file_2.read(), args.absolute, args.relative):
-    exit
+if isFuzzyEqual(args.vtu_file_1, args.vtu_file_2, args.absTol, args.relTol):
+    exit(0)
 else:
     exit(1)
