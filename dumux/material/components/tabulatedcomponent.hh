@@ -19,11 +19,8 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief A generic class which tabulates all thermodynamic properties
- *        of a given component.
  *
- * At the moment, this class can only handle the sub-critical fluids
- * since it tabulates along the vapor pressure curve.
+ * \copydoc Dumux::TabulatedComponent
  */
 #ifndef DUMUX_TABULATED_COMPONENT_HH
 #define DUMUX_TABULATED_COMPONENT_HH
@@ -620,7 +617,6 @@ private:
     {
         Scalar alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            // std::cerr << __LINE__ << " T: " << T << "\n";
             return std::numeric_limits<Scalar>::quiet_NaN();
         }
 
