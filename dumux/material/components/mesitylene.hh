@@ -122,7 +122,7 @@ public:
     	//				= 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
 
     	// enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
-        return 0.5*temperature*(spHeatCapLiquidPhase_(0.2113*temperature) + spHeatCapLiquidPhase_(0.7887*temperature));
+        return 0.5*temperature*(liquidHeatCapacity(0.2113*temperature, pressure) + liquidHeatCapacity(0.7887*temperature, pressure));
     }
 
     /*!
@@ -134,7 +134,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar heatVap(Scalar temperature,
-    			  Scalar pressure)
+                          Scalar pressure)
     {
         temperature = std::min(temperature, criticalTemperature()); // regularization
         temperature = std::max(temperature, 0.0); // regularization
@@ -255,35 +255,17 @@ public:
         return std::exp(A + B/temperature)*1e-3; // [Pa s]
     }
 
-protected:
-    /*!
-     * \brief The molar density of pure mesitylene at a given pressure and temperature
-     * \f$\mathrm{[mol/m^3]}\f$.
-     *
-     * source : Reid et al. (fourth edition): Modified Racket technique (chap. 3-11, eq. 3-11.9)
-     *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     */
-    static Scalar molarLiquidDensity_(Scalar temperature)
-    {
-        temperature = std::min(temperature, 500.0); // regularization
-        temperature = std::max(temperature, 250.0);
-
-        const Scalar Z_RA = 0.2556;
-        const Scalar expo = 1.0 + std::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
-        Scalar V = Consts::R*criticalTemperature()/criticalPressure()*std::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
-
-        return 1.0/V; // convert to molar density [mol/m^3]
-    }
-
     /*!
      * \brief Specific heat cap of liquid mesitylene \f$\mathrm{[J/kg]}\f$.
      *
      * source : Reid et al. (fourth edition): Missenard group contrib. method (chap 5-7, Table 5-11, s. example 5-8)
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     *
      */
-    static Scalar spHeatCapLiquidPhase_(Scalar temperature)
+    static Scalar liquidHeatCapacity(const Scalar temperature,
+                                     const Scalar pressure)
     {
         /* according Reid et al. : Missenard group contrib. method (s. example 5-8) */
         /* Mesitylen: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was to much!) */
@@ -291,9 +273,9 @@ protected:
         Scalar H, CH3, C6H5;
         if(temperature<298.) {
             // extrapolation for temperature < 273K
-            H = 13.4+1.2*(temperature-273.0)/25.; 		// 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
-            CH3 = 40.0+1.6*(temperature-273.0)/25.;		// 40 + 1.6 = 41.6 = CH3(T=298K)
-            C6H5 = 113.0+4.2*(temperature-273.0)/25.;	// 113 + 4.2 =117.2 = C6H5(T=298K)
+            H = 13.4+1.2*(temperature-273.0)/25.;       // 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
+            CH3 = 40.0+1.6*(temperature-273.0)/25.;     // 40 + 1.6 = 41.6 = CH3(T=298K)
+            C6H5 = 113.0+4.2*(temperature-273.0)/25.;   // 113 + 4.2 =117.2 = C6H5(T=298K)
         }
         else if((temperature>=298.0)&&(temperature<323.)){ // i.e. interpolation of table values 298<T<323
             H = 14.6+0.9*(temperature-298.0)/25.;
@@ -316,6 +298,28 @@ protected:
 
         return (C6H5 + 3*CH3 - 2*H)/molarMass(); // J/(mol K) -> J/(kg K)
     }
+
+protected:
+    /*!
+     * \brief The molar density of pure mesitylene at a given pressure and temperature
+     * \f$\mathrm{[mol/m^3]}\f$.
+     *
+     * source : Reid et al. (fourth edition): Modified Racket technique (chap. 3-11, eq. 3-11.9)
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     */
+    static Scalar molarLiquidDensity_(Scalar temperature)
+    {
+        temperature = std::min(temperature, 500.0); // regularization
+        temperature = std::max(temperature, 250.0);
+
+        const Scalar Z_RA = 0.2556; // from equation
+        const Scalar expo = 1.0 + std::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
+        Scalar V = Consts::R*criticalTemperature()/criticalPressure()*std::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
+
+        return 1.0/V; // molar density [mol/m^3]
+    }
+
 };
 
 } // end namespace
