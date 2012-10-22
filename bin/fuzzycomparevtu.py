@@ -10,14 +10,17 @@ def isFuzzyEqual(vtkFile1, vtkFile2, absTol, relTol):
     for curLine1 in vtkFile1.xreadlines():
         curLine2 = vtkFile2.readline()
 
-        if curLine1.find("</DataArray>"):
+        if curLine1.find("</DataArray>") >= 0:
             inField = False
             continue
 
-        m = re.match('Name="\([a-zA-Z0-9 _\-]*\)"', curLine1)
+        m = re.search(r'Name="([a-zA-Z0-9 _\-]*)"', curLine1)
         if m:
             curFieldName = m.group(1)
             inField = True
+            continue
+
+        if not inField:
             continue
 
         curVals1 = map(float, curLine1.split())
@@ -30,11 +33,8 @@ def isFuzzyEqual(vtkFile1, vtkFile2, absTol, relTol):
         for i in range(0, len(curVals1)):
             number1 = curVals1[i]
             number2 = curVals2[i]
-            if abs(number1 - number2) > absTol:
-                print 'Absolute difference between %f and %f too large (%f) in data field "%s"'%(number1,number2,abs(number1 - number2), curFieldName)
-                return False
-            elif number2 != 0 and abs(number1/number2 - 1) > relTol:
-                print 'Relative difference between %f and %f too large (%f%%) in data field "%s"'%(number1,number2,abs(number1/number2 - 1)*100, curFieldName)
+            if abs(number1 - number2) > absTol and number2 != 0 and abs(number1/number2 - 1) > relTol:
+                print 'Difference between %f and %f too large (%f%%) in data field "%s"'%(number1,number2,abs(number1/number2 - 1)*100, curFieldName)
                 return False
     return True
 
