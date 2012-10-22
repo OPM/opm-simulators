@@ -72,10 +72,7 @@ public:
      */
     template <class FluidState>
     void updateAllPressures(const FluidState &fluidState)
-    {
-        for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
-            asImp_().updatePhase(fluidState, phaseIdx);
-    }
+    { asImp_().updateAll(fluidState, Temperature | Composition); }
 
     /*!
      * \brief Update temperature dependent quantities of the parameter
