@@ -50,8 +50,8 @@ parser.add_argument('vtu_file_2', type=open,
     help='second file to compare')
 parser.add_argument('-r', '--relTol', type=float, default=1e-2,
     help='maximum tolerated absolute error (default=1e-2)')
-parser.add_argument('-a', '--absTol', type=float, default=1e-9,
-    help='maximum tolerated relative error (default=1e-9)')
+parser.add_argument('-a', '--absTol', type=float, default=1e-6,
+    help='maximum tolerated relative error (default=1e-6)')
 args = parser.parse_args()
 
 # fuzzy compare

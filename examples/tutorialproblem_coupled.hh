@@ -65,7 +65,7 @@ SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Dumux::CubeGridCreator<TypeTa
 // Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
               Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-              Dumux::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >); 
+                                 Dumux::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >); 
 
 // Set the non-wetting phase
 SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
@@ -100,7 +100,7 @@ SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity, false); /*@\label{tutorial-
 SET_SCALAR_PROP(TutorialProblemCoupled, EndTime, 100e3);
 
 // define the size of the initial time step [s]
-SET_SCALAR_PROP(TutorialProblemCoupled, InitialTimeStepSize, 500.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, InitialTimeStepSize, 125.0);
 
 // define the physical size of the problem's domain [m]
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX, 300.0);
