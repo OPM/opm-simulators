@@ -1,7 +1,6 @@
 #! /usr/bin/python
-
-import argparse
 import re
+import sys
 
 # fuzzy compare two VTK files
 def isFuzzyEqual(vtkFile1, vtkFile2, absTol, relTol):
@@ -38,24 +37,11 @@ def isFuzzyEqual(vtkFile1, vtkFile2, absTol, relTol):
                 return False
     return True
 
-# main programm
-# handle arguments and print help message
-parser = argparse.ArgumentParser(description='Fuzzy compare two VTK\
-    (Visualization Toolkit) files. The files are accepted if for every\
-    value the difference is below the absTol error or below the\
-    relTol error or below both.')
-parser.add_argument('vtu_file_1', type=open,
-    help='first file to compare')
-parser.add_argument('vtu_file_2', type=open,
-    help='second file to compare')
-parser.add_argument('-r', '--relTol', type=float, default=1e-2,
-    help='maximum tolerated absolute error (default=1e-2)')
-parser.add_argument('-a', '--absTol', type=float, default=1e-6,
-    help='maximum tolerated relative error (default=1e-6)')
-args = parser.parse_args()
+if len(sys.argv) != 3:
+    print sys.argv[0], "CURRENT_RESULT REFERENCE_RESULT"
+    exit(1);
 
-# fuzzy compare
-if isFuzzyEqual(args.vtu_file_1, args.vtu_file_2, args.absTol, args.relTol):
+if isFuzzyEqual(open(sys.argv[1]), open(sys.argv[2]), absTol=1e-6, relTol=1e-2):
     exit(0)
 else:
     exit(1)
