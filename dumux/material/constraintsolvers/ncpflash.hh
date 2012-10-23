@@ -32,6 +32,8 @@
 #include <dumux/common/valgrind.hh>
 #include <dumux/common/math.hh>
 
+#include <limits>
+
 namespace Dumux {
 
 /*!
@@ -340,7 +342,8 @@ protected:
             const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7/(quantityWeight_(fluidState, pvIdx));
 
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
-            assert(getQuantity_(fluidState, pvIdx) == x_i + eps);
+            assert(std::abs(getQuantity_(fluidState, pvIdx) - (x_i + eps)) 
+                   <= std::max(1.0, std::abs(x_i))*std::numeric_limits<Scalar>::epsilon()*100);
 
             // compute derivative of the defect
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
