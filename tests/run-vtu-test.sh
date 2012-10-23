@@ -42,33 +42,33 @@ echo "######################"
 echo "# Running test '$TEST_NAME'"
 echo "######################"
 
-RND="$RANDOM"
-"$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
-RET="${PIPESTATUS[0]}"
-if test "$RET" != "0"; then
-    echo "Executing the binary failed!"
-    rm "test-$RND.log"
-    exit 1
-fi
 
 case "$TEST_TYPE" in
     "--simulation")
+        RND="$RANDOM"
+        "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
+        RET="${PIPESTATUS[0]}"
+        if test "$RET" != "0"; then
+            echo "Executing the binary failed!"
+            rm "test-$RND.log"
+            exit 1
+        fi
+
         # compare the results
         echo "######################"
         echo "# Comparing results"
         echo "######################"
         SIM_NAME=$(grep "Writing result file for" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
         TEST_RESULT=$(ls $SIM_NAME*.vtu $SIM_NAME*.vtp 2> /dev/null | sort | tail -n 1)
+        rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
             echo "File $TEST_RESULT does not exist or is not readable"
-            rm "test-$RND.log"
             exit 1
         fi
 
         REFERENCE_RESULT="referencesolutions/$TEST_RESULT"
         if ! test -r "$REFERENCE_RESULT"; then
             echo "File $REFERENCE_RESULT does not exist or is not readable"
-            rm "test-$RND.log"
             exit 1
         fi
         
@@ -77,18 +77,84 @@ case "$TEST_TYPE" in
             echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
             echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
             echo "make it the reference result if necessary."
-            rm "test-$RND.log"
             exit 1
         fi
         
         # SUCCESS!!!!!!
         echo "Result and reference result are identical" 
-        rm "test-$RND.log"
         exit 0
 
         ;;
-    *)
+    
+    "--parallel-simulation")
+        RND="$RANDOM"
+        mpirun -np 4 "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
+        RET="${PIPESTATUS[0]}"
+        if test "$RET" != "0"; then
+            echo "Executing the binary failed!"
+            rm "test-$RND.log"
+            exit 1
+        fi
         rm "test-$RND.log"
+
+        # # compare the results
+        # echo "######################"
+        # echo "# Comparing results"
+        # echo "######################"
+        # SIM_NAME=$(grep "Writing result file for" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        # TEST_RESULT=$(ls $SIM_NAME*.vtu $SIM_NAME*.vtp 2> /dev/null | sort | tail -n 1)
+        # rm "test-$RND.log"
+        # if ! test -r "$TEST_RESULT"; then
+        #     echo "File $TEST_RESULT does not exist or is not readable"
+        #     exit 1
+        # fi
+
+        # REFERENCE_RESULT="referencesolutions/$TEST_RESULT"
+        # if ! test -r "$REFERENCE_RESULT"; then
+        #     echo "File $REFERENCE_RESULT does not exist or is not readable"
+        #     exit 1
+        # fi
+        
+
+        # if ! python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$TEST_RESULT"; then
+        #     echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
+        #     echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
+        #     echo "make it the reference result if necessary."
+        #     exit 1
+        # fi
+        
+        # # SUCCESS!!!!!!
+        # echo "Result and reference result are identical" 
+        exit 0
+
+        ;;
+
+    "--parameters")
+        HELP_MSG="$($TEST_BINARY --help)"
+        if test "$(echo $HELP_MSG | grep -i usage == '')"; then
+            echo "$TEST_BINARY did not accept '--help' parameter"
+            exit 1
+        fi
+        HELP_MSG2="$($TEST_BINARY -h)"
+        if test "$HELP_MSG" != "$HELP_MSG2"; then
+            echo "Output of $TEST_BINARY different when passing '--help' and '-h'"
+            exit 1
+        fi
+
+        RND="$RANDOM"
+        cat > "paramfile-$RND.ini" <<EOF
+EndTime=100
+InitialTimeStepSize=100
+UndefinedParam="blubb"
+EOF
+        $TEST_BINARY --parameter-file="paramfile-$RND.ini"
+        ;;
+
+    "--plain")
+        if ! "$TEST_BINARY" $TEST_ARGS; then
+            exit 1
+        fi
+
         exit 0
         ;;
 esac
