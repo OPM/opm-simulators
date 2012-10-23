@@ -58,7 +58,7 @@ case "$TEST_TYPE" in
         echo "######################"
         echo "# Comparing results"
         echo "######################"
-        SIM_NAME=$(grep "Writing result file for" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        SIM_NAME=$(grep "Initializing problem" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
         TEST_RESULT=$(ls $SIM_NAME*.vtu $SIM_NAME*.vtp 2> /dev/null | sort | tail -n 1)
         rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
