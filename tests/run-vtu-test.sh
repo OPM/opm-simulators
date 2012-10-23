@@ -59,7 +59,7 @@ case "$TEST_TYPE" in
         echo "# Comparing results"
         echo "######################"
         SIM_NAME=$(grep "Initializing problem" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        TEST_RESULT=$(ls $SIM_NAME*.vtu $SIM_NAME*.vtp 2> /dev/null | sort | tail -n 1)
+        TEST_RESULT=$(ls $SIM_NAME-0*.vtu $SIM_NAME-0*.vtp 2> /dev/null | sort | tail -n 1)
         rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
             echo "File $TEST_RESULT does not exist or is not readable"
@@ -84,6 +84,21 @@ case "$TEST_TYPE" in
         echo "Result and reference result are identical" 
         exit 0
 
+        ;;
+
+    "--simulation-diffusion")
+        if ! "$TEST_BINARY" $TEST_ARGS ; then
+            echo "Executing the binary failed!"
+            exit 1
+        fi
+        if ! python bin/fuzzycomparevtu.py referencesolutions/mimeticdiffusion-00001.vtu mimeticdiffusion-00001.vtu; then
+            echo "The files \"mimeticdiffusion-00001.vtu\" and \"referencesolutions/mimeticdiffusion-00001.vtu\" are different."
+            echo "Make sure the contents of \"mimeticdiffusion-00001.vtu\" are still valid and "
+            echo "make it the reference result if necessary."
+            exit 1
+        fi
+
+        exit 0
         ;;
     
     "--parallel-simulation")
