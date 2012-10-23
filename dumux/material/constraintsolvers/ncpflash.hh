@@ -230,8 +230,8 @@ public:
 
             // update the fluid quantities.
             update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
-            //relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
-
+            //Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
+            
             if (!std::isfinite(absError))
                 break;
             else if (absError < tolerance && lastError >= absError) {
@@ -339,7 +339,7 @@ protected:
 
             // deviate the mole fraction of the i-th component
             Scalar x_i = getQuantity_(fluidState, pvIdx);
-            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7/(quantityWeight_(fluidState, pvIdx));
+            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e5/(quantityWeight_(fluidState, pvIdx));
 
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(std::abs(getQuantity_(fluidState, pvIdx) - (x_i + eps)) 
@@ -434,11 +434,7 @@ protected:
                           const Vector &deltaX)
     {
         // make sure we don't swallow non-finite update vectors
-        Scalar tmp = 0;
-        for (int i = 0; i < Vector::dimension; ++i)
-            tmp += deltaX[i];
-        if (!std::isfinite(tmp))
-            return tmp;
+        assert(std::isfinite(deltaX.two_norm()));
 
         Scalar relError = 0;
         for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
@@ -446,7 +442,7 @@ protected:
             Scalar delta = deltaX[pvIdx];
 
             relError = std::max(relError, std::abs(delta)*quantityWeight_(fluidState, pvIdx));
-
+            
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 20% change in saturation per
                 // iteration
@@ -466,6 +462,7 @@ protected:
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
         }
 
+        /*
         // make sure all saturations, pressures and mole fractions are non-negative
         Scalar sumSat = 0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -494,6 +491,7 @@ protected:
                 fluidState.setSaturation(phaseIdx, value);
             }
         }
+        */
 
         completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
 

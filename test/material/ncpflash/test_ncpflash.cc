@@ -207,7 +207,7 @@ int main()
 
     // set the liquid composition to pure water
     fsRef.setMoleFraction(lPhaseIdx, N2Idx, 0.0);
-    fsRef.setMoleFraction(lPhaseIdx, H2OIdx, 1.0);
+    fsRef.setMoleFraction(lPhaseIdx, H2OIdx, 1.0 - fsRef.moleFraction(lPhaseIdx, N2Idx));
 
     // "complete" the fluid state
     completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, lPhaseIdx);
