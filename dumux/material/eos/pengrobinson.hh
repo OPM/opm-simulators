@@ -19,17 +19,7 @@
 /*!
  * \file
  *
- * \brief Implements the Peng-Robinson equation of state for liquids
- *        and gases.
- *
- * See:
- *
- * D.-Y. Peng, D.B. Robinson: A new two-constant equation of state,
- * Industrial & Engineering Chemistry Fundamentals, 1976, 15 (1),
- * pp. 59–64
- *
- * R. Reid, et al.: The Properties of Gases and Liquids,
- * 4th edition, McGraw-Hill, 1987, pp. 42-44, 82
+ * \copydoc Dumux::PengRobinson
  */
 #ifndef DUMUX_PENG_ROBINSON_HH
 #define DUMUX_PENG_ROBINSON_HH
@@ -40,8 +30,9 @@
 #include <dumux/common/math.hh>
 #include <dumux/common/dynamictabulated2dfunction.hh>
 
-namespace Dumux
-{
+#include <csignal>
+
+namespace Dumux {
 
 /*!
  * \brief Implements the Peng-Robinson equation of state for liquids
@@ -69,6 +60,7 @@ public:
     static void  init(Scalar aMin, Scalar aMax, int na,
                       Scalar bMin, Scalar bMax, int nb)
     {
+/*
         // resize the tabulation for the critical points
         criticalTemperature_.resize(aMin, aMax, na, bMin, bMax, nb);
         criticalPressure_.resize(aMin, aMax, na, bMin, bMax, nb);
@@ -77,8 +69,11 @@ public:
         Scalar VmCrit, pCrit, TCrit;
         for (int i = 0; i < na; ++i) {
             Scalar a = criticalTemperature_.iToX(i);
+            assert(std::abs(criticalTemperature_.xToI(criticalTemperature_.iToX(i)) - i) < 1e-10);
+
             for (int j = 0; j < nb; ++j) {
                 Scalar b = criticalTemperature_.jToY(j);
+                assert(std::abs(criticalTemperature_.yToJ(criticalTemperature_.jToY(j)) - j) < 1e-10);
 
                 findCriticalPoint_(TCrit, pCrit, VmCrit,  a, b);
 
@@ -87,6 +82,7 @@ public:
                 criticalMolarVolume_.setSamplePoint(i, j, VmCrit);
             }
         }
+        */
     }
 
     /*!
@@ -156,7 +152,7 @@ public:
 
         Scalar a = params.a(phaseIdx); // "attractive factor"
         Scalar b = params.b(phaseIdx); // "co-volume"
-
+      
         if (!std::isfinite(a) || a == 0)
             DUNE_THROW(NumericalProblem, "Peng-Robinson: The 'a' coefficient must finite and not be zero. It is " << a);
         if (!std::isfinite(b) || b <= 0)
@@ -176,6 +172,10 @@ public:
         // would get negative molar volumes for the liquid phase, we
         // consider the liquid phase non-existant.)
         Scalar Z[3] = {0.0,0.0,0.0};
+        Valgrind::CheckDefined(a1);
+        Valgrind::CheckDefined(a2);
+        Valgrind::CheckDefined(a3);
+        Valgrind::CheckDefined(a4);
         int numSol = invertCubicPolynomial(Z, a1, a2, a3, a4);
         if (numSol == 3) {
             // the EOS has three intersections with the pressure,
@@ -193,34 +193,32 @@ public:
             Scalar VmCubic = Z[0]*RT/p;
             Vm = VmCubic;
 
-            if (T > criticalTemperature_.eval(a, b)) {
-                // if the EOS does not exhibit any extrema, the fluid
-                // is critical...
+            // find the extrema (if they are present)
+            Scalar Vmin, Vmax, pmin, pmax;
+            if (findExtrema_(Vmin, Vmax,
+                             pmin, pmax,
+                             a, b, T))
+            {
+                if (isGasPhase)
+                    Vm = std::max(Vmax, VmCubic);
+                else {
+                    if (Vmin > 0)
+                        Vm = std::min(Vmin, VmCubic);
+                    else
+                        Vm = VmCubic;
+                }
+            }
+            else {
+                // the EOS does not exhibit any physically meaningful
+                // extrema, and the fluid is critical...
                 Vm = VmCubic;
                 handleCriticalFluid_(Vm, fs, params, phaseIdx, isGasPhase);
             }
-            else {
-                // find the extrema (if they are present)
-                Scalar Vmin, Vmax, pmin, pmax;
-                if (findExtrema_(Vmin, Vmax,
-                                 pmin, pmax,
-                                 a, b, T))
-                {
-                    if (isGasPhase)
-                        Vm = std::max(Vmax, VmCubic);
-                    else
-                        Vm = std::min(Vmin, VmCubic);
-                }
-                else
-                    Vm = VmCubic;
-            }
         }
-
+        
         Valgrind::CheckDefined(Vm);
-        if (Vm <= 0) {
-            std::cout << "Vm: " << Vm << "\n"; 
-        }
-        assert(std::isfinite(Vm) && Vm > 0);
+        assert(std::isfinite(Vm));
+        assert(Vm > 0);
         return Vm;
     }
 
@@ -278,8 +276,16 @@ protected:
                                      int phaseIdx,
                                      bool isGasPhase)
     {
-        Scalar Vcrit = criticalMolarVolume_.eval(params.a(phaseIdx), params.b(phaseIdx));
+        Scalar Tcrit, pcrit, Vcrit;
+        findCriticalPoint_(Tcrit,
+                           pcrit,
+                           Vcrit,
+                           params.a(phaseIdx),
+                           params.b(phaseIdx));
 
+
+        //Scalar Vcrit = criticalMolarVolume_.eval(params.a(phaseIdx), params.b(phaseIdx));
+        
         if (isGasPhase)
             Vm = std::max(Vm, Vcrit);
         else
@@ -312,12 +318,13 @@ protected:
 
         // Newton's method: Start at minimum temperature and minimize
         // the "gap" between the extrema of the EOS
-        for (int i = 0; i < 25; ++i) {
+        int iMax = 100;
+        for (int i = 0; i < iMax; ++i) {
             // calculate function we would like to minimize
             Scalar f = maxVm - minVm;
 
             // check if we're converged
-            if (f < 1e-10) {
+            if (f < 1e-10 || (i == iMax - 1 && f < 1e-8)) {
                 Tcrit = T;
                 pcrit = (minP + maxP)/2;
                 Vcrit = (maxVm + minVm)/2;
@@ -328,18 +335,26 @@ protected:
             // robust, since the isotherm could be critical if an
             // epsilon was added to the temperature. (this is case
             // rarely happens, though)
-            const Scalar eps = - 1e-8;
+            const Scalar eps = - 1e-11;
             bool DUNE_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
             assert(hasExtrema);
+            assert(std::isfinite(maxVm));
             Scalar fStar = maxVm - minVm;
 
             // derivative of the difference between the maximum's
             // molar volume and the minimum's molar volume regarding
             // temperature
             Scalar fPrime = (fStar - f)/eps;
-
+            if (std::abs(fPrime) < 1e-40) {
+                Tcrit = T;
+                pcrit = (minP + maxP)/2;
+                Vcrit = (maxVm + minVm)/2;
+                return;
+            }
+            
             // update value for the current iteration
             Scalar delta = f/fPrime;
+            assert(std::isfinite(delta));
             if (delta > 0)
                 delta = -10;
 
@@ -347,6 +362,12 @@ protected:
             // still exist after the update)
             for (int j = 0; ; ++j) {
                 if (j >= 20) {
+                    if (f < 1e-8) {
+                        Tcrit = T;
+                        pcrit = (minP + maxP)/2;
+                        Vcrit = (maxVm + minVm)/2;
+                        return;
+                    }
                     DUNE_THROW(NumericalProblem,
                                "Could not determine the critical point for a=" << a << ", b=" << b);
                 }
@@ -361,6 +382,9 @@ protected:
                     delta /= 2;
             };
         }
+
+        std::cout << "oops:" << maxVm - minVm << "\n";
+        assert(false);
     }
 
     // find the two molar volumes where the EOS exhibits extrema and
@@ -386,6 +410,12 @@ protected:
         Scalar a4 = 2*RT*u*w*b*b*b + 2*u*a*b*b - 2*a*b*b;
         Scalar a5 = RT*w*w*b*b*b*b - u*a*b*b*b;
 
+        assert(std::isfinite(a1));
+        assert(std::isfinite(a2));
+        assert(std::isfinite(a3));
+        assert(std::isfinite(a4));
+        assert(std::isfinite(a5));
+
         // Newton method to find first root
 
         // if the values which we got on Vmin and Vmax are usefull, we
@@ -393,14 +423,12 @@ protected:
         // above the covolume
         Scalar V = b*1.1;
         Scalar delta = 1.0;
-        for (int i = 0; std::abs(delta) > 1e-9; ++i) {
+        for (int i = 0; std::abs(delta) > 1e-12; ++i) {
             Scalar f = a5 + V*(a4 + V*(a3 + V*(a2 + V*a1)));
             Scalar fPrime = a4 + V*(2*a3 + V*(3*a2 + V*4*a1));
 
             if (std::abs(fPrime) < 1e-20) {
                 // give up if the derivative is zero
-                Vmin = 0;
-                Vmax = 0;
                 return false;
             }
 
@@ -408,13 +436,12 @@ protected:
             delta = f/fPrime;
             V -= delta;
 
-            if (i > 20) {
-                // give up after 20 iterations...
-                Vmin = 0;
-                Vmax = 0;
+            if (i > 200) {
+                // give up after 200 iterations...
                 return false;
             }
         }
+        assert(std::isfinite(V));
 
         // polynomial division
         Scalar b1 = a1;
@@ -431,12 +458,12 @@ protected:
         std::sort(allV + 0, allV + numSol);
 
         // check whether the result is physical
-        if (allV[numSol - 2] < b) {
+        if (numSol != 4 || allV[numSol - 2] < b) {
             // the second largest extremum is smaller than the phase's
             // covolume which is physically impossible
-            Vmin = Vmax = 0;
             return false;
         }
+        
 
         // it seems that everything is okay...
         Vmin = allV[numSol - 2];
@@ -490,11 +517,14 @@ protected:
                                       Scalar VmGas)
     { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); }
 
+/*
     static DynamicTabulated2DFunction<Scalar> criticalTemperature_;
     static DynamicTabulated2DFunction<Scalar> criticalPressure_;
     static DynamicTabulated2DFunction<Scalar> criticalMolarVolume_;
+*/
 };
 
+/*
 template <class Scalar>
 DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalTemperature_;
 
@@ -503,6 +533,7 @@ DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalPressure_;
 
 template <class Scalar>
 DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
+*/
 
 } // end namepace
 

@@ -155,7 +155,6 @@ public:
             // update the fluid composition. b is also used to store
             // the defect for the next iteration.
             Scalar relError = update_(fluidState, paramCache, x, b, phaseIdx, targetFug);
-            //std::cout << "relError: " << relError << "\n";
 
             if (relError < 1e-9) {
                 Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
@@ -206,16 +205,17 @@ protected:
     }
 
     template <class FluidState>
-    static void linearize_(Dune::FieldMatrix<Scalar, numComponents, numComponents> &J,
-                           Dune::FieldVector<Scalar, numComponents> &defect,
-                           FluidState &fluidState,
-                           ParameterCache &paramCache,
-                           int phaseIdx,
-                           const ComponentVector &targetFug)
+    static Scalar linearize_(Dune::FieldMatrix<Scalar, numComponents, numComponents> &J,
+                             Dune::FieldVector<Scalar, numComponents> &defect,
+                             FluidState &fluidState,
+                             ParameterCache &paramCache,
+                             int phaseIdx,
+                             const ComponentVector &targetFug)
     {
         // reset jacobian
         J = 0;
 
+        Scalar absError = 0;
         // calculate the defect (deviation of the current fugacities
         // from the target fugacities)
         for (int i = 0; i < numComponents; ++ i) {
@@ -227,12 +227,12 @@ protected:
             fluidState.setFugacityCoefficient(phaseIdx, i, phi);
 
             defect[i] = targetFug[i] - f;
+            absError = std::max(absError, std::abs(defect[i]));
         }
 
         // assemble jacobian matrix of the constraints for the composition
+        static constexpr Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e6;
         for (int i = 0; i < numComponents; ++ i) {
-            const Scalar eps = 1e-11; //std::max(1e-16, std::abs(xI)*1e-9);
-
             ////////
             // approximately calculate partial derivatives of the
             // fugacity defect of all components in regard to the mole
@@ -272,6 +272,8 @@ protected:
             // end forward differences
             ////////
         }
+
+        return absError;
     }
 
     template <class FluidState>

@@ -303,18 +303,26 @@ public:
      * Methods which compute stuff
      ****************************************/
 
-    //! \copydoc BaseFluidSystem::init
-    static void init()
+    /*!
+     * \brief \copydoc BaseFluidSystem::init
+     *
+     * \param minT The minimum temperature possibly encountered during the simulation
+     * \param maxT The maximum temperature possibly encountered during the simulation
+     * \param minP The minimum pressure possibly encountered during the simulation
+     * \param maxP The maximum pressure possibly encountered during the simulation
+     */
+    static void init(Scalar minT = 273.15,
+                     Scalar maxT = 373.15,
+                     Scalar minP = 1e4,
+                     Scalar maxP = 100e6)
     {
         Dumux::PengRobinsonParamsMixture<Scalar, ThisType, gPhaseIdx, /*useSpe5=*/true> prParams;
-
+        
         // find envelopes of the 'a' and 'b' parameters for the range
-        // 273.15K <= T <= 373.15K and 10e3 Pa <= p <= 100e6 Pa. For
+        // minT <= T <= maxT and minP <= p <= maxP. For
         // this we take advantage of the fact that 'a' and 'b' for
         // mixtures is just a convex combination of the attractive and
         // repulsive parameters of the pure components
-        Scalar minT = 273.15, maxT = 373.15;
-        Scalar minP = 1e4, maxP = 100e6;
 
         Scalar minA = 1e100, maxA = -1e100;
         Scalar minB = 1e100, maxB = -1e100;

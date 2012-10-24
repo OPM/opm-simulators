@@ -157,11 +157,11 @@ public:
         Scalar a = 0;
         Scalar b = 0;
         for (int compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
-            Scalar xi = fs.moleFraction(phaseIdx, compIIdx) / sumx;
+            Scalar xi = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compIIdx)));
             Valgrind::CheckDefined(xi);
 
             for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
-                Scalar xj = fs.moleFraction(phaseIdx, compJIdx) / sumx;
+                Scalar xj = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compJIdx)));
                 Valgrind::CheckDefined(xj);
 
                 // mixing rule from Reid, page 82
@@ -171,12 +171,14 @@ public:
             }
 
             // mixing rule from Reid, page 82
-            b += xi * this->pureParams_[compIIdx].b();
+            b += std::max(0.0, xi) * this->pureParams_[compIIdx].b();
             assert(std::isfinite(b));
         }
 
+        assert(b > 0);
         this->setA(a);
         this->setB(b);
+
         Valgrind::CheckDefined(this->a());
         Valgrind::CheckDefined(this->b());
 

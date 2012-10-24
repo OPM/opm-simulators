@@ -177,16 +177,15 @@ public:
             std::cout << globalMolarities[compIdx] << " ";
         std::cout << "\n";
         */
-        Scalar absError, lastError = 0;
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
-            absError = linearize_<MaterialLaw>(J,
-                                               b,
-                                               fluidState,
-                                               paramCache,
-                                               matParams,
-                                               globalMolarities);
+            linearize_<MaterialLaw>(J,
+                                    b,
+                                    fluidState,
+                                    paramCache,
+                                    matParams,
+                                    globalMolarities);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
 
@@ -229,19 +228,11 @@ public:
             */
 
             // update the fluid quantities.
-            update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
-            //Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
-            
-            if (!std::isfinite(absError))
-                break;
-            else if (absError < tolerance && lastError >= absError) {
-                return;
-            }
-            lastError = absError;
-        }
+            //update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
+            Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
 
-        if (absError < tolerance) {
-            return;
+            if (relError < 1e-9)
+                return;
         }
 
         /*
@@ -325,11 +316,31 @@ protected:
         calculateDefect_(b, fluidState, fluidState, globalMolarities);
         Valgrind::CheckDefined(b);
 
+        ///////
+        // calculate the absolute error
+        ///////
         Scalar absError = 0;
-        for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-            absError = std::max(std::abs(b[compIdx]), absError);
 
+#if 0
+        // fugacities are equal
+        int eqIdx = 0;
+        for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+            absError = std::max(std::abs(b[eqIdx + compIdx]), absError);
+        eqIdx += numComponents;
+ 
+        // sum of concentrations are given
+        for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+            absError = std::max(std::abs(b[eqIdx + compIdx]), absError);
+        eqIdx += numComponents;
+
+        // NCP model assumptions
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            absError = std::max(std::abs(b[eqIdx + phaseIdx]), absError);
+        eqIdx += numPhases;
+#endif
+        ///////
         // assemble jacobian matrix
+        ///////
         for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             ////////
             // approximately calculate partial derivatives of the
@@ -339,7 +350,7 @@ protected:
 
             // deviate the mole fraction of the i-th component
             Scalar x_i = getQuantity_(fluidState, pvIdx);
-            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e5/(quantityWeight_(fluidState, pvIdx));
+            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7/(quantityWeight_(fluidState, pvIdx));
 
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
             assert(std::abs(getQuantity_(fluidState, pvIdx) - (x_i + eps)) 
@@ -376,12 +387,8 @@ protected:
         // fugacity of any component must be equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-                // in phase1 we equalize the fugacities divided by
-                // pressure. this is less stable and but
-                // physically correct for non-zero capillary
-                // pressures
                 b[eqIdx] =
-                    fluidState.fugacity(/*phaseIdx=*/0, compIdx) 
+                    fluidState.fugacity(/*phaseIdx=*/0, compIdx)
                     - fluidState.fugacity(phaseIdx, compIdx);
                 ++eqIdx;
             }
@@ -444,19 +451,19 @@ protected:
             relError = std::max(relError, std::abs(delta)*quantityWeight_(fluidState, pvIdx));
             
             if (isSaturationIdx_(pvIdx)) {
-                // dampen to at most 20% change in saturation per
+                // dampen to at most 25% change in saturation per
                 // iteration
-                delta = std::min(0.2, std::max(-0.2, delta));
+                delta = std::min(0.25, std::max(-0.25, delta));
             }
             else if (isMoleFracIdx_(pvIdx)) {
-                // dampen to at most 15% change in mole fraction per
+                // dampen to at most 20% change in mole fraction per
                 // iteration
-                delta = std::min(0.15, std::max(-0.15, delta));
+                delta = std::min(0.20, std::max(-0.20, delta));
             }
             else if (isPressureIdx_(pvIdx)) {
-                // dampen to at most 15% change in pressure per
+                // dampen to at most 50% change in pressure per
                 // iteration
-                delta = std::min(0.15*fluidState.pressure(0), std::max(-0.15*fluidState.pressure(0), delta));
+                delta = std::min(0.5*fluidState.pressure(0), std::max(-0.5*fluidState.pressure(0), delta));
             }
 
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
@@ -685,7 +692,7 @@ protected:
     {
         // first pressure
         if (pvIdx < 1)
-            return 1/std::max(1e5, fluidState.pressure(/*phaseIdx=*/0));
+            return 1/1e5;
         // first M - 1 saturations
         else if (pvIdx < numPhases)
             return 1.0;
