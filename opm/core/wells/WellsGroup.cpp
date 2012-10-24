@@ -762,27 +762,16 @@ namespace Opm
         }
     }
 
-// macro to insert const_cast to get a round bug in GCC 4.6.3 where it
-// suddenly believes that "this" is a const pointer, although we are not
-// in a const method.
-#if ( __GNUC__ == 4 ) && ( __GNUC_MINOR__ == 6 ) && ( __GNUC_PATCHLEVEL__ == 3 )
-#define CONST_CAST(T,v) const_cast<T>(v)
-#else
-#define CONST_CAST(T,v) v
-#endif
-  
     std::pair<WellNode*, double> WellNode::getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                              const std::vector<double>& well_surfacerates_phase,
                                                              ProductionSpecification::ControlMode mode)
     {
         const int np = phaseUsage().num_phases;
         const int index = self_index_*np;
-        // note: CONST_CAST is just to work around a bug in GCC 4.6.3; it
-        // is not really needed, and should be a harmless no-op.
-        return std::make_pair<WellNode*, double>(CONST_CAST(WellNode*,this),
-                                                 rateByMode(&well_reservoirrates_phase[index],
-                                                            &well_surfacerates_phase[index],
-                                                            mode));
+        return std::pair<WellNode*, double>(this,
+                                            rateByMode(&well_reservoirrates_phase[index],
+                                                       &well_surfacerates_phase[index],
+                                                       mode));
     }
     
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
