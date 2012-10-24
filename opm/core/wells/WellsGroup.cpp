@@ -794,7 +794,7 @@ namespace Opm
              && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
             return;
         }
-        if (!wells_->type[self_index_] == INJECTOR) {
+        if (wells_->type[self_index_] != INJECTOR) {
             ASSERT(target == 0.0);
             return;
         }
@@ -871,7 +871,7 @@ namespace Opm
             std::cout << "Returning" << std::endl;
             return;
         }
-        if (!wells_->type[self_index_] == PRODUCER) {
+        if (wells_->type[self_index_] != PRODUCER) {
             ASSERT(target == 0.0);
             return;
         }
