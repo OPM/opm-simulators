@@ -174,13 +174,10 @@ public:
      */
     static Scalar molarMass(int compIdx)
     {
-        static const Scalar M[] = {
-            Brine::molarMass(),
-            CO2::molarMass(),
-        };
-
         assert(0 <= compIdx && compIdx < numComponents);
-        return M[compIdx];
+        return (compIdx==BrineIdx)
+            ? Brine::molarMass()
+            : CO2::molarMass();
     }
 
     /****************************************
