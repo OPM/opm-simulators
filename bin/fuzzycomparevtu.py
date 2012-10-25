@@ -35,7 +35,7 @@ def isFuzzyEqual(vtkFile1, vtkFile2, absTol, relTol):
             if curFieldName.startswith("saturation") and abs(number1 - number2) > 1e-3:
                 print 'Difference between %f and %f too large in data field "%s: %s"'%(number1,number2,curFieldName,abs(number1 - number2))
                 return False
-            elif curFieldName.startswith("pressure") and abs(number1 - number2) > 0.1:
+            elif curFieldName.startswith("pressure") and abs(number1 - number2) > 0.1 and abs(number1 - number2) > 1e-5*abs(number1 + number2):
                 print 'Difference between %f and %f too large in data field "%s: %s"'%(number1,number2,curFieldName,abs(number1 - number2))
                 return False
             elif abs(number1 - number2) > absTol and number2 != 0 and abs(number1/number2 - 1) > relTol:
