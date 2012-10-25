@@ -284,7 +284,8 @@ protected:
             Scalar xI = getQuantity_(fluidState, pvIdx);
             const Scalar eps = 1e-10/quantityWeight_(fluidState, pvIdx);
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, xI + eps);
-            assert(getQuantity_(fluidState, pvIdx) == xI + eps);
+            assert(std::abs(getQuantity_(fluidState, pvIdx) - (xI + eps)) 
+                   <= std::max(1.0, std::abs(xI))*std::numeric_limits<Scalar>::epsilon()*100);
 
             // compute derivative of the defect
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
