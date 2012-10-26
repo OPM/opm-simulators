@@ -210,19 +210,13 @@ public:
      *        a component in a fluid phase [mol^2 * s / (kg*m^3)]
      *
      * Molecular diffusion of a compoent \f$\kappa\f$ is caused by a
-     * gradient of the chemical potential and follows the law
+     * gradient of the mole fraction and follows the law
      *
-     * \f[ J = - D \mathbf{grad} \mu_\kappa \f]
+     * \f[ J = - D \mathbf{grad} x^\kappa_\alpha \f]
      *
-     * where \f$\mu_\kappa\f$ is the component's chemical potential,
-     * \f$D\f$ is the diffusion coefficient and \f$J\f$ is the
-     * diffusive flux. \f$\mu_\kappa\f$ is connected to the component's
-     * fugacity \f$f_\kappa\f$ by the relation
-     *
-     * \f[ \mu_\kappa = R T_\alpha \mathrm{ln} \frac{f_\kappa}{p_\alpha} \f]
-     *
-     * where \f$p_\alpha\f$ and \f$T_\alpha\f$ are the fluid phase'
-     * pressure and temperature.
+     * where \f$x_\alpha^\kappa\f$ is the component's mole fraction in
+     * phase \f$\alpha\f$, \f$D\f$ is the diffusion coefficient and
+     * \f$J\f$ is the diffusive flux.
      *
      * \copydoc Doxygen::fluidSystemBaseParams
      * \copydoc Doxygen::phaseIdxParam
@@ -235,27 +229,6 @@ public:
                                        int compIdx)
     {
          DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
-    }
-
-    /*!
-     * \brief Given a phase's composition, temperature and pressure,
-     *        return the binary diffusion coefficient for components
-     *        \f$i\f$ and \f$j\f$ in this phase.
-     *
-     * \copydoc Doxygen::fluidSystemBaseParams
-     * \copydoc Doxygen::phaseIdxParam
-     * \copydoc Doxygen::compIIdxParam
-     * \copydoc Doxygen::compJIdxParam
-     */
-    template <class FluidState, class ParameterCache>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             const ParameterCache &paramCache,
-                                             int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
-
-    {
-        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a binaryDiffusionCoefficient() method!");
     }
 
     /*!

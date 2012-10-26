@@ -363,50 +363,21 @@ public:
     }
 
     /*!
-     * \copydoc BaseFluidSystem::binaryDiffusionCoefficient
+     * \copydoc BaseFluidSystem::diffusionCoefficient
      */
     template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             const ParameterCache &paramCache,
-                                             int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
+    static Scalar diffusionCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx,
+                                       int compIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        assert(0 <= compIIdx && compIIdx < numComponents);
-        assert(0 <= compJIdx && compJIdx < numComponents);
-
-        if (compIIdx > compJIdx)
-            std::swap(compIIdx, compJIdx);
-
         Scalar temperature = fluidState.temperature(phaseIdx);
         Scalar pressure = fluidState.pressure(phaseIdx);
-        if (phaseIdx == lPhaseIdx) {
-#ifndef NDEBUG
-            if (compIIdx != BrineIdx || compJIdx != CO2Idx)
-                DUNE_THROW(Dune::NotImplemented,
-                           "Only binary diffusion cofficients between Brine and "
-                           "CO2 are implemented");
-#endif
+        if (phaseIdx == lPhaseIdx)
+            return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
 
-            Scalar result = BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
-            Valgrind::CheckDefined(result);
-            return result;
-        }
-        else {
-            assert(phaseIdx == gPhaseIdx);
-
-#ifndef NDEBUG
-            if (compIIdx != BrineIdx || compJIdx != CO2Idx)
-                DUNE_THROW(Dune::NotImplemented,
-                           "Only binary diffusion cofficients between Brine and "
-                           "CO2 are implemented");
-#endif
-
-            Scalar result = BinaryCoeffBrineCO2::gasDiffCoeff(temperature, pressure);
-            Valgrind::CheckDefined(result);
-            return result;
-        }
+        assert(phaseIdx == gPhaseIdx);
+        return BinaryCoeffBrineCO2::gasDiffCoeff(temperature, pressure);
     }
 
     /*!

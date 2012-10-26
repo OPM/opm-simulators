@@ -298,8 +298,8 @@ protected:
                                    Scalar a,
                                    Scalar b)
     {
-        Scalar minVm;
-        Scalar maxVm;
+        Scalar minVm(0);
+        Scalar maxVm(1e100);
 
         Scalar minP(0);
         Scalar maxP(1e100);

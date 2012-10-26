@@ -224,28 +224,6 @@ public:
         return std::numeric_limits<Scalar>::infinity();
     }
 
-    //! \copydoc BaseFluidSystem::diffusionCoefficient
-    template <class FluidState>
-    static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
-    {
-        DUNE_THROW(Dune::InvalidStateException, "Not applicable: Diffusion coefficients");
-    }
-
-    //! \copydoc BaseFluidSystem::binaryDiffusionCoefficient
-    template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
-                                             const ParameterCache &paramCache,
-                                             int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
-
-    {
-        DUNE_THROW(Dune::InvalidStateException, "Not applicable: Binary diffusion coefficients");
-    }
-
     //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState>
     static Scalar enthalpy(const FluidState &fluidState,

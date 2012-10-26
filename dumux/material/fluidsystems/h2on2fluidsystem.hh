@@ -407,47 +407,24 @@ public:
         return 1.0;
     }
 
-    //! \copydoc BaseFluidSystem::binaryDiffusionCoefficient
+    //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState>
-    static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
+    static Scalar diffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
                                              int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
+                                             int compIdx)
 
     {
-        static Scalar undefined(1e10);
-        Valgrind::SetUndefined(undefined);
-
-        if (compIIdx > compJIdx)
-            std::swap(compIIdx, compJIdx);
-
-#ifndef NDEBUG
-        if (compIIdx == compJIdx ||
-            phaseIdx > numPhases - 1 ||
-            compJIdx > numComponents - 1)
-        {
-            DUNE_THROW(Dune::InvalidStateException,
-                       "Binary diffusion coefficient of components "
-                       << compIIdx << " and " << compJIdx
-                       << " in phase " << phaseIdx << " is undefined!\n");
-        }
-#endif
-
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
         // liquid phase
-        if (phaseIdx == lPhaseIdx) {
-            if (compIIdx == H2OIdx && compJIdx == N2Idx)
-                return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
-            return undefined;
-        }
+        if (phaseIdx == lPhaseIdx)
+            return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
 
         // gas phase
-        if (compIIdx == H2OIdx && compJIdx == N2Idx)
-            return BinaryCoeff::H2O_N2::gasDiffCoeff(T, p);
-        return undefined;
+        assert(phaseIdx == gPhaseIdx);
+        return BinaryCoeff::H2O_N2::gasDiffCoeff(T, p);
     }
 
     //! \copydoc BaseFluidSystem::enthalpy

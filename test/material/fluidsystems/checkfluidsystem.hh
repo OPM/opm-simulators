@@ -305,9 +305,6 @@ void checkFluidSystem()
             try { val = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
             fs.allowComposition(true);
             try { val = FluidSystem::diffusionCoefficient(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
-            for (int comp2Idx = 0; comp2Idx < numComponents; ++ comp2Idx) {
-                try { val = FluidSystem::binaryDiffusionCoefficient(fs, paramCache, phaseIdx, compIdx, comp2Idx); } catch (...) {};
-            }
         }
             
     }

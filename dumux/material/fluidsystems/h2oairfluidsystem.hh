@@ -415,62 +415,21 @@ public:
         return 1.0;
     }
 
-    //! \copydoc BaseFluidSystem::binaryDiffusionCoefficient
+    //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState>
     static Scalar binaryDiffusionCoefficient(const FluidState &fluidState,
                                              const ParameterCache &paramCache,
                                              int phaseIdx,
-                                             int compIIdx,
-                                             int compJIdx)
+                                             int compIdx)
     {
-        if (compIIdx > compJIdx)
-            std::swap(compIIdx, compJIdx);
-
-#ifndef NDEBUG
-        if (compIIdx == compJIdx ||
-            phaseIdx > numPhases - 1 ||
-            compJIdx > numComponents - 1)
-        {
-            DUNE_THROW(Dune::InvalidStateException,
-                       "Binary diffusion coefficient of components "
-                       << compIIdx << " and " << compJIdx
-                       << " in phase " << phaseIdx << " is undefined!\n");
-        }
-#endif
-
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        switch (phaseIdx)
-        {
-        case lPhaseIdx:
-            switch (compIIdx) {
-            case H2OIdx:
-                switch (compJIdx) {
-                case AirIdx:
-                    return BinaryCoeff::H2O_Air::liquidDiffCoeff(T,
-                                                                 p);
-                }
-            default:
-                DUNE_THROW(Dune::InvalidStateException,
-                           "Binary diffusion coefficients of trace "
-                           "substances in liquid phase is undefined!\n");
-            }
-        case gPhaseIdx:
-            switch (compIIdx){
-            case H2OIdx:
-                switch (compJIdx){
-                case AirIdx:
-                    return BinaryCoeff::H2O_Air::gasDiffCoeff(T,
-                                                              p);
-                }
-            }
-        }
+        if (phaseIdx == lPhaseIdx)
+            return BinaryCoeff::H2O_Air::liquidDiffCoeff(T, p);
 
-        DUNE_THROW(Dune::InvalidStateException,
-                   "Binary diffusion coefficient of components "
-                   << compIIdx << " and " << compJIdx
-                   << " in phase " << phaseIdx << " is undefined!\n");
+        assert(phaseIdx == gPhaseIdx);
+        return BinaryCoeff::H2O_Air::gasDiffCoeff(T, p);
     }
 
     //! \copydoc BaseFluidSystem::enthalpy
