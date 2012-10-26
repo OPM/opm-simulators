@@ -311,24 +311,17 @@ only needs to provide the following thermodynamic relations:
   phase.
   
   Molecular diffusion of a component $\kappa$ in phase $\alpha$ is
-  caused by a gradient of the chemical potential and follows the law
+  caused by a gradient of the chemical potential. Using some
+  simplifying assumptions~\cite{reid1987}, they can be also expressed
+  in terms of mole fraction gradients, i.e. the equation used for mass
+  fluxes due to molecular diffusion is
   \[ 
-  J^\kappa_\alpha = - D^\kappa_\alpha\ \mathbf{grad} \zeta^\kappa_\alpha\;,
+  J^\kappa_\alpha = - \rho_{mol,\alpha} D^\kappa_\alpha\ \mathbf{grad} x^\kappa_\alpha\;,
   \] 
-  where $\zeta^\kappa_\alpha$ is the component's chemical potential,
-  $D^\kappa_\alpha$ is the diffusion coefficient and $J^\kappa_\alpha$
-  is the diffusive flux. $\zeta^\kappa_\alpha$ is connected to the
-  component's fugacity $f^\kappa_\alpha$ by the relation
-  \[ 
-  \zeta^\kappa_\alpha = 
-  R T_\alpha \mathrm{ln} \frac{f^\kappa_\alpha}{p_\alpha} \;.
-  \]
-\item[binaryDiffusionCoefficient():] Given a fluid state, an
-  up-to-date parameter cache, a phase index and two component indices,
-  return the binary diffusion coefficient for the binary mixture. This
-  method is less general than \texttt{diffusionCoefficient} method,
-  but relations can only be found for binary diffusion coefficients in
-  the literature.
+  where $\rho_{mol,\alpha}$ is the molar density of phase $\alpha$,
+  $x^\kappa_\alpha$ is the mole fraction of component $\kappa$ in
+  phase $\alpha$, $D^\kappa_\alpha$ is the diffusion coefficient and
+  $J^\kappa_\alpha$ is the diffusive flux.
 \item[enthalpy():] Given a fluid state, an up-to-date parameter cache
   and a phase index, this method calulates the specific enthalpy
   $h_\alpha$ of the phase.
