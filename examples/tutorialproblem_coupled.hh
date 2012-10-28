@@ -65,11 +65,11 @@ SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Dumux::CubeGridCreator<TypeTa
 // Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
               Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                                 Dumux::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >); 
+                                 Dumux::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
 
 // Set the non-wetting phase
 SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
-              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar), 
+              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
               Dumux::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
 
 // Set the material law
@@ -153,9 +153,9 @@ public:
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
         , eps_(3e-6)
     {
-        // Use an isotropic and homogeneous intrinsic permeability 
+        // Use an isotropic and homogeneous intrinsic permeability
         K_ = this->toDimMatrix_(1e-7);
-        
+
         // Parameters of the Brooks-Corey law
         materialParams_.setPe(500.0); // entry pressure [Pa]  /*@\label{tutorial-coupled:setLawParams}@*/
         materialParams_.setLambda(2); // shape parameter
@@ -179,7 +179,7 @@ public:
     const DimMatrix &intrinsicPermeability(const Context &context, /*@\label{tutorial-coupled:permeability}@*/
                                            int spaceIdx, int timeIdx) const
     { return K_; }
-    
+
     //! Defines the porosity [-] of the medium at a given position
     template <class Context>
     Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const  /*@\label{tutorial-coupled:porosity}@*/
@@ -193,20 +193,20 @@ public:
 
     //! Evaluates the boundary conditions.
     template <class Context>
-    void boundary(BoundaryRateVector &values, 
+    void boundary(BoundaryRateVector &values,
                   const Context &context, int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
         if (pos[0] < eps_) {
             // Free-flow conditions on left boundary
             const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
-            
+
             ImmiscibleFluidState<Scalar, FluidSystem> fs;
             Scalar Sw = 1.0;
             fs.setSaturation(wPhaseIdx, Sw);
             fs.setSaturation(nPhaseIdx, 1.0 - Sw);
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
-            
+
             Scalar pC[numPhases];
             MaterialLaw::capillaryPressures(pC, materialParams, fs);
             fs.setPressure(wPhaseIdx, 200e3);
@@ -250,13 +250,13 @@ public:
 
         // the temperature is given by the temperature() method
         fs.setTemperature(temperature(context, spaceIdx, timeIdx));
-        
+
         // set pressure of the wetting phase to 200 kPa = 2 bar
         Scalar pC[numPhases];
         MaterialLaw::capillaryPressures(pC, materialLawParams(context, spaceIdx, timeIdx), fs);
         fs.setPressure(wPhaseIdx, 200e3);
         fs.setPressure(nPhaseIdx, 200e3 + pC[nPhaseIdx] - pC[nPhaseIdx]);
-        
+
         values.assignNaive(fs);
     }
 

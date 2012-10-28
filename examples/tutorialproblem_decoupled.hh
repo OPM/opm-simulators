@@ -63,7 +63,7 @@ NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(FVPressureTwoP, FVTransport
 
 // Set the problem property
 SET_TYPE_PROP(TutorialProblemDecoupled, /*@\label{tutorial-decoupled:set-problem}@*/
-              Problem, 
+              Problem,
               Dumux::TutorialProblemDecoupled<TypeTag>);
 
 // Set the grid type
