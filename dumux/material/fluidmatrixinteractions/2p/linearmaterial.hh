@@ -83,7 +83,7 @@ public:
      * \param pC Capillary pressure \f$p_C\f$
      * \param params A container object that is populated with the
      *               appropriate coefficients for the respective law.
-     *                  
+     *
      * \return Effective wetting phase saturation calculated as
      *         inverse of the linear constitutive relation.
      */

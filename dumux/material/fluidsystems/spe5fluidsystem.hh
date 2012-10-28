@@ -171,7 +171,7 @@ public:
     //! \copydoc BaseFluidSystem::molarMass
     static constexpr Scalar molarMass(int compIdx)
     {
-        return 
+        return
             (compIdx == H2OIdx)
             ? H2O::molarMass()
             : (compIdx == C1Idx)
@@ -194,7 +194,7 @@ public:
      */
     static constexpr Scalar criticalTemperature(int compIdx)
     {
-        return 
+        return
             (compIdx == H2OIdx)
             ? H2O::criticalTemperature()
             : (compIdx == C1Idx)
@@ -217,7 +217,7 @@ public:
      */
     static constexpr Scalar criticalPressure(int compIdx)
     {
-        return 
+        return
             (compIdx == H2OIdx)
             ? H2O::criticalPressure()
             : (compIdx == C1Idx)
@@ -240,7 +240,7 @@ public:
      */
     static Scalar criticalMolarVolume(int compIdx)
     {
-        return 
+        return
             (compIdx == H2OIdx)
             ? H2O::criticalMolarVolume()
             : (compIdx == C1Idx)
@@ -263,7 +263,7 @@ public:
      */
     static constexpr Scalar acentricFactor(int compIdx)
     {
-        return 
+        return
             (compIdx == H2OIdx)
             ? H2O::acentricFactor()
             : (compIdx == C1Idx)
@@ -317,7 +317,7 @@ public:
                      Scalar maxP = 100e6)
     {
         Dumux::PengRobinsonParamsMixture<Scalar, ThisType, gPhaseIdx, /*useSpe5=*/true> prParams;
-        
+
         // find envelopes of the 'a' and 'b' parameters for the range
         // minT <= T <= maxT and minP <= p <= maxP. For
         // this we take advantage of the fact that 'a' and 'b' for

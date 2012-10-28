@@ -74,7 +74,7 @@ public:
      * \brief Sets the parameters of the main imbibition curve (which uses
      *        the van Genuchten capillary pressure model).
      */
-    void setMicParams(const VanGenuchtenParams *val) 
+    void setMicParams(const VanGenuchtenParams *val)
     { micParams_ = val; }
 
     /*!
@@ -88,7 +88,7 @@ public:
      * \brief Sets the parameters of the main drainage curve (which uses
      *        the van Genuchten capillary pressure model).
      */
-    void setMdcParams(const VanGenuchtenParams *val) 
+    void setMdcParams(const VanGenuchtenParams *val)
     { mdcParams_ = val; }
 
     /*!
@@ -177,7 +177,7 @@ public:
 
 
 private:
-    const VanGenuchtenParams *micParams_; 
+    const VanGenuchtenParams *micParams_;
     const VanGenuchtenParams *mdcParams_;
     Scalar Swr_;
     Scalar Snr_;

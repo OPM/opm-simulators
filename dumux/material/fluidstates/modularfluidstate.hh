@@ -52,7 +52,7 @@ namespace Dumux
  * set of requested thermodynamic quantities.
  */
 template <class ScalarT,
-          class FluidSystem, 
+          class FluidSystem,
           class PressureModule,
           class TemperatureModule,
           class CompositionModule,

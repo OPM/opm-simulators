@@ -36,7 +36,7 @@ namespace Dumux
  * \brief Module for the modular fluid state which stores the
  *       pressures explicitly.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateExplicitPressureModule
@@ -93,7 +93,7 @@ protected:
  * \brief Module for the modular fluid state which does not  the
  *        pressures but throws Dune::InvalidState instead.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateNullPressureModule

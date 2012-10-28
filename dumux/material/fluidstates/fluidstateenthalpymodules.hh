@@ -36,7 +36,7 @@ namespace Dumux
  * \brief Module for the modular fluid state which stores the
  *       enthalpys explicitly.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateExplicitEnthalpyModule
@@ -101,7 +101,7 @@ protected:
  * \brief Module for the modular fluid state which does not store the
  *        enthalpies but throws Dune::InvalidState instead.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateNullEnthalpyModule

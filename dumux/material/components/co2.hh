@@ -49,7 +49,7 @@ class CO2 : public Component<Scalar, CO2<Scalar, CO2Tables> >
 {
     static constexpr Scalar R = Constants<Scalar>::R;
     typedef typename Dumux::IdealGas<Scalar> IdealGas;
-    
+
     static bool warningPrinted;
 
 public:
@@ -126,10 +126,10 @@ public:
      * 1996
      */
     static Scalar vaporPressure(Scalar T)
-    { 
-        static const Scalar a[4] = 
+    {
+        static const Scalar a[4] =
             { -7.0602087, 1.9391218, -1.6463597, -3.2995634 };
-        static const Scalar t[4] = 
+        static const Scalar t[4] =
             { 1.0, 1.5, 2.0, 4.0 };
 
         // this is on page 1524 of the reference
@@ -139,7 +139,7 @@ public:
             exponent += a[i]*std::pow(1 - Tred, t[i]);
         }
         exponent *= 1.0/Tred;
-        
+
         return std::exp(exponent)*criticalPressure();
     }
 

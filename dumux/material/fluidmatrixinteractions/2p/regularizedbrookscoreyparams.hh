@@ -65,7 +65,7 @@ public:
      */
     void setThresholdSw(Scalar value)
     { SwThres_ = value; }
-    
+
 private:
     Scalar SwThres_;
 };

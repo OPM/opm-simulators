@@ -65,7 +65,7 @@ public:
         Valgrind::CheckDefined(p_cnw);
         Valgrind::CheckDefined(p_cgn);
         Valgrind::CheckDefined(p_cAlpha);
-        
+
         values[gPhaseIdx] = 0;
         values[nPhaseIdx] = - (p_cAlpha*p_cgn + (1 - p_cAlpha)*(p_cgw - p_cnw1));
         values[wPhaseIdx] = values[nPhaseIdx] - (p_cAlpha*p_cnw + (1 - p_cAlpha)*p_cnw1);
@@ -94,7 +94,7 @@ public:
         Scalar Sw = fluidState.saturation(wPhaseIdx);
         Scalar Sn = fluidState.saturation(nPhaseIdx);
         Scalar Sg = fluidState.saturation(gPhaseIdx);
-        
+
         values[wPhaseIdx] = ThreePLaw::krw(params, Sw, Sn, Sg);
         values[nPhaseIdx] = ThreePLaw::krn(params, Sw, Sn, Sg);
         values[gPhaseIdx] = ThreePLaw::krg(params, Sw, Sn, Sg);

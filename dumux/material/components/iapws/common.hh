@@ -203,7 +203,7 @@ public:
             Tpow *= Tbar;
         }
 
-        lam += 
+        lam +=
             thcond_b0 + thcond_b1
             * rhobar + thcond_b2
             * std::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));

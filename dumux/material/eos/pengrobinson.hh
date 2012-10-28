@@ -152,7 +152,7 @@ public:
 
         Scalar a = params.a(phaseIdx); // "attractive factor"
         Scalar b = params.b(phaseIdx); // "co-volume"
-      
+
         if (!std::isfinite(a) || a == 0)
             DUNE_THROW(NumericalProblem, "Peng-Robinson: The 'a' coefficient must finite and not be zero. It is " << a);
         if (!std::isfinite(b) || b <= 0)
@@ -215,7 +215,7 @@ public:
                 handleCriticalFluid_(Vm, fs, params, phaseIdx, isGasPhase);
             }
         }
-        
+
         Valgrind::CheckDefined(Vm);
         assert(std::isfinite(Vm));
         assert(Vm > 0);
@@ -285,7 +285,7 @@ protected:
 
 
         //Scalar Vcrit = criticalMolarVolume_.eval(params.a(phaseIdx), params.b(phaseIdx));
-        
+
         if (isGasPhase)
             Vm = std::max(Vm, Vcrit);
         else
@@ -351,7 +351,7 @@ protected:
                 Vcrit = (maxVm + minVm)/2;
                 return;
             }
-            
+
             // update value for the current iteration
             Scalar delta = f/fPrime;
             assert(std::isfinite(delta));
@@ -463,7 +463,7 @@ protected:
             // covolume which is physically impossible
             return false;
         }
-        
+
 
         // it seems that everything is okay...
         Vmin = allV[numSol - 2];

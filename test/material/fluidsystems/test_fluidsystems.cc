@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
     {   typedef Dumux::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/true> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
- 
+
     // H2O -- N2 -- liquid phase
     {   typedef Dumux::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/false> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }

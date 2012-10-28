@@ -77,7 +77,7 @@ public:
         if (Se<0.0) Se=0.0;
         if (Se>1.0) Se=1.0;
         vg_m = 1.-1./params.vgN();
-    
+
         if (Se>PC_VG_REG && Se<1-PC_VG_REG)
         {
             r = std::pow(Se,-1/vg_m);
@@ -93,7 +93,7 @@ public:
             if (Se<=PC_VG_REG) Se_regu = PC_VG_REG; else Se_regu = 1-PC_VG_REG;
             pc       = std::pow(std::pow(Se_regu,-1/vg_m)-1,1/params.vgN())/params.vgAlpha();
             pc_prime = std::pow(std::pow(Se_regu,-1/vg_m)-1,1/params.vgN()-1)*std::pow(Se_regu,-1/vg_m-1)*(-1/vg_m)/params.vgAlpha()/(1-params.Sgr()-params.Swr())/params.vgN();
-        
+
             /* evaluate tangential */
             r        = (Se-Se_regu)*pc_prime+pc;
             return(r/params.betaGW());

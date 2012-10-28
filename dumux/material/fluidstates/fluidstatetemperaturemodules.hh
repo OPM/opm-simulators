@@ -37,7 +37,7 @@ namespace Dumux
  * \brief Module for the modular fluid state which stores the
  *       temperatures explicitly.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateExplicitTemperatureModule
@@ -93,7 +93,7 @@ protected:
  * \brief Module for the modular fluid state which stores the
  *        temperatures explicitly and assumes thermal equilibrium.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateEquilibriumTemperatureModule
@@ -151,7 +151,7 @@ protected:
  * \brief Module for the modular fluid state which does not  the
  *        temperatures but throws Dune::InvalidState instead.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateNullTemperatureModule

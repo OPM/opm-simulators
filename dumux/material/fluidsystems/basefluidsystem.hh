@@ -77,7 +77,7 @@ public:
         DUNE_THROW(Dune::NotImplemented,
                    "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isLiquid() method!");
     }
-        
+
     /*!
      * \brief Returns true if and only if a fluid phase is assumed to
      *        be an ideal mixture.

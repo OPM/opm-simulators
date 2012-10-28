@@ -76,14 +76,14 @@ public:
     //typedef SimpleH2O H2O;
     typedef TabulatedH2O H2O;
     //typedef IapwsH2O H2O;
-    
+
     //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 3;
     //! \copydoc BaseFluidSystem::numComponents
     static const int numComponents = 3;
 
     //! The index of the water phase
-    static const int wPhaseIdx = 0; 
+    static const int wPhaseIdx = 0;
     //! The index of the NAPL phase
     static const int nPhaseIdx = 1;
     //! The index of the gas phase
@@ -133,9 +133,9 @@ public:
 
     //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(int phaseIdx)
-    { 
+    {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return phaseIdx != gPhaseIdx; 
+        return phaseIdx != gPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
@@ -147,7 +147,7 @@ public:
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // gases are always compressible
-        return (phaseIdx == gPhaseIdx) 
+        return (phaseIdx == gPhaseIdx)
             ? true
             : (phaseIdx == wPhaseIdx)
             ? H2O::liquidIsCompressible()
@@ -190,7 +190,7 @@ public:
     static constexpr Scalar molarMass(int compIdx)
     {
         return
-            (compIdx == H2OIdx) 
+            (compIdx == H2OIdx)
             ? H2O::molarMass()
             : (compIdx == airIdx)
             ? Air::molarMass()
@@ -266,7 +266,7 @@ public:
         }
 
         assert (phaseIdx == gPhaseIdx);
-        
+
         /* Wilke method. See:
          *
          * See: R. Reid, et al.: The Properties of Gases and Liquids,
@@ -447,7 +447,7 @@ public:
         }
         DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
     }
-    
+
     //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState>
     static Scalar thermalConductivity(const FluidState &fluidState,
@@ -468,13 +468,13 @@ public:
         }
 
         assert(phaseIdx == nPhaseIdx);
-        
-        // Taken from: 
+
+        // Taken from:
         //
         // D. K. H. Briggs: "Thermal Conductivity of Liquids",
         // Ind. Eng. Chem., 1957, 49 (3), pp 418–421
         //
-        // Convertion to SI units: 
+        // Convertion to SI units:
         // 344e-6 cal/(s cm K) = 0.0143964 J/(s m K)
         return 0.0143964;
     }

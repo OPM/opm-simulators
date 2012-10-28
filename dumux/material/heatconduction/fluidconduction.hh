@@ -53,7 +53,7 @@ public:
     template <class FluidState>
     static Scalar heatConductivity(const Params &params,
                                    const FluidState &fluidState)
-    { 
+    {
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updatePhase(fluidState, phaseIdx);
         return FluidSystem::thermalConductivity(fluidState, paramCache, phaseIdx);

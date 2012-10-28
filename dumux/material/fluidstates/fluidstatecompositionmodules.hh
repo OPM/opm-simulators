@@ -36,7 +36,7 @@ namespace Dumux
  * \brief Module for the modular fluid state which stores the
  *        phase compositions explicitly in terms of mole fractions.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateExplicitCompositionModule
@@ -106,7 +106,7 @@ public:
         Valgrind::SetUndefined(moleFraction_[phaseIdx][compIdx]);
 
         moleFraction_[phaseIdx][compIdx] = value;
-        
+
         // re-calculate the mean molar mass
         sumMoleFractions_[phaseIdx] = 0.0;
         averageMolarMass_[phaseIdx] = 0.0;
@@ -162,14 +162,14 @@ protected:
  * \brief Module for the modular fluid state which provides the
  *        phase compositions assuming immiscibility.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateImmiscibleCompositionModule
 {
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    static_assert((int) numPhases == (int) numComponents, 
+    static_assert((int) numPhases == (int) numComponents,
                   "The number of phases must be the same as the number of (pseudo-) components if you assume immiscibility");
 
 public:
@@ -239,7 +239,7 @@ protected:
  * \brief Module for the modular fluid state which does not store the
  *        compositions but throws Dune::InvalidState instead.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateNullCompositionModule

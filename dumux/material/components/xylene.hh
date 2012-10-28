@@ -117,32 +117,32 @@ public:
      * \param temp temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar spHeatCapLiquidPhase(Scalar temp, Scalar pressure) 
+    static Scalar spHeatCapLiquidPhase(Scalar temp, Scalar pressure)
     {
         Scalar CH3,C6H5,H;
         // after Reid et al. : Missenard group contrib. method (s. example 5-8)
         // Xylene: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was too much!)
         // linear interpolation between table values [J/(mol K)]
 
-        if(temp < 298.0){                          	// take care: extrapolation for Temp<273
-            H = 13.4 + 1.2*(temp - 273.0)/25.0;		// 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
-            CH3 = 40.0 + 1.6*(temp - 273.0)/25.0;	// 40 + 1.6 = 41.6 = CH3(T=298K)
+        if(temp < 298.0){                              // take care: extrapolation for Temp<273
+            H = 13.4 + 1.2*(temp - 273.0)/25.0;        // 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
+            CH3 = 40.0 + 1.6*(temp - 273.0)/25.0;    // 40 + 1.6 = 41.6 = CH3(T=298K)
             C6H5 = 113.0 + 4.2*(temp - 273.0)/25.0; // 113 + 4.2 = 117.2 = C6H5(T=298K)
         }
         else if(temp < 323.0){
-            H = 14.6 + 0.9*(temp - 298.0)/25.0;		// i.e. interpolation of table values 298<T<323
+            H = 14.6 + 0.9*(temp - 298.0)/25.0;        // i.e. interpolation of table values 298<T<323
             CH3 = 41.6 + 1.9*(temp - 298.0)/25.0;
             C6H5 = 117.2 + 6.2*(temp - 298.0)/25.0;
         }
         else if(temp < 348.0){
-            H = 15.5 + 1.2*(temp - 323.0)/25.0;		// i.e. interpolation of table values 323<T<348
+            H = 15.5 + 1.2*(temp - 323.0)/25.0;        // i.e. interpolation of table values 323<T<348
             CH3 = 43.5 + 2.3*(temp - 323.0)/25.0;
             C6H5 = 123.4 + 6.3*(temp - 323.0)/25.0;
         }
         else {
             H = 16.7 + 2.1*(temp - 348.0)/25.0;         // i.e. interpolation of table values 348<T<373
-            CH3 = 45.8 + 2.5*(temp - 348.0)/25.0;		// take care: extrapolation for Temp>373
-            C6H5 = 129.7 + 6.3*(temp - 348.0)/25.0;		// most likely leads to underestimation
+            CH3 = 45.8 + 2.5*(temp - 348.0)/25.0;        // take care: extrapolation for Temp>373
+            C6H5 = 129.7 + 6.3*(temp - 348.0)/25.0;        // most likely leads to underestimation
         }
 
         return (C6H5 + 2*CH3 - H)/molarMass();// J/(mol K) -> J/(kg K)
@@ -154,17 +154,17 @@ public:
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     {
-    	// Gauss quadrature rule:
-    	// Interval: [0K; temperature (K)]
-    	// Gauss-Legendre-Integration with variable transformation:
-    	// \int_a^b f(T) dT  \approx (b-a)/2 \sum_i=1^n \alpha_i f( (b-a)/2 x_i + (a+b)/2 )
-    	// with: n=2, legendre -> x_i = +/- \sqrt(1/3), \apha_i=1
-    	// here: a=0, b=actual temperature in Kelvin
-    	// \leadsto h(T) = \int_0^T c_p(T) dT
-    	// 				\approx 0.5 T * (cp( (0.5-0.5*\sqrt(1/3)) T) + cp((0.5+0.5*\sqrt(1/3)) T))
-    	//				= 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
+        // Gauss quadrature rule:
+        // Interval: [0K; temperature (K)]
+        // Gauss-Legendre-Integration with variable transformation:
+        // \int_a^b f(T) dT  \approx (b-a)/2 \sum_i=1^n \alpha_i f( (b-a)/2 x_i + (a+b)/2 )
+        // with: n=2, legendre -> x_i = +/- \sqrt(1/3), \apha_i=1
+        // here: a=0, b=actual temperature in Kelvin
+        // \leadsto h(T) = \int_0^T c_p(T) dT
+        //                 \approx 0.5 T * (cp( (0.5-0.5*\sqrt(1/3)) T) + cp((0.5+0.5*\sqrt(1/3)) T))
+        //                = 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
 
-    	// enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
+        // enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
         return 0.5*temperature*(spHeatCapLiquidPhase(0.2113*temperature,pressure)
                           + spHeatCapLiquidPhase(0.7887*temperature,pressure));
     }
@@ -191,8 +191,8 @@ public:
         const Scalar DH_v_boil = Consts::R * T_crit * Tr1
             * (3.978 * Tr1 - 3.958 + 1.555*std::log(p_crit * 1e-5 /*Pa->bar*/ ) )
             / (1.07 - Tr1); /* [J/mol] */
-        
-    	/* Variation with temp according to Watson relation eq 7-12.1*/
+
+        /* Variation with temp according to Watson relation eq 7-12.1*/
         const Scalar Tr2 = temperature/criticalTemperature();
         const Scalar n = 0.375;
         const Scalar DH_vap = DH_v_boil * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);

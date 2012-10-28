@@ -297,7 +297,7 @@ public:
             return WettingPhase::thermalConductivity(temperature, pressure);
         return NonwettingPhase::thermalConductivity(temperature, pressure);
     }
-    
+
     //! \copydoc BaseFluidSystem::heatCapacity
     template <class FluidState>
     static Scalar heatCapacity(const FluidState &fluidState,

@@ -115,7 +115,7 @@ public:
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        return 
+        return
             (phaseIdx == gPhaseIdx)
             ? H2O::gasIsIdeal() && N2::gasIsIdeal() // let the components decide
             : false; // not a gas

@@ -42,7 +42,7 @@ namespace FluidSystems {
  *        to calculate termodynamically meaningful quantities.
  */
 template <class Scalar>
-class BlackOil 
+class BlackOil
     : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
     typedef Dumux::Spline<Scalar, -1> Spline;
@@ -65,17 +65,17 @@ public:
     static const int wPhaseIdx = 1;
     //! Index of the gas phase
     static const int gPhaseIdx = 2;
-    
+
     /*!
      * \copydoc BaseFluidSystem::init
-     * 
+     *
      * \attention For this fluid system, this method just throws a
      *            <tt>Dune::InvalidStateException</tt> as there is no
      *            way to generically calculate the required black oil
      *            parameters. Instead of this method, use
      * \code
      * FluidSystem::initBegin();
-     * // set the black oil parameters 
+     * // set the black oil parameters
      * FluidSystem::initEnd();
      * \endcode
      */
@@ -98,7 +98,7 @@ public:
      */
     static void initBegin()
     {}
-    
+
     /*!
      * \brief Initialize the values of the surface densities
      *
@@ -106,22 +106,22 @@ public:
      * \param rhoWater The surface density of the water phase.
      * \param rhoGas The surface density of the gas phase.
      */
-    static void setSurfaceDensities(Scalar rhoOil, 
-                                    Scalar rhoWater, 
+    static void setSurfaceDensities(Scalar rhoOil,
+                                    Scalar rhoWater,
                                     Scalar rhoGas)
     {
         surfaceDensity_[oPhaseIdx] = rhoOil;
         surfaceDensity_[wPhaseIdx] = rhoWater;
         surfaceDensity_[gPhaseIdx] = rhoGas;
     }
-   
+
     /*!
      * \brief Initialize the spline for the gas formation volume factor
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setGasFormationFactor(const SplineSamplingPoints &samplePoints)
-    { 
+    {
         // we discard the last sample point because that is for
         // undersaturated oil
         //SplineSamplingPoints tmp(samplePoints.begin(), --samplePoints.end());
@@ -135,7 +135,7 @@ public:
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setOilFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
-    { 
+    {
         oilFormationVolumeFactorSpline_.setContainerOfTuples(samplePoints);
         assert(oilFormationVolumeFactorSpline_.monotonic());
     }
@@ -149,9 +149,9 @@ public:
      * \param phaseIdx The index of the fluid phase.
      * \param val The value of the reference volume factor.
      */
-    static void setReferenceVolumeFactor(int phaseIdx, 
+    static void setReferenceVolumeFactor(int phaseIdx,
                                          Scalar val)
-    { 
+    {
         refFormationVolumeFactor_[phaseIdx] = val;
     }
 
@@ -171,7 +171,7 @@ public:
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setOilViscosity(const SplineSamplingPoints &samplePoints)
-    { 
+    {
         oilViscositySpline_.setContainerOfTuples(samplePoints);
         assert(oilViscositySpline_.monotonic());
     }
@@ -186,7 +186,7 @@ public:
         // we use linear interpolation between the first and the
         // second sampling point to avoid a non-monotonic spline...
         Bg0_ = samplePoints[0];
-        mBg0_ = 
+        mBg0_ =
             (samplePoints[1].second - samplePoints[0].second) /
             (samplePoints[1].first - samplePoints[0].first);
 
@@ -228,10 +228,10 @@ public:
     static void initEnd()
     {
         // calculate molar masses
-        
+
         // water is simple: 18 g/mol
         molarMass_[wCompIdx] = 18e-3;
-        
+
         // for gas, we take the density at surface pressure and assume
         // it to be ideal
         Scalar p = 1.0135e5;
@@ -242,11 +242,11 @@ public:
         // finally, for oil phase, we take the molar mass from the
         // spe9 paper
         molarMass_[oCompIdx] = 175e-3; // kg/mol
-        
+
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
         int n = gasFormationFactorSpline_.numSamples()*5;
-        int delta = 
+        int delta =
             (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin())
             /(n + 1);
 
@@ -271,7 +271,7 @@ public:
 
                 Scalar Bg = gasFormationVolumeFactor(p);
                 Scalar Bo = oilFormationVolumeFactor(p);
-                
+
                 std::cerr.precision(16);
                 std::cerr << p << " "
                           << Bo << " "
@@ -329,7 +329,7 @@ public:
         assert(0 <= compIdx && compIdx < numComponents);
         return name[compIdx];
     }
-    
+
     //! \copydoc BaseFluidSystem::molarMass
     static Scalar molarMass(const int compIdx)
     { return molarMass_[compIdx]; }
@@ -345,7 +345,7 @@ public:
     //! \copydoc BaseFluidSystem::isCompressible
     static constexpr bool isCompressible(int phaseIdx)
     { return true; /* all phases are compressible */ }
-    
+
     //! \copydoc BaseFluidSystem::isIdealGas
     static constexpr bool isIdealGas(int phaseIdx)
     { return false; }
@@ -369,18 +369,18 @@ public:
         case oPhaseIdx: {
             Scalar X_oG = fluidState.massFraction(oPhaseIdx, gCompIdx);
             Scalar X_oO = fluidState.massFraction(oPhaseIdx, oCompIdx);
-            Scalar sumX = 
+            Scalar sumX =
                 std::max(1e-20,
                          fluidState.massFraction(oPhaseIdx, oCompIdx)
                          + fluidState.massFraction(oPhaseIdx, wCompIdx)
                          + fluidState.massFraction(oPhaseIdx, gCompIdx));
-           
+
             Scalar pAlpha = oilSaturationPressure(X_oG/sumX);
             Scalar X_oGAlpha = fluidState.massFraction(oPhaseIdx, gCompIdx) / sumX;
             //Scalar X_oOAlpha = 1 - X_oGAlpha;
-            Scalar rho_oAlpha = 
+            Scalar rho_oAlpha =
                 flashOilDensity_(pAlpha)
-                + 
+                +
                 oilCompressibility()
                 *(p - pAlpha);
 
@@ -388,15 +388,15 @@ public:
             Scalar X_oGBeta = flashGasMassFracInOil_(pBeta);
             Scalar X_oOBeta = 1 - X_oGBeta;
             Scalar rho_oBeta = flashOilDensity_(pBeta);
-            
-            Scalar rho_oPure = 
+
+            Scalar rho_oPure =
                 surfaceDensity_[oPhaseIdx]
                 + oilCompressibility()*(p - 1.0135e5);
 
-            Scalar drho_dXoO = 
+            Scalar drho_dXoO =
                 (1.0*rho_oPure - X_oOBeta*rho_oBeta)
                 / (1.0 - X_oOBeta);
-            Scalar drho_dXoG = 
+            Scalar drho_dXoG =
                 (X_oGAlpha*rho_oAlpha - X_oGBeta*rho_oBeta)
                 / (X_oGAlpha - X_oOBeta);
 
@@ -408,7 +408,7 @@ public:
             return std::max(250.0, std::min(1250.0, rho_o));
         }
         }
-        
+
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
 
@@ -426,12 +426,12 @@ public:
         switch (phaseIdx) {
         case wPhaseIdx: return fugCoefficientInWater(compIdx, p);
         case gPhaseIdx: return fugCoefficientInGas(compIdx, p);
-        case oPhaseIdx: return fugCoefficientInOil(compIdx, p); 
+        case oPhaseIdx: return fugCoefficientInOil(compIdx, p);
         }
 
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase or component index");
     }
-    
+
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState>
     static Scalar viscosity(const FluidState &fluidState,
@@ -447,7 +447,7 @@ public:
         case wPhaseIdx: return waterViscosity_(p);
         case gPhaseIdx: return gasViscosity_(p);
         }
-        
+
         DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
     }
 
@@ -465,7 +465,7 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     static Scalar oilFormationVolumeFactor(Scalar pressure)
-    { 
+    {
         return oilFormationVolumeFactorSpline_.eval(pressure,
                                                   /*extrapolate=*/true);
     }
@@ -476,7 +476,7 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     static Scalar gasFormationVolumeFactor(Scalar pressure)
-    { 
+    {
         if (pressure < gasFormationVolumeFactorSpline_.xMin()) {
             return (pressure - Bg0_.first)*mBg0_ + Bg0_.second;
         }
@@ -490,7 +490,7 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     static Scalar gasFormationFactor(Scalar pressure)
-    { 
+    {
         return gasFormationFactorSpline_.eval(pressure,
                                               /*extrapolate=*/true);
     }
@@ -508,7 +508,7 @@ public:
         // water component. for this we use a pseudo-realistic vapor
         // pressure of water as a starting point. (we just set it to
         // 30 kPa to ease interpreting the results.)
-        const Scalar pvWater = 30e3; 
+        const Scalar pvWater = 30e3;
         if (compIdx == oCompIdx ||
             compIdx == gCompIdx)
         {
@@ -542,7 +542,7 @@ public:
         // arbitrarily. we use some pseudo-realistic value for the vapor
         // pressure to ease physical interpretation of the results
         Scalar phi_oO = 20e3/pressure;
-        
+
         if (compIdx == oCompIdx)
             return phi_oO;
         else if (compIdx == wCompIdx)
@@ -554,7 +554,7 @@ public:
         /////////////
         // the rest of this method determines the fugacity coefficient
         // of the gas component:
-        // 
+        //
         // first, retrieve the mole fraction of gas a "flashed" oil
         // would exhibit at the given pressure
         Scalar x_oGf = flashGasMoleFracInOil_(pressure);
@@ -600,7 +600,7 @@ private:
         // the volume formation factors
         return rhoRef * BgRef/Bg;
     }
-    
+
     // density of oil in a flash experiment
     static Scalar flashOilDensity_(Scalar pressure)
     {
@@ -648,7 +648,7 @@ private:
         // calculate the mass fractions of gas and oil
         Scalar X_oG = flashGasMassFracInOil_(pressure);
         //Scalar X_oO = 1 - X_oG;
-        
+
         // which can be converted to mole fractions, given the
         // components' molar masses
         Scalar M_G = molarMass(gCompIdx);
@@ -662,14 +662,14 @@ private:
     {
         // compressibility of water times standard density
         Scalar rhoRef = surfaceDensity_[wPhaseIdx];
-        return rhoRef * 
+        return rhoRef *
             (1 +
              waterCompressibilityScalar_
              * (pressure - 1.0135e5));
     }
 
     static Scalar gasViscosity_(Scalar pressure)
-    { 
+    {
         return gasViscositySpline_.eval(pressure,
                                         /*extrapolate=*/true);
     }
@@ -691,37 +691,37 @@ private:
 
     static Scalar waterCompressibilityScalar_;
     static Scalar waterViscosityScalar_;
-    
+
     static Scalar refFormationVolumeFactor_[numPhases];
     static Scalar surfaceDensity_[numPhases];
     static Scalar molarMass_[numComponents];
 };
 
 template <class Scalar>
-typename BlackOil<Scalar>::Spline 
+typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::oilFormationVolumeFactorSpline_;
 
 template <class Scalar>
-typename BlackOil<Scalar>::Spline 
+typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::oilViscositySpline_;
 
 template <class Scalar>
-typename BlackOil<Scalar>::Spline 
+typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::gasFormationFactorSpline_;
 
 template <class Scalar>
-typename BlackOil<Scalar>::Spline 
+typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::gasFormationVolumeFactorSpline_;
 
 template <class Scalar>
-typename BlackOil<Scalar>::Spline 
+typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::saturationPressureSpline_;
 
 template <class Scalar>
 Scalar BlackOil<Scalar>::bubblePressure_;
 
 template <class Scalar>
-typename BlackOil<Scalar>::Spline 
+typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::gasViscositySpline_;
 
 template <class Scalar>

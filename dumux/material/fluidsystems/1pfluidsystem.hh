@@ -60,7 +60,7 @@ class OneP
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
-    typedef NullParameterCache ParameterCache; 
+    typedef NullParameterCache ParameterCache;
 
     /****************************************
      * Fluid phase related static parameters

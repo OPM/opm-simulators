@@ -111,17 +111,17 @@ public:
      */
     static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     {
-    	// Gauss quadrature rule:
-    	// Interval: [0K; temperature (K)]
-    	// Gauss-Legendre-Integration with variable transformation:
-    	// \int_a^b f(T) dT  \approx (b-a)/2 \sum_i=1^n \alpha_i f( (b-a)/2 x_i + (a+b)/2 )
-    	// with: n=2, legendre -> x_i = +/- \sqrt(1/3), \apha_i=1
-    	// here: a=0, b=actual temperature in Kelvin
-    	// \leadsto h(T) = \int_0^T c_p(T) dT
-    	// 				\approx 0.5 T * (cp( (0.5-0.5*\sqrt(1/3)) T) + cp((0.5+0.5*\sqrt(1/3)) T))
-    	//				= 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
+        // Gauss quadrature rule:
+        // Interval: [0K; temperature (K)]
+        // Gauss-Legendre-Integration with variable transformation:
+        // \int_a^b f(T) dT  \approx (b-a)/2 \sum_i=1^n \alpha_i f( (b-a)/2 x_i + (a+b)/2 )
+        // with: n=2, legendre -> x_i = +/- \sqrt(1/3), \apha_i=1
+        // here: a=0, b=actual temperature in Kelvin
+        // \leadsto h(T) = \int_0^T c_p(T) dT
+        //                 \approx 0.5 T * (cp( (0.5-0.5*\sqrt(1/3)) T) + cp((0.5+0.5*\sqrt(1/3)) T))
+        //                = 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
 
-    	// enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
+        // enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
         return 0.5*temperature*(liquidHeatCapacity(0.2113*temperature, pressure) + liquidHeatCapacity(0.7887*temperature, pressure));
     }
 
@@ -149,7 +149,7 @@ public:
             * (3.978 * Tr1 - 3.958 + 1.555*std::log(p_crit * 1e-5 /*Pa->bar*/ ) )
             / (1.07 - Tr1); /* [J/mol] */
 
-    	/* Variation with temp according to Watson relation eq 7-12.1*/
+        /* Variation with temp according to Watson relation eq 7-12.1*/
         const Scalar Tr2 = temperature/criticalTemperature();
         const Scalar n = 0.375;
         const Scalar DH_vap = DH_v_boil * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);

@@ -113,7 +113,7 @@ public:
     //! \copydoc BaseFluidSystem::isCompressible
     static constexpr bool isCompressible(int phaseIdx)
     {
-        return 
+        return
             (phaseIdx == gPhaseIdx)
             // gases are always compressible
             ? true
@@ -149,7 +149,7 @@ public:
     //! \copydoc BaseFluidSystem::molarMass
     static constexpr Scalar molarMass(int compIdx)
     {
-        return 
+        return
             (compIdx == H2OIdx)
             // gases are always compressible
             ? H2O::molarMass()
@@ -164,7 +164,7 @@ public:
 
     //! \copydoc BaseFluidSystem::density
     template <class FluidState>
-    static Scalar density(const FluidState &fluidState, 
+    static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {

@@ -46,7 +46,7 @@ namespace Dumux
  *
  * \tparam Scalar  The type used for scalar values
  * \tparam Scalar  The component which ought to be tabulated
- * \tparam useVaporPressure If true, tabulate all quantities along the 
+ * \tparam useVaporPressure If true, tabulate all quantities along the
  *                          vapor pressure curve, if false use the pressure range [p_min, p_max]
  */
 template <class Scalar, class RawComponent, bool useVaporPressure=true>

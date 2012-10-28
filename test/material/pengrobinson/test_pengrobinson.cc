@@ -49,8 +49,8 @@ void guessInitial(FluidState &fluidState,
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C3Idx, 0.03);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C6Idx, 0.07);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C10Idx, 0.20);
-        fluidState.setMoleFraction(phaseIdx, FluidSystem::C15Idx, 0.15); 
-        fluidState.setMoleFraction(phaseIdx, FluidSystem::C20Idx, 0.05); 
+        fluidState.setMoleFraction(phaseIdx, FluidSystem::C15Idx, 0.15);
+        fluidState.setMoleFraction(phaseIdx, FluidSystem::C20Idx, 0.05);
     }
     else {
         assert(phaseIdx == FluidSystem::wPhaseIdx);
@@ -94,7 +94,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         // we start at a fluid state with reservoir oil.
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
-                surfaceFluidState.setMoleFraction(phaseIdx, 
+                surfaceFluidState.setMoleFraction(phaseIdx,
                                                   compIdx,
                                                   reservoirFluidState.moleFraction(phaseIdx, compIdx));
             }
@@ -130,7 +130,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
         Scalar fStar = surfaceFluidState.pressure(gPhaseIdx) - refPressure;
         Scalar fPrime = (fStar - f)/eps;
-        
+
         // newton update
         Scalar delta = f/fPrime;
         alpha -= delta;
@@ -138,7 +138,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
             break;
         }
     }
-        
+
     // calculate the final result
     tmpMolarities = molarities;
     tmpMolarities /= alpha;
@@ -181,9 +181,9 @@ int main(int argc, char** argv)
     // parameters
     ////////////
     Scalar T = 273.15 + 20; // 20 deg Celsius
-    FluidSystem::init(/*minTemperature=*/T - 1, 
-                      /*maxTemperature=*/T + 1, 
-                      /*minPressure=*/1.0e4, 
+    FluidSystem::init(/*minTemperature=*/T - 1,
+                      /*maxTemperature=*/T + 1,
+                      /*minPressure=*/1.0e4,
                       /*maxTemperature=*/40.0e6);
 
     // set the parameters for the capillary pressure law
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
         fluidState.setTemperature(T);
         paramCache.updatePhase(fluidState, oPhaseIdx);
         paramCache.updatePhase(fluidState, gPhaseIdx);
-        
+
         Scalar rhoO = FluidSystem::density(fluidState, paramCache, oPhaseIdx);
         Scalar rhoG = FluidSystem::density(fluidState, paramCache, gPhaseIdx);
         fluidState.setDensity(oPhaseIdx, rhoO);
@@ -266,14 +266,14 @@ int main(int argc, char** argv)
         // initial guess for the composition
         guessInitial<FluidSystem>(fluidState, phaseIdx);
     }
-    
+
     typedef Dumux::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
     CFRP::solve(fluidState,
                 paramCache,
                 /*refPhaseIdx=*/oPhaseIdx,
                 /*setViscosity=*/false,
                 /*setEnthalpy=*/false);
-    
+
     ////////////
     // Calculate the total molarities of the components
     ////////////
@@ -313,8 +313,8 @@ int main(int argc, char** argv)
         // "flash" the modified reservoir oil
         Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, curMolarities);
 
-        surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, 
-                                                              surfaceAlpha, 
+        surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState,
+                                                              surfaceAlpha,
                                                               flashFluidState,
                                                               /*guessInitial=*/false);
         std::cout << alpha << " "

@@ -17,7 +17,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file 
+ * \file
  *
  * \brief An implementation of the Parker-Lenhard capillary pressure
  *        hystersis model.

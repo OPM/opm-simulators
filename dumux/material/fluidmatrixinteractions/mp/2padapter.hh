@@ -51,7 +51,7 @@ public:
     {
         // wetting phase does not get anything added
         values[wPhaseIdx] = 0;
- 
+
         // non-wetting phase gets the capillary pressure added
         values[nPhaseIdx] = TwoPLaw::pC(params, fluidState.saturation(wPhaseIdx));
    }
@@ -65,7 +65,7 @@ public:
                             const FluidState &fluidState)
     {
         // wetting phase does not get anything added
-        values[wPhaseIdx] = TwoPLaw::Sw(params, 
+        values[wPhaseIdx] = TwoPLaw::Sw(params,
                                         fluidState.pressure(nPhaseIdx) - fluidState.pressure(wPhaseIdx));
         values[nPhaseIdx] = 1.0 - values[wPhaseIdx];
     }

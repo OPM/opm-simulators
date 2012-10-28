@@ -111,7 +111,7 @@ public:
                 fluidState.setMoleFraction(phaseIdx,
                                            compIdx,
                                            globalMolarities[compIdx]/sumMoles);
-            
+
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 1.0135e5);
 
@@ -145,7 +145,7 @@ public:
         Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-35);
 
         if (tolerance <= 0.0) {
-            tolerance = std::min(1e-10, 
+            tolerance = std::min(1e-10,
                                  Dumux::geometricMean(Scalar(1.0),
                                                       std::numeric_limits<Scalar>::epsilon()));
         }
@@ -327,7 +327,7 @@ protected:
         for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
             absError = std::max(std::abs(b[eqIdx + compIdx]), absError);
         eqIdx += numComponents;
- 
+
         // sum of concentrations are given
         for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
             absError = std::max(std::abs(b[eqIdx + compIdx]), absError);
@@ -353,7 +353,7 @@ protected:
             const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7/(quantityWeight_(fluidState, pvIdx));
 
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
-            assert(std::abs(getQuantity_(fluidState, pvIdx) - (x_i + eps)) 
+            assert(std::abs(getQuantity_(fluidState, pvIdx) - (x_i + eps))
                    <= std::max(1.0, std::abs(x_i))*std::numeric_limits<Scalar>::epsilon()*100);
 
             // compute derivative of the defect
@@ -449,7 +449,7 @@ protected:
             Scalar delta = deltaX[pvIdx];
 
             relError = std::max(relError, std::abs(delta)*quantityWeight_(fluidState, pvIdx));
-            
+
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 25% change in saturation per
                 // iteration

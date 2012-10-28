@@ -64,7 +64,7 @@ public:
         Scalar D = k / (c * PI * R_h) * (temperature / mu);
         return D;
     }
-    
+
     /*!
      * \brief Binary diffusion coefficent [m^2/s] of CO2 in the brine phase.
      *
@@ -76,7 +76,7 @@ public:
         //Diffusion coefficient of CO2 in the brine phase
         return 2e-9;
     }
-    
+
     /*!
      * \brief Returns the _mol_ (!) fraction of CO2 in the liquid
      *        phase and the mol_ (!) fraction of H2O in the gas phase
@@ -95,10 +95,10 @@ public:
      * \param ygH2O mole fraction of water in the gas phase [mol/mol]
      */
     static void calculateMoleFractions(const Scalar temperature,
-                                       const Scalar pg, 
+                                       const Scalar pg,
                                        const Scalar salinity,
                                        const int knownPhaseIdx,
-                                       Scalar &xlCO2, 
+                                       Scalar &xlCO2,
                                        Scalar &ygH2O)
     {
         Scalar A = computeA_(temperature, pg);
@@ -161,14 +161,14 @@ public:
         static const Scalar R = IdealGas::R * 10.; // ideal gas constant with unit bar cm^3 /(K mol)
         Scalar lnPhiCO2, phiCO2;
 
-        lnPhiCO2 = std::log(V / (V - b_CO2)); 
+        lnPhiCO2 = std::log(V / (V - b_CO2));
         lnPhiCO2 += b_CO2 / (V - b_CO2);
         lnPhiCO2 -= 2 * a_CO2 / (R * std::pow(T, 1.5) * b_CO2) * log((V + b_CO2) / V);
-        lnPhiCO2 += 
-            a_CO2 * b_CO2 
-            / (R 
-               * std::pow(T, 1.5) 
-               * b_CO2 
+        lnPhiCO2 +=
+            a_CO2 * b_CO2
+            / (R
+               * std::pow(T, 1.5)
+               * b_CO2
                * b_CO2)
             * (std::log((V + b_CO2) / V)
                - b_CO2 / (V + b_CO2));

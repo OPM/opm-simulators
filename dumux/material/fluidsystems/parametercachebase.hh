@@ -49,7 +49,7 @@ public:
     {}
 
     /*!
-     * \brief Update the quantities of the parameter cache for all phases 
+     * \brief Update the quantities of the parameter cache for all phases
      *
      * \param fluidState The representation of the thermodynamic system of interest.
      * \param exceptQuantities The quantities of the fluid state that have not changed since the last update.

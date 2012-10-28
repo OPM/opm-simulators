@@ -67,7 +67,7 @@ class H2ON2LiquidPhase
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
     typedef NullParameterCache ParameterCache;
- 
+
     /****************************************
      * Fluid phase related static parameters
      ****************************************/
@@ -280,7 +280,7 @@ public:
             // See: Ochs 2008
             Scalar rholH2O = H2O::liquidDensity(T, p);
             Scalar clH2O = rholH2O/H2O::molarMass();
-            
+
             // this assumes each nitrogen molecule displaces exactly one
             // water molecule in the liquid
             return
@@ -299,10 +299,10 @@ public:
                             int phaseIdx)
     {
         assert(phaseIdx == lPhaseIdx);
-        
+
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
-        
+
         // assume pure water for the liquid phase
         return H2O::liquidViscosity(T, p);
     }
@@ -337,7 +337,7 @@ public:
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
-     
+
         return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
     }
 

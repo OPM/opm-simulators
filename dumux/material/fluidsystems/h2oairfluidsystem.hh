@@ -309,7 +309,7 @@ public:
                     IdealGas::molarDensity(T, p)
                     * fluidState.averageMolarMass(gPhaseIdx)
                     / std::max(1e-5, sumMoleFrac);
-            
+
             Scalar partialPressureH2O =
                 fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
                 fluidState.pressure(gPhaseIdx);

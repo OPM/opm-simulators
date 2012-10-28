@@ -37,7 +37,7 @@ namespace Dumux
  * \brief Module for the modular fluid state which stores the
  *        phase fugacity coefficients explicitly.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateExplicitFugacityModule
@@ -107,14 +107,14 @@ protected:
  * \brief Module for the modular fluid state which stores the phase
  *        fugacity coefficients explicitly assuming immiscibility.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateImmiscibleFugacityModule
 {
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    static_assert((int) numPhases == (int) numComponents, 
+    static_assert((int) numPhases == (int) numComponents,
                   "The number of phases must be the same as the number of (pseudo-) components if you assume immiscibility");
 
 public:
@@ -175,7 +175,7 @@ protected:
  * \brief Module for the modular fluid state which does not store the
  *        fugacitys but throws Dune::InvalidState instead.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateNullFugacityModule

@@ -63,7 +63,7 @@ public:
         compIdx_ = compIdx;
         value_ = value;
     }
-    
+
     /*!
      * \brief Returns the index of the fluid phase for which the
      *        auxiliary constraint is specified.
@@ -230,7 +230,7 @@ public:
         }
 
         assert(presentPhases + numAuxConstraints == numComponents);
-        
+
         // assemble the equations expressing the assumption that the
         // sum of all mole fractions in each phase must be 1 for the
         // phases present.

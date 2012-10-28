@@ -74,7 +74,7 @@ public:
 
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar Sabs = state.saturation(phaseIdx);
-            Scalar S = 
+            Scalar S =
                 (Sabs - params.residSat(phaseIdx))
                 / (1.0 - sumResidSat + params.residSat(phaseIdx));
 
@@ -111,7 +111,7 @@ public:
             Scalar Sabs = state.saturation(phaseIdx);
             Scalar S = (Sabs - params.residSat(phaseIdx))
                 / (1.0 - sumResidSat + params.residSat(phaseIdx));
-            
+
             values[phaseIdx] = std::max(std::min(S,1.0),0.0);
         }
     }

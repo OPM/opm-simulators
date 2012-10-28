@@ -36,7 +36,7 @@ namespace Dumux
  * \brief Module for the modular fluid state which stores the
  *       saturations explicitly.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateExplicitSaturationModule
@@ -92,7 +92,7 @@ protected:
  * \brief Module for the modular fluid state which does not  the
  *        saturations but throws Dune::InvalidState instead.
  */
-template <class Scalar, 
+template <class Scalar,
           class FluidSystem,
           class Implementation>
 class FluidStateNullSaturationModule

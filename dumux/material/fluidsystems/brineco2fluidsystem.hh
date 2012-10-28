@@ -70,7 +70,7 @@ public:
 
     //! \copydoc BaseFluidSystem::ParameterCache
     typedef Dumux::NullParameterCache ParameterCache;
-    
+
     /****************************************
      * Fluid phase related static parameters
      ****************************************/
@@ -251,7 +251,7 @@ public:
             Scalar sumx = xlBrine + xlCO2;
             xlBrine /= sumx;
             xlCO2 /= sumx;
-       
+
             Scalar result = liquidDensity_(temperature,
                                            pressure,
                                            xlBrine,
@@ -271,7 +271,7 @@ public:
             Scalar sumx = xgBrine + xgCO2;
             xgBrine /= sumx;
             xgCO2 /= sumx;
-       
+
             Scalar result = gasDensity_(temperature,
                                         pressure,
                                         xgBrine,
@@ -336,9 +336,9 @@ public:
         // could use some cleanup.
         Scalar xlH2O, xgH2O;
         Scalar xlCO2, xgCO2;
-        BinaryCoeffBrineCO2::calculateMoleFractions(temperature, 
-                                                    pressure, 
-                                                    Brine_IAPWS::salinity, 
+        BinaryCoeffBrineCO2::calculateMoleFractions(temperature,
+                                                    pressure,
+                                                    Brine_IAPWS::salinity,
                                                     /*knownPhaseIdx=*/-1,
                                                     xlCO2,
                                                     xgH2O);
@@ -384,7 +384,7 @@ public:
      * \copydoc BaseFluidSystem::enthalpy
      */
     template <class FluidState>
-    static Scalar enthalpy(const FluidState &fluidState, 
+    static Scalar enthalpy(const FluidState &fluidState,
                            const ParameterCache &paramCache,
                            int phaseIdx)
     {
