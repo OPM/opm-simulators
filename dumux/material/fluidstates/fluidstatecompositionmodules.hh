@@ -29,6 +29,7 @@
 #include <dune/common/exceptions.hh>
 
 #include <algorithm>
+#include <cmath>
 
 namespace Dumux
 {
