@@ -120,14 +120,14 @@ public:
 protected:
     static Scalar regularizedSqrt_(Scalar x)
     {
-        const Scalar xMin = 1e-2;
-        const Scalar sqrtXMin = std::sqrt(xMin);
-        const Scalar fPrimeXMin = 1.0/(2*std::sqrt(xMin));
-        const Scalar fPrime0 = 2*fPrimeXMin;
+        static const Scalar xMin = 1e-2;
+        static const Scalar sqrtXMin = std::sqrt(xMin);
+        static const Scalar fPrimeXMin = 1.0/(2*std::sqrt(xMin));
+        static const Scalar fPrime0 = 2*fPrimeXMin;
         typedef Dumux::Spline<Scalar, 2> Spline;
-        static Spline sqrtRegSpline(0, xMin, // x0, x1
-                                    0, sqrtXMin, // y0, y1
-                                    fPrime0, fPrimeXMin); // m0, m1
+        static const Spline sqrtRegSpline(0, xMin, // x0, x1
+                                          0, sqrtXMin, // y0, y1
+                                          fPrime0, fPrimeXMin); // m0, m1
 
         if (x > xMin)
             return std::sqrt(x);

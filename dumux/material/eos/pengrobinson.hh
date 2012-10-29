@@ -383,7 +383,6 @@ protected:
             };
         }
 
-        std::cout << "oops:" << maxVm - minVm << "\n";
         assert(false);
     }
 
