@@ -30,8 +30,9 @@ namespace Opm
 
     /// Construct solver.
     /// \param[in] grid      A 2d or 3d grid.
-    TransportModelTracerTof::TransportModelTracerTof(const UnstructuredGrid& grid)
-        : grid_(grid)
+    TransportModelTracerTof::TransportModelTracerTof(const UnstructuredGrid& grid,
+                                                     const bool use_multidim_upwind)
+        : grid_(grid), use_multidim_upwind_(use_multidim_upwind)
     {
     }
 
@@ -94,7 +95,11 @@ namespace Opm
             // Add flux to upwind_term or downwind_flux, if interior.
             if (other != -1) {
                 if (flux < 0.0) {
-                    upwind_term  += flux*tof_[other];
+                    if (use_multidim_upwind_) {
+                        upwind_term += flux*multidimUpwindTof(f, other);
+                    } else {
+                        upwind_term += flux*tof_[other];
+                    }
                 } else {
                     downwind_flux += flux;
                 }
@@ -117,6 +122,10 @@ namespace Opm
     }
 
 
-
+    double TransportModelTracerTof::multidimUpwindTof(const int face, const int upwind_cell) const
+    {
+        // Just SPU for now...
+        return tof_[upwind_cell];
+    }
 
 } // namespace Opm
