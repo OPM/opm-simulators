@@ -40,7 +40,6 @@ template<class Scalar, class CO2Tables, bool verbose = true>
 class Brine_CO2 {
     typedef Dumux::H2O<Scalar> H2O;
     typedef Dumux::CO2<Scalar, CO2Tables> CO2;
-    typedef Dumux::Brine<Scalar,H2O> Brine;
     typedef Dumux::IdealGas<Scalar> IdealGas;
     static const int lPhaseIdx = 0; // index of the liquid phase
     static const int gPhaseIdx = 1; // index of the gas phase

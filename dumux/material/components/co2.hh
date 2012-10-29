@@ -48,7 +48,6 @@ template <class Scalar, class CO2Tables>
 class CO2 : public Component<Scalar, CO2<Scalar, CO2Tables> >
 {
     static constexpr Scalar R = Constants<Scalar>::R;
-    typedef typename Dumux::IdealGas<Scalar> IdealGas;
 
     static bool warningPrinted;
 
