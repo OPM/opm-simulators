@@ -168,6 +168,7 @@ main(int argc, char** argv)
     if (output) {
         std::string tof_filename = output_dir + "/tof.txt";
         std::ofstream tof_stream(tof_filename.c_str());
+        tof_stream.precision(16);
         std::copy(tof.begin(), tof.end(), std::ostream_iterator<double>(tof_stream, "\n"));
     }
 }
