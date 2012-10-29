@@ -144,9 +144,28 @@ case "$TEST_TYPE" in
 
         ;;
 
+    "--restart")
+        RND="$RANDOM"
+        "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
+        RET="${PIPESTATUS[0]}"
+        if test "$RET" != "0"; then
+            echo "Executing the binary failed!"
+            rm "test-$RND.log"
+            exit 1
+        fi
+        RESTART_TIME=$(grep "Serialize" "test-$RND.log" | tail -n 1 | sed "s/.*time=\([0-9.e+\-]*\).*/\1/")
+        rm "test-$RND.log"
+        
+        if ! "$TEST_BINARY" $TEST_ARGS --restart-time="$RESTART_TIME"; then
+            echo "Restarting $TEST_BINARY failed"
+            exit 1;
+        fi
+        exit 0
+        ;;        
+
     "--parameters")
         HELP_MSG="$($TEST_BINARY --help)"
-        if test "$(echo $HELP_MSG | grep -i usage == '')"; then
+        if test "$(echo $HELP_MSG | grep -i usage)" == ''; then
             echo "$TEST_BINARY did not accept '--help' parameter"
             exit 1
         fi
@@ -162,7 +181,27 @@ EndTime=100
 InitialTimeStepSize=100
 UndefinedParam="blubb"
 EOF
-        $TEST_BINARY --parameter-file="paramfile-$RND.ini"
+        if ! $TEST_BINARY --parameter-file="paramfile-$RND.ini" > /dev/null; then
+            echo "$TEST_BINARY does not correctly read a parameter file"
+            exit 1
+        elif $TEST_BINARY --parameter-file="foobar.ini" > /dev/null; then
+            echo "$TEST_BINARY does not abort even though the specified parameter file does not exist"
+            exit 1
+        elif ! $TEST_BINARY --foo --end-time=1 > /dev/null; then
+            echo "$TEST_BINARY des not accept a flag parameters"
+            exit 1
+        fi
+
+        # test some invalid parameter names
+        for PARAM in foo -- -0foo --0foo --foo--bar --foo- -foo --foo-bar§=abc ; do
+            if $TEST_BINARY "$PARAM" --end-time=100 > /dev/null; then
+                echo "$TEST_BINARY accepted invalid command line option '$PARAM'"
+                exit 1
+            fi
+        done
+        echo "Test successful"
+        exit 0
+
         ;;
 
     "--plain")
