@@ -124,9 +124,12 @@ main(int argc, char** argv)
     bool use_dg = param.getDefault("use_dg", false);
     int dg_degree = -1;
     bool use_cvi = false;
+    bool use_multidim_upwind = false;
     if (use_dg) {
         dg_degree = param.getDefault("dg_degree", 0);
         use_cvi = param.getDefault("use_cvi", false);
+    } else {
+        use_multidim_upwind = param.getDefault("use_multidim_upwind", false);
     }
 
     // Write parameters used for later reference.
@@ -157,7 +160,7 @@ main(int argc, char** argv)
         Opm::TransportModelTracerTofDiscGal tofsolver(grid, use_cvi);
         tofsolver.solveTof(&flux[0], &porevol[0], &src[0], dg_degree, tof);
     } else {
-        Opm::TransportModelTracerTof tofsolver(grid);
+        Opm::TransportModelTracerTof tofsolver(grid, use_multidim_upwind);
         tofsolver.solveTof(&flux[0], &porevol[0], &src[0], tof);
     }
     transport_timer.stop();
