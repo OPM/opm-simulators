@@ -64,6 +64,10 @@ namespace Opm
         tof.resize(grid_.number_of_cells);
         std::fill(tof.begin(), tof.end(), 0.0);
         tof_ = &tof[0];
+        if (use_multidim_upwind_) {
+            face_tof_.resize(grid_.number_of_faces);
+            std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
+        }
         reorderAndTransport(grid_, darcyflux);
     }
 
@@ -96,7 +100,9 @@ namespace Opm
             if (other != -1) {
                 if (flux < 0.0) {
                     if (use_multidim_upwind_) {
-                        upwind_term += flux*multidimUpwindTof(f, other);
+                        const double ftof = multidimUpwindTof(f, other);
+                        face_tof_[f] = ftof;
+                        upwind_term += flux*ftof;
                     } else {
                         upwind_term += flux*tof_[other];
                     }
@@ -124,8 +130,63 @@ namespace Opm
 
     double TransportModelTracerTof::multidimUpwindTof(const int face, const int upwind_cell) const
     {
-        // Just SPU for now...
-        return tof_[upwind_cell];
+        // Implements multidim upwind according to
+        // "Multidimensional upstream weighting for multiphase transport on general grids"
+        // by Keilegavlen, Kozdon, Mallison.
+        // However, that article does not give a 3d extension other than noting that using
+        // multidimensional upwinding in the XY-plane and not in the Z-direction may be
+        // a good idea. We have here attempted some generalization, by looking at all
+        // face-neighbours across edges as upwind candidates, and giving them all uniform weight.
+        // This will over-weight the immediate upstream cell value in an extruded 2d grid with
+        // one layer (top and bottom no-flow faces will enter the computation) compared to the
+        // original 2d case. Improvements are welcome.
+
+        // Identify the adjacent faces of the upwind cell.
+        const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
+        const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[face + 1];
+        ASSERT(face_nodes_end - face_nodes_beg == 2 || grid_.dimensions != 2);
+        adj_faces_.clear();
+        for (int hf = grid_.cell_facepos[upwind_cell]; hf < grid_.cell_facepos[upwind_cell + 1]; ++hf) {
+            const int f = grid_.cell_faces[hf];
+            if (f != face) {
+                const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
+                const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
+                // Find out how many vertices they have in common.
+                // Using simple linear searches since sets are small.
+                int num_common = 0;
+                for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
+                    num_common += std::count(face_nodes_beg, face_nodes_end, *f_iter);
+                }
+                if (num_common == grid_.dimensions - 1) {
+                    // Neighbours over an edge (3d) or vertex (2d).
+                    adj_faces_.push_back(f);
+                } else {
+                    ASSERT(num_common == 0);
+                }
+            }
+        }
+
+        // Indentify adjacent faces with inflows, compute omega_star, omega,
+        // add up contributions.
+        const int num_adj = adj_faces_.size();
+        ASSERT(num_adj == face_nodes_end - face_nodes_beg);
+        const double flux_face = std::fabs(darcyflux_[face]);
+        double tof = 0.0;
+        for (int ii = 0; ii < num_adj; ++ii) {
+            const int f = adj_faces_[ii];
+            const double influx_f = (grid_.face_cells[2*f] == upwind_cell) ? -darcyflux_[f] : darcyflux_[f];
+            const double omega_star = influx_f/flux_face;
+            // SPU
+            // const double omega = 0.0;
+            // TMU
+            // const double omega = omega_star > 0.0 ? std::min(omega_star, 1.0) :  0.0;
+            // SMU
+            const double omega = omega_star > 0.0 ? omega_star/(1.0 + omega_star) : 0.0;
+            tof += (1.0 - omega)*tof_[upwind_cell] + omega*face_tof_[f];
+        }
+
+        // For now taking a simple average.
+        return tof/double(num_adj);
     }
 
 } // namespace Opm
