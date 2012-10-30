@@ -37,12 +37,20 @@ namespace Opm
             if (wells) {
                 const int nw = wells->number_of_wells;
                 bhp_.resize(nw);
-                // Initialize bhp to be pressure in first perforation cell.
+                // Initialize bhp to be target pressure
+                // if bhp-controlled well, otherwise set
+                // to pressure in first perforation cell.
                 for (int w = 0; w < nw; ++w) {
-                    const int cell = wells->well_cells[wells->well_connpos[w]];
-                    bhp_[w] = state.pressure()[cell];
+                    const WellControls* ctrl = wells->ctrls[w];
+                    if (ctrl->type[ctrl->current] == BHP) {
+                        bhp_[w] = ctrl->target[ctrl->current];
+                    } else {
+                        const int cell = wells->well_cells[wells->well_connpos[w]];
+                        bhp_[w] = state.pressure()[cell];
+                    }
                 }
-                perfrates_.resize(wells->well_connpos[nw]);
+                perfrates_.resize(wells->well_connpos[nw], 0.0);
+                perfpress_.resize(wells->well_connpos[nw], -1e100);
             }
         }
 
@@ -54,9 +62,14 @@ namespace Opm
         std::vector<double>& perfRates() { return perfrates_; }
         const std::vector<double>& perfRates() const { return perfrates_; }
 
+        /// One pressure per well connection.
+        std::vector<double>& perfPress() { return perfpress_; }
+        const std::vector<double>& perfPress() const { return perfpress_; }
+
     private:
         std::vector<double> bhp_;
         std::vector<double> perfrates_;
+        std::vector<double> perfpress_;
     };
 
 } // namespace Opm

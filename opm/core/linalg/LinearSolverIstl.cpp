@@ -26,6 +26,10 @@
 
 #include <opm/core/utility/have_boost_redef.hpp>
 
+// Silence compatibility warning from DUNE headers since we don't use
+// the deprecated member anyway (in this compilation unit)
+#define DUNE_COMMON_FIELDVECTOR_SIZE_IS_METHOD 1
+
 // TODO: clean up includes.
 #include <dune/common/deprecated.hh>
 #include <dune/istl/bvector.hh>

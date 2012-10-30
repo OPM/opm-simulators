@@ -74,13 +74,10 @@ namespace Opm
         /// vertical stack, that do not interact with other columns (for
         /// gravity segregation.
         /// \param[in] columns           Vector of cell-columns.
-        /// \param[in] porevolume0       Array of pore volumes at start of timestep.
         /// \param[in] dt                Time step.
         /// \param[in, out] saturation   Phase saturations.
         /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* pressure,
-                          const double* porevolume0,
                           const double dt,
                           std::vector<double>& saturation,
                           std::vector<double>& surfacevol);

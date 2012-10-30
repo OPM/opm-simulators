@@ -47,7 +47,13 @@ namespace Opm
         BlackoilPvtProperties();
 
         /// Initialize from deck.
-        void init(const EclipseGridParser& deck, const int samples = 16);
+        /// \param deck     An input deck.
+        /// \param samples  If greater than zero, indicates the number of
+        ///                 uniform samples to be taken from monotone spline
+        ///                 curves interpolating the fluid data.
+        ///                 Otherwise, interpolate linearly in the original
+        ///                 data without fitting a spline.
+        void init(const EclipseGridParser& deck, const int samples);
 
         /// Number of active phases.
         int numPhases() const;
@@ -64,7 +70,7 @@ namespace Opm
 
         /// Densities of stock components at surface conditions.
         /// \return  Array of size numPhases().
-	const double* surfaceDensities() const;
+        const double* surfaceDensities() const;
 
         /// Viscosity as a function of p and z.
         void mu(const int n,
@@ -105,11 +111,11 @@ namespace Opm
 
         PhaseUsage phase_usage_;
 
-	int region_number_;
+        int region_number_;
 
         std::vector<std::tr1::shared_ptr<SinglePvtInterface> > props_;
 
-	double densities_[MaxNumPhases];
+        double densities_[MaxNumPhases];
         mutable std::vector<double> data1_;
         mutable std::vector<double> data2_;
     };

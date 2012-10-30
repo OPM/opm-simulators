@@ -62,7 +62,7 @@ namespace Opm
         /// \return Array of P viscosity values.
         virtual const double* viscosity() const = 0;
 
-        /// Densities of fluid phases at surface conditions.
+        /// Densities of fluid phases at reservoir conditions.
         /// \return Array of P density values.
         virtual const double* density() const = 0;
 
@@ -109,9 +109,9 @@ namespace Opm
                               double* pc,
                               double* dpcds) const = 0;
 
-	/// Obtain the range of allowable saturation values.
-	/// In cell cells[i], saturation of phase p is allowed to be
-	/// in the interval [smin[i*P + p], smax[i*P + p]].
+        /// Obtain the range of allowable saturation values.
+        /// In cell cells[i], saturation of phase p is allowed to be
+        /// in the interval [smin[i*P + p], smax[i*P + p]].
         /// \param[in]  n      Number of data points.
         /// \param[in]  cells  Array of n cell indices.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.

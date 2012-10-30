@@ -230,6 +230,14 @@ namespace Opm
 
 
 
+    /// Construct from existing wells object.
+    WellsManager::WellsManager(struct Wells* W)
+        : w_(clone_wells(W))
+    {
+    }
+
+
+
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseGridParser& deck,
                                const UnstructuredGrid& grid,
@@ -548,7 +556,7 @@ namespace Opm
                             cf[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
                         } else if (wci_line.injector_type_[0] == 'G') {
                             if (!pu.phase_used[BlackoilPhases::Vapour]) {
-                                THROW("Water phase not used, yet found water-injecting well.");
+                                THROW("Gas phase not used, yet found gas-injecting well.");
                             }
                             cf[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                         }
@@ -720,32 +728,31 @@ namespace Opm
 #endif
 
         if (deck.hasField("WELOPEN")) {
-        	const WELOPEN& welopen = deck.getWELOPEN();
-
-        	for (size_t i = 0; i < welopen.welopen.size(); ++i) {
-        		WelopenLine line = welopen.welopen[i];
-        		std::string wellname = line.well_;
-        		std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
-        		if (it == well_names_to_index.end()) {
-        			THROW("Trying to open/shut well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
-        		}
-        		int index = it->second;
-        		if (line.openshutflag_ == "SHUT") {
-        			// We currently don't care if the well is open or not.
-        			/// \TODO Should this perhaps be allowed? I.e. should it be if(well_shut) { shutwell(); } else { /* do nothing*/ }?
-        			//ASSERT(w_->ctrls[index]->current < 0);
-        		} else if (line.openshutflag_ == "OPEN") {
-        			//ASSERT(w_->ctrls[index]->current >= 0);
-        		} else {
-        			THROW("Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
-        		}
-
-        		// We revert back to it's original control.
-        		// Note that this is OK as ~~ = id.
-        		w_->ctrls[index]->current = ~w_->ctrls[index]->current;
-
-
-        	}
+            const WELOPEN& welopen = deck.getWELOPEN();
+            for (size_t i = 0; i < welopen.welopen.size(); ++i) {
+                WelopenLine line = welopen.welopen[i];
+                std::string wellname = line.well_;
+                std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
+                if (it == well_names_to_index.end()) {
+                    THROW("Trying to open/shut well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
+                }
+                const int index = it->second;
+                if (line.openshutflag_ == "SHUT") {
+                    int& cur_ctrl = w_->ctrls[index]->current;
+                    if (cur_ctrl >= 0) {
+                        cur_ctrl = ~cur_ctrl;
+                    }
+                    ASSERT(w_->ctrls[index]->current < 0);
+                } else if (line.openshutflag_ == "OPEN") {
+                    int& cur_ctrl = w_->ctrls[index]->current;
+                    if (cur_ctrl < 0) {
+                        cur_ctrl = ~cur_ctrl;
+                    }
+                    ASSERT(w_->ctrls[index]->current >= 0);
+                } else {
+                    THROW("Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
+                }
+            }
         }
 
         // Build the well_collection_ well group hierarchy.

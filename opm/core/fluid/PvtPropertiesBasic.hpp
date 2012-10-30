@@ -38,11 +38,11 @@ namespace Opm
         PvtPropertiesBasic();
 
         /// Initialize from parameters.
-	/// The following parameters are accepted (defaults):
-	///    num_phases         (2)          Must be 1, 2 or 3.
-	///    rho1 [rho2, rho3]  (1.0e3)      Density in kg/m^3
-	///    mu1 [mu2, mu3]     (1.0)        Viscosity in cP
-	void init(const parameter::ParameterGroup& param);
+        /// The following parameters are accepted (defaults):
+        ///    num_phases         (2)          Must be 1, 2 or 3.
+        ///    rho1 [rho2, rho3]  (1.0e3)      Density in kg/m^3
+        ///    mu1 [mu2, mu3]     (1.0)        Viscosity in cP
+        void init(const parameter::ParameterGroup& param);
 
         /// Initialize from arguments.
         /// Basic multi phase fluid pvt properties.
@@ -55,7 +55,7 @@ namespace Opm
 
         /// Densities of stock components at surface conditions.
         /// \return  Array of size numPhases().
-	const double* surfaceDensities() const;
+        const double* surfaceDensities() const;
 
         /// Viscosity as a function of p and z.
         void mu(const int n,
@@ -90,9 +90,9 @@ namespace Opm
                   double* output_dRdp) const;
 
     private:
-	std::vector<double> density_;
-	std::vector<double> viscosity_;
-	std::vector<double> formation_volume_factor_;
+        std::vector<double> density_;
+        std::vector<double> viscosity_;
+        std::vector<double> formation_volume_factor_;
     };
 
 }

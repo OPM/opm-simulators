@@ -37,7 +37,7 @@ namespace Opm
 
         /// Initialize from deck and grid.
         /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the 
+        /// \param  grid         Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         void init(const EclipseGridParser& deck,

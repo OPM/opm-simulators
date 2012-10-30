@@ -26,20 +26,20 @@ namespace Opm
 {
 
     BlackoilPropertiesBasic::BlackoilPropertiesBasic(const parameter::ParameterGroup& param,
-						     const int dim,
-						     const int num_cells)
+                                                     const int dim,
+                                                     const int num_cells)
     {
-	double poro = param.getDefault("porosity", 1.0);
-	using namespace Opm::unit;
-	using namespace Opm::prefix;
-	double perm = param.getDefault("permeability", 100.0)*milli*darcy;
+        double poro = param.getDefault("porosity", 1.0);
+        using namespace Opm::unit;
+        using namespace Opm::prefix;
+        double perm = param.getDefault("permeability", 100.0)*milli*darcy;
         rock_.init(dim, num_cells, poro, perm);
-	pvt_.init(param);
+        pvt_.init(param);
         satprops_.init(param);
-	if (pvt_.numPhases() != satprops_.numPhases()) {
-	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
-	}
+        if (pvt_.numPhases() != satprops_.numPhases()) {
+            THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+        }
     }
 
     BlackoilPropertiesBasic::~BlackoilPropertiesBasic()
@@ -90,11 +90,11 @@ namespace Opm
     /// \param[out] dmudp  If non-null: array of nP viscosity derivative values,
     ///                    array must be valid before calling.
     void BlackoilPropertiesBasic::viscosity(const int n,
-					    const double* p,
-					    const double* z,
-					    const int* /*cells*/,
-					    double* mu,
-					    double* dmudp) const
+                                            const double* p,
+                                            const double* z,
+                                            const int* /*cells*/,
+                                            double* mu,
+                                            double* dmudp) const
     {
         if (dmudp) {
             THROW("BlackoilPropertiesBasic::viscosity()  --  derivatives of viscosity not yet implemented.");
@@ -114,16 +114,16 @@ namespace Opm
     ///                    array must be valid before calling. The matrices are output
     ///                    in Fortran order.
     void BlackoilPropertiesBasic::matrix(const int n,
-					 const double* /*p*/,
-					 const double* /*z*/,
-					 const int* /*cells*/,
-					 double* A,
-					 double* dAdp) const
+                                         const double* /*p*/,
+                                         const double* /*z*/,
+                                         const int* /*cells*/,
+                                         double* A,
+                                         double* dAdp) const
     {
-	const int np = numPhases();
-	ASSERT(np <= 2);
-	double B[2]; // Must be enough since component classes do not handle more than 2.
-	pvt_.B(1, 0, 0, B);
+        const int np = numPhases();
+        ASSERT(np <= 2);
+        double B[2]; // Must be enough since component classes do not handle more than 2.
+        pvt_.B(1, 0, 0, B);
         // Compute A matrix
 // #pragma omp parallel for
         for (int i = 0; i < n; ++i) {
@@ -152,8 +152,8 @@ namespace Opm
     ///                    of a call to the method matrix().
     /// \param[out] rho    Array of nP density values, array must be valid before calling.
     void BlackoilPropertiesBasic::density(const int n,
-					  const double* A,
-					  double* rho) const
+                                          const double* A,
+                                          double* rho) const
     {
         const int np = numPhases();
         const double* sdens = pvt_.surfaceDensities();
@@ -186,10 +186,10 @@ namespace Opm
     ///                           m_{ij} = \frac{dkr_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void BlackoilPropertiesBasic::relperm(const int n,
-					  const double* s,
-					  const int* /*cells*/,
-					  double* kr,
-					  double* dkrds) const
+                                          const double* s,
+                                          const int* /*cells*/,
+                                          double* kr,
+                                          double* dkrds) const
     {
         satprops_.relperm(n, s, kr, dkrds);
     }
@@ -205,10 +205,10 @@ namespace Opm
     ///                           m_{ij} = \frac{dpc_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
     void BlackoilPropertiesBasic::capPress(const int n,
-					   const double* s,
-					   const int* /*cells*/,
-					   double* pc,
-					   double* dpcds) const
+                                           const double* s,
+                                           const int* /*cells*/,
+                                           double* pc,
+                                           double* dpcds) const
     {
         satprops_.capPress(n, s, pc, dpcds);
     }
@@ -226,7 +226,7 @@ namespace Opm
                                            double* smin,
                                            double* smax) const
     {
-	satprops_.satRange(n, smin, smax);
+        satprops_.satRange(n, smin, smax);
     }
 
 

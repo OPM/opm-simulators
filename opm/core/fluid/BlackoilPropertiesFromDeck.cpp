@@ -19,6 +19,7 @@
 
 #include <opm/core/fluid/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+
 namespace Opm
 {
 
@@ -26,15 +27,19 @@ namespace Opm
                                                            const UnstructuredGrid& grid,
                                                            bool init_rock)
     {
-        if (init_rock){
+       if (init_rock){
             rock_.init(deck, grid);
         }
-        pvt_.init(deck);
-        satprops_.init(deck, grid);
-	if (pvt_.numPhases() != satprops_.numPhases()) {
-	    THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
-		  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
-	}
+        pvt_.init(deck, 200);
+        SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
+            = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
+        satprops_.reset(ptr);
+        ptr->init(deck, grid, 200);
+
+        if (pvt_.numPhases() != satprops_->numPhases()) {
+            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
+        }
     }
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
@@ -45,13 +50,56 @@ namespace Opm
         if(init_rock){
             rock_.init(deck, grid);
         }
-        const int samples = param.getDefault("dead_tab_size", 1025);
-        pvt_.init(deck, samples);
-        satprops_.init(deck, grid, param);
 
-        if (pvt_.numPhases() != satprops_.numPhases()) {
-            THROW("BlackoilPropertiesBasic::BlackoilPropertiesBasic() - Inconsistent number of phases in pvt data ("
-                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
+        const int pvt_samples = param.getDefault("pvt_tab_size", 200);
+        pvt_.init(deck, pvt_samples);
+
+        // Unfortunate lack of pointer smartness here...
+        const int sat_samples = param.getDefault("sat_tab_size", 200);
+        std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
+        if (sat_samples > 1) {
+            if (threephase_model == "stone2") {
+                SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncStone2Uniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else if (threephase_model == "simple") {
+                SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else if (threephase_model == "gwseg") {
+                SaturationPropsFromDeck<SatFuncGwsegUniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncGwsegUniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else {
+                THROW("Unknown threephase_model: " << threephase_model);
+            }
+        } else {
+            if (threephase_model == "stone2") {
+                SaturationPropsFromDeck<SatFuncStone2Nonuniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncStone2Nonuniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else if (threephase_model == "simple") {
+                SaturationPropsFromDeck<SatFuncSimpleNonuniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncSimpleNonuniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else if (threephase_model == "gwseg") {
+                SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
+                    = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
+                satprops_.reset(ptr);
+                ptr->init(deck, grid, sat_samples);
+            } else {
+                THROW("Unknown threephase_model: " << threephase_model);
+            }
+        }
+
+        if (pvt_.numPhases() != satprops_->numPhases()) {
+            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
         }
     }
 
@@ -256,7 +304,7 @@ namespace Opm
                                              double* kr,
                                              double* dkrds) const
     {
-        satprops_.relperm(n, s, cells, kr, dkrds);
+        satprops_->relperm(n, s, cells, kr, dkrds);
     }
 
 
@@ -275,7 +323,7 @@ namespace Opm
                                               double* pc,
                                               double* dpcds) const
     {
-        satprops_.capPress(n, s, cells, pc, dpcds);
+        satprops_->capPress(n, s, cells, pc, dpcds);
     }
 
 
@@ -291,7 +339,7 @@ namespace Opm
                                               double* smin,
                                               double* smax) const
     {
-	satprops_.satRange(n, cells, smin, smax);
+        satprops_->satRange(n, cells, smin, smax);
     }
 
 

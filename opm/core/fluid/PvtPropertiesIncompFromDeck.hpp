@@ -39,14 +39,14 @@ namespace Opm
         PvtPropertiesIncompFromDeck();
 
         /// Initialize from deck.
-	void init(const EclipseGridParser& deck);
+        void init(const EclipseGridParser& deck);
 
         /// Number of active phases.
         int numPhases() const;
 
         /// Densities of stock components at surface conditions.
         /// \return  Array of size numPhases().
-	const double* surfaceDensities() const;
+        const double* surfaceDensities() const;
 
         /// Densities of stock components at reservoir conditions.
         /// Note: a reasonable question to ask is why there can be
@@ -58,15 +58,15 @@ namespace Opm
         /// reporting and using data given in terms of surface values,
         /// we need to handle this difference.
         /// \return  Array of size numPhases().
-	const double* reservoirDensities() const;
+        const double* reservoirDensities() const;
 
         /// Viscosities.
         const double* viscosity() const;
 
     private:
-	std::tr1::array<double, 2> surface_density_;
-	std::tr1::array<double, 2> reservoir_density_;
-	std::tr1::array<double, 2> viscosity_;
+        std::tr1::array<double, 2> surface_density_;
+        std::tr1::array<double, 2> reservoir_density_;
+        std::tr1::array<double, 2> viscosity_;
     };
 
 }
