@@ -223,12 +223,7 @@ namespace Opm
         : w_(0)
     {
     }
-    WellsManager::WellsManager(struct Wells* W)
-        : w_(W)
-    {
-    }
-
-
+   
 
     /// Construct from existing wells object.
     WellsManager::WellsManager(struct Wells* W)
