@@ -298,10 +298,10 @@ int main(int argc, char** argv)
     Scalar rho_oRef = surfaceFluidState.density(oPhaseIdx);
 
     std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
-    int n = 10;
+    int n = 1000;
     for (int i = 0; i < n; ++i) {
         Scalar minAlpha = 0.98;
-        Scalar maxAlpha = 0.98 + (5 - 0.98)/100;
+        Scalar maxAlpha = 5.0;
 
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
