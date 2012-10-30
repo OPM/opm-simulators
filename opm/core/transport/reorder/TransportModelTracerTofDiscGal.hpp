@@ -21,15 +21,18 @@
 #define OPM_TRANSPORTMODELTRACERTOFDISCGAL_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <boost/shared_ptr.hpp>
 #include <vector>
 #include <map>
 #include <ostream>
+
 struct UnstructuredGrid;
 
 namespace Opm
 {
 
     class IncompPropertiesInterface;
+    class VelocityInterpolationInterface;
 
     /// Implements a discontinuous Galerkin solver for
     /// (single-phase) time-of-flight using reordering.
@@ -45,7 +48,10 @@ namespace Opm
     public:
         /// Construct solver.
         /// \param[in] grid      A 2d or 3d grid.
-        TransportModelTracerTofDiscGal(const UnstructuredGrid& grid);
+        /// \param[in] use_cvi   If true, use corner point velocity interpolation.
+        ///                      Otherwise, use the basic constant interpolation.
+        TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
+                                       const bool use_cvi);
 
 
         /// Solve for time-of-flight.
@@ -72,7 +78,12 @@ namespace Opm
         virtual void solveMultiCell(const int num_cells, const int* cells);
 
     private:
+        // Disable copying and assignment.
+        TransportModelTracerTofDiscGal(const TransportModelTracerTofDiscGal&);
+        TransportModelTracerTofDiscGal& operator=(const TransportModelTracerTofDiscGal&);
+
         const UnstructuredGrid& grid_;
+        boost::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
@@ -80,6 +91,7 @@ namespace Opm
         double* tof_coeff_;
         std::vector<double> rhs_;   // single-cell right-hand-side
         std::vector<double> jac_;   // single-cell jacobian
+        std::vector<double> orig_jac_;   // single-cell jacobian (copy)
         // Below: storage for quantities needed by solveSingleCell().
         std::vector<double> coord_;
         std::vector<double> basis_;

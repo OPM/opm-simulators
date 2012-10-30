@@ -761,16 +761,17 @@ namespace Opm
             wells_->ctrls[self_index_]->current = ~ wells_->ctrls[self_index_]->current;
         }
     }
-    
+
     std::pair<WellNode*, double> WellNode::getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                              const std::vector<double>& well_surfacerates_phase,
                                                              ProductionSpecification::ControlMode mode)
     {
         const int np = phaseUsage().num_phases;
         const int index = self_index_*np;
-        return std::make_pair<WellNode*, double>(this, rateByMode(&well_reservoirrates_phase[index],
-                                                                  &well_surfacerates_phase[index],
-                                                                  mode));
+        return std::pair<WellNode*, double>(this,
+                                            rateByMode(&well_reservoirrates_phase[index],
+                                                       &well_surfacerates_phase[index],
+                                                       mode));
     }
     
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
@@ -782,7 +783,7 @@ namespace Opm
              && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
             return;
         }
-        if (!wells_->type[self_index_] == INJECTOR) {
+        if (wells_->type[self_index_] != INJECTOR) {
             ASSERT(target == 0.0);
             return;
         }
@@ -859,7 +860,7 @@ namespace Opm
             std::cout << "Returning" << std::endl;
             return;
         }
-        if (!wells_->type[self_index_] == PRODUCER) {
+        if (wells_->type[self_index_] != PRODUCER) {
             ASSERT(target == 0.0);
             return;
         }
