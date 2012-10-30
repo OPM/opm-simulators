@@ -23,9 +23,12 @@ namespace Opm
 {
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                                           const UnstructuredGrid& grid)
+                                                           const UnstructuredGrid& grid,
+                                                           bool init_rock)
     {
-        rock_.init(deck, grid);
+        if (init_rock){
+            rock_.init(deck, grid);
+        }
         pvt_.init(deck);
         satprops_.init(deck, grid);
 	if (pvt_.numPhases() != satprops_.numPhases()) {
@@ -36,9 +39,12 @@ namespace Opm
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                                            const UnstructuredGrid& grid,
-                                                           const parameter::ParameterGroup& param)
+                                                           const parameter::ParameterGroup& param,
+                                                           bool init_rock)
     {
-        rock_.init(deck, grid);
+        if(init_rock){
+            rock_.init(deck, grid);
+        }
         const int samples = param.getDefault("dead_tab_size", 1025);
         pvt_.init(deck, samples);
         satprops_.init(deck, grid, param);
