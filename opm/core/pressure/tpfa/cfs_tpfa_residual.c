@@ -1090,7 +1090,7 @@ compute_wflux(int                        np    ,
 {
     int           w, c, i, p;
     double        pw, dp, t;
-    const double *pmob;
+    const double *pmob, *wdp;
 
     struct Wells          *W;
     struct CompletionData *cdata;
@@ -1101,13 +1101,14 @@ compute_wflux(int                        np    ,
 
     W     = wells->W;
     cdata = wells->data;
+    wdp   = cdata->wdp;
 
     for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[w];
 
         for (; i < W->well_connpos[w + 1]; i++) {
             c  = W->well_cells[ i ];
-            dp = pw - cpress[c];
+            dp = pw + wdp[ i ] - cpress[c];
 
             if (dp > 0) { pmob = cdata->phasemob + (i * np); } /* w->c */
             else        { pmob = pmobc           + (c * np); } /* c->w */
