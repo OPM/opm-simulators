@@ -2,22 +2,21 @@
 \label{tutorial-coupled}
 
 The process of setting up a problem using \eWoms can be roughly
-divided into four parts:
+divided into three parts:
 \begin{enumerate}
 \item A suitable model has to be chosen.
-\item The geometry of the problem and correspondingly a grid have to
-  be defined.
-\item Boundary and initial conditions and material properties have to be
-  selected.
+\item The geometry of the problem has to be defined and the suitable
+  grid has to be created.
+\item Boundary and initial conditions and material properties have to
+  be specified.
 \end{enumerate}
 
 The physical set-up of the flow problem being solved in this tutorial
 is illustrated in Figure \ref{tutorial-coupled:problemfigure}: It
 consists of a rectangular domain with no-flow boundary conditions on
 the top and on the bottom of the domain, which is initially fully
-saturated by oil. Water infiltrates from the left side into the domain
-and replaces the oil. The effect of gravity is neglected for this
-problem.
+saturated by a light oil. Water infiltrates from the left side and
+replaces the oil. The effect of gravity is neglected.
 
 \begin{figure}[ht]
 \psfrag{x}{x}
@@ -58,10 +57,10 @@ The solved equations are the mass balances of water and oil:
 
 \subsection{The main source file}
 
-Listing \ref{tutorial-coupled:mainfile} shows the main application
-file \texttt{tutorial/tutorial\_coupled.cc} uses the fully implicit
-model that assumes immiscibility. This file has to be compiled and
-executed in order to solve the problem described above.
+Listing \ref{tutorial-coupled:mainfile} shows the main file
+\texttt{tutorial/tutorial\_coupled.cc} for the tutorial problem using
+a fully-implicit model that assumes immiscibility. This file has to be
+compiled and executed in order to solve the problem described above.
 
 \begin{lst}[File tutorial/tutorial\_coupled.cc]\label{tutorial-coupled:mainfile} \mbox{}
   \lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=25, firstnumber=25]{../../tutorial/tutorial_coupled.cc}
@@ -84,13 +83,12 @@ The default \eWoms startup routine deals with parsing the command line
 arguments, reading the parameter file, properly setting up the \Dune
 infrastructure, creating the grid, and starting the actual simulation.
 Required parameters for the start of the simulation, such as the
-initial time-step size, the simulation time or details of the grid,
-can be either specified by command line arguments of the form
-(\texttt{--parameter-name=value}), in the file specified by the
+initial time-step size, the final simulation time or details of the
+grid, can be either specified by command line arguments of the form
+(\texttt{--parameter-name=value}), or in the file specified by the
 \texttt{--parameter-file="file\_name"} argument. A list of all
-recognized parameters that can be specified at run time can be printed
-by passing the \texttt{--help} argument to the exectutable of the
-simulation.
+parameters that can be specified at run-time can be obtained by passing
+the \texttt{--help} argument to the exectutable of the simulation.
 
 \subsection{The problem file}
 
@@ -109,67 +107,74 @@ using the \eWoms property system (for more information see chapter
 \begin{itemize}
 \item First, a new type tag is created for the problem in line
   \ref{tutorial-coupled:create-type-tag}.  In this case, the new type
-  tag inherits all properties from the \texttt{BoxTwoP} type tag, which
-  means that for this problem the two-phase box model is chosen as
-  discretization scheme.
-\item On line \ref{tutorial-coupled:set-problem}, a problem class is
-  specified for the new type tag, while the grid which is going to be
-  used is defined in line \ref{tutorial-coupled:set-grid} -- in this
-  case that is \texttt{Dune::YaspGrid}.
-\item Since there's no uniform mechanism to allocate grids in \Dune,
-  \eWoms features the concept of grid creators. In this case the
-  generic \texttt{CubeGridCreator} is used. This grid creator constructs a structured
-  hexahedron grid of a specified size and resolution. For this grid
-  creator the physical domain of the grid is specified via the
-  run-time parameters \texttt{Grid.upperRightX},
-  \texttt{Grid.upperRightY}, \texttt{Grid.numberOfCellsX} and
-  \texttt{Grid.numberOfCellsY}. These parameters can be specified via
-  the command-line or in a parameter file.
+  tag inherits all properties from the \texttt{BoxImmiscibleTwoPhase}
+  type tag, which means that for this problem the immiscible box model
+  for two fluid phases is chosen as discretization scheme.
+\item On line \ref{tutorial-coupled:set-problem}, the problem class is
+  specified for the new type tag, while the kind of grid which is
+  going to be used is defined in line \ref{tutorial-coupled:set-grid}
+  -- in this case that is \texttt{Dune::YaspGrid}.
+\item Since \Dune does not provide a uniform mechanism to initialize
+  and load grids, \eWoms features the concept of grid creators. In
+  this case, the generic \texttt{CubeGridCreator} is used. This grid
+  creator constructs a structured rectangular grid with a specified
+  size and resolution. For this grid creator, the physical domain of
+  the grid is specified via the run-time parameters
+  \texttt{DomainSizeX} and \texttt{DomainSizeY} and its resolution by
+  \texttt{CellsX} and \texttt{CellsY}. These parameters can be
+  specified via the command-line or in a parameter file, but the
+  problem file must define default values for them. Defining these
+  defaults is done on lines
+  \ref{tutorial-coupled:grid-default-params-begin} to
+  \ref{tutorial-coupled:default-params-end}.
 \end{itemize}
 
 Next, an appropriate fluid system -- which specifies the thermodynamic
 relations of the fluid phases -- has to be chosen. By default, the
-fully-implicit immiscible model uses the
-\texttt{TwoPImmiscibleFluidSystem}. This fluid system simplifies
-things considerably by assuming immiscibility of the phases, but it
-requires to explicitly specify the fluids used for the wetting and
-non-wetting phases. In this case, liquid water based on the relations
-from IAPWS'97~\cite{IAPWS1997} is chosen as the wetting phase on line
-\ref{tutorial-coupled:wettingPhase} and liquid oil is chosen as the
-non-wetting phase on line \ref{tutorial-coupled:nonwettingPhase}. The
-next property, which is set in line \ref{tutorial-coupled:gravity},
-tells the model not to use gravity. This is then followed by the
-specifcation default values for parameters specifying the temporal and
-spatial domain from line \ref{tutorial-coupled:default-params-begin}
-to line \ref{tutorial-coupled:default-params-end}.  The values of thos
-can be overwritten at run-time if desired.
+fully-implicit immiscible model for two fluid phases uses
+\texttt{Dumux::FluidSystems::TwoPImmiscible}. This fluid system
+simplifies things considerably by assuming immiscibility of the
+phases, but it requires to explicitly specify the fluids used for the
+wetting and non-wetting phases. In this case, liquid water based on
+the relations from IAPWS'97~\cite{IAPWS1997} is chosen as the wetting
+phase on line \ref{tutorial-coupled:wettingPhase} and liquid oil is
+chosen as the non-wetting phase on line
+\ref{tutorial-coupled:nonwettingPhase}. The next property, which is
+set in line \ref{tutorial-coupled:gravity}, tells the model not to use
+gravity. This is then followed by the specifcation default values for
+parameters specifying the temporal and spatial domain from line
+\ref{tutorial-coupled:default-params-begin} to line
+\ref{tutorial-coupled:default-params-end}.  The values of those can be
+overwritten at run-time if desired.
 
-Following the property definition is the definition actual physical
-set-up to be simulated. This is done by means of the \textit{problem
-  class}. The problem class specifies boundary and initial conditions,
-source terms or spatial quantities like temperature, porosity,
-intrinsic permeability and the parameters of the material law within
-the domain. Since there are quite a few methods of the problem called
-by the \eWoms models, and often there are sensible defaults for these
-methods, it is strongly recomended to derive the problem class from
-the class specified by the \texttt{BaseProblem} property as can be
-seen on line \ref{tutorial-coupled:def-problem}\footnote{Technically,
-  deriving the problem from the \texttt{BaseProblem} property is not
-  required if it implements all necessary methods. Do not complain if
-  things explode in this case, though.}.
+Following the property definitions comes the definition of the actual
+physical set-up to be simulated. This is done by means of the
+\textit{problem class}. The problem class specifies boundary and
+initial conditions, source terms or spatial quantities like
+temperature, porosity, intrinsic permeability and the parameters of
+the material law within the domain. Since there are quite a few
+methods of the problem called by the \eWoms models, and often there
+are sensible defaults for these methods, it is strongly recomended to
+derive the problem class from the class specified by the
+\texttt{BaseProblem} property as done on line
+\ref{tutorial-coupled:def-problem}\footnote{Technically, deriving the
+  problem from the \texttt{BaseProblem} property is not required if it
+  implements all necessary methods. Do not complain if things explode
+  in this case, though.}.
 
-For isothermal multi-phase porous media models, problem class must always provide at least
-the following methods:
+For isothermal multi-phase porous media model, the problem class must
+always provide at least the following methods:
 \begin{itemize}
 \item \texttt{initial()} for specifying the initial condition within
-  the domain.
-\item \texttt{source()} specifying the source term for each conservation quantity.
-\item \texttt{boundary()} specifying the conditions which apply on the domain boundary.
-\item \texttt{temperature()} specifying temperature at a given time
-  and at a given position of the domain. If energy is conserved, this
-  method is not necessary, but energy fluxes must be provided in the
-  \texttt{boundary()} and \texttt{source()} methods and an initial
-  temperature needs to be defined in the \texttt{initial()} method.
+  the domain,
+\item \texttt{source()} which specifies the source term for each conservation quantitym
+\item \texttt{boundary()} for specifying the conditions which apply on
+  the domain boundary,
+\item \texttt{temperature()} specifying the temperature within the
+  domain. Note, that if energy is conserved, this method is not
+  necessary. Though in this case, energy fluxes must be specified by
+  the \texttt{boundary()} and \texttt{source()} methods and an initial
+  temperature needs to be defined by the \texttt{initial()} method.
 \item \texttt{intrinsicPermeability()} returns the intrinsic
   permeability matrix $\mathbf{K}$ in $[m^2]$ at a given location.
 \item \texttt{porosity()} returns the ratio of pore space to
@@ -181,12 +186,12 @@ the following methods:
 
 All of these methods take a single template argument,
 \texttt{Context}, and the three function arguments \texttt{context},
-\texttt{spaceIdx} and \texttt{timeIdx}. Together these form the
+\texttt{spaceIdx} and \texttt{timeIdx}. Together, these form the
 \textit{execution context}. The execution context can be thought of as
 a collection of all available information when a given method is
 called. Execution contexts are thus a way to abstract the differences
 of the different discretization schemes. The following methods are
-provided by all \text{context} objects:
+provided by all \texttt{context} objects:
 \begin{itemize}
 \item \texttt{pos(spaceIdx, timeIdx)}: This method returns the
   relevant position of the execution context within the physical
@@ -206,7 +211,7 @@ provided by all \text{context} objects:
 \end{itemize}
 
 The execution contexts for the \texttt{source} and \texttt{boundary}
-methods provide the following methods in addition:
+methods always provide the following methods in addition:
 \begin{itemize}
 \item \texttt{volVars(spaceIdx, timeIdx)}: The secondary variables
   used by the model relevant for the execution context. These are
@@ -217,20 +222,21 @@ methods provide the following methods in addition:
 
 Finally, the execution context for the \texttt{boundary} method
 provides the methods \texttt{boundarySegmentArea(spaceIdx, timeIdx)},
-and \texttt{normal(spaceIdx, timeIdx)}, which return the area and
-outer unit normal of the execution context's boundary segment.
+and \texttt{normal(spaceIdx, timeIdx)}, which return the area of the
+boundary segment and outer unit normal of the boundary segment.
 
 When specifying the boundary conditions in the problem class, a small
-safeguard value \texttt{eps\_} is usually added when comparing spatial
-coordinates. For the problem considered here, the left boundary might
-hence not be detected if checking whether the first coordinate of the
-global position is equal to zero, but by testing whether it is smaller
-than a very small value \texttt{eps\_}. Also, the \texttt{bboxMax()}
-(``\textbf{max}imum coordinate of the grid's \textbf{b}ounding
-\textbf{b}ox'') method is used here to determine the extend of the
-physical domain. It returns a vector with the maximum values of each
-global coordinate of the grid. This method and the analogous
-\texttt{bboxMin()} method are provided by the problem's base class.
+safeguard value \texttt{eps\_} should usually be added when comparing
+spatial coordinates. For the problem considered here, the left
+boundary might not be detected if checking whether the first
+coordinate of the global position is equal to zero, but it is detected
+reliably by testing whether it is smaller than an
+$\epsilon$-value. Also, the \texttt{bboxMax()} (``\textbf{max}imum
+coordinate of the grid's \textbf{b}ounding \textbf{box}'') method is
+used here to determine the extend of the physical domain. It returns a
+vector with the maximum values on each axis of the grid. This method
+and the analogous \texttt{bboxMin()} method are provided by the
+problem's base class.
 
 In addition to these methods, there might be some additional
 model-specific methods. 
@@ -238,35 +244,39 @@ model-specific methods.
 \subsection{Defining fluid properties}
 \label{tutorial-coupled:description-fluid-class}
 
-The \eWoms distribution includes some common substances which can be
-used out of the box. The properties of pure substances (such as
-the components nitrogen, water, or the pseudo-component air) are
+The \eWoms distribution includes representations of some common
+substances which can be used out of the box. The properties of pure
+substances (such as nitrogen, water, or the pseudo-component air) are
 provided by header files located in the folder
 \texttt{dumux/material/components}.
 
-When two or more components are considered, interactions between pure
-substances become relevant and properties of these mixtures of
-substances -- e.g. composition, density or enthalpy -- are of
-interest. Such interactions are defined by {\em fluid systems}, which
-are located in \texttt{dumux/material/fluidsystems}. A more thorough
-overview of the \eWoms fluid framework can be found in
+When two or more substances are considered, interactions between these
+become relevant and the properties of these mixtures of substances --
+e.g. composition, density or enthalpy -- are required. In \eWoms, such
+interactions are defined by {\em fluid systems}, which are located in
+\texttt{dumux/material/fluidsystems}. A more thorough overview of the
+\eWoms fluid framework can be found in
 chapter~\ref{sec:fluidframework}.
 
 \subsection{Exercises}
 \label{tutorial-coupled:exercises}
+
 The following exercises will give you the opportunity to learn how you
 can change soil parameters, boundary conditions, run-time parameters
 and fluid properties in \eWoms.
 
 \subsubsection{Exercise 1}
-\renewcommand{\labelenumi}{\alph{enumi})} For Exercise 1 you have
-to make only some small changes in the tutorial files.  
+
+\renewcommand{\labelenumi}{\alph{enumi})}
+
+For Exercise 1 you have to modify the tutorial files only sightly, or
+even not at all.
 
 \begin{enumerate}
 
 \item \textbf{Running the Program} \\
-  To get an impression what the results should look like you can first run the original version of 
-the coupled tutorial model by typing  \texttt{./tutorial\_coupled}. 
+  To get an impression what the results should look like, you can first run the original version of 
+the fully-implicit tutorial problem by typing  \texttt{./tutorial\_coupled}. 
 Note, that the time-step size is automatically adapted during the simulation. 
 For visualizing the results using the program \texttt{paraview}, please refer to section \ref{quick-start-guide}.
 
@@ -274,24 +284,23 @@ For visualizing the results using the program \texttt{paraview}, please refer to
   Change the size of the model domain so that you get a rectangle with
   edge lengths of $\text{x} = \unit[400]{m}$ and $\text{y} =
   \unit[500]{m}$ and with discretization lengths of $\Delta \text{x} =
-  \unit[20]{m}$ and $\Delta \text{y} = \unit[20]{m}$. For this you can
+  \unit[20]{m}$ and $\Delta \text{y} = \unit[20]{m}$. For this, you can
   either change the properties defined between lines
   \ref{tutorial-coupled:default-params-begin} and
-  \ref{tutorial-coupled:default-params-end} (don't forget to
-  re-compile the program in this case), or pass you may pass them as
-  command line parameters to the simulation when you run it.  Note,
-  that you do not have to recompile the program if you add command
-  line parameters to the executable.
+  \ref{tutorial-coupled:default-params-end}, or you may pass them as
+  command line parameters to the simulation when you run it.
 
   If you chose to change the problem file, re-compile the simulation
-  by typing \texttt{make tutorial\_coupled}. In both cases, don't
-  forget run the simulation as explained above.
+  by typing \texttt{make tutorial\_coupled}.  Note, that you do not
+  have to recompile the program if you use command line parameters. In
+  both cases, don't forget run the simulation before re-inspecting the
+  results using \texttt{paraview}.
   
 \item \textbf{Boundary Conditions} \\
-  Change the boundary conditions in the file
+  Change the boundary conditions in the problem file
   \texttt{tutorialproblem\_coupled.hh} so that water enters from the
   bottom and oil is extracted from the top boundary. The right and the
-  left boundary should be closed for water and oil fluxes. 
+  left boundary should be closed for both, water and oil. 
 
   Note that in \eWoms, flux boundary conditions are specified as
   fluxes of the conserved quantities into the direction of the outer
@@ -300,55 +309,59 @@ For visualizing the results using the program \texttt{paraview}, please refer to
   simulation by typing \texttt{make tutorial\_coupled} and re-run it
   as explained above.
 
-\item \textbf{Changing  the Shape of the Discrete Elements} \\
-  In order to complete this exercise you need a \Dune grid module that
-  is capable of handling simplex grids. By default, \Dune does not
-  include such a grid manager in its core modules, but one such grid
-  manager that is freely available
-  \texttt{ALUGrid}~\cite{ALUGRID-HP}. If you did not install such a
-  grid manager, please skip this exercise.  
+\item \textbf{Changing the Shape of the Discrete Elements} \\
+  In order to complete this exercise you need a \Dune grid manager
+  that is capable of handling simplex grids. By default, \Dune does
+  not include such a grid manager in its core modules, but the freely
+  available \texttt{ALUGrid}~\cite{ALUGRID-HP} can be used. If you did
+  not install such a grid manager, you may also skip this exercise.
 
-  To complete this excercise, change the problem's grid creator on
-  line \ref{tutorial-coupled:set-gridcreator} to
+  Change the grid creator used by the problem to
   \texttt{SimplexGridCreator<TypeTag>} and the type of the grid to
-  \texttt{Dune::ALUSimplexGrid<2, 2>} on line
+  \texttt{Dune::ALUSimplexGrid<2, 2>}. The grid creator is specified
+  on line \ref{tutorial-coupled:set-gridcreator}, whil the type of the
+  \Dune grid manager is set on line
   \ref{tutorial-coupled:set-grid}. You also need to change the include
-  statement from \texttt{cubegridcreator.hh} to
+  statement of the grid creator from \texttt{cubegridcreator.hh} to
   \texttt{simplexgridcreator.hh} on line
-  \ref{tutorial-coupled:include-grid-creator}.
+  \ref{tutorial-coupled:include-grid-creator} and the one for the grid
+  manager from \texttt{dune/grid/yaspgrid.hh} to
+  \texttt{dune/grid/alugrid.hh} on line \ref{tutorial-coupled:include-grid-manager}.
 
   The resulting grid can be examined by re-compiling and starting the
   simulation, loading the result into \texttt{paraview}, and selecting
-  \texttt{Surface with Edges} as the visualization mode.
+  \texttt{Surface with Edges} instead of the default visualization
+  mode \texttt{Surface}.
 
 \item \textbf{Changing Fluids} \\
-  In this exercise you will change the fluids used. Use DNAPL instead
-  of Oil and Brine instead of Water. To do that, you may follow the
-  steps:
+  In this exercise you will change the fluids used: Use DNAPL instead
+  of LNAPL and Brine instead of Water. This can be done by the
+  following steps:
 \begin{enumerate}
 \item Brine: Brine is thermodynamically very similar to pure water but
-  also considers a fixed amount of salt in the liquid phase.  Hence,
+  also includes a fixed amount of salt in the liquid phase.  Hence,
   the class \texttt{Dumux::Brine} calls back to a class which
-  represents pure water. This can be, for example \texttt{Dumux::H2O},
-  or \texttt{Dumux::SimpleH2O}.  The class which represents pure water
-  is passed to \texttt{Dumux::Brine} as the second template argument
-  after the data type for scalar values, i.e. the full definition of
-  the brine component is \texttt{Dumux::Brine<Scalar,
-    Dumux::H2O<Scalar> >}. The file which defines the brine component
-  is located in the folder \texttt{dumux/material/components/}.  
-  Include this file and select use the brine component as the wetting phase.
-\item DNAPL: Now let us include a component representing an oil that
+  represents pure water. (This can be, for example
+  \texttt{Dumux::H2O}, or \texttt{Dumux::SimpleH2O}.) The class which
+  represents pure water is passed to \texttt{Dumux::Brine} as the
+  second template argument after the data type for scalar values,
+  i.e. the full definition of the brine component is
+  \texttt{Dumux::Brine<Scalar, Dumux::H2O<Scalar> >}. The file which
+  defines the brine component is located in the folder
+  \texttt{dumux/material/components/}.  Include this file and select
+  use the brine component as the wetting phase.
+\item DNAPL: Now let us use a component that represents an oil that
   is heavier than water (in environmental engineering this class of
   substances is often called \textbf{d}ense
   \textbf{n}on-\textbf{a}queous \textbf{p}hase \textbf{l}iquid
   (DNAPL)) which is also located in the folder
-  \texttt{dumux/material/components/}. Try to include the file and
-  use the \texttt{DNAPL} component as the non-wetting phase.
+  \texttt{dumux/material/components/}. Include the correct file and
+  use the DNAPL component as the non-wetting phase.
 \end{enumerate}
 If you want to take a closer look on how the fluid classes are defined
 and which substances are available in the \eWoms distribution, feel
 free to browse through the files in the directory
-\texttt{dumux/material/components} and to read
+\texttt{dumux/material/components} and read
 chapter~\ref{sec:fluidframework}.
 
 \item \textbf{Use a Full-Fledged Fluid System} \\
@@ -362,28 +375,26 @@ chapter~\ref{sec:fluidframework}.
   Now include the file
   \texttt{dumux/material/fluidsystems/h2oairfluidsystem.hh}, and
   instruct the model to use this fluid system by setting
-  \texttt{FluidSystem} via:\\
+  the \texttt{FluidSystem} property via:\\
 \begin{lstlisting}[style=eWomsCode]
   SET_TYPE_PROP(TutorialProblemCoupled, 
                 FluidSystem,
-                Dumux::FluidSystems::H2OAir<typename GET\_PROP\_TYPE(TypeTag, Scalar)>)
+                Dumux::FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar)>)
 \end{lstlisting}
-However, this is a rather complicated fluid system which considers
-mixtures of components and also uses tabulated components that need to
-be initialized -- i.e. some components use tables for expensive to
-calculate quantities that need to be filled with values.  The
-initialization of the fluid system is normally done in the constructor
-of the problem by calling \texttt{FluidSystem::init();}.
+However, this is a rather complicated fluid system which considers all
+fluid phases as a mixture of the components and also uses tabulated
+components that need to be filled with values (i.e. some components
+use tables to speed up expensive computations).  The initialization of
+the fluid system is normally done in the constructor of the problem by
+calling \texttt{FluidSystem::init();}.
 
-Remember that in \Cplusplus, the constructor always the same name as
-the respective class, i.e. \texttt{TutorialProblemCoupled(..)}.
+As water flow replacing a gas is much faster, simulate the problem
+only until $2.000$ seconds is reached and start with a time step of
+$1$ second.
 
-As water flow replacing a gas is much faster, test your simulation
-only until $2000$ seconds and start with a time step of $1$ second.
-
-Please revert the changes made in this part of the exercise, as we
-will continue to use immiscible phases from here on and hence do not
-need a complex fluid system.
+Now, revert the changes made in this part of the exercise, as we will
+continue to use immiscible phases from here on and hence do not need a
+complex fluid system.
 
 \item \textbf{Changing Constitutive Relations} \\
   Instead of using a regularized Brooks-Corey law for the relative
@@ -400,7 +411,7 @@ need a complex fluid system.
   of the property definition by \texttt{LinearMaterial} and rename
   \texttt{RawMaterialLaw} to \texttt{TwoPMaterialLaw}. Also remove the
   line which contains the \texttt{EffToAbsLaw} typedef.
-\item Then adapt the necessary parameters of the linear law and the
+\item Then, adapt the necessary parameters of the linear law and the
   respective \texttt{set}-functions can be found in the file
   \texttt{dumux/material/fluidmatrixinteractions/2p/linearmaterialparams.hh}.\\
   Call the \texttt{set}-functions from the constructor of the problem.
@@ -511,12 +522,12 @@ step size of $100\;\text{s}$.
 \subsubsection{Exercise 3: Create a New Component}
 
 Create a new file for the benzene component called \texttt{benzene.hh}
-and implement a new component. (You may copy and modify one of the
-existing components located in the directory
-\texttt{dumux/material/components}. Use benzene as a new fluid and
-run the model of Exercise 2 with water and benzene. Benzene has a
-density of $889.51 \, \text{kg} / \text{m}^3$ and a viscosity of
-$0.00112 \, \text{Pa} \; \text{s}$.
+and implement a new component. (\textbf{Hint:} The easiest way to do
+this is to copy and modify one of the existing components located in
+the directory \texttt{dumux/material/components}.) Use benzene as a
+new non-wetting fluid and run the problem of Exercise 2 with water and
+benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
+and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$.
 
 \clearpage \newpage
 

@@ -38,7 +38,7 @@
 #include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
 
 // For the DUNE grid
-#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/
 #include <dumux/common/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
 
 // For Dune::FieldMatrix
@@ -103,14 +103,14 @@ SET_SCALAR_PROP(TutorialProblemCoupled, EndTime, 100e3);
 SET_SCALAR_PROP(TutorialProblemCoupled, InitialTimeStepSize, 125.0);
 
 // define the physical size of the problem's domain [m]
-SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX, 300.0);
+SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX, 300.0); /*@\label{tutorial-coupled:grid-default-params-begin}@*/
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeY, 60.0);
 SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeZ, 0.0);
 
 // // define the number of cells used for discretizing the physical domain
 SET_INT_PROP(TutorialProblemCoupled, CellsX, 100);
 SET_INT_PROP(TutorialProblemCoupled, CellsY, 1);
-SET_INT_PROP(TutorialProblemCoupled, CellsZ, 1);   /*@\label{tutorial-coupled:default-params-end}@*/
+SET_INT_PROP(TutorialProblemCoupled, CellsZ, 1); /*@\label{tutorial-coupled:default-params-end}@*/
 } // namespace Properties
 
 //! Tutorial problem using the fully-implicit immiscible model.

@@ -1,40 +1,42 @@
 \chapter{Introduction}
 
-\eWoms~\cite{EWOMS-HP} aims to be a generic framework for the simulation of multi-phase
-fluid flow and transport processes in porous media using continuum
-mechanical approaches.  At the same time, \eWoms aims to deliver
-top-notch computational performance, high flexibility, a sound
+\eWoms~\cite{EWOMS-HP} a generic framework for the simulation of
+multi-phase fluid flow and transport processes in porous media using
+continuum mechanical approaches. \eWoms is also an integral part of
+the open porous media initiative~\cite{OPM-HP} for which it implements
+the fully-implicit discretization schemes. \eWoms is based on the
+source code of the \Dumux~\cite{DUMUX-HP} simulation framework and
+aims to be a proper superset of \Dumux when it comes to features,
+while at the same time it delivers better performance and a
+higher-quality code base. To ease porting features from \Dumux to
+\eWoms, the \eWoms source code uses very similar naming and style
+conventions as the one of \Dumux.
+
+Besides being a generic simulation framework, \eWoms also aims to to
+deliver top-notch computational performance, high flexibility, a sound
 software architecture and the ability to run on anything from single
 processor systems to highly parallel supercomputers with specialized
-hardware architectures.
-
-\eWoms is an integral part of the open porous media
-initiative~\cite{OPM-HP} where it provides the fully-implicit
-models. \eWoms is based on the source code of the
-\Dumux~\cite{DUMUX-HP} simulation framework and aims to be a proper
-superset of \Dumux when it comes to features, while at the same time
-it aims to deliver better performance and quality of the source
-code. To ease porting features from \Dumux to \eWoms and vice-versa,
-all classes provided by \eWoms are currently located in the namespace
-\texttt{Dumux}.
-
-The means to achieve these somewhat contradictory goals are the
-thorough use of object oriented design in conjunction with template
-programming. These requirements motivated the decision to use
-\Cplusplus as the implementation language for \eWoms.
+hardware architectures. The means to achieve these somewhat
+contradictory goals are the thorough use of object oriented design in
+conjunction with template programming. These requirements motivated
+the decision to implement \eWoms using the \Cplusplus programming
+language.
 
 One of the more complex issues when dealing with parallel continuum
-models is managing the grids used for the spatial discretization of
-the physical model. To date, no generic and efficient approach exists
-for all possible cases, so \eWoms is build on top of \Dune, the
-\textbf{D}istributed and \textbf{U}nified \textbf{N}umerics
-\textbf{E}nvironment~\cite{DUNE-HP}. \Dune provides a generic interface
-to many existing grid management libraries such as UG~\cite{UG-HP},
-ALBERTA~\cite{ALBERTA-HP}, ALUGrid~\cite{ALUGRID-HP} and a few
-more. DUNE also extensively uses template programming in order to
-achieve minimal overhead when accessing the underlying grid
-libraries\footnote{In fact, the performance penalty resulting from the
-use of \Dune's grid interface is usually negligible~\cite{BURRI2006}.}.
+models for partial differential equations, is the management of the
+grids used for the spatial discretization. To date, no generic and
+efficient approach exists for all possible cases, which lead to \eWoms
+being build on top of \Dune, the \textbf{D}istributed and
+\textbf{U}nified \textbf{N}umerics
+\textbf{E}nvironment~\cite{DUNE-HP}. Instead of trying to implement a
+grid for everything, \Dune defines a generic \Cplusplus interface to
+grids, and provides adapters to several existing grid management
+libraries such as UG~\cite{UG-HP}, ALBERTA~\cite{ALBERTA-HP} or
+ALUGrid~\cite{ALUGRID-HP}. DUNE also extensively uses template
+programming in order to achieve minimal overhead when accessing the
+underlying grid libraries\footnote{In fact, the performance penalty
+  resulting from the use of \Dune's grid interface is usually
+  negligible~\cite{BURRI2006}.}.
 \begin{figure}[hbt]
   \centering 
   \includegraphics[width=.5\linewidth, keepaspectratio]{EPS/dunedesign}
@@ -65,24 +67,25 @@ it matches the grid's cell. For a more thorough description of \Dune's
 grid definition, see~\cite{BASTIAN2008}.
 
 In addition to the grid interface, \Dune also provides quite a few
-additional modules, of which the \texttt{dune-localfunctions} and
-\texttt{dune-istl} modules are the most relevant in the context of
-this handbook. \texttt{dune-localfunctions} provides a set of generic
-finite element shape functions, while \texttt{dune-istl} is the
-\textbf{I}terative \textbf{S}olver \textbf{T}emplate \textbf{L}ibrary
-and provides generic, highly optimized linear algebra routines for
-solving the generated systems.
+additional modules; In the context of this handbook the
+\texttt{dune-localfunctions} and \texttt{dune-istl} modules are
+probably the most relevant. \texttt{dune-localfunctions} provides a
+set of generic finite element shape functions, while
+\texttt{dune-istl} is the \textbf{I}terative \textbf{S}olver
+\textbf{T}emplate \textbf{L}ibrary and provides generic, highly
+optimized linear algebra routines for solving linear systems of
+equations.
 
-\eWoms comes in form of an additional module \Dune module
-'\texttt{ewoms}'.  It depends on the \Dune core modules
-\texttt{dune-common}, \texttt{dune-grid}, \texttt{dune-istl}, and on
+\eWoms comes in form of a module \Dune module '\texttt{ewoms}'.  It
+depends on the \Dune core modules \texttt{dune-common},
+\texttt{dune-grid}, \texttt{dune-istl}, and on
 \texttt{dune-localfunctions}.  The main intention of \eWoms is to
 provide a framework for an easy and efficient implementation of new
 physical models for porous media flow problems, ranging from problem
 formulation and the selection of spatial and temporal discretization
-schemes as well as nonlinear solvers, to general concepts for model
-coupling.  Moreover, \eWoms includes ready-to-use numerical models and
-a few example applications.
+schemes as well as nonlinear and linear solvers, to general concepts
+for model coupling.  Moreover, \eWoms includes ready-to-use numerical
+models and a few example applications.
 
 %%% Local Variables: 
 %%% mode: latex

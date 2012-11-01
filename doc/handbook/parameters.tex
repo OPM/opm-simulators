@@ -3,10 +3,10 @@
 
 As already mentioned in the previous section, \eWoms allows to specify
 a number of parameters at run time. A description of these parameters
-can usually obtained by passing the \texttt{--help} parameter to the
+can usually be obtained by passing the \texttt{--help} parameter to the
 executable. The values used for these parameters are printed to the
 terminal during the start-up of the simulation, e.g. the if the \texttt{lens\_immiscible}
-simulation is run with the parameters \texttt{--end-time=30e3 --foo-param=123}, there will an output similar to
+simulation is run with the parameters \texttt{--end-time=30e3 --foo-param=123}, it will print an output similar to
 \begin{lstlisting}[style=Bash]
 ###########
 # Parameters specified at run-time
@@ -27,13 +27,13 @@ FooParam="123"
 \end{lstlisting}
 
 This can be directly copy-and-pasted into a file
-(e.g. \texttt{myparams.ini}) and loaded by passing the
-\texttt{--parameter-file=myparams.ini} parameter to the simulation the
-next time it is run.
+(e.g. \texttt{myparams.ini}). The simulation can be instructed to use
+these parameters by passing the \texttt{--parameter-file=myparams.ini}
+parameter the next time it is run. Of course, this file can also be
+adapted.
 
-When you do simulations, always look for the paramters which are
-unknown to the simulation, as this is \emph{very} useful for spotting
-typos.
+An additional hint: Always watch out for parameters which are unknown
+to the simulation, as this is \emph{very} useful for spotting typos.
 
 %%% Local Variables: 
 %%% mode: latex

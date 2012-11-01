@@ -8,17 +8,17 @@ rough steps will be described here; More detailed explanations can be
 found in the tutorials in the following chapter.
 
 \begin{enumerate}
-\item Go to the directory \texttt{/test}. There, various test
+\item Go to the directory \texttt{test}. There, various test
   application folders can be found. Let us consider as example
-  \texttt{boxmodels/lens{\_}immiscible}:
-\item Enter the folder \texttt{boxmodels/}. 
+  the one for the fully-implicit models, \texttt{boxmodels}:
+\item Enter the folder \texttt{boxmodels}. 
 \item By default, the \texttt{dunecontrol} command only compiles the
   parts of \Dune modules that are necessary to build modules depending
   on the given module. For \eWoms, \texttt{dunecontrol} does not build
   anything by default, because \eWoms only provides \Cplusplus
   template classes but no libraries that need compilation. To compile
-  the test simulation for the "lens" problem which uses the immiscible
-  box model, enter
+  the test simulation for the "lens" problem which uses the fully-implicit 
+  model that assumes immisciblility, enter
 \begin{lstlisting}[style=Bash]
 make lens_immiscible
 \end{lstlisting}
@@ -37,15 +37,15 @@ make -j $N check
 %$
 
 \item If everything was compiled correctly, there should be an
-  executable \texttt{lens{\_}immiscible}. To run the simulation,
-  simply run it, i.e. enter
+  executable called '\texttt{lens{\_}immiscible}'. To run the simulation,
+  simply execute it, i.e. enter
 \begin{lstlisting}[style=Bash]
 ./lens_immiscible
 \end{lstlisting}
 
 You may also want to change some parameters from the command line. For
-example, if you want to change the time up to which the simulation is
-run to $30.000$ seconds, use
+example, if you want to change the time up to which the problem is
+simulated to $30.000$ seconds, use
 \begin{lstlisting}[style=Bash]
 ./lens_immiscible --end-time=30e3
 \end{lstlisting}
@@ -61,11 +61,11 @@ simulation together with a brief description, by running
   pressing \texttt{<Ctrl>+<C>}.
 
 \item The actual output files produced by the simulation are a series
-  of \texttt{.vtu} files and a \texttt{.pvd} file. The \texttt{.vtu}
-  contain "visualization ready" data which is produced during the
-  simulation, while the \texttt{.pvd} file "stitches" these together
-  into a coherent data set. For example, the \texttt{.pvd} holds the
-  simulation time at which a given data-set is produced which can
+  of \texttt{.vtu} files and a \texttt{.pvd} file. Each \texttt{.vtu}
+  file contains "visualization ready" data for a single time step,
+  while the \texttt{.pvd} file "stitches" these files together into a
+  coherent data set. For example, the \texttt{.pvd} holds the
+  simulation time at which a given time step was produced, that can
   later be used for visualization.
 \item You can now display the result of the simulation using the
   visualization tool ParaView (or, if you prefer, VisIt). Just type
@@ -74,9 +74,9 @@ simulation together with a brief description, by running
   ``Apply'' button. Once you have done this, the visualization of the
   simulation result appears on the screen and you can click the
   ``play'' button in the toolbar to view display its evolution over
-  time.  Also note that you can choose the output quantity to be
-  displayed in the toolbar. For the lens problem, the most insight can
-  be gained by looking at one of the saturations.
+  time.  Also note that you can choose the visualized quantity
+  in the toolbar. For the lens problem, the most interesting quantities
+  are probably the saturations.
 \item Play a bit around to make your self familiar with the
   visualization tool of your choice as you will be using it a lot.
 \end{enumerate}
