@@ -22,7 +22,7 @@
 /*!
  * \file
  *
- * \brief problem for the sequential tutorial
+ * \copydoc Dumux::TutorialProblemDecoupled
  */
 #ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian1}@*/
 #define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian2}@*/

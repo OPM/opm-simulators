@@ -21,8 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief spatial parameters for the sequential tutorial
+ * \copydoc Dumux::TutorialSpatialParamsDecoupled
  */
 #ifndef DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 #define DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
