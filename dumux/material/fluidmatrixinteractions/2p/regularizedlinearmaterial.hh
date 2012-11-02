@@ -20,9 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief   Regularized linear capillary pressure and
- *          relative permeability <-> saturation relations.
+ * \copydoc Dumux::RegularizedLinearMaterial
  */
 #ifndef DUMUX_REGULARIZED_LINEAR_MATERIAL_HH
 #define DUMUX_REGULARIZED_LINEAR_MATERIAL_HH

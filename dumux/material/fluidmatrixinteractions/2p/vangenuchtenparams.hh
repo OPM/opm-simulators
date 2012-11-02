@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Specification of the material parameters for the van
- *        Genuchten constitutive relations.
+ * \copydoc Dumux::VanGenuchtenParams
  */
 #ifndef VAN_GENUCHTEN_PARAMS_HH
 #define VAN_GENUCHTEN_PARAMS_HH

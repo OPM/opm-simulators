@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Specifies the parameters required by the SPE5 problem which
- *        are dependend on the thermodynamic state.
+ * \copydoc Dumux::Spe5ParameterCache
  */
 #ifndef DUMUX_SPE5_PARAMETER_CACHE_HH
 #define DUMUX_SPE5_PARAMETER_CACHE_HH

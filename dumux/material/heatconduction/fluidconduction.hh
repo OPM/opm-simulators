@@ -17,9 +17,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file fluidconduction.hh
- *
- * \brief Implements a heat conduction law which just takes the conductivity of a given fluid phase.
+ * \file
+ * \copydoc Dumux::FluidHeatConduction
  */
 #ifndef DUMUX_FLUID_HEAT_CONDUCTION_HH
 #define DUMUX_FLUID_HEAT_CONDUCTION_HH

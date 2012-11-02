@@ -20,8 +20,8 @@
  * \file
  *
  * \brief Represents all relevant thermodynamic quantities of a
- *        multi-phase, multi-component fluid system without using
- *        any assumptions.
+ *        multi-phase, multi-component fluid system _not_ assuming
+ *        thermodynamic equilibrium.
  */
 #ifndef DUMUX_NON_EQUILIBRIUM_FLUID_STATE_HH
 #define DUMUX_NON_EQUILIBRIUM_FLUID_STATE_HH

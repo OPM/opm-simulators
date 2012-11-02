@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Binary coefficients for water and xylene.
+ * \copydoc Dumux::BinaryCoeff::H2O_Xylene
  */
 #ifndef DUMUX_BINARY_COEFF_H2O_XYLENE_HH
 #define DUMUX_BINARY_COEFF_H2O_XYLENE_HH

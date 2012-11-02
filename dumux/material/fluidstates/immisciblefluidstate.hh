@@ -20,7 +20,7 @@
  * \file
  *
  * \brief Represents all relevant thermodynamic quantities of a
- *        multi-phase fluid system assuming immiscibility and
+ *        multi-phase, multi-component fluid system assuming
  *        thermodynamic equilibrium.
  */
 #ifndef DUMUX_IMMISCIBLE_FLUID_STATE_HH

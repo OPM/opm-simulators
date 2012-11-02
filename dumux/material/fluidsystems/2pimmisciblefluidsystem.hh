@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A fluid system for two-phase models assuming immiscibility and
- *        thermodynamic equilibrium
+ * \copydoc Dumux::FluidSystems::TwoPImmiscible
  */
 #ifndef DUMUX_2P_IMMISCIBLE_FLUID_SYSTEM_HH
 #define DUMUX_2P_IMMISCIBLE_FLUID_SYSTEM_HH

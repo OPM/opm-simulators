@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Relations valid for an ideal gas.
+ * \copydoc Dumux::IdealGas
  */
 #ifndef DUMUX_IDEAL_GAS_HH
 #define DUMUX_IDEAL_GAS_HH

@@ -19,11 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief This material law takes a material law defined for effective
- *        saturations and converts it to a material law defined on
- *        absolute saturations.
- *
+ * \copydoc Dumux::EffToAbsLaw
  */
 #ifndef DUMUX_EFF_TO_ABS_LAW_HH
 #define DUMUX_EFF_TO_ABS_LAW_HH

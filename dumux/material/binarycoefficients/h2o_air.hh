@@ -19,8 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Binary coefficients for water and nitrogen.
+ * \copydoc Dumux::BinaryCoeff::H2O_Air
  */
 #ifndef DUMUX_BINARY_COEFF_H2O_AIR_HH
 #define DUMUX_BINARY_COEFF_H2O_AIR_HH

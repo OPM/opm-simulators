@@ -18,10 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief This is a fluid state which allows to set the fluid
- *        temperatures and takes all other quantities from an other
- *        fluid state.
+ * \copydoc Dumux::TemperatureOverlayFluidState
  */
 #ifndef DUMUX_TEMPERATURE_OVERLAY_FLUID_STATE_HH
 #define DUMUX_TEMPERATURE_OVERLAY_FLUID_STATE_HH

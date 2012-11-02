@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief The base class for all fluid systems.
+ * \copydoc Dumux::BaseFluidSystem
  */
 #ifndef DUMUX_BASE_FLUID_SYSTEM_HH
 #define DUMUX_BASE_FLUID_SYSTEM_HH

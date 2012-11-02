@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief   Parameters that are necessary for the \em regularization of
- *          the Brooks-Corey capillary pressure model.
+ * \copydoc Dumux::RegularizedBrooksCoreyParams
  */
 #ifndef DUMUX_REGULARIZED_BROOKS_COREY_PARAMS_HH
 #define DUMUX_REGULARIZED_BROOKS_COREY_PARAMS_HH

@@ -20,14 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implements the equations for region 1 of the IAPWS '97 formulation.
- *
- * See:
- *
- * IAPWS: "Revised Release on the IAPWS Industrial Formulation
- * 1997 for the Thermodynamic Properties of Water and Steam",
- * http://www.iapws.org/relguide/IF97-Rev.pdf
+ * \copydoc Dumux::IAPWS::Region1
  */
 #ifndef DUMUX_IAPWS_REGION1_HH
 #define DUMUX_IAPWS_REGION1_HH

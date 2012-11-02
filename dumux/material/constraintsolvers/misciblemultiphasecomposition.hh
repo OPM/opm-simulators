@@ -18,10 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Computes the composition of all phases of a N-phase,
- *        N-component fluid system assuming that all N phases are
- *        present
+ * \copydoc Dumux::MiscibleMultiPhaseComposition
  */
 #ifndef DUMUX_MISCIBLE_MULTIPHASE_COMPOSITION_HH
 #define DUMUX_MISCIBLE_MULTIPHASE_COMPOSITION_HH

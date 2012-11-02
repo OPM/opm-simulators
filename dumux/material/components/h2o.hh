@@ -20,8 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Material properties of pure water \f$H_2O\f$.
+ * \copydoc Dumux::H2O
  */
 #ifndef DUMUX_H2O_HH
 #define DUMUX_H2O_HH

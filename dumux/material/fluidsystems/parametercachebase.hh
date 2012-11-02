@@ -19,8 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief The base class of the parameter caches of fluid systems
+ * \copydoc Dumux::ParameterCacheBase
  */
 #ifndef DUMUX_PARAMETER_CACHE_BASE_HH
 #define DUMUX_PARAMETER_CACHE_BASE_HH

@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implements the Peng-Robinson equation of state for a
- *        mixture.
+ * \copydoc Dumux::PengRobinsonMixture
  */
 #ifndef DUMUX_PENG_ROBINSON_MIXTURE_HH
 #define DUMUX_PENG_ROBINSON_MIXTURE_HH

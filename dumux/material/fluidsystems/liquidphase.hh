@@ -19,8 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Represents the liquid phase of a single (pseudo-) component.
+ * \copydoc Dumux::LiquidPhase
  */
 #ifndef DUMUX_LIQUID_PHASE_HH
 #define DUMUX_LIQUID_PHASE_HH

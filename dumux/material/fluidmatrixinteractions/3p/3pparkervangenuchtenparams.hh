@@ -20,9 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Specification of the material params for the three-phase van
- *        Genuchten capillary pressure model.
+ * \copydoc Dumux::ParkerVanGen3PParams
  */
 #ifndef DUMUX_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
 #define DUMUX_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH

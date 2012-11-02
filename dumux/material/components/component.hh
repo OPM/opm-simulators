@@ -18,11 +18,9 @@
  *   You should have received a copy of the GNU General Public License       *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
-
 /*!
  * \file
- *
- * \brief Abstract base class of a pure chemical species.
+ * \copydoc Dumux::Component
  */
 #ifndef DUMUX_COMPONENT_HH
 #define DUMUX_COMPONENT_HH

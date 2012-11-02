@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief   Parameters that are necessary for the \em regularization of
- *          VanGenuchten "material law".
+ * \copydoc Dumux::RegularizedVanGenuchtenParams
  */
 #ifndef DUMUX_REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
 #define DUMUX_REGULARIZED_VAN_GENUCHTEN_PARAMS_HH

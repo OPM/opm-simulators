@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Binary coefficients for water and mesitylene.
+ * \copydoc Dumux::BinaryCoeff::H2O_Mesitylene
  */
 #ifndef DUMUX_BINARY_COEFF_H2O_MESITYLENE_HH
 #define DUMUX_BINARY_COEFF_H2O_MESITYLENE_HH

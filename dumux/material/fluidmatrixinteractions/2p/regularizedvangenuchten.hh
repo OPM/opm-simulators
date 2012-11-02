@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implementation of the regularized version of the van Genuchten's
- *        capillary pressure / relative permeability  <-> saturation relation.
+ * \copydoc Dumux::RegularizedVanGenuchten
  */
 #ifndef DUMUX_REGULARIZED_VAN_GENUCHTEN_HH
 #define DUMUX_REGULARIZED_VAN_GENUCHTEN_HH

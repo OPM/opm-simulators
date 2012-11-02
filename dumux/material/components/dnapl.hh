@@ -21,10 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief A simple implementation of a dense non-aqueous phase liquid (DNAPL).
- *
- * The parameters are chosen to roughly correspond to those of
- * trichloroethylene (TCE) at standard conditions.
+ * \copydoc Dumux::DNAPL
  */
 #ifndef DUMUX_DNAPL_HH
 #define DUMUX_DNAPL_HH

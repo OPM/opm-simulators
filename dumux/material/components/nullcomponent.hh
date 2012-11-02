@@ -18,10 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief A component that only throws exceptions.
- *
- * Its main purpose is to make things compile and give runtime errors
- * if it is actually used.
+ * \copydoc Dumux::NullComponent
  */
 #ifndef DUMUX_NULL_COMPONENT_HH
 #define DUMUX_NULL_COMPONENT_HH

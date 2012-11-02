@@ -18,10 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief This is a fluid state which allows to set the fluid
- *        saturations and takes all other quantities from an other
- *        fluid state.
+ * \copydoc Dumux::SaturationOverlayFluidState
  */
 #ifndef DUMUX_SATURATION_OVERLAY_FLUID_STATE_HH
 #define DUMUX_SATURATION_OVERLAY_FLUID_STATE_HH

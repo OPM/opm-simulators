@@ -19,7 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief Component for Xylene
+ * \copydoc Dumux::Xylene
  */
 #ifndef DUMUX_XYLENE_HH
 #define DUMUX_XYLENE_HH

@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A two-phase fluid system with water and nitrogen as components.
+ * \copydoc Dumux::FluidSystems::H2ON2
  */
 #ifndef DUMUX_H2O_N2_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_FLUID_SYSTEM_HH

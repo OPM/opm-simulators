@@ -17,10 +17,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file nullmateriallaw.hh
- *
- * Implements a dummy linear saturation-capillary pressure relation
- * which just disables capillary pressure.
+ * \file
+ * \copydoc Dumux::NullMaterialLaw
  */
 #ifndef DUMUX_NULL_MATERIAL_LAW_HH
 #define DUMUX_NULL_MATERIAL_LAW_HH

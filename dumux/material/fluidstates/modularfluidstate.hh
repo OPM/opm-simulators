@@ -18,13 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Represents all relevant thermodynamic quantities of a
- *        multi-phase, multi-component fluid system assuming
- *        thermodynamic equilibrium.
- *
- * This class uses a modular approach which results in storing only a
- * set of requested thermodynamic quantities.
+ * \copydoc Dumux::ModularFluidState
  */
 #ifndef DUMUX_MODULAR_FLUID_STATE_HH
 #define DUMUX_MODULAR_FLUID_STATE_HH

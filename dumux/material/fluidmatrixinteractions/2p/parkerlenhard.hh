@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief An implementation of the Parker-Lenhard capillary pressure
- *        hystersis model.
+ * \copydoc Dumux::ParkerLenhard
  */
 #ifndef DUMUX_PARKER_LENHARD_HH
 #define DUMUX_PARKER_LENHARD_HH
@@ -36,8 +34,7 @@
 namespace Dumux
 {
 /*!
- * \internal
- * \brief Represents a scanning curve.
+ * \brief Represents a scanning curve in the Parker-Lenhard hysteresis model.
  *
  * The class has pointers to the scanning curves
  * with higher and lower loop number, this saving

@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Determines the phase compositions, pressures and saturations
- *        given the total mass of all components.
+ * \copydoc Dumux::NcpFlash
  */
 #ifndef DUMUX_NCP_FLASH_HH
 #define DUMUX_NCP_FLASH_HH

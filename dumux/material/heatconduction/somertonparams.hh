@@ -17,23 +17,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file somertonparams.hh
- *
- * Reference implementation of parameters for the Somerton law of
- * heat conductivity in a porous medium.
- *
- * See:
- *
- * W.H. Somerton, A.H. El-Shaarani and S.M. Mobarak: High
- * Temperature Behavior of Rocks Associated with Geothermal Type
- * Reservoirs, paper SPE-4897 presentet at SPE California Regional
- * Meeting 1974, 1974
- *
- * or
- *
- * H. Class: Theorie und numerische Modellierung nichtisothermer
- * Mehrphasenprozesse in NAPL kontaminierten poroesen Medien, PhD
- * thesis, Technical University of Braunschweig, 2000
+ * \file
+ * \copydoc Dumux::SomertonParams
  */
 #ifndef DUMUX_SOMERTON_PARAMS_HH
 #define DUMUX_SOMERTON_PARAMS_HH
@@ -41,8 +26,10 @@
 #include <cassert>
 
 namespace Dumux {
+
 /*!
- * \brief
+ * \brief The default implementation of a parameter object for the
+ *        Somerton heatconduction law.
  */
 template <int numPhases, class ScalarT>
 class SomertonParams

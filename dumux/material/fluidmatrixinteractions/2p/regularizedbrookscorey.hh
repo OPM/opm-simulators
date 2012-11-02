@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implementation of a regularized version of the Brooks-Corey
- *        capillary pressure / relative permeability  <-> saturation relation.
+ * \copydoc Dumux::RegularizedBrooksCorey
  */
 #ifndef REGULARIZED_BROOKS_COREY_HH
 #define REGULARIZED_BROOKS_COREY_HH
@@ -34,26 +32,29 @@
 namespace Dumux {
 /*!
  * \ingroup fluidmatrixinteractionslaws
- * \brief Implementation of the regularized  Brooks-Corey
- *        capillary pressure / relative permeability  <-> saturation relation.
- *        This class bundles the "raw" curves as
- *        static members and doesn't concern itself converting
- *        absolute to effective saturations and vice versa.
+ * \brief Implementation of the regularized Brooks-Corey capillary
+ *        pressure / relative permeability <-> saturation relation.
  *
- *        In order to avoid very steep gradients the marginal values are "regularized".
- *        This means that in stead of following the curve of the material law in these regions, some linear approximation is used.
- *        Doing this is not worse than following the material law. E.g. for very low wetting phase values the material
- *        laws predict infinite values for \f$p_c\f$ which is completely unphysical. In case of very high wetting phase
- *        saturations the difference between regularized and "pure" material law is not big.
+ * This class bundles the "raw" curves as static members and doesn't
+ * concern itself converting absolute to effective saturations and
+ * vice versa.
  *
- *        Regularizing has the additional benefit of being numerically friendly: Newton's method does not like infinite gradients.
+ * In order to avoid very steep gradients the marginal values are
+ * "regularized".  This means that in stead of following the curve of
+ * the material law in these regions, some linear approximation is
+ * used.  Doing this is not worse than following the material
+ * law. E.g. for very low wetting phase values the material laws
+ * predict infinite values for \f$p_c\f$ which is completely
+ * unphysical. In case of very high wetting phase saturations the
+ * difference between regularized and "pure" material law is not big.
  *
- *        The implementation is accomplished as follows:
- *        - check whether we are in the range of regularization
- *         - yes: use the regularization
- *         - no: forward to the standard material law.
+ * Regularizing has the additional benefit of being numerically
+ * friendly: Newton's method does not like infinite gradients.
  *
- *         For an example figure of the regularization: RegularizedVanGenuchten
+ * The implementation is accomplished as follows:
+ * - check whether we are in the range of regularization
+ *   - yes: use the regularization
+ *   - no: forward to the standard material law.
  *
  * \see BrooksCorey
  */

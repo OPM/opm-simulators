@@ -17,12 +17,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file dummyheatconductionlaw.hh
- *
- * \brief Implements a dumm law for heat conduction to which isothermal models
- *        can fall back to
- *
- * If any method of this law is called, it throws an excetion
+ * \file
+ * \copydoc Dumux::DummyHeatConductionLaw
  */
 #ifndef DUMUX_DUMMY_HEATCONDUCTION_LAW_HH
 #define DUMUX_DUMMY_HEATCONDUCTION_LAW_HH

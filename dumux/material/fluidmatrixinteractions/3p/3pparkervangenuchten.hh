@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implementation of the three-phase van Genuchten's capillary
- *        pressure <-> saturation relation
+ * \copydoc Dumux::ThreePParkerVanGenuchten
  */
 #ifndef DUMUX_3P_PARKER_VAN_GENUCHTEN_HH
 #define DUMUX_3P_PARKER_VAN_GENUCHTEN_HH

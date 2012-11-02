@@ -18,10 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A default implementation of the parameters for the adapter
- *        class to convert material laws from effective to absolute
- *        saturations.
+ * \copydoc Dumux::EffToAbsLawParams
  */
 #ifndef DUMUX_EFF_TO_ABS_LAW_PARAMS_HH
 #define DUMUX_EFF_TO_ABS_LAW_PARAMS_HH

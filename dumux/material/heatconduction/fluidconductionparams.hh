@@ -17,13 +17,11 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file fluidconductionparams.hh
- *
- * \brief Parameters for the heat conduction law which just takes the conductivity of a given fluid phase.
+ * \file
+ * \copydoc Dumux::FluidHeatConductionParams
  */
 #ifndef DUMUX_FLUID_HEAT_CONDUCTION_PARAMS_HH
 #define DUMUX_FLUID_HEAT_CONDUCTION_PARAMS_HH
-
 
 namespace Dumux {
 /*!

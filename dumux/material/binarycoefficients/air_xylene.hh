@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Binary coefficients for air and xylene.
+ * \copydoc Dumux::BinaryCoeff::Air_Xylene
  */
 #ifndef DUMUX_BINARY_COEFF_AIR_XYLENE_HH
 #define DUMUX_BINARY_COEFF_AIR_XYLENE_HH

@@ -20,7 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief A simple version of pure water.
+ * \copydoc Dumux::SimpleH2O
  */
 #ifndef DUMUX_SIMPLE_H2O_HH
 #define DUMUX_SIMPLE_H2O_HH

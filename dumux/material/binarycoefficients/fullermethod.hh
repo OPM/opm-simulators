@@ -18,7 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief Various relations for molecular diffusion coefficients.
+ * \copydoc Dumux::BinaryCoeff::fullerMethod
  */
 #ifndef DUMUX_FULLERMETHOD_HH
 #define DUMUX_FULLERMETHOD_HH

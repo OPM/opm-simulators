@@ -20,8 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Properties of pure molecular nitrogen \f$N_2\f$.
+ * \copydoc Dumux::N2
  */
 #ifndef DUMUX_N2_HH
 #define DUMUX_N2_HH

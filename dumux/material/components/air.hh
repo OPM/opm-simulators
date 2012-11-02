@@ -19,8 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A simple class implementing the fluid properties of air.
+ * \copydoc Dumux::Air
  */
 #ifndef DUMUX_AIR_HH
 #define DUMUX_AIR_HH

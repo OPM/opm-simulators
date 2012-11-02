@@ -20,15 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implements relations common for all regions of the IAPWS '97
- *        formulation.
- *
- * See:
- *
- * IAPWS: "Revised Release on the IAPWS Industrial Formulation
- * 1997 for the Thermodynamic Properties of Water and Steam",
- * http://www.iapws.org/relguide/IF97-Rev.pdf
+ * \copydoc Dumux::IAPWS::Common
  */
 #ifndef DUMUX_IAPWS_COMMON_HH
 #define DUMUX_IAPWS_COMMON_HH

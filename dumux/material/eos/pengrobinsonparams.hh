@@ -18,14 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Base class for Peng-Robinson parameters of a
- *        single-component fluid or a mixture
- *
- * See:
- *
- * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
- * McGraw-Hill, 1987, pp. 43-44
+ * \copydoc Dumux::PengRobinsonParams
  */
 #ifndef DUMUX_PENG_ROBINSON_PARAMS_HH
 #define DUMUX_PENG_ROBINSON_PARAMS_HH

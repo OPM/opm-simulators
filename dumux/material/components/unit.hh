@@ -19,10 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief A component where all quantities are fixed at 1.0
- *
- * This component is meant as a debugging tool. Do not use it in
- * real-life applications!
+ * \copydoc Dumux::Unit
  */
 #ifndef DUMUX_UNIT_HH
 #define DUMUX_UNIT_HH

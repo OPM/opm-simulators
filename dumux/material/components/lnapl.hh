@@ -21,7 +21,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief  A simple implementation of a light non-aqueous phase liquid (LNAPL).
+ * \copydoc Dumux::LNAPL
  */
 #ifndef DUMUX_LNAPL_HH
 #define DUMUX_LNAPL_HH

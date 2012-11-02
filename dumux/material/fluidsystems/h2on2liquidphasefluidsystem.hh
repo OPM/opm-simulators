@@ -19,8 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A liquid-phase-only fluid system with water and nitrogen as components.
+ * \copydoc Dumux::FluidSystems::H2ON2LiquidPhase
  */
 #ifndef DUMUX_H2O_N2_LIQUIDPHASE_FLUID_SYSTEM_HH
 #define DUMUX_H2O_N2_LIQUIDPHASE_FLUID_SYSTEM_HH

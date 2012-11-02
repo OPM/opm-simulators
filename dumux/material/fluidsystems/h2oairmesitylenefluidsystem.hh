@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A fluid system with water, gas and NAPL as phases and
- *        water, air and mesitylene (DNAPL) as components.
+ * \copydoc Dumux::FluidSystems::H2OAirMesitylene
  */
 #ifndef DUMUX_H2O_AIR_MESITYLENE_FLUID_SYSTEM_HH
 #define DUMUX_H2O_AIR_MESITYLENE_FLUID_SYSTEM_HH
@@ -42,10 +40,8 @@
 
 #include <iostream>
 
-namespace Dumux
-{
-namespace FluidSystems
-{
+namespace Dumux {
+namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems

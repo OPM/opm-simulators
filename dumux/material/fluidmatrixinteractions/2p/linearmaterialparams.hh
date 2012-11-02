@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Reference implementation of the parameter object for the
- *        linear material law.
+ * \copydoc Dumux::LinearMaterialParams
  */
 #ifndef LINEAR_MATERIAL_PARAMS_HH
 #define LINEAR_MATERIAL_PARAMS_HH

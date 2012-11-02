@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A fluid system with water, gas and NAPL as phases and
- *        water, air and NAPL (contaminant) as components.
+ * \copydoc Dumux::FluidSystems::H2OAirXylene
  */
 #ifndef DUMUX_H2O_AIR_XYLENE_FLUID_SYSTEM_HH
 #define DUMUX_H2O_AIR_XYLENE_FLUID_SYSTEM_HH

@@ -20,9 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Implementation of the capillary pressure and relative permeability <-> saturation relations according to Brooks and Corey.
- *
+ * \copydoc Dumux::BrooksCorey
  */
 #ifndef DUMUX_BROOKS_COREY_HH
 #define DUMUX_BROOKS_COREY_HH

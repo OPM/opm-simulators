@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Default parameter class for the Parker-Lenhard hysteresis
- *        model.
+ * \copydoc Dumux::ParkerLenhardParams
  */
 #ifndef DUMUX_PARKER_LENHARD_PARAMS_HH
 #define DUMUX_PARKER_LENHARD_PARAMS_HH

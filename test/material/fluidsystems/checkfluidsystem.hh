@@ -18,12 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief This file provides the actual code for the fluid systems
- *        test.
- *
- * It is not directly in test_fluidsystems.cc so that external modules
- * like dumux-devel can use it easily
+ * \copydoc checkFluidSystem
  */
 #ifndef DUMUX_CHECK_FLUIDSYSTEM_HH
 #define DUMUX_CHECK_FLUIDSYSTEM_HH
@@ -51,8 +46,10 @@
 #include <iostream>
 #include <string>
 
-// this is a fluid state which makes sure that only the quantities
-// allowed are accessed
+/*!
+ * \brief This is a fluid state which makes sure that only the quantities
+ *        allowed are accessed.
+ */
 template <class Scalar,
           class FluidSystem,
           class BaseFluidState = Dumux::CompositionalFluidState<Scalar, FluidSystem> >
@@ -245,6 +242,9 @@ void checkFluidState(const BaseFluidState &fs)
     };
 }
 
+/*!
+ * \brief Checks whether a fluid system adheres to the specification.
+ */
 template <class Scalar, class FluidSystem>
 void checkFluidSystem()
 {

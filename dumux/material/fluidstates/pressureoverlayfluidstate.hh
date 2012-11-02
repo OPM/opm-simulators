@@ -18,10 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief This is a fluid state which allows to set the fluid
- *        pressures and takes all other quantities from an other
- *        fluid state.
+ * \copydoc Dumux::PressureOverlayFluidState
  */
 #ifndef DUMUX_PRESSURE_OVERLAY_FLUID_STATE_HH
 #define DUMUX_PRESSURE_OVERLAY_FLUID_STATE_HH

@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Linear capillary pressure and relative permeability <->
- *        saturation relations
+ * \copydoc Dumux::LinearMaterial
  */
 #ifndef DUMUX_LINEAR_MATERIAL_HH
 #define DUMUX_LINEAR_MATERIAL_HH

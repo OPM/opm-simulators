@@ -18,22 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief The mixing rule for the oil and the gas phases of the SPE5 problem.
- *
- * This problem comprises \f$H_2O\f$, \f$C_1\f$, \f$C_3\f$, \f$C_6\f$,
- * \f$C_10\f$, \f$C_15\f$ and \f$C_20\f$ as components.
- *
- * See:
- *
- * R. Reid, et al.: The Properties of Gases and Liquids, 4th edition,
- * McGraw-Hill, 1987, pp. 43-44
- *
- * and
- *
- * J.E. Killough, et al.: Fifth Comparative Solution Project:
- * Evaluation of Miscible Flood Simulators, Ninth SPE Symposium on
- * Reservoir Simulation, 1987
+ * \copydoc Dumux::PengRobinsonParamsMixture
  */
 #ifndef DUMUX_PENG_ROBINSON_PARAMS_MIXTURE_HH
 #define DUMUX_PENG_ROBINSON_PARAMS_MIXTURE_HH

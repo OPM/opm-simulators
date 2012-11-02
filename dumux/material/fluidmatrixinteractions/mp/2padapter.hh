@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief Provides an adapter class to use two-phase material laws
- *        with the generalized M-phase API.
+ * \copydoc Dumux::TwoPAdapter
  */
 #ifndef DUMUX_MP_2P_ADAPTER_HH
 #define DUMUX_MP_2P_ADAPTER_HH

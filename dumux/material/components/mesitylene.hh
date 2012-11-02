@@ -19,7 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief Component for Mesitylene
+ * \copydoc Dumux::Mesitylene
  */
 #ifndef DUMUX_MESITYLENE_HH
 #define DUMUX_MESITYLENE_HH

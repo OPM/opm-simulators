@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief   Parameters that are necessary for the \em regularization of
- *          the linear constitutive relations.
+ * \copydoc Dumux::RegularizedLinearMaterialParams
  */
 #ifndef REGULARIZED_LINEAR_PARAMS_HH
 #define REGULARIZED_LINEAR_PARAMS_HH

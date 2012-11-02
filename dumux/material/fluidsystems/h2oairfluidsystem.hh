@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A fluid system with a liquid and a gaseous phase and water and air
- *        as components.
+ * \copydoc Dumux::FluidSystems::H2OAir
  */
 #ifndef DUMUX_H2O_AIR_SYSTEM_HH
 #define DUMUX_H2O_AIR_SYSTEM_HH

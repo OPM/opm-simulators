@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Binary coefficients for air and mesitylene.
+ * \copydoc Dumux::BinaryCoeff::Air_Mesitylene
  */
 #ifndef DUMUX_BINARY_COEFF_AIR_MESITYLENE_HH
 #define DUMUX_BINARY_COEFF_AIR_MESITYLENE_HH

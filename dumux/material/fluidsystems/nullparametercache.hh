@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief The a parameter cache which does nothing
+ * \copydoc Dumux::NullParameterCache
  */
 #ifndef DUMUX_NULL_PARAMETER_CACHE_HH
 #define DUMUX_NULL_PARAMETER_CACHE_HH

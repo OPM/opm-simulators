@@ -18,9 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A central place for various physical constants occuring in
- *        some equations.
+ * \copydoc Dumux::Constants
  */
 #ifndef DUMUX_CONSTANTS_HH
 #define DUMUX_CONSTANTS_HH

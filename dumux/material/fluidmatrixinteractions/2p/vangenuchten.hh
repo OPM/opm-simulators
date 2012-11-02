@@ -20,9 +20,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief   Implementation of the capillary pressure and
- *          relative permeability <-> saturation relations according to van Genuchten.
+ * \copydoc Dumux::VanGenuchten
  */
 #ifndef DUMUX_VAN_GENUCHTEN_HH
 #define DUMUX_VAN_GENUCHTEN_HH
@@ -38,9 +36,11 @@ namespace Dumux {
  * \ingroup fluidmatrixinteractionslaws
  *
  * \brief Implementation of the van Genuchten capillary pressure <->
- *        saturation relation. This class bundles the "raw" curves
- *        as static members and doesn't concern itself converting
- *        absolute to effective saturations and vice versa.
+ *        saturation relation.
+ *
+ * This class only implements the "raw" van-Genuchten curves as static
+ * members and doesn't concern itself converting absolute to effective
+ * saturations and vice versa.
  *
  * For general info: EffToAbsLaw
  *

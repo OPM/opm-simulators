@@ -17,17 +17,9 @@
  *   You should have received a copy of the GNU General Public License       *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
-
 /*!
  * \file
- *
- * \brief Implements the equations for region 2 of the IAPWS '97 formulation.
- *
- * See:
- *
- * IAPWS: "Revised Release on the IAPWS Industrial Formulation
- * 1997 for the Thermodynamic Properties of Water and Steam",
- * http://www.iapws.org/relguide/IF97-Rev.pdf
+ * \copydoc Dumux::IAPWS::Region2
  */
 #ifndef DUMUX_IAPWS_REGION2_HH
 #define DUMUX_IAPWS_REGION2_HH

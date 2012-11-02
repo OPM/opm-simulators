@@ -41,7 +41,6 @@ namespace Dumux
 template <class Scalar, class FluidSystem, bool storeEnthalpy=true>
 class CompositionalFluidState;
 
-
 // specialization for the enthalpy enabled case
 template <class Scalar, class FluidSystem>
 class CompositionalFluidState<Scalar, FluidSystem, true>

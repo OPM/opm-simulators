@@ -19,8 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Represents the gas phase of a single (pseudo-) component
+ * \copydoc Dumux::GasPhase
  */
 #ifndef DUMUX_GAS_PHASE_HH
 #define DUMUX_GAS_PHASE_HH

@@ -17,10 +17,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file linearmaterialparams.hh
- *
- * Reference implementation of parameters for the M-phase linear
- * material material.
+ * \file
+ * \copydoc Dumux::MpLinearMaterialParams
  */
 #ifndef MP_LINEAR_MATERIAL_PARAMS_HH
 #define MP_LINEAR_MATERIAL_PARAMS_HH

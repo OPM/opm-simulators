@@ -17,10 +17,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
  *****************************************************************************/
 /*!
- * \file mplinearmaterialparams.hh
- *
- * Implements a linear saturation-capillary pressure relation for
- * M-phase fluid systems.
+ * \file
+ * \copydoc Dumux::MpLinearMaterial
  */
 #ifndef DUMUX_MP_LINEAR_MATERIAL_HH
 #define DUMUX_MP_LINEAR_MATERIAL_HH

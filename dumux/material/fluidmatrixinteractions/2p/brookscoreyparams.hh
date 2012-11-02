@@ -19,9 +19,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief Specification of the material parameters for the Brooks
- *        Corey constitutive relations.
+ * \copydoc Dumux::BrooksCoreyParams
  */
 #ifndef DUMUX_BROOKS_COREY_PARAMS_HH
 #define DUMUX_BROOKS_COREY_PARAMS_HH

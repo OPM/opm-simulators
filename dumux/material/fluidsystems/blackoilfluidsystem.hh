@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A three-phase black-oil fluid system.
+ * \copydoc Dumux::FluidSystems::BlackOil
  */
 #ifndef DUMUX_BLACK_OIL_FLUID_SYSTEM_HH
 #define DUMUX_BLACK_OIL_FLUID_SYSTEM_HH

@@ -18,8 +18,7 @@
  *****************************************************************************/
 /*!
  * \file
- *
- * \brief A fluid system for single phase models.
+ * \copydoc Dumux::FluidSystems::OneP
  */
 #ifndef DUMUX_1P_FLUIDSYSTEM_HH
 #define DUMUX_1P_FLUIDSYSTEM_HH
