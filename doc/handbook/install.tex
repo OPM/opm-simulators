@@ -76,11 +76,10 @@ modules for additional \Dune features, additional software packages
 may be required. Some hints on that are given in Section
 \ref{sec:external-modules-libraries}.
 
-For the extraction of the content of tar files, the GNU version of
-\texttt{tar} is used.  To access the git or subversion software
-repositories, a git and subversion clients are required. We recommend
-to use the git command-line client \texttt{git} version 1.7.12 or
-newer with the subversion integration plugin \texttt{git-svn} enabled~\cite{GIT-HP}.
+To access the git or subversion software repositories, git and
+subversion clients are required. We recommend to use the git
+command-line client \texttt{git} version 1.7.12 or newer with the
+subversion integration plugin \texttt{git-svn} enabled~\cite{GIT-HP}.
 
 \begin{table}
 \centering
@@ -106,6 +105,20 @@ for debugging: & valgrind &\\
 \bottomrule
 \end{tabular}
 \label{tbl:ubuntu-pkg}
+\end{table}
+
+\begin{table}
+\centering
+\caption{Package names for openSUSE 12.2. For this distribution, the {\em science} package repository needs to be added. The science repository is available from \url{http://download.opensuse.org/repositories/science/openSUSE_12.2/}. }
+\begin{tabular}{llll}
+\toprule
+\textbf{purpose} & \textbf{package names} \\
+\midrule
+git & git-svn & dune-istl-devel & dune-grid-devel \\
+dune-localfunctions-devel & \\
+\bottomrule
+\end{tabular}
+\label{tbl:opensuse-pkg}
 \end{table}
 
 \section{Obtaining source code for \Dune and \eWoms}
