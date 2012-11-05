@@ -43,7 +43,9 @@ namespace Opm
     public:
         /// Construct solver.
         /// \param[in] grid      A 2d or 3d grid.
-        TransportModelTracerTof(const UnstructuredGrid& grid);
+        /// \param[in] use_multidim_upwind  If true, use multidimensional tof upwinding.
+        TransportModelTracerTof(const UnstructuredGrid& grid,
+                                const bool use_multidim_upwind = false);
 
         /// Solve for time-of-flight.
         /// \param[in]  darcyflux         Array of signed face fluxes.
@@ -59,7 +61,11 @@ namespace Opm
 
     private:
         virtual void solveSingleCell(const int cell);
+        void solveSingleCellMultidimUpwind(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
+
+        void multidimUpwindTerms(const int face, const int upwind_cell,
+                                 double& face_term, double& cell_term_factor) const;
 
     private:
         const UnstructuredGrid& grid_;
@@ -67,6 +73,9 @@ namespace Opm
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
         double* tof_;
+        bool use_multidim_upwind_;
+        std::vector<double> face_tof_;       // For multidim upwind face tofs.
+        mutable std::vector<int> adj_faces_; // For multidim upwind logic.
     };
 
 } // namespace Opm
