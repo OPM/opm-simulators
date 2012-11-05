@@ -464,12 +464,12 @@ private:
         if(T < 273.15) {
             DUNE_THROW(NumericalProblem,
                        "Liquid density for Brine and CO2 is only "
-                       "defined above 273.15K (is" << T << ")");
+                       "defined above 273.15K (is " << T << "K)");
         }
         if(pl >= 2.5e8) {
             DUNE_THROW(NumericalProblem,
                        "Liquid density for Brine and CO2 is only "
-                       "defined below 250MPa (is" << pl << ")");
+                       "defined below 250MPa (is " << pl << "Pa)");
         }
 
         Scalar rho_brine = Brine::liquidDensity(T, pl);

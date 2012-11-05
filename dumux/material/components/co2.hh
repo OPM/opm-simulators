@@ -228,11 +228,11 @@ public:
         double dmu, rho;
         double visco_CO2;
 
-        if(temperature < 275.) // regularisation
+        if(temperature < 275.) // regularization
         {
             temperature = 275;
-            Dune::dgrave << "Temperature below 275K in viscosity function:"
-                    << "Regularizing tempereature to 275K. " << std::endl;
+            std::cout << "Temperature below 275K in viscosity function:"
+                      << "Regularizing temperature to 275K. " << std::endl;
         }
 
 
