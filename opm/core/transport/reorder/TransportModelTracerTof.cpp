@@ -76,6 +76,10 @@ namespace Opm
 
     void TransportModelTracerTof::solveSingleCell(const int cell)
     {
+        if (use_multidim_upwind_) {
+            solveSingleCellMultidimUpwind(cell);
+            return;
+        }
         // Compute flux terms.
         // Sources have zero tof, and therefore do not contribute
         // to upwind_term. Sinks on the other hand, must be added
@@ -99,13 +103,7 @@ namespace Opm
             // Add flux to upwind_term or downwind_flux, if interior.
             if (other != -1) {
                 if (flux < 0.0) {
-                    if (use_multidim_upwind_) {
-                        const double ftof = multidimUpwindTof(f, other);
-                        face_tof_[f] = ftof;
-                        upwind_term += flux*ftof;
-                    } else {
-                        upwind_term += flux*tof_[other];
-                    }
+                    upwind_term += flux*tof_[other];
                 } else {
                     downwind_flux += flux;
                 }
@@ -114,6 +112,60 @@ namespace Opm
 
         // Compute tof.
         tof_[cell] = (porevolume_[cell] - upwind_term)/downwind_flux;
+    }
+
+
+
+
+    void TransportModelTracerTof::solveSingleCellMultidimUpwind(const int cell)
+    {
+        // Compute flux terms.
+        // Sources have zero tof, and therefore do not contribute
+        // to upwind_term. Sinks on the other hand, must be added
+        // to the downwind terms (note sign change resulting from
+        // different sign conventions: pos. source is injection,
+        // pos. flux is outflow).
+        double upwind_term = 0.0;
+        double downwind_term_cell_factor = std::max(-source_[cell], 0.0);
+        double downwind_term_face = 0.0;
+        for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
+            int f = grid_.cell_faces[i];
+            double flux;
+            int other;
+            // Compute cell flux
+            if (cell == grid_.face_cells[2*f]) {
+                flux  = darcyflux_[f];
+                other = grid_.face_cells[2*f+1];
+            } else {
+                flux  =-darcyflux_[f];
+                other = grid_.face_cells[2*f];
+            }
+            // Add flux to upwind_term or downwind_flux, if interior.
+            if (other != -1) {
+                if (flux < 0.0) {
+                    upwind_term += flux*face_tof_[f];
+                } else {
+                    double fterm, cterm_factor;
+                    multidimUpwindTerms(f, cell, fterm, cterm_factor);
+                    downwind_term_face += fterm*flux;
+                    downwind_term_cell_factor += cterm_factor*flux;
+                }
+            }
+        }
+
+        // Compute tof for cell.
+        tof_[cell] = (porevolume_[cell] - upwind_term - downwind_term_face)/downwind_term_cell_factor;        // }
+
+        // Compute tof for downwind faces.
+        for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
+            int f = grid_.cell_faces[i];
+            const double outflux_f = (grid_.face_cells[2*f] == cell) ? darcyflux_[f] : -darcyflux_[f];
+            if (outflux_f > 0.0) {
+                double fterm, cterm_factor;
+                multidimUpwindTerms(f, cell, fterm, cterm_factor);
+                face_tof_[f] = fterm + cterm_factor*tof_[cell];
+            }
+        }
     }
 
 
@@ -128,7 +180,18 @@ namespace Opm
     }
 
 
-    double TransportModelTracerTof::multidimUpwindTof(const int face, const int upwind_cell) const
+
+
+    // Assumes that face_tof_[f] is known for all upstream faces f of upwind_cell.
+    // Assumes that darcyflux_[face] is != 0.0.
+    // This function returns factors to compute the tof for 'face':
+    //   tof(face) = face_term + cell_term_factor*tof(upwind_cell).
+    // It is not computed here, since these factors are needed to
+    // compute the tof(upwind_cell) itself.
+    void TransportModelTracerTof::multidimUpwindTerms(const int face,
+                                                      const int upwind_cell,
+                                                      double& face_term,
+                                                      double& cell_term_factor) const
     {
         // Implements multidim upwind according to
         // "Multidimensional upstream weighting for multiphase transport on general grids"
@@ -171,7 +234,8 @@ namespace Opm
         const int num_adj = adj_faces_.size();
         ASSERT(num_adj == face_nodes_end - face_nodes_beg);
         const double flux_face = std::fabs(darcyflux_[face]);
-        double tof = 0.0;
+        face_term = 0.0;
+        cell_term_factor = 0.0;
         for (int ii = 0; ii < num_adj; ++ii) {
             const int f = adj_faces_[ii];
             const double influx_f = (grid_.face_cells[2*f] == upwind_cell) ? -darcyflux_[f] : darcyflux_[f];
@@ -182,11 +246,13 @@ namespace Opm
             // const double omega = omega_star > 0.0 ? std::min(omega_star, 1.0) :  0.0;
             // SMU
             const double omega = omega_star > 0.0 ? omega_star/(1.0 + omega_star) : 0.0;
-            tof += (1.0 - omega)*tof_[upwind_cell] + omega*face_tof_[f];
+            face_term += omega*face_tof_[f];
+            cell_term_factor += (1.0 - omega);
         }
-
-        // For now taking a simple average.
-        return tof/double(num_adj);
+        face_term /= double(num_adj);
+        cell_term_factor /= double(num_adj);
     }
+
+
 
 } // namespace Opm

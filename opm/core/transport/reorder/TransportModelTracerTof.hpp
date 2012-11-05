@@ -61,9 +61,11 @@ namespace Opm
 
     private:
         virtual void solveSingleCell(const int cell);
+        void solveSingleCellMultidimUpwind(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
 
-        double multidimUpwindTof(const int face, const int upwind_cell) const;
+        void multidimUpwindTerms(const int face, const int upwind_cell,
+                                 double& face_term, double& cell_term_factor) const;
 
     private:
         const UnstructuredGrid& grid_;
