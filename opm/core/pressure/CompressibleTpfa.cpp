@@ -217,7 +217,7 @@ namespace Opm
         const int dim = grid_.dimensions;
         const double grav = gravity_ ? gravity_[dim - 1] : 0.0;
         wellperf_wdp_.clear();
-        wellperf_wdp_.resize(np*nperf, 0.0);
+        wellperf_wdp_.resize(nperf, 0.0);
         if (not (std::abs(grav) > 0.0)) {
             return;
         }
@@ -228,9 +228,9 @@ namespace Opm
 
         // Main loop, iterate over all perforations,
         // using the following formula (by phase):
-        //    gpot(perf) = g*(perf_z - well_ref_z)*rho(perf)
-        // where the phase densities rho(perf) are taken to be
-        // the densities in the perforation cell.
+        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
+        // where the total density rho(perf) is taken to be
+        //    sum_p (rho_p*saturation_p) in the perforation cell.
         for (int w = 0; w < nw; ++w) {
             const double ref_depth = wells_->depth_ref[w];
             for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w + 1]; ++j) {
@@ -239,7 +239,8 @@ namespace Opm
                 props_.matrix(1, &state.pressure()[cell], &state.surfacevol()[np*cell], &cell, &A[0], 0);
                 props_.density(1, &A[0], &rho[0]);
                 for (int phase = 0; phase < np; ++phase) {
-                    wellperf_wdp_[np*j + phase] = rho[phase]*grav*(cell_depth - ref_depth);
+                    const double s_phase = state.saturation()[np*cell + phase];
+                    wellperf_wdp_[j] += s_phase*rho[phase]*grav*(cell_depth - ref_depth);
                 }
             }
         }
@@ -478,10 +479,7 @@ namespace Opm
                     std::copy(cM, cM + np, wpM);
                 } else {
                     const double bhp = well_state.bhp()[w];
-                    double perf_p = bhp;
-                    for (int phase = 0; phase < np; ++phase) {
-                        perf_p += wellperf_wdp_[np*j + phase]*comp_frac[phase];
-                    }
+                    double perf_p = bhp + wellperf_wdp_[j];
                     // Hack warning: comp_frac is used as a component
                     // surface-volume variable in calls to matrix() and
                     // viscosity(), but as a saturation in the call to
@@ -636,16 +634,10 @@ namespace Opm
         // Compute well perforation pressures (not done by the C code).
         if (wells_ != 0) {
             const int nw = wells_->number_of_wells;
-            const int np = props_.numPhases();
             for (int w = 0; w < nw; ++w) {
-                const double* comp_frac = &wells_->comp_frac[np*w];
                 for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w+1]; ++j) {
                     const double bhp = well_state.bhp()[w];
-                    double perf_p = bhp;
-                    for (int phase = 0; phase < np; ++phase) {
-                        perf_p += wellperf_wdp_[np*j + phase]*comp_frac[phase];
-                    }
-                    well_state.perfPress()[j] = perf_p;
+                    well_state.perfPress()[j] = bhp + wellperf_wdp_[j];
                 }
             }
         }
