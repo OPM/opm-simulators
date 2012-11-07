@@ -29,8 +29,9 @@ namespace Opm
 
     /// Default constructor.
     SimulatorTimer::SimulatorTimer()
-	: current_step_(0),
-	  current_time_(0.0)
+        : current_step_(0),
+          current_time_(0.0),
+          start_date_(2012,1,1)    // A really arbitrary default starting value?!
     {
     }
 
@@ -39,31 +40,32 @@ namespace Opm
     ///    stepsize_days (default 1)
     void SimulatorTimer::init(const parameter::ParameterGroup& param)
     {
-	const int num_psteps = param.getDefault("num_psteps", 1);
-	const double stepsize_days = param.getDefault("stepsize_days", 1.0);
-	const double stepsize = Opm::unit::convert::from(stepsize_days, Opm::unit::day);
-	timesteps_.clear();
-	timesteps_.resize(num_psteps, stepsize);
-	total_time_ = num_psteps*stepsize;
+        const int num_psteps = param.getDefault("num_psteps", 1);
+        const double stepsize_days = param.getDefault("stepsize_days", 1.0);
+        const double stepsize = Opm::unit::convert::from(stepsize_days, Opm::unit::day);
+        timesteps_.clear();
+        timesteps_.resize(num_psteps, stepsize);
+        total_time_ = num_psteps*stepsize;
     }
 
     /// Initialize from TSTEP field.
     void SimulatorTimer::init(const EclipseGridParser& deck)
     {
-	timesteps_ = deck.getTSTEP().tstep_;
-	total_time_ = std::accumulate(timesteps_.begin(), timesteps_.end(), 0.0);
+        timesteps_  = deck.getTSTEP().tstep_;
+        total_time_ = std::accumulate(timesteps_.begin(), timesteps_.end(), 0.0);
+        start_date_ = deck.getStartDate();
     }
 
     /// Total number of steps.
     int SimulatorTimer::numSteps() const
     {
-	return timesteps_.size();
+        return timesteps_.size();
     }
 
     /// Current step number.
     int SimulatorTimer::currentStepNum() const
     {
-	return current_step_;
+        return current_step_;
     }
 
     /// Set current step number.
@@ -82,20 +84,28 @@ namespace Opm
     /// Current step length.
     double SimulatorTimer::currentStepLength() const
     {
-	ASSERT(!done());
-	return timesteps_[current_step_];
+        ASSERT(!done());
+        return timesteps_[current_step_];
     }
 
     /// Current time.
     double SimulatorTimer::currentTime() const
     {
-	return current_time_;
+        return current_time_;
     }
+
+
+    boost::posix_time::ptime SimulatorTimer::currentDateTime() const
+    {
+      return boost::posix_time::ptime(start_date_) + boost::posix_time::seconds( (int) current_time_ );
+    }
+    
+
 
     /// Total time.
     double SimulatorTimer::totalTime() const
     {
-	return total_time_;
+        return total_time_;
     }
 
     /// Set total time.
@@ -104,32 +114,32 @@ namespace Opm
     /// access to later timesteps.
     void SimulatorTimer::setTotalTime(double time)
     {
-	total_time_ = time;
+        total_time_ = time;
     }
 
     /// Print a report with current and total time etc.
     void SimulatorTimer::report(std::ostream& os) const
     {
         os << "\n\n---------------    Simulation step number " << currentStepNum() << "    ---------------"
-	   << "\n      Current time (days)     " << Opm::unit::convert::to(currentTime(), Opm::unit::day)
-	   << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day)
-	   << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
-	   << "\n" << std::endl;
+           << "\n      Current time (days)     " << Opm::unit::convert::to(currentTime(), Opm::unit::day)
+           << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day)
+           << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
+           << "\n" << std::endl;
     }
 
     /// Next step.
     SimulatorTimer& SimulatorTimer::operator++()
     {
-	ASSERT(!done());
-	current_time_ += timesteps_[current_step_];
-	++current_step_;
-	return *this;
+        ASSERT(!done());
+        current_time_ += timesteps_[current_step_];
+        ++current_step_;
+        return *this;
     }
 
     /// Return true if op++() has been called numSteps() times.
     bool SimulatorTimer::done() const
     {
-	return int(timesteps_.size()) == current_step_;
+        return int(timesteps_.size()) == current_step_;
     }
 
 
