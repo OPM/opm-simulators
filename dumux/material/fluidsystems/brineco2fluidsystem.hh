@@ -260,25 +260,24 @@ public:
             Valgrind::CheckDefined(result);
             return result;
         }
-        else {
-            assert(phaseIdx == gPhaseIdx);
 
-            // use normalized composition for to calculate the density
-            // (the relations don't seem to take non-normalized
-            // compositions too well...)
-            Scalar xgBrine = std::min(1.0, std::max(0.0, fluidState.moleFraction(gPhaseIdx, BrineIdx)));
-            Scalar xgCO2 = std::min(1.0, std::max(0.0, fluidState.moleFraction(gPhaseIdx, CO2Idx)));
-            Scalar sumx = xgBrine + xgCO2;
-            xgBrine /= sumx;
-            xgCO2 /= sumx;
+        assert(phaseIdx == gPhaseIdx);
 
-            Scalar result = gasDensity_(temperature,
-                                        pressure,
-                                        xgBrine,
-                                        xgCO2);
-            Valgrind::CheckDefined(result);
-            return result;
-        }
+        // use normalized composition for to calculate the density
+        // (the relations don't seem to take non-normalized
+        // compositions too well...)
+        Scalar xgBrine = std::min(1.0, std::max(0.0, fluidState.moleFraction(gPhaseIdx, BrineIdx)));
+        Scalar xgCO2 = std::min(1.0, std::max(0.0, fluidState.moleFraction(gPhaseIdx, CO2Idx)));
+        Scalar sumx = xgBrine + xgCO2;
+        xgBrine /= sumx;
+        xgCO2 /= sumx;
+
+        Scalar result = gasDensity_(temperature,
+                                    pressure,
+                                    xgBrine,
+                                    xgCO2);
+        Valgrind::CheckDefined(result);
+        return result;
     }
 
     /*!
