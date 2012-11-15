@@ -35,7 +35,7 @@ namespace Opm
     class TransportModelInterface
     {
     public:
-	virtual ~TransportModelInterface() {}
+    virtual ~TransportModelInterface() {}
     private:
 	virtual void solveSingleCell(const int cell) = 0;
 	virtual void solveMultiCell(const int num_cells, const int* cells) = 0;
