@@ -98,7 +98,20 @@ namespace Opm
         const FlowBoundaryConditions* bcs_;
         // Solvers
         IncompTpfa psolver_;
+        // this should maybe be packed in a separate file
+        typedef Opm::SimpleFluid2pWrappingProps TwophaseFluid;
         typedef Opm::SinglePointUpwindTwoPhase<TwophaseFluid> TransportModel;
+        using namespace Opm::ImplicitTransportDefault;
+        typedef NewtonVectorCollection< ::std::vector<double> >      NVecColl;
+        typedef JacobianSystem        < struct CSRMatrix, NVecColl > JacSys;
+        template <class Vector>
+        class MaxNorm {
+        public:
+            static double
+            norm(const Vector& v) {
+                return AccumulationNorm <Vector, MaxAbs>::norm(v);
+            }
+        };
         typedef Opm::ImplicitTransport<TransportModel,
                                        JacSys        ,
                                        MaxNorm       ,
@@ -106,7 +119,8 @@ namespace Opm
                                        VectorZero    ,
                                        MatrixZero    ,
                                        VectorAssign  > ImpliciteTwoPhaseTransportSolver;
-        ImpliciteTwoPhaseTransporSolver tsolver_;
+
+        ImpliciteTwoPhaseTransportSolver tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
         // Misc. data
