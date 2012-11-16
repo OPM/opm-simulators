@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
+#include <opm/core/transport/reorder/TofDiscGalReorder.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>

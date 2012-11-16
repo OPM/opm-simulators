@@ -20,7 +20,7 @@
 #ifndef OPM_TOFDISCGALREORDER_HEADER_INCLUDED
 #define OPM_TOFDISCGALREORDER_HEADER_INCLUDED
 
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include <map>

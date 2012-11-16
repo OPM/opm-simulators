@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/grid.h>
 #include <opm/core/utility/StopWatch.hpp>

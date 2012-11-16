@@ -20,7 +20,7 @@
 #ifndef OPM_TOFREORDER_HEADER_INCLUDED
 #define OPM_TOFREORDER_HEADER_INCLUDED
 
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <vector>
 #include <map>
 #include <ostream>

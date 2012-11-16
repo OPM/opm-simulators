@@ -20,7 +20,7 @@
 #ifndef OPM_TRANSPORTSOLVERCOMPRESSIBLETWOPHASEREORDER_HEADER_INCLUDED
 #define OPM_TRANSPORTSOLVERCOMPRESSIBLETWOPHASEREORDER_HEADER_INCLUDED
 
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
