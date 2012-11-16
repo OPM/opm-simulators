@@ -29,24 +29,32 @@
 
 #ifndef TWOPHASETRANSPORTSOLVER_HPP
 #define TWOPHASETRANSPORTSOLVER_HPP
-/// Base class for tranport solvers
-class TwoPhaseTransportSolver
-{
-public:
-    /// Construct solver.
-    virtual ~TwoPhaseTransportSolver() {};
 
-    /// Solve for saturation at next timestep.
-    /// \param[in] darcyflux         Array of signed face fluxes.
-    /// \param[in] porevolume        Array of pore volumes.
-    /// \param[in] source            Transport source term.
-    /// \param[in] dt                Time step.
-    /// \param[in, out] saturation   Phase saturations.
-    virtual void solve(const double* darcyflux,
-               const double* porevolume,
-               const double* source,
-               const double dt,
-               std::vector<double>& saturation) = 0;
-};
+#include <opm/core/simulator/TwophaseState.hpp>
+#include <opm/core/simulator/WellState.hpp>
+namespace Opm
+{
+
+    /// Base class for tranport solvers
+    class TwoPhaseTransportSolver
+    {
+    public:
+        /// Virtual destructor to enable inheritance.
+        virtual ~TwoPhaseTransportSolver() {}
+
+        /// Solve for saturation at next timestep.
+        /// \param[in] darcyflux         Array of signed face fluxes.
+        /// \param[in] porevolume        Array of pore volumes.
+        /// \param[in] source            Transport source term.
+        /// \param[in] dt                Time step.
+        /// \param[in, out] saturation   Phase saturations.
+        virtual void solve(const double* porevolume,
+                           const double* source,
+                           const double dt,
+                           TwophaseState& state,
+                           WellState& wstate) = 0;
+    };
+
+}
 
 #endif // TWOPHASETRANSPORTSOLVER_HPP

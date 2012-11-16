@@ -29,6 +29,4 @@
 
 #include "TwoPhaseTransportSolver.hpp"
 
-TwoPhaseTransportSolver::TwoPhaseTransportSolver()
-{
-}
+
