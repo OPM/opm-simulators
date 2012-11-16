@@ -46,7 +46,7 @@
 #include <opm/core/utility/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/transport/reorder/TransportModelCompressibleTwophase.hpp>
+#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -101,7 +101,7 @@ namespace Opm
         const double* gravity_;
         // Solvers
         CompressibleTpfa psolver_;
-        TransportModelCompressibleTwophase tsolver_;
+        TransportSolverCompressibleTwophaseReorder tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
         // Misc. data

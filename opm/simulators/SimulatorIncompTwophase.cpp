@@ -46,8 +46,8 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 //#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
-#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
-#include <opm/core/transport/ImpliciteTwoPhaseTransportSolver.hpp>
+//#include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
+#include <opm/core/transport/ImplicitTwoPhaseTransportSolver.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
@@ -359,7 +359,8 @@ namespace Opm
             //}
             SinglePointUpwindTwoPhase<Opm::SimpleFluid2pWrappingProps>
                     model(fluid, grid, porevol, gravity, guess_old_solution);
-            tsolver_.reset(new Opm::ImpliciteTwoPhaseTransportSolver(
+            model.initGravityTrans(grid_, psolver_.getHalfTrans());
+            tsolver_.reset(new Opm::ImplicitTwoPhaseTransportSolver(
                                wells_manager,
                                *rock_comp_props,
                                ctrl,
