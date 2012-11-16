@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELTRACERTOFDISCGAL_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELTRACERTOFDISCGAL_HEADER_INCLUDED
+#ifndef OPM_TOFDISCGALREORDER_HEADER_INCLUDED
+#define OPM_TOFDISCGALREORDER_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <boost/shared_ptr.hpp>
@@ -43,14 +43,14 @@ namespace Opm
     /// \tau is specified to be zero on all inflow boundaries.
     /// The user may specify the polynomial degree of the basis function space
     /// used, but only degrees 0 and 1 are supported so far.
-    class TransportModelTracerTofDiscGal : public TransportModelInterface
+    class TofDiscGalReorder : public ReorderSolverInterface
     {
     public:
         /// Construct solver.
         /// \param[in] grid      A 2d or 3d grid.
         /// \param[in] use_cvi   If true, use corner point velocity interpolation.
         ///                      Otherwise, use the basic constant interpolation.
-        TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
+        TofDiscGalReorder(const UnstructuredGrid& grid,
                                        const bool use_cvi);
 
 
@@ -79,8 +79,8 @@ namespace Opm
 
     private:
         // Disable copying and assignment.
-        TransportModelTracerTofDiscGal(const TransportModelTracerTofDiscGal&);
-        TransportModelTracerTofDiscGal& operator=(const TransportModelTracerTofDiscGal&);
+        TofDiscGalReorder(const TofDiscGalReorder&);
+        TofDiscGalReorder& operator=(const TofDiscGalReorder&);
 
         const UnstructuredGrid& grid_;
         boost::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;

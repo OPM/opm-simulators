@@ -26,7 +26,7 @@
 #include <cassert>
 
 
-void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux)
+void Opm::ReorderSolverInterface::reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux)
 {
     // Compute reordered sequence of single-cell problems
     std::vector<int> sequence(grid.number_of_cells);

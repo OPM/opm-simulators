@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELTRACERTOF_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELTRACERTOF_HEADER_INCLUDED
+#ifndef OPM_TOFREORDER_HEADER_INCLUDED
+#define OPM_TOFREORDER_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
@@ -38,12 +38,12 @@ namespace Opm
     /// where v is the fluid velocity, \tau is time-of-flight and
     /// \phi is the porosity. This is a boundary value problem, where
     /// \tau is specified to be zero on all inflow boundaries.
-    class TransportModelTracerTof : public TransportModelInterface
+    class TofReorder : public ReorderSolverInterface
     {
     public:
         /// Construct solver.
         /// \param[in] grid      A 2d or 3d grid.
-        TransportModelTracerTof(const UnstructuredGrid& grid);
+        TofReorder(const UnstructuredGrid& grid);
 
         /// Solve for time-of-flight.
         /// \param[in]  darcyflux         Array of signed face fluxes.

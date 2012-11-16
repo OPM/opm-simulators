@@ -30,7 +30,7 @@ namespace Opm
 
     /// Construct solver.
     /// \param[in] grid      A 2d or 3d grid.
-    TransportModelTracerTof::TransportModelTracerTof(const UnstructuredGrid& grid)
+    TofReorder::TofReorder(const UnstructuredGrid& grid)
         : grid_(grid)
     {
     }
@@ -45,7 +45,7 @@ namespace Opm
     ///                                 (+) inflow flux,
     ///                                 (-) outflow flux.
     /// \param[out] tof               Array of time-of-flight values.
-    void TransportModelTracerTof::solveTof(const double* darcyflux,
+    void TofReorder::solveTof(const double* darcyflux,
                                            const double* porevolume,
                                            const double* source,
                                            std::vector<double>& tof)
@@ -69,7 +69,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTof::solveSingleCell(const int cell)
+    void TofReorder::solveSingleCell(const int cell)
     {
         // Compute flux terms.
         // Sources have zero tof, and therefore do not contribute
@@ -108,7 +108,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTof::solveMultiCell(const int num_cells, const int* cells)
+    void TofReorder::solveMultiCell(const int num_cells, const int* cells)
     {
         std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         for (int i = 0; i < num_cells; ++i) {

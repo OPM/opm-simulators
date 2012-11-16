@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELCOMPRESSIBLETWOPHASE_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELCOMPRESSIBLETWOPHASE_HEADER_INCLUDED
+#ifndef OPM_TRANSPORTSOLVERCOMPRESSIBLETWOPHASEREORDER_HEADER_INCLUDED
+#define OPM_TRANSPORTSOLVERCOMPRESSIBLETWOPHASEREORDER_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
@@ -32,7 +32,7 @@ namespace Opm
 
     /// Implements a reordering transport solver for compressible,
     /// non-miscible two-phase flow.
-    class TransportModelCompressibleTwophase : public TransportModelInterface
+    class TransportSolverCompressibleTwophaseReorder : public ReorderSolverInterface
     {
     public:
         /// Construct solver.
@@ -40,7 +40,7 @@ namespace Opm
         /// \param[in] props     Rock and fluid properties.
         /// \param[in] tol       Tolerance used in the solver.
         /// \param[in] maxit     Maximum number of non-linear iterations used.
-        TransportModelCompressibleTwophase(const UnstructuredGrid& grid,
+        TransportSolverCompressibleTwophaseReorder(const UnstructuredGrid& grid,
                                            const Opm::BlackoilPropertiesInterface& props,
                                            const double tol,
                                            const int maxit);

@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELINTERFACE_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELINTERFACE_HEADER_INCLUDED
+#ifndef OPM_REORDERSOLVERINTERFACE_HEADER_INCLUDED
+#define OPM_REORDERSOLVERINTERFACE_HEADER_INCLUDED
 
 struct UnstructuredGrid;
 
@@ -32,10 +32,10 @@ namespace Opm
     /// needs. (The solve() method is therefore not virtual in this
     /// class.) The reorderAndTransport() method is provided as an aid
     /// to implementing solve() in subclasses.
-    class TransportModelInterface
+    class ReorderSolverInterface
     {
     public:
-    virtual ~TransportModelInterface() {}
+    virtual ~ReorderSolverInterface() {}
     private:
 	virtual void solveSingleCell(const int cell) = 0;
 	virtual void solveMultiCell(const int num_cells, const int* cells) = 0;

@@ -413,7 +413,7 @@ namespace Opm
     /// \param[in] grid      A 2d or 3d grid.
     /// \param[in] use_cvi   If true, use corner point velocity interpolation.
     ///                      Otherwise, use the basic constant interpolation.
-    TransportModelTracerTofDiscGal::TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
+    TofDiscGalReorder::TofDiscGalReorder(const UnstructuredGrid& grid,
                                                                    const bool use_cvi)
         : grid_(grid),
           coord_(grid.dimensions),
@@ -442,7 +442,7 @@ namespace Opm
     ///                               cell comes before the K coefficients corresponding
     ///                               to the second cell etc.
     ///                               K depends on degree and grid dimension.
-    void TransportModelTracerTofDiscGal::solveTof(const double* darcyflux,
+    void TofDiscGalReorder::solveTof(const double* darcyflux,
                                                   const double* porevolume,
                                                   const double* source,
                                                   const int degree,
@@ -476,7 +476,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::solveSingleCell(const int cell)
+    void TofDiscGalReorder::solveSingleCell(const int cell)
     {
         // Residual:
         // For each cell K, basis function b_j (spanning V_h),
@@ -643,7 +643,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::solveMultiCell(const int num_cells, const int* cells)
+    void TofDiscGalReorder::solveMultiCell(const int num_cells, const int* cells)
     {
         std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         for (int i = 0; i < num_cells; ++i) {

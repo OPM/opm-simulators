@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELTWOPHASE_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELTWOPHASE_HEADER_INCLUDED
+#ifndef OPM_TRANSPORTSOLVERTWOPHASEREORDER_HEADER_INCLUDED
+#define OPM_TRANSPORTSOLVERTWOPHASEREORDER_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/TransportModelInterface.hpp>
 #include <vector>
@@ -32,7 +32,7 @@ namespace Opm
     class IncompPropertiesInterface;
 
     /// Implements a reordering transport solver for incompressible two-phase flow.
-    class TransportModelTwophase : public TransportModelInterface
+    class TransportSolverTwophaseReorder : public ReorderSolverInterface
     {
     public:
         /// Construct solver.
@@ -40,7 +40,7 @@ namespace Opm
         /// \param[in] props     Rock and fluid properties.
         /// \param[in] tol       Tolerance used in the solver.
         /// \param[in] maxit     Maximum number of non-linear iterations used.
-        TransportModelTwophase(const UnstructuredGrid& grid,
+        TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
                                const Opm::IncompPropertiesInterface& props,
                                const double tol,
                                const int maxit);
