@@ -15,7 +15,7 @@
    sodipodi:version="0.32"
    inkscape:version="0.48.3.1 r9886"
    version="1.0"
-   sodipodi:docname="dumux_strucutre_flowchart_horizontal_explained.svg"
+   sodipodi:docname="ewoms_structure.eps"
    inkscape:output_extension="org.inkscape.output.svg.inkscape">
   <defs
      id="defs4">
@@ -234,13 +234,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.0939471"
-     inkscape:cx="344.81304"
-     inkscape:cy="319.8014"
+     inkscape:cx="346.64128"
+     inkscape:cy="392.93108"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="1920"
-     inkscape:window-height="1180"
+     inkscape:window-width="1680"
+     inkscape:window-height="995"
      inkscape:window-x="-2"
      inkscape:window-y="-3"
      showguides="false"
@@ -298,7 +298,7 @@
            x="556.69971"
            y="55.761379" /></flowRegion><flowPara
          id="flowPara3183"
-         style="font-size:12px">dumux</flowPara></flowRoot>    <flowRoot
+         style="font-size:12px">ewoms</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot3185"
        style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
@@ -663,7 +663,7 @@
            x="339.13889"
            y="43.877808" /></flowRegion><flowPara
          id="flowPara2528"
-         style="font-size:11px;text-align:start;text-anchor:start">Physical models using a sequentially (IMPET) discretization.</flowPara></flowRoot>    <flowRoot
+         style="font-size:11px;text-align:start;text-anchor:start">Physical models using a sequential (IMPET) discretization.</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot2530"
        style="font-size:18px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"

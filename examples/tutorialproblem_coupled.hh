@@ -20,31 +20,31 @@
 /*!
  * \file
  *
- * \copydoc Dumux::TutorialProblemCoupled
+ * \copydoc Ewoms::TutorialProblemCoupled
  */
-#ifndef DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
-#define DUMUX_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
+#ifndef EWOMS_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
+#define EWOMS_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
 
 // The numerical model
-#include <dumux/boxmodels/immiscible/immisciblemodel.hh>
+#include <ewoms/boxmodels/immiscible/immisciblemodel.hh>
 
 // The chemical species that are used
-#include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/lnapl.hh>
+#include <ewoms/material/components/h2o.hh>
+#include <ewoms/material/components/lnapl.hh>
 
 // The material laws
-#include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
-#include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
-#include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <ewoms/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <ewoms/material/fluidmatrixinteractions/mp/2padapter.hh>
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/
-#include <dumux/common/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
+#include <ewoms/common/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
 
 // For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>
 
-namespace Dumux {
+namespace Ewoms {
 
 // forward declaration of the problem class
 template <class TypeTag>
@@ -56,21 +56,21 @@ NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxImmiscibleTwoPhase)); /*@\
 
 // Set the "Problem" property
 SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
-{ typedef Dumux::TutorialProblemCoupled<TypeTag> type;};
+{ typedef Ewoms::TutorialProblemCoupled<TypeTag> type;};
 
 // Set grid and the grid creator to be used
 SET_TYPE_PROP(TutorialProblemCoupled, Grid, Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial-coupled:set-grid}@*/
-SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Dumux::CubeGridCreator<TypeTag>); /*@\label{tutorial-coupled:set-gridcreator}@*/
+SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Ewoms::CubeGridCreator<TypeTag>); /*@\label{tutorial-coupled:set-gridcreator}@*/
 
 // Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
-              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                                 Dumux::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
+              Ewoms::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+                                 Ewoms::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
 
 // Set the non-wetting phase
 SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
-              Dumux::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-              Dumux::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
+              Ewoms::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+              Ewoms::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
 
 // Set the material law
 SET_PROP(TutorialProblemCoupled, MaterialLaw)
@@ -268,6 +268,6 @@ private:
     // small epsilon value
     Scalar eps_;
 };
-} // namespace Dumux
+} // namespace Ewoms
 
 #endif

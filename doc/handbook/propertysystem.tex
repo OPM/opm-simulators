@@ -35,10 +35,10 @@ how it was inherited.
 \section{\eWoms property system reference}
 
 All source files which use the \eWoms property system should include
-the header file \texttt{dumux/ \hskip-1ex{}common/
+the header file \texttt{ewoms/ \hskip-1ex{}common/
   \hskip-1ex{}propertysystem.hh}.  Declaration of type tags and
 property tags as well as defining properties must be done inside the
-namespace \texttt{Dumux::Properties}.
+namespace \texttt{Ewoms::Properties}.
 
 \subsection*{Defining type tags}
 
@@ -53,7 +53,7 @@ once for a program.
 \vskip1ex\noindent
 Example:
 \begin{lstlisting}[style=eWomsCode]
-namespace Dumux {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(MyBaseTypeTag1);
 NEW_TYPE_TAG(MyBaseTypeTag2);
@@ -76,7 +76,7 @@ are used.
 \vskip1ex\noindent
 Example:
 \begin{lstlisting}[style=eWomsCode]
-namespace Dumux {
+namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(MyPropertyTag);
 }}
@@ -107,7 +107,7 @@ SET_SCALAR_PROP(TypeTagName, PropertyTagName, floatingPointValue);
 \vskip1ex\noindent
 Example:
 \begin{lstlisting}[style=eWomsCode]
-namespace Dumux {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(MyTypeTag);
 
@@ -144,7 +144,7 @@ course derived type tags may set it again.
 \vskip1ex\noindent
 Example:
 \begin{lstlisting}[style=eWomsCode]
-namespace Dumux {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(BaseTypeTag);
 NEW_TYPE_TAG(DerivedTypeTag, INHERITS_FROM(BaseTypeTag));
@@ -257,10 +257,10 @@ diagram for the car types above might look like outlined in Figure
 Using the \eWoms property system, this inheritance hierarchy is
 defined by:
 \begin{lstlisting}[name=propsyscars,style=eWomsCode]
-#include <dumux/common/propertysystem.hh>
+#include <ewoms/common/propertysystem.hh>
 #include <iostream>
 
-namespace Dumux {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(CompactCar);
 NEW_TYPE_TAG(Truck);
@@ -354,7 +354,7 @@ int main()
     std::cout << PROP_DIAGNOSTIC(TTAG(Sedan), TopSpeed);
     std::cout << PROP_DIAGNOSTIC(TTAG(HummerH1), CanonCaliber);
 
-    Dumux::Properties::print<TTAG(Sedan)>();
+    Ewoms::Properties::print<TTAG(Sedan)>();
 }
 \end{lstlisting}
 will yield the following output:
@@ -366,7 +366,7 @@ Properties for Sedan:
   int    GasUsage = '7' defined at test_propertysystem.cc:67
   Inherited from CompactCar:
     int    NumSeats = '5' defined at test_propertysystem.cc:55
-    int    TopSpeed = '::Dumux::Properties::GetProperty<TypeTag, ::Dumux::Properties::PTag::GasUsage>::p::value * 30' defined at test_propertysystem.cc:54
+    int    TopSpeed = '::Ewoms::Properties::GetProperty<TypeTag, ::Ewoms::Properties::PTag::GasUsage>::p::value * 30' defined at test_propertysystem.cc:54
 \end{lstlisting}
 
 

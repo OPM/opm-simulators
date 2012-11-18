@@ -24,10 +24,10 @@
  */
 #include "config.h" /*@\label{tutorial-coupled:include-begin}@*/
 #include "tutorialproblem_coupled.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/
-#include <dumux/common/start.hh> /*@\label{tutorial-coupled:include-end}@*/
+#include <ewoms/common/start.hh> /*@\label{tutorial-coupled:include-end}@*/
 
 int main(int argc, char** argv)
 {
     typedef TTAG(TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-    return Dumux::start<TypeTag>(argc, argv); /*@\label{tutorial-coupled:call-start}@*/
+    return Ewoms::start<TypeTag>(argc, argv); /*@\label{tutorial-coupled:call-start}@*/
 }

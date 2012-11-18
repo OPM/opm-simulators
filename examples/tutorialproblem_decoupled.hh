@@ -22,34 +22,34 @@
 /*!
  * \file
  *
- * \copydoc Dumux::TutorialProblemDecoupled
+ * \copydoc Ewoms::TutorialProblemDecoupled
  */
-#ifndef DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian1}@*/
-#define DUMUX_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian2}@*/
+#ifndef EWOMS_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian1}@*/
+#define EWOMS_TUTORIALPROBLEM_DECOUPLED_HH // guardian macro /*@\label{tutorial-decoupled:guardian2}@*/
 
 // assign parameters dependent on space (e.g. spatial parameters)
 #include "tutorialspatialparams_decoupled.hh" /*@\label{tutorial-decoupled:spatialparameters}@*/
 
-// dumux 2p-decoupled environment
-#include <dumux/decoupled/2p/diffusion/fv/fvpressureproperties2p.hh>
-#include <dumux/decoupled/2p/transport/fv/fvtransportproperties2p.hh>
-#include <dumux/decoupled/2p/impes/impesproblem2p.hh> /*@\label{tutorial-decoupled:parent-problem}@*/
+// eWoms includes
+#include <ewoms/decoupled/2p/diffusion/fv/fvpressureproperties2p.hh>
+#include <ewoms/decoupled/2p/transport/fv/fvtransportproperties2p.hh>
+#include <ewoms/decoupled/2p/impes/impesproblem2p.hh> /*@\label{tutorial-decoupled:parent-problem}@*/
 
 // include cfl-criterion after coats: more suitable if the problem is not advection dominated
-#include<dumux/decoupled/2p/transport/fv/evalcflfluxcoats.hh>
+#include<ewoms/decoupled/2p/transport/fv/evalcflfluxcoats.hh>
 
 // the components that are used
-#include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/lnapl.hh>
+#include <ewoms/material/components/h2o.hh>
+#include <ewoms/material/components/lnapl.hh>
 
 // the grid includes
-#include <dumux/common/cubegridcreator.hh>
+#include <ewoms/common/cubegridcreator.hh>
 #include <dune/grid/yaspgrid.hh>
 
 // provides Dune::FieldVector
 #include <dune/common/fvector.hh>
 
-namespace Dumux {
+namespace Ewoms {
 
 template<class TypeTag>
 class TutorialProblemDecoupled;
@@ -64,13 +64,13 @@ NEW_TYPE_TAG(TutorialProblemDecoupled, INHERITS_FROM(FVPressureTwoP, FVTransport
 // Set the problem property
 SET_TYPE_PROP(TutorialProblemDecoupled, /*@\label{tutorial-decoupled:set-problem}@*/
               Problem,
-              Dumux::TutorialProblemDecoupled<TypeTag>);
+              Ewoms::TutorialProblemDecoupled<TypeTag>);
 
 // Set the grid type
 SET_TYPE_PROP(TutorialProblemDecoupled, Grid, Dune::YaspGrid<2>); /*@\label{tutorial-decoupled:set-grid-type}@*/
 
 //Set the grid creator
-SET_TYPE_PROP(TutorialProblemDecoupled, GridCreator, Dumux::CubeGridCreator<TypeTag>); /*@\label{tutorial-decoupled:set-gridcreator}@*/
+SET_TYPE_PROP(TutorialProblemDecoupled, GridCreator, Ewoms::CubeGridCreator<TypeTag>); /*@\label{tutorial-decoupled:set-gridcreator}@*/
 
 // Set the wetting phase
 SET_PROP(TutorialProblemDecoupled, WettingPhase) /*@\label{tutorial-decoupled:2p-system-start}@*/
@@ -78,7 +78,7 @@ SET_PROP(TutorialProblemDecoupled, WettingPhase) /*@\label{tutorial-decoupled:2p
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public:
-    typedef Dumux::LiquidPhase<Scalar, Dumux::H2O<Scalar> > type; /*@\label{tutorial-decoupled:wettingPhase}@*/
+    typedef Ewoms::LiquidPhase<Scalar, Ewoms::H2O<Scalar> > type; /*@\label{tutorial-decoupled:wettingPhase}@*/
 };
 
 // Set the non-wetting phase
@@ -87,10 +87,10 @@ SET_PROP(TutorialProblemDecoupled, NonwettingPhase)
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public:
-    typedef Dumux::LiquidPhase<Scalar, Dumux::LNAPL<Scalar> > type; /*@\label{tutorial-decoupled:nonwettingPhase}@*/
+    typedef Ewoms::LiquidPhase<Scalar, Ewoms::LNAPL<Scalar> > type; /*@\label{tutorial-decoupled:nonwettingPhase}@*/
 }; /*@\label{tutorial-decoupled:2p-system-end}@*/
 
-SET_TYPE_PROP(TutorialProblemDecoupled, EvalCflFluxFunction, Dumux::EvalCflFluxCoats<TypeTag>); /*@\label{tutorial-decoupled:cflflux}@*/
+SET_TYPE_PROP(TutorialProblemDecoupled, EvalCflFluxFunction, Ewoms::EvalCflFluxCoats<TypeTag>); /*@\label{tutorial-decoupled:cflflux}@*/
 SET_SCALAR_PROP(TutorialProblemDecoupled, ImpetCflFactor, 0.95); /*@\label{tutorial-decoupled:cflfactor}@*/
 
 // Disable gravity

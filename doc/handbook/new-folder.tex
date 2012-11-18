@@ -36,7 +36,7 @@ check_PROGRAMS = tutorial_decoupled tutorial_coupled
 noinst_HEADERS= *.hh
 EXTRA_DIST = CMakeLists.txt
 
-tutorial_coupleddir = $(datadir)/dumux/tutorial
+tutorial_coupleddir = $(datadir)/ewoms/tutorial
 tutorial_coupled_SOURCES = tutorial_coupled.cc
 tutorial_coupled_DATA = $(tutorial_coupled_SOURCES)
 
@@ -56,7 +56,7 @@ directory is \texttt{new\_project}.
 
 \begin{verbatim}
 ...
-SUBDIRS = doc dumux m4 test tutorial new_project
+SUBDIRS = doc ewoms m4 test tutorial new_project
 ...
 \end{verbatim}
 

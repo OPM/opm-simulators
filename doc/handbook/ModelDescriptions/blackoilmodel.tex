@@ -29,7 +29,7 @@ This allows to calculate all quantities required for the mass-\/conservation equ
 By default $\mathrm{v}_\alpha$ is determined by using the standard multi-\/phase Darcy approach, i.\-e. \[ \mathbf{v}_\alpha = - \frac{k_{r\alpha}}{\mu_\alpha} \mathbf{K} \left(\text{grad}\, p_\alpha - \varrho_{\alpha} \mathbf{g} \right) \;, \] although the actual approach which is used can be specified via the {\ttfamily Velocity\-Module} property. For example, the velocity model can by changed to the Forchheimer approach by
 \begin{lstlisting}[style=eWomsCode]
  SET_TYPE_PROP(MyProblemTypeTag, VelocityModule,
-      Dumux::BoxForchheimerVelocityModule<TypeTag>);
+      Ewoms::BoxForchheimerVelocityModule<TypeTag>);
 \end{lstlisting}
 
 

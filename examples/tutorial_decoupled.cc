@@ -26,7 +26,7 @@
 #include "config.h" /*@\label{tutorial-decoupled:include-begin}@*/
 
 #include "tutorialproblem_decoupled.hh" /*@\label{tutorial-decoupled:include-problem-header}@*/
-#include <dumux/common/start.hh> /*@\label{tutorial-decoupled:include-end}@*/
+#include <ewoms/common/start.hh> /*@\label{tutorial-decoupled:include-end}@*/
 
 ////////////////////////
 // the main function
@@ -34,5 +34,5 @@
 int main(int argc, char** argv)
 {
     typedef TTAG(TutorialProblemDecoupled) TypeTag; /*@\label{tutorial-decoupled:set-type-tag}@*/
-    return Dumux::start<TypeTag>(argc, argv); /*@\label{tutorial-decoupled:call-start}@*/
+    return Ewoms::start<TypeTag>(argc, argv); /*@\label{tutorial-decoupled:call-start}@*/
 }

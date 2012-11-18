@@ -21,20 +21,20 @@
  *****************************************************************************/
 /*!
  * \file
- * \copydoc Dumux::TutorialSpatialParamsDecoupled
+ * \copydoc Ewoms::TutorialSpatialParamsDecoupled
  */
-#ifndef DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
-#define DUMUX_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
+#ifndef EWOMS_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
+#define EWOMS_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 
-#include <dumux/decoupled/spatialparams/fvspatialparams.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <ewoms/decoupled/spatialparams/fvspatialparams.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/linearmaterial.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-namespace Dumux
+namespace Ewoms
 {
 
 //forward declaration
@@ -48,7 +48,7 @@ NEW_TYPE_TAG(TutorialSpatialParamsDecoupled);
 
 // Set the spatial parameters
 SET_TYPE_PROP(TutorialSpatialParamsDecoupled, SpatialParams,
-        Dumux::TutorialSpatialParamsDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
+        Ewoms::TutorialSpatialParamsDecoupled<TypeTag>); /*@\label{tutorial-decoupled:set-spatialparameters}@*/
 
 // Set the material law
 SET_PROP(TutorialSpatialParamsDecoupled, MaterialLaw)

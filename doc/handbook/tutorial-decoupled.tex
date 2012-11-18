@@ -49,7 +49,7 @@ can be retrieved by the \eWoms property system and only depend on this
 single type tag. For an introduction to the
 property system, see section \ref{sec:propertysystem}.
 
-After this, \eWoms' default startup routine \texttt{Dumux::start()} is
+After this, \eWoms' default startup routine \texttt{Ewoms::start()} is
 called in line \ref{tutorial-decoupled:call-start}. This function deals
 with parsing the command line arguments, 
 setting up the infrastructure necessary for \Dune, loading the grid, and
@@ -195,11 +195,11 @@ Change the boundary conditions in the file \texttt{tutorialproblem\_decoupled.hh
 \item \textbf{Changing Fluids} \\
 Now change the fluids: Use DNAPL instead of LNAPL and brine instead of water. To do that you have to select different components:
 \begin{enumerate}
- \item Brine: First, you need to add an \texttt{\#include} directive for \texttt{brine.hh}. The class \texttt{Dumux::Brine} is an adapter class that slightly adapts the thermodynamic properties of pure water by adding some salt. Hence, the class \texttt{Dumux::Brine} uses a pure water class, such as \texttt{Dumux::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument.
+ \item Brine: First, you need to add an \texttt{\#include} directive for \texttt{brine.hh}. The class \texttt{Ewoms::Brine} is an adapter class that slightly adapts the thermodynamic properties of pure water by adding some salt. Hence, the class \texttt{Ewoms::Brine} uses a pure water class, such as \texttt{Ewoms::H2O}, as a second template argument after the data type \texttt{<Scalar>} as a template argument.
  \item DNAPL: First, you need to change \texttt{\#include} directive from \texttt{lnapl.hh} to \texttt{dnapl.hh}. Then change the fluid used for the non-wetting phase from \texttt{LNAPL<Scalar>} to \texttt{DNAPL<Scalar>}
 \end{enumerate}
 If you want to take a closer look at how the fluid classes are defined and which substances are already available you may browse the files in the directory
-\texttt{/dumux/material/components}.
+\texttt{/ewoms/material/components}.
 
 \item \textbf{Use an \eWoms fluid system}\label{dec-ex1-fluidsystem} \\
 \eWoms usually organizes fluid mixtures via a \textit{fluid system}, see also chapter \ref{sec:fluidframework}. In order to include a fluid system you first have to comment the lines \ref{tutorial-coupled:2p-system-start} to \ref{tutorial-coupled:2p-system-end} in the problem file.\\
@@ -207,7 +207,7 @@ If you want to take a closer look at how the fluid classes are defined and which
 Now include the file \texttt{fluidsystems/h2oairsystem.hh} in the
 material folder, and set a property \texttt{FluidSystem} with the
 appropriate type,
-\texttt{Dumux::FluidSystems::H2OAir<Scalar>}. However, this rather
+\texttt{Ewoms::FluidSystems::H2OAir<Scalar>}. However, this rather
 complicated fluidsystem uses tabularized fluid data, which need to be
 initialized at startup (i.e. the tables need to be filled with values)
 in the constructor body of the current problem by adding
@@ -254,8 +254,8 @@ name that relates to the file name, such as \texttt{Ex2TutorialProblemDecoupled}
 Make sure that you also adjust the guardian
 macros in lines \ref{tutorial-decoupled:guardian1} and \ref{tutorial-decoupled:guardian2}
  in the header files (e.g. change \\
-\texttt{DUMUX\_TUTORIALPROBLEM\_DECOUPLED\_HH} to
-\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_DECOUPLED\_HH}).  Beside also adjusting the guardian macros, 
+\texttt{EWOMS\_TUTORIALPROBLEM\_DECOUPLED\_HH} to
+\texttt{EWOMS\_EX2\_TUTORIALPROBLEM\_DECOUPLED\_HH}).  Beside also adjusting the guardian macros, 
 the new problem file should define and use a new type tag for the problem as well as a new problem class
 e.g. \texttt{Ex2TutorialProblemDecoupled}. Make sure to assign your newly defined spatial 
 parameter class to the \texttt{SpatialParams} property for the new 
@@ -315,7 +315,7 @@ compile the program.
 \subsubsection{Exercise 3}
 Create a new file for benzene called \texttt{benzene.hh} and implement
 a new component. (You may get a hint by looking at existing components
-in the directory \verb+/dumux/material/components+.)
+in the directory \verb+/ewoms/material/components+.)
 
 Use benzene as a new fluid and run the model of Exercise 2 with water
 and benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$

@@ -68,7 +68,7 @@ compiled and executed in order to solve the problem described above.
 
 In \eWoms, this file is usually quite short, as most of the work for
 setting up the simulation is done by the generic startup routine
-\texttt{Dumux::start()}. The tasks left for the main source file are:
+\texttt{Ewoms::start()}. The tasks left for the main source file are:
 \begin{itemize}
 \item Inclusion of the necessary header files from line
   \ref{tutorial-coupled:include-begin} to line
@@ -76,7 +76,7 @@ setting up the simulation is done by the generic startup routine
 \item Specifying the type tag of the problem which is going to be
   simulated at line \ref{tutorial-coupled:set-type-tag}.
 \item Starting the simulation using default \eWoms startup routine
-  \texttt{Dumux::start()} on line \ref{tutorial-coupled:call-start}.
+  \texttt{Ewoms::start()} on line \ref{tutorial-coupled:call-start}.
 \end{itemize}
 
 The default \eWoms startup routine deals with parsing the command line
@@ -132,7 +132,7 @@ using the \eWoms property system (for more information see chapter
 Next, an appropriate fluid system -- which specifies the thermodynamic
 relations of the fluid phases -- has to be chosen. By default, the
 fully-implicit immiscible model for two fluid phases uses
-\texttt{Dumux::FluidSystems::TwoPImmiscible}. This fluid system
+\texttt{Ewoms::FluidSystems::TwoPImmiscible}. This fluid system
 simplifies things considerably by assuming immiscibility of the
 phases, but it requires to explicitly specify the fluids used for the
 wetting and non-wetting phases. In this case, liquid water based on
@@ -248,13 +248,13 @@ The \eWoms distribution includes representations of some common
 substances which can be used out of the box. The properties of pure
 substances (such as nitrogen, water, or the pseudo-component air) are
 provided by header files located in the folder
-\texttt{dumux/material/components}.
+\texttt{ewoms/material/components}.
 
 When two or more substances are considered, interactions between these
 become relevant and the properties of these mixtures of substances --
 e.g. composition, density or enthalpy -- are required. In \eWoms, such
 interactions are defined by {\em fluid systems}, which are located in
-\texttt{dumux/material/fluidsystems}. A more thorough overview of the
+\texttt{ewoms/material/fluidsystems}. A more thorough overview of the
 \eWoms fluid framework can be found in
 chapter~\ref{sec:fluidframework}.
 
@@ -340,28 +340,28 @@ For visualizing the results using the program \texttt{paraview}, please refer to
 \begin{enumerate}
 \item Brine: Brine is thermodynamically very similar to pure water but
   also includes a fixed amount of salt in the liquid phase.  Hence,
-  the class \texttt{Dumux::Brine} calls back to a class which
+  the class \texttt{Ewoms::Brine} calls back to a class which
   represents pure water. (This can be, for example
-  \texttt{Dumux::H2O}, or \texttt{Dumux::SimpleH2O}.) The class which
-  represents pure water is passed to \texttt{Dumux::Brine} as the
+  \texttt{Ewoms::H2O}, or \texttt{Ewoms::SimpleH2O}.) The class which
+  represents pure water is passed to \texttt{Ewoms::Brine} as the
   second template argument after the data type for scalar values,
   i.e. the full definition of the brine component is
-  \texttt{Dumux::Brine<Scalar, Dumux::H2O<Scalar> >}. The file which
+  \texttt{Ewoms::Brine<Scalar, Ewoms::H2O<Scalar> >}. The file which
   defines the brine component is located in the folder
-  \texttt{dumux/material/components/}.  Include this file and select
+  \texttt{ewoms/material/components/}.  Include this file and select
   use the brine component as the wetting phase.
 \item DNAPL: Now let us use a component that represents an oil that
   is heavier than water (in environmental engineering this class of
   substances is often called \textbf{d}ense
   \textbf{n}on-\textbf{a}queous \textbf{p}hase \textbf{l}iquid
   (DNAPL)) which is also located in the folder
-  \texttt{dumux/material/components/}. Include the correct file and
+  \texttt{ewoms/material/components/}. Include the correct file and
   use the DNAPL component as the non-wetting phase.
 \end{enumerate}
 If you want to take a closer look on how the fluid classes are defined
 and which substances are available in the \eWoms distribution, feel
 free to browse through the files in the directory
-\texttt{dumux/material/components} and read
+\texttt{ewoms/material/components} and read
 chapter~\ref{sec:fluidframework}.
 
 \item \textbf{Use a Full-Fledged Fluid System} \\
@@ -373,13 +373,13 @@ chapter~\ref{sec:fluidframework}.
   \ref{tutorial-coupled:2p-system-start}
   to \ref{tutorial-coupled:2p-system-end} in the problem file.\\
   Now include the file
-  \texttt{dumux/material/fluidsystems/h2oairfluidsystem.hh}, and
+  \texttt{ewoms/material/fluidsystems/h2oairfluidsystem.hh}, and
   instruct the model to use this fluid system by setting
   the \texttt{FluidSystem} property via:\\
 \begin{lstlisting}[style=eWomsCode]
   SET_TYPE_PROP(TutorialProblemCoupled, 
                 FluidSystem,
-                Dumux::FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar)>)
+                Ewoms::FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar)>)
 \end{lstlisting}
 However, this is a rather complicated fluid system which considers all
 fluid phases as a mixture of the components and also uses tabulated
@@ -413,7 +413,7 @@ complex fluid system.
   line which contains the \texttt{EffToAbsLaw} typedef.
 \item Then, adapt the necessary parameters of the linear law and the
   respective \texttt{set}-functions can be found in the file
-  \texttt{dumux/material/fluidmatrixinteractions/2p/linearmaterialparams.hh}.\\
+  \texttt{ewoms/material/fluidmatrixinteractions/2p/linearmaterialparams.hh}.\\
   Call the \texttt{set}-functions from the constructor of the problem.
 \item Finally, re-compile and re-run the simulation. In order to
   successfully compile the simulation, you also have to include the
@@ -461,8 +461,8 @@ relate to the file name, such as
 \texttt{Ex2TutorialProblemCoupled}. Make sure that you also adjust the
 guardian macros in lines \ref{tutorial-coupled:guardian1} and
 \ref{tutorial-coupled:guardian1} in the header files (e.g. change
-\mbox{\texttt{DUMUX\_TUTORIALPROBLEM\_COUPLED\_HH}} to
-\mbox{\texttt{DUMUX\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). Include the
+\mbox{\texttt{EWOMS\_TUTORIALPROBLEM\_COUPLED\_HH}} to
+\mbox{\texttt{EWOMS\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). Include the
 new problem file in \texttt{tutorial\_coupled.cc}.  Besides adjusting
 the guardian macros, the new problem file should define and use a new
 type tag for the problem as well as a new problem class
@@ -524,7 +524,7 @@ step size of $100\;\text{s}$.
 Create a new file for the benzene component called \texttt{benzene.hh}
 and implement a new component. (\textbf{Hint:} The easiest way to do
 this is to copy and modify one of the existing components located in
-the directory \texttt{dumux/material/components}.) Use benzene as a
+the directory \texttt{ewoms/material/components}.) Use benzene as a
 new non-wetting fluid and run the problem of Exercise 2 with water and
 benzene. Benzene has a density of $889.51 \, \text{kg} / \text{m}^3$
 and a viscosity of $0.00112 \, \text{Pa} \; \text{s}$.

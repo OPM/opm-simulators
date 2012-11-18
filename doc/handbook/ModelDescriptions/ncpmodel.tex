@@ -9,7 +9,7 @@ This model implements a $M$-\/phase flow of a fluid mixture composed of $N$ chem
 By default, the standard multi-\/phase Darcy approach is used to determine the velocity, i.\-e. \[ \mathbf{v}_\alpha = - \frac{k_{r\alpha}}{\mu_\alpha} \mathbf{K} \left(\text{grad}\, p_\alpha - \varrho_{\alpha} \mathbf{g} \right) \;, \] although the actual approach which is used can be specified via the {\ttfamily Velocity\-Module} property. For example, the velocity model can by changed to the Forchheimer approach by
 \begin{lstlisting}[style=eWomsCode]
  SET_TYPE_PROP(MyProblemTypeTag, VelocityModule,
-      Dumux::BoxForchheimerVelocityModule<TypeTag>);
+      Ewoms::BoxForchheimerVelocityModule<TypeTag>);
 \end{lstlisting}
 
 

@@ -313,15 +313,15 @@ PDELab::GridOperatorSpace<Dune::PDELab::PowerGridFunctionSpace<Dune::\
 PDELab::GridFunctionSpace<Dune::GridView<Dune::DefaultLeafGridViewTraits\
 <const Dune::UGGrid<3>, (Dune::PartitionIteratorType)4u> >, Dune::\
 PDELab::Q1LocalFiniteElementMap<double, double, 3>, Dune::PDELab::\
-NoConstraints, Dumux::PDELab::BoxISTLVectorBackend<Dumux::Properties::\
+NoConstraints, Ewoms::PDELab::BoxISTLVectorBackend<Ewoms::Properties::\
 TTag::LensProblem> >, 2, Dune::PDELab::GridFunctionSpaceBlockwiseMapper>\
 , Dune::PDELab::PowerGridFunctionSpace<Dune::PDELab::GridFunctionSpace<\
 Dune::GridView<Dune::DefaultLeafGridViewTraits<const Dune::UGGrid<3>, \
 (Dune::PartitionIteratorType)4u> >, Dune::PDELab::Q1LocalFiniteElementMap\
-<double, double, 3>, Dune::PDELab::NoConstraints, Dumux::PDELab::\
-BoxISTLVectorBackend<Dumux::Properties::TTag::LensProblem> >, 2, Dune::\
-PDELab::GridFunctionSpaceBlockwiseMapper>, Dumux::PDELab::BoxLocalOperator\
-<Dumux::Properties::TTag::LensProblem>, Dune::PDELab::\
+<double, double, 3>, Dune::PDELab::NoConstraints, Ewoms::PDELab::\
+BoxISTLVectorBackend<Ewoms::Properties::TTag::LensProblem> >, 2, Dune::\
+PDELab::GridFunctionSpaceBlockwiseMapper>, Ewoms::PDELab::BoxLocalOperator\
+<Ewoms::Properties::TTag::LensProblem>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ConstraintsTransformation<long unsigned int, double>, Dune::PDELab::\
 ISTLBCRSMatrixBackend<2, 2>, true>::GridOperatorSpace()
@@ -352,7 +352,7 @@ int main()
     typedef TTAG(LensProblem) TypeTag;
     typedef Dune::PDELab::NoConstraints Constraints;
     typedef Dune::PDELab::GridFunctionSpace<
-        GridView, FEM, Constraints, Dumux::PDELab::BoxISTLVectorBackend<TypeTag>
+        GridView, FEM, Constraints, Ewoms::PDELab::BoxISTLVectorBackend<TypeTag>
     >
         doubleGridFunctionSpace;
     typedef Dune::PDELab::PowerGridFunctionSpace<
@@ -363,7 +363,7 @@ int main()
         GridFunctionSpace;
     typedef typename GridFunctionSpace::ConstraintsContainer<double>::Type 
         ConstraintsTrafo;
-    typedef Dumux::PDELab::BoxLocalOperator<TypeTag> LocalOperator;
+    typedef Ewoms::PDELab::BoxLocalOperator<TypeTag> LocalOperator;
     typedef Dune::PDELab::GridOperatorSpace<
         GridFunctionSpace,
         GridFunctionSpace,
