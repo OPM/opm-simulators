@@ -24,11 +24,11 @@
  */
 #include "config.h"
 
-#include <dumux/material/constraintsolvers/computefromreferencephase.hh>
-#include <dumux/material/constraintsolvers/ncpflash.hh>
-#include <dumux/material/fluidstates/compositionalfluidstate.hh>
-#include <dumux/material/fluidsystems/spe5fluidsystem.hh>
-#include <dumux/material/fluidmatrixinteractions/mp/mplinearmaterial.hh>
+#include <ewoms/material/constraintsolvers/computefromreferencephase.hh>
+#include <ewoms/material/constraintsolvers/ncpflash.hh>
+#include <ewoms/material/fluidstates/compositionalfluidstate.hh>
+#include <ewoms/material/fluidsystems/spe5fluidsystem.hh>
+#include <ewoms/material/fluidmatrixinteractions/mp/mplinearmaterial.hh>
 
 template <class FluidSystem, class FluidState>
 void guessInitial(FluidState &fluidState,
@@ -69,8 +69,8 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         numComponents = FluidSystem::numComponents
     };
 
-    typedef Dumux::NcpFlash<Scalar, FluidSystem> Flash;
-    typedef Dumux::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
+    typedef Ewoms::NcpFlash<Scalar, FluidSystem> Flash;
+    typedef Ewoms::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
 
@@ -113,7 +113,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
     ComponentVector tmpMolarities;
     for (int i = 0;; ++i) {
         if (i >= 20)
-            DUNE_THROW(Dumux::NumericalProblem,
+            DUNE_THROW(Ewoms::NumericalProblem,
                        "Newton method did not converge after 20 iterations");
 
         // calculate the deviation from the standard pressure
@@ -149,7 +149,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
 int main(int argc, char** argv)
 {
     typedef double Scalar;
-    typedef Dumux::FluidSystems::Spe5<Scalar> FluidSystem;
+    typedef Ewoms::FluidSystems::Spe5<Scalar> FluidSystem;
 
     enum {
         numPhases = FluidSystem::numPhases,
@@ -167,11 +167,11 @@ int main(int argc, char** argv)
         C20Idx = FluidSystem::C20Idx
     };
 
-    typedef Dumux::NcpFlash<Scalar, FluidSystem> Flash;
+    typedef Ewoms::NcpFlash<Scalar, FluidSystem> Flash;
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-    typedef Dumux::CompositionalFluidState<Scalar, FluidSystem> FluidState;
+    typedef Ewoms::CompositionalFluidState<Scalar, FluidSystem> FluidState;
 
-    typedef Dumux::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
+    typedef Ewoms::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
     typedef MaterialLaw::Params MaterialLawParams;
 
     typedef FluidSystem::ParameterCache ParameterCache;
@@ -267,7 +267,7 @@ int main(int argc, char** argv)
         guessInitial<FluidSystem>(fluidState, phaseIdx);
     }
 
-    typedef Dumux::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+    typedef Ewoms::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
     CFRP::solve(fluidState,
                 paramCache,
                 /*refPhaseIdx=*/oPhaseIdx,

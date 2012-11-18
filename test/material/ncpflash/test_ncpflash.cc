@@ -28,20 +28,20 @@
  */
 #include "config.h"
 
-#include <dumux/material/constraintsolvers/misciblemultiphasecomposition.hh>
-#include <dumux/material/constraintsolvers/computefromreferencephase.hh>
-#include <dumux/material/constraintsolvers/ncpflash.hh>
+#include <ewoms/material/constraintsolvers/misciblemultiphasecomposition.hh>
+#include <ewoms/material/constraintsolvers/computefromreferencephase.hh>
+#include <ewoms/material/constraintsolvers/ncpflash.hh>
 
-#include <dumux/material/fluidstates/compositionalfluidstate.hh>
+#include <ewoms/material/fluidstates/compositionalfluidstate.hh>
 
-#include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
+#include <ewoms/material/fluidsystems/h2on2fluidsystem.hh>
 
-#include <dumux/material/fluidmatrixinteractions/mp/mplinearmaterial.hh>
-#include <dumux/material/fluidmatrixinteractions/mp/2padapter.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/linearmaterial.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/regularizedlinearmaterial.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
-#include <dumux/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <ewoms/material/fluidmatrixinteractions/mp/mplinearmaterial.hh>
+#include <ewoms/material/fluidmatrixinteractions/mp/2padapter.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/linearmaterial.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/regularizedlinearmaterial.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>
+#include <ewoms/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
 
 template <class Scalar, class FluidState>
 void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
@@ -100,7 +100,7 @@ void checkNcpFlash(const FluidState &fsRef,
     }
 
     // initialize the fluid state for the flash calculation
-    typedef Dumux::NcpFlash<Scalar, FluidSystem> NcpFlash;
+    typedef Ewoms::NcpFlash<Scalar, FluidSystem> NcpFlash;
     FluidState fsFlash;
 
     fsFlash.setTemperature(fsRef.temperature(/*phaseIdx=*/0));
@@ -122,7 +122,7 @@ void completeReferenceFluidState(FluidState &fs,
 {
     enum { numPhases = FluidSystem::numPhases };
 
-    typedef Dumux::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
+    typedef Ewoms::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
 
     int otherPhaseIdx = 1 - refPhaseIdx;
@@ -151,8 +151,8 @@ void completeReferenceFluidState(FluidState &fs,
 int main()
 {
     typedef double Scalar;
-    typedef Dumux::FluidSystems::H2ON2<Scalar, false> FluidSystem;
-    typedef Dumux::CompositionalFluidState<Scalar, FluidSystem> CompositionalFluidState;
+    typedef Ewoms::FluidSystems::H2ON2<Scalar, false> FluidSystem;
+    typedef Ewoms::CompositionalFluidState<Scalar, FluidSystem> CompositionalFluidState;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
@@ -162,9 +162,9 @@ int main()
     enum { H2OIdx = FluidSystem::H2OIdx };
     enum { N2Idx = FluidSystem::N2Idx };
 
-    typedef Dumux::RegularizedBrooksCorey<Scalar> EffMaterialLaw;
-    typedef Dumux::EffToAbsLaw<EffMaterialLaw> TwoPMaterialLaw;
-    typedef Dumux::TwoPAdapter<lPhaseIdx, TwoPMaterialLaw> MaterialLaw;
+    typedef Ewoms::RegularizedBrooksCorey<Scalar> EffMaterialLaw;
+    typedef Ewoms::EffToAbsLaw<EffMaterialLaw> TwoPMaterialLaw;
+    typedef Ewoms::TwoPAdapter<lPhaseIdx, TwoPMaterialLaw> MaterialLaw;
     typedef MaterialLaw::Params MaterialLawParams;
 
     Scalar T = 273.15 + 25;
@@ -249,7 +249,7 @@ int main()
     fsRef.setPressure(gPhaseIdx, 1e6);
 
     FluidSystem::ParameterCache paramCache;
-    typedef Dumux::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
+    typedef Ewoms::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
                                          /*setViscosity=*/false,
                                          /*setEnthalpy=*/false);
@@ -282,7 +282,7 @@ int main()
                       fsRef.pressure(lPhaseIdx)
                       + (pC[gPhaseIdx] - pC[lPhaseIdx]));
 
-    typedef Dumux::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
+    typedef Ewoms::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
                                          /*setViscosity=*/false,
                                          /*setEnthalpy=*/false);

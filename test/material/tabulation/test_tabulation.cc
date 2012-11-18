@@ -27,8 +27,8 @@
  */
 #include "config.h"
 
-#include <dumux/material/components/h2o.hh>
-#include <dumux/material/components/tabulatedcomponent.hh>
+#include <ewoms/material/components/h2o.hh>
+#include <ewoms/material/components/tabulatedcomponent.hh>
 
 bool success;
 
@@ -45,8 +45,8 @@ void isSame(const char *str, Scalar v, Scalar vRef, Scalar tol=1e-3)
 int main()
 {
     typedef double Scalar;
-    typedef Dumux::H2O<Scalar> IapwsH2O;
-    typedef Dumux::TabulatedComponent<Scalar, IapwsH2O> TabulatedH2O;
+    typedef Ewoms::H2O<Scalar> IapwsH2O;
+    typedef Ewoms::TabulatedComponent<Scalar, IapwsH2O> TabulatedH2O;
 
     Scalar tempMin = 274.15;
     Scalar tempMax = 622.15;

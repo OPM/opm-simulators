@@ -20,26 +20,26 @@
  * \file
  * \copydoc checkFluidSystem
  */
-#ifndef DUMUX_CHECK_FLUIDSYSTEM_HH
-#define DUMUX_CHECK_FLUIDSYSTEM_HH
+#ifndef EWOMS_CHECK_FLUIDSYSTEM_HH
+#define EWOMS_CHECK_FLUIDSYSTEM_HH
 
-// include all fluid systems in dumux-stable
-#include <dumux/material/fluidsystems/1pfluidsystem.hh>
-#include <dumux/material/fluidsystems/2pimmisciblefluidsystem.hh>
-#include <dumux/material/fluidsystems/h2on2fluidsystem.hh>
-#include <dumux/material/fluidsystems/h2on2liquidphasefluidsystem.hh>
-#include <dumux/material/fluidsystems/h2oairfluidsystem.hh>
-#include <dumux/material/fluidsystems/h2oairmesitylenefluidsystem.hh>
-#include <dumux/material/fluidsystems/h2oairxylenefluidsystem.hh>
-#include <dumux/material/fluidsystems/spe5fluidsystem.hh>
+// include all fluid systems in ewoms-stable
+#include <ewoms/material/fluidsystems/1pfluidsystem.hh>
+#include <ewoms/material/fluidsystems/2pimmisciblefluidsystem.hh>
+#include <ewoms/material/fluidsystems/h2on2fluidsystem.hh>
+#include <ewoms/material/fluidsystems/h2on2liquidphasefluidsystem.hh>
+#include <ewoms/material/fluidsystems/h2oairfluidsystem.hh>
+#include <ewoms/material/fluidsystems/h2oairmesitylenefluidsystem.hh>
+#include <ewoms/material/fluidsystems/h2oairxylenefluidsystem.hh>
+#include <ewoms/material/fluidsystems/spe5fluidsystem.hh>
 
 // include all fluid states
-#include <dumux/material/fluidstates/pressureoverlayfluidstate.hh>
-#include <dumux/material/fluidstates/saturationoverlayfluidstate.hh>
-#include <dumux/material/fluidstates/temperatureoverlayfluidstate.hh>
-#include <dumux/material/fluidstates/compositionalfluidstate.hh>
-#include <dumux/material/fluidstates/nonequilibriumfluidstate.hh>
-#include <dumux/material/fluidstates/immisciblefluidstate.hh>
+#include <ewoms/material/fluidstates/pressureoverlayfluidstate.hh>
+#include <ewoms/material/fluidstates/saturationoverlayfluidstate.hh>
+#include <ewoms/material/fluidstates/temperatureoverlayfluidstate.hh>
+#include <ewoms/material/fluidstates/compositionalfluidstate.hh>
+#include <ewoms/material/fluidstates/nonequilibriumfluidstate.hh>
+#include <ewoms/material/fluidstates/immisciblefluidstate.hh>
 
 #include <dune/common/classname.hh>
 
@@ -52,7 +52,7 @@
  */
 template <class Scalar,
           class FluidSystem,
-          class BaseFluidState = Dumux::CompositionalFluidState<Scalar, FluidSystem> >
+          class BaseFluidState = Ewoms::CompositionalFluidState<Scalar, FluidSystem> >
 class HairSplittingFluidState
     : protected BaseFluidState
 {
