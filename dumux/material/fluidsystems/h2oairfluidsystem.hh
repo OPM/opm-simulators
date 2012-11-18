@@ -468,30 +468,33 @@ public:
                                       const ParameterCache &paramCache,
                                       int phaseIdx)
     {
-		// PRELIMINARY, values for 293.15 K - has to be generalized
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
+        Scalar temperature  = fluidState.temperature(phaseIdx) ;
+        Scalar pressure = fluidState.pressure(phaseIdx);
+
         if (phaseIdx == lPhaseIdx){// liquid phase
-            if(useComplexRelations){
-                const Scalar temperature  = fluidState.temperature(phaseIdx) ;
-                const Scalar pressure = fluidState.pressure(phaseIdx);
-                return H2O::liquidThermalConductivity(temperature, pressure);
-            }
-            else
-                // Database of National Institute of Standards and Technology
-                // Isobaric conductivity at 293.15 K
-                return 0.59848;   // conductivity of liquid water[W / (m K ) ]
+            return H2O::liquidThermalConductivity(temperature, pressure);
         }
         else{// gas phase
-            // Isobaric Properties for Nitrogen in: NIST Standard
-            // see http://webbook.nist.gov/chemistry/fluid/
-            // evaluated at p=.1 MPa, T=20°C
-            // Nitrogen: 0.025398
-            // Oxygen: 0.026105
-            // lambda_air is approximately 0.78*lambda_N2+0.22*lambda_O2
-            const Scalar lambdaPureAir = 0.0255535;
+            Scalar lambdaDryAir = Air::gasThermalConductivity(temperature, pressure);
 
-            return lambdaPureAir; // conductivity of pure air [W/(m K)]
+            if (useComplexRelations){
+                Scalar xAir = fluidState.moleFraction(phaseIdx, AirIdx);
+                Scalar xH2O = fluidState.moleFraction(phaseIdx, H2OIdx);
+                Scalar lambdaAir = xAir * lambdaDryAir;
+
+                // Assuming Raoult's, Daltons law and ideal gas
+                // in order to obtain the partial density of water in the air phase
+                Scalar partialPressure  = pressure * xH2O;
+
+                Scalar lambdaH2O =
+                    xH2O
+                    * H2O::gasThermalConductivity(temperature, partialPressure);
+                return lambdaAir + lambdaH2O;
+            }
+            else
+                return lambdaDryAir; // conductivity of Nitrogen [W / (m K ) ]
         }
     }
 };
