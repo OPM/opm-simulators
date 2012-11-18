@@ -39,8 +39,8 @@
 #include "iapws/region2.hh"
 #include "iapws/region4.hh"
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \ingroup Components
  *
@@ -117,13 +117,13 @@ public:
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure water
      *        at a given temperature.
      *
-     *\param T temperature of component in \f$\mathrm{[K]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param T Absolute temperature of the system in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
     {
@@ -138,13 +138,13 @@ public:
      * \brief The vapor temperature in \f$\mathrm{[Ka]}\f$ of pure water
      *        at a given pressure.
      *
-     *\param pressure pressure in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar vaporTemperature(Scalar pressure)
     {
@@ -159,14 +159,14 @@ public:
     /*!
      * \brief Specific enthalpy of water steam \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasEnthalpy(Scalar temperature,
                               Scalar pressure)
@@ -209,14 +209,14 @@ public:
     /*!
      * \brief Specific enthalpy of liquid water \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidEnthalpy(Scalar temperature,
                                  Scalar pressure)
@@ -250,14 +250,14 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of water steam \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasHeatCapacity(Scalar temperature,
                                   Scalar pressure)
@@ -286,14 +286,14 @@ public:
     /*!
      * \brief Specific isobaric heat capacity of liquid water \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidHeatCapacity(Scalar temperature,
                                      Scalar pressure)
@@ -319,14 +319,14 @@ public:
     /*!
      * \brief Specific internal energy of liquid water \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidInternalEnergy(Scalar temperature,
                                        Scalar pressure)
@@ -376,14 +376,14 @@ public:
     /*!
      * \brief Specific internal energy of steam and water vapor \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
     {
@@ -449,14 +449,14 @@ public:
     /*!
      * \brief Specific isochoric heat capacity of liquid water \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidHeatCapacityConstVolume(Scalar temperature,
                                                 Scalar pressure)
@@ -483,14 +483,14 @@ public:
     /*!
      * \brief Specific isochoric heat capacity of steam and water vapor \f$\mathrm{[J/kg]}\f$.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasHeatCapacityConstVolume(Scalar temperature, Scalar pressure)
     {
@@ -529,14 +529,14 @@ public:
     /*!
      * \brief The density of steam in \f$\mathrm{[kg/m^3]}\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
@@ -607,14 +607,14 @@ public:
     /*!
      * \brief The pressure of steam in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param density of component in \f$\mathrm{[kg/m^3]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param density Density in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar gasPressure(Scalar temperature, Scalar density)
     {
@@ -650,14 +650,14 @@ public:
     /*!
      * \brief The density of pure water in \f$\mathrm{[kg/m^3]}\f$ at a given pressure and temperature.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     {
@@ -710,14 +710,14 @@ public:
      * \brief The pressure of liquid water in \f$\mathrm{[Pa]}\f$ at a given density and
      *        temperature.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
-     *
      * See:
      *
      * IAPWS: "Revised Release on the IAPWS Industrial Formulation
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param density Density of the fluid in \f$\mathrm{[kg/m^3]}\f$
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
@@ -747,9 +747,6 @@ public:
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of steam.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * This method is only valid if pressure is below or at the vapor
      * pressure of water.
      *
@@ -757,6 +754,9 @@ public:
      *
      * IAPWS: "Release on the IAPWS Formulation 2008 for the Viscosity
      * of Ordinary Water Substance", http://www.iapws.org/relguide/visc.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
     {
@@ -774,13 +774,13 @@ public:
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure water.
      *
-     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
-     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-     *
      * See:
      *
      * IAPWS: "Release on the IAPWS Formulation 2008 for the Viscosity
      * of Ordinary Water Substance", http://www.iapws.org/relguide/visc.pdf
+     *
+     * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
+     * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     {
@@ -805,21 +805,24 @@ public:
      * Appendix B: Recommended Interpolating equation for Industrial Use
      * see http://www.iapws.org/relguide/thcond.pdf
      *
-     * \param temperature absolute temperature in K
-     * \param pressure of the phase in Pa
+     * \param temperature Absolute temperature in K
+     * \param pressure Phase pressure of the phase in Pa
      */
     static Scalar liquidThermalConductivity(Scalar temperature,  Scalar pressure)
     {
 #ifndef NDEBUG
         // Thermal conductivity of water is empirically fit.
-        // Evaluating that fitting-function outside the area of validity does not make sense.
+        // Evaluating that fitting-function outside the area of
+        // validity does not make sense.
         if ((pressure > 400e6 && ((273.15  < temperature) || (temperature > 398.15)) )
             || (pressure <= 200e6 && ((398.15 < temperature) || (temperature > 523.15)) )
             || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
             || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
         {
-            DUNE_THROW(Dune::NotImplemented,
-                       "liquidThermalConductivity() of H2O for T="<<temperature<<" p="<<pressure);
+            DUNE_THROW(NumericalProblem,
+                       "Liquid thermal conductivity of H2O for "
+                       << "T="<<temperature<<" p="<<pressure 
+                       << " is not implemented");
         }
 #endif
 
@@ -837,8 +840,8 @@ public:
      * Appendix B: Recommended Interpolating equation for Industrial Use
      * see http://www.iapws.org/relguide/thcond.pdf
      *
-     * \param temperature absolute temperature in K
-     * \param pressure of the phase in Pa
+     * \param temperature Absolute temperature in K
+     * \param pressure Phase pressure of the phase in Pa
      */
     static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
     {
@@ -850,8 +853,10 @@ public:
             || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
             || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
         {
-            DUNE_THROW(Dune::NotImplemented,
-                       "gasThermalConductivity() of H2O for T="<<temperature<<" p="<<pressure);
+            DUNE_THROW(NumericalProblem,
+                       "Gas thermal conductivity of H2O for "
+                       " T="<<temperature<<" p="<<pressure
+                       << " is not implemented");
         }
 #endif
 
