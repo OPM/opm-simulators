@@ -39,7 +39,7 @@
 #include<ewoms/decoupled/2p/transport/fv/evalcflfluxcoats.hh>
 
 // the components that are used
-#include <ewoms/material/components/h2o.hh>
+#include <ewoms/material/components/simpleh2o.hh>
 #include <ewoms/material/components/lnapl.hh>
 
 // the grid includes
@@ -78,7 +78,7 @@ SET_PROP(TutorialProblemDecoupled, WettingPhase) /*@\label{tutorial-decoupled:2p
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 public:
-    typedef Ewoms::LiquidPhase<Scalar, Ewoms::H2O<Scalar> > type; /*@\label{tutorial-decoupled:wettingPhase}@*/
+    typedef Ewoms::LiquidPhase<Scalar, Ewoms::SimpleH2O<Scalar> > type; /*@\label{tutorial-decoupled:wettingPhase}@*/
 };
 
 // Set the non-wetting phase

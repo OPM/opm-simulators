@@ -29,7 +29,7 @@
 #include <ewoms/boxmodels/immiscible/immisciblemodel.hh>
 
 // The chemical species that are used
-#include <ewoms/material/components/h2o.hh>
+#include <ewoms/material/components/simpleh2o.hh>
 #include <ewoms/material/components/lnapl.hh>
 
 // The material laws
@@ -65,7 +65,7 @@ SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Ewoms::CubeGridCreator<TypeTa
 // Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
               Ewoms::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                                 Ewoms::H2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
+                                 Ewoms::SimpleH2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
 
 // Set the non-wetting phase
 SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
