@@ -572,6 +572,7 @@ namespace Opm
                 break;
             }
             const double total_produced = getTotalProductionFlow(well_surfacerates_phase, phase);
+            const double total_reinjected = - total_produced; // Production negative, injection positive
             const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
                 // Apply for all children. 
@@ -580,11 +581,11 @@ namespace Opm
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
 #ifdef DIRTY_WELLCTRL_HACK
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().reinjection_fraction_target_,
+                        (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
                         false);
 #else
                 children_[i]->applyInjGroupControl(InjectionSpecification::RATE,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().reinjection_fraction_target_,
+                        (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
                         false);
 #endif
             }
@@ -600,15 +601,15 @@ namespace Opm
             if (phaseUsage().phase_used[BlackoilPhases::Vapour]) {
                 total_produced += getTotalProductionFlow(well_reservoirrates_phase, BlackoilPhases::Vapour);
             }
-            
-                  const double my_guide_rate = injectionGuideRate(true);
+            const double total_reinjected = - total_produced; // Production negative, injection positive
+            const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
                 // Apply for all children. 
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
-                        (children_guide_rate / my_guide_rate) * total_produced * injSpec().voidage_replacment_fraction_,
+                        (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
                         false);
             }
             
@@ -760,16 +761,17 @@ namespace Opm
             wells_->ctrls[self_index_]->current = ~ wells_->ctrls[self_index_]->current;
         }
     }
-    
+
     std::pair<WellNode*, double> WellNode::getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                              const std::vector<double>& well_surfacerates_phase,
                                                              ProductionSpecification::ControlMode mode)
     {
         const int np = phaseUsage().num_phases;
         const int index = self_index_*np;
-        return std::make_pair<WellNode*, double>(this, rateByMode(&well_reservoirrates_phase[index],
-                                                                  &well_surfacerates_phase[index],
-                                                                  mode));
+        return std::pair<WellNode*, double>(this,
+                                            rateByMode(&well_reservoirrates_phase[index],
+                                                       &well_surfacerates_phase[index],
+                                                       mode));
     }
     
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
@@ -781,7 +783,7 @@ namespace Opm
              && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
             return;
         }
-        if (!wells_->type[self_index_] == INJECTOR) {
+        if (wells_->type[self_index_] != INJECTOR) {
             ASSERT(target == 0.0);
             return;
         }
@@ -858,12 +860,12 @@ namespace Opm
             std::cout << "Returning" << std::endl;
             return;
         }
-        if (!wells_->type[self_index_] == PRODUCER) {
+        if (wells_->type[self_index_] != PRODUCER) {
             ASSERT(target == 0.0);
             return;
         }
         // We're a producer, so we need to negate the input
-        double ntarget = target;
+        double ntarget = -target;
         
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;

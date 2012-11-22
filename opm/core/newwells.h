@@ -33,97 +33,177 @@
 extern "C" {
 #endif
 
-/** Well type indicates desired/expected well behaviour. */
-enum WellType         { INJECTOR, PRODUCER };
-
-/** Type of well control equation or inequality constraint.
- *  BHP            -> Well constrained by bottom-hole pressure target.
- *  RESERVOIR_RATE -> Well constrained by reservoir volume flow rates.
- *  SURFACE_RATE   -> Well constrained by surface volume flow rates.
+/**
+ * Well type indicates desired/expected well behaviour.
  */
-enum WellControlType  { BHP, RESERVOIR_RATE, SURFACE_RATE };
+enum WellType {
+    INJECTOR,  /**< Well is an injector */
+    PRODUCER   /**< Well is a producer */
+};
 
-/** Controls for a single well.
- *  Each control specifies a well rate or bottom-hole pressure. Only
- *  one control can be active at a time, indicated by current. The
- *  meaning of each control's target value depends on the control type:
- *  BHP            -> target pressure in Pascal.
- *  RESERVOIR_RATE -> target reservoir volume rate in cubic(meter)/second
- *  SURFACE_RATE   -> target surface volume rate in cubic(meter)/second
- *  The sign convention for RATE targets is as follows:
- *    (+) Fluid flowing into reservoir, i.e. injecting.
- *    (-) Fluid flowing out of reservoir, i.e. producing.
- *  For *_RATE controls, the distribution of phases used for the control
- *  is also needed. For example, a total rate control should have 1.0
- *  for each phase, whereas a control on oil rate should have 1.0 for
- *  the oil phase and 0.0 for the rest. For BHP controls, this is unused.
- *  The active control acts as an equality constraint, whereas the
- *  non-active controls should be interpreted as inequality
- *  constraints (upper or lower bounds).  For instance, a PRODUCER's
- *  BHP constraint defines a minimum acceptable bottom-hole pressure
- *  value for the well.
+/**
+ * Type of well control equation or inequality constraint.
+ */
+enum WellControlType  {
+    BHP,              /**< Well constrained by BHP target */
+    RESERVOIR_RATE,   /**< Well constrained by reservoir volume flow rate */
+    SURFACE_RATE      /**< Well constrained by surface volume flow rate */
+};
+
+/**
+ * Controls for a single well.
+ * Each control specifies a well rate or bottom-hole pressure. Only
+ * one control can be active at a time, indicated by current. The
+ * meaning of each control's target value depends on the control type:
+ *
+ *  - BHP            -> target pressure in Pascal.
+ *  - RESERVOIR_RATE -> target reservoir volume rate in cubic(meter)/second
+ *  - SURFACE_RATE   -> target surface volume rate in cubic(meter)/second
+ *
+ * The sign convention for RATE targets is as follows:
+ *
+ *  - (+) Fluid flowing into reservoir, i.e. injecting.
+ *  - (-) Fluid flowing out of reservoir, i.e. producing.
+ *
+ * For *_RATE controls, the distribution of phases used for the control
+ * is also needed. For example, a total rate control should have 1.0
+ * for each phase, whereas a control on oil rate should have 1.0 for
+ * the oil phase and 0.0 for the rest. For BHP controls, this is unused.
+ * The active control acts as an equality constraint, whereas the
+ * non-active controls should be interpreted as inequality
+ * constraints (upper or lower bounds).  For instance, a PRODUCER's
+ * BHP constraint defines a minimum acceptable bottom-hole pressure
+ * value for the well.
  */
 struct WellControls
 {
-    int                     num;     /** Number of controls. */
-    enum WellControlType   *type;    /** Array of control types.*/
-    double                 *target;  /** Array of control targets */
-    double                 *distr;   /** Array of rate control distributions,
-                                         Wells::number_of_phases numbers per control */
-    int                     current; /** Index of current active control. */
+    /**
+     * Number of controls.
+     */
+    int num;
 
-    void                   *data;    /** Internal management structure. */
+    /**
+     * Array of control types.
+     */
+    enum WellControlType *type;
+
+    /**
+     * Array of control targets
+     */
+    double *target;
+
+    /**
+     * Array of rate control distributions,
+     * <CODE>Wells::number_of_phases</CODE> numbers for each control
+     */
+    double *distr;
+
+    /**
+     * Index of current active control.
+     */
+    int current;
+
+    /**
+     * Internal management structure.
+     */
+    void *data;
 };
 
 
 
-/** Data structure aggregating static information about all wells in a scenario. */
+/**
+ *  Data structure aggregating static information about all wells in a scenario.
+ */
 struct Wells
 {
-    int                  number_of_wells;  /** Number of wells. */
-    int                  number_of_phases; /** Number of phases. */
+    int number_of_wells;  /**< Number of wells. */
+    int number_of_phases; /**< Number of phases. */
 
-    enum WellType       *type;            /** Array of well types. */
-    double              *depth_ref;       /** Array of well bhp reference depths. */
-    double              *comp_frac;       /** Component fractions for each well, size is (number_of_wells*number_of_phases).
-                                           *  This is intended to be used for injection wells. For production wells
-                                           *  the component fractions will vary and cannot be specified a priori.
-                                           */
-    int                 *well_connpos;    /** Array of indices into well_cells (and WI).
-                                           *  For a well w, well_connpos[w] and well_connpos[w+1] yield
-                                           *  start and one-beyond-end indices into the well_cells array
-                                           *  for accessing w's perforation cell indices.
-                                           */
-    int                 *well_cells;      /** Array of perforation cell indices.
-                                           *  Size is number of perforations (== well_connpos[number_of_wells]).
-                                           */
-    double              *WI;              /** Well productivity index, same size and structure as well_cells. */
-    struct WellControls **ctrls;          /** Well controls, one set of controls for each well. */
+    /**
+     * Array of well types.
+     */
+    enum WellType *type;
 
-    char                **name;           /** Well names. One string for each well. */
+    /**
+     * Array of well types.
+     */
+    double *depth_ref;
 
-    void               *data;             /** Internal management structure. */
+    /**
+     * Component fractions for each well.  Array of size
+     * <CODE>number_of_wells * number_of_phases</CODE>.
+     * This is intended to be used for injection wells. For production wells
+     * the component fractions will vary and cannot be specified a priori.
+     */
+    double *comp_frac;
+
+    /**
+     * Array of indices into well_cells (and WI).  For a well @c w,
+     * <CODE>well_connpos[w]</CODE> and <CODE>well_connpos[w+1]</CODE> are start
+     * and one-beyond-end indices into the @c well_cells array for accessing
+     * @c w's perforation cell indices.
+     */
+    int *well_connpos;
+
+    /**
+     * Array of perforation cell indices.
+     * Size is number of perforations (== well_connpos[number_of_wells]).
+     */
+    int *well_cells;
+
+    /**
+     *  Well productivity index, same size and structure as well_cells.
+     */
+    double *WI;
+
+
+    /**
+     * Well controls, one set of controls for each well.
+     */
+    struct WellControls **ctrls;
+
+    /**
+     * Well names. One string for each well.
+     */
+    char **name;
+
+    /**
+     * Internal management structure.
+     */
+    void *data;
 };
 
 
-/** Data structure aggregating dynamic information about all wells in a scenario.
- *  All arrays in this structure contain data for each perforation,
- *  ordered the same as Wells::well_cells and Wells:WI.  The array
- *  sizes are, respectively,
+/**
+ * Data structure aggregating dynamic information about all wells in a scenario.
+ * All arrays in this structure contain data for each perforation, ordered the
+ * same as Wells::well_cells and Wells:WI.  The array sizes are, respectively,
  *
- *     gpot       n*NP
+ *     wdp        NP
  *     A          n²*NP (matrix in column-major (i.e., Fortran) order).
  *     phasemob   n*NP
  *
- *  in which "n" denotes the number of active fluid phases (and
- *  constituent components) and "NP" is the total number of
- *  perforations, <CODE>well_connpos[ number_of_wells ]</CODE>.
+ * in which "n" denotes the number of active fluid phases (and constituent
+ * components) and "NP" is the total number of perforations,
+ * <CODE>well_connpos[ number_of_wells ]</CODE>.
  */
 struct CompletionData
 {
-    double *gpot;     /** Gravity potentials. */
-    double *A;        /** Volumes to surface-components matrix, A = RB^{-1}. */
-    double *phasemob; /** Phase mobilities. */
+    /**
+     * Gravity potentials.
+     */
+    double *wdp;
+
+    /**
+     * Volumes to surface-components matrix, A = RB^{-1}.
+     */
+    double *A;
+
+    /**
+     * Phase mobilities for all perforations, stored consecutively with the
+     * phase index cycling the most rapidly.
+     */
+    double *phasemob;
 };
 
 /**
@@ -233,6 +313,19 @@ clear_well_controls(int well_index, struct Wells *W);
  */
 void
 destroy_wells(struct Wells *W);
+
+
+/**
+ * Create a deep-copy (i.e., clone) of an existing Wells object, including its
+ * controls.
+ *
+ * @param[in] W Existing Wells object.
+ * @return Complete clone of the input object.  Dispose of resources using
+ * function destroy_wells() when no longer needed.  Returns @c NULL in case of
+ * allocation failure.
+ */
+struct Wells *
+clone_wells(const struct Wells *W);
 
 
 #ifdef __cplusplus

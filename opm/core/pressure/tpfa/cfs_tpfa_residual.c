@@ -420,15 +420,15 @@ compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *wells ,
                                 const double              *wpress,
                                 struct cfs_tpfa_res_impl  *pimpl )
 {
-    int     c, i, w, np2;
-    double  pw, dp;
-    double *WI, *gpot, *Ap, *pmobp;
-
-    double *pflux, *dpflux;
+    int           c, i, w, np2;
+    double        pw, dp;
+    const double *WI, *wdp, *Ap, *pmobp;
+    double       *pflux, *dpflux, gpot[3] = { 0.0 };
 
     struct Wells *W;
 
     assert (wells->W != NULL);
+    assert (wells->W->number_of_phases <= 3);
 
     W = wells->W;
 
@@ -436,7 +436,7 @@ compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *wells ,
     assert (W->data  != NULL);
 
     WI     = W->WI;
-    gpot   = wells->data->gpot;
+    wdp    = wells->data->wdp;
     Ap     = wells->data->A;
     pmobp  = wells->data->phasemob;
 
@@ -449,11 +449,11 @@ compute_well_compflux_and_deriv(struct cfs_tpfa_res_wells *wells ,
         pw = wpress[w];
 
         for (; i < W->well_connpos[w + 1]; i++,
-                 gpot  += np, Ap += np2, pmobp += np,
+                 Ap += np2, pmobp += np,
                  pflux += np, dpflux += 2 * np) {
 
             c  = W->well_cells[i];
-            dp = pw - cpress[c];
+            dp = pw + wdp[i]- cpress[c];
 
             compute_darcyflux_and_deriv(np, WI[i], dp, pmobp, gpot,
                                         pimpl->flux_work,
@@ -909,8 +909,8 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
 {
     int           w, i, c, np, np2, nc;
     int           is_neumann, is_open;
-    double        pw, dp;
-    double       *WI, *gpot, *pmobp;
+    double        pw, dp, gpot[3] = { 0.0 };
+    const double *WI, *wdp, *pmobp;
     const double *Ac, *dAc;
 
     struct Wells        *W;
@@ -923,7 +923,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
     W = wells->W;
 
     WI    = W->WI;
-    gpot  = wells->data->gpot;
+    wdp   = wells->data->wdp;
     pmobp = wells->data->phasemob;
 
     is_neumann = 1;
@@ -932,14 +932,13 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
         pw = wpress[ w ];
         is_open = W->ctrls[w]->current >= 0;
 
-        for (; i < W->well_connpos[w + 1];
-             i++, gpot += np, pmobp += np) {
+        for (; i < W->well_connpos[w + 1]; i++, pmobp += np) {
 
             c   = W->well_cells[ i ];
             Ac  = cq->Ac  + (c * np2);
             dAc = cq->dAc + (c * np2);
 
-            dp  = pw - cpress[ c ];
+            dp  = pw + wdp[i] - cpress[ c ];
 
             init_completion_contrib(i, np, Ac, dAc, h->pimpl);
 
@@ -1091,7 +1090,7 @@ compute_wflux(int                        np    ,
 {
     int           w, c, i, p;
     double        pw, dp, t;
-    const double *pmob;
+    const double *pmob, *wdp;
 
     struct Wells          *W;
     struct CompletionData *cdata;
@@ -1102,13 +1101,14 @@ compute_wflux(int                        np    ,
 
     W     = wells->W;
     cdata = wells->data;
+    wdp   = cdata->wdp;
 
     for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[w];
 
         for (; i < W->well_connpos[w + 1]; i++) {
             c  = W->well_cells[ i ];
-            dp = pw - cpress[c];
+            dp = pw + wdp[ i ] - cpress[c];
 
             if (dp > 0) { pmob = cdata->phasemob + (i * np); } /* w->c */
             else        { pmob = pmobc           + (c * np); } /* c->w */

@@ -62,7 +62,7 @@ namespace Opm
         /// \return Array of P viscosity values.
         virtual const double* viscosity() const = 0;
 
-        /// Densities of fluid phases at surface conditions.
+        /// Densities of fluid phases at reservoir conditions.
         /// \return Array of P density values.
         virtual const double* density() const = 0;
 
