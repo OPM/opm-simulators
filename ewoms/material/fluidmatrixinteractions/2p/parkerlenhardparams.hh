@@ -46,14 +46,14 @@ public:
 
     ParkerLenhardParams()
     {
-        Snrei_ = 0;
+        currentEffectiveSnr_ = 0;
         mdc_ = new ScanningCurve();
         pisc_ = csc_ = NULL;
     }
 
     ParkerLenhardParams(const ParkerLenhardParams &)
     {
-        Snrei_ = 0;
+        currentEffectiveSnr_ = 0;
         mdc_ = new ScanningCurve();
         pisc_ = csc_ = NULL;
     }
@@ -116,26 +116,20 @@ public:
     /*!
      * \brief Returns the current effective residual saturation.
      */
-    Scalar Snrei() const
-    { return Snrei_; }
+    Scalar currentEffectiveSnr() const
+    { return currentEffectiveSnr_; }
 
     /*!
      * \brief Set the current effective residual saturation.
      */
-    void setSnrei(Scalar val)
-    { Snrei_ = val; }
+    void setCurrentEffectiveSnr(Scalar val)
+    { currentEffectiveSnr_ = val; }
 
     /*!
      * \brief Returns the effective residual saturation of the non-wetting phase.
      */
-    Scalar Snre() const
-    { return Snre_; }
-
-    /*!
-     * \brief Set the effective residual saturation of the non-wetting phase.
-     */
-    void setSnre(Scalar val)
-    { Snre_ = val; }
+    Scalar effectiveSnr() const
+    { return Snr_/(1 - Swr_); }
 
     /*!
      * \brief Returns the main drainage curve
@@ -179,8 +173,7 @@ private:
     const VanGenuchtenParams *mdcParams_;
     Scalar Swr_;
     Scalar Snr_;
-    Scalar Snre_;
-    Scalar Snrei_;
+    Scalar currentEffectiveSnr_;
     mutable ScanningCurve *mdc_;
     mutable ScanningCurve *pisc_;
     mutable ScanningCurve *csc_;

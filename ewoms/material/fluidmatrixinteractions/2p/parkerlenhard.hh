@@ -31,8 +31,8 @@
 #include <iostream>
 #include <cassert>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Represents a scanning curve in the Parker-Lenhard hysteresis model.
  *
@@ -282,7 +282,7 @@ public:
         params.setMdc(new ScanningCurve());
         params.setCsc(params.mdc());
         params.setPisc(NULL);
-        params.setSnrei(0.0);
+        params.setCurrentEffectiveSnr(0.0);
     }
 
     /*!
@@ -298,13 +298,13 @@ public:
             return;
         }
 
-        Scalar Swe = SwToSwe_(params, Sw);
+        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
 
         // find the loop number which corrosponds to the
         // given effective saturation
         ScanningCurve *curve = findScanningCurve_Swe_(params, Swe);
 
-        Scalar Sw_app = Swapp_(params, Swe);
+        Scalar Sw_app = effectiveToApparentSw_(params, Swe);
 
         // calculate the apparent saturation on the MIC and MDC
         // which yield the same capillary pressure as the
@@ -323,22 +323,22 @@ public:
         // if we're back on the MDC, we also have a new PISC!
         if (params.csc() == params.mdc()) {
             params.setPisc(params.mdc()->next());
-            params.setSnrei(Snrei_(params, Swe));
+            params.setCurrentEffectiveSnr(currentEffectiveSnr_(params, Swe));
         }
     }
 
     /*!
      * \brief Returns true iff the given absolute saturation
-     *        is viable (i.e. larger than the residual
-     *        saturation of the wetting phase but smaller
-     *        than the maximum saturation of the current
-     *        PISC)
+     *        is viable
+     *
+     * (i.e. larger than the residual saturation of the wetting phase
+     * but smaller than the maximum saturation of the current PISC)
      */
     static bool isValidSw(const Params &params, Scalar Sw)
     {
-        Scalar Swe = SwToSwe_(params, Sw);
+        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
 
-        return 0 <= Swe && Swe <= 1. - params.Snrei();
+        return 0 <= Swe && Swe <= 1. - params.currentEffectiveSnr();
     }
 
     /*!
@@ -347,13 +347,13 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
-        Scalar Swe = SwToSwe_(params, Sw);
+        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
 
         // calculate the current apparent saturation
         ScanningCurve *sc = findScanningCurve_Swe_(params, Swe);
 
         // calculate the apparant saturation
-        Scalar Sw_app = Swapp_(params, Swe);
+        Scalar Sw_app = effectiveToApparentSw_(params, Swe);
 
         // if the apparent saturation exceeds the 'legal' limits,
         // we also the underlying material law decide what to do.
@@ -412,7 +412,7 @@ public:
         Scalar Sw_app = pos*(sc->prev()->Sw_app() - sc->Sw_app()) + sc->Sw_app();
 
         // which can finally converted into an absolute saturation
-        return SweToSw_(params, SweFromSwapp_(params, Sw_app));
+        return SweToSw_(params, effectiveFromApparentSw_(params, Sw_app));
     }
 
     /*!
@@ -421,7 +421,7 @@ public:
      */
     static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        Scalar Swe = SwToSwe_(params, Sw);
+        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
 
         // if the effective saturation exceeds 1, we have a
         // problem, but we let the underlying capillary pressure
@@ -432,7 +432,7 @@ public:
 
         // calculate the current apparent saturation
         ScanningCurve *sc = findScanningCurve_Swe_(params, Swe);
-        Scalar Sw_app = Swapp_(params, Swe);
+        Scalar Sw_app = effectiveToApparentSw_(params, Swe);
 
         // calculate the derivative of the linear interpolation parameter
         // in regard to the apparent saturation
@@ -518,12 +518,9 @@ public:
      */
     static Scalar krw(const Params &params, Scalar Sw)
     {
-        // for the effective permeability we use play-type
-        // hystersis. (That's because it's basically impossible
-        // to invert the krw-Sw realtion effectivly.)
-        Scalar Swe = SwToSwe_(params, Sw);
-
-        Scalar Sw_app = Swapp_(params, Swe);
+        // for the effective permeability we only use Land's law and
+        // the relative permeability of the main drainage curve.
+        Scalar Sw_app = absoluteToApparentSw_(params, Sw);
         return VanGenuchten::krw(params.mdcParams(), Sw_app);
 
 #if 0 // TODO: saturation-permebility hysteresis
@@ -542,12 +539,9 @@ public:
      */
     static Scalar krn(const Params &params, Scalar Sw)
     {
-        // for the effective permeability we use play-type
-        // hystersis. (That's because it's basically impossible
-        // to invert the krw-Sw realtion effectivly.)
-        Scalar Swe = SwToSwe_(params, Sw);
-
-        Scalar Sw_app = Swapp_(params, Swe);
+        // for the effective permeability we only use Land's law and
+        // the relative permeability of the main drainage curve.
+        Scalar Sw_app = absoluteToApparentSw_(params, Sw);
         return VanGenuchten::krn(params.mdcParams(), Sw_app);
 
 #if 0 // TODO: saturation-permebility hysteresis
@@ -560,15 +554,15 @@ public:
 #endif
     }
 
-private:
     /*!
      * \brief Convert an absolute wetting saturation to an apparent one.
      */
-    static Scalar SwToSwapp(const Params &params, Scalar Sw)
+    static Scalar absoluteToApparentSw_(const Params &params, Scalar Sw)
     {
-        return Swapp_(params, SwToSwe_(params, Sw));
+        return effectiveToApparentSw_(params, absoluteToEffectiveSw_(params, Sw));
     }
 
+private:
     /*!
      * \brief Convert an absolute wetting saturation to an effective one.
      *
@@ -578,8 +572,8 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Effective saturation of the wetting phase.
      */
-    static Scalar SwToSwe_(const Params &params, Scalar Sw)
-    { return (Sw - params.Swr())/(1 - params.Swr() - params.Snr()); }
+    static Scalar absoluteToEffectiveSw_(const Params &params, Scalar Sw)
+    { return (Sw - params.Swr())/(1 - params.Swr()); }
 
     /*!
      * \brief Convert an effective wetting saturation to an absolute one.
@@ -591,9 +585,7 @@ private:
      * \return          Absolute saturation of the non-wetting phase.
      */
     static Scalar SweToSw_(const Params &params, Scalar Swe)
-    {
-        return Swe*(1 - params.Swr() - params.Snr()) + params.Swr();
-    }
+    { return Swe*(1 - params.Swr()) + params.Swr(); }
 
     /*!
      * \brief           Derivative of the effective saturation w.r.t. the absolute saturation.
@@ -604,7 +596,7 @@ private:
      * \return          Derivative of the effective saturation w.r.t. the absolute saturation.
      */
     static Scalar dSwe_dSw_(const Params &params)
-    { return 1.0/(1 - params.Swr() - params.Snr()); }
+    { return 1.0/(1 - params.Swr()); }
 
     /*!
      * \brief           Derivative of the absolute saturation w.r.t. the effective saturation.
@@ -615,9 +607,7 @@ private:
      * \return          Derivative of the absolute saturation w.r.t. the effective saturation.
      */
     static Scalar dSw_dSwe_(const Params &params)
-    { return 1 - params.Swr() - params.Snr(); }
-
-
+    { return 1 - params.Swr(); }
 
     // find the loop on which the an effective
     // saturation has to be
@@ -669,64 +659,60 @@ private:
         }
     }
 
-    // calculate and save Snrei_
-    static Scalar Snrei_(Params &params, Scalar Swei)
+    // return the effctive residual non-wetting saturation, given an
+    // effective wetting saturation
+    static Scalar currentEffectiveSnr_(const Params &params, Scalar Swe)
     {
-        if (Swei > 1 || Swei < 0)
-            return params.Snrei();
+        // regularize
+        if (Swe > 1)
+            return 0.0;
+        if (Swe < 0)
+            return params.currentEffectiveSnr();
 
-        Scalar Snrei;
-        if (params.Snre() == 0.0) {
+        Scalar curEffectiveSnr;
+        if (params.effectiveSnr() == 0.0) {
             return 0.0;
         }
         else {
             // use Land's law
-            Scalar R = 1.0/params.Snre() - 1;
-            Snrei = (1 - Swei)/(1 + R*(1 - Swei));
+            Scalar R = 1.0/params.effectiveSnr() - 1;
+            curEffectiveSnr = (1 - Swe)/(1 + R*(1 - Swe));
         }
 
-        // if the effective saturation is smaller or equal 100%,
-        // the current trapped saturation must be smaller than the
-        // residual saturation
-        assert(params.Snrei() <= params.Snre());
+        // the current effective residual non-wetting saturation must
+        // be smaller than the residual non-wetting saturation
+        assert(params.currentEffectiveSnr() <= params.effectiveSnr());
 
-        // we need to make sure that there is sufficent "distance"
-        // between Swei and 1-Snrei in order not to get very steep
-        // slopes which cause terrible nummeric headaches
-        Snrei = std::min(Snrei, (Scalar) 1 - (Swei + 5e-2));
-        Snrei = std::max(Snrei, (Scalar) 0.0);
-
-        return Snrei;
+        return curEffectiveSnr;
     }
 
-    // returns the trapped effective saturation at j
-    static Scalar Snrij_(const Params &params, Scalar Swej)
+    // returns the trapped effective non-wetting saturation for a
+    // given wetting phase saturation
+    static Scalar trappedEffectiveSn_(const Params &params, Scalar Swe)
     {
-        return params.Snrei()*(Swej - params.pisc()->Swe()) /
-            (1 - params.Snrei() - params.pisc()->Swe());
+        return params.currentEffectiveSnr()*(Swe - params.pisc()->Swe()) /
+            (1 - params.currentEffectiveSnr() - params.pisc()->Swe());
     }
 
-    // returns the apparent saturation of the
-    // wetting phase depending on the effective saturation
-    static Scalar Swapp_(const Params &params, Scalar Swe)
+    // returns the apparent saturation of the wetting phase depending
+    // on the effective saturation
+    static Scalar effectiveToApparentSw_(const Params &params, Scalar Swe)
     {
         if (params.pisc() == NULL || Swe <= params.pisc()->Swe()) {
-            // we are on the main drainage curve, i.e.
-            // no non-wetting fluid is trapped
-            // -> apparent saturation == effective saturation
+            // we are on the main drainage curve, i.e.  no non-wetting
+            // fluid is trapped -> apparent saturation == effective
+            // saturation
             return Swe;
         }
 
-
-        // we are on a imbibition or drainage curve
-        // which is not the main drainage curve
-        // -> apparent saturation ==
-        //    effective saturation + trapped effective saturation
-        return Swe + Snrij_(params, Swe);
+        // we are on a imbibition or drainage curve which is not the
+        // main drainage curve -> apparent saturation == effective
+        // saturation + trapped effective saturation
+        return Swe + trappedEffectiveSn_(params, Swe);
     }
 
     // Returns the effective saturation to a given apparent one
-    static Scalar SweFromSwapp_(const Params &params, Scalar Sw_app)
+    static Scalar apparentToEffectiveSw_(const Params &params, Scalar Sw_app)
     {
         if (params.pisc() == NULL || Sw_app <= params.pisc()->Swe()) {
             // we are on the main drainage curve, i.e.
@@ -735,9 +721,9 @@ private:
             return Sw_app;
         }
 
-        return (Sw_app*(1 - params.Snrei()
+        return (Sw_app*(1 - params.currentEffectiveSnr()
                         - params.pisc()->Swe())
-                + params.pisc()->Swe()*params.Snrei())
+                + params.pisc()->Swe()*params.currentEffectiveSnr())
             /(1 - params.pisc()->Swe());
     }
 
@@ -748,7 +734,7 @@ private:
         if (sc == params.mdc())
             return 1.0;
 
-        return 1 + params.Snrei()/(1 - params.Snrei()
+        return 1 + params.currentEffectiveSnr()/(1 - params.currentEffectiveSnr()
                                   - params.pisc()->Swe());
     }
 
@@ -759,7 +745,7 @@ private:
         if (sc == params.mdc())
             return 1.0;
 
-        return (1 - params.Snrei() - params.pisc()->Swe())
+        return (1 - params.currentEffectiveSnr() - params.pisc()->Swe())
             / (1 - params.pisc()->Swe());
     }
 };
