@@ -46,15 +46,16 @@ public:
 
     ParkerLenhardParams()
     {
-        currentEffectiveSnr_ = 0;
-        mdc_ = new ScanningCurve();
+        currentSnr_ = 0;
+        mdc_ = new ScanningCurve(/*Swr=*/0);
         pisc_ = csc_ = NULL;
     }
 
-    ParkerLenhardParams(const ParkerLenhardParams &)
+    ParkerLenhardParams(const ParkerLenhardParams &p)
     {
-        currentEffectiveSnr_ = 0;
-        mdc_ = new ScanningCurve();
+        currentSnr_ = 0;
+        SwrPc_ = p.SwrPc();
+        mdc_ = new ScanningCurve(p.SwrPc());
         pisc_ = csc_ = NULL;
     }
 
@@ -102,34 +103,41 @@ public:
     { Snr_ = val; }
 
     /*!
-     * \brief Returns wetting phase residual saturation.
+     * \brief Returns wetting phase residual saturation for the capillary pressure curve.
      */
-    Scalar Swr() const
-    { return Swr_; }
+    Scalar SwrPc() const
+    { return SwrPc_; }
 
     /*!
-     * \brief Set the  wetting phase residual saturation.
+     * \brief Returns wetting phase residual saturation for the residual saturation curves.
      */
-    void setSwr(Scalar val)
-    { Swr_ = val; }
+    Scalar SwrKr() const
+    { return SwrKr_; }
+
+    /*!
+     * \brief Set the wetting phase residual saturation for the
+     *        capillary pressure and the relative permeabilities.
+     */
+    void setSwr(Scalar pcSwr, Scalar krSwr = -1)
+    {
+        SwrPc_ = pcSwr;
+        if (krSwr < 0)
+            SwrKr_ = pcSwr;
+        else
+            SwrKr_ = krSwr;
+    }
 
     /*!
      * \brief Returns the current effective residual saturation.
      */
-    Scalar currentEffectiveSnr() const
-    { return currentEffectiveSnr_; }
+    Scalar currentSnr() const
+    { return currentSnr_; }
 
     /*!
      * \brief Set the current effective residual saturation.
      */
-    void setCurrentEffectiveSnr(Scalar val)
-    { currentEffectiveSnr_ = val; }
-
-    /*!
-     * \brief Returns the effective residual saturation of the non-wetting phase.
-     */
-    Scalar effectiveSnr() const
-    { return Snr_/(1 - Swr_); }
+    void setCurrentSnr(Scalar val)
+    { currentSnr_ = val; }
 
     /*!
      * \brief Returns the main drainage curve
@@ -171,9 +179,10 @@ public:
 private:
     const VanGenuchtenParams *micParams_;
     const VanGenuchtenParams *mdcParams_;
-    Scalar Swr_;
+    Scalar SwrPc_;
+    Scalar SwrKr_;
     Scalar Snr_;
-    Scalar currentEffectiveSnr_;
+    Scalar currentSnr_;
     mutable ScanningCurve *mdc_;
     mutable ScanningCurve *pisc_;
     mutable ScanningCurve *csc_;

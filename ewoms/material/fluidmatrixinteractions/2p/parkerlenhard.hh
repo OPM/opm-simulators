@@ -47,27 +47,25 @@ public:
     typedef ScalarT Scalar;
 
     /*!
-     * \brief Constructs main imbibtion curve.
+     * \brief Constructs main imbibition curve.
      *
      * Further scanning curves can be added with
      * setNext.
      */
-    PLScanningCurve()
+    PLScanningCurve(Scalar Swr)
     {
         loopNum_ = 0;
         prev_ = new PLScanningCurve(NULL, // prev
                                     this, // next
                                     -1, // loop number
-                                    0, // Sw
+                                    Swr, // Sw
                                     1e12, // pC
-                                    0, // Sw_app
-                                    0, // SwMic
-                                    0);   // SwMdc
+                                    Swr, // SwMic
+                                    Swr); // SwMdc
         next_ = NULL;
 
-        Swe_ = 1.0;
+        Sw_ = 1.0;
         pC_ = 0.0;
-        Sw_app_ = 1.0;
         SwMic_ = 1.0;
         SwMdc_ = 1.0;
     }
@@ -76,18 +74,16 @@ protected:
     PLScanningCurve(PLScanningCurve *prev,
                     PLScanningCurve *next,
                     int loopN,
-                    Scalar Swe,
+                    Scalar Sw,
                     Scalar pC,
-                    Scalar Sw_app,
                     Scalar SwMic,
                     Scalar SwMdc)
     {
         prev_ = prev;
         next_ = next;
         loopNum_ = loopN;
-        Swe_ = Swe;
+        Sw_ = Sw;
         pC_ = pC;
-        Sw_app_ = Sw_app;
         SwMic_ = SwMic;
         SwMdc_ = SwMdc;
     }
@@ -128,9 +124,8 @@ public:
      * curve already has a list of next curves, it is
      * deleted and thus forgotten.
      */
-    void setNext(Scalar Swe,
+    void setNext(Scalar Sw,
                  Scalar pC,
-                 Scalar Sw_app,
                  Scalar SwMic,
                  Scalar SwMdc)
     {
@@ -141,9 +136,8 @@ public:
         next_ = new PLScanningCurve(this, // prev
                                     NULL, // next
                                     loopNum() + 1,
-                                    Swe,
+                                    Sw,
                                     pC,
-                                    Sw_app,
                                     SwMic,
                                     SwMdc);
     }
@@ -154,34 +148,20 @@ public:
      *        whether Swei is part of the curve's
      *        domain and the curve thus applies to Swi.
      */
-    bool isValidAt_Swe(Scalar Swei)
+    bool isValidAt_Sw(Scalar Sw)
     {
         if (isImbib())
             // for inbibition the given saturation
             // must be between the start of the
             // current imbibition and the the start
             // of the last drainage
-            return Swe() < Swei && Swei < prev_->Swe();
+            return this->Sw() < Sw && Sw < prev_->Sw();
         else
             // for drainage the given saturation
             // must be between the start of the
             // last imbibition and the start
             // of the current drainage
-            return prev_->Swe() < Swei && Swei < Swe();
-    }
-
-    /*!
-     * \brief Returns true iff a given capillary pressure
-     *        pC is within the scope of the curve, i.e.
-     *        whether pC is part of the curve's
-     *        image and the curve thus applies to pC.
-     */
-    bool isValidAt_pC(Scalar pCi)
-    {
-        if (isImbib())
-            return prev_->pC() < pCi && pCi < pC();
-        else
-            return pC() < pCi && pCi < prev_->pC();
+            return prev_->Sw() < Sw && Sw < this->Sw();
     }
 
     /*!
@@ -207,24 +187,17 @@ public:
     { return loopNum_; }
 
     /*!
-     * \brief Effective saturation at the
-     *        last reversal point.
+     * \brief Absolute wetting-phase saturation at the
+     *        scanning curve's reversal point.
      */
-    Scalar Swe() const
-    { return Swe_; }
+    Scalar Sw() const
+    { return Sw_; }
 
     /*!
      * \brief Capillary pressure at the last reversal point.
      */
     Scalar pC() const
     { return pC_; }
-
-    /*!
-     * \brief Apparent saturation at the
-     *        last reversal point.
-     */
-    Scalar Sw_app() const
-    { return Sw_app_; }
 
     /*!
      * \brief Apparent saturation of the last reversal point on
@@ -246,9 +219,8 @@ private:
 
     int loopNum_;
 
-    Scalar Swe_;
+    Scalar Sw_;
     Scalar pC_;
-    Scalar Sw_app_;
 
     Scalar SwMdc_;
     Scalar SwMic_;
@@ -279,10 +251,10 @@ public:
     static void reset(Params &params)
     {
         delete params.mdc(); // this will work even if mdc_ == NULL!
-        params.setMdc(new ScanningCurve());
+        params.setMdc(new ScanningCurve(params.SwrPc()));
         params.setCsc(params.mdc());
         params.setPisc(NULL);
-        params.setCurrentEffectiveSnr(0.0);
+        params.setCurrentSnr(0.0);
     }
 
     /*!
@@ -298,13 +270,9 @@ public:
             return;
         }
 
-        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
-
         // find the loop number which corrosponds to the
         // given effective saturation
-        ScanningCurve *curve = findScanningCurve_Swe_(params, Swe);
-
-        Scalar Sw_app = effectiveToApparentSw_(params, Swe);
+        ScanningCurve *curve = findScanningCurve_(params, Sw);
 
         // calculate the apparent saturation on the MIC and MDC
         // which yield the same capillary pressure as the
@@ -313,8 +281,7 @@ public:
         Scalar Sw_mic = VanGenuchten::Sw(params.micParams(), pc);
         Scalar Sw_mdc = VanGenuchten::Sw(params.mdcParams(), pc);
 
-        curve->setNext(Swe, pc, Sw_app,
-                       Sw_mic, Sw_mdc);
+        curve->setNext(Sw, pc, Sw_mic, Sw_mdc);
         if (!curve->next())
             return;
 
@@ -323,22 +290,8 @@ public:
         // if we're back on the MDC, we also have a new PISC!
         if (params.csc() == params.mdc()) {
             params.setPisc(params.mdc()->next());
-            params.setCurrentEffectiveSnr(currentEffectiveSnr_(params, Swe));
+            params.setCurrentSnr(computeCurrentSnr_(params, Sw));
         }
-    }
-
-    /*!
-     * \brief Returns true iff the given absolute saturation
-     *        is viable
-     *
-     * (i.e. larger than the residual saturation of the wetting phase
-     * but smaller than the maximum saturation of the current PISC)
-     */
-    static bool isValidSw(const Params &params, Scalar Sw)
-    {
-        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
-
-        return 0 <= Swe && Swe <= 1. - params.currentEffectiveSnr();
     }
 
     /*!
@@ -347,13 +300,11 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
-        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
-
         // calculate the current apparent saturation
-        ScanningCurve *sc = findScanningCurve_Swe_(params, Swe);
+        ScanningCurve *sc = findScanningCurve_(params, Sw);
 
         // calculate the apparant saturation
-        Scalar Sw_app = effectiveToApparentSw_(params, Swe);
+        Scalar Sw_app = absoluteToApparentSw_(params, Sw);
 
         // if the apparent saturation exceeds the 'legal' limits,
         // we also the underlying material law decide what to do.
@@ -361,155 +312,23 @@ public:
             return 0.0; // VanGenuchten::pC(params.mdcParams(), Sw_app);
         }
 
-        // put the effective saturation into the capillary pressure model
-        Scalar pos = (Sw_app - sc->Sw_app())/(sc->prev()->Sw_app() - sc->Sw_app());
+        // put the apparent saturation into the main imbibition or
+        // drainage curve
+        Scalar SwAppCurSC = absoluteToApparentSw_(params, sc->Sw());
+        Scalar SwAppPrevSC = absoluteToApparentSw_(params, sc->prev()->Sw());
+        Scalar pos = (Sw_app - SwAppCurSC)/(SwAppPrevSC - SwAppCurSC);
         if (sc->isImbib()) {
             Scalar SwMic =
-                pos * (sc->prev()->SwMic() - sc->SwMic())
-                + sc->SwMic();
+                pos * (sc->prev()->SwMic() - sc->SwMic()) + sc->SwMic();
 
             return VanGenuchten::pC(params.micParams(), SwMic);
         }
         else { // sc->isDrain()
             Scalar SwMdc =
-                pos*(sc->prev()->SwMdc() - sc->SwMdc())
-                + sc->SwMdc();
+                pos*(sc->prev()->SwMdc() - sc->SwMdc()) + sc->SwMdc();
 
             return VanGenuchten::pC(params.mdcParams(), SwMdc);
         }
-    }
-
-    /*!
-     * \brief Returns the absolute saturation to a given on the
-     *        capillary pressure.
-     */
-    static Scalar Sw(const Params &params, Scalar pC)
-    {
-        assert(pC >= 0);
-
-        // find the relevant scanning curve based on
-        // the given capillary pressure
-        ScanningCurve *sc = findScanningCurve_pC_(params, pC);
-        // if we're on the MDC, we're already done...
-        if (sc == params.mdc()) {
-            Scalar Swe = VanGenuchten::Sw(params.mdcParams(), pC);
-            return SweToSw_(params, Swe);
-        }
-
-        // like in the forward direction, we first calculate
-        // the relative position on the scanning curve sc
-        Scalar pos;
-        if (sc->isImbib()) {
-            Scalar SwMic = VanGenuchten::Sw(params.micParams(), pC);
-            pos = (SwMic - sc->SwMic())/(sc->prev()->SwMic() - sc->SwMic());
-        }
-        else {
-            Scalar SwMdc = VanGenuchten::Sw(params.mdcParams(), pC);
-            pos = (SwMdc - sc->SwMdc())/(sc->prev()->SwMdc() - sc->SwMdc());
-        }
-
-        // now we can calculate the apparent saturation
-        Scalar Sw_app = pos*(sc->prev()->Sw_app() - sc->Sw_app()) + sc->Sw_app();
-
-        // which can finally converted into an absolute saturation
-        return SweToSw_(params, effectiveFromApparentSw_(params, Sw_app));
-    }
-
-    /*!
-     * \brief The derivative of the capillary pressure regarding
-     *        the absolute saturation.
-     */
-    static Scalar dpC_dSw(const Params &params, Scalar Sw)
-    {
-        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
-
-        // if the effective saturation exceeds 1, we have a
-        // problem, but we let the underlying capillary pressure
-        // model deal with it. it might apply a regularization,
-        // or it might crash ;)
-        if (Swe > 1)
-            return VanGenuchten::dpC_dSw(params.mdcParams(), Swe);
-
-        // calculate the current apparent saturation
-        ScanningCurve *sc = findScanningCurve_Swe_(params, Swe);
-        Scalar Sw_app = effectiveToApparentSw_(params, Swe);
-
-        // calculate the derivative of the linear interpolation parameter
-        // in regard to the apparent saturation
-        Scalar pos = (Sw_app - sc->Sw_app())/(sc->prev()->Sw_app() - sc->Sw_app());
-        Scalar dpos_dSwapp = 1/(sc->prev()->Sw_app() - sc->Sw_app());
-
-        if (sc->isImbib()) {
-            Scalar SwMic =
-                pos * (sc->prev()->SwMic() - sc->SwMic())
-                + sc->SwMic();
-            // the factor behind the pos variable is a constant
-            Scalar dSwMic_dSwapp = dpos_dSwapp *
-                (sc->prev()->SwMic() - sc->SwMic());
-
-            // inner times outer derivative (-> chain rule)
-            return VanGenuchten::dpC_dSw(params.micParams(), SwMic)*
-                dSwMic_dSwapp*
-                dSwapp_dSwe_(params, sc) *
-                dSwe_dSw_(params);
-        }
-        else { // sc->isDrain()
-            Scalar SwMdc =
-                pos*(sc->prev()->SwMdc() - sc->SwMdc())
-                + sc->SwMdc();
-            // the factor behind the pos variable is a constant
-            Scalar dSwMdc_dSwapp = dpos_dSwapp *
-                (sc->prev()->SwMdc() - sc->SwMdc());
-
-            // inner times outer derivative (-> chain rule)
-            return VanGenuchten::dpC_dSw(params.mdcParams(), SwMdc)*
-                dSwMdc_dSwapp *
-                dSwapp_dSwe_(params, sc) *
-                dSwe_dSw_(params);
-        }
-    }
-
-    /*!
-     * \brief The derivative of the absolute saturation regarding
-     *        the capillary pressure.
-     */
-    static Scalar dSw_dpC (const Params &params, Scalar pC)
-    {
-        if (pC < 0) pC = 0;
-
-        // find the relevant scanning curve based on
-        // the given capillary pressure
-        ScanningCurve *sc = findScanningCurve_pC_(params, pC);
-        // if we're on the MDC, we're already done...
-        if (sc == params.mdc()) {
-            return VanGenuchten::dSw_dpC(params.mdcParams(), pC)*dSw_dSwe_(params);
-        }
-
-        // like in the forward direction, we first calculate
-        // the relative position on the scanning curve sc
-        //            Scalar pos;
-        Scalar dpos_dSwMc;
-        Scalar dSwMc_dpC;
-        if (sc->isImbib()) {
-            //                Scalar SwMic = params.mic().Sw(pC);
-            //                pos = (SwMic - sc->SwMic())/(sc->prev()->SwMic() - sc->SwMic());
-            dpos_dSwMc = 1/(sc->prev()->SwMic() - sc->SwMic());
-            dSwMc_dpC = VanGenuchten::dSw_dpC(params.micParams(), pC);
-        }
-        else {
-            //                Scalar SwMdc = params.mdc().Sw(pC);
-            //                pos = (SwMdc - sc->SwMdc())/(sc->prev()->SwMdc() - sc->SwMdc());
-            dpos_dSwMc = 1/(sc->prev()->SwMdc() - sc->SwMdc());
-            dSwMc_dpC = VanGenuchten::dSw_dpC(params.mdcParams(), pC);
-        }
-
-        // now we can calculate the apparent saturation
-        //            Scalar Sw_app = pos*(sc->prev()->Sw_app() - sc->Sw_app()) + sc->Sw_app();
-        Scalar dSwapp_dpos = sc->prev()->Sw_app() - sc->Sw_app();
-        Scalar dSwapp_dSwMc = dSwapp_dpos*dpos_dSwMc;
-
-        return dSwMc_dpC*dSwapp_dSwMc*
-            dSwe_dSwapp_(params, sc)*dSw_dSwe_(params);
     }
 
     /*!
@@ -522,15 +341,6 @@ public:
         // the relative permeability of the main drainage curve.
         Scalar Sw_app = absoluteToApparentSw_(params, Sw);
         return VanGenuchten::krw(params.mdcParams(), Sw_app);
-
-#if 0 // TODO: saturation-permebility hysteresis
-        if (params.pisc() && Swe > params.csc()->Swe()) {
-            return VanGenuchten::krw(params.micParams(), Sw_app);
-        }
-        else { // sc->isDrain()
-            return VanGenuchten::krw(params.mdcParams(), Sw_app);
-        }
-#endif
     }
 
     /*!
@@ -543,15 +353,6 @@ public:
         // the relative permeability of the main drainage curve.
         Scalar Sw_app = absoluteToApparentSw_(params, Sw);
         return VanGenuchten::krn(params.mdcParams(), Sw_app);
-
-#if 0 // TODO: saturation-permebility hysteresis
-        if (params.pisc() && Swe > params.csc()->Swe()) {
-            return VanGenuchten::krn(params.micParams(), Sw_app);
-        }
-        else { // sc->isDrain()
-            return VanGenuchten::krn(params.mdcParams(), Sw_app);
-        }
-#endif
     }
 
     /*!
@@ -573,7 +374,7 @@ private:
      * \return          Effective saturation of the wetting phase.
      */
     static Scalar absoluteToEffectiveSw_(const Params &params, Scalar Sw)
-    { return (Sw - params.Swr())/(1 - params.Swr()); }
+    { return (Sw - params.SwrPc())/(1 - params.SwrPc()); }
 
     /*!
      * \brief Convert an effective wetting saturation to an absolute one.
@@ -584,121 +385,51 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Absolute saturation of the non-wetting phase.
      */
-    static Scalar SweToSw_(const Params &params, Scalar Swe)
-    { return Swe*(1 - params.Swr()) + params.Swr(); }
-
-    /*!
-     * \brief           Derivative of the effective saturation w.r.t. the absolute saturation.
-     *
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Derivative of the effective saturation w.r.t. the absolute saturation.
-     */
-    static Scalar dSwe_dSw_(const Params &params)
-    { return 1.0/(1 - params.Swr()); }
-
-    /*!
-     * \brief           Derivative of the absolute saturation w.r.t. the effective saturation.
-     *
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Derivative of the absolute saturation w.r.t. the effective saturation.
-     */
-    static Scalar dSw_dSwe_(const Params &params)
-    { return 1 - params.Swr(); }
-
-    // find the loop on which the an effective
-    // saturation has to be
-    static ScanningCurve *findScanningCurve_Swe_(const Params &params, Scalar Swe)
-    {
-        if (params.pisc() == NULL || Swe <= params.pisc()->Swe()) {
-            // we don't have a PISC yet, or the effective
-            // saturation is smaller than the saturation where the
-            // PISC begins. In this case are on the MDC
-            return params.mdc();
-        }
-
-        // if we have a primary imbibition curve, and our current
-        // effective saturation is higher than the beginning of
-        // the secondary drainage curve. this means we are on the
-        // PISC again.
-        if (params.pisc()->next() == NULL ||
-            params.pisc()->next()->Swe() < Swe)
-        {
-            return params.pisc();
-        }
-
-        ScanningCurve *curve = params.csc()->next();
-        while (true) {
-            assert(curve != params.mdc()->prev());
-            if (curve->isValidAt_Swe(Swe)) {
-                return curve;
-            }
-            curve = curve->prev();
-        }
-    }
-
-    // find the loop on which an capillary pressure belongs to
-    static ScanningCurve *findScanningCurve_pC_(const Params &params, Scalar pC)
-    {
-        if (params.mdc()->next() == NULL) {
-            // we don't have a PISC yet,
-            // so we must be on the MDC
-            // (i.e. csc_ == mdc_)
-            return params.mdc();
-        }
-
-        ScanningCurve *curve = params.csc()->next();
-        while (true) {
-            assert(curve != params.mdc()->prev());
-            if (curve->isValidAt_pC(pC))
-                return curve;
-            curve = curve->prev();
-        }
-    }
+    static Scalar effectiveToAbsoluteSw_(const Params &params, Scalar Swe)
+    { return Swe*(1 - params.SwrPc()) + params.SwrPc(); }
 
     // return the effctive residual non-wetting saturation, given an
     // effective wetting saturation
-    static Scalar currentEffectiveSnr_(const Params &params, Scalar Swe)
+    static Scalar computeCurrentSnr_(const Params &params, Scalar Sw)
     {
         // regularize
-        if (Swe > 1)
+        if (Sw > 1 - params.Snr())
             return 0.0;
-        if (Swe < 0)
-            return params.currentEffectiveSnr();
+        if (Sw < params.SwrPc())
+            return params.Snr();
 
-        Scalar curEffectiveSnr;
-        if (params.effectiveSnr() == 0.0) {
+        if (params.Snr() == 0.0)
             return 0.0;
-        }
-        else {
-            // use Land's law
-            Scalar R = 1.0/params.effectiveSnr() - 1;
-            curEffectiveSnr = (1 - Swe)/(1 + R*(1 - Swe));
-        }
+
+        // use Land's law
+        Scalar R = 1.0/params.Snr() - 1;
+        Scalar curSnr = (1 - Sw)/(1 + R*(1 - Sw));
 
         // the current effective residual non-wetting saturation must
         // be smaller than the residual non-wetting saturation
-        assert(params.currentEffectiveSnr() <= params.effectiveSnr());
+        assert(curSnr <= params.Snr());
 
-        return curEffectiveSnr;
+        return curSnr;
     }
 
     // returns the trapped effective non-wetting saturation for a
     // given wetting phase saturation
-    static Scalar trappedEffectiveSn_(const Params &params, Scalar Swe)
+    static Scalar trappedEffectiveSn_(const Params &params, Scalar Sw)
     {
-        return params.currentEffectiveSnr()*(Swe - params.pisc()->Swe()) /
-            (1 - params.currentEffectiveSnr() - params.pisc()->Swe());
+        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
+        Scalar SwePisc = absoluteToEffectiveSw_(params, params.pisc()->Sw());
+
+        Scalar Snre = absoluteToEffectiveSw_(params, params.currentSnr());
+        return Snre*(Swe - SwePisc) / (1 - Snre - SwePisc);
     }
 
     // returns the apparent saturation of the wetting phase depending
     // on the effective saturation
     static Scalar effectiveToApparentSw_(const Params &params, Scalar Swe)
     {
-        if (params.pisc() == NULL || Swe <= params.pisc()->Swe()) {
+        if (params.pisc() == NULL ||
+            Swe <= absoluteToEffectiveSw_(params, params.pisc()->Sw()))
+        {
             // we are on the main drainage curve, i.e.  no non-wetting
             // fluid is trapped -> apparent saturation == effective
             // saturation
@@ -712,41 +443,52 @@ private:
     }
 
     // Returns the effective saturation to a given apparent one
-    static Scalar apparentToEffectiveSw_(const Params &params, Scalar Sw_app)
+    static Scalar apparentToEffectiveSw_(const Params &params, Scalar Swapp)
     {
-        if (params.pisc() == NULL || Sw_app <= params.pisc()->Swe()) {
+        Scalar SwePisc = absoluteToEffectiveSw_(params, params.pisc()->Sw());
+        if (params.pisc() == NULL || Swapp <= SwePisc) {
             // we are on the main drainage curve, i.e.
             // no non-wetting fluid is trapped
             // -> apparent saturation == effective saturation
-            return Sw_app;
+            return Swapp;
         }
 
-        return (Sw_app*(1 - params.currentEffectiveSnr()
-                        - params.pisc()->Swe())
-                + params.pisc()->Swe()*params.currentEffectiveSnr())
-            /(1 - params.pisc()->Swe());
+        Scalar Snre = absoluteToEffectiveSw_(params.currentSnr());
+        return
+            (Swapp*(1 - Snre - SwePisc) + Snre*SwePisc)
+            /(1 - SwePisc);
     }
 
-    // returns the derivative of the apparent saturation in
-    // regard to the effective one
-    static Scalar dSwapp_dSwe_(const Params &params, ScanningCurve *sc)
+
+    // find the loop on which the an effective
+    // saturation has to be
+    static ScanningCurve *findScanningCurve_(const Params &params, Scalar Sw)
     {
-        if (sc == params.mdc())
-            return 1.0;
+        if (params.pisc() == NULL || Sw <= params.pisc()->Sw()) {
+            // we don't have a PISC yet, or the effective
+            // saturation is smaller than the saturation where the
+            // PISC begins. In this case are on the MDC
+            return params.mdc();
+        }
 
-        return 1 + params.currentEffectiveSnr()/(1 - params.currentEffectiveSnr()
-                                  - params.pisc()->Swe());
-    }
+        // if we have a primary imbibition curve, and our current
+        // effective saturation is higher than the beginning of
+        // the secondary drainage curve. this means we are on the
+        // PISC again.
+        if (params.pisc()->next() == NULL ||
+            params.pisc()->next()->Sw() < Sw)
+        {
+            return params.pisc();
+        }
 
-    // returns the derivative of the apparent saturation in
-    // regard to the effective one
-    static Scalar dSwe_dSwapp_(const Params &params, ScanningCurve *sc)
-    {
-        if (sc == params.mdc())
-            return 1.0;
-
-        return (1 - params.currentEffectiveSnr() - params.pisc()->Swe())
-            / (1 - params.pisc()->Swe());
+        ScanningCurve *curve = params.csc()->next();
+        while (true) {
+            assert(curve != params.mdc()->prev());
+            if (curve->isValidAt_Sw(Sw)) {
+                return curve;
+            }
+            curve = curve->prev();
+        }
     }
 };
 
