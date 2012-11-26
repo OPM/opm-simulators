@@ -44,6 +44,7 @@ namespace Opm
         void init(const parameter::ParameterGroup& param);
 
         /// Initialize from TSTEP field.
+        /// Note that DATES are folded into TSTEP by the parser.
         void init(const EclipseGridParser& deck);
 
         /// Total number of steps.
@@ -62,6 +63,7 @@ namespace Opm
         /// Current time.
         double currentTime() const;
 
+        /// Return the current time as a posix time object.
         boost::posix_time::ptime currentDateTime() const;
 
         /// Total time.
