@@ -20,8 +20,9 @@
 #ifndef OPM_DATAMAP_HEADER_INCLUDED
 #define OPM_DATAMAP_HEADER_INCLUDED
 
-#include <string>
 #include <map>
+#include <string>
+#include <vector>
 
 namespace Opm
 {
