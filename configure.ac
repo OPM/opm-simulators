@@ -39,6 +39,8 @@ AX_BOOST_DATE_TIME
 AX_BOOST_FILESYSTEM
 AX_BOOST_UNIT_TEST_FRAMEWORK
 
+ERT
+
 # Checks for header files.
 AC_CHECK_HEADERS([opm/core/grid.h], [],
 [AC_MSG_ERROR(
