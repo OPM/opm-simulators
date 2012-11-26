@@ -1028,8 +1028,8 @@ namespace Opm
             THROW("In solveMultiCell(), we did not converge after "
                   << num_iters << " iterations. Delta c = " << max_c_change);
         }
-        std::cout << "Solved " << num_cells << " cell multicell problem in "
-                  << num_iters << " iterations." << std::endl;
+        // std::cout << "Solved " << num_cells << " cell multicell problem in "
+        //           << num_iters << " iterations." << std::endl;
     }
 
     void TransportModelCompressiblePolymer::fracFlow(double s, double c, double cmax,
