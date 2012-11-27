@@ -20,7 +20,7 @@
 /*!
  * \file
  *
- * \brief Main file of the tutorial for a fully coupled twophase box model.
+ * \brief Main file of the tutorial for a fully coupled twophase VCVF discretization.
  */
 #include "config.h" /*@\label{tutorial-coupled:include-begin}@*/
 #include "tutorialproblem_coupled.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/

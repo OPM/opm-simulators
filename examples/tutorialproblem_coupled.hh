@@ -26,7 +26,7 @@
 #define EWOMS_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
 
 // The numerical model
-#include <ewoms/boxmodels/immiscible/immisciblemodel.hh>
+#include <ewoms/models/immiscible/immisciblemodel.hh>
 
 // The chemical species that are used
 #include <ewoms/material/components/simpleh2o.hh>
@@ -52,7 +52,7 @@ class TutorialProblemCoupled;
 
 namespace Properties {
 // Create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(BoxImmiscibleTwoPhase)); /*@\label{tutorial-coupled:create-type-tag}@*/
+NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(VcfvImmiscibleTwoPhase)); /*@\label{tutorial-coupled:create-type-tag}@*/
 
 // Set the "Problem" property
 SET_PROP(TutorialProblemCoupled, Problem) /*@\label{tutorial-coupled:set-problem}@*/
