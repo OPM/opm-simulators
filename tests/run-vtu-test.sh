@@ -59,7 +59,9 @@ case "$TEST_TYPE" in
         echo "# Comparing results"
         echo "######################"
         SIM_NAME=$(grep "Initializing problem" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        TEST_RESULT=$(ls $SIM_NAME-0*.vtu $SIM_NAME-0*.vtp 2> /dev/null | sort | tail -n 1)
+        NUM_TIMESTEPS=$(grep "Writing result" test-$RND.log | wc -l)
+        TEST_RESULT=$(printf "%s-%05i" $SIM_NAME $NUM_TIMESTEPS)
+        TEST_RESULT=$(ls $TEST_RESULT.*)
         rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
             echo "File $TEST_RESULT does not exist or is not readable"
