@@ -91,6 +91,7 @@ namespace Opm
         double* tof_coeff_;
         std::vector<double> rhs_;   // single-cell right-hand-side
         std::vector<double> jac_;   // single-cell jacobian
+        std::vector<double> orig_rhs_;   // single-cell right-hand-side (copy)
         std::vector<double> orig_jac_;   // single-cell jacobian (copy)
         // Below: storage for quantities needed by solveSingleCell().
         std::vector<double> coord_;
