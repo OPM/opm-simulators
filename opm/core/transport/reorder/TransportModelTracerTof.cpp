@@ -100,13 +100,16 @@ namespace Opm
                 flux  =-darcyflux_[f];
                 other = grid_.face_cells[2*f];
             }
-            // Add flux to upwind_term or downwind_flux, if interior.
-            if (other != -1) {
-                if (flux < 0.0) {
+            // Add flux to upwind_term or downwind_flux
+            if (flux < 0.0) {
+                // Using tof == 0 on inflow, so we only add a
+                // nonzero contribution if we are on an internal
+                // face.
+                if (other != -1) {
                     upwind_term += flux*tof_[other];
-                } else {
-                    downwind_flux += flux;
                 }
+            } else {
+                downwind_flux += flux;
             }
         }
 
@@ -131,25 +134,20 @@ namespace Opm
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
             int f = grid_.cell_faces[i];
             double flux;
-            int other;
             // Compute cell flux
             if (cell == grid_.face_cells[2*f]) {
                 flux  = darcyflux_[f];
-                other = grid_.face_cells[2*f+1];
             } else {
                 flux  =-darcyflux_[f];
-                other = grid_.face_cells[2*f];
             }
-            // Add flux to upwind_term or downwind_flux, if interior.
-            if (other != -1) {
-                if (flux < 0.0) {
-                    upwind_term += flux*face_tof_[f];
-                } else {
-                    double fterm, cterm_factor;
-                    multidimUpwindTerms(f, cell, fterm, cterm_factor);
-                    downwind_term_face += fterm*flux;
-                    downwind_term_cell_factor += cterm_factor*flux;
-                }
+            // Add flux to upwind_term or downwind_term_[face|cell_factor].
+            if (flux < 0.0) {
+                upwind_term += flux*face_tof_[f];
+            } else {
+                double fterm, cterm_factor;
+                multidimUpwindTerms(f, cell, fterm, cterm_factor);
+                downwind_term_face += fterm*flux;
+                downwind_term_cell_factor += cterm_factor*flux;
             }
         }
 
