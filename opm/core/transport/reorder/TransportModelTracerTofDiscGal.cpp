@@ -133,6 +133,12 @@ namespace Opm
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
     {
+        // A note about the use_cvi_ member variable:
+        // In principle, we should not need it, since the choice of velocity
+        // interpolation is made below, but we may need to use higher order
+        // quadrature to exploit CVI, so we store the choice.
+        // An alternative would be to add a virtual method isConstant() to
+        // the VelocityInterpolationInterface.
         if (use_cvi) {
             velocity_interpolation_.reset(new VelocityInterpolationECVI(grid));
         } else {
@@ -253,7 +259,8 @@ namespace Opm
         // Compute cell jacobian contribution. We use Fortran ordering
         // for jac_, i.e. rows cycling fastest.
         {
-            CellQuadrature quad(grid_, cell, 2*degree_ - 1);
+            const int deg_needed = use_cvi_ ? 2*degree_ : 2*degree_ - 1;
+            CellQuadrature quad(grid_, cell, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
                 quad.quadPtCoord(quad_pt, &coord_[0]);

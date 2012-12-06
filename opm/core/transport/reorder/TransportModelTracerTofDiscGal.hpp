@@ -84,6 +84,7 @@ namespace Opm
 
         const UnstructuredGrid& grid_;
         boost::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;
+        bool use_cvi_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
