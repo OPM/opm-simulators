@@ -90,7 +90,7 @@ public:
 
             if (FluidSystem::isLiquid(phaseIdx)) {
                 lambda +=
-                    regularizedSqrt_(fluidState.saturation(phaseIdx))
+                    regularizedSqrt_(std::max(0.0, std::min(1.0, fluidState.saturation(phaseIdx))))
                     * (params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda());
             }
             else { // gas phase
@@ -99,6 +99,7 @@ public:
         };
 
         lambda += params.vacuumLambda();
+        assert(lambda >= 0);
         return lambda;
     }
 

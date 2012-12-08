@@ -48,37 +48,13 @@ public:
      * \brief A human readable name for the TCE.
      */
     static const char *name()
-    { return "DNAPL_TCE"; }
+    { return "DNAPL"; }
 
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
      */
     static constexpr Scalar molarMass()
     { return 131.39e-3; /* [kg/mol] */ };
-
-    /*!
-     * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of TCE.
-     */
-    static Scalar criticalTemperature()
-    { DUNE_THROW(Dune::NotImplemented, "criticalTemperature for TCE"); };
-
-    /*!
-     * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of TCE.
-     */
-    static Scalar criticalPressure()
-    { DUNE_THROW(Dune::NotImplemented, "criticalPressure for TCE"); };
-
-    /*!
-     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at TCE's triple point.
-     */
-    static Scalar tripleTemperature()
-    { DUNE_THROW(Dune::NotImplemented, "tripleTemperature for TCE"); };
-
-    /*!
-     * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at TCE's triple point.
-     */
-    static Scalar triplePressure()
-    { DUNE_THROW(Dune::NotImplemented, "triplePressure for TCE"); };
 
     /*!
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure TCE
@@ -135,8 +111,28 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static constexpr Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    static const Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { return 5.7e-4; /* [Pa s] */ };
+
+    /*!
+     * \brief The enthalpy of pure TCE at a given pressure and temperature \f$\mathrm{[J/kg]}\f$.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    { return 120.0/molarMass() * temperature; /* [J/kg] */ }
+
+    /*!
+     * \brief Specific heat conductivity of liquid TCE \f$\mathrm{[W/(m K)]}\f$.
+     *
+     * \todo  The value returned here is a guess which does not necessarily correspond to reality in any way!
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    { return 0.3; }
 };
 
 } // end namepace

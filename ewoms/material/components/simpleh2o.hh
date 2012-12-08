@@ -31,8 +31,8 @@
 
 #include <cmath>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \ingroup Components
  *
@@ -148,9 +148,7 @@ public:
      */
     static const Scalar liquidEnthalpy(Scalar temperature,
                                        Scalar pressure)
-    {
-        return 4180*(temperature - 293.15);
-    }
+    { return 4180*(temperature - 293.15); }
 
     /*!
      * \brief Specific internal energy of steam \f$\mathrm{[J/kg]}\f$.

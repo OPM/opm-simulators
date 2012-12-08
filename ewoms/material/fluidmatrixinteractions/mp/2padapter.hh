@@ -29,16 +29,16 @@ namespace Ewoms {
 /*!
  * \ingroup fluidmatrixinteractionslaws
  * \brief Provides an adapter class to use two-phase material laws
- *        with the generalized M-phase API.
+ *        with the generic M-phase API.
  */
-template <int wPhaseIdx, class TwoPLaw >
+template <int wPhaseIdxT, class TwoPLaw >
 class TwoPAdapter
 {
-    enum { nPhaseIdx = (wPhaseIdx == 0)?1:0 };
-
 public:
     typedef typename TwoPLaw::Params Params;
     enum { numPhases = 2 };
+    enum { wPhaseIdx = wPhaseIdxT };
+    enum { nPhaseIdx = (wPhaseIdx == 0)?1:0 };
 
     /*!
      * \brief The capillary pressure-saturation curve.

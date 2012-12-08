@@ -29,8 +29,8 @@
 
 #include <algorithm>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \ingroup material
  *
