@@ -46,24 +46,22 @@ template <class ScalarT, class ParamsT = BrooksCoreyParams<ScalarT> >
 class BrooksCorey
 {
 public:
-    typedef ParamsT     Params;
-    typedef typename    Params::Scalar Scalar;
+    typedef ParamsT Params;
+    typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief The capillary pressure-saturation curve according to Brooks & Corey.
+     * \brief The capillary pressure-saturation curve according to
+     *        Brooks and Corey.
      *
-     * The Brooks-Corey empirical  capillary pressure <-> saturation
-     * function is given by
+     * The empirical Brooks-Corey capillary pressure-saturation
+     * function is defined as
+     * \f[
+     * p_C = p_e\overline{S}_w^{-1/\lambda}
+     * \f]
      *
-     *  \f[
-        p_C = p_e\overline{S}_w^{-1/\lambda}
-    *  \f]
-    *
-     * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Capillary pressure calculated by Brooks & Corey constitutive relation.
+     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     static Scalar pC(const Params &params, Scalar Swe)
     {
@@ -73,25 +71,23 @@ public:
     }
 
     /*!
-     * \brief The saturation-capillary pressure curve according to Brooks & Corey.
+     * \brief The saturation-capillary pressure curve according to
+     *        Brooks & Corey.
      *
      * This is the inverse of the capillary pressure-saturation curve:
      * \f[
      \overline{S}_w = (\frac{p_C}{p_e})^{-\lambda}
      \f]
      *
-     * \param pC        Capillary pressure \f$p_C\f$
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Effective wetting phase saturation calculated as inverse of BrooksCorey constitutive relation.
+     * \param pc Capillary pressure \f$[Pa]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    static Scalar Sw(const Params &params, Scalar pC)
+    static Scalar Sw(const Params &params, Scalar pc)
     {
-        assert(pC >= 0);
+        assert(pc > 0); // if we don't assume that, std::pow will screw up!
 
-        Scalar tmp = std::pow(pC/params.pe(), -params.lambda());
-        return std::min(std::max(tmp, Scalar(0.0)), Scalar(1.0));
+        return std::pow(pc/params.pe(), -params.lambda());
     }
 
     /*!
@@ -104,11 +100,9 @@ public:
      -\frac{p_e}{\lambda} \overline{S}_w^{-1/\lambda - 1}
      \f]
      *
-     * \param Swe       Effective saturation of the wetting phase \f$\overline{S}_w\f$
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Partial derivative of \f$p_c\f$ w.r.t. effective saturation according to Brooks & Corey.
+     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
     */
     static Scalar dpC_dSw(const Params &params, Scalar Swe)
     {
@@ -118,14 +112,13 @@ public:
     }
 
     /*!
-     * \brief The partial derivative of the effective
-     *        saturation w.r.t. the capillary pressure according to Brooks & Corey.
+     * \brief The partial derivative of the effective saturation with
+     *        regard to the capillary pressure according to Brooks and
+     *        Corey.
      *
-     * \param pC        Capillary pressure \f$p_C\f$
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Partial derivative of effective saturation w.r.t. \f$p_c\f$ according to Brooks & Corey.
+     * \param pc Capillary pressure \f$[Pa]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
@@ -139,11 +132,9 @@ public:
      *        the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Swe       The mobile saturation of the wetting phase.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Relative permeability of the wetting phase calculated as implied by Brooks & Corey.
+     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     static Scalar krw(const Params &params, Scalar Swe)
     {
@@ -157,11 +148,9 @@ public:
      *        wetting phase with regard to the wetting saturation of the
      *        medium implied by the Brooks-Corey parameterization.
      *
-     * \param Swe       The mobile saturation of the wetting phase.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Derivative of the relative permeability of the wetting phase w.r.t. effective wetting phase saturation calculated as implied by Brooks & Corey.
+     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     static Scalar dkrw_dSw(const Params &params, Scalar Swe)
     {
@@ -175,11 +164,9 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Swe       The mobile saturation of the wetting phase.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Relative permeability of the non-wetting phase calculated as implied by Brooks & Corey.
+     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     static Scalar krn(const Params &params, Scalar Swe)
     {
@@ -196,11 +183,9 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Swe       The mobile saturation of the wetting phase.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Derivative of the relative permeability of the non-wetting phase w.r.t. effective wetting phase saturation calculated as implied by Brooks & Corey.
+     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param params The parameters of the capillary pressure curve
+     *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     static Scalar dkrn_dSw(const Params &params, Scalar Swe)
     {
