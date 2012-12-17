@@ -124,32 +124,6 @@ namespace Opm
             initEPS(deck, grid, std::string("KRWR"), eps_.krwr_);
             initEPS(deck, grid, std::string("KRO"), eps_.kro_);
             initEPS(deck, grid, std::string("KRORW"), eps_.krorw_);
-
-/*
-            double ss[PhaseUsage::MaxNumPhases], kr[PhaseUsage::MaxNumPhases];
-            int oldP = std::cout.precision();
-            std::cout.precision(4);
-            for (unsigned int i=0; i<=100; ++i) {
-                ss[phase_usage_.phase_pos[Aqua]] = i*0.01;
-                ss[phase_usage_.phase_pos[Liquid]] = 1.0 - ss[phase_usage_.phase_pos[Aqua]];
-                endScaling(ss, 15, kr);
-                std::cout << std::showpoint
-                          << std::setw(10) << ss[phase_usage_.phase_pos[Aqua]]
-                          << std::setw(12) << kr[phase_usage_.phase_pos[Aqua]]
-                          << std::setw(10) << kr[phase_usage_.phase_pos[Liquid]];
-                endScaling(ss, 45, kr);
-                std::cout << std::setw(12) << kr[phase_usage_.phase_pos[Aqua]]
-                          << std::setw(10) << kr[phase_usage_.phase_pos[Liquid]];
-                endScaling(ss, 75, kr);
-                std::cout << std::setw(12) << kr[phase_usage_.phase_pos[Aqua]]
-                          << std::setw(10) << kr[phase_usage_.phase_pos[Liquid]];
-                endScaling(ss, 105, kr);
-                std::cout << std::setw(12) << kr[phase_usage_.phase_pos[Aqua]]
-                          << std::setw(10) << kr[phase_usage_.phase_pos[Liquid]]
-                          << std::noshowpoint << std::endl;
-            }
-            std::cout.precision(oldP);
-*/
         } 
     }
 
@@ -280,44 +254,94 @@ namespace Opm
     // Initialize saturation scaling parameter
     template <class SatFuncSet>
     void SaturationPropsFromDeck<SatFuncSet>::initEPS(const EclipseGridParser& deck,
-                                                       const UnstructuredGrid& grid,
-                                                       const std::string& keyword,
-                                                       std::vector<double>& scaleparam)
+                                                      const UnstructuredGrid& grid,
+                                                      const std::string& keyword,
+                                                      std::vector<double>& scaleparam)
     {
-        
-        if (deck.hasField(keyword)) {
+        bool useKeyword = deck.hasField(keyword);  
+        bool hasENPTVD = deck.hasField("ENPTVD");
+        bool hasENKRVD = deck.hasField("ENKRVD");
+        int itab = 0;
+        std::vector<std::vector<std::vector<double> > > table_dummy;
+        std::vector<std::vector<std::vector<double> > >& table = table_dummy;
 
-            // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
-            scaleparam.resize(grid.number_of_cells);
-            int phase_pos_aqua = phase_usage_.phase_pos[BlackoilPhases::Aqua];
-            if (keyword == std::string("SWCR")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).swcr_;
-            } else if (keyword == std::string("SWL")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).smin_[phase_pos_aqua];
+        // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
+        int phase_pos_aqua = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+        if (keyword[0] == 'S' && (useKeyword || hasENPTVD)) {
+            if (keyword == std::string("SWL")) {
+                if (useKeyword || deck.getENPTVD().mask_[0]) {
+                    itab = 1;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smin_[phase_pos_aqua];
+                }
+            } else if (keyword == std::string("SWCR")) {
+                if (useKeyword || deck.getENPTVD().mask_[1]) {
+                    itab = 2;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).swcr_;
+                }
             } else if (keyword == std::string("SWU")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).smax_[phase_pos_aqua];
+                if (useKeyword || deck.getENPTVD().mask_[2]) {
+                    itab = 3;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smax_[phase_pos_aqua];
+                }
             } else if (keyword == std::string("SOWCR")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).sowcr_;
-            } else if (keyword == std::string("KRW")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).krwmax_;
-            } else if (keyword == std::string("KRWR")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).krwr_;
-            } else if (keyword == std::string("KRO")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).kromax_;
-            } else if (keyword == std::string("KRORW")) {
-                for (int i=0; i<grid.number_of_cells; ++i)
-                    scaleparam[i] = funcForCell(i).krorw_;
-            } else {
-                THROW("SaturationPropsFromDeck::initEndscale()   --  unknown keyword: '" << keyword << "'");
+                if (useKeyword || deck.getENPTVD().mask_[3]) {
+                    itab = 4;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).sowcr_;
+                }
+            }else {
+                THROW(" -- unknown keyword: '" << keyword << "'");
             }
+            if (!useKeyword && itab > 0) {
+                table = deck.getENPTVD().table_;
+            } 
+        } else if (keyword[0] == 'K' && (useKeyword || hasENKRVD)) {    
+            if (keyword == std::string("KRW")) {
+                if (useKeyword || deck.getENKRVD().mask_[0]) {
+                    itab = 1;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krwmax_;
+                }
+            } else if (keyword == std::string("KRO")) {
+                if (useKeyword || deck.getENKRVD().mask_[1]) {
+                    itab = 2;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).kromax_;
+                }
+            } else if (keyword == std::string("KRWR")) {
+                if (useKeyword || deck.getENKRVD().mask_[2]) {
+                    itab = 3;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krwr_;
+                }
+            } else if (keyword == std::string("KRORW")) {
+                if (useKeyword || deck.getENKRVD().mask_[3]) {
+                    itab = 4;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krorw_;
+                }
+            } else {
+                THROW(" -- unknown keyword: '" << keyword << "'");
+            }
+            if (!useKeyword && itab > 0) {
+                table = deck.getENKRVD().table_;
+            } 
+        }
 
+        if (scaleparam.empty()) {
+            return;
+        } else if (useKeyword) {
             // Keyword values from deck
             std::cout << "--- Scaling parameter '" << keyword << "' assigned." << std::endl;
             const int* gc = grid.global_cell;
@@ -326,8 +350,28 @@ namespace Opm
                 const int deck_pos = (gc == NULL) ? c : gc[c];
                 scaleparam[c] = val[deck_pos];
             }
+        } else {
+            std::cout << "--- Scaling parameter '" << keyword << "' assigned via ";
+            if (keyword[0] == 'S')
+                deck.getENPTVD().write(std::cout);
+            else
+                deck.getENKRVD().write(std::cout);
+            const double* cc = grid.cell_centroids;
+            const int dim = grid.dimensions;
+            for (int cell = 0; cell < grid.number_of_cells; ++cell) {
+                int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
+                if (table[itab][jtab][0] != -1.0) {
+                    std::vector<double>& depth = table[0][jtab];
+                    std::vector<double>& val = table[itab][jtab];
+                    double zc = cc[dim*cell+dim-1];
+                    if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth, val, zc);
+                    }
+                }
+            }
         }
     }
+    
 
     // Saturation scaling
     template <class SatFuncSet>
