@@ -242,7 +242,7 @@ namespace Opm
             // \int_{\partial K} u_h^{ext} (v(x) \cdot n) b_j ds
             // (where u_h^{ext} is the upstream unknown (tof)).
             const double normal_velocity = flux / grid_.face_areas[face];
-            FaceQuadrature quad(grid_, face, degree_);
+            FaceQuadrature quad(grid_, face, 2*degree_);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
