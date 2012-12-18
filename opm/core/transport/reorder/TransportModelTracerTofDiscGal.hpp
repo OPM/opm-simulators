@@ -51,7 +51,8 @@ namespace Opm
         /// \param[in] use_cvi   If true, use corner point velocity interpolation.
         ///                      Otherwise, use the basic constant interpolation.
         TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
-                                       const bool use_cvi);
+                                       const bool use_cvi,
+                                       const bool use_limiter = false);
 
 
         /// Solve for time-of-flight.
@@ -82,9 +83,11 @@ namespace Opm
         TransportModelTracerTofDiscGal(const TransportModelTracerTofDiscGal&);
         TransportModelTracerTofDiscGal& operator=(const TransportModelTracerTofDiscGal&);
 
+        // Data members
         const UnstructuredGrid& grid_;
         boost::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;
         bool use_cvi_;
+        bool use_limiter_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
@@ -100,6 +103,9 @@ namespace Opm
         std::vector<double> basis_nb_;
         std::vector<double> grad_basis_;
         std::vector<double> velocity_;
+
+        // Private methods
+        void useLimiter(const int cell);
     };
 
 } // namespace Opm
