@@ -124,10 +124,12 @@ main(int argc, char** argv)
     bool use_dg = param.getDefault("use_dg", false);
     int dg_degree = -1;
     bool use_cvi = false;
+    bool use_limiter = false;
     bool use_multidim_upwind = false;
     if (use_dg) {
         dg_degree = param.getDefault("dg_degree", 0);
         use_cvi = param.getDefault("use_cvi", false);
+        use_limiter = param.getDefault("use_limiter", false);
     } else {
         use_multidim_upwind = param.getDefault("use_multidim_upwind", false);
     }
@@ -157,7 +159,7 @@ main(int argc, char** argv)
     transport_timer.start();
     std::vector<double> tof;
     if (use_dg) {
-        Opm::TransportModelTracerTofDiscGal tofsolver(grid, use_cvi);
+        Opm::TransportModelTracerTofDiscGal tofsolver(grid, use_cvi, use_limiter);
         tofsolver.solveTof(&flux[0], &porevol[0], &src[0], dg_degree, tof);
     } else {
         Opm::TransportModelTracerTof tofsolver(grid, use_multidim_upwind);
