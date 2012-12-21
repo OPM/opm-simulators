@@ -39,7 +39,7 @@
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/
-#include <ewoms/common/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
+#include <ewoms/io/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
 
 // For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>

@@ -43,7 +43,7 @@
 #include <ewoms/material/components/lnapl.hh>
 
 // the grid includes
-#include <ewoms/common/cubegridcreator.hh>
+#include <ewoms/io/cubegridcreator.hh>
 #include <dune/grid/yaspgrid.hh>
 
 // provides Dune::FieldVector
