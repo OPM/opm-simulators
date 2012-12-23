@@ -29,6 +29,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <limits>
 #include <iostream>
 
 namespace Ewoms {

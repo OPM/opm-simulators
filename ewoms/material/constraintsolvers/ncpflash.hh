@@ -31,6 +31,7 @@
 #include <ewoms/common/math.hh>
 
 #include <limits>
+#include <iostream>
 
 namespace Ewoms {
 

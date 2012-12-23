@@ -43,6 +43,8 @@
 #include <mpi.h>
 #endif
 
+#include <iostream>
+
 namespace Ewoms {
 namespace FluidSystems {
 

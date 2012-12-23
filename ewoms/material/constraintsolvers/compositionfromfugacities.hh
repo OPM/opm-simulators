@@ -29,6 +29,8 @@
 #include <ewoms/common/exceptions.hh>
 #include <ewoms/common/valgrind.hh>
 
+#include <limits>
+
 namespace Ewoms {
 
 /*!

@@ -32,6 +32,8 @@
 #include <ewoms/material/fluidsystems/nullparametercache.hh>
 
 #include <array>
+#include <vector>
+#include <iostream>
 
 namespace Ewoms {
 namespace FluidSystems {

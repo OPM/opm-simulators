@@ -28,7 +28,6 @@
 #include <ewoms/material/fluidmatrixinteractions/2p/vangenuchten.hh>
 
 #include <algorithm>
-#include <iostream>
 #include <cassert>
 
 namespace Ewoms {
