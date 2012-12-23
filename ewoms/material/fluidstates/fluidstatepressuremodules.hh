@@ -30,8 +30,8 @@
 
 #include <algorithm>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Module for the modular fluid state which stores the
  *       pressures explicitly.

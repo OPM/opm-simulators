@@ -31,8 +31,8 @@
 #include <algorithm>
 #include <limits>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Module for the modular fluid state which stores the
  *        phase fugacity coefficients explicitly.

@@ -31,8 +31,8 @@
 #include <algorithm>
 #include <cassert>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Module for the modular fluid state which stores the
  *       temperatures explicitly.

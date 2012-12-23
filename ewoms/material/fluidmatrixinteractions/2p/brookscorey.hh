@@ -59,15 +59,15 @@ public:
      * p_C = p_e\overline{S}_w^{-1/\lambda}
      * \f]
      *
-     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    static Scalar pC(const Params &params, Scalar Swe)
+    static Scalar pC(const Params &params, Scalar Sw)
     {
-        assert(0 <= Swe && Swe <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
-        return params.pe()*std::pow(Swe, -1.0/params.lambda());
+        return params.pe()*std::pow(Sw, -1.0/params.lambda());
     }
 
     /*!
@@ -100,15 +100,15 @@ public:
      -\frac{p_e}{\lambda} \overline{S}_w^{-1/\lambda - 1}
      \f]
      *
-     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
     */
-    static Scalar dpC_dSw(const Params &params, Scalar Swe)
+    static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        assert(0 <= Swe && Swe <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
-        return - params.pe()/params.lambda() * std::pow(Swe, -1/params.lambda() - 1);
+        return - params.pe()/params.lambda() * std::pow(Sw, -1/params.lambda() - 1);
     }
 
     /*!
@@ -122,7 +122,7 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        assert(pC >= 0);
+        assert(pC > 0); // required for std::pow
 
         return -params.lambda()/params.pe() * std::pow(pC/params.pe(), - params.lambda() - 1);
     }
@@ -132,15 +132,15 @@ public:
      *        the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    static Scalar krw(const Params &params, Scalar Swe)
+    static Scalar krw(const Params &params, Scalar Sw)
     {
-        assert(0 <= Swe && Swe <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
-        return std::pow(Swe, 2.0/params.lambda() + 3);
+        return std::pow(Sw, 2.0/params.lambda() + 3);
     }
 
     /*!
@@ -148,15 +148,15 @@ public:
      *        wetting phase with regard to the wetting saturation of the
      *        medium implied by the Brooks-Corey parameterization.
      *
-     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    static Scalar dkrw_dSw(const Params &params, Scalar Swe)
+    static Scalar dkrw_dSw(const Params &params, Scalar Sw)
     {
-        assert(0 <= Swe && Swe <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
-        return (2.0/params.lambda() + 3)*std::pow(Swe, 2.0/params.lambda() + 2);
+        return (2.0/params.lambda() + 3)*std::pow(Sw, 2.0/params.lambda() + 2);
     }
 
     /*!
@@ -164,17 +164,17 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    static Scalar krn(const Params &params, Scalar Swe)
+    static Scalar krn(const Params &params, Scalar Sw)
     {
-        assert(0 <= Swe && Swe <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
         Scalar exponent = 2.0/params.lambda() + 1;
-        Scalar tmp = 1. - Swe;
-        return tmp*tmp*(1. - std::pow(Swe, exponent));
+        Scalar Sn = 1. - Sw;
+        return Sn*Sn*(1. - std::pow(Sw, exponent));
     }
 
     /*!
@@ -183,22 +183,22 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Swe Effective saturation of the wetting phase \f$[-]\f$
+     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    static Scalar dkrn_dSw(const Params &params, Scalar Swe)
+    static Scalar dkrn_dSw(const Params &params, Scalar Sw)
     {
-        assert(0 <= Swe && Swe <= 1);
+        assert(0 <= Sw && Sw <= 1);
 
         return
-            2.0*(Swe - 1)*(
+            2.0*(Sw - 1)*(
                 1 +
-                std::pow(Swe, 2.0/params.lambda())*(
-                    1.0/params.lambda() + 1.0/2 -
-                    Swe*(1.0/params.lambda() + 1.0/2)
-                    )
-                );
+                std::pow(Sw,
+                         2.0/params.lambda())*(
+                             1.0/params.lambda() + 1.0/2 -
+                             Sw*(1.0/params.lambda() + 1.0/2)
+                             ));
     }
 
 };

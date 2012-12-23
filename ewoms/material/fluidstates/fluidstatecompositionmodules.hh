@@ -31,8 +31,8 @@
 #include <algorithm>
 #include <cmath>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Module for the modular fluid state which stores the
  *        phase compositions explicitly in terms of mole fractions.

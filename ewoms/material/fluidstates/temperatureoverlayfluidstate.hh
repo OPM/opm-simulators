@@ -25,8 +25,8 @@
 
 #include <ewoms/common/valgrind.hh>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief This is a fluid state which allows to set the fluid
  *        temperatures and takes all other quantities from an other

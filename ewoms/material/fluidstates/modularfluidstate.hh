@@ -35,8 +35,8 @@
 #include <ewoms/common/valgrind.hh>
 #include <algorithm>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Represents all relevant thermodynamic quantities of a
  *        multi-phase, multi-component fluid system assuming

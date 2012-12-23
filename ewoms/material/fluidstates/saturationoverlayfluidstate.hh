@@ -27,8 +27,8 @@
 
 #include <array>
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief This is a fluid state which allows to set the fluid
  *        saturations and takes all other quantities from an other
