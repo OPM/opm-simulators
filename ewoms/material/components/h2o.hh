@@ -3,7 +3,6 @@
 /*****************************************************************************
  *   Copyright (C) 2009-2012 by Andreas Lauser                               *
  *   Copyright (C) 2010 by Jochen Fritz                                      *
- *   Copyright (C) 2010 by Felix Bode                                        *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *
@@ -821,7 +820,7 @@ public:
         {
             DUNE_THROW(NumericalProblem,
                        "Liquid thermal conductivity of H2O for "
-                       << "T="<<temperature<<" p="<<pressure 
+                       << "T="<<temperature<<" p="<<pressure
                        << " is not implemented");
         }
 #endif

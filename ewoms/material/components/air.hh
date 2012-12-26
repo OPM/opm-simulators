@@ -214,7 +214,7 @@ public:
      */
     static const Scalar gasThermalConductivity(Scalar temperature,
                                                   Scalar pressure)
-    { 
+    {
         // Isobaric Properties for Nitrogen in: NIST Standard
         // see http://webbook.nist.gov/chemistry/fluid/
         // evaluated at p=.1 MPa, T=20°C
