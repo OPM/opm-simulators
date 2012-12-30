@@ -121,8 +121,6 @@ void completeReferenceFluidState(FluidState &fs,
                                  int refPhaseIdx)
 {
     enum { numPhases = FluidSystem::numPhases };
-
-    typedef Ewoms::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
 
     int otherPhaseIdx = 1 - refPhaseIdx;
