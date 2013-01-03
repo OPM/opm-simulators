@@ -404,9 +404,10 @@ namespace Opm
         const int dim = grid_.dimensions;
         const int num_basis = DGBasis::numBasisFunc(dim, degree_);
 
-        double limiter = 1e100;
+        double max_slope_mult = 0.0;
+        int num_upstream_faces = 0;
         // For inflow faces, ensure that cell tof does not dip below
-        // the minimum value from upstream (for that face).
+        // the minimum value from upstream (for all faces).
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
             const int face = grid_.cell_faces[hface];
             double flux = 0.0;
@@ -418,6 +419,11 @@ namespace Opm
                 flux = -darcyflux_[face];
                 upstream_cell = grid_.face_cells[2*face];
             }
+            if (flux >= 0.0) {
+                // This is a downstream face.
+                continue;
+            }
+            ++num_upstream_faces;
 
             // Evaluate the solution in all corners, and find the appropriate limiter.
             bool upstream = (upstream_cell >= 0 && flux < 0.0);
@@ -437,26 +443,23 @@ namespace Opm
                     min_upstream = std::min(min_upstream, tof_upstream);
                 }
             }
-            if (min_here < min_upstream) {
-                // Must limit slope.
-                const double tof_c = tof_coeff_[num_basis*cell];
-                if (tof_c < min_upstream) {
-                    // Handle by setting a flat solution.
-                    std::cout << "Trouble in cell " << cell << std::endl;
-                    limiter = 0.0;
-                    tof_coeff_[num_basis*cell] = min_upstream;
-                    break;
-                }
-                const double face_limit = (tof_c - min_upstream)/(tof_c - min_here);
-                limiter = std::min(limiter, face_limit);
+            // Compute maximum slope multiplier.
+            const double tof_c = tof_coeff_[num_basis*cell];
+            if (tof_c < min_upstream) {
+                // Handle by setting a flat solution.
+                std::cout << "Trouble in cell " << cell << std::endl;
+                max_slope_mult = 0.0;
+                tof_coeff_[num_basis*cell] = min_upstream;
+                break;
             }
+            const double face_mult = (tof_c - min_upstream)/(tof_c - min_here);
+            max_slope_mult = std::max(max_slope_mult, face_mult);
         }
+        ASSERT(max_slope_mult >= 0.0);
 
-        if (limiter < 0.0) {
-            THROW("Error in limiter.");
-        }
-
-        if (limiter < 1.0) {
+        // Actually do the limiting (if applicable).
+        const double limiter = max_slope_mult;
+        if (num_upstream_faces > 0 && limiter < 1.0) {
             std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
             for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
                 tof_coeff_[i] *= limiter;
