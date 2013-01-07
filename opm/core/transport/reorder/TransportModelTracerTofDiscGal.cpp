@@ -404,7 +404,8 @@ namespace Opm
         const int dim = grid_.dimensions;
         const int num_basis = DGBasis::numBasisFunc(dim, degree_);
 
-        double max_slope_mult = 1e100;
+        // double max_slope_mult = 1e100;
+        double max_slope_mult = 0.0;
         int num_upstream_faces = 0;
         // For inflow faces, ensure that cell tof does not dip below
         // the minimum value from upstream (for all faces).
@@ -453,7 +454,8 @@ namespace Opm
                 break;
             }
             const double face_mult = (tof_c - min_upstream)/(tof_c - min_here);
-            max_slope_mult = std::min(max_slope_mult, face_mult);
+            // max_slope_mult = std::min(max_slope_mult, face_mult);
+            max_slope_mult = std::max(max_slope_mult, face_mult);
         }
         ASSERT(max_slope_mult >= 0.0);
 
