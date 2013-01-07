@@ -404,11 +404,10 @@ namespace Opm
         const int dim = grid_.dimensions;
         const int num_basis = DGBasis::numBasisFunc(dim, degree_);
 
-        // double max_slope_mult = 1e100;
-        double max_slope_mult = 0.0;
+        double min_upstream_tof = 1e100;
+        double min_here_tof = 1e100;
         int num_upstream_faces = 0;
-        // For inflow faces, ensure that cell tof does not dip below
-        // the minimum value from upstream (for all faces).
+        // Find minimum tof on upstream faces.
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
             const int face = grid_.cell_faces[hface];
             double flux = 0.0;
@@ -420,48 +419,51 @@ namespace Opm
                 flux = -darcyflux_[face];
                 upstream_cell = grid_.face_cells[2*face];
             }
-            if (flux >= 0.0) {
-                // This is a downstream face.
-                continue;
+            const bool upstream = (flux < 0.0);
+            if (upstream) {
+                ++num_upstream_faces;
             }
-            ++num_upstream_faces;
+            bool interior = (upstream_cell >= 0);
 
-            // Evaluate the solution in all corners, and find the appropriate limiter.
-            bool upstream = (upstream_cell >= 0 && flux < 0.0);
-            double min_upstream = upstream ? 1e100 : 0.0;
-            double min_here = 1e100;
+            // Evaluate the solution in all corners.
             for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
                 const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
                 DGBasis::eval(grid_, cell, degree_, nc, &basis_[0]);
                 const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
                                                            tof_coeff_ + num_basis*cell, 0.0);
-                min_here = std::min(min_here, tof_here);
+                min_here_tof = std::min(min_here_tof, tof_here);
                 if (upstream) {
-                    DGBasis::eval(grid_, upstream_cell, degree_, nc, &basis_nb_[0]);
-                    const double tof_upstream
-                        = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
-                                             tof_coeff_ + num_basis*upstream_cell, 0.0);
-                    min_upstream = std::min(min_upstream, tof_upstream);
+                    if (interior) {
+                        DGBasis::eval(grid_, upstream_cell, degree_, nc, &basis_nb_[0]);
+                        const double tof_upstream
+                            = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
+                                                 tof_coeff_ + num_basis*upstream_cell, 0.0);
+                        min_upstream_tof = std::min(min_upstream_tof, tof_upstream);
+                    } else {
+                        // Allow tof down to 0 on inflow boundaries.
+                        min_upstream_tof = std::min(min_upstream_tof, 0.0);
+                    }
                 }
             }
-            // Compute maximum slope multiplier.
-            const double tof_c = tof_coeff_[num_basis*cell];
-            if (tof_c < min_upstream) {
-                // Handle by setting a flat solution.
-                std::cout << "Trouble in cell " << cell << std::endl;
-                max_slope_mult = 0.0;
-                tof_coeff_[num_basis*cell] = min_upstream;
-                break;
-            }
-            const double face_mult = (tof_c - min_upstream)/(tof_c - min_here);
-            // max_slope_mult = std::min(max_slope_mult, face_mult);
-            max_slope_mult = std::max(max_slope_mult, face_mult);
         }
-        ASSERT(max_slope_mult >= 0.0);
+
+        // Compute slope multiplier (limiter).
+        if (num_upstream_faces == 0) {
+            min_upstream_tof = 0.0;
+            min_here_tof = 0.0;
+        }
+        const double tof_c = tof_coeff_[num_basis*cell];
+        double limiter = (tof_c - min_upstream_tof)/(tof_c - min_here_tof);
+        if (tof_c < min_upstream_tof) {
+            // Handle by setting a flat solution.
+            std::cout << "Trouble in cell " << cell << std::endl;
+            limiter = 0.0;
+            tof_coeff_[num_basis*cell] = min_upstream_tof;
+        }
+        ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
-        const double limiter = max_slope_mult;
-        if (num_upstream_faces > 0 && limiter < 1.0) {
+        if (limiter < 1.0) {
             std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
             for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
                 tof_coeff_[i] *= limiter;
