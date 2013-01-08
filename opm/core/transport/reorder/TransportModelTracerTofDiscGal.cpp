@@ -133,6 +133,9 @@ namespace Opm
         : grid_(grid),
           use_cvi_(use_cvi),
           use_limiter_(use_limiter),
+          limiter_relative_flux_threshold_(1e-3),
+          limiter_method_(MinUpwindFace),
+          limiter_usage_(DuringComputations),
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
     {
@@ -194,6 +197,19 @@ namespace Opm
         grad_basis_.resize(num_basis*grid_.dimensions);
         velocity_interpolation_->setupFluxes(darcyflux);
         reorderAndTransport(grid_, darcyflux);
+        switch (limiter_usage_) {
+        case AsPostProcess:
+            applyLimiterAsPostProcess();
+            break;
+        case AsSimultaneousPostProcess:
+            applyLimiterAsSimultaneousPostProcess();
+            break;
+        case DuringComputations:
+            // Do nothing.
+            break;
+        default:
+            THROW("Unknown limiter usage choice: " << limiter_usage_);
+        }
     }
 
 
@@ -370,8 +386,8 @@ namespace Opm
         std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);
 
         // Apply limiter.
-        if (degree_ > 0 && use_limiter_) {
-            useLimiter(cell);
+        if (degree_ > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
+            applyLimiter(cell, tof_coeff_);
         }
     }
 
@@ -389,7 +405,22 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::useLimiter(const int cell)
+    void TransportModelTracerTofDiscGal::applyLimiter(const int cell, double* tof)
+    {
+        switch (limiter_method_) {
+        case MinUpwindFace:
+            applyMinUpwindFaceLimiter(cell, tof);
+            break;
+        case MinUpwindAverage:
+        default:
+            THROW("Limiter type not implemented: " << limiter_method_);
+        }
+    }
+
+
+
+
+    void TransportModelTracerTofDiscGal::applyMinUpwindFaceLimiter(const int cell, double* tof)
     {
         if (degree_ != 1) {
             THROW("This limiter only makes sense for our DG1 implementation.");
@@ -399,15 +430,38 @@ namespace Opm
         // 1. Let M be the minimum TOF value on the upstream faces,
         //    evaluated in the upstream cells. Then the value at all
         //    points in this cell shall be at least M.
+        //    Upstream faces whose flux does not exceed the relative
+        //    flux threshold are not considered for this minimum.
         // 2. The TOF shall not be below zero in any point.
 
+        // Find total upstream/downstream fluxes.
+        double upstream_flux = 0.0;
+        double downstream_flux = 0.0;
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+            } else {
+                flux = -darcyflux_[face];
+            }
+            if (flux < 0.0) {
+                upstream_flux += flux;
+            } else {
+                downstream_flux += flux;
+            }
+        }
+        // In the presence of sources, significant fluxes may be missing from the computed fluxes,
+        // setting the total flux to the (positive) maximum avoids this: since source is either
+        // inflow or outflow, not both, either upstream_flux or downstream_flux must be correct.
+        const double total_flux = std::max(-upstream_flux, downstream_flux);
+
+        // Find minimum tof on upstream faces.
         const int dim = grid_.dimensions;
         const int num_basis = DGBasis::numBasisFunc(dim, degree_);
-
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
         int num_upstream_faces = 0;
-        // Find minimum tof on upstream faces.
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
             const int face = grid_.cell_faces[hface];
             double flux = 0.0;
@@ -419,7 +473,7 @@ namespace Opm
                 flux = -darcyflux_[face];
                 upstream_cell = grid_.face_cells[2*face];
             }
-            const bool upstream = (flux < 0.0);
+            const bool upstream = (flux < -total_flux*limiter_relative_flux_threshold_);
             if (upstream) {
                 ++num_upstream_faces;
             }
@@ -458,7 +512,7 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            tof_coeff_[num_basis*cell] = min_upstream_tof;
+            tof[num_basis*cell] = min_upstream_tof;
         }
         ASSERT(limiter >= 0.0);
 
@@ -466,11 +520,45 @@ namespace Opm
         if (limiter < 1.0) {
             std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
             for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
-                tof_coeff_[i] *= limiter;
+                tof[i] *= limiter;
             }
         } else {
             std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
+    }
+
+
+
+
+    void TransportModelTracerTofDiscGal::applyLimiterAsPostProcess()
+    {
+        // Apply the limiter sequentially to all cells.
+        // This means that a cell's limiting behaviour may be affected by
+        // any limiting applied to its upstream cells.
+        const std::vector<int>& seq = TransportModelInterface::sequence();
+        const int nc = seq.size();
+        ASSERT(nc == grid_.number_of_cells);
+        for (int i = 0; i < nc; ++i) {
+            const int cell = seq[i];
+            applyLimiter(cell, tof_coeff_);
+        }
+    }
+
+
+
+
+    void TransportModelTracerTofDiscGal::applyLimiterAsSimultaneousPostProcess()
+    {
+        // Apply the limiter simultaneously to all cells.
+        // This means that each cell is limited independently from all other cells,
+        // we write the resulting dofs to a new array instead of writing to tof_coeff_.
+        // Afterwards we copy the results back to tof_coeff_.
+        const int num_basis = DGBasis::numBasisFunc(grid_.dimensions, degree_);
+        std::vector<double> tof_coeffs_new(tof_coeff_, tof_coeff_ + num_basis*grid_.number_of_cells);
+        for (int c = 0; c < grid_.number_of_cells; ++c) {
+            applyLimiter(c, &tof_coeffs_new[0]);
+        }
+        std::copy(tof_coeffs_new.begin(), tof_coeffs_new.end(), tof_coeff_);
     }
 
 

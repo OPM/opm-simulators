@@ -88,6 +88,11 @@ namespace Opm
         boost::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;
         bool use_cvi_;
         bool use_limiter_;
+        double limiter_relative_flux_threshold_;
+        enum LimiterMethod { MinUpwindFace, MinUpwindAverage };
+        LimiterMethod limiter_method_;
+        enum LimiterUsage { DuringComputations, AsPostProcess, AsSimultaneousPostProcess };
+        LimiterUsage limiter_usage_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
@@ -105,7 +110,14 @@ namespace Opm
         std::vector<double> velocity_;
 
         // Private methods
-        void useLimiter(const int cell);
+
+        // Apply some limiter, writing to array tof
+        // (will read data from tof_coeff_, it is ok to call
+        //  with tof_coeff as tof argument.
+        void applyLimiter(const int cell, double* tof);
+        void applyMinUpwindFaceLimiter(const int cell, double* tof);
+        void applyLimiterAsPostProcess();
+        void applyLimiterAsSimultaneousPostProcess();
     };
 
 } // namespace Opm
