@@ -23,6 +23,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/blas_lapack.h>
 #include <algorithm>
 #include <cmath>
@@ -128,27 +129,50 @@ namespace Opm
     /// \param[in] use_cvi   If true, use corner point velocity interpolation.
     ///                      Otherwise, use the basic constant interpolation.
     TransportModelTracerTofDiscGal::TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
-                                                                   const bool use_cvi,
-                                                                   const bool use_limiter)
+                                                                   const parameter::ParameterGroup& param)
         : grid_(grid),
-          use_cvi_(use_cvi),
-          use_limiter_(use_limiter),
+          use_cvi_(false),
+          use_limiter_(false),
           limiter_relative_flux_threshold_(1e-3),
           limiter_method_(MinUpwindFace),
           limiter_usage_(DuringComputations),
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
     {
+        use_cvi_ = param.getDefault("use_cvi", use_cvi_);
+        use_limiter_ = param.getDefault("use_limiter", use_limiter_);
+        if (use_limiter_) {
+            limiter_relative_flux_threshold_ = param.getDefault("limiter_relative_flux_threshold",
+                                                                limiter_relative_flux_threshold_);
+            const std::string limiter_method_str = param.getDefault<std::string>("limiter_method", "MinUpwindFace");
+            if (limiter_method_str == "MinUpwindFace") {
+                limiter_method_ = MinUpwindFace;
+            } else if (limiter_method_str == "MinUpwindAverage") {
+                limiter_method_ = MinUpwindAverage;
+            } else {
+                THROW("Unknown limiter method: " << limiter_method_str);
+            }
+            const std::string limiter_usage_str = param.getDefault<std::string>("limiter_usage", "DuringComputations");
+            if (limiter_usage_str == "DuringComputations") {
+                limiter_usage_ = DuringComputations;
+            } else if (limiter_usage_str == "AsPostProcess") {
+                limiter_usage_ = AsPostProcess;
+            } else if (limiter_usage_str == "AsSimultaneousPostProcess") {
+                limiter_usage_ = AsSimultaneousPostProcess;
+            } else {
+                THROW("Unknown limiter usage spec: " << limiter_usage_str);
+            }
+        }
         // A note about the use_cvi_ member variable:
         // In principle, we should not need it, since the choice of velocity
         // interpolation is made below, but we may need to use higher order
         // quadrature to exploit CVI, so we store the choice.
         // An alternative would be to add a virtual method isConstant() to
         // the VelocityInterpolationInterface.
-        if (use_cvi) {
-            velocity_interpolation_.reset(new VelocityInterpolationECVI(grid));
+        if (use_cvi_) {
+            velocity_interpolation_.reset(new VelocityInterpolationECVI(grid_));
         } else {
-            velocity_interpolation_.reset(new VelocityInterpolationConstant(grid));
+            velocity_interpolation_.reset(new VelocityInterpolationConstant(grid_));
         }
     }
 
@@ -456,7 +480,7 @@ namespace Opm
         // inflow or outflow, not both, either upstream_flux or downstream_flux must be correct.
         const double total_flux = std::max(-upstream_flux, downstream_flux);
 
-        // Find minimum tof on upstream faces.
+        // Find minimum tof on upstream faces and for this cell.
         const int dim = grid_.dimensions;
         const int num_basis = DGBasis::numBasisFunc(dim, degree_);
         double min_upstream_tof = 1e100;
@@ -506,6 +530,9 @@ namespace Opm
             min_upstream_tof = 0.0;
             min_here_tof = 0.0;
         }
+        if (min_upstream_tof < 0.0) {
+            min_upstream_tof = 0.0;
+        }
         const double tof_c = tof_coeff_[num_basis*cell];
         double limiter = (tof_c - min_upstream_tof)/(tof_c - min_here_tof);
         if (tof_c < min_upstream_tof) {
@@ -518,12 +545,12 @@ namespace Opm
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
-            std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
+            // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
             for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
                 tof[i] *= limiter;
             }
         } else {
-            std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
+            // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
     }
 

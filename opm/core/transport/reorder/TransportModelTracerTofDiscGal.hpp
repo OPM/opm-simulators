@@ -33,6 +33,7 @@ namespace Opm
 
     class IncompPropertiesInterface;
     class VelocityInterpolationInterface;
+    namespace parameter { class ParameterGroup; }
 
     /// Implements a discontinuous Galerkin solver for
     /// (single-phase) time-of-flight using reordering.
@@ -51,8 +52,7 @@ namespace Opm
         /// \param[in] use_cvi   If true, use corner point velocity interpolation.
         ///                      Otherwise, use the basic constant interpolation.
         TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
-                                       const bool use_cvi,
-                                       const bool use_limiter = false);
+                                       const parameter::ParameterGroup& param);
 
 
         /// Solve for time-of-flight.
