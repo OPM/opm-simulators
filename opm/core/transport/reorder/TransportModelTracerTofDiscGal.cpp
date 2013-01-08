@@ -147,7 +147,7 @@ namespace Opm
           use_cvi_(false),
           use_limiter_(false),
           limiter_relative_flux_threshold_(1e-3),
-          limiter_method_(MinUpwindFace),
+          limiter_method_(MinUpwindAverage),
           limiter_usage_(DuringComputations),
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
@@ -157,7 +157,7 @@ namespace Opm
         if (use_limiter_) {
             limiter_relative_flux_threshold_ = param.getDefault("limiter_relative_flux_threshold",
                                                                 limiter_relative_flux_threshold_);
-            const std::string limiter_method_str = param.getDefault<std::string>("limiter_method", "MinUpwindFace");
+            const std::string limiter_method_str = param.getDefault<std::string>("limiter_method", "MinUpwindAverage");
             if (limiter_method_str == "MinUpwindFace") {
                 limiter_method_ = MinUpwindFace;
             } else if (limiter_method_str == "MinUpwindAverage") {
@@ -449,6 +449,8 @@ namespace Opm
             applyMinUpwindFaceLimiter(cell, tof);
             break;
         case MinUpwindAverage:
+            applyMinUpwindAverageLimiter(cell, tof);
+            break;
         default:
             THROW("Limiter type not implemented: " << limiter_method_);
         }
@@ -530,6 +532,114 @@ namespace Opm
                             = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                  tof_coeff_ + num_basis*upstream_cell, 0.0);
                         min_upstream_tof = std::min(min_upstream_tof, tof_upstream);
+                    } else {
+                        // Allow tof down to 0 on inflow boundaries.
+                        min_upstream_tof = std::min(min_upstream_tof, 0.0);
+                    }
+                }
+            }
+        }
+
+        // Compute slope multiplier (limiter).
+        if (num_upstream_faces == 0) {
+            min_upstream_tof = 0.0;
+            min_here_tof = 0.0;
+        }
+        if (min_upstream_tof < 0.0) {
+            min_upstream_tof = 0.0;
+        }
+        const double tof_c = tof_coeff_[num_basis*cell];
+        double limiter = (tof_c - min_upstream_tof)/(tof_c - min_here_tof);
+        if (tof_c < min_upstream_tof) {
+            // Handle by setting a flat solution.
+            std::cout << "Trouble in cell " << cell << std::endl;
+            limiter = 0.0;
+            tof[num_basis*cell] = min_upstream_tof;
+        }
+        ASSERT(limiter >= 0.0);
+
+        // Actually do the limiting (if applicable).
+        if (limiter < 1.0) {
+            // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
+            for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
+                tof[i] *= limiter;
+            }
+        } else {
+            // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
+        }
+    }
+
+
+
+
+    void TransportModelTracerTofDiscGal::applyMinUpwindAverageLimiter(const int cell, double* tof)
+    {
+        if (degree_ != 1) {
+            THROW("This limiter only makes sense for our DG1 implementation.");
+        }
+
+        // Limiter principles:
+        // 1. Let M be the average TOF value of the upstream cells.
+        ///   Then the value at all points in this cell shall be at least M.
+        //    Upstream faces whose flux does not exceed the relative
+        //    flux threshold are not considered for this minimum.
+        // 2. The TOF shall not be below zero in any point.
+
+        // Find total upstream/downstream fluxes.
+        double upstream_flux = 0.0;
+        double downstream_flux = 0.0;
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+            } else {
+                flux = -darcyflux_[face];
+            }
+            if (flux < 0.0) {
+                upstream_flux += flux;
+            } else {
+                downstream_flux += flux;
+            }
+        }
+        // In the presence of sources, significant fluxes may be missing from the computed fluxes,
+        // setting the total flux to the (positive) maximum avoids this: since source is either
+        // inflow or outflow, not both, either upstream_flux or downstream_flux must be correct.
+        const double total_flux = std::max(-upstream_flux, downstream_flux);
+
+        // Find minimum tof on upstream faces and for this cell.
+        const int dim = grid_.dimensions;
+        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        double min_upstream_tof = 1e100;
+        double min_here_tof = 1e100;
+        int num_upstream_faces = 0;
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            int upstream_cell = -1;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+                upstream_cell = grid_.face_cells[2*face+1];
+            } else {
+                flux = -darcyflux_[face];
+                upstream_cell = grid_.face_cells[2*face];
+            }
+            const bool upstream = (flux < -total_flux*limiter_relative_flux_threshold_);
+            if (upstream) {
+                ++num_upstream_faces;
+            }
+            bool interior = (upstream_cell >= 0);
+
+            // Evaluate the solution in all corners.
+            for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
+                const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
+                DGBasis::eval(grid_, cell, degree_, nc, &basis_[0]);
+                const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
+                                                           tof_coeff_ + num_basis*cell, 0.0);
+                min_here_tof = std::min(min_here_tof, tof_here);
+                if (upstream) {
+                    if (interior) {
+                        min_upstream_tof = std::min(min_upstream_tof, tof_coeff_[num_basis*upstream_cell]);
                     } else {
                         // Allow tof down to 0 on inflow boundaries.
                         min_upstream_tof = std::min(min_upstream_tof, 0.0);
