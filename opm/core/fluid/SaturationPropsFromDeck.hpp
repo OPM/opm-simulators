@@ -107,9 +107,28 @@ namespace Opm
         std::vector<SatFuncSet> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
 
+        struct { // End point scaling parameters
+            std::vector<double> swl_;
+            std::vector<double> swcr_;
+            std::vector<double> swu_;
+            std::vector<double> sowcr_;
+            std::vector<double> krw_;
+            std::vector<double> krwr_;
+            std::vector<double> kro_;
+            std::vector<double> krorw_;
+        } eps_;
+        bool do_eps_;  // ENDSCALE is active
+        bool do_3pt_;  // SCALECRS: YES~true  NO~false
+
         typedef SatFuncSet Funcs;
 
         const Funcs& funcForCell(const int cell) const;
+
+        void initEPS(const EclipseGridParser& deck,
+                          const UnstructuredGrid& grid,
+                          const std::string& keyword,
+                          std::vector<double>& scaleparam);
+        void relpermEPS(const double *s, const int cell, double *kr, double *dkrds= 0) const;
     };
 
 
