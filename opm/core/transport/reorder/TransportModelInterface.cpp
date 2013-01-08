@@ -29,14 +29,17 @@
 void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux)
 {
     // Compute reordered sequence of single-cell problems
-    std::vector<int> sequence(grid.number_of_cells);
-    std::vector<int> components(grid.number_of_cells + 1);
+    sequence_.resize(grid.number_of_cells);
+    components_.resize(grid.number_of_cells + 1);
     int ncomponents;
     time::StopWatch clock;
     clock.start();
-    compute_sequence(&grid, darcyflux, &sequence[0], &components[0], &ncomponents);
+    compute_sequence(&grid, darcyflux, &sequence_[0], &components_[0], &ncomponents);
     clock.stop();
     std::cout << "Topological sort took: " << clock.secsSinceStart() << " seconds." << std::endl;
+
+    // Make vector's size match actual used data.
+    components_.resize(ncomponents + 1);
 
     // Invoke appropriate solve method for each interdependent component.
     for (int comp = 0; comp < ncomponents; ++comp) {
@@ -50,11 +53,23 @@ void Opm::TransportModelInterface::reorderAndTransport(const UnstructuredGrid& g
         }
 #endif
 #endif
-	const int comp_size = components[comp + 1] - components[comp];
+	const int comp_size = components_[comp + 1] - components_[comp];
 	if (comp_size == 1) {
-	    solveSingleCell(sequence[components[comp]]);
+	    solveSingleCell(sequence_[components_[comp]]);
 	} else {
-	    solveMultiCell(comp_size, &sequence[components[comp]]);
+	    solveMultiCell(comp_size, &sequence_[components_[comp]]);
 	}
     }
+}
+
+
+const std::vector<int>& Opm::TransportModelInterface::sequence() const
+{
+    return sequence_;
+}
+
+
+const std::vector<int>& Opm::TransportModelInterface::components() const
+{
+    return components_;
 }
