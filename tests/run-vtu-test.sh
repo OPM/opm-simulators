@@ -14,6 +14,24 @@ function usage() {
     echo "where TEST_TYPE can either be --plain or --simulation"
 };
 
+function validateResults() {
+    OUTPUT_FILE="$1"
+    SIM_NAME="$1"
+    for REFERENCE_RESULT in referencesolutions/$SIM_NAME*; do
+        if python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$TEST_RESULT"; then
+            # SUCCESS!!!!!!
+            echo "Result file '$TEST_RESULT' and reference result '$REFERENCE_RESULT' are identical" 
+            return 0
+        fi
+    done
+    
+    echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
+    echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
+    echo "make it the reference result if necessary."
+    exit 1
+}
+
+
 TEST_TYPE="$1"
 TEST_NAME="$2"
 TEST_ARGS="${@:3:100}"
@@ -68,22 +86,7 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        REFERENCE_RESULT="referencesolutions/$TEST_RESULT"
-        if ! test -r "$REFERENCE_RESULT"; then
-            echo "File $REFERENCE_RESULT does not exist or is not readable"
-            exit 1
-        fi
-        
-
-        if ! python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$TEST_RESULT"; then
-            echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
-            echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
-            echo "make it the reference result if necessary."
-            exit 1
-        fi
-        
-        # SUCCESS!!!!!!
-        echo "Result and reference result are identical" 
+        validateResults $TEST_RESULT $SIM_NAME
         exit 0
 
         ;;
