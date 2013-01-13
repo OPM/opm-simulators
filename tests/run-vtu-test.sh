@@ -16,11 +16,12 @@ function usage() {
 
 function validateResults() {
     OUTPUT_FILE="$1"
-    SIM_NAME="$1"
+    SIM_NAME="$2"
+
     for REFERENCE_RESULT in referencesolutions/$SIM_NAME*; do
-        if python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$TEST_RESULT"; then
+        if python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
             # SUCCESS!!!!!!
-            echo "Result file '$TEST_RESULT' and reference result '$REFERENCE_RESULT' are identical" 
+            echo "Result file '$OUTPUT_FILE' and reference result '$REFERENCE_RESULT' are identical" 
             return 0
         fi
     done
@@ -88,7 +89,6 @@ case "$TEST_TYPE" in
 
         validateResults $TEST_RESULT $SIM_NAME
         exit 0
-
         ;;
 
     "--simulation-diffusion")
@@ -96,13 +96,7 @@ case "$TEST_TYPE" in
             echo "Executing the binary failed!"
             exit 1
         fi
-        if ! python bin/fuzzycomparevtu.py referencesolutions/mimeticdiffusion-00001.vtu mimeticdiffusion-00001.vtu; then
-            echo "The files \"mimeticdiffusion-00001.vtu\" and \"referencesolutions/mimeticdiffusion-00001.vtu\" are different."
-            echo "Make sure the contents of \"mimeticdiffusion-00001.vtu\" are still valid and "
-            echo "make it the reference result if necessary."
-            exit 1
-        fi
-
+        validateResults mimeticdiffusion-00001.vtu mimeticdiffusion
         exit 0
         ;;
     
