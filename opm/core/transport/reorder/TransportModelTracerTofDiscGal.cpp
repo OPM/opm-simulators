@@ -242,6 +242,48 @@ namespace Opm
                 THROW("Maximum degree is 1 for now.");
             }
         }
+
+        /// Modify basis coefficients to add to the function value.
+        /// A function f = sum_i c_i b_i is assumed, and we change
+        /// it to (f + increment) by modifying the c_i. This is done without
+        /// modifying its gradient.
+        /// \param[in]  increment     Add this value to the function.
+        /// \param[in]  dim           Number of space dimensions.
+        /// \param[in]  degree        Polynomial degree of basis.
+        /// \param[out] coefficients  Coefficients {c_i} for a single cell.
+        static void addConstant(const double increment,
+                                const int dim,
+                                const int degree,
+                                double* coefficients)
+        {
+            const int nb = numBasisFunc(dim, degree);
+            const double term = increment/double(nb);
+            for (int ix = 0; ix < nb; ++ix) {
+                coefficients[ix] += term;
+            }
+        }
+
+        /// Modify basis coefficients to change the function's slope.
+        /// A function f = sum_i c_i b_i is assumed, and we change
+        /// it to a function g with the property that grad g = factor * grad f
+        /// by modifying the c_i. This is done without modifying the average,
+        /// i.e. the integrals of g and f over the cell are the same.
+        /// \param[in]  factor        Multiply gradient by this factor.
+        /// \param[in]  dim           Number of space dimensions.
+        /// \param[in]  degree        Polynomial degree of basis.
+        /// \param[out] coefficients  Coefficients {c_i} for a single cell.
+        static void multiplyGradient(const double factor,
+                                     const int dim,
+                                     const int degree,
+                                     double* coefficients)
+        {
+            const int nb = numBasisFunc(dim, degree);
+            const double average = std::accumulate(coefficients, coefficients + nb, 0.0)/double(nb);
+            for (int ix = 0; ix < nb; ++ix) {
+                coefficients[ix] = factor*(coefficients[ix] - average) + average;
+            }
+        }
+
     };
 
 
