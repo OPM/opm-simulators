@@ -271,8 +271,18 @@ namespace Opm
         std::fill(jac_.begin(), jac_.end(), 0.0);
 
         // Compute cell residual contribution.
-        // Note: Assumes that \int_K b_j = 0 for all j > 0
-        rhs_[0] += porevolume_[cell];
+        {
+            CellQuadrature quad(grid_, cell, degree_);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // Integral of: b_i \phi
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
+                }
+            }
+        }
 
         // Compute upstream residual contribution.
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
