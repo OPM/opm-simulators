@@ -727,16 +727,14 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            tof[num_basis*cell] = min_upstream_tof;
+            DGBasis::addConstant(min_upstream_tof - tof_c, dim, degree_, tof + num_basis*cell);
         }
         ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
             // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
-            for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
-                tof[i] *= limiter;
-            }
+            DGBasis::multiplyGradient(limiter, dim, degree_, tof + num_basis*cell);
         } else {
             // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
@@ -835,16 +833,14 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            tof[num_basis*cell] = min_upstream_tof;
+            DGBasis::addConstant(min_upstream_tof - tof_c, dim, degree_, tof + num_basis*cell);
         }
         ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
             // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
-            for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
-                tof[i] *= limiter;
-            }
+            DGBasis::multiplyGradient(limiter, dim, degree_, tof + num_basis*cell);
         } else {
             // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
