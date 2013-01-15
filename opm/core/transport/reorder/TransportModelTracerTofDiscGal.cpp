@@ -37,8 +37,9 @@ namespace Opm
 
 
 
-    /// A class providing discontinuous Galerkin basis functions.
-    struct DGBasis
+    /// A class providing discontinuous Galerkin basis functions
+    /// of bounded total degree.
+    struct DGBasisBoundedTotalDegree
     {
         static int numBasisFunc(const int dimensions,
                                 const int degree)
@@ -117,6 +118,8 @@ namespace Opm
 
 
 
+    typedef DGBasisBoundedTotalDegree DGBasis;
+    // typedef DGBasisMultilin DGBasis;
 
 
 
