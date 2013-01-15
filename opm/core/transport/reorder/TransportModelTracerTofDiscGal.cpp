@@ -221,7 +221,8 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            THROW("Sources do not sum to zero: " << cum_src);
+            // THROW("Sources do not sum to zero: " << cum_src);
+            MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
         degree_ = degree;
