@@ -113,6 +113,101 @@ namespace Opm
 
 
 
+    /// A class providing discontinuous Galerkin basis functions of
+    /// multi-degree 1 (bilinear or trilinear functions).
+    struct DGBasisMultilin
+    {
+        static int numBasisFunc(const int dimensions,
+                                const int degree)
+        {
+            switch (dimensions) {
+            case 1:
+                return degree + 1;
+            case 2:
+                return (degree + 1)*(degree + 1);
+            case 3:
+                return (degree + 1)*(degree + 1)*(degree + 1);
+            default:
+                THROW("Dimensions must be 1, 2 or 3.");
+            }
+        }
+
+        /// Evaluate all nonzero basis functions at x,
+        /// writing to f_x. The array f_x must have
+        /// size numBasisFunc(grid.dimensions, degree).
+        ///
+        /// The basis functions are the following
+        ///     Degree 0: 1.
+        /// (for 2 dims:)
+        ///         (Bi)degree 1: (x-)(y-), (x-)(y+), (x+)(y-), (x+)(y+)
+        ///         where (x-) = (1/2 - x + xc), (x+) = (1/2 + x - xc)
+        ///         and similar for (y-), (y+).
+        static void eval(const UnstructuredGrid& grid,
+                         const int cell,
+                         const int degree,
+                         const double* x,
+                         double* f_x)
+        {
+            const int dim = grid.dimensions;
+            const int num_basis = numBasisFunc(dim, degree);
+            const double* cc = grid.cell_centroids + dim*cell;
+            switch (degree) {
+            case 0:
+                f_x[0] = 1;
+                break;
+            case 1:
+                std::fill(f_x, f_x + num_basis, 1.0);
+                for (int dd = 0; dd < dim; ++dd) {
+                    const double f[2] = { 0.5 - x[dd] + cc[dd],  0.5 + x[dd] - cc[dd] };
+                    const int divi = 1 << (dim - dd - 1); // { 4, 2, 1 } for 3d, for example.
+                    for (int ix = 0; ix < num_basis; ++ix) {
+                        f_x[ix] *= f[(ix/divi) % 2];
+                    }
+                }
+                break;
+            default:
+                THROW("Maximum degree is 1 for now.");
+            }
+        }
+
+        /// Evaluate gradients of all nonzero basis functions at x,
+        /// writing to grad_f_x. The array grad_f_x must have size
+        /// numBasisFunc(grid.dimensions, degree) * grid.dimensions.
+        /// The <grid.dimensions> components of the first basis function
+        /// gradient come before the components of the second etc.
+        static void evalGrad(const UnstructuredGrid& grid,
+                             const int cell,
+                             const int degree,
+                             const double* x,
+                             double* grad_f_x)
+        {
+            const int dim = grid.dimensions;
+            const int num_basis = numBasisFunc(dim, degree);
+            const double* cc = grid.cell_centroids + dim*cell;
+            switch (degree) {
+            case 0:
+                std::fill(grad_f_x, grad_f_x + num_basis*dim, 0.0);
+                break;
+            case 1:
+                std::fill(grad_f_x, grad_f_x + num_basis*dim, 1.0);
+                for (int dd = 0; dd < dim; ++dd) {
+                    const double f[2] = { 0.5 - x[dd] + cc[dd],  0.5 + x[dd] - cc[dd] };
+                    const double fder[2] = { -1.0,  1.0 };
+                    const int divi = 1 << (dim - dd - 1); // { 4, 2, 1 } for 3d, for example.
+                    for (int ix = 0; ix < num_basis; ++ix) {
+                        const int ind = (ix/divi) % 2;
+                        for (int dder = 0; dder < dim; ++dder) {
+                            grad_f_x[ix*dim + dder] *= (dder == dd ? fder[ind] : f[ind]);
+                        }
+                    }
+                }
+                break;
+            default:
+                THROW("Maximum degree is 1 for now.");
+            }
+        }
+    };
+
 
 
 
@@ -120,6 +215,9 @@ namespace Opm
 
     typedef DGBasisBoundedTotalDegree DGBasis;
     // typedef DGBasisMultilin DGBasis;
+
+
+
 
 
 
