@@ -329,7 +329,9 @@ namespace Opm
         // Compute cell jacobian contribution. We use Fortran ordering
         // for jac_, i.e. rows cycling fastest.
         {
-            const int deg_needed = use_cvi_ ? 2*degree_ : 2*degree_ - 1;
+            // Even with ECVI velocity interpolation, degree of precision 1
+            // is sufficient for optimal convergence order for DG1.
+            const int deg_needed = 2*degree_ - 1;
             CellQuadrature quad(grid_, cell, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
