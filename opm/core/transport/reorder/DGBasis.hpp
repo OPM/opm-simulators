@@ -30,7 +30,7 @@ namespace Opm
     {
     public:
         /// Virtual destructor.
-        virtual ~DGBasisInterface() = 0;
+        virtual ~DGBasisInterface();
 
         /// The number of basis functions per cell.
         virtual int numBasisFunc() const = 0;
@@ -164,6 +164,7 @@ namespace Opm
     ///         Similar for (y-), (y+).
     class DGBasisMultilin : public DGBasisInterface
     {
+    public:
         /// Constructor.
         /// \param[in]  grid    grid on which basis is used (cell-wise)
         /// \param[in]  degree  polynomial degree of basis (in each coordinate)

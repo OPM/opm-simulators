@@ -26,6 +26,12 @@ namespace Opm
 {
 
 
+    /// Virtual destructor.
+    DGBasisInterface::~DGBasisInterface()
+    {
+    }
+
+
     // ----------------  Methods for class DGBasisBoundedTotalDegree ----------------
 
 
