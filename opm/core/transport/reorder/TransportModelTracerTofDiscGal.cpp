@@ -20,6 +20,7 @@
 #include <opm/core/grid/CellQuadrature.hpp>
 #include <opm/core/grid/FaceQuadrature.hpp>
 #include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
+#include <opm/core/transport/reorder/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
@@ -31,272 +32,6 @@
 
 namespace Opm
 {
-
-
-    // ---------------   Helpers for TransportModelTracerTofDiscGal ---------------
-
-
-
-    /// A class providing discontinuous Galerkin basis functions
-    /// of bounded total degree.
-    struct DGBasisBoundedTotalDegree
-    {
-        static int numBasisFunc(const int dimensions,
-                                const int degree)
-        {
-            switch (dimensions) {
-            case 1:
-                return degree + 1;
-            case 2:
-                return (degree + 2)*(degree + 1)/2;
-            case 3:
-                return (degree + 3)*(degree + 2)*(degree + 1)/6;
-            default:
-                THROW("Dimensions must be 1, 2 or 3.");
-            }
-        }
-
-        /// Evaluate all nonzero basis functions at x,
-        /// writing to f_x. The array f_x must have
-        /// size numBasisFunc(grid.dimensions, degree).
-        ///
-        /// The basis functions are the following
-        ///     Degree 0: 1.
-        ///     Degree 1: x - xc, y - yc, z - zc etc.
-        /// Further degrees await development.
-        static void eval(const UnstructuredGrid& grid,
-                         const int cell,
-                         const int degree,
-                         const double* x,
-                         double* f_x)
-        {
-            const int dim = grid.dimensions;
-            const double* cc = grid.cell_centroids + dim*cell;
-            // Note intentional fallthrough in this switch statement!
-            switch (degree) {
-            case 1:
-                for (int ix = 0; ix < dim; ++ix) {
-                    f_x[1 + ix] = x[ix] - cc[ix];
-                }
-            case 0:
-                f_x[0] = 1;
-                break;
-            default:
-                THROW("Maximum degree is 1 for now.");
-            }
-        }
-
-        /// Evaluate gradients of all nonzero basis functions at x,
-        /// writing to grad_f_x. The array grad_f_x must have size
-        /// numBasisFunc(grid.dimensions, degree) * grid.dimensions.
-        /// The <grid.dimensions> components of the first basis function
-        /// gradient come before the components of the second etc.
-        static void evalGrad(const UnstructuredGrid& grid,
-                             const int /*cell*/,
-                             const int degree,
-                             const double* /*x*/,
-                             double* grad_f_x)
-        {
-            const int dim = grid.dimensions;
-            const int num_basis = numBasisFunc(dim, degree);
-            std::fill(grad_f_x, grad_f_x + num_basis*dim, 0.0);
-            if (degree > 1) {
-                THROW("Maximum degree is 1 for now.");
-            } else if (degree == 1) {
-                for (int ix = 0; ix < dim; ++ix) {
-                    grad_f_x[dim*(ix + 1) + ix] = 1.0;
-                }
-            }
-        }
-
-        /// Modify basis coefficients to add to the function value.
-        /// A function f = sum_i c_i b_i is assumed, and we change
-        /// it to (f + increment) by modifying the c_i. This is done without
-        /// modifying its gradient.
-        /// \param[in]  increment     Add this value to the function.
-        /// \param[in]  dim           Number of space dimensions.
-        /// \param[in]  degree        Polynomial degree of basis.
-        /// \param[out] coefficients  Coefficients {c_i} for a single cell.
-        static void addConstant(const double increment,
-                                const int /*dim*/,
-                                const int /*degree*/,
-                                double* coefficients)
-        {
-            coefficients[0] += increment;
-        }
-
-        /// Modify basis coefficients to change the function's slope.
-        /// A function f = sum_i c_i b_i is assumed, and we change
-        /// it to a function g with the property that grad g = factor * grad f
-        /// by modifying the c_i. This is done without modifying the average,
-        /// i.e. the integrals of g and f over the cell are the same.
-        /// \param[in]  factor        Multiply gradient by this factor.
-        /// \param[in]  dim           Number of space dimensions.
-        /// \param[in]  degree        Polynomial degree of basis.
-        /// \param[out] coefficients  Coefficients {c_i} for a single cell.
-        static void multiplyGradient(const double factor,
-                                     const int dim,
-                                     const int degree,
-                                     double* coefficients)
-        {
-            const int nb = numBasisFunc(dim, degree);
-            for (int ix = 1; ix < nb; ++ix) {
-                coefficients[ix] *= factor;
-            }
-        }
-    };
-
-
-
-
-    /// A class providing discontinuous Galerkin basis functions of
-    /// multi-degree 1 (bilinear or trilinear functions).
-    struct DGBasisMultilin
-    {
-        static int numBasisFunc(const int dimensions,
-                                const int degree)
-        {
-            switch (dimensions) {
-            case 1:
-                return degree + 1;
-            case 2:
-                return (degree + 1)*(degree + 1);
-            case 3:
-                return (degree + 1)*(degree + 1)*(degree + 1);
-            default:
-                THROW("Dimensions must be 1, 2 or 3.");
-            }
-        }
-
-        /// Evaluate all nonzero basis functions at x,
-        /// writing to f_x. The array f_x must have
-        /// size numBasisFunc(grid.dimensions, degree).
-        ///
-        /// The basis functions are the following
-        ///     Degree 0: 1.
-        /// (for 2 dims:)
-        ///         (Bi)degree 1: (x-)(y-), (x-)(y+), (x+)(y-), (x+)(y+)
-        ///         where (x-) = (1/2 - x + xc), (x+) = (1/2 + x - xc)
-        ///         and similar for (y-), (y+).
-        static void eval(const UnstructuredGrid& grid,
-                         const int cell,
-                         const int degree,
-                         const double* x,
-                         double* f_x)
-        {
-            const int dim = grid.dimensions;
-            const int num_basis = numBasisFunc(dim, degree);
-            const double* cc = grid.cell_centroids + dim*cell;
-            switch (degree) {
-            case 0:
-                f_x[0] = 1;
-                break;
-            case 1:
-                std::fill(f_x, f_x + num_basis, 1.0);
-                for (int dd = 0; dd < dim; ++dd) {
-                    const double f[2] = { 0.5 - x[dd] + cc[dd],  0.5 + x[dd] - cc[dd] };
-                    const int divi = 1 << (dim - dd - 1); // { 4, 2, 1 } for 3d, for example.
-                    for (int ix = 0; ix < num_basis; ++ix) {
-                        f_x[ix] *= f[(ix/divi) % 2];
-                    }
-                }
-                break;
-            default:
-                THROW("Maximum degree is 1 for now.");
-            }
-        }
-
-        /// Evaluate gradients of all nonzero basis functions at x,
-        /// writing to grad_f_x. The array grad_f_x must have size
-        /// numBasisFunc(grid.dimensions, degree) * grid.dimensions.
-        /// The <grid.dimensions> components of the first basis function
-        /// gradient come before the components of the second etc.
-        static void evalGrad(const UnstructuredGrid& grid,
-                             const int cell,
-                             const int degree,
-                             const double* x,
-                             double* grad_f_x)
-        {
-            const int dim = grid.dimensions;
-            const int num_basis = numBasisFunc(dim, degree);
-            const double* cc = grid.cell_centroids + dim*cell;
-            switch (degree) {
-            case 0:
-                std::fill(grad_f_x, grad_f_x + num_basis*dim, 0.0);
-                break;
-            case 1:
-                std::fill(grad_f_x, grad_f_x + num_basis*dim, 1.0);
-                for (int dd = 0; dd < dim; ++dd) {
-                    const double f[2] = { 0.5 - x[dd] + cc[dd],  0.5 + x[dd] - cc[dd] };
-                    const double fder[2] = { -1.0,  1.0 };
-                    const int divi = 1 << (dim - dd - 1); // { 4, 2, 1 } for 3d, for example.
-                    for (int ix = 0; ix < num_basis; ++ix) {
-                        const int ind = (ix/divi) % 2;
-                        for (int dder = 0; dder < dim; ++dder) {
-                            grad_f_x[ix*dim + dder] *= (dder == dd ? fder[ind] : f[ind]);
-                        }
-                    }
-                }
-                break;
-            default:
-                THROW("Maximum degree is 1 for now.");
-            }
-        }
-
-        /// Modify basis coefficients to add to the function value.
-        /// A function f = sum_i c_i b_i is assumed, and we change
-        /// it to (f + increment) by modifying the c_i. This is done without
-        /// modifying its gradient.
-        /// \param[in]  increment     Add this value to the function.
-        /// \param[in]  dim           Number of space dimensions.
-        /// \param[in]  degree        Polynomial degree of basis.
-        /// \param[out] coefficients  Coefficients {c_i} for a single cell.
-        static void addConstant(const double increment,
-                                const int dim,
-                                const int degree,
-                                double* coefficients)
-        {
-            const int nb = numBasisFunc(dim, degree);
-            const double term = increment/double(nb);
-            for (int ix = 0; ix < nb; ++ix) {
-                coefficients[ix] += term;
-            }
-        }
-
-        /// Modify basis coefficients to change the function's slope.
-        /// A function f = sum_i c_i b_i is assumed, and we change
-        /// it to a function g with the property that grad g = factor * grad f
-        /// by modifying the c_i. This is done without modifying the average,
-        /// i.e. the integrals of g and f over the cell are the same.
-        /// \param[in]  factor        Multiply gradient by this factor.
-        /// \param[in]  dim           Number of space dimensions.
-        /// \param[in]  degree        Polynomial degree of basis.
-        /// \param[out] coefficients  Coefficients {c_i} for a single cell.
-        static void multiplyGradient(const double factor,
-                                     const int dim,
-                                     const int degree,
-                                     double* coefficients)
-        {
-            const int nb = numBasisFunc(dim, degree);
-            const double average = std::accumulate(coefficients, coefficients + nb, 0.0)/double(nb);
-            for (int ix = 0; ix < nb; ++ix) {
-                coefficients[ix] = factor*(coefficients[ix] - average) + average;
-            }
-        }
-
-    };
-
-
-
-
-
-
-    typedef DGBasisBoundedTotalDegree DGBasis;
-    // typedef DGBasisMultilin DGBasis;
-
-
-
-
 
 
     // ---------------   Methods of TransportModelTracerTofDiscGal ---------------
@@ -331,6 +66,14 @@ namespace Opm
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
     {
+        const int dg_degree = param.getDefault("dg_degree", 0);
+        const bool use_tensorial_basis = param.getDefault("use_tensorial_basis", false);
+        if (use_tensorial_basis) {
+            basis_func_.reset(new DGBasisMultilin(grid_, dg_degree));
+        } else {
+            basis_func_.reset(new DGBasisBoundedTotalDegree(grid_, dg_degree));
+        }
+
         use_cvi_ = param.getDefault("use_cvi", use_cvi_);
         use_limiter_ = param.getDefault("use_limiter", use_limiter_);
         if (use_limiter_) {
@@ -387,7 +130,6 @@ namespace Opm
     void TransportModelTracerTofDiscGal::solveTof(const double* darcyflux,
                                                   const double* porevolume,
                                                   const double* source,
-                                                  const int degree,
                                                   std::vector<double>& tof_coeff)
     {
         darcyflux_ = darcyflux;
@@ -401,8 +143,7 @@ namespace Opm
             MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
-        degree_ = degree;
-        const int num_basis = DGBasis::numBasisFunc(grid_.dimensions, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         tof_coeff.resize(num_basis*grid_.number_of_cells);
         std::fill(tof_coeff.begin(), tof_coeff.end(), 0.0);
         tof_coeff_ = &tof_coeff[0];
@@ -445,18 +186,19 @@ namespace Opm
         // equal to Res = Jac*c - rhs, and we compute rhs directly.
 
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
 
         std::fill(rhs_.begin(), rhs_.end(), 0.0);
         std::fill(jac_.begin(), jac_.end(), 0.0);
 
         // Compute cell residual contribution.
         {
-            CellQuadrature quad(grid_, cell, degree_);
+            const int deg_needed = basis_func_->degree();
+            CellQuadrature quad(grid_, cell, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // Integral of: b_i \phi
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
@@ -492,11 +234,12 @@ namespace Opm
             // velocity is constant (this assumption may have to go
             // for higher order than DG1).
             const double normal_velocity = flux / grid_.face_areas[face];
-            FaceQuadrature quad(grid_, face, 2*degree_);
+            const int deg_needed = 2*basis_func_->degree();
+            FaceQuadrature quad(grid_, face, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
-                DGBasis::eval(grid_, upstream_cell, degree_, &coord_[0], &basis_nb_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                basis_func_->eval(upstream_cell, &coord_[0], &basis_nb_[0]);
                 const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                                tof_coeff_ + num_basis*upstream_cell, 0.0);
                 const double w = quad.quadPtWeight(quad_pt);
@@ -517,14 +260,14 @@ namespace Opm
             // has significantly lower error with degree of precision 2.
             // For now, we err on the side of caution, and use 2*degree, even
             // though this is wasteful for the pure linear basis functions.
-            // const int deg_needed = 2*degree_ - 1;
-            const int deg_needed = 2*degree_;
+            // const int deg_needed = 2*basis_func_->degree() - 1;
+            const int deg_needed = 2*basis_func_->degree();
             CellQuadrature quad(grid_, cell, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
-                DGBasis::evalGrad(grid_, cell, degree_, &coord_[0], &grad_basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                basis_func_->evalGrad(cell, &coord_[0], &grad_basis_[0]);
                 velocity_interpolation_->interpolate(cell, &coord_[0], &velocity_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
@@ -553,11 +296,11 @@ namespace Opm
             // Do quadrature over the face to compute
             // \int_{\partial K} b_i (v(x) \cdot n) b_j ds
             const double normal_velocity = flux / grid_.face_areas[face];
-            FaceQuadrature quad(grid_, face, 2*degree_);
+            FaceQuadrature quad(grid_, face, 2*basis_func_->degree());
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // u^ext flux B   (B = {b_j})
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
@@ -578,10 +321,10 @@ namespace Opm
             const double flux_density = flux / grid_.cell_volumes[cell];
             // Do quadrature over the cell to compute
             // \int_{K} b_i flux b_j dx
-            CellQuadrature quad(grid_, cell, 2*degree_);
+            CellQuadrature quad(grid_, cell, 2*basis_func_->degree());
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
@@ -622,7 +365,7 @@ namespace Opm
         std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);
 
         // Apply limiter.
-        if (degree_ > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
+        if (basis_func_->degree() > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
 #ifdef EXTRA_VERBOSE
             std::cout << "Cell: " << cell << "   ";
             std::cout << "v = ";
@@ -683,7 +426,7 @@ namespace Opm
 
     void TransportModelTracerTofDiscGal::applyMinUpwindFaceLimiter(const int cell, double* tof)
     {
-        if (degree_ != 1) {
+        if (basis_func_->degree() != 1) {
             THROW("This limiter only makes sense for our DG1 implementation.");
         }
 
@@ -719,7 +462,7 @@ namespace Opm
 
         // Find minimum tof on upstream faces and for this cell.
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
         int num_upstream_faces = 0;
@@ -743,13 +486,13 @@ namespace Opm
             // Evaluate the solution in all corners.
             for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
                 const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
-                DGBasis::eval(grid_, cell, degree_, nc, &basis_[0]);
+                basis_func_->eval(cell, nc, &basis_[0]);
                 const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
                                                            tof_coeff_ + num_basis*cell, 0.0);
                 min_here_tof = std::min(min_here_tof, tof_here);
                 if (upstream) {
                     if (interior) {
-                        DGBasis::eval(grid_, upstream_cell, degree_, nc, &basis_nb_[0]);
+                        basis_func_->eval(upstream_cell, nc, &basis_nb_[0]);
                         const double tof_upstream
                             = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                  tof_coeff_ + num_basis*upstream_cell, 0.0);
@@ -776,14 +519,14 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            DGBasis::addConstant(min_upstream_tof - tof_c, dim, degree_, tof + num_basis*cell);
+            basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }
         ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
             // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
-            DGBasis::multiplyGradient(limiter, dim, degree_, tof + num_basis*cell);
+            basis_func_->multiplyGradient(limiter, tof + num_basis*cell);
         } else {
             // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
@@ -794,7 +537,7 @@ namespace Opm
 
     void TransportModelTracerTofDiscGal::applyMinUpwindAverageLimiter(const int cell, double* tof)
     {
-        if (degree_ != 1) {
+        if (basis_func_->degree() != 1) {
             THROW("This limiter only makes sense for our DG1 implementation.");
         }
 
@@ -829,7 +572,7 @@ namespace Opm
 
         // Find minimum tof on upstream faces and for this cell.
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
         int num_upstream_faces = 0;
@@ -853,7 +596,7 @@ namespace Opm
             // Evaluate the solution in all corners.
             for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
                 const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
-                DGBasis::eval(grid_, cell, degree_, nc, &basis_[0]);
+                basis_func_->eval(cell, nc, &basis_[0]);
                 const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
                                                            tof_coeff_ + num_basis*cell, 0.0);
                 min_here_tof = std::min(min_here_tof, tof_here);
@@ -882,14 +625,14 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            DGBasis::addConstant(min_upstream_tof - tof_c, dim, degree_, tof + num_basis*cell);
+            basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }
         ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
             // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
-            DGBasis::multiplyGradient(limiter, dim, degree_, tof + num_basis*cell);
+            basis_func_->multiplyGradient(limiter, tof + num_basis*cell);
         } else {
             // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
@@ -921,7 +664,7 @@ namespace Opm
         // This means that each cell is limited independently from all other cells,
         // we write the resulting dofs to a new array instead of writing to tof_coeff_.
         // Afterwards we copy the results back to tof_coeff_.
-        const int num_basis = DGBasis::numBasisFunc(grid_.dimensions, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         std::vector<double> tof_coeffs_new(tof_coeff_, tof_coeff_ + num_basis*grid_.number_of_cells);
         for (int c = 0; c < grid_.number_of_cells; ++c) {
             applyLimiter(c, &tof_coeffs_new[0]);

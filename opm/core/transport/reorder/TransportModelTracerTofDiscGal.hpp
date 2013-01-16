@@ -33,6 +33,7 @@ namespace Opm
 
     class IncompPropertiesInterface;
     class VelocityInterpolationInterface;
+    class DGBasisInterface;
     namespace parameter { class ParameterGroup; }
 
     /// Implements a discontinuous Galerkin solver for
@@ -51,6 +52,9 @@ namespace Opm
         /// \param[in] grid      A 2d or 3d grid.
         /// \param[in] param     Parameters for the solver.
         ///                      The following parameters are accepted (defaults):
+        ///   dg_degree (0)                           Polynomial degree of basis functions.
+        ///   use_tensorial_basis (false)             Use tensor-product basis, interpreting dg_degree as
+        ///                                           bi/tri-degree not total degree.
         ///   use_cvi (false)                         Use ECVI velocity interpolation.
         ///   use_limiter (false)                     Use a slope limiter. If true, the next three parameters are used.
         ///   limiter_relative_flux_threshold (1e-3)  Ignore upstream fluxes below this threshold, relative to total cell flux.
@@ -74,7 +78,6 @@ namespace Opm
         /// \param[in]  source            Source term. Sign convention is:
         ///                                 (+) inflow flux,
         ///                                 (-) outflow flux.
-        /// \param[in]  degree            Polynomial degree of DG basis functions used.
         /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
         ///                               The values are ordered by cell, meaning that
         ///                               the K coefficients corresponding to the first
@@ -84,7 +87,6 @@ namespace Opm
         void solveTof(const double* darcyflux,
                       const double* porevolume,
                       const double* source,
-                      const int degree,
                       std::vector<double>& tof_coeff);
 
     private:
@@ -109,7 +111,7 @@ namespace Opm
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
-        int degree_;
+        boost::shared_ptr<DGBasisInterface> basis_func_;
         double* tof_coeff_;
         std::vector<double> rhs_;   // single-cell right-hand-side
         std::vector<double> jac_;   // single-cell jacobian
