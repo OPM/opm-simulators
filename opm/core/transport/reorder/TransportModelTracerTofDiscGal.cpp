@@ -510,8 +510,15 @@ namespace Opm
         // for jac_, i.e. rows cycling fastest.
         {
             // Even with ECVI velocity interpolation, degree of precision 1
-            // is sufficient for optimal convergence order for DG1.
-            const int deg_needed = 2*degree_ - 1;
+            // is sufficient for optimal convergence order for DG1 when we
+            // use linear (total degree 1) basis functions.
+            // With bi(tri)-linear basis functions, it still seems sufficient
+            // for convergence order 2, but the solution looks much better and
+            // has significantly lower error with degree of precision 2.
+            // For now, we err on the side of caution, and use 2*degree, even
+            // though this is wasteful for the pure linear basis functions.
+            // const int deg_needed = 2*degree_ - 1;
+            const int deg_needed = 2*degree_;
             CellQuadrature quad(grid_, cell, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
