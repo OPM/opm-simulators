@@ -115,7 +115,7 @@ public:
      *        regard to the capillary pressure according to Brooks and
      *        Corey.
      *
-     * \param pc Capillary pressure \f$[Pa]\f$
+     * \param pC Capillary pressure \f$[Pa]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
