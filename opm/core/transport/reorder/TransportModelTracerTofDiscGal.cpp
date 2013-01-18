@@ -20,6 +20,7 @@
 #include <opm/core/grid/CellQuadrature.hpp>
 #include <opm/core/grid/FaceQuadrature.hpp>
 #include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
+#include <opm/core/transport/reorder/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
@@ -31,93 +32,6 @@
 
 namespace Opm
 {
-
-
-    // ---------------   Helpers for TransportModelTracerTofDiscGal ---------------
-
-
-
-    /// A class providing discontinuous Galerkin basis functions.
-    struct DGBasis
-    {
-        static int numBasisFunc(const int dimensions,
-                                const int degree)
-        {
-            switch (dimensions) {
-            case 1:
-                return degree + 1;
-            case 2:
-                return (degree + 2)*(degree + 1)/2;
-            case 3:
-                return (degree + 3)*(degree + 2)*(degree + 1)/6;
-            default:
-                THROW("Dimensions must be 1, 2 or 3.");
-            }
-        }
-
-        /// Evaluate all nonzero basis functions at x,
-        /// writing to f_x. The array f_x must have
-        /// size numBasisFunc(grid.dimensions, degree).
-        ///
-        /// The basis functions are the following
-        ///     Degree 0: 1.
-        ///     Degree 1: x - xc, y - yc, z - zc etc.
-        /// Further degrees await development.
-        static void eval(const UnstructuredGrid& grid,
-                         const int cell,
-                         const int degree,
-                         const double* x,
-                         double* f_x)
-        {
-            const int dim = grid.dimensions;
-            const double* cc = grid.cell_centroids + dim*cell;
-            // Note intentional fallthrough in this switch statement!
-            switch (degree) {
-            case 1:
-                for (int ix = 0; ix < dim; ++ix) {
-                    f_x[1 + ix] = x[ix] - cc[ix];
-                }
-            case 0:
-                f_x[0] = 1;
-                break;
-            default:
-                THROW("Maximum degree is 1 for now.");
-            }
-        }
-
-        /// Evaluate gradients of all nonzero basis functions at x,
-        /// writing to grad_f_x. The array grad_f_x must have size
-        /// numBasisFunc(grid.dimensions, degree) * grid.dimensions.
-        /// The <grid.dimensions> components of the first basis function
-        /// gradient come before the components of the second etc.
-        static void evalGrad(const UnstructuredGrid& grid,
-                             const int /*cell*/,
-                             const int degree,
-                             const double* /*x*/,
-                             double* grad_f_x)
-        {
-            const int dim = grid.dimensions;
-            const int num_basis = numBasisFunc(dim, degree);
-            std::fill(grad_f_x, grad_f_x + num_basis*dim, 0.0);
-            if (degree > 1) {
-                THROW("Maximum degree is 1 for now.");
-            } else if (degree == 1) {
-                for (int ix = 0; ix < dim; ++ix) {
-                    grad_f_x[dim*(ix + 1) + ix] = 1.0;
-                }
-            }
-        }
-    };
-
-
-
-
-
-
-
-
-
-
 
 
     // ---------------   Methods of TransportModelTracerTofDiscGal ---------------
@@ -152,6 +66,14 @@ namespace Opm
           coord_(grid.dimensions),
           velocity_(grid.dimensions)
     {
+        const int dg_degree = param.getDefault("dg_degree", 0);
+        const bool use_tensorial_basis = param.getDefault("use_tensorial_basis", false);
+        if (use_tensorial_basis) {
+            basis_func_.reset(new DGBasisMultilin(grid_, dg_degree));
+        } else {
+            basis_func_.reset(new DGBasisBoundedTotalDegree(grid_, dg_degree));
+        }
+
         use_cvi_ = param.getDefault("use_cvi", use_cvi_);
         use_limiter_ = param.getDefault("use_limiter", use_limiter_);
         if (use_limiter_) {
@@ -208,7 +130,6 @@ namespace Opm
     void TransportModelTracerTofDiscGal::solveTof(const double* darcyflux,
                                                   const double* porevolume,
                                                   const double* source,
-                                                  const int degree,
                                                   std::vector<double>& tof_coeff)
     {
         darcyflux_ = darcyflux;
@@ -218,11 +139,11 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            THROW("Sources do not sum to zero: " << cum_src);
+            // THROW("Sources do not sum to zero: " << cum_src);
+            MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
-        degree_ = degree;
-        const int num_basis = DGBasis::numBasisFunc(grid_.dimensions, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         tof_coeff.resize(num_basis*grid_.number_of_cells);
         std::fill(tof_coeff.begin(), tof_coeff.end(), 0.0);
         tof_coeff_ = &tof_coeff[0];
@@ -265,14 +186,25 @@ namespace Opm
         // equal to Res = Jac*c - rhs, and we compute rhs directly.
 
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
 
         std::fill(rhs_.begin(), rhs_.end(), 0.0);
         std::fill(jac_.begin(), jac_.end(), 0.0);
 
         // Compute cell residual contribution.
-        // Note: Assumes that \int_K b_j = 0 for all j > 0
-        rhs_[0] += porevolume_[cell];
+        {
+            const int deg_needed = basis_func_->degree();
+            CellQuadrature quad(grid_, cell, deg_needed);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // Integral of: b_i \phi
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
+                }
+            }
+        }
 
         // Compute upstream residual contribution.
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
@@ -302,11 +234,12 @@ namespace Opm
             // velocity is constant (this assumption may have to go
             // for higher order than DG1).
             const double normal_velocity = flux / grid_.face_areas[face];
-            FaceQuadrature quad(grid_, face, 2*degree_);
+            const int deg_needed = 2*basis_func_->degree();
+            FaceQuadrature quad(grid_, face, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
-                DGBasis::eval(grid_, upstream_cell, degree_, &coord_[0], &basis_nb_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                basis_func_->eval(upstream_cell, &coord_[0], &basis_nb_[0]);
                 const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                                tof_coeff_ + num_basis*upstream_cell, 0.0);
                 const double w = quad.quadPtWeight(quad_pt);
@@ -319,13 +252,22 @@ namespace Opm
         // Compute cell jacobian contribution. We use Fortran ordering
         // for jac_, i.e. rows cycling fastest.
         {
-            const int deg_needed = use_cvi_ ? 2*degree_ : 2*degree_ - 1;
+            // Even with ECVI velocity interpolation, degree of precision 1
+            // is sufficient for optimal convergence order for DG1 when we
+            // use linear (total degree 1) basis functions.
+            // With bi(tri)-linear basis functions, it still seems sufficient
+            // for convergence order 2, but the solution looks much better and
+            // has significantly lower error with degree of precision 2.
+            // For now, we err on the side of caution, and use 2*degree, even
+            // though this is wasteful for the pure linear basis functions.
+            // const int deg_needed = 2*basis_func_->degree() - 1;
+            const int deg_needed = 2*basis_func_->degree();
             CellQuadrature quad(grid_, cell, deg_needed);
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // b_i (v \cdot \grad b_j)
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
-                DGBasis::evalGrad(grid_, cell, degree_, &coord_[0], &grad_basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                basis_func_->evalGrad(cell, &coord_[0], &grad_basis_[0]);
                 velocity_interpolation_->interpolate(cell, &coord_[0], &velocity_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
@@ -354,11 +296,11 @@ namespace Opm
             // Do quadrature over the face to compute
             // \int_{\partial K} b_i (v(x) \cdot n) b_j ds
             const double normal_velocity = flux / grid_.face_areas[face];
-            FaceQuadrature quad(grid_, face, 2*degree_);
+            FaceQuadrature quad(grid_, face, 2*basis_func_->degree());
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 // u^ext flux B   (B = {b_j})
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
@@ -379,10 +321,10 @@ namespace Opm
             const double flux_density = flux / grid_.cell_volumes[cell];
             // Do quadrature over the cell to compute
             // \int_{K} b_i flux b_j dx
-            CellQuadrature quad(grid_, cell, 2*degree_);
+            CellQuadrature quad(grid_, cell, 2*basis_func_->degree());
             for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
                 quad.quadPtCoord(quad_pt, &coord_[0]);
-                DGBasis::eval(grid_, cell, degree_, &coord_[0], &basis_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     for (int i = 0; i < num_basis; ++i) {
@@ -423,7 +365,30 @@ namespace Opm
         std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);
 
         // Apply limiter.
-        if (degree_ > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
+        if (basis_func_->degree() > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
+#ifdef EXTRA_VERBOSE
+            std::cout << "Cell: " << cell << "   ";
+            std::cout << "v = ";
+            for (int dd = 0; dd < dim; ++dd) {
+                std::cout << velocity_[dd] << ' ';
+            }
+            std::cout << "     grad tau = ";
+            for (int dd = 0; dd < dim; ++dd) {
+                std::cout << tof_coeff_[num_basis*cell + dd + 1] << ' ';
+            }
+            const double prod = std::inner_product(velocity_.begin(), velocity_.end(),
+                                                   tof_coeff_ + num_basis*cell + 1, 0.0);
+            const double vv = std::inner_product(velocity_.begin(), velocity_.end(),
+                                                 velocity_.begin(), 0.0);
+            const double gg = std::inner_product(tof_coeff_ + num_basis*cell + 1,
+                                                 tof_coeff_ + num_basis*cell + num_basis,
+                                                 tof_coeff_ + num_basis*cell + 1, 0.0);
+            std::cout << "     prod = " << std::inner_product(velocity_.begin(), velocity_.end(),
+                                                              tof_coeff_ + num_basis*cell + 1, 0.0);
+            std::cout << "     normalized = " << prod/std::sqrt(vv*gg);
+            std::cout << "     angle = " << std::acos(prod/std::sqrt(vv*gg))*360.0/(2.0*M_PI);
+            std::cout << std::endl;
+#endif
             applyLimiter(cell, tof_coeff_);
         }
     }
@@ -461,7 +426,7 @@ namespace Opm
 
     void TransportModelTracerTofDiscGal::applyMinUpwindFaceLimiter(const int cell, double* tof)
     {
-        if (degree_ != 1) {
+        if (basis_func_->degree() != 1) {
             THROW("This limiter only makes sense for our DG1 implementation.");
         }
 
@@ -497,7 +462,7 @@ namespace Opm
 
         // Find minimum tof on upstream faces and for this cell.
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
         int num_upstream_faces = 0;
@@ -521,13 +486,13 @@ namespace Opm
             // Evaluate the solution in all corners.
             for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
                 const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
-                DGBasis::eval(grid_, cell, degree_, nc, &basis_[0]);
+                basis_func_->eval(cell, nc, &basis_[0]);
                 const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
                                                            tof_coeff_ + num_basis*cell, 0.0);
                 min_here_tof = std::min(min_here_tof, tof_here);
                 if (upstream) {
                     if (interior) {
-                        DGBasis::eval(grid_, upstream_cell, degree_, nc, &basis_nb_[0]);
+                        basis_func_->eval(upstream_cell, nc, &basis_nb_[0]);
                         const double tof_upstream
                             = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                  tof_coeff_ + num_basis*upstream_cell, 0.0);
@@ -554,16 +519,14 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            tof[num_basis*cell] = min_upstream_tof;
+            basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }
         ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
             // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
-            for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
-                tof[i] *= limiter;
-            }
+            basis_func_->multiplyGradient(limiter, tof + num_basis*cell);
         } else {
             // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
@@ -574,7 +537,7 @@ namespace Opm
 
     void TransportModelTracerTofDiscGal::applyMinUpwindAverageLimiter(const int cell, double* tof)
     {
-        if (degree_ != 1) {
+        if (basis_func_->degree() != 1) {
             THROW("This limiter only makes sense for our DG1 implementation.");
         }
 
@@ -609,7 +572,7 @@ namespace Opm
 
         // Find minimum tof on upstream faces and for this cell.
         const int dim = grid_.dimensions;
-        const int num_basis = DGBasis::numBasisFunc(dim, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
         int num_upstream_faces = 0;
@@ -633,7 +596,7 @@ namespace Opm
             // Evaluate the solution in all corners.
             for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
                 const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
-                DGBasis::eval(grid_, cell, degree_, nc, &basis_[0]);
+                basis_func_->eval(cell, nc, &basis_[0]);
                 const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
                                                            tof_coeff_ + num_basis*cell, 0.0);
                 min_here_tof = std::min(min_here_tof, tof_here);
@@ -662,16 +625,14 @@ namespace Opm
             // Handle by setting a flat solution.
             std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
-            tof[num_basis*cell] = min_upstream_tof;
+            basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }
         ASSERT(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
             // std::cout << "Applying limiter in cell " << cell << ", limiter = " << limiter << std::endl;
-            for (int i = num_basis*cell + 1; i < num_basis*(cell+1); ++i) {
-                tof[i] *= limiter;
-            }
+            basis_func_->multiplyGradient(limiter, tof + num_basis*cell);
         } else {
             // std::cout << "Not applying limiter in cell " << cell << "!" << std::endl;
         }
@@ -703,7 +664,7 @@ namespace Opm
         // This means that each cell is limited independently from all other cells,
         // we write the resulting dofs to a new array instead of writing to tof_coeff_.
         // Afterwards we copy the results back to tof_coeff_.
-        const int num_basis = DGBasis::numBasisFunc(grid_.dimensions, degree_);
+        const int num_basis = basis_func_->numBasisFunc();
         std::vector<double> tof_coeffs_new(tof_coeff_, tof_coeff_ + num_basis*grid_.number_of_cells);
         for (int c = 0; c < grid_.number_of_cells; ++c) {
             applyLimiter(c, &tof_coeffs_new[0]);
