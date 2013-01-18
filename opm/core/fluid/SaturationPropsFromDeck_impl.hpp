@@ -96,6 +96,35 @@ namespace Opm
         for (int table = 0; table < num_tables; ++table) {
             satfuncset_[table].init(deck, table, phase_usage_, samples);
         }
+
+        // Saturation table scaling
+        do_eps_ = false;
+        do_3pt_ = false;
+        if (deck.hasField("ENDSCALE")) {
+            if (!phase_usage_.phase_used[Aqua] || !phase_usage_.phase_used[Liquid] || phase_usage_.phase_used[Vapour]) {
+                THROW("Currently endpoint-scaling limited to oil-water systems without gas.");
+            }
+            if (deck.getENDSCALE().dir_switch_ != std::string("NODIR")) {
+                THROW("SaturationPropsFromDeck::init()   --  ENDSCALE: Currently only 'NODIR' accepted.");
+            }
+            if (deck.getENDSCALE().revers_switch_ != std::string("REVERS")) {
+                THROW("SaturationPropsFromDeck::init()   --  ENDSCALE: Currently only 'REVERS' accepted.");
+            }
+            if (deck.hasField("SCALECRS")) {
+                if (deck.getSCALECRS().scalecrs_ == std::string("YES")) {
+                    do_3pt_ = true;
+                }
+            }
+            do_eps_ = true;
+            initEPS(deck, grid, std::string("SWCR"), eps_.swcr_);
+            initEPS(deck, grid, std::string("SWL"), eps_.swl_);
+            initEPS(deck, grid, std::string("SWU"), eps_.swu_);
+            initEPS(deck, grid, std::string("SOWCR"), eps_.sowcr_);
+            initEPS(deck, grid, std::string("KRW"), eps_.krw_);
+            initEPS(deck, grid, std::string("KRWR"), eps_.krwr_);
+            initEPS(deck, grid, std::string("KRO"), eps_.kro_);
+            initEPS(deck, grid, std::string("KRORW"), eps_.krorw_);
+        } 
     }
 
 
@@ -134,12 +163,20 @@ namespace Opm
         if (dkrds) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
-                funcForCell(cells[i]).evalKrDeriv(s + np*i, kr + np*i, dkrds + np*np*i);
+                if (do_eps_) {
+                   relpermEPS(s + np*i, cells[i], kr + np*i, dkrds + np*np*i);
+                } else {
+                   funcForCell(cells[i]).evalKrDeriv(s + np*i, kr + np*i, dkrds + np*np*i);
+                }
             }
         } else {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
-                funcForCell(cells[i]).evalKr(s + np*i, kr + np*i);
+                if (do_eps_) {
+                   relpermEPS(s + np*i, cells[i], kr + np*i);
+                } else {
+                   funcForCell(cells[i]).evalKr(s + np*i, kr + np*i);
+                }
             }
         }
     }
@@ -214,7 +251,293 @@ namespace Opm
         return cell_to_func_.empty() ? satfuncset_[0] : satfuncset_[cell_to_func_[cell]];
     }
 
+    // Initialize saturation scaling parameter
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::initEPS(const EclipseGridParser& deck,
+                                                      const UnstructuredGrid& grid,
+                                                      const std::string& keyword,
+                                                      std::vector<double>& scaleparam)
+    {
+        bool useKeyword = deck.hasField(keyword);  
+        bool hasENPTVD = deck.hasField("ENPTVD");
+        bool hasENKRVD = deck.hasField("ENKRVD");
+        int itab = 0;
+        std::vector<std::vector<std::vector<double> > > table_dummy;
+        std::vector<std::vector<std::vector<double> > >& table = table_dummy;
 
+        // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
+        int phase_pos_aqua = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+        if (keyword[0] == 'S' && (useKeyword || hasENPTVD)) {
+            if (keyword == std::string("SWL")) {
+                if (useKeyword || deck.getENPTVD().mask_[0]) {
+                    itab = 1;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smin_[phase_pos_aqua];
+                }
+            } else if (keyword == std::string("SWCR")) {
+                if (useKeyword || deck.getENPTVD().mask_[1]) {
+                    itab = 2;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).swcr_;
+                }
+            } else if (keyword == std::string("SWU")) {
+                if (useKeyword || deck.getENPTVD().mask_[2]) {
+                    itab = 3;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smax_[phase_pos_aqua];
+                }
+            } else if (keyword == std::string("SOWCR")) {
+                if (useKeyword || deck.getENPTVD().mask_[3]) {
+                    itab = 4;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).sowcr_;
+                }
+            }else {
+                THROW(" -- unknown keyword: '" << keyword << "'");
+            }
+            if (!useKeyword && itab > 0) {
+                table = deck.getENPTVD().table_;
+            } 
+        } else if (keyword[0] == 'K' && (useKeyword || hasENKRVD)) {    
+            if (keyword == std::string("KRW")) {
+                if (useKeyword || deck.getENKRVD().mask_[0]) {
+                    itab = 1;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krwmax_;
+                }
+            } else if (keyword == std::string("KRO")) {
+                if (useKeyword || deck.getENKRVD().mask_[1]) {
+                    itab = 2;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).kromax_;
+                }
+            } else if (keyword == std::string("KRWR")) {
+                if (useKeyword || deck.getENKRVD().mask_[2]) {
+                    itab = 3;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krwr_;
+                }
+            } else if (keyword == std::string("KRORW")) {
+                if (useKeyword || deck.getENKRVD().mask_[3]) {
+                    itab = 4;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krorw_;
+                }
+            } else {
+                THROW(" -- unknown keyword: '" << keyword << "'");
+            }
+            if (!useKeyword && itab > 0) {
+                table = deck.getENKRVD().table_;
+            } 
+        }
+
+        if (scaleparam.empty()) {
+            return;
+        } else if (useKeyword) {
+            // Keyword values from deck
+            std::cout << "--- Scaling parameter '" << keyword << "' assigned." << std::endl;
+            const int* gc = grid.global_cell;
+            const std::vector<double>& val = deck.getFloatingPointValue(keyword);
+            for (int c = 0; c < int(scaleparam.size()); ++c) {
+                const int deck_pos = (gc == NULL) ? c : gc[c];
+                scaleparam[c] = val[deck_pos];
+            }
+        } else {
+            std::cout << "--- Scaling parameter '" << keyword << "' assigned via ";
+            if (keyword[0] == 'S')
+                deck.getENPTVD().write(std::cout);
+            else
+                deck.getENKRVD().write(std::cout);
+            const double* cc = grid.cell_centroids;
+            const int dim = grid.dimensions;
+            for (int cell = 0; cell < grid.number_of_cells; ++cell) {
+                int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
+                if (table[itab][jtab][0] != -1.0) {
+                    std::vector<double>& depth = table[0][jtab];
+                    std::vector<double>& val = table[itab][jtab];
+                    double zc = cc[dim*cell+dim-1];
+                    if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth, val, zc);
+                    }
+                }
+            }
+        }
+    }
+    
+
+    // Saturation scaling
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::relpermEPS(const double *s, const int cell, double *kr, double *dkrds) const
+    {
+       const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+       const int opos = phase_usage_.phase_pos[BlackoilPhases::Liquid];
+       double ss[PhaseUsage::MaxNumPhases];
+       
+       if (do_3pt_) { // Three-point scaling
+           // Transforms for water saturation 
+           if (eps_.swcr_.empty() && eps_.swu_.empty()) {
+               ss[wpos] = s[wpos]; 
+           } else {
+               double s_r = 1.0-funcForCell(cell).sowcr_;
+               double sr = eps_.sowcr_.empty() ? s_r : 1.0-eps_.sowcr_[cell];
+               if (s[wpos] <= sr) {
+                   double sw_cr = funcForCell(cell).swcr_;
+                   double swcr = eps_.swcr_.empty() ? sw_cr : eps_.swcr_[cell];
+                   ss[wpos] = (s[wpos] <= swcr) ? sw_cr : sw_cr+(s[wpos]-swcr)*(s_r-sw_cr)/(sr-swcr);
+               } else {
+                   double sw_max = funcForCell(cell).smax_[wpos];
+                   double swmax = eps_.swu_.empty() ? sw_max : eps_.swu_[cell];
+                   ss[wpos] = (s[wpos] >= swmax) ? sw_max : s_r+(s[wpos]-sr)*(sw_max-s_r)/(swmax-sr);
+               }
+           }
+           // Transforms for oil saturation 
+           if (eps_.sowcr_.empty() && eps_.swl_.empty()) {
+               ss[opos] = s[opos]; 
+           } else {
+               double s_r = 1.0-funcForCell(cell).swcr_;
+               double sr = eps_.swcr_.empty() ? s_r : 1.0-eps_.swcr_[cell];
+               if (s[opos] <= sr) {
+                   double sow_cr = funcForCell(cell).sowcr_;
+                   double sowcr = eps_.sowcr_.empty() ? sow_cr : eps_.sowcr_[cell];
+                   ss[opos] = (s[opos] <= sowcr) ? sow_cr : sow_cr+(s[opos]-sowcr)*(s_r-sow_cr)/(sr-sowcr);
+               } else {
+                   double sow_max = funcForCell(cell).smax_[opos];
+                   double sowmax = eps_.swl_.empty() ? sow_max : (1.0-eps_.swl_[cell]);
+                   ss[opos] = (s[opos] >= sowmax) ? sow_max : s_r+(s[opos]-sr)*(sow_max-s_r)/(sowmax-sr);
+               }
+           }
+       } else { // Two-point scaling
+           // Transforms for water saturation 
+           if (eps_.swcr_.empty() && eps_.swu_.empty()) {
+               ss[wpos] = s[wpos]; 
+           } else {
+               double sw_cr = funcForCell(cell).swcr_;
+               double swcr = eps_.swcr_.empty() ? sw_cr : eps_.swcr_[cell];
+               if (s[wpos] <= swcr) {
+                   ss[wpos] = sw_cr;
+               } else {
+                   double sw_max = funcForCell(cell).smax_[wpos];
+                   double swmax = eps_.swu_.empty() ? sw_max : eps_.swu_[cell];
+                   ss[wpos] = (s[wpos] >= swmax) ? sw_max : sw_cr + (s[wpos]-swcr)*(sw_max-sw_cr)/(swmax-swcr);
+               }
+           }
+           // Transforms for oil saturation 
+           if (eps_.sowcr_.empty() && eps_.swl_.empty()) {
+               ss[opos] = s[opos]; 
+           } else {
+               double sow_cr = funcForCell(cell).sowcr_;
+               double socr = eps_.sowcr_.empty() ? sow_cr : eps_.sowcr_[cell];
+               if (s[opos] <= socr) {
+                   ss[opos] = sow_cr;
+               } else {
+                   double sow_max = funcForCell(cell).smax_[opos];
+                   double sowmax = eps_.swl_.empty() ? sow_max : (1.0-eps_.swl_[cell]);
+                   ss[opos] = (s[opos] >= sowmax) ? sow_max : sow_cr + (s[opos]-socr) *(sow_max-sow_cr)/(sowmax-socr);
+               }
+           }
+       }
+
+       // Evaluation of relperms
+       if (dkrds) {
+           THROW("Relperm derivatives not yet available in combination with end point scaling ...");
+           funcForCell(cell).evalKrDeriv(ss, kr, dkrds);
+       } else {
+           // Assume: sw_cr -> krw=0     sw_max -> krw=<max water relperm>
+           //         sow_cr -> kro=0    sow_max -> kro=<max oil relperm>
+           funcForCell(cell).evalKr(ss, kr);
+       }  
+
+       // Scaling of relperms values
+       //  - Water
+       if (eps_.krw_.empty() && eps_.krwr_.empty()) { // No value scaling
+       } else if (eps_.krwr_.empty()) { // Two-point
+           kr[wpos] *= (eps_.krw_[cell]/funcForCell(cell).krwmax_);
+       } else {
+           double swcr = eps_.swcr_.empty() ? funcForCell(cell).swcr_ : eps_.swcr_[cell];
+           double swmax = eps_.swu_.empty() ? funcForCell(cell).smax_[wpos] : eps_.swu_[cell];
+           double sr;
+           if (do_3pt_) {
+               sr = eps_.sowcr_.empty() ? 1.0-funcForCell(cell).sowcr_ : 1.0-eps_.sowcr_[cell];
+           } else {
+               double sw_cr = funcForCell(cell).swcr_;
+               double sw_max = funcForCell(cell).smax_[wpos];
+               double s_r = 1.0-funcForCell(cell).sowcr_;
+               sr = swcr + (s_r-sw_cr)*(swmax-swcr)/(sw_max-sw_cr);
+           }          
+           if (s[wpos] <= swcr) {
+               kr[wpos] = 0.0;
+           } else if (sr > swmax-1.0e-6) {
+               if (do_3pt_) { //Ignore krw and do two-point?
+                   kr[wpos] *= eps_.krwr_[cell]/funcForCell(cell).krwr_;
+               } else if (!eps_.kro_.empty()){ //Ignore krwr and do two-point
+                   kr[wpos] *= eps_.krw_[cell]/funcForCell(cell).krwmax_;
+               }
+           } else if (s[wpos] <= sr) {
+               kr[wpos] *= eps_.krwr_[cell]/funcForCell(cell).krwr_;
+           } else if (s[wpos] <= swmax) {
+               double krw_max = funcForCell(cell).krwmax_;
+               double krw = eps_.krw_.empty() ? krw_max : eps_.krw_[cell];
+               double krw_r = funcForCell(cell).krwr_;
+               double krwr = eps_.krwr_.empty() ? krw_r : eps_.krwr_[cell];
+               if (std::fabs(krw_max- krw_r) > 1.0e-6) {
+                   kr[wpos] = krwr + (kr[wpos]-krw_r)*(krw-krwr)/(krw_max-krw_r);
+               } else {
+                   kr[wpos] = krwr + (krw-krwr)*(s[wpos]-sr)/(swmax-sr);
+               }
+           } else {
+               kr[wpos] = eps_.krw_.empty() ? funcForCell(cell).krwmax_ : eps_.krw_[cell];
+           }
+       }
+       
+       //  - Oil
+       if (eps_.kro_.empty() && eps_.krorw_.empty()) { // No value scaling
+       } else if (eps_.krorw_.empty()) { // Two-point scaling
+           kr[opos] *= (eps_.kro_[cell]/funcForCell(cell).kromax_);
+       } else {
+           double sowcr = eps_.sowcr_.empty() ? funcForCell(cell).sowcr_ : eps_.sowcr_[cell];
+           double sowmax = eps_.swl_.empty() ? funcForCell(cell).smax_[opos] : 1.0-eps_.swl_[cell];
+           double sr;
+           if (do_3pt_) {
+               sr = eps_.swcr_.empty() ? 1.0-funcForCell(cell).swcr_ : 1.0-eps_.swcr_[cell];
+           } else {
+               double sow_cr = funcForCell(cell).sowcr_;
+               double sow_max = funcForCell(cell).smax_[opos];
+               double s_r = 1.0-funcForCell(cell).swcr_;
+               sr = sowcr + (s_r-sow_cr)*(sowmax-sowcr)/(sow_max-sow_cr);
+           }
+           if (s[opos] <= sowcr) {
+               kr[opos] = 0.0;
+           } else if (sr > sowmax-1.0e-6) {
+               if (do_3pt_) { //Ignore kro and do two-point?
+                   kr[opos] *= eps_.krorw_[cell]/funcForCell(cell).krorw_;
+               } else if (!eps_.kro_.empty()){ //Ignore krowr and do two-point
+                   kr[opos] *= eps_.kro_[cell]/funcForCell(cell).kromax_;
+               }
+           } else if (s[opos] <= sr) {
+               kr[opos] *= eps_.krorw_[cell]/funcForCell(cell).krorw_;
+           } else if (s[opos] <= sowmax) {
+               double kro_max = funcForCell(cell).kromax_;
+               double kro = eps_.kro_.empty() ? kro_max : eps_.kro_[cell];
+               double kro_rw = funcForCell(cell).krorw_;
+               double krorw = eps_.krorw_[cell];
+               if (std::fabs(kro_max- kro_rw) > 1.0e-6) {
+                   kr[opos] = krorw + (kr[opos]- kro_rw)*(kro-krorw)/(kro_max- kro_rw);
+               } else {
+                   kr[opos] = krorw + (kro-krorw)*(s[opos]-sr)/(sowmax-sr);
+               }
+           } else {
+               kr[opos] = eps_.kro_.empty() ? funcForCell(cell).kromax_ : eps_.kro_[cell];
+           }
+       }
+    }
 
 } // namespace Opm
 

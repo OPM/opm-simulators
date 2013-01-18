@@ -20,6 +20,8 @@
 #ifndef OPM_TRANSPORTMODELINTERFACE_HEADER_INCLUDED
 #define OPM_TRANSPORTMODELINTERFACE_HEADER_INCLUDED
 
+#include <vector>
+
 struct UnstructuredGrid;
 
 namespace Opm
@@ -31,7 +33,8 @@ namespace Opm
     /// method that will have an interface geared to the model's
     /// needs. (The solve() method is therefore not virtual in this
     /// class.) The reorderAndTransport() method is provided as an aid
-    /// to implementing solve() in subclasses.
+    /// to implementing solve() in subclasses, together with the
+    /// sequence() and components() methods for accessing the ordering.
     class TransportModelInterface
     {
     public:
@@ -41,6 +44,11 @@ namespace Opm
 	virtual void solveMultiCell(const int num_cells, const int* cells) = 0;
     protected:
 	void reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux);
+        const std::vector<int>& sequence() const;
+        const std::vector<int>& components() const;
+    private:
+        std::vector<int> sequence_;
+        std::vector<int> components_;
     };
 
 

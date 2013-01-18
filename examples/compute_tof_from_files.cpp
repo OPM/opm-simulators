@@ -122,14 +122,17 @@ main(int argc, char** argv)
 
     // Choice of tof solver.
     bool use_dg = param.getDefault("use_dg", false);
-    int dg_degree = -1;
-    bool use_cvi = false;
     bool use_multidim_upwind = false;
+    // Need to initialize dg solver here, since it uses parameters now.
+    boost::scoped_ptr<Opm::TransportModelTracerTofDiscGal> dg_solver;
     if (use_dg) {
-        dg_degree = param.getDefault("dg_degree", 0);
-        use_cvi = param.getDefault("use_cvi", false);
+        dg_solver.reset(new Opm::TransportModelTracerTofDiscGal(grid, param));
     } else {
         use_multidim_upwind = param.getDefault("use_multidim_upwind", false);
+    }
+    bool compute_tracer = param.getDefault("compute_tracer", false);
+    if (use_dg && compute_tracer) {
+        THROW("DG for tracer not yet implemented.");
     }
 
     // Write parameters used for later reference.
@@ -156,12 +159,16 @@ main(int argc, char** argv)
     Opm::time::StopWatch transport_timer;
     transport_timer.start();
     std::vector<double> tof;
+    std::vector<double> tracer;
     if (use_dg) {
-        Opm::TransportModelTracerTofDiscGal tofsolver(grid, use_cvi);
-        tofsolver.solveTof(&flux[0], &porevol[0], &src[0], dg_degree, tof);
+        dg_solver->solveTof(&flux[0], &porevol[0], &src[0], tof);
     } else {
         Opm::TransportModelTracerTof tofsolver(grid, use_multidim_upwind);
-        tofsolver.solveTof(&flux[0], &porevol[0], &src[0], tof);
+        if (compute_tracer) {
+            tofsolver.solveTofTracer(&flux[0], &porevol[0], &src[0], tof, tracer);
+        } else {
+            tofsolver.solveTof(&flux[0], &porevol[0], &src[0], tof);
+        }
     }
     transport_timer.stop();
     double tt = transport_timer.secsSinceStart();
@@ -173,5 +180,14 @@ main(int argc, char** argv)
         std::ofstream tof_stream(tof_filename.c_str());
         tof_stream.precision(16);
         std::copy(tof.begin(), tof.end(), std::ostream_iterator<double>(tof_stream, "\n"));
+        if (compute_tracer) {
+            std::string tracer_filename = output_dir + "/tracer.txt";
+            std::ofstream tracer_stream(tracer_filename.c_str());
+            tracer_stream.precision(16);
+            const int nt = tracer.size()/grid.number_of_cells;
+            for (int i = 0; i < nt*grid.number_of_cells; ++i) {
+                tracer_stream << tracer[i] << (((i + 1) % nt == 0) ? '\n' : ' ');
+            }
+        }
     }
 }

@@ -32,7 +32,14 @@ namespace Opm
     /// \param[in] grid      A 2d or 3d grid.
     TransportModelTracerTof::TransportModelTracerTof(const UnstructuredGrid& grid,
                                                      const bool use_multidim_upwind)
-        : grid_(grid), use_multidim_upwind_(use_multidim_upwind)
+        : grid_(grid),
+          darcyflux_(0),
+          porevolume_(0),
+          source_(0),
+          tof_(0),
+          tracer_(0),
+          num_tracers_(0),
+          use_multidim_upwind_(use_multidim_upwind)
     {
     }
 
@@ -68,6 +75,62 @@ namespace Opm
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
         }
+        num_tracers_ = 0;
+        reorderAndTransport(grid_, darcyflux);
+    }
+
+
+
+
+    /// Solve for time-of-flight and a number of tracers.
+    /// One tracer will be used for each inflow flux specified in
+    /// the source parameter.
+    /// \param[in]  darcyflux         Array of signed face fluxes.
+    /// \param[in]  porevolume        Array of pore volumes.
+    /// \param[in]  source            Source term. Sign convention is:
+    ///                                 (+) inflow flux,
+    ///                                 (-) outflow flux.
+    /// \param[out] tof               Array of time-of-flight values (1 per cell).
+    /// \param[out] tracer            Array of tracer values (N per cell, where N is
+    ///                               the number of cells c for which source[c] > 0.0).
+    void TransportModelTracerTof::solveTofTracer(const double* darcyflux,
+                                                 const double* porevolume,
+                                                 const double* source,
+                                                 std::vector<double>& tof,
+                                                 std::vector<double>& tracer)
+    {
+        darcyflux_ = darcyflux;
+        porevolume_ = porevolume;
+        source_ = source;
+#ifndef NDEBUG
+        // Sanity check for sources.
+        const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
+        if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
+            THROW("Sources do not sum to zero: " << cum_src);
+        }
+#endif
+        tof.resize(grid_.number_of_cells);
+        std::fill(tof.begin(), tof.end(), 0.0);
+        tof_ = &tof[0];
+        // Find the tracer heads (injectors).
+        std::vector<int> tracerheads;
+        for (int c = 0; c < grid_.number_of_cells; ++c) {
+            if (source[c] > 0.0) {
+                tracerheads.push_back(c);
+            }
+        }
+        num_tracers_ = tracerheads.size();
+        tracer.resize(grid_.number_of_cells*num_tracers_);
+        std::fill(tracer.begin(), tracer.end(), 0.0);
+        for (int tr = 0; tr < num_tracers_; ++tr) {
+            tracer[tracerheads[tr]*num_tracers_ + tr] = 1.0;
+        }
+        tracer_ = &tracer[0];
+        if (use_multidim_upwind_) {
+            face_tof_.resize(grid_.number_of_faces);
+            std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
+            THROW("Multidimensional upwind not yet implemented for tracer.");
+        }
         reorderAndTransport(grid_, darcyflux);
     }
 
@@ -100,18 +163,32 @@ namespace Opm
                 flux  =-darcyflux_[f];
                 other = grid_.face_cells[2*f];
             }
-            // Add flux to upwind_term or downwind_flux, if interior.
-            if (other != -1) {
-                if (flux < 0.0) {
+            // Add flux to upwind_term or downwind_flux
+            if (flux < 0.0) {
+                // Using tof == 0 on inflow, so we only add a
+                // nonzero contribution if we are on an internal
+                // face.
+                if (other != -1) {
                     upwind_term += flux*tof_[other];
-                } else {
-                    downwind_flux += flux;
+                    for (int tr = 0; tr < num_tracers_; ++tr) {
+                        tracer_[num_tracers_*cell + tr] += flux*tracer_[num_tracers_*other + tr];
+                    }
                 }
+            } else {
+                downwind_flux += flux;
             }
         }
 
         // Compute tof.
         tof_[cell] = (porevolume_[cell] - upwind_term)/downwind_flux;
+
+        // Compute tracers (if any).
+        // Do not change tracer solution in source cells.
+        if (source_[cell] <= 0.0) {
+            for (int tr = 0; tr < num_tracers_; ++tr) {
+                tracer_[num_tracers_*cell + tr] *= -1.0/downwind_flux;
+            }
+        }
     }
 
 
@@ -131,25 +208,20 @@ namespace Opm
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
             int f = grid_.cell_faces[i];
             double flux;
-            int other;
             // Compute cell flux
             if (cell == grid_.face_cells[2*f]) {
                 flux  = darcyflux_[f];
-                other = grid_.face_cells[2*f+1];
             } else {
                 flux  =-darcyflux_[f];
-                other = grid_.face_cells[2*f];
             }
-            // Add flux to upwind_term or downwind_flux, if interior.
-            if (other != -1) {
-                if (flux < 0.0) {
-                    upwind_term += flux*face_tof_[f];
-                } else {
-                    double fterm, cterm_factor;
-                    multidimUpwindTerms(f, cell, fterm, cterm_factor);
-                    downwind_term_face += fterm*flux;
-                    downwind_term_cell_factor += cterm_factor*flux;
-                }
+            // Add flux to upwind_term or downwind_term_[face|cell_factor].
+            if (flux < 0.0) {
+                upwind_term += flux*face_tof_[f];
+            } else {
+                double fterm, cterm_factor;
+                multidimUpwindTerms(f, cell, fterm, cterm_factor);
+                downwind_term_face += fterm*flux;
+                downwind_term_cell_factor += cterm_factor*flux;
             }
         }
 

@@ -59,6 +59,23 @@ namespace Opm
                       const double* source,
                       std::vector<double>& tof);
 
+        /// Solve for time-of-flight and a number of tracers.
+        /// One tracer will be used for each inflow flux specified in
+        /// the source parameter.
+        /// \param[in]  darcyflux         Array of signed face fluxes.
+        /// \param[in]  porevolume        Array of pore volumes.
+        /// \param[in]  source            Source term. Sign convention is:
+        ///                                 (+) inflow flux,
+        ///                                 (-) outflow flux.
+        /// \param[out] tof               Array of time-of-flight values (1 per cell).
+        /// \param[out] tracer            Array of tracer values (N per cell, where N is
+        ///                               the number of cells c for which source[c] > 0.0).
+        void solveTofTracer(const double* darcyflux,
+                            const double* porevolume,
+                            const double* source,
+                            std::vector<double>& tof,
+                            std::vector<double>& tracer);
+
     private:
         virtual void solveSingleCell(const int cell);
         void solveSingleCellMultidimUpwind(const int cell);
@@ -73,6 +90,8 @@ namespace Opm
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
         double* tof_;
+        double* tracer_;
+        int num_tracers_;
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.
         mutable std::vector<int> adj_faces_; // For multidim upwind logic.

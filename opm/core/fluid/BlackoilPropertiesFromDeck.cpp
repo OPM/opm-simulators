@@ -50,6 +50,9 @@ namespace Opm
         // Unfortunate lack of pointer smartness here...
         const int sat_samples = param.getDefault("sat_tab_size", 200);
         std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
+        if (deck.hasField("ENDSCALE") && threephase_model != "simple") {
+            THROW("Sorry, end point scaling currently available for the 'simple' model only.");
+        }
         if (sat_samples > 1) {
             if (threephase_model == "stone2") {
                 SaturationPropsFromDeck<SatFuncStone2Uniform>* ptr
