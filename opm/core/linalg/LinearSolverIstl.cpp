@@ -59,7 +59,8 @@ namespace Opm
         solveCG_ILU0(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
 
         LinearSolverInterface::LinearSolverReport
-        solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
+        solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
+                    double prolongateFactor, int smothsteps);
 
         LinearSolverInterface::LinearSolverReport
         solveBiCGStab_ILU0(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
@@ -100,7 +101,7 @@ namespace Opm
         }
         linsolver_max_iterations_ = param.getDefault("linsolver_max_iterations", linsolver_max_iterations_);
         linsolver_smooth_steps_ = param.getDefault("linsolver_smooth_steps", linsolver_smooth_steps_);
-        linsolver_prolongate_factor_ = param.getDegfault("linsolver_prolongate_factor", linsolver_prolongate_factor_);
+        linsolver_prolongate_factor_ = param.getDefault("linsolver_prolongate_factor", linsolver_prolongate_factor_);
         
     }
 
@@ -167,7 +168,8 @@ namespace Opm
             res = solveCG_ILU0(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
             break;
         case CG_AMG:
-            res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+            res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
+                              linsolver_prolongate_factor_, linsolver_smooth_steps_);
             break;
         case BiCGStab_ILU0:
             res = solveBiCGStab_ILU0(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
@@ -222,7 +224,7 @@ namespace Opm
 
 
     LinearSolverInterface::LinearSolverReport
-    solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
+    solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity, double linsolver_prolongate_factor, int linsolver_smooth_steps)
     {
         // Solve with AMG solver.
 #define FIRST_DIAGONAL 1
@@ -261,9 +263,9 @@ namespace Opm
 #if ANISOTROPIC_3D
         criterion.setDefaultValuesAnisotropic(3, 2);
 #endif
-        criterion.setProlongateDampingFactor(linsolve_prolongate_factor_);
-        Precond precond(opA, criterion, smootherArgs, 1, linsolve_smooth_steps_,
-                        linsolve_smooth_steps_);
+        criterion.setProlongationDampingFactor(linsolver_prolongate_factor);
+        Precond precond(opA, criterion, smootherArgs, 1, linsolver_smooth_steps,
+                        linsolver_smooth_steps);
 
         // Construct linear solver.
         CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
