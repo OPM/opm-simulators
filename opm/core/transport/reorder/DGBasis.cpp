@@ -154,6 +154,12 @@ namespace Opm
         }
     }
 
+    /// Compute the average of the function f = sum_i c_i b_i.
+    /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+    double DGBasisBoundedTotalDegree::functionAverage(const double* coefficients) const
+    {
+        return coefficients[0];
+    }
 
 
 
@@ -300,11 +306,18 @@ namespace Opm
                                            double* coefficients) const
     {
         const int nb = numBasisFunc();
-        const double average = std::accumulate(coefficients, coefficients + nb, 0.0)/double(nb);
+        const double aver = functionAverage(coefficients);
         for (int ix = 0; ix < nb; ++ix) {
-            coefficients[ix] = factor*(coefficients[ix] - average) + average;
+            coefficients[ix] = factor*(coefficients[ix] - aver) + aver;
         }
     }
 
+    /// Compute the average of the function f = sum_i c_i b_i.
+    /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+    double DGBasisMultilin::functionAverage(const double* coefficients) const
+    {
+        const int nb = numBasisFunc();
+        return std::accumulate(coefficients, coefficients + nb, 0.0)/double(nb);
+    }
 
 } // namespace Opm

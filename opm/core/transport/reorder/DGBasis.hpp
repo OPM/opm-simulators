@@ -75,6 +75,10 @@ namespace Opm
         /// \param[out] coefficients  Coefficients {c_i} for a single cell.
         virtual void multiplyGradient(const double factor,
                                       double* coefficients) const = 0;
+
+        /// Compute the average of the function f = sum_i c_i b_i.
+        /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+        virtual double functionAverage(const double* coefficients) const = 0;
     };
 
 
@@ -143,6 +147,10 @@ namespace Opm
         /// \param[out] coefficients  Coefficients {c_i} for a single cell.
         virtual void multiplyGradient(const double factor,
                                       double* coefficients) const;
+
+        /// Compute the average of the function f = sum_i c_i b_i.
+        /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+        virtual double functionAverage(const double* coefficients) const;
 
     private:
         const UnstructuredGrid& grid_;
@@ -216,6 +224,10 @@ namespace Opm
         /// \param[out] coefficients  Coefficients {c_i} for a single cell.
         virtual void multiplyGradient(const double factor,
                                       double* coefficients) const;
+
+        /// Compute the average of the function f = sum_i c_i b_i.
+        /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+        virtual double functionAverage(const double* coefficients) const;
 
     private:
         const UnstructuredGrid& grid_;
