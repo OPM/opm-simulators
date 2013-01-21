@@ -444,34 +444,13 @@ namespace Opm
         //    minimum.
         // 2. The TOF shall not be below zero in any point.
 
-        // Find total upstream/downstream fluxes.
-        double upstream_flux = 0.0;
-        double downstream_flux = 0.0;
-        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
-            const int face = grid_.cell_faces[hface];
-            double flux = 0.0;
-            if (cell == grid_.face_cells[2*face]) {
-                flux = darcyflux_[face];
-            } else {
-                flux = -darcyflux_[face];
-            }
-            if (flux < 0.0) {
-                upstream_flux += flux;
-            } else {
-                downstream_flux += flux;
-            }
-        }
-        // In the presence of sources, significant fluxes may be missing from the computed fluxes,
-        // setting the total flux to the (positive) maximum avoids this: since source is either
-        // inflow or outflow, not both, either upstream_flux or downstream_flux must be correct.
-        const double total_flux = std::max(-upstream_flux, downstream_flux);
-
-        // Find minimum tof on upstream faces and for this cell.
+        // Find minimum tof on upstream faces/cells and for this cell.
         const int dim = grid_.dimensions;
         const int num_basis = basis_func_->numBasisFunc();
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
         int num_upstream_faces = 0;
+        const double total_flux = totalFlux(cell);
         for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
             const int face = grid_.cell_faces[hface];
             double flux = 0.0;
@@ -490,12 +469,9 @@ namespace Opm
             bool interior = (upstream_cell >= 0);
 
             // Evaluate the solution in all corners.
+            min_here_tof = std::min(min_here_tof, minCornerVal(cell, face));
             for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
                 const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
-                basis_func_->eval(cell, nc, &basis_[0]);
-                const double tof_here = std::inner_product(basis_.begin(), basis_.end(),
-                                                           tof_coeff_ + num_basis*cell, 0.0);
-                min_here_tof = std::min(min_here_tof, tof_here);
                 if (upstream) {
                     if (interior) {
                         const double* upstream_coef = tof_coeff_ + num_basis*upstream_cell;
@@ -578,6 +554,53 @@ namespace Opm
             applyLimiter(c, &tof_coeffs_new[0]);
         }
         std::copy(tof_coeffs_new.begin(), tof_coeffs_new.end(), tof_coeff_);
+    }
+
+
+
+
+    double TransportModelTracerTofDiscGal::totalFlux(const int cell) const
+    {
+        // Find total upstream/downstream fluxes.
+        double upstream_flux = 0.0;
+        double downstream_flux = 0.0;
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+            } else {
+                flux = -darcyflux_[face];
+            }
+            if (flux < 0.0) {
+                upstream_flux += flux;
+            } else {
+                downstream_flux += flux;
+            }
+        }
+        // In the presence of sources, significant fluxes may be missing from the computed fluxes,
+        // setting the total flux to the (positive) maximum avoids this: since source is either
+        // inflow or outflow, not both, either upstream_flux or downstream_flux must be correct.
+        return std::max(-upstream_flux, downstream_flux);
+    }
+
+
+
+
+    double TransportModelTracerTofDiscGal::minCornerVal(const int cell, const int face) const
+    {
+        // Evaluate the solution in all corners.
+        const int dim = grid_.dimensions;
+        const int num_basis = basis_func_->numBasisFunc();
+        double min_cornerval = 1e100;
+        for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
+            const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
+            basis_func_->eval(cell, nc, &basis_[0]);
+            const double tof_corner = std::inner_product(basis_.begin(), basis_.end(),
+                                                         tof_coeff_ + num_basis*cell, 0.0);
+            min_cornerval = std::min(min_cornerval, tof_corner);
+        }
+        return min_cornerval;
     }
 
 

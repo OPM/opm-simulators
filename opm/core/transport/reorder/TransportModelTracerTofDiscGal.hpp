@@ -119,8 +119,8 @@ namespace Opm
         std::vector<double> orig_jac_;   // single-cell jacobian (copy)
         // Below: storage for quantities needed by solveSingleCell().
         std::vector<double> coord_;
-        std::vector<double> basis_;
-        std::vector<double> basis_nb_;
+        mutable std::vector<double> basis_;
+        mutable std::vector<double> basis_nb_;
         std::vector<double> grad_basis_;
         std::vector<double> velocity_;
 
@@ -133,6 +133,8 @@ namespace Opm
         void applyMinUpwindLimiter(const int cell, const bool face_min, double* tof);
         void applyLimiterAsPostProcess();
         void applyLimiterAsSimultaneousPostProcess();
+        double totalFlux(const int cell) const;
+        double minCornerVal(const int cell, const int face) const;
     };
 
 } // namespace Opm
