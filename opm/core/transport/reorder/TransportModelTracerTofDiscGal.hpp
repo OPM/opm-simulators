@@ -130,8 +130,7 @@ namespace Opm
         // (will read data from tof_coeff_, it is ok to call
         //  with tof_coeff as tof argument.
         void applyLimiter(const int cell, double* tof);
-        void applyMinUpwindFaceLimiter(const int cell, double* tof);
-        void applyMinUpwindAverageLimiter(const int cell, double* tof);
+        void applyMinUpwindLimiter(const int cell, const bool face_min, double* tof);
         void applyLimiterAsPostProcess();
         void applyLimiterAsSimultaneousPostProcess();
     };
