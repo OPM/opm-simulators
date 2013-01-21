@@ -498,14 +498,16 @@ namespace Opm
                 min_here_tof = std::min(min_here_tof, tof_here);
                 if (upstream) {
                     if (interior) {
+                        const double* upstream_coef = tof_coeff_ + num_basis*upstream_cell;
                         if (face_min) {
                             basis_func_->eval(upstream_cell, nc, &basis_nb_[0]);
                             const double tof_upstream
                                 = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
-                                                     tof_coeff_ + num_basis*upstream_cell, 0.0);
+                                                     upstream_coef, 0.0);
                             min_upstream_tof = std::min(min_upstream_tof, tof_upstream);
                         } else {
-                            min_upstream_tof = std::min(min_upstream_tof, tof_coeff_[num_basis*upstream_cell]);
+                            min_upstream_tof = std::min(min_upstream_tof,
+                                                        basis_func_->functionAverage(upstream_coef));
                         }
                     } else {
                         // Allow tof down to 0 on inflow boundaries.
@@ -523,7 +525,7 @@ namespace Opm
         if (min_upstream_tof < 0.0) {
             min_upstream_tof = 0.0;
         }
-        const double tof_c = tof_coeff_[num_basis*cell];
+        const double tof_c = basis_func_->functionAverage(tof_coeff_ + num_basis*cell);
         double limiter = (tof_c - min_upstream_tof)/(tof_c - min_here_tof);
         if (tof_c < min_upstream_tof) {
             // Handle by setting a flat solution.
