@@ -42,11 +42,14 @@ namespace Opm
                 // to pressure in first perforation cell.
                 for (int w = 0; w < nw; ++w) {
                     const WellControls* ctrl = wells->ctrls[w];
-                    if (ctrl->type[ctrl->current] == BHP) {
-                        bhp_[w] = ctrl->target[ctrl->current];
-                    } else {
+
+                    if ((ctrl->current < 0) || // SHUT
+                        (ctrl->type[ctrl->current] != BHP)) {
                         const int cell = wells->well_cells[wells->well_connpos[w]];
                         bhp_[w] = state.pressure()[cell];
+                    }
+                    else {
+                        bhp_[w] = ctrl->target[ctrl->current];
                     }
                 }
                 perfrates_.resize(wells->well_connpos[nw], 0.0);
