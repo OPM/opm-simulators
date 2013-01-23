@@ -445,7 +445,6 @@ namespace Opm
         // 2. The TOF shall not be below zero in any point.
 
         // Find minimum tof on upstream faces/cells and for this cell.
-        const int dim = grid_.dimensions;
         const int num_basis = basis_func_->numBasisFunc();
         double min_upstream_tof = 1e100;
         double min_here_tof = 1e100;
@@ -463,33 +462,22 @@ namespace Opm
                 upstream_cell = grid_.face_cells[2*face];
             }
             const bool upstream = (flux < -total_flux*limiter_relative_flux_threshold_);
+            const bool interior = (upstream_cell >= 0);
+
+            // Find minimum tof in this cell and upstream.
+            // The meaning of minimum upstream tof depends on method.
+            min_here_tof = std::min(min_here_tof, minCornerVal(cell, face));
             if (upstream) {
                 ++num_upstream_faces;
-            }
-            bool interior = (upstream_cell >= 0);
-
-            // Evaluate the solution in all corners.
-            min_here_tof = std::min(min_here_tof, minCornerVal(cell, face));
-            for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
-                const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
-                if (upstream) {
-                    if (interior) {
-                        const double* upstream_coef = tof_coeff_ + num_basis*upstream_cell;
-                        if (face_min) {
-                            basis_func_->eval(upstream_cell, nc, &basis_nb_[0]);
-                            const double tof_upstream
-                                = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
-                                                     upstream_coef, 0.0);
-                            min_upstream_tof = std::min(min_upstream_tof, tof_upstream);
-                        } else {
-                            min_upstream_tof = std::min(min_upstream_tof,
-                                                        basis_func_->functionAverage(upstream_coef));
-                        }
+                double upstream_tof = 0.0;
+                if (interior) {
+                    if (face_min) {
+                        upstream_tof = minCornerVal(upstream_cell, face);
                     } else {
-                        // Allow tof down to 0 on inflow boundaries.
-                        min_upstream_tof = std::min(min_upstream_tof, 0.0);
+                        upstream_tof = basis_func_->functionAverage(tof_coeff_ + num_basis*upstream_cell);
                     }
                 }
+                min_upstream_tof = std::min(min_upstream_tof, upstream_tof);
             }
         }
 
