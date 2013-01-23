@@ -25,11 +25,29 @@
 namespace Opm
 {
 
+    // ----------------  Methods for class DGBasisInterface ----------------
+
 
     /// Virtual destructor.
     DGBasisInterface::~DGBasisInterface()
     {
     }
+
+    /// Evaluate function f = sum_i c_i b_i at the point x.
+    /// Note that this function is not virtual, but implemented in
+    /// terms of the virtual functions of the class.
+    /// \param[in] cell          Cell index
+    /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+    /// \param[in] x             Point at which to compute f(x).
+    double DGBasisInterface::evalFunc(const int cell,
+                                      const double* coefficients,
+                                      const double* x) const
+    {
+        bvals_.resize(numBasisFunc());
+        eval(cell, x, &bvals_[0]);
+        return std::inner_product(bvals_.begin(), bvals_.end(), coefficients, 0.0);
+    }
+
 
 
     // ----------------  Methods for class DGBasisBoundedTotalDegree ----------------

@@ -20,6 +20,8 @@
 #ifndef OPM_DGBASIS_HEADER_INCLUDED
 #define OPM_DGBASIS_HEADER_INCLUDED
 
+#include <vector>
+
 struct UnstructuredGrid;
 
 namespace Opm
@@ -76,9 +78,22 @@ namespace Opm
         virtual void multiplyGradient(const double factor,
                                       double* coefficients) const = 0;
 
+        /// Evaluate function f = sum_i c_i b_i at the point x.
+        /// Note that this function is not virtual, but implemented in
+        /// terms of the virtual functions of the class.
+        /// \param[in] cell          Cell index
+        /// \param[in] coefficients  Coefficients {c_i} for a single cell.
+        /// \param[in] x             Point at which to compute f(x).
+        double evalFunc(const int cell,
+                        const double* coefficients,
+                        const double* x) const;
+
         /// Compute the average of the function f = sum_i c_i b_i.
         /// \param[in] coefficients  Coefficients {c_i} for a single cell.
         virtual double functionAverage(const double* coefficients) const = 0;
+
+    private:
+        mutable std::vector<double> bvals_; // For evalFunc().
     };
 
 
