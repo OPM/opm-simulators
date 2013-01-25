@@ -64,7 +64,7 @@ echo "######################"
 
 case "$TEST_TYPE" in
     "--simulation")
-        RND="$(dd if=/dev/urandom bs=10 count=1 2> /dev/null | base64 --wrap=0)"
+        RND="$(dd if=/dev/urandom bs=20 count=1 2> /dev/null | md5sum | cut -d" " -f1)"
         "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
