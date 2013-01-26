@@ -1,7 +1,8 @@
-add_executable("test_pengrobinson" test_pengrobinson.cc)
-target_link_libraries("test_pengrobinson" ${EwomsLinkLibraries})
+# set the CMake module include path
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-# add required libraries and includes to the build flags 
-link_directories(${EwomsLinkDirectories})
-include_directories(${EwomsIncludeDirectories})
+# eWoms unit-testing infrastructure
+include(EwomsAddTest)
+
+EwomsAddTest(test_pengrobinson DRIVER_ARGS --plain test_pengrobinson)
 

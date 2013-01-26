@@ -1,8 +1,7 @@
-# build target for the simple twophase lens problem
-add_executable("test_ncpflash" test_ncpflash.cc)
-target_link_libraries("test_ncpflash" ${EwomsLinkLibraries})
+# set the CMake module include path
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-# add required libraries and includes to the build flags 
-link_directories(${EwomsLinkDirectories})
-include_directories(${EwomsIncludeDirectories})
+# eWoms unit-testing infrastructure
+include(EwomsAddTest)
 
+EwomsAddTest(test_ncpflash DRIVER_ARGS --plain test_ncpflash)
