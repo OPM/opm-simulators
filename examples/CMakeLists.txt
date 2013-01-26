@@ -1,11 +1,8 @@
-# add build targets
-ADD_EXECUTABLE("tutorial_decoupled" tutorial_decoupled.cc)
-TARGET_LINK_LIBRARIES("tutorial_decoupled" ${EwomsLinkLibraries})
+# set the CMake module include path
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-ADD_EXECUTABLE("tutorial_coupled" tutorial_coupled.cc)
-TARGET_LINK_LIBRARIES("tutorial_coupled" ${EwomsLinkLibraries})
+# eWoms unit-testing infrastructure
+include(EwomsAddTest)
 
-# add required libraries and includes to the build flags 
-LINK_DIRECTORIES(${EwomsLinkDirectories})
-INCLUDE_DIRECTORIES(${EwomsIncludeDirectories})
-
+EwomsAddTest(tutorial_coupled)
+EwomsAddTest(tutorial_decoupled)
