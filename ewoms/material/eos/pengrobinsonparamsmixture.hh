@@ -58,7 +58,7 @@ class PengRobinsonParamsMixture
     typedef Ewoms::PengRobinsonParams<Scalar> PureParams;
 
     // the ideal gas constant
-    static constexpr Scalar R = Ewoms::Constants<Scalar>::R;
+    static const Scalar R;
 
 public:
     /*!
@@ -235,6 +235,9 @@ private:
 
     Scalar aCache_[numComponents][numComponents];
 };
+
+template <class Scalar, class FluidSystem, int phaseIdx, bool useSpe5Relations>
+const Scalar PengRobinsonParamsMixture<Scalar, FluidSystem, phaseIdx, useSpe5Relations>::R = Ewoms::Constants<Scalar>::R;
 
 } // end namepace
 

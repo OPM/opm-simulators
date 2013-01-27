@@ -45,7 +45,7 @@ class PengRobinsonMixture
     PengRobinsonMixture() {}
 
     // the ideal gas constant
-    static constexpr Scalar R = Ewoms::Constants<Scalar>::R;
+    static const Scalar R;
 
     // the u and w parameters as given by the Peng-Robinson EOS
     static const Scalar u;
@@ -153,6 +153,8 @@ public:
 
 };
 
+template <class Scalar, class StaticParameters>
+const Scalar PengRobinsonMixture<Scalar, StaticParameters>::R = Ewoms::Constants<Scalar>::R;
 template<class Scalar, class StaticParameters>
 const Scalar PengRobinsonMixture<Scalar, StaticParameters>::u = 2.0;
 template<class Scalar, class StaticParameters>

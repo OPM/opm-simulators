@@ -55,7 +55,7 @@ class Spe5
     typedef typename Ewoms::PengRobinsonMixture<Scalar, ThisType> PengRobinsonMixture;
     typedef typename Ewoms::PengRobinson<Scalar> PengRobinson;
 
-    static constexpr Scalar R = Ewoms::Constants<Scalar>::R;
+    static const Scalar R;
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
@@ -430,6 +430,9 @@ private:
         }
     }
 };
+
+template <class Scalar>
+const Scalar Spe5<Scalar>::R = Ewoms::Constants<Scalar>::R;
 
 } // end namepace
 } // end namepace

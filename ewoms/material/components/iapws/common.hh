@@ -52,31 +52,31 @@ class Common
 {
 public:
     //! The molar mass of water \f$\mathrm{[kg/mol]}\f$
-    static constexpr Scalar molarMass = 18.01518e-3;
+    static const Scalar molarMass;
 
     //! Specific gas constant of water \f$\mathrm{[J/(kg*K)]}\f$
-    static constexpr Scalar Rs = Ewoms::Constants<Scalar>::R/molarMass;
+    static const Scalar Rs;
 
     //! Critical temperature of water \f$\mathrm{[K]}\f$
-    static constexpr Scalar criticalTemperature = 647.096;
+    static const Scalar criticalTemperature;
 
     //! Critical pressure of water \f$\mathrm{[Pa]}\f$
-    static constexpr Scalar criticalPressure = 22.064e6;
+    static const Scalar criticalPressure;
 
     //! Density of water at the critical point \f$\mathrm{[kg/m^3]}\f$
-    static constexpr Scalar criticalDensity = 322.0;
+    static const Scalar criticalDensity;
 
     //! Critical molar volume of water \f$\mathrm{[m^3/mol]}\f$
-    static constexpr Scalar criticalMolarVolume = molarMass/criticalDensity;
+    static const Scalar criticalMolarVolume;
 
     //! The acentric factor of water \f$\mathrm{[-]}\f$
-    static constexpr Scalar acentricFactor = 0.344;
+    static const Scalar acentricFactor;
 
     //! Triple temperature of water \f$\mathrm{[K]}\f$
-    static constexpr Scalar tripleTemperature = 273.16;
+    static const Scalar tripleTemperature;
 
     //! Triple pressure of water \f$\mathrm{[Pa]}\f$
-    static constexpr Scalar triplePressure = 611.657;
+    static const Scalar triplePressure;
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[(N/m^2)*s]}\f$of pure water.
@@ -224,6 +224,25 @@ public:
         return /*thcond_kstar * */ lam;
     }
 };
+
+template <class Scalar>
+const Scalar Common<Scalar>::molarMass = 18.01518e-3;
+template <class Scalar>
+const Scalar Common<Scalar>::Rs = Ewoms::Constants<Scalar>::R/molarMass;
+template <class Scalar>
+const Scalar Common<Scalar>::criticalTemperature = 647.096;
+template <class Scalar>
+const Scalar Common<Scalar>::criticalPressure = 22.064e6;
+template <class Scalar>
+const Scalar Common<Scalar>::criticalDensity = 322.0;
+template <class Scalar>
+const Scalar Common<Scalar>::criticalMolarVolume = molarMass/criticalDensity;
+template <class Scalar>
+const Scalar Common<Scalar>::acentricFactor = 0.344;
+template <class Scalar>
+const Scalar Common<Scalar>::tripleTemperature = 273.16;
+template <class Scalar>
+const Scalar Common<Scalar>::triplePressure = 611.657;
 
 } // end namepace IAPWS
 } // end namepace Dune

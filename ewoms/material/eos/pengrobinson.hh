@@ -51,7 +51,7 @@ template <class Scalar>
 class PengRobinson
 {
     //! The ideal gas constant [Pa * m^3/mol/K]
-    static constexpr Scalar R = Ewoms::Constants<Scalar>::R;
+    static const Scalar R;
 
     PengRobinson()
     { }
@@ -522,6 +522,9 @@ protected:
     static DynamicTabulated2DFunction<Scalar> criticalMolarVolume_;
 */
 };
+
+template <class Scalar>
+const Scalar PengRobinson<Scalar>::R = Ewoms::Constants<Scalar>::R;
 
 /*
 template <class Scalar>

@@ -38,38 +38,53 @@ class Constants
     /*!
      * \brief The ideal gas constant [J/(mol K)]
      */
-    static constexpr Scalar R = 8.314472;
+    static const Scalar R;
 
     /*!
      * \brief The Avogadro constant [1/mol]
      */
-    static constexpr Scalar Na = 6.02214179e23;
+    static const Scalar Na;
 
     /*!
      * \brief The Boltzmann constant [J/K]
      */
-    static constexpr Scalar kb = R/Na;
+    static const Scalar kb;
 
     /*!
      * \brief Speed of light in vacuum [m/s]
      */
-    static constexpr Scalar c = 299792458.0;
+    static const Scalar c;
 
     /*!
      * \brief Newtonian constant of gravitation [m^3/(kg s^2)]
      */
-    static constexpr Scalar G = 6.67428e-11;
+    static const Scalar G;
 
     /*!
      * \brief Planck constant [J s]
      */
-    static constexpr Scalar h = 6.62606896e-34;
+    static const Scalar h;
 
     /*!
      * \brief Reduced Planck constant [J s]
      */
-    static constexpr Scalar hRed = h / (2 * M_PI);
+    static const Scalar hRed;
 };
+
+template<class Scalar>
+const Scalar Constants<Scalar>::R = 8.314472;
+template <class Scalar>
+const Scalar Constants<Scalar>::Na = 6.02214179e23;
+template <class Scalar>
+const Scalar Constants<Scalar>::kb = R/Na;
+template <class Scalar>
+const Scalar Constants<Scalar>::c = 299792458.0;
+template <class Scalar>
+const Scalar Constants<Scalar>::G = 6.67428e-11;
+template <class Scalar>
+const Scalar Constants<Scalar>::h = 6.62606896e-34;
+template <class Scalar>
+const Scalar Constants<Scalar>::hRed = h / (2 * M_PI);
 }
 
 #endif
