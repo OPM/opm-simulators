@@ -62,9 +62,9 @@ echo "# Running test '$TEST_NAME'"
 echo "######################"
 
 
+RND="$(dd if=/dev/urandom bs=20 count=1 2> /dev/null | md5sum | cut -d" " -f1)"
 case "$TEST_TYPE" in
     "--simulation")
-        RND="$(dd if=/dev/urandom bs=20 count=1 2> /dev/null | md5sum | cut -d" " -f1)"
         "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
@@ -106,7 +106,6 @@ case "$TEST_TYPE" in
         ;;
     
     "--parallel-simulation")
-        RND="$RANDOM"
         mpirun -np 4 "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
@@ -149,7 +148,6 @@ case "$TEST_TYPE" in
         ;;
 
     "--restart")
-        RND="$RANDOM"
         "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
@@ -160,7 +158,7 @@ case "$TEST_TYPE" in
         RESTART_TIME=$(grep "Serialize" "test-$RND.log" | tail -n 1 | sed "s/.*time=\([0-9.e+\-]*\).*/\1/")
         rm "test-$RND.log"
         
-        if ! "$TEST_BINARY" $TEST_ARGS --restart-time="$RESTART_TIME"; then
+        if ! "$TEST_BINARY" $TEST_ARGS --restart-time="$RESTART_TIME" --newton-write-convergence=true; then
             echo "Restarting $TEST_BINARY failed"
             exit 1;
         fi
@@ -179,7 +177,6 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        RND="$RANDOM"
         cat > "paramfile-$RND.ini" <<EOF
 EndTime=100
 InitialTimeStepSize=100
