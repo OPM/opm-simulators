@@ -79,7 +79,7 @@ case "$TEST_TYPE" in
         echo "######################"
         SIM_NAME=$(grep "Initializing problem" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
         NUM_TIMESTEPS=$(grep "Writing result" test-$RND.log | wc -l)
-        TEST_RESULT=$(printf "%s-%05i" $SIM_NAME $NUM_TIMESTEPS)
+        TEST_RESULT=$(printf "%s-%05i" "$SIM_NAME" "$NUM_TIMESTEPS")
         TEST_RESULT=$(ls $TEST_RESULT.*)
         rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
@@ -87,7 +87,12 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        validateResults $TEST_RESULT $SIM_NAME
+        echo "RND: '$RND'"
+        echo "Simulation name: '$SIM_NAME'"
+        echo "Number of timesteps: '$NUM_TIMESTEPS'"
+        echo "Test result file: '$TEST_RESULT'"
+
+        validateResults "$TEST_RESULT" "$SIM_NAME"
         exit 0
         ;;
 
