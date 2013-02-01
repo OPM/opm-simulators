@@ -88,8 +88,8 @@ tarjan (int nv, const int *ia, const int *ja, int *vert, int *comp,
     int  pos    = 0;
 
     int *time   = work;
-    int *link   = (int *) time + nv;
-    int *status = (int *) link + nv; /* dual usage... */
+    int *link   = time + nv;
+    int *status = link + nv; /* dual usage... */
 
     clear_vector(3 * ((size_t) nv), work);
     clear_vector(1 * ((size_t) nv), vert);
