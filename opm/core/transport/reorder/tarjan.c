@@ -79,7 +79,11 @@ tarjan (int nv, const int *ia, const int *ja, int *vert, int *comp,
     int *stack  = comp + nv;
     int *bottom = stack;
     int *cstack = vert + nv-1;
+
+#if !defined(NDEBUG)
     int *cbottom = cstack;
+#endif
+
     int  t      = 0;
     int  pos    = 0;
 
