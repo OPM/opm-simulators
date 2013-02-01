@@ -196,7 +196,7 @@ tarjan (int nv, const int *ia, const int *ja, int *vert, int *comp,
                 }
                 else
                 {
-                    assert(status[child] = DONE);
+                    assert(status[child] == DONE);
                 }
             }
         }
