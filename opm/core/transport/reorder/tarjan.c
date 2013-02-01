@@ -20,8 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <string.h>
 #include <assert.h>
+#include <stddef.h>
 
 #ifdef MATLAB_MEX_FILE
 #include "tarjan.h"
@@ -30,7 +30,13 @@ SOFTWARE.
 #endif
 
 
+static void
+clear_vector(size_t n, int *v)
+{
+    size_t i;
 
+    for (i = 0; i < n; i++) { v[i] = 0; }
+}
 
 static int min(int a, int b){ return a < b? a : b;}
 
@@ -81,11 +87,9 @@ tarjan (int nv, const int *ia, const int *ja, int *vert, int *comp,
     int *link   = (int *) time + nv;
     int *status = (int *) link + nv; /* dual usage... */
 
-    (void) cbottom;
-
-    memset(work, 0, 3*nv    *  sizeof *work);
-    memset(vert, 0,   nv    *  sizeof *vert   );
-    memset(comp, 0,  (nv+1) *  sizeof *comp   );
+    clear_vector(3 * ((size_t) nv), work);
+    clear_vector(1 * ((size_t) nv), vert);
+    clear_vector(1 + ((size_t) nv), comp);
 
     /* Init status all vertices */
     for (i=0; i<nv; ++i)
