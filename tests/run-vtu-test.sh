@@ -19,16 +19,17 @@ function validateResults() {
     SIM_NAME="$2"
 
     for REFERENCE_RESULT in referencesolutions/$SIM_NAME*; do
+        echo "Comparing with \"$REFERENCE_RESULT\"... "
         if python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
             # SUCCESS!!!!!!
-            echo "Result file '$OUTPUT_FILE' and reference result '$REFERENCE_RESULT' are identical" 
+            echo "Result file '$OUTPUT_FILE' and reference '$REFERENCE_RESULT' are identical" 
             return 0
         fi
     done
     
-    echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
+    echo "There are no reference results which are are identical to \"$TEST_RESULT\"."
     echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
-    echo "make it the reference result if necessary."
+    echo "if necessary, add a reference result."
     exit 1
 }
 
