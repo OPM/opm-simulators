@@ -78,8 +78,10 @@ case "$TEST_TYPE" in
         echo "######################"
         echo "# Comparing results"
         echo "######################"
-        SIM_NAME=$(grep "Initializing problem" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        NUM_TIMESTEPS=$(grep "Writing result" test-$RND.log | wc -l)
+        echo "RND: '$RND'"
+
+        SIM_NAME=$(grep "Initializing problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
         TEST_RESULT=$(printf "%s-%05i" "$SIM_NAME" "$NUM_TIMESTEPS")
         TEST_RESULT=$(ls $TEST_RESULT.*)
         rm "test-$RND.log"
@@ -88,7 +90,6 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        echo "RND: '$RND'"
         echo "Simulation name: '$SIM_NAME'"
         echo "Number of timesteps: '$NUM_TIMESTEPS'"
         echo "Test result file: '$TEST_RESULT'"
