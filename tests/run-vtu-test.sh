@@ -11,7 +11,7 @@ function usage() {
     echo "Usage:"
     echo
     echo "runTest.sh TEST_TYPE TEST_BINARY [TEST_ARGS]"
-    echo "where TEST_TYPE can either be --plain or --simulation"
+    echo "where TEST_TYPE can either be --plain or --simulation (is '$TEST_TYPE')."
 };
 
 function validateResults() {
@@ -48,7 +48,16 @@ fi
 
 # find the binary in the its folder
 TEST_BINARY=$(find -type f -executable -name "$TEST_NAME")
-    
+NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w)
+
+
+if test "$NUM_BINARIES" != "1"; then
+    echo "No binary file found or binary file is non-unique (is: $TEST_BINARY)"
+    echo
+    usage
+    exit 1
+fi
+
 # make sure the binary is of the test is present
 if ! test -x "$TEST_BINARY"; then
     echo "$TEST_NAME does not exist or is not executable"
