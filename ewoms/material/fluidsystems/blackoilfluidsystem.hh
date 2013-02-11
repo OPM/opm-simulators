@@ -26,6 +26,7 @@
 #include <ewoms/common/exceptions.hh>
 #include <ewoms/common/spline.hh>
 
+#include <ewoms/material/idealgas.hh>
 #include <ewoms/material/constants.hh>
 #include <ewoms/material/components/h2o.hh>
 #include <ewoms/material/fluidsystems/basefluidsystem.hh>
@@ -157,16 +158,6 @@ public:
     }
 
     /*!
-     * \brief Set the bubble pressure of the oil in the reservoir [Pa]
-     *
-     * (That's the pressure below which gas starts to appear.)
-     *
-     * \param val The value of the bubble pressure [Pa].
-     */
-    static void setBubblePressure(Scalar val)
-    { bubblePressure_ = val; }
-
-    /*!
      * \brief Initialize the spline for the oil viscosity
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
@@ -236,7 +227,7 @@ public:
         // for gas, we take the density at surface pressure and assume
         // it to be ideal
         Scalar p = 1.0135e5;
-        Scalar rho_g = gasDensity_(p);
+        Scalar rho_g = surfaceDensity_[gPhaseIdx];
         Scalar T = 311;
         molarMass_[gCompIdx] = Ewoms::Constants<Scalar>::R*T*rho_g / p;
 
@@ -292,14 +283,6 @@ public:
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
         return name[phaseIdx];
     }
-
-    /*!
-     * \brief Returns the pressure [Pa] at which the oil started to
-     *        degas in the flash experiment which determined the
-     *        black-oil parameters.
-     */
-    static Scalar bubblePressure()
-    { return bubblePressure_; }
 
     //! \copydoc BaseFluidSystem::isLiquid
     static constexpr bool isLiquid(const int phaseIdx)
@@ -368,45 +351,50 @@ public:
         case wPhaseIdx: return waterDensity_(p);
         case gPhaseIdx: return gasDensity_(p);
         case oPhaseIdx: {
-            Scalar X_oG = fluidState.massFraction(oPhaseIdx, gCompIdx);
-            Scalar X_oO = fluidState.massFraction(oPhaseIdx, oCompIdx);
-            Scalar sumX =
-                std::max(1e-20,
-                         fluidState.massFraction(oPhaseIdx, oCompIdx)
-                         + fluidState.massFraction(oPhaseIdx, wCompIdx)
-                         + fluidState.massFraction(oPhaseIdx, gCompIdx));
+            Scalar pSat = oilSaturationPressure(fluidState.massFraction(oPhaseIdx, gCompIdx));
 
-            Scalar pAlpha = oilSaturationPressure(X_oG/sumX);
-            Scalar X_oGAlpha = fluidState.massFraction(oPhaseIdx, gCompIdx) / sumX;
-            //Scalar X_oOAlpha = 1 - X_oGAlpha;
-            Scalar rho_oAlpha =
-                flashOilDensity_(pAlpha)
-                +
-                oilCompressibility()
-                *(p - pAlpha);
+            // retrieve the gas formation factor and the oil formation volume factor
+            Scalar Rs = gasFormationFactorSpline_.eval(pSat, /*extrapolate=*/true);
+            Scalar Bo = oilFormationVolumeFactor(pSat);
 
-            Scalar pBeta = p;
-            Scalar X_oGBeta = flashGasMassFracInOil_(pBeta);
-            Scalar X_oOBeta = 1 - X_oGBeta;
-            Scalar rho_oBeta = flashOilDensity_(pBeta);
+            // retrieve the derivatives of the oil formation volume
+            // factor and the gas formation factor regarding pressure
+            Scalar dBo_dp = oilFormationVolumeFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
+            Scalar dRs_dp = gasFormationFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
 
-            Scalar rho_oPure =
-                surfaceDensity_[oPhaseIdx]
-                + oilCompressibility()*(p - 1.0135e5);
+            // define the derivatives of oil regarding oil component
+            // mass fraction and pressure
+            Scalar drhoo_dXoO =
+                surfaceDensity_[oPhaseIdx]*
+                (1 + oilCompressibility()*(p - 1.0135e5));
+            Scalar drhoo_dp =
+                oilCompressibility();
 
-            Scalar drho_dXoO =
-                (1.0*rho_oPure - X_oOBeta*rho_oBeta)
-                / (1.0 - X_oOBeta);
-            Scalar drho_dXoG =
-                (X_oGAlpha*rho_oAlpha - X_oGBeta*rho_oBeta)
-                / (X_oGAlpha - X_oOBeta);
+            // Calculate the derivative of the density of saturated
+            // oil regarding pressure
+            Scalar drhoosat_dp = - surfaceDensity_[oPhaseIdx]*dBo_dp / (Bo * Bo);
 
-            Scalar rho_o =
-                rho_oBeta*(1 - X_oGBeta)
-                + drho_dXoG*X_oG
-                + drho_dXoO*(X_oO - X_oOBeta);
+            // calculate the derivative of the gas component mass
+            // fraction regarding pressure in saturated oil
+            Scalar dXoOsat_dp =
+                - surfaceDensity_[gPhaseIdx]/surfaceDensity_[oPhaseIdx]
+                *(Bo * dRs_dp + Rs * dBo_dp);
 
-            return std::max(250.0, std::min(1250.0, rho_o));
+            // Using the previous derivatives, define a derivative
+            // for the oil density in regard to the gas mass fraction.
+            Scalar drhoo_dXoG =
+                drhoo_dXoO + (drhoo_dp - drhoosat_dp) / dXoOsat_dp;
+
+            // calculate the composition of saturated oil.
+            Scalar XoGsat = surfaceDensity_[gPhaseIdx]/surfaceDensity_[oPhaseIdx] * Rs * Bo;
+            Scalar XoOsat = 1.0 - XoGsat;
+
+            Scalar rhoo =
+                surfaceDensity_[oPhaseIdx]/Bo*(1 + drhoo_dp*(p - pSat))
+                + (XoOsat - fluidState.massFraction(oPhaseIdx, oCompIdx))*drhoo_dXoO
+                + (XoGsat - fluidState.massFraction(oPhaseIdx, gCompIdx))*drhoo_dXoG;
+
+            return rhoo;
         }
         }
 
@@ -556,7 +544,7 @@ public:
         // the rest of this method determines the fugacity coefficient
         // of the gas component:
         //
-        // first, retrieve the mole fraction of gas a "flashed" oil
+        // first, retrieve the mole fraction of gas a saturated oil
         // would exhibit at the given pressure
         Scalar x_oGf = flashGasMoleFracInOil_(pressure);
 
@@ -590,6 +578,7 @@ private:
     {
         // gas formation volume factor at reservoir pressure
         Scalar Bg = gasFormationVolumeFactor(pressure);
+
 
         // gas formation volume factor at standard pressure
         Scalar BgRef = refFormationVolumeFactor_[gPhaseIdx];
@@ -647,16 +636,18 @@ private:
     static Scalar flashGasMoleFracInOil_(Scalar pressure)
     {
         // calculate the mass fractions of gas and oil
-        Scalar X_oG = flashGasMassFracInOil_(pressure);
-        //Scalar X_oO = 1 - X_oG;
+        Scalar XoG = flashGasMassFracInOil_(pressure);
+        Scalar XoO = 1.0 - XoG;
 
         // which can be converted to mole fractions, given the
         // components' molar masses
-        Scalar M_G = molarMass(gCompIdx);
-        Scalar M_O = molarMass(oCompIdx);
-        Scalar x_oO = M_G*(1 - X_oG) / (M_G + X_oG*(M_O - M_G));
+        Scalar MG = molarMass(gCompIdx);
+        Scalar MO = molarMass(oCompIdx);
 
-        return 1.0 - x_oO;
+        Scalar avgMolarMass = MO*MG/(MG + XoO*(MO - MG));
+        Scalar xoG = XoG*avgMolarMass/MG;
+
+        return xoG;
     }
 
     static Scalar waterDensity_(Scalar pressure)
@@ -684,7 +675,6 @@ private:
     static Spline gasFormationFactorSpline_;
     static Spline gasFormationVolumeFactorSpline_;
     static Spline saturationPressureSpline_;
-    static Scalar bubblePressure_;
 
     static Spline gasViscositySpline_;
     static std::pair<Scalar, Scalar> Bg0_;
@@ -717,9 +707,6 @@ BlackOil<Scalar>::gasFormationVolumeFactorSpline_;
 template <class Scalar>
 typename BlackOil<Scalar>::Spline
 BlackOil<Scalar>::saturationPressureSpline_;
-
-template <class Scalar>
-Scalar BlackOil<Scalar>::bubblePressure_;
 
 template <class Scalar>
 typename BlackOil<Scalar>::Spline
