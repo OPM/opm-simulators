@@ -312,8 +312,8 @@ public:
                 n_r(i) *
                 std::pow(pi_,  I_r(i)) *
                 J_r(i) *
-                (J_g(i) - 1) *
-                std::pow(tau_ - 0.5, J_r(i) - 2);
+                (J_r(i) - 1.) *
+                std::pow(tau_ - 0.5, J_r(i) - 2.);
         }
 
         return result;
