@@ -258,16 +258,17 @@ public:
             int n = 1000;
             Scalar pMin = 10e6;
             Scalar pMax = 35e6;
+            std::cerr.precision(16);
             for (int i = 0; i < n; ++i) {
                 Scalar p = Scalar(i)/n*(pMax - pMin) + pMin;
 
-                Scalar Bg = gasFormationVolumeFactor(p);
-                Scalar Bo = oilFormationVolumeFactor(p);
+                Scalar X_ogf = flashGasMassFracInOil_(p);
+                Scalar pPrime = oilSaturationPressure(X_ogf);
 
-                std::cerr.precision(16);
                 std::cerr << p << " "
-                          << Bo << " "
-                          << Bg << " "
+                          << X_ogf << " "
+                          << pPrime << " "
+                          << p - pPrime << " "
                           << "\n";
             };
             exit(1);
@@ -536,7 +537,7 @@ public:
             return phi_oO;
         else if (compIdx == wCompIdx)
             // assume that the affinity of the water component to the
-            // oil phase is 1million times smaller than that of the
+            // oil phase is one million times smaller than that of the
             // oil component
             return 1e6*phi_oO;
 
@@ -619,7 +620,6 @@ private:
         Scalar B_o = oilFormationVolumeFactor(pressure);
         Scalar rho_o = surfaceDensity(oPhaseIdx)/B_o;
 
-
         // then, we calculate the mass of the gas component [kg/m^3]
         // in the oil phase. This is equivalent to the gas formation
         // factor [m^3/m^3] at current pressure times the gas density
@@ -637,14 +637,14 @@ private:
     {
         // calculate the mass fractions of gas and oil
         Scalar XoG = flashGasMassFracInOil_(pressure);
-        Scalar XoO = 1.0 - XoG;
+        //Scalar XoO = 1.0 - XoG;
 
         // which can be converted to mole fractions, given the
         // components' molar masses
         Scalar MG = molarMass(gCompIdx);
         Scalar MO = molarMass(oCompIdx);
 
-        Scalar avgMolarMass = MO*MG/(MG + XoO*(MO - MG));
+        Scalar avgMolarMass = MO/(1 + XoG*(MO/MG - 1));
         Scalar xoG = XoG*avgMolarMass/MG;
 
         return xoG;
