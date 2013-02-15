@@ -572,7 +572,28 @@ public:
      * \param X_oG The mass fraction of the gas component in the oil phase [-]
      */
     static Scalar oilSaturationPressure(Scalar X_oG)
-    { return saturationPressureSpline_.eval(X_oG, /*extrapolate=*/true); }
+    {
+        // use the saturation pressure spline to get a pretty good
+        // initial value
+        Scalar pSat = saturationPressureSpline_.eval(X_oG, /*extrapolate=*/true);
+
+        // Newton method to do the remaining work. If the initial
+        // value is good, this should only take two to three
+        // iterations...
+        for (int i = 0; i < 20; ++i) {
+            Scalar f = flashGasMassFracInOil_(pSat) - X_oG;
+            Scalar eps = pSat*1e-11;
+            Scalar fPrime = ((flashGasMassFracInOil_(pSat + eps) - X_oG) - f)/eps;
+
+            Scalar delta = f/fPrime;
+            pSat -= delta;
+
+            if (std::abs(delta) < pSat * 1e-10)
+                return pSat;
+        }
+
+        DUNE_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^g = " << X_oG);
+    }
 
 private:
     static Scalar gasDensity_(Scalar pressure)
