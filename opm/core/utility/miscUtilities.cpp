@@ -474,7 +474,7 @@ namespace Opm
             if (wells.type[w] == INJECTOR) {
                 flow *= wells.comp_frac[np*w + 0]; // Obtaining water rate for inflow source.
             }
-            const double cell = wells.well_cells[wells.well_connpos[w]];
+            const int cell = wells.well_cells[wells.well_connpos[w]];
             src[cell] = flow;
         }
     }
