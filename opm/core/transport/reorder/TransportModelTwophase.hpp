@@ -94,7 +94,7 @@ namespace Opm
         std::vector<double> smin_;
         std::vector<double> smax_;
         double tol_;
-        double maxit_;
+        int maxit_;
 
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
