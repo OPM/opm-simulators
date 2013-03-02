@@ -163,7 +163,7 @@ public:
 #ifndef NDEBUG
         if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
         {
-            Dune::dwarn << "The tables used for the CO2 subcritical as well as critical values: "
+            Dune::dwarn << "The tables used for the CO2 exhibit subcritical as well as critical values: "
                         << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
             warningPrinted=true;
         }
@@ -192,7 +192,7 @@ public:
 #ifndef NDEBUG
         if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
         {
-            Dune::dwarn << "The tables used for the CO2 subcritical as well as critical values: "
+            Dune::dwarn << "The tables used for the CO2 exhibit subcritical as well as critical values: "
                         << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
             warningPrinted=true;
         }
