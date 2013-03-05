@@ -410,7 +410,7 @@ public:
         }
     }
 
-private:
+protected:
     static Scalar henryCoeffWater_(int compIdx, Scalar temperature)
     {
         // use henry's law for the solutes and the vapor pressure for
