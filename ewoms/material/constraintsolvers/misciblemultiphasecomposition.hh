@@ -149,7 +149,7 @@ public:
     template <class FluidState, class ParameterCache>
     static void solve(FluidState &fluidState,
                       ParameterCache &paramCache,
-                      int phaseState,
+                      int phasePresence,
                       const MMPCAuxConstraint<Scalar> *auxConstraints,
                       int numAuxConstraints,
                       bool setViscosity,
@@ -187,7 +187,6 @@ public:
 
         // assemble the equations expressing the fact that the
         // fugacities of each component are equal in all phases
-        // (assuming thermal equilibrium, that is)
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
             Scalar entryCol1 =
                 fluidState.fugacityCoefficient(/*phaseIdx=*/0, compIdx)
@@ -212,7 +211,7 @@ public:
         // phases present.
         int presentPhases = 0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!(phaseState & (1 << phaseIdx)))
+            if (!(phasePresence & (1 << phaseIdx)))
                 continue;
 
             int rowIdx = numComponents*(numPhases - 1) + presentPhases;
@@ -228,9 +227,7 @@ public:
 
         assert(presentPhases + numAuxConstraints == numComponents);
 
-        // assemble the equations expressing the assumption that the
-        // sum of all mole fractions in each phase must be 1 for the
-        // phases present.
+        // incorperate the auxiliary equations, i.e., the explicitly given mole fractions
         for (int auxEqIdx = 0; auxEqIdx < numAuxConstraints; ++auxEqIdx) {
             int rowIdx = numComponents*(numPhases - 1) + presentPhases + auxEqIdx;
             b[rowIdx] = auxConstraints[auxEqIdx].value();
@@ -292,7 +289,7 @@ public:
     {
         solve(fluidState,
               paramCache,
-              /*phaseState=*/0xffffff,
+              /*phasePresence=*/0xffffff,
               /*numAuxConstraints=*/0,
               /*auxConstraints=*/0,
               setViscosity,

@@ -154,9 +154,9 @@ public:
         Scalar b = params.b(phaseIdx); // "co-volume"
 
         if (!std::isfinite(a) || a == 0)
-            DUNE_THROW(NumericalProblem, "Peng-Robinson: The 'a' coefficient must finite and not be zero. It is " << a);
+            return std::numeric_limits<Scalar>::quiet_NaN();
         if (!std::isfinite(b) || b <= 0)
-            DUNE_THROW(NumericalProblem, "Peng-Robinson: The 'b' coefficient must positive. It is " << b);
+            return std::numeric_limits<Scalar>::quiet_NaN();
 
         Scalar RT= R*T;
         Scalar Astar = a*p/(RT*RT);

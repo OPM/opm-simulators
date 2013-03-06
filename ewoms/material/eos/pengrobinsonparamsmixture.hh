@@ -160,7 +160,7 @@ public:
             assert(std::isfinite(b));
         }
 
-        assert(b > 0);
+        // assert(b > 0);
         this->setA(a);
         this->setB(b);
 
