@@ -23,31 +23,25 @@
 #endif // HAVE_CONFIG_H
 
 /// \page tutorial1 A simple cartesian grid
-/// This tutorial explains how to construct a simple cartesian grid,
+/// This tutorial explains how to construct a simple Cartesian grid,
 /// and we will take a look at some output facilities.
 
 /// \page tutorial1
-/// \section commentedsource1 Program walkthrough.
+/// \section commentedsource1 Program walk-through.
 /// All headers from opm-core are found in the opm/core/ directory.
 /// Some important headers are at the root, other headers are found
 /// in subdirectories.
-#include <opm/core/grid.h>
-#include <opm/core/GridManager.hpp>
-#include <opm/core/utility/writeVtkData.hpp>
-#include <iostream>
-#include <fstream>
-#include <vector>
+/// \snippet tutorial1.cpp including headers
 
-/**
-\code
+/// \internal [including headers] 
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/utility/writeVtkData.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
-\endcode
-*/
+/// \internal [including headers]
+/// \endinternal
 
 // ----------------- Main program -----------------
 
@@ -55,18 +49,22 @@ int main()
 {
     /// \page tutorial1
     /// We set the number of blocks in each direction.
-    /// \code
+    /// \snippet tutorial1.cpp num blocks
+    /// \internal [num blocks]
     int nx = 4;
     int ny = 3;
     int nz = 2;
-    /// \endcode
+    /// \internal [num blocks] 
+    /// \endinternal
     /// The size of each block is 1m x 1m x 1m. The default units are always the
     /// standard units (SI). But other units can easily be dealt with, see Opm::unit.
-    /// \code
+    /// \snippet tutorial1.cpp dim
+    /// \internal [dim]
     double dx = 1.0;
     double dy = 1.0;
     double dz = 1.0;
-    /// \endcode
+    /// \internal [dim]
+    /// \endinternal
     /// \page tutorial1
     /// In opm-core, grid information is accessed via the UnstructuredGrid data structure.
     /// This data structure has a pure C API, including helper functions to construct and
@@ -74,29 +72,38 @@ int main()
     /// which is a C++ class that wraps the UnstructuredGrid and takes care of
     /// object lifetime issues.
     /// One of the constructors of the class Opm::GridManager takes <code>nx, ny, nz, dx, dy, dz</code>
-    /// and construct the corresponding cartesian grid.
-    /// \code
+    /// and construct the corresponding Cartesian grid.
+    /// \snippet tutorial1.cpp grid manager
+    /// \internal [grid manager]
     Opm::GridManager grid(nx, ny, nz, dx, dy, dz);
-    /// \endcode
+    /// \internal [grid manager]
+    /// \endinternal
     /// \page tutorial1
     /// We open an output file stream for the output
-    /// \code
+    /// \snippet tutorial1.cpp output stream
+    /// \internal [output stream]
     std::ofstream vtkfile("tutorial1.vtu");
-    /// \endcode
+    /// \internal [output stream]
+    /// \endinternal
     /// \page tutorial1
     /// The Opm::writeVtkData() function writes a grid together with
     /// data to a stream. Here, we just want to visualize the grid. We
     /// construct an empty Opm::DataMap object, which we send to
     /// Opm::writeVtkData() together with the grid
-    /// \code
+    /// \snippet tutorial1.cpp data map
+    /// \internal [data map]
     Opm::DataMap dm;
-    /// \endcode
+    /// \internal [data map]
+    /// \endinternal
     /// \page tutorial1
     /// Call Opm::writeVtkData() to write the output file.
-    /// \code
+    /// \snippet tutorial1.cpp write vtk
+    /// \internal [write vtk]
     Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
+    /// \internal [write vtk]
+    /// \endinternal
 }
-/// \endcode
+
 /// \page tutorial1
 /// We read the vtu output file in \a Paraview and obtain the following grid.
 /// \image html tutorial1.png
@@ -104,4 +111,9 @@ int main()
 /// \page tutorial1
 /// \section completecode1 Complete source code:
 /// \include tutorial1.cpp
+
+/// \page tutorial1
+/// \details
+/// \section pythonscript1 Python script to generate figures: 
+/// \snippet generate_doc_figures.py tutorial1
 

@@ -38,7 +38,7 @@ collected_garbage_file = []
 if not isdir(figure_path):
     mkdir(figure_path)
     
-
+## [tutorial1]
 # tutorial 1
 data_file_name = join(tutorial_data_path, "tutorial1.vtu")
 # grid = servermanager.sources.XMLUnstructuredGridReader(FileName = data_file_name)
@@ -60,7 +60,9 @@ camera.SetFocalPoint(1.5, 1.5, 1)
 Render()
 WriteImage(join(figure_path, "tutorial1.png"))
 Hide(grid)
+## [tutorial1]
 
+## [tutorial2]
 # tutorial 2
 data_file_name = join(tutorial_data_path, "tutorial2.vtu")
 grid = XMLUnstructuredGridReader(FileName = data_file_name)
@@ -83,7 +85,9 @@ camera.SetFocalPoint(20, 20, 0.5)
 Render()
 WriteImage(join(figure_path, "tutorial2.png"))
 Hide(grid)
+## [tutorial2]
 
+## [tutorial3]
 # tutorial 3
 for case in range(0,20):
     data_file_name = join(tutorial_data_path, "tutorial3-"+"%(case)03d"%{"case": case}+".vtu")
@@ -110,7 +114,9 @@ for case in cases:
     Render()
     WriteImage(join(figure_path, "tutorial3-"+case+".png"))
 Hide(grid)
+## [tutorial3]
 
+## [tutorial4]
 # tutorial 4
 for case in range(0,20):
     data_file_name = join(tutorial_data_path, "tutorial4-"+"%(case)03d"%{"case": case}+".vtu")
@@ -137,6 +143,7 @@ for case in cases:
     Render()
     WriteImage(join(figure_path, "tutorial4-"+case+".png"))
 Hide(grid)
+## [tutorial4]
 
 # remove temporary files
 for f in collected_garbage_file:
