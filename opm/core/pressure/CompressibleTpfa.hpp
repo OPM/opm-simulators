@@ -72,7 +72,7 @@ namespace Opm
                          const Wells* wells);
 
         /// Destructor.
-        ~CompressibleTpfa();
+        virtual ~CompressibleTpfa();
 
         /// Solve the pressure equation by Newton-Raphson scheme.
         /// May throw an exception if the number of iterations
