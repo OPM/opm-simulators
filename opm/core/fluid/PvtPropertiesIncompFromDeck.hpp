@@ -21,7 +21,7 @@
 #define OPM_PVTPROPERTIESINCOMPFROMDECK_HEADER_INCLUDED
 
 
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <tr1/array>
 
 namespace Opm

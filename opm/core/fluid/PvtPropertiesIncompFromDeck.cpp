@@ -20,7 +20,7 @@
 
 #include <opm/core/fluid/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>

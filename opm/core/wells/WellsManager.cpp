@@ -19,7 +19,7 @@
 
 
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
 #include <opm/core/utility/ErrorMacros.hpp>

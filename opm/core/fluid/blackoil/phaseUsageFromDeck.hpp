@@ -21,7 +21,7 @@
 #define OPM_PHASEUSAGEFROMDECK_HEADER_INCLUDED
 
 
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 
 

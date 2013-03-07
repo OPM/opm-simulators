@@ -25,7 +25,7 @@
 #include <vector>
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 namespace Opm
 {

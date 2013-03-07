@@ -22,7 +22,7 @@
 
 #include <opm/core/fluid/SaturationPropsInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
 #include <opm/core/fluid/SatFuncStone2.hpp>
 #include <opm/core/fluid/SatFuncSimple.hpp>

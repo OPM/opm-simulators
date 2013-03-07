@@ -23,7 +23,7 @@
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/MonotCubicInterpolator.hpp>
 #include <opm/core/utility/Units.hpp>

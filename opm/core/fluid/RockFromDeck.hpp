@@ -21,7 +21,7 @@
 #define OPM_ROCKFROMDECK_HEADER_INCLUDED
 
 
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <vector>
 
 struct UnstructuredGrid;

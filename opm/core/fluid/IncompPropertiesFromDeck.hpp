@@ -24,7 +24,7 @@
 #include <opm/core/fluid/RockFromDeck.hpp>
 #include <opm/core/fluid/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/fluid/SaturationPropsFromDeck.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 struct UnstructuredGrid;
 
