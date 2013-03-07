@@ -125,7 +125,7 @@ struct Wells
     enum WellType *type;
 
     /**
-     * Array of well types.
+     * Array of well reference depths.
      */
     double *depth_ref;
 
