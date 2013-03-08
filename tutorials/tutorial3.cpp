@@ -29,7 +29,7 @@
 #include <cassert>
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
-#include <opm/core/utility/writeVtkData.hpp>
+#include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>

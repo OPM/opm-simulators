@@ -35,7 +35,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/GridManager.hpp>
-#include <opm/core/utility/writeVtkData.hpp>
+#include <opm/core/io/vtk/writeVtkData.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
