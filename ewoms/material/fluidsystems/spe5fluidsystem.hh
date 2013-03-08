@@ -68,12 +68,12 @@ public:
     //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 3;
 
-    //! Index of the oil phase
-    static const int oPhaseIdx = 0;
+    //! Index of the gas phase
+    static const int gPhaseIdx = 0;
     //! Index of the water phase
     static const int wPhaseIdx = 1;
-    //! Index of the gas phase
-    static const int gPhaseIdx = 2;
+    //! Index of the oil phase
+    static const int oPhaseIdx = 2;
 
     //! The component for pure water to be used
     typedef Ewoms::H2O<Scalar> H2O;
@@ -82,9 +82,9 @@ public:
     static const char *phaseName(int phaseIdx)
     {
         static const char *name[] = {
-            "o",
-            "w",
             "g",
+            "w",
+            "o",
         };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);
