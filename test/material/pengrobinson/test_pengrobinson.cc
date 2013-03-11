@@ -325,8 +325,8 @@ int main(int argc, char** argv)
                   << flashFluidState.averageMolarMass(oPhaseIdx) << " "
                   << flashFluidState.averageMolarMass(gPhaseIdx) << " "
                   << surfaceFluidState.saturation(gPhaseIdx)*surfaceAlpha << " "
-                  << flashFluidState.density(gPhaseIdx)/rho_gRef << " "
-                  << flashFluidState.density(oPhaseIdx)/rho_oRef << " "
+                  << rho_gRef/flashFluidState.density(gPhaseIdx) << " "
+                  << rho_oRef/flashFluidState.density(oPhaseIdx) << " "
                   << "\n";
     }
 
