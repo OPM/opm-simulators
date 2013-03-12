@@ -246,7 +246,7 @@ public:
         Scalar X_oG = 0;
         for (int i=0; i <= n && X_oG < 0.7; ++ i) {
             Scalar pSat = i*delta + gasFormationFactorSpline_.xMin();
-            X_oG = flashGasMassFracInOil_(pSat);
+            X_oG = saturatedOilGasMassFraction(pSat);
 
             std::pair<Scalar, Scalar> val(X_oG, pSat);
             pSatSamplePoints.push_back(val);;
@@ -262,7 +262,7 @@ public:
             for (int i = 0; i < n; ++i) {
                 Scalar p = Scalar(i)/n*(pMax - pMin) + pMin;
 
-                Scalar X_ogf = flashGasMassFracInOil_(p);
+                Scalar X_ogf = saturatedOilGasMassFraction(p);
                 Scalar pPrime = oilSaturationPressure(X_ogf);
 
                 std::cerr << p << " "
@@ -547,7 +547,7 @@ public:
         //
         // first, retrieve the mole fraction of gas a saturated oil
         // would exhibit at the given pressure
-        Scalar x_oGf = flashGasMoleFracInOil_(pressure);
+        Scalar x_oGf = saturatedOilGasMoleFraction(pressure);
 
         // then, scale the gas component's gas phase fugacity
         // coefficient, so that the oil phase ends up at the right
@@ -581,9 +581,9 @@ public:
         // value is good, this should only take two to three
         // iterations...
         for (int i = 0; i < 20; ++i) {
-            Scalar f = flashGasMassFracInOil_(pSat) - X_oG;
+            Scalar f = saturatedOilGasMassFraction(pSat) - X_oG;
             Scalar eps = pSat*1e-11;
-            Scalar fPrime = ((flashGasMassFracInOil_(pSat + eps) - X_oG) - f)/eps;
+            Scalar fPrime = ((saturatedOilGasMassFraction(pSat + eps) - X_oG) - f)/eps;
 
             Scalar delta = f/fPrime;
             pSat -= delta;
@@ -595,44 +595,10 @@ public:
         DUNE_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^g = " << X_oG);
     }
 
-private:
-    static Scalar gasDensity_(Scalar pressure)
-    {
-        // gas formation volume factor at reservoir pressure
-        Scalar Bg = gasFormationVolumeFactor(pressure);
-
-
-        // gas formation volume factor at standard pressure
-        Scalar BgRef = refFormationVolumeFactor_[gPhaseIdx];
-
-        // surface density of gas
-        Scalar rhoRef = surfaceDensity_[gPhaseIdx];
-
-        // reservoir density is surface density scaled by the ratio of
-        // the volume formation factors
-        return rhoRef * BgRef/Bg;
-    }
-
-    // density of oil in a flash experiment
-    static Scalar flashOilDensity_(Scalar pressure)
-    {
-        // oil formation volume factor at reservoir pressure
-        Scalar Bo = oilFormationVolumeFactor(pressure);
-
-        // oil formation volume factor at standard pressure
-        Scalar BoRef  = refFormationVolumeFactor_[oPhaseIdx];
-
-        // surface density of oil
-        Scalar rhoRef = surfaceDensity_[oPhaseIdx];
-
-        // reservoir density is surface density scaled by the ratio of
-        // the volume formation factors
-        return rhoRef * BoRef/Bo;
-    }
 
     // the mass fraction of the gas component in the oil phase in a
     // flash experiment
-    static Scalar flashGasMassFracInOil_(Scalar pressure)
+    static Scalar saturatedOilGasMassFraction(Scalar pressure)
     {
         // first, we calculate the total reservoir oil phase density
         // [kg/m^3]
@@ -654,10 +620,10 @@ private:
 
     // the mole fraction of the gas component in the oil phase in a
     // flash experiment
-    static Scalar flashGasMoleFracInOil_(Scalar pressure)
+    static Scalar saturatedOilGasMoleFraction(Scalar pressure)
     {
         // calculate the mass fractions of gas and oil
-        Scalar XoG = flashGasMassFracInOil_(pressure);
+        Scalar XoG = saturatedOilGasMassFraction(pressure);
         //Scalar XoO = 1.0 - XoG;
 
         // which can be converted to mole fractions, given the
@@ -669,6 +635,41 @@ private:
         Scalar xoG = XoG*avgMolarMass/MG;
 
         return xoG;
+    }
+
+    // density of oil in a flash experiment
+    static Scalar saturatedOilDensity(Scalar pressure)
+    {
+        // oil formation volume factor at reservoir pressure
+        Scalar Bo = oilFormationVolumeFactor(pressure);
+
+        // oil formation volume factor at standard pressure
+        Scalar BoRef  = refFormationVolumeFactor_[oPhaseIdx];
+
+        // surface density of oil
+        Scalar rhoRef = surfaceDensity_[oPhaseIdx];
+
+        // reservoir density is surface density scaled by the ratio of
+        // the volume formation factors
+        return rhoRef * BoRef/Bo;
+    }
+
+private:
+    static Scalar gasDensity_(Scalar pressure)
+    {
+        // gas formation volume factor at reservoir pressure
+        Scalar Bg = gasFormationVolumeFactor(pressure);
+
+
+        // gas formation volume factor at standard pressure
+        Scalar BgRef = refFormationVolumeFactor_[gPhaseIdx];
+
+        // surface density of gas
+        Scalar rhoRef = surfaceDensity_[gPhaseIdx];
+
+        // reservoir density is surface density scaled by the ratio of
+        // the volume formation factors
+        return rhoRef * BgRef/Bg;
     }
 
     static Scalar waterDensity_(Scalar pressure)
