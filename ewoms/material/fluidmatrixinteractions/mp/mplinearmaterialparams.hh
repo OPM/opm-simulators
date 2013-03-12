@@ -36,12 +36,18 @@ public:
     typedef ScalarT Scalar;
     enum { numPhases = numPhasesV };
 
+
+    /*!
+     * \brief The default constructor.
+     *
+     * We set the capillary pressure to zero, if not specified otherwise.
+     */
     MpLinearMaterialParams()
     {
-        for (int i = 0; i < numPhases; ++i) {
-            setPcMinSat(i, 0.0);
-            setPcMaxSat(i, 0.0);
-            setResidSat(i, 0.0);
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            setPcMinSat(phaseIdx, 0.0);
+            setPcMaxSat(phaseIdx, 0.0);
+            setResidSat(phaseIdx, 0.0);
         }
     }
 

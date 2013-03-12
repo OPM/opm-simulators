@@ -456,8 +456,9 @@ public:
      */
     static Scalar oilFormationVolumeFactor(Scalar pressure)
     {
+        Valgrind::CheckDefined(pressure);
         return oilFormationVolumeFactorSpline_.eval(pressure,
-                                                  /*extrapolate=*/true);
+                                                    /*extrapolate=*/true);
     }
 
     /*!

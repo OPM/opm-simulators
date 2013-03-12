@@ -72,6 +72,7 @@ public:
 
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar Sabs = state.saturation(phaseIdx);
+            Valgrind::CheckDefined(Sabs);
             Scalar S =
                 (Sabs - params.residSat(phaseIdx))
                 / (1.0 - sumResidSat + params.residSat(phaseIdx));
