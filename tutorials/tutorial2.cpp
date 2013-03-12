@@ -1,4 +1,5 @@
-/*
+/*!
+\cond SKIP
   Copyright 2012 SINTEF ICT, Applied Mathematics.
 
   This file is part of the Open Porous Media project (OPM).
@@ -15,9 +16,8 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+\endcond
 */
-
-
 /// \page tutorial2 Flow Solver for a single phase
 /// \details The flow equations consist of the mass conservation equation
 /// \f[\nabla\cdot {\bf u}=q\f] and the Darcy law \f[{\bf u} =- \frac{1}{\mu}K\nabla p.\f] Here,
@@ -27,8 +27,6 @@
 /// We solve the flow equations for a Cartesian grid and we set the source term
 /// \f$q\f$ be zero except at the left-lower and right-upper corner, where it is equal
 /// with opposite sign (inflow equal to outflow).
-
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
