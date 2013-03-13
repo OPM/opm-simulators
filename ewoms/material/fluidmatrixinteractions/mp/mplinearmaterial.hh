@@ -25,6 +25,8 @@
 
 #include "mplinearmaterialparams.hh"
 
+#include <ewoms/common/valgrind.hh>
+
 #include <dune/common/exceptions.hh>
 
 #include <algorithm>

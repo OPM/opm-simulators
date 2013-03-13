@@ -23,8 +23,8 @@
 #ifndef MP_LINEAR_MATERIAL_PARAMS_HH
 #define MP_LINEAR_MATERIAL_PARAMS_HH
 
-namespace Ewoms
-{
+namespace Ewoms {
+
 /*!
  * \brief Reference implementation of params for the linear M-phase
  *        material material.
