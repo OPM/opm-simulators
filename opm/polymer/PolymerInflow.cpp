@@ -18,7 +18,7 @@
 */
 
 #include <opm/polymer/PolymerInflow.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/newwells.h>
 #include <map>
 

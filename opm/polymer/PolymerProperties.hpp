@@ -23,7 +23,7 @@
 
 #include <cmath>
 #include <vector>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 
 namespace Opm
