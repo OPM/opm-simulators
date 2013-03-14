@@ -20,8 +20,8 @@
 
 #include <opm/polymer/IncompTpfaPolymer.hpp>
 
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
