@@ -45,7 +45,6 @@
 #include <opm/core/utility/ColumnExtract.hpp>
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-//#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
 //#include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
 #include <opm/core/transport/ImplicitTwoPhaseTransportSolver.hpp>
 #include <boost/filesystem.hpp>
@@ -100,7 +99,7 @@ namespace Opm
         // Solvers
         IncompTpfa psolver_;
         // this should maybe be packed in a separate file
-        boost::scoped_ptr<TwoPhaseTransportSolver> tsolver_;
+        boost::scoped_ptr<TransportSolverTwophaseInterface> tsolver_;
         //ImpliciteTwoPhaseTransportSolver tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
