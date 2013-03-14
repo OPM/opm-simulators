@@ -33,7 +33,7 @@
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
-#include <opm/core/fluid/IncompPropertiesBasic.hpp>
+#include <opm/core/props/IncompPropertiesBasic.hpp>
 
 #include <opm/core/transport/reorder/TransportModelTwophase.hpp>
 

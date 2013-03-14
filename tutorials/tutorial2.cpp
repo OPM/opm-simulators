@@ -37,7 +37,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <opm/core/fluid/IncompPropertiesBasic.hpp>
+#include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
