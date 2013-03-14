@@ -18,7 +18,7 @@
 */
 
 #include <opm/core/transport/reorder/TransportModelTwophase.hpp>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/utility/RootFinders.hpp>

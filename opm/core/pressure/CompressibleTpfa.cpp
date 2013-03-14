@@ -30,7 +30,7 @@
 #include <opm/core/newwells.h>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <algorithm>
 #include <cmath>

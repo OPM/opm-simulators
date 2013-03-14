@@ -19,7 +19,7 @@
 
 
 
-#include <opm/core/fluid/PvtPropertiesBasic.hpp>
+#include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 

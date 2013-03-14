@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/fluid/BlackoilPropertiesBasic.hpp>
+#include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>

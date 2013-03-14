@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/fluid/SaturationPropsFromDeck.hpp>
+#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/buildUniformMonotoneTable.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

@@ -27,9 +27,9 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/MonotCubicInterpolator.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <cmath>
 
 namespace Opm

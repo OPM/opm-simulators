@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/fluid/SaturationPropsBasic.hpp>
+#include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>
 

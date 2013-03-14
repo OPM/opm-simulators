@@ -21,7 +21,7 @@
 #define OPM_BLACKOILSTATE_HEADER_INCLUDED
 
 #include <opm/core/grid.h>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <vector>
 
 namespace Opm

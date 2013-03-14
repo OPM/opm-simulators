@@ -25,7 +25,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/wells/WellCollection.hpp>
-#include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <tr1/array>
 #include <algorithm>

@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/fluid/RockBasic.hpp>
+#include <opm/core/props/rock/RockBasic.hpp>
 
 namespace Opm
 {

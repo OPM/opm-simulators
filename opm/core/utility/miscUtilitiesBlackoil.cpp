@@ -22,7 +22,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

@@ -19,7 +19,7 @@
 
 
 
-#include <opm/core/fluid/IncompPropertiesBasic.hpp>
+#include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>

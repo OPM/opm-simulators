@@ -20,10 +20,10 @@
 #ifndef OPM_INCOMPPROPERTIESFROMDECK_HEADER_INCLUDED
 #define OPM_INCOMPPROPERTIESFROMDECK_HEADER_INCLUDED
 
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/RockFromDeck.hpp>
-#include <opm/core/fluid/PvtPropertiesIncompFromDeck.hpp>
-#include <opm/core/fluid/SaturationPropsFromDeck.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockFromDeck.hpp>
+#include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
+#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 struct UnstructuredGrid;

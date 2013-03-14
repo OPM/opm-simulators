@@ -20,7 +20,7 @@
 #ifndef OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED
 #define OPM_SATURATIONPROPSINTERFACE_HEADER_INCLUDED
 
-#include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 
 
 namespace Opm

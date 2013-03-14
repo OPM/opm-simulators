@@ -21,9 +21,9 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/newwells.h>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <functional>

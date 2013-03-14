@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/fluid/BlackoilPropertiesFromDeck.hpp>
+#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm

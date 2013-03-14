@@ -22,7 +22,7 @@
 
 
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 
 
 namespace Opm

@@ -21,7 +21,7 @@
 #define OPM_TWOPHASESTATE_HEADER_INCLUDED
 
 #include <opm/core/grid.h>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <vector>
 
 namespace Opm

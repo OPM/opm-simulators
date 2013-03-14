@@ -20,13 +20,13 @@
 #ifndef OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
 #define OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
 
-#include <opm/core/fluid/SaturationPropsInterface.hpp>
+#include <opm/core/props/satfunc/SaturationPropsInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <opm/core/fluid/blackoil/BlackoilPhases.hpp>
-#include <opm/core/fluid/SatFuncStone2.hpp>
-#include <opm/core/fluid/SatFuncSimple.hpp>
-#include <opm/core/fluid/SatFuncGwseg.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/props/satfunc/SatFuncStone2.hpp>
+#include <opm/core/props/satfunc/SatFuncSimple.hpp>
+#include <opm/core/props/satfunc/SatFuncGwseg.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -136,7 +136,7 @@ namespace Opm
 } // namespace Opm
 
 
-#include <opm/core/fluid/SaturationPropsFromDeck_impl.hpp>
+#include <opm/core/props/satfunc/SaturationPropsFromDeck_impl.hpp>
 
 
 #endif // OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED

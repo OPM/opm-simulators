@@ -23,7 +23,7 @@
 
 #include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/utility/NonuniformTableLinear.hpp>
-#include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/grid.h>
 
 namespace Opm

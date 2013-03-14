@@ -19,7 +19,7 @@
 
 
 #include <opm/core/transport/reorder/TransportModelCompressibleTwophase.hpp>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/utility/RootFinders.hpp>

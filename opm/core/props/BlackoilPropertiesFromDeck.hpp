@@ -21,10 +21,10 @@
 #define OPM_BLACKOILPROPERTIESFROMDECK_HEADER_INCLUDED
 
 
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/RockFromDeck.hpp>
-#include <opm/core/fluid/blackoil/BlackoilPvtProperties.hpp>
-#include <opm/core/fluid/SaturationPropsFromDeck.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockFromDeck.hpp>
+#include <opm/core/props/pvt/BlackoilPvtProperties.hpp>
+#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <boost/scoped_ptr.hpp>

@@ -21,10 +21,10 @@
 #define OPM_BLACKOILPROPERTIESBASIC_HEADER_INCLUDED
 
 
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/RockBasic.hpp>
-#include <opm/core/fluid/PvtPropertiesBasic.hpp>
-#include <opm/core/fluid/SaturationPropsBasic.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockBasic.hpp>
+#include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
+#include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm

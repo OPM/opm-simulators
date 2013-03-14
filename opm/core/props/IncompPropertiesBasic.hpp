@@ -20,10 +20,10 @@
 #ifndef OPM_INCOMPPROPERTIESBASIC_HEADER_INCLUDED
 #define OPM_INCOMPPROPERTIESBASIC_HEADER_INCLUDED
 
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/RockBasic.hpp>
-#include <opm/core/fluid/PvtPropertiesBasic.hpp>
-#include <opm/core/fluid/SaturationPropsBasic.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockBasic.hpp>
+#include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
+#include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
 
 namespace Opm
 {

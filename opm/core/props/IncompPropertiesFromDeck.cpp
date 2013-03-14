@@ -18,7 +18,7 @@
 */
 
 
-#include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
+#include <opm/core/props/IncompPropertiesFromDeck.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>
