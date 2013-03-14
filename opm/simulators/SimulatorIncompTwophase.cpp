@@ -554,10 +554,10 @@ namespace Opm
                 //tsolver_.solve(&state.faceflux()[0], &initial_porevol[0], &transport_src[0],
                 //              stepsize, state.saturation());
                 tsolver_->solve(&transport_src[0],
-                               &porevol[0],
-                               stepsize,
-                               state,
-                               well_state);
+                                &porevol[0],
+                                stepsize,
+                                well_state,
+                                state);
 
                 double substep_injected[2] = { 0.0 };
                 double substep_produced[2] = { 0.0 };
