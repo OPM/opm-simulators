@@ -45,8 +45,9 @@
 #include <opm/core/utility/ColumnExtract.hpp>
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
-
+//#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
+//#include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
+#include <opm/core/transport/ImplicitTwoPhaseTransportSolver.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
@@ -98,7 +99,9 @@ namespace Opm
         const FlowBoundaryConditions* bcs_;
         // Solvers
         IncompTpfa psolver_;
-        TransportModelTwophase tsolver_;
+        // this should maybe be packed in a separate file
+        boost::scoped_ptr<TwoPhaseTransportSolver> tsolver_;
+        //ImpliciteTwoPhaseTransportSolver tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
         // Misc. data
@@ -316,7 +319,7 @@ namespace Opm
                                         WellsManager& wells_manager,
                                         const std::vector<double>& src,
                                         const FlowBoundaryConditions* bcs,
-                                        LinearSolverInterface& linsolver,
+                                        LinearSolverInterface& linsolverp,
                                         const double* gravity)
         : grid_(grid),
           props_(props),
@@ -325,15 +328,49 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           src_(src),
           bcs_(bcs),
-          psolver_(grid, props, rock_comp_props, linsolver,
+          psolver_(grid, props, rock_comp_props, linsolverp,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
-                   gravity, wells_manager.c_wells(), src, bcs),
-          tsolver_(grid, props,
-                   param.getDefault("nl_tolerance", 1e-9),
-                   param.getDefault("nl_maxiter", 30))
+                   gravity, wells_manager.c_wells(), src, bcs)
     {
+        const bool use_reorder = param.getDefault("use_reorder", true);
+        if(use_reorder){
+            /*
+            tsolver_.reset(new Opm::TransportModelTwoPhase(grid, props, rock_comp_props, linsolver,
+                                                           param.getDefault("nl_pressure_residual_tolerance", 0.0),
+                                                           param.getDefault("nl_pressure_change_tolerance", 1.0),
+                                                           param.getDefault("nl_pressure_maxiter", 10),
+                                                           gravity, wells_manager.c_wells(), src, bcs));
+                                                           */
+        }else{
+            //Opm::ImplicitTransportDetails::NRReport  rpt;
+            Opm::ImplicitTransportDetails::NRControl ctrl;
+            ctrl.max_it = param.getDefault("max_it", 20);
+            ctrl.verbosity = param.getDefault("verbosity", 0);
+            ctrl.max_it_ls = param.getDefault("max_it_ls", 5);
+            const bool guess_old_solution = param.getDefault("guess_old_solution", false);
+            Opm::SimpleFluid2pWrappingProps fluid(props);
+            std::vector<double> porevol;
+            //if (rock_comp->isActive()) {
+            //    computePorevolume(grid, props->porosity(), rock_comp, state.pressure(), porevol);
+            //} else {
+                computePorevolume(grid, props.porosity(), porevol);
+            //}
+            SinglePointUpwindTwoPhase<Opm::SimpleFluid2pWrappingProps>
+                    model(fluid, grid, porevol, gravity, guess_old_solution);
+            model.initGravityTrans(grid_, psolver_.getHalfTrans());
+            tsolver_.reset(new Opm::ImplicitTwoPhaseTransportSolver(
+                               wells_manager,
+                               *rock_comp_props,
+                               ctrl,
+                               model,
+                               grid,
+                               props,
+                               param));
+
+        }
+
         // For output.
         output_ = param.getDefault("output", true);
         if (output_) {
@@ -356,12 +393,7 @@ namespace Opm
 
         // Transport related init.
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
-        use_segregation_split_ = param.getDefault("use_segregation_split", false);
-        if (gravity != 0 && use_segregation_split_){
-            tsolver_.initGravity(gravity);
-            extractColumn(grid_, columns_);
-        }
-
+        use_segregation_split_ = param.getDefault("use_segregation_split", false);        
         // Misc init.
         const int num_cells = grid.number_of_cells;
         allcells_.resize(num_cells);
@@ -427,9 +459,6 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputVectorMatlab(std::string("reorder_it"),
-                                   tsolver_.getReorderIterations(),
-                                   timer.currentStepNum(), output_dir_);
             }
 
             SimulatorReport sreport;
@@ -523,8 +552,14 @@ namespace Opm
             double injected[2] = { 0.0 };
             double produced[2] = { 0.0 };
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_.solve(&state.faceflux()[0], &initial_porevol[0], &transport_src[0],
-                              stepsize, state.saturation());
+                //tsolver_.solve(&state.faceflux()[0], &initial_porevol[0], &transport_src[0],
+                //              stepsize, state.saturation());
+                tsolver_->solve(&transport_src[0],
+                               &porevol[0],
+                               stepsize,
+                               state,
+                               well_state);
+
                 double substep_injected[2] = { 0.0 };
                 double substep_produced[2] = { 0.0 };
                 Opm::computeInjectedProduced(props_, state.saturation(), transport_src, stepsize,
@@ -533,17 +568,18 @@ namespace Opm
                 injected[1] += substep_injected[1];
                 produced[0] += substep_produced[0];
                 produced[1] += substep_produced[1];
-                if (use_segregation_split_) {
-                    tsolver_.solveGravity(columns_, &initial_porevol[0], stepsize, state.saturation());
-                }
+
+
                 watercut.push(timer.currentTime() + timer.currentStepLength(),
                               produced[0]/(produced[0] + produced[1]),
                               tot_produced[0]/tot_porevol_init);
+
                 if (wells_) {
                     wellreport.push(props_, *wells_, state.saturation(),
                                     timer.currentTime() + timer.currentStepLength(),
                                     well_state.bhp(), well_state.perfRates());
                 }
+
             }
             transport_timer.stop();
             double tt = transport_timer.secsSinceStart();
@@ -571,9 +607,6 @@ namespace Opm
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            outputVectorMatlab(std::string("reorder_it"),
-                               tsolver_.getReorderIterations(),
-                               timer.currentStepNum(), output_dir_);
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);
