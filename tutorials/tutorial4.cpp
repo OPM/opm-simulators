@@ -35,7 +35,7 @@
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 
-#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
+#include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
 
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -169,7 +169,7 @@ int main ()
     /// \internal[transport solver]
     const double tolerance = 1e-9;
     const int max_iterations = 30;
-    Opm::TransportModelTwophase transport_solver(grid, props, tolerance, max_iterations);
+    Opm::TransportSolverTwophaseReorder transport_solver(grid, props, tolerance, max_iterations);
     /// \internal[transport solver]
     /// \endinternal
 
