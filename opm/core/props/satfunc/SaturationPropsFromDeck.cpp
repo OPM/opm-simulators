@@ -17,31 +17,18 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/fluid/blackoil/SinglePvtInterface.hpp>
-
+#include <opm/core/fluid/SaturationPropsFromDeck.hpp>
+#include <opm/core/grid.h>
+#include <opm/core/utility/buildUniformMonotoneTable.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <iostream>
 
 namespace Opm
 {
 
-    SinglePvtInterface::SinglePvtInterface()
-        : num_phases_(MaxNumPhases)
-    {
-        for (int i = 0; i < MaxNumPhases; ++i) {
-            phase_pos_[i] = i;
-        }
-    }
-
-    SinglePvtInterface::~SinglePvtInterface()
-    {
-    }
-
-    void SinglePvtInterface::setPhaseConfiguration(const int num_phases, const int* phase_pos)
-    {
-        num_phases_ = num_phases;
-        for (int i = 0; i < MaxNumPhases; ++i) {
-            phase_pos_[i] = phase_pos[i];
-        }
-    }
-
+    // This file should be removed in the future.
+    // Holding off until refactoring of SaturationPropsFromDeck class is done.
 
 } // namespace Opm
+
+
