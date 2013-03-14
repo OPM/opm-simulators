@@ -93,11 +93,11 @@ namespace Opm
     /// \param[out] tof               Array of time-of-flight values (1 per cell).
     /// \param[out] tracer            Array of tracer values (N per cell, where N is
     ///                               the number of cells c for which source[c] > 0.0).
-    void TransportModelTracerTof::solveTofTracer(const double* darcyflux,
-                                                 const double* porevolume,
-                                                 const double* source,
-                                                 std::vector<double>& tof,
-                                                 std::vector<double>& tracer)
+    void TofReorder::solveTofTracer(const double* darcyflux,
+                                    const double* porevolume,
+                                    const double* source,
+                                    std::vector<double>& tof,
+                                    std::vector<double>& tracer)
     {
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
@@ -194,7 +194,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTof::solveSingleCellMultidimUpwind(const int cell)
+    void TofReorder::solveSingleCellMultidimUpwind(const int cell)
     {
         // Compute flux terms.
         // Sources have zero tof, and therefore do not contribute
@@ -260,10 +260,10 @@ namespace Opm
     //   tof(face) = face_term + cell_term_factor*tof(upwind_cell).
     // It is not computed here, since these factors are needed to
     // compute the tof(upwind_cell) itself.
-    void TransportModelTracerTof::multidimUpwindTerms(const int face,
-                                                      const int upwind_cell,
-                                                      double& face_term,
-                                                      double& cell_term_factor) const
+    void TofReorder::multidimUpwindTerms(const int face,
+                                         const int upwind_cell,
+                                         double& face_term,
+                                         double& cell_term_factor) const
     {
         // Implements multidim upwind according to
         // "Multidimensional upstream weighting for multiphase transport on general grids"

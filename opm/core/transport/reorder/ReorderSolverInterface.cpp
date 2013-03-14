@@ -63,13 +63,13 @@ void Opm::ReorderSolverInterface::reorderAndTransport(const UnstructuredGrid& gr
 }
 
 
-const std::vector<int>& Opm::TransportModelInterface::sequence() const
+const std::vector<int>& Opm::ReorderSolverInterface::sequence() const
 {
     return sequence_;
 }
 
 
-const std::vector<int>& Opm::TransportModelInterface::components() const
+const std::vector<int>& Opm::ReorderSolverInterface::components() const
 {
     return components_;
 }

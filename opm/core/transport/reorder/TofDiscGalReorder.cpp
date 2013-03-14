@@ -403,7 +403,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::applyLimiter(const int cell, double* tof)
+    void TofDiscGalReorder::applyLimiter(const int cell, double* tof)
     {
         switch (limiter_method_) {
         case MinUpwindFace:
@@ -420,7 +420,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::applyMinUpwindLimiter(const int cell, const bool face_min, double* tof)
+    void TofDiscGalReorder::applyMinUpwindLimiter(const int cell, const bool face_min, double* tof)
     {
         if (basis_func_->degree() != 1) {
             THROW("This limiter only makes sense for our DG1 implementation.");
@@ -509,12 +509,12 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::applyLimiterAsPostProcess()
+    void TofDiscGalReorder::applyLimiterAsPostProcess()
     {
         // Apply the limiter sequentially to all cells.
         // This means that a cell's limiting behaviour may be affected by
         // any limiting applied to its upstream cells.
-        const std::vector<int>& seq = TransportModelInterface::sequence();
+        const std::vector<int>& seq = ReorderSolverInterface::sequence();
         const int nc = seq.size();
         ASSERT(nc == grid_.number_of_cells);
         for (int i = 0; i < nc; ++i) {
@@ -526,7 +526,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::applyLimiterAsSimultaneousPostProcess()
+    void TofDiscGalReorder::applyLimiterAsSimultaneousPostProcess()
     {
         // Apply the limiter simultaneously to all cells.
         // This means that each cell is limited independently from all other cells,
@@ -543,7 +543,7 @@ namespace Opm
 
 
 
-    double TransportModelTracerTofDiscGal::totalFlux(const int cell) const
+    double TofDiscGalReorder::totalFlux(const int cell) const
     {
         // Find total upstream/downstream fluxes.
         double upstream_flux = 0.0;
@@ -571,7 +571,7 @@ namespace Opm
 
 
 
-    double TransportModelTracerTofDiscGal::minCornerVal(const int cell, const int face) const
+    double TofDiscGalReorder::minCornerVal(const int cell, const int face) const
     {
         // Evaluate the solution in all corners.
         const int dim = grid_.dimensions;

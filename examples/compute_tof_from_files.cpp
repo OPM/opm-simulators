@@ -42,8 +42,8 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
-#include <opm/core/transport/reorder/TransportModelTracerTof.hpp>
-#include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
+#include <opm/core/transport/reorder/TofReorder.hpp>
+#include <opm/core/transport/reorder/TofDiscGalReorder.hpp>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
@@ -124,9 +124,9 @@ main(int argc, char** argv)
     bool use_dg = param.getDefault("use_dg", false);
     bool use_multidim_upwind = false;
     // Need to initialize dg solver here, since it uses parameters now.
-    boost::scoped_ptr<Opm::TransportModelTracerTofDiscGal> dg_solver;
+    boost::scoped_ptr<Opm::TofDiscGalReorder> dg_solver;
     if (use_dg) {
-        dg_solver.reset(new Opm::TransportModelTracerTofDiscGal(grid, param));
+        dg_solver.reset(new Opm::TofDiscGalReorder(grid, param));
     } else {
         use_multidim_upwind = param.getDefault("use_multidim_upwind", false);
     }
@@ -163,7 +163,7 @@ main(int argc, char** argv)
     if (use_dg) {
         dg_solver->solveTof(&flux[0], &porevol[0], &src[0], tof);
     } else {
-        Opm::TransportModelTracerTof tofsolver(grid, use_multidim_upwind);
+        Opm::TofReorder tofsolver(grid, use_multidim_upwind);
         if (compute_tracer) {
             tofsolver.solveTofTracer(&flux[0], &porevol[0], &src[0], tof, tracer);
         } else {
