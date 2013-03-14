@@ -27,6 +27,8 @@
 */
 
 
-#include "TwoPhaseTransportSolver.hpp"
+#include "TransportSolverTwophaseInterface.hpp"
 
-
+Opm::TransportSolverTwophaseInterface::~TransportSolverTwophaseInterface()
+{
+}
