@@ -37,13 +37,13 @@ namespace Opm
         /// \param[in]      porevolume   Array of pore volumes.
         /// \param[in]      source       Transport source term.
         /// \param[in]      dt           Time step.
-        /// \param[in, out] state        Reservoir state. Saturation will be modified.
         /// \param[in]      wstate       Well state.
+        /// \param[in, out] state        Reservoir state. Saturation will be modified.
         virtual void solve(const double* porevolume,
                            const double* source,
                            const double dt,
-                           TwophaseState& state,
-                           const WellState& wstate) = 0;
+                           const WellState& wstate,
+                           TwophaseState& state) = 0;
     };
 
 }
