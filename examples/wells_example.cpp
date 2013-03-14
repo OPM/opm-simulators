@@ -8,7 +8,7 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
-#include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
+#include <opm/core/props/IncompPropertiesFromDeck.hpp>
 #include <opm/core/newwells.h>
 #include <opm/core/grid.h>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -16,7 +16,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 
 int main(int argc, char** argv)
 {
