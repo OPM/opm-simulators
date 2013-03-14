@@ -40,8 +40,8 @@
 
 #include <opm/core/wells/WellsManager.hpp>
 
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/utility/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>

@@ -34,9 +34,9 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/fluid/BlackoilPropertiesBasic.hpp>
-#include <opm/core/fluid/BlackoilPropertiesFromDeck.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/BlackoilPropertiesBasic.hpp>
+#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
