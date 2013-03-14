@@ -18,7 +18,7 @@
 */
 
 
-#include <opm/core/transport/reorder/TransportModelCompressibleTwophase.hpp>
+#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
@@ -39,7 +39,7 @@ namespace Opm
     typedef RegulaFalsi<WarnAndContinueOnError> RootFinder;
 
 
-    TransportModelCompressibleTwophase::TransportModelCompressibleTwophase(
+    TransportSolverCompressibleTwophaseReorder::TransportSolverCompressibleTwophaseReorder(
                                                    const UnstructuredGrid& grid,
                                                    const Opm::BlackoilPropertiesInterface& props,
                                                    const double tol,
@@ -76,7 +76,7 @@ namespace Opm
         props.satRange(props.numCells(), &allcells_[0], &smin_[0], &smax_[0]);
     }
 
-    void TransportModelCompressibleTwophase::solve(const double* darcyflux,
+    void TransportSolverCompressibleTwophaseReorder::solve(const double* darcyflux,
                                                    const double* pressure,
                                                    const double* porevolume0,
                                                    const double* porevolume,
@@ -132,7 +132,7 @@ namespace Opm
     // We need the formula influx = B_i sum_{j->i} b_j v_{ij} - B_i q_w.
     //                     outflux = B_i sum_{i->j} b_i v_{ij} - B_i q = sum_{i->j} v_{ij} - B_i q
     // Influxes are negative, outfluxes positive.
-    struct TransportModelCompressibleTwophase::Residual
+    struct TransportSolverCompressibleTwophaseReorder::Residual
     {
         int cell;
         double B_cell;
@@ -142,8 +142,8 @@ namespace Opm
         // @@@ TODO: figure out change to rock-comp. terms with fluid compr.
         double comp_term; // Now: used to be: q - sum_j v_ij
         double dtpv;    // dt/pv(i)
-        const TransportModelCompressibleTwophase& tm;
-        explicit Residual(const TransportModelCompressibleTwophase& tmodel, int cell_index)
+        const TransportSolverCompressibleTwophaseReorder& tm;
+        explicit Residual(const TransportSolverCompressibleTwophaseReorder& tmodel, int cell_index)
             : tm(tmodel)
         {
             cell    = cell_index;
@@ -187,7 +187,7 @@ namespace Opm
     };
 
 
-    void TransportModelCompressibleTwophase::solveSingleCell(const int cell)
+    void TransportSolverCompressibleTwophaseReorder::solveSingleCell(const int cell)
     {
         Residual res(*this, cell);
         int iters_used;
@@ -196,7 +196,7 @@ namespace Opm
     }
 
 
-    void TransportModelCompressibleTwophase::solveMultiCell(const int num_cells, const int* cells)
+    void TransportSolverCompressibleTwophaseReorder::solveMultiCell(const int num_cells, const int* cells)
     {
         // Experiment: when a cell changes more than the tolerance,
         //             mark all downwind cells as needing updates. After
@@ -302,7 +302,7 @@ namespace Opm
 
     }
 
-    double TransportModelCompressibleTwophase::fracFlow(double s, int cell) const
+    double TransportSolverCompressibleTwophaseReorder::fracFlow(double s, int cell) const
     {
         double sat[2] = { s, 1.0 - s };
         double mob[2];
@@ -321,15 +321,15 @@ namespace Opm
     // [[ incompressible was: r(s) = s - s0 + dt/pv*sum_{j adj i}( gravmod_ij * gf_ij )  ]]
     //
     //     r(s) = s - B*z0 + dt/pv*( influx + outflux*f(s) )
-    struct TransportModelCompressibleTwophase::GravityResidual
+    struct TransportSolverCompressibleTwophaseReorder::GravityResidual
     {
         int cell;
         int nbcell[2];
         double s0;
         double dtpv;    // dt/pv(i)
         double gf[2];
-        const TransportModelCompressibleTwophase& tm;
-        explicit GravityResidual(const TransportModelCompressibleTwophase& tmodel,
+        const TransportSolverCompressibleTwophaseReorder& tm;
+        explicit GravityResidual(const TransportSolverCompressibleTwophaseReorder& tmodel,
                                  const std::vector<int>& cells,
                                  const int pos,
                                  const double* gravflux) // Always oriented towards next in column. Size = colsize - 1.
@@ -376,7 +376,7 @@ namespace Opm
         }
     };
 
-    void TransportModelCompressibleTwophase::mobility(double s, int cell, double* mob) const
+    void TransportSolverCompressibleTwophaseReorder::mobility(double s, int cell, double* mob) const
     {
         double sat[2] = { s, 1.0 - s };
         props_.relperm(1, sat, &cell, mob, 0);
@@ -386,7 +386,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressibleTwophase::initGravity(const double* grav)
+    void TransportSolverCompressibleTwophaseReorder::initGravity(const double* grav)
     {
         // Set up transmissibilities.
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
@@ -403,7 +403,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressibleTwophase::initGravityDynamic()
+    void TransportSolverCompressibleTwophaseReorder::initGravityDynamic()
     {
         // Set up gravflux_ = T_ij g [   (b_w,i rho_w,S - b_o,i rho_o,S) (z_i - z_f)
         //                             + (b_w,j rho_w,S - b_o,j rho_o,S) (z_f - z_j) ]
@@ -436,7 +436,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressibleTwophase::solveSingleCellGravity(const std::vector<int>& cells,
+    void TransportSolverCompressibleTwophaseReorder::solveSingleCellGravity(const std::vector<int>& cells,
                                                                     const int pos,
                                                                     const double* gravflux)
     {
@@ -451,7 +451,7 @@ namespace Opm
 
 
 
-    int TransportModelCompressibleTwophase::solveGravityColumn(const std::vector<int>& cells)
+    int TransportSolverCompressibleTwophaseReorder::solveGravityColumn(const std::vector<int>& cells)
     {
         // Set up column gravflux.
         const int nc = cells.size();
@@ -504,7 +504,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressibleTwophase::solveGravity(const std::vector<std::vector<int> >& columns,
+    void TransportSolverCompressibleTwophaseReorder::solveGravity(const std::vector<std::vector<int> >& columns,
                                                           const double dt,
                                                           std::vector<double>& saturation,
                                                           std::vector<double>& surfacevol)

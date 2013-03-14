@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/transport/reorder/TransportModelTracerTof.hpp>
+#include <opm/core/transport/reorder/TofReorder.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
@@ -30,8 +30,8 @@ namespace Opm
 
     /// Construct solver.
     /// \param[in] grid      A 2d or 3d grid.
-    TransportModelTracerTof::TransportModelTracerTof(const UnstructuredGrid& grid,
-                                                     const bool use_multidim_upwind)
+    TofReorder::TofReorder(const UnstructuredGrid& grid,
+                           const bool use_multidim_upwind)
         : grid_(grid),
           darcyflux_(0),
           porevolume_(0),
@@ -53,7 +53,7 @@ namespace Opm
     ///                                 (+) inflow flux,
     ///                                 (-) outflow flux.
     /// \param[out] tof               Array of time-of-flight values.
-    void TransportModelTracerTof::solveTof(const double* darcyflux,
+    void TofReorder::solveTof(const double* darcyflux,
                                            const double* porevolume,
                                            const double* source,
                                            std::vector<double>& tof)
@@ -137,7 +137,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTof::solveSingleCell(const int cell)
+    void TofReorder::solveSingleCell(const int cell)
     {
         if (use_multidim_upwind_) {
             solveSingleCellMultidimUpwind(cell);
@@ -243,7 +243,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTof::solveMultiCell(const int num_cells, const int* cells)
+    void TofReorder::solveMultiCell(const int num_cells, const int* cells)
     {
         std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         for (int i = 0; i < num_cells; ++i) {

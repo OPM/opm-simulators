@@ -24,9 +24,12 @@ namespace Opm
 {
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                                           const UnstructuredGrid& grid)
+                                                           const UnstructuredGrid& grid,
+                                                           bool init_rock)
     {
-        rock_.init(deck, grid);
+       if (init_rock){
+            rock_.init(deck, grid);
+        }
         pvt_.init(deck, 200);
         SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
             = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
@@ -41,9 +44,13 @@ namespace Opm
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                                            const UnstructuredGrid& grid,
-                                                           const parameter::ParameterGroup& param)
+                                                           const parameter::ParameterGroup& param,
+                                                           bool init_rock)
     {
-        rock_.init(deck, grid);
+        if(init_rock){
+            rock_.init(deck, grid);
+        }
+
         const int pvt_samples = param.getDefault("pvt_tab_size", 200);
         pvt_.init(deck, pvt_samples);
 

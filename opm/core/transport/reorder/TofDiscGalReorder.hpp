@@ -17,10 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELTRACERTOFDISCGAL_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELTRACERTOFDISCGAL_HEADER_INCLUDED
+#ifndef OPM_TOFDISCGALREORDER_HEADER_INCLUDED
+#define OPM_TOFDISCGALREORDER_HEADER_INCLUDED
 
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include <map>
@@ -45,7 +45,7 @@ namespace Opm
     /// \tau is specified to be zero on all inflow boundaries.
     /// The user may specify the polynomial degree of the basis function space
     /// used, but only degrees 0 and 1 are supported so far.
-    class TransportModelTracerTofDiscGal : public TransportModelInterface
+    class TofDiscGalReorder : public ReorderSolverInterface
     {
     public:
         /// Construct solver.
@@ -68,8 +68,8 @@ namespace Opm
         ///                                                                        computing (unlimited) solution.
         ///                                             AsSimultaneousPostProcess  Apply to each cell independently, using un-
         ///                                                                        limited solution in neighbouring cells.
-        TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
-                                       const parameter::ParameterGroup& param);
+        TofDiscGalReorder(const UnstructuredGrid& grid,
+                          const parameter::ParameterGroup& param);
 
 
         /// Solve for time-of-flight.
@@ -95,8 +95,8 @@ namespace Opm
 
     private:
         // Disable copying and assignment.
-        TransportModelTracerTofDiscGal(const TransportModelTracerTofDiscGal&);
-        TransportModelTracerTofDiscGal& operator=(const TransportModelTracerTofDiscGal&);
+        TofDiscGalReorder(const TofDiscGalReorder&);
+        TofDiscGalReorder& operator=(const TofDiscGalReorder&);
 
         // Data members
         const UnstructuredGrid& grid_;

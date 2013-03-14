@@ -19,7 +19,7 @@
 
 #include <opm/core/grid/CellQuadrature.hpp>
 #include <opm/core/grid/FaceQuadrature.hpp>
-#include <opm/core/transport/reorder/TransportModelTracerTofDiscGal.hpp>
+#include <opm/core/transport/reorder/TofDiscGalReorder.hpp>
 #include <opm/core/transport/reorder/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -32,10 +32,6 @@
 
 namespace Opm
 {
-
-
-    // ---------------   Methods of TransportModelTracerTofDiscGal ---------------
-
 
 
     /// Construct solver.
@@ -55,8 +51,8 @@ namespace Opm
     ///                                                                        computing (unlimited) solution.
     ///                                             AsSimultaneousPostProcess  Apply to each cell independently, using un-
     ///                                                                        limited solution in neighbouring cells.
-    TransportModelTracerTofDiscGal::TransportModelTracerTofDiscGal(const UnstructuredGrid& grid,
-                                                                   const parameter::ParameterGroup& param)
+    TofDiscGalReorder::TofDiscGalReorder(const UnstructuredGrid& grid,
+                                         const parameter::ParameterGroup& param)
         : grid_(grid),
           use_cvi_(false),
           use_limiter_(false),
@@ -127,7 +123,7 @@ namespace Opm
     ///                               cell comes before the K coefficients corresponding
     ///                               to the second cell etc.
     ///                               K depends on degree and grid dimension.
-    void TransportModelTracerTofDiscGal::solveTof(const double* darcyflux,
+    void TofDiscGalReorder::solveTof(const double* darcyflux,
                                                   const double* porevolume,
                                                   const double* source,
                                                   std::vector<double>& tof_coeff)
@@ -173,7 +169,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::solveSingleCell(const int cell)
+    void TofDiscGalReorder::solveSingleCell(const int cell)
     {
         // Residual:
         // For each cell K, basis function b_j (spanning V_h),
@@ -396,7 +392,7 @@ namespace Opm
 
 
 
-    void TransportModelTracerTofDiscGal::solveMultiCell(const int num_cells, const int* cells)
+    void TofDiscGalReorder::solveMultiCell(const int num_cells, const int* cells)
     {
         std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         for (int i = 0; i < num_cells; ++i) {

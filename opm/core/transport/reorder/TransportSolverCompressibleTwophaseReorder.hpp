@@ -17,22 +17,22 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TRANSPORTMODELTWOPHASE_HEADER_INCLUDED
-#define OPM_TRANSPORTMODELTWOPHASE_HEADER_INCLUDED
+#ifndef OPM_TRANSPORTSOLVERCOMPRESSIBLETWOPHASEREORDER_HEADER_INCLUDED
+#define OPM_TRANSPORTSOLVERCOMPRESSIBLETWOPHASEREORDER_HEADER_INCLUDED
 
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <vector>
-#include <map>
-#include <ostream>
+
 struct UnstructuredGrid;
 
 namespace Opm
 {
 
-    class IncompPropertiesInterface;
+    class BlackoilPropertiesInterface;
 
-    /// Implements a reordering transport solver for incompressible two-phase flow.
-    class TransportModelTwophase : public TransportModelInterface
+    /// Implements a reordering transport solver for compressible,
+    /// non-miscible two-phase flow.
+    class TransportSolverCompressibleTwophaseReorder : public ReorderSolverInterface
     {
     public:
         /// Construct solver.
@@ -40,25 +40,32 @@ namespace Opm
         /// \param[in] props     Rock and fluid properties.
         /// \param[in] tol       Tolerance used in the solver.
         /// \param[in] maxit     Maximum number of non-linear iterations used.
-        TransportModelTwophase(const UnstructuredGrid& grid,
-                               const Opm::IncompPropertiesInterface& props,
-                               const double tol,
-                               const int maxit);
+        TransportSolverCompressibleTwophaseReorder(const UnstructuredGrid& grid,
+                                           const Opm::BlackoilPropertiesInterface& props,
+                                           const double tol,
+                                           const int maxit);
 
         /// Solve for saturation at next timestep.
         /// \param[in] darcyflux         Array of signed face fluxes.
-        /// \param[in] porevolume        Array of pore volumes.
+        /// \param[in] pressure          Array of cell pressures
+        /// \param[in] surfacevol0       Array of surface volumes at start of timestep
+        /// \param[in] porevolume0       Array of pore volumes at start of timestep.
+        /// \param[in] porevolume        Array of pore volumes at end of timestep.
         /// \param[in] source            Transport source term.
         /// \param[in] dt                Time step.
         /// \param[in, out] saturation   Phase saturations.
+        /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solve(const double* darcyflux,
+                   const double* pressure,
+                   const double* porevolume0,
                    const double* porevolume,
                    const double* source,
                    const double dt,
-                   std::vector<double>& saturation);
+                   std::vector<double>& saturation,
+                   std::vector<double>& surfacevol);
 
         /// Initialise quantities needed by gravity solver.
-        /// \param[in] grav    gravity vector
+        /// \param[in] grav    Gravity vector
         void initGravity(const double* grav);
 
         /// Solve for gravity segregation.
@@ -67,44 +74,46 @@ namespace Opm
         /// vertical stack, that do not interact with other columns (for
         /// gravity segregation.
         /// \param[in] columns           Vector of cell-columns.
-        /// \param[in] porevolume        Array of pore volumes.
         /// \param[in] dt                Time step.
         /// \param[in, out] saturation   Phase saturations.
+        /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* porevolume,
                           const double dt,
-                          std::vector<double>& saturation);
-
-        //// Return the number of iterations used by the reordering solver.
-        //// \return vector of iteration per cell
-        const std::vector<int>& getReorderIterations() const;
+                          std::vector<double>& saturation,
+                          std::vector<double>& surfacevol);
 
     private:
         virtual void solveSingleCell(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
-
         void solveSingleCellGravity(const std::vector<int>& cells,
                                     const int pos,
                                     const double* gravflux);
         int solveGravityColumn(const std::vector<int>& cells);
+        void initGravityDynamic();
+
     private:
         const UnstructuredGrid& grid_;
-        const IncompPropertiesInterface& props_;
-        const double* visc_;
+        const BlackoilPropertiesInterface& props_;
+        std::vector<int> allcells_;
+        std::vector<double> visc_;
+        std::vector<double> A_;
         std::vector<double> smin_;
         std::vector<double> smax_;
         double tol_;
         int maxit_;
 
         const double* darcyflux_;   // one flux per grid face
+        const double* surfacevol0_; // one per phase per cell
+        const double* porevolume0_; // one volume per cell
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one source per cell
         double dt_;
-        std::vector<double> saturation_;        // one per cell, only water saturation!
+        std::vector<double> saturation_;        // P (= num. phases) per cell
         std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
-        std::vector<int> reorder_iterations_;
-        //std::vector<double> reorder_fval_;
         // For gravity segregation.
+        const double* gravity_;
+        std::vector<double> trans_;
+        std::vector<double> density_;
         std::vector<double> gravflux_;
         std::vector<double> mob_;
         std::vector<double> s0_;
@@ -124,4 +133,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_TRANSPORTMODELTWOPHASE_HEADER_INCLUDED
+#endif // OPM_TRANSPORTMODELCOMPRESSIBLETWOPHASE_HEADER_INCLUDED

@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/transport/reorder/TransportModelTwophase.hpp>
+#include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
@@ -40,7 +40,7 @@ namespace Opm
     typedef RegulaFalsi<WarnAndContinueOnError> RootFinder;
 
 
-    TransportModelTwophase::TransportModelTwophase(const UnstructuredGrid& grid,
+    TransportSolverTwophaseReorder::TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
                                                    const Opm::IncompPropertiesInterface& props,
                                                    const double tol,
                                                    const int maxit)
@@ -76,7 +76,7 @@ namespace Opm
         props.satRange(props.numCells(), &cells[0], &smin_[0], &smax_[0]);
     }
 
-    void TransportModelTwophase::solve(const double* darcyflux,
+    void TransportSolverTwophaseReorder::solve(const double* darcyflux,
                                        const double* porevolume,
                                        const double* source,
                                        const double dt,
@@ -108,7 +108,7 @@ namespace Opm
     }
 
 
-    const std::vector<int>& TransportModelTwophase::getReorderIterations() const
+    const std::vector<int>& TransportSolverTwophaseReorder::getReorderIterations() const
     {
         return reorder_iterations_;
     }
@@ -120,7 +120,7 @@ namespace Opm
     //
     // where influx is water influx, outflux is total outflux.
     // Influxes are negative, outfluxes positive.
-    struct TransportModelTwophase::Residual
+    struct TransportSolverTwophaseReorder::Residual
     {
         int cell;
         double s0;
@@ -128,8 +128,8 @@ namespace Opm
         double outflux;   // sum_j max(v_ij, 0) - q
         double comp_term; // q - sum_j v_ij
         double dtpv;    // dt/pv(i)
-        const TransportModelTwophase& tm;
-        explicit Residual(const TransportModelTwophase& tmodel, int cell_index)
+        const TransportSolverTwophaseReorder& tm;
+        explicit Residual(const TransportSolverTwophaseReorder& tmodel, int cell_index)
             : tm(tmodel)
         {
             cell    = cell_index;
@@ -171,7 +171,7 @@ namespace Opm
     };
 
 
-    void TransportModelTwophase::solveSingleCell(const int cell)
+    void TransportSolverTwophaseReorder::solveSingleCell(const int cell)
     {
         Residual res(*this, cell);
         // const double r0 = res(saturation_[cell]);
@@ -225,7 +225,7 @@ namespace Opm
     // } // anon namespace
 
 
-    void TransportModelTwophase::solveMultiCell(const int num_cells, const int* cells)
+    void TransportSolverTwophaseReorder::solveMultiCell(const int num_cells, const int* cells)
     {
         // std::ofstream os("dump");
         // std::copy(cells, cells + num_cells, std::ostream_iterator<double>(os, "\n"));
@@ -440,7 +440,7 @@ namespace Opm
 #endif // EXPERIMENT_GAUSS_SEIDEL
     }
 
-    double TransportModelTwophase::fracFlow(double s, int cell) const
+    double TransportSolverTwophaseReorder::fracFlow(double s, int cell) const
     {
         double sat[2] = { s, 1.0 - s };
         double mob[2];
@@ -458,15 +458,15 @@ namespace Opm
     //
     //     r(s) = s - s0 + dt/pv*sum_{j adj i}( gravmod_ij * gf_ij ).
     //
-    struct TransportModelTwophase::GravityResidual
+    struct TransportSolverTwophaseReorder::GravityResidual
     {
         int cell;
         int nbcell[2];
         double s0;
         double dtpv;    // dt/pv(i)
         double gf[2];
-        const TransportModelTwophase& tm;
-        explicit GravityResidual(const TransportModelTwophase& tmodel,
+        const TransportSolverTwophaseReorder& tm;
+        explicit GravityResidual(const TransportSolverTwophaseReorder& tmodel,
                                  const std::vector<int>& cells,
                                  const int pos,
                                  const double* gravflux) // Always oriented towards next in column. Size = colsize - 1.
@@ -513,7 +513,7 @@ namespace Opm
         }
     };
 
-    void TransportModelTwophase::mobility(double s, int cell, double* mob) const
+    void TransportSolverTwophaseReorder::mobility(double s, int cell, double* mob) const
     {
         double sat[2] = { s, 1.0 - s };
         props_.relperm(1, sat, &cell, mob, 0);
@@ -523,7 +523,7 @@ namespace Opm
 
 
 
-    void TransportModelTwophase::initGravity(const double* grav)
+    void TransportSolverTwophaseReorder::initGravity(const double* grav)
     {
         // Set up gravflux_ = T_ij g (rho_w - rho_o) (z_i - z_j)
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
@@ -547,7 +547,7 @@ namespace Opm
 
 
 
-    void TransportModelTwophase::solveSingleCellGravity(const std::vector<int>& cells,
+    void TransportSolverTwophaseReorder::solveSingleCellGravity(const std::vector<int>& cells,
                                                         const int pos,
                                                         const double* gravflux)
     {
@@ -564,7 +564,7 @@ namespace Opm
 
 
 
-    int TransportModelTwophase::solveGravityColumn(const std::vector<int>& cells)
+    int TransportSolverTwophaseReorder::solveGravityColumn(const std::vector<int>& cells)
     {
         // Set up column gravflux.
         const int nc = cells.size();
@@ -617,7 +617,7 @@ namespace Opm
 
 
 
-    void TransportModelTwophase::solveGravity(const std::vector<std::vector<int> >& columns,
+    void TransportSolverTwophaseReorder::solveGravity(const std::vector<std::vector<int> >& columns,
                                               const double* porevolume,
                                               const double dt,
                                               std::vector<double>& saturation)

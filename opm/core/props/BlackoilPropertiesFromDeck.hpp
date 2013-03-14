@@ -45,7 +45,7 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const UnstructuredGrid& grid);
+                                   const UnstructuredGrid& grid, bool init_rock=true );        
 
         /// Initialize from deck, grid and parameters.
         /// \param[in]  deck     Deck input parser
@@ -60,7 +60,8 @@ namespace Opm
         ///                      be done, and the input fluid data used directly for linear interpolation.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                    const UnstructuredGrid& grid,
-                                   const parameter::ParameterGroup& param);
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
 
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
