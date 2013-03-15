@@ -349,7 +349,6 @@ namespace Opm
             std::vector<double> porevol;
             computePorevolume(grid, props.porosity(), porevol);
             tsolver_.reset(new Opm::TransportSolverTwophaseImplicit(
-                               *rock_comp_props,
                                grid,
                                props,
                                porevol,
