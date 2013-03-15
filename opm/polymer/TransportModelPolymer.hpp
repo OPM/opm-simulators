@@ -21,7 +21,7 @@
 #define OPM_TRANSPORTMODELPOLYMER_HEADER_INCLUDED
 
 #include <opm/polymer/PolymerProperties.hpp>
-#include <opm/core/transport/reorder/TransportModelInterface.hpp>
+#include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <vector>
 #include <list>
@@ -36,7 +36,7 @@ namespace Opm
     /// Implements a reordering transport solver for incompressible two-phase flow
     /// with polymer in the water phase.
     /// \TODO Include permeability reduction effect.
-    class TransportModelPolymer : public TransportModelInterface
+    class TransportModelPolymer : public ReorderSolverInterface
     {
     public:
 
