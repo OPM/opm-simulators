@@ -26,6 +26,7 @@
 #ifndef EWOMS_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 #define EWOMS_TUTORIAL_SPATIAL_PARAMETERS_DECOUPLED_HH
 
+#include <ewoms/parallel/mpihelper.hh>
 #include <ewoms/decoupled/spatialparams/fvspatialparams.hh>
 #include <ewoms/material/fluidmatrixinteractions/2p/linearmaterial.hh>
 #include <ewoms/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh>

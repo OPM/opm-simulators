@@ -23,8 +23,8 @@
  */
 #include "config.h" /*@\label{tutorial-decoupled:include-begin}@*/
 
-#include "tutorialproblem_decoupled.hh" /*@\label{tutorial-decoupled:include-problem-header}@*/
 #include <ewoms/common/start.hh> /*@\label{tutorial-decoupled:include-end}@*/
+#include "tutorialproblem_decoupled.hh" /*@\label{tutorial-decoupled:include-problem-header}@*/
 
 ////////////////////////
 // the main function
