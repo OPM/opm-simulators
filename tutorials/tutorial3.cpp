@@ -232,7 +232,7 @@ int main ()
     /// \internal [transport solver]
     const double tolerance = 1e-9;
     const int max_iterations = 30;
-    Opm::TransportSolverTwophaseReorder transport_solver(grid, props, tolerance, max_iterations);
+    Opm::TransportSolverTwophaseReorder transport_solver(grid, props, NULL, tolerance, max_iterations);
     /// \internal [transport solver]
     /// \endinternal
 
