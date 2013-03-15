@@ -41,9 +41,9 @@ namespace Opm
         /// \param[in] tol       Tolerance used in the solver.
         /// \param[in] maxit     Maximum number of non-linear iterations used.
         TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
-                               const Opm::IncompPropertiesInterface& props,
-                               const double tol,
-                               const int maxit);
+                                       const Opm::IncompPropertiesInterface& props,
+                                       const double tol,
+                                       const int maxit);
 
         /// Solve for saturation at next timestep.
         /// \param[in] darcyflux         Array of signed face fluxes.
