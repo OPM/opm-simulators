@@ -301,8 +301,7 @@ int main ()
         /// \details  Solve the transport equation.
         /// \snippet tutorial3.cpp transport solve
 	/// \internal [transport solve]
-        transport_solver.solve(&state.faceflux()[0], &porevol[0], &src[0],
-                               dt, state.saturation());
+        transport_solver.solve(&porevol[0], &src[0], dt, state);
         /// \internal [transport solve]
 	/// \endinternal
 

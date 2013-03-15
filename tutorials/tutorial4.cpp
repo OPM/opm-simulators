@@ -420,7 +420,7 @@ int main ()
         /// \TODO We must call computeTransportSource() here, since we have wells.
         /// \snippet tutorial4.cpp tranport solver
         /// \internal[tranport solver]
-        transport_solver.solve(&state.faceflux()[0], &porevol[0], &src[0], dt, state.saturation());
+        transport_solver.solve(&porevol[0], &src[0], dt, state);
         /// \internal[tranport solver]
 	/// \endinternal
 
