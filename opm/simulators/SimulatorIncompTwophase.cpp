@@ -543,7 +543,7 @@ namespace Opm
             double injected[2] = { 0.0 };
             double produced[2] = { 0.0 };
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_->solve(&porevol[0], &transport_src[0], stepsize, state);
+                tsolver_->solve(&initial_porevol[0], &transport_src[0], stepsize, state);
 
                 double substep_injected[2] = { 0.0 };
                 double substep_produced[2] = { 0.0 };
