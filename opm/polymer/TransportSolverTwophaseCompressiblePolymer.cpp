@@ -18,7 +18,7 @@
 */
 
 
-#include <opm/polymer/TransportModelCompressiblePolymer.hpp>
+#include <opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
@@ -33,7 +33,7 @@
 typedef Opm::RegulaFalsi<Opm::WarnAndContinueOnError> RootFinder;
 
 
-class Opm::TransportModelCompressiblePolymer::ResidualEquation
+class Opm::TransportSolverTwophaseCompressiblePolymer::ResidualEquation
 {
 public:
     GradientMethod gradient_method;
@@ -55,9 +55,9 @@ public:
     double rhor;
     double ads0;
 
-    TransportModelCompressiblePolymer& tm;
+    TransportSolverTwophaseCompressiblePolymer& tm;
 
-    ResidualEquation(TransportModelCompressiblePolymer& tmodel, int cell_index);
+    ResidualEquation(TransportSolverTwophaseCompressiblePolymer& tmodel, int cell_index);
     void computeResidual(const double* x, double* res) const;
     void computeResidual(const double* x, double* res, double& mc, double& ff) const;
     double computeResidualS(const double* x) const;
@@ -75,9 +75,9 @@ private:
                              double* dres_c_dsdc, double& mc, double& ff) const;
 };
 
-class Opm::TransportModelCompressiblePolymer::ResidualCGrav {
+class Opm::TransportSolverTwophaseCompressiblePolymer::ResidualCGrav {
 public:
-    const TransportModelCompressiblePolymer& tm;
+    const TransportSolverTwophaseCompressiblePolymer& tm;
     const int cell;
     const double s0;
     const double c0;
@@ -92,7 +92,7 @@ public:
     int nbcell[2];
     mutable double last_s;
 
-    ResidualCGrav(const TransportModelCompressiblePolymer& tmodel,
+    ResidualCGrav(const TransportSolverTwophaseCompressiblePolymer& tmodel,
                   const std::vector<int>& cells,
                   const int pos,
                   const double* gravflux);
@@ -103,7 +103,7 @@ public:
     double lastSaturation() const;
 };
 
-class Opm::TransportModelCompressiblePolymer::ResidualSGrav {
+class Opm::TransportSolverTwophaseCompressiblePolymer::ResidualSGrav {
 public:
     const ResidualCGrav& res_c_eq_;
     double c;
@@ -151,7 +151,7 @@ namespace
 
 namespace Opm
 {
-    TransportModelCompressiblePolymer::TransportModelCompressiblePolymer(const UnstructuredGrid& grid,
+    TransportSolverTwophaseCompressiblePolymer::TransportSolverTwophaseCompressiblePolymer(const UnstructuredGrid& grid,
                                                                          const BlackoilPropertiesInterface& props,
                                                                          const PolymerProperties& polyprops,
                                                                          const SingleCellMethod method,
@@ -202,7 +202,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressiblePolymer::setPreferredMethod(SingleCellMethod method)
+    void TransportSolverTwophaseCompressiblePolymer::setPreferredMethod(SingleCellMethod method)
     {
         method_ = method;
     }
@@ -210,7 +210,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressiblePolymer::solve(const double* darcyflux,
+    void TransportSolverTwophaseCompressiblePolymer::solve(const double* darcyflux,
                                                   const std::vector<double>& initial_pressure,
                                                   const std::vector<double>& pressure,
                                                   const double* porevolume0,
@@ -243,7 +243,7 @@ namespace Opm
 
         // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {
-            THROW("TransportCompressibleModelCompressibleTwophase requires a property object without miscibility.");
+            THROW("TransportCompressibleSolverTwophaseCompressibleTwophase requires a property object without miscibility.");
         }
         std::vector<int> seq(grid_.number_of_cells);
         std::vector<int> comp(grid_.number_of_cells + 1);
@@ -273,11 +273,11 @@ namespace Opm
     //
     // where influx is water influx, outflux is total outflux.
     // Influxes are negative, outfluxes positive.
-    struct TransportModelCompressiblePolymer::ResidualS
+    struct TransportSolverTwophaseCompressiblePolymer::ResidualS
     {
-        TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
+        TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq_;
         const double c_;
-        explicit ResidualS(TransportModelCompressiblePolymer::ResidualEquation& res_eq,
+        explicit ResidualS(TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq,
                            const double c)
             : res_eq_(res_eq),
               c_(c)
@@ -298,11 +298,11 @@ namespace Opm
     //  \TODO doc me
     // where ...
     // Influxes are negative, outfluxes positive.
-    struct TransportModelCompressiblePolymer::ResidualC
+    struct TransportSolverTwophaseCompressiblePolymer::ResidualC
     {
         mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
-        TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
-        explicit ResidualC(TransportModelCompressiblePolymer::ResidualEquation& res_eq)
+        TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq_;
+        explicit ResidualC(TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq)
             : res_eq_(res_eq)
         {}
 
@@ -346,7 +346,7 @@ namespace Opm
     // ResidualEquation gathers parameters to construct the residual, computes its
     // value and the values of its derivatives.
 
-    TransportModelCompressiblePolymer::ResidualEquation::ResidualEquation(TransportModelCompressiblePolymer& tmodel, int cell_index)
+    TransportSolverTwophaseCompressiblePolymer::ResidualEquation::ResidualEquation(TransportSolverTwophaseCompressiblePolymer& tmodel, int cell_index)
         : tm(tmodel)
     {
         gradient_method = Analytic;
@@ -399,7 +399,7 @@ namespace Opm
     }
 
 
-    void TransportModelCompressiblePolymer::ResidualEquation::computeResidual(const double* x, double* res) const
+    void TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeResidual(const double* x, double* res) const
     {
         double dres_s_dsdc[2];
         double dres_c_dsdc[2];
@@ -408,7 +408,7 @@ namespace Opm
         computeResAndJacobi(x, true, true, false, false, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
     }
 
-    void TransportModelCompressiblePolymer::ResidualEquation::computeResidual(const double* x, double* res, double& mc, double& ff) const
+    void TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeResidual(const double* x, double* res, double& mc, double& ff) const
     {
         double dres_s_dsdc[2];
         double dres_c_dsdc[2];
@@ -416,7 +416,7 @@ namespace Opm
     }
 
 
-    double TransportModelCompressiblePolymer::ResidualEquation::computeResidualS(const double* x) const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeResidualS(const double* x) const
     {
         double res[2];
         double dres_s_dsdc[2];
@@ -427,7 +427,7 @@ namespace Opm
         return res[0];
     }
 
-    double TransportModelCompressiblePolymer::ResidualEquation::computeResidualC(const double* x) const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeResidualC(const double* x) const
     {
         double res[2];
         double dres_s_dsdc[2];
@@ -438,7 +438,7 @@ namespace Opm
         return res[1];
     }
 
-    void TransportModelCompressiblePolymer::ResidualEquation::computeGradientResS(const double* x, double* res, double* gradient) const
+    void TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeGradientResS(const double* x, double* res, double* gradient) const
     // If gradient_method == FinDif, use finite difference
     // If gradient_method == Analytic, use analytic expresions
     {
@@ -448,7 +448,7 @@ namespace Opm
         computeResAndJacobi(x, true, true, true, false, res, gradient, dres_c_dsdc, mc, ff);
     }
 
-    void TransportModelCompressiblePolymer::ResidualEquation::computeGradientResC(const double* x, double* res, double* gradient) const
+    void TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeGradientResC(const double* x, double* res, double* gradient) const
     // If gradient_method == FinDif, use finite difference
     // If gradient_method == Analytic, use analytic expresions
     {
@@ -459,7 +459,7 @@ namespace Opm
     }
 
     // Compute the Jacobian of the residual equations.
-    void TransportModelCompressiblePolymer::ResidualEquation::computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const
+    void TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeJacobiRes(const double* x, double* dres_s_dsdc, double* dres_c_dsdc) const
     {
         double res[2];
         double mc;
@@ -467,7 +467,7 @@ namespace Opm
         computeResAndJacobi(x, false, false, true, true, res, dres_s_dsdc, dres_c_dsdc, mc, ff);
     }
 
-    void TransportModelCompressiblePolymer::ResidualEquation::computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
+    void TransportSolverTwophaseCompressiblePolymer::ResidualEquation::computeResAndJacobi(const double* x, const bool if_res_s, const bool if_res_c,
                                                                                   const bool if_dres_s_dsdc, const bool if_dres_c_dsdc,
                                                                                   double* res, double* dres_s_dsdc,
                                                                                   double* dres_c_dsdc, double& mc, double& ff) const
@@ -567,34 +567,34 @@ namespace Opm
 
     // Compute the "s" residual along the curve "curve" for a given residual equation "res_eq".
     // The operator() is sent to a root solver.
-    class TransportModelCompressiblePolymer::ResSOnCurve
+    class TransportSolverTwophaseCompressiblePolymer::ResSOnCurve
     {
     public:
-        ResSOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq);
+        ResSOnCurve(const TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq);
         double operator()(const double t) const;
         CurveInSCPlane curve;
     private:
-        const TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
+        const TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq_;
     };
 
     // Compute the "c" residual along the curve "curve" for a given residual equation "res_eq".
     // The operator() is sent to a root solver.
-    class TransportModelCompressiblePolymer::ResCOnCurve
+    class TransportSolverTwophaseCompressiblePolymer::ResCOnCurve
     {
     public:
-        ResCOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq);
+        ResCOnCurve(const TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq);
         double operator()(const double t) const;
         CurveInSCPlane curve;
     private:
-        const TransportModelCompressiblePolymer::ResidualEquation& res_eq_;
+        const TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq_;
     };
 
-    TransportModelCompressiblePolymer::ResSOnCurve::ResSOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq)
+    TransportSolverTwophaseCompressiblePolymer::ResSOnCurve::ResSOnCurve(const TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq)
         : res_eq_(res_eq)
     {
     }
 
-    double TransportModelCompressiblePolymer::ResSOnCurve::operator()(const double t) const
+    double TransportSolverTwophaseCompressiblePolymer::ResSOnCurve::operator()(const double t) const
     {
         double x_of_t[2];
         double x_c[2];
@@ -603,12 +603,12 @@ namespace Opm
         return res_eq_.computeResidualS(x_c);
     }
 
-    TransportModelCompressiblePolymer::ResCOnCurve::ResCOnCurve(const TransportModelCompressiblePolymer::ResidualEquation& res_eq)
+    TransportSolverTwophaseCompressiblePolymer::ResCOnCurve::ResCOnCurve(const TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq)
         : res_eq_(res_eq)
     {
     }
 
-    double TransportModelCompressiblePolymer::ResCOnCurve::operator()(const double t) const
+    double TransportSolverTwophaseCompressiblePolymer::ResCOnCurve::operator()(const double t) const
     {
         double x_of_t[2];
         double x_c[2];
@@ -619,7 +619,7 @@ namespace Opm
 
 
 
-    void TransportModelCompressiblePolymer::solveSingleCell(const int cell)
+    void TransportSolverTwophaseCompressiblePolymer::solveSingleCell(const int cell)
     {
         switch (method_) {
         case Bracketing:
@@ -640,7 +640,7 @@ namespace Opm
     }
 
 
-    void TransportModelCompressiblePolymer::solveSingleCellBracketing(int cell)
+    void TransportSolverTwophaseCompressiblePolymer::solveSingleCellBracketing(int cell)
     {
 
         ResidualEquation res_eq(*this, cell);
@@ -672,7 +672,7 @@ namespace Opm
     // Newton method, where we first try a Newton step. Then, if it does not work well, we look for
     // the zero of either the residual in s or the residual in c along a specified piecewise linear
     // curve. In these cases, we can use a robust 1d solver.
-    void TransportModelCompressiblePolymer::solveSingleCellGradient(int cell)
+    void TransportSolverTwophaseCompressiblePolymer::solveSingleCellGradient(int cell)
     {
         int iters_used_falsi = 0;
         const int max_iters_split = maxit_;
@@ -829,7 +829,7 @@ namespace Opm
         }
     }
 
-    void TransportModelCompressiblePolymer::solveSingleCellNewton(int cell, bool use_sc,
+    void TransportSolverTwophaseCompressiblePolymer::solveSingleCellNewton(int cell, bool use_sc,
                                                                   bool use_explicit_step)
     {
         const int max_iters_split = maxit_;
@@ -975,7 +975,7 @@ namespace Opm
     }
 
 
-    void TransportModelCompressiblePolymer::solveMultiCell(const int num_cells, const int* cells)
+    void TransportSolverTwophaseCompressiblePolymer::solveMultiCell(const int num_cells, const int* cells)
     {
         double max_s_change = 0.0;
         double max_c_change = 0.0;
@@ -1032,21 +1032,21 @@ namespace Opm
         //           << num_iters << " iterations." << std::endl;
     }
 
-    void TransportModelCompressiblePolymer::fracFlow(double s, double c, double cmax,
+    void TransportSolverTwophaseCompressiblePolymer::fracFlow(double s, double c, double cmax,
                                                      int cell, double& ff) const
     {
         double dummy[2];
         fracFlowBoth(s, c, cmax, cell, ff,  dummy, false);
     }
 
-    void TransportModelCompressiblePolymer::fracFlowWithDer(double s, double c, double cmax,
+    void TransportSolverTwophaseCompressiblePolymer::fracFlowWithDer(double s, double c, double cmax,
                                                             int cell, double& ff,
                                                             double* dff_dsdc) const
     {
         fracFlowBoth(s, c, cmax, cell, ff, dff_dsdc, true);
     }
 
-    void TransportModelCompressiblePolymer::fracFlowBoth(double s, double c, double cmax, int cell,
+    void TransportSolverTwophaseCompressiblePolymer::fracFlowBoth(double s, double c, double cmax, int cell,
                                                          double& ff, double* dff_dsdc,
                                                          bool if_with_der) const
     {
@@ -1077,12 +1077,12 @@ namespace Opm
         }
     }
 
-    void TransportModelCompressiblePolymer::computeMc(double c, double& mc) const
+    void TransportSolverTwophaseCompressiblePolymer::computeMc(double c, double& mc) const
     {
         polyprops_.computeMc(c, mc);
     }
 
-    void TransportModelCompressiblePolymer::computeMcWithDer(double c, double& mc,
+    void TransportSolverTwophaseCompressiblePolymer::computeMcWithDer(double c, double& mc,
                                                              double &dmc_dc) const
     {
         polyprops_.computeMcWithDer(c, mc, dmc_dc);
@@ -1090,14 +1090,14 @@ namespace Opm
 
 
 
-    TransportModelCompressiblePolymer::ResidualSGrav::ResidualSGrav(const ResidualCGrav& res_c_eq,
+    TransportSolverTwophaseCompressiblePolymer::ResidualSGrav::ResidualSGrav(const ResidualCGrav& res_c_eq,
                                                                     const double c_init)
         : res_c_eq_(res_c_eq),
           c(c_init)
     {
     }
 
-    double TransportModelCompressiblePolymer::ResidualSGrav::operator()(double s) const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualSGrav::operator()(double s) const
     {
         return res_c_eq_.computeGravResidualS(s, c);
     }
@@ -1113,7 +1113,7 @@ namespace Opm
     // where ...
     // Influxes are negative, outfluxes positive.
 
-    TransportModelCompressiblePolymer::ResidualCGrav::ResidualCGrav(const TransportModelCompressiblePolymer& tmodel,
+    TransportSolverTwophaseCompressiblePolymer::ResidualCGrav::ResidualCGrav(const TransportSolverTwophaseCompressiblePolymer& tmodel,
                                                                     const std::vector<int>& cells,
                                                                     const int pos,
                                                                     const double* gravflux) // Always oriented towards next in column. Size = colsize - 1.
@@ -1146,7 +1146,7 @@ namespace Opm
         tm.polyprops_.adsorption(c0, cmax0, c_ads0);
     }
 
-    double TransportModelCompressiblePolymer::ResidualCGrav::operator()(double c) const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualCGrav::operator()(double c) const
     {
 
         ResidualSGrav res_s(*this);
@@ -1159,7 +1159,7 @@ namespace Opm
 
     }
 
-    double TransportModelCompressiblePolymer::ResidualCGrav::computeGravResidualS(double s, double c) const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualCGrav::computeGravResidualS(double s, double c) const
     {
 
         double mobcell[2];
@@ -1185,7 +1185,7 @@ namespace Opm
         return res;
     }
 
-    double TransportModelCompressiblePolymer::ResidualCGrav::computeGravResidualC(double s, double c) const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualCGrav::computeGravResidualC(double s, double c) const
     {
 
         double mobcell[2];
@@ -1216,13 +1216,13 @@ namespace Opm
         return res;
     }
 
-    double TransportModelCompressiblePolymer::ResidualCGrav::lastSaturation() const
+    double TransportSolverTwophaseCompressiblePolymer::ResidualCGrav::lastSaturation() const
     {
         return last_s;
     }
 
 
-    void TransportModelCompressiblePolymer::mobility(double s, double c, int cell, double* mob) const
+    void TransportSolverTwophaseCompressiblePolymer::mobility(double s, double c, int cell, double* mob) const
     {
         double sat[2] = { s, 1.0 - s };
         double relperm[2];
@@ -1231,7 +1231,7 @@ namespace Opm
         polyprops_.effectiveMobilities(c, cmax0_[cell], &visc_[np*cell], relperm, mob);
     }
 
-    void TransportModelCompressiblePolymer::initGravity(const double* grav)
+    void TransportSolverTwophaseCompressiblePolymer::initGravity(const double* grav)
     {
         // Set up transmissibilities.
         std::vector<double> htrans(grid_.cell_facepos[grid_.number_of_cells]);
@@ -1245,7 +1245,7 @@ namespace Opm
         gravity_ = grav;
     }
 
-    void TransportModelCompressiblePolymer::initGravityDynamic()
+    void TransportSolverTwophaseCompressiblePolymer::initGravityDynamic()
     {
         // Set up gravflux_ = T_ij g [   (b_w,i rho_w,S - b_o,i rho_o,S) (z_i - z_f)
         //                             + (b_w,j rho_w,S - b_o,j rho_o,S) (z_f - z_j) ]
@@ -1276,7 +1276,7 @@ namespace Opm
     }
 
 
-    void TransportModelCompressiblePolymer::solveSingleCellGravity(const std::vector<int>& cells,
+    void TransportSolverTwophaseCompressiblePolymer::solveSingleCellGravity(const std::vector<int>& cells,
                                                                    const int pos,
                                                                    const double* gravflux)
     {
@@ -1303,7 +1303,7 @@ namespace Opm
         mobility(saturation_[cell], concentration_[cell], cell, &mob_[2*cell]);
     }
 
-    int TransportModelCompressiblePolymer::solveGravityColumn(const std::vector<int>& cells)
+    int TransportSolverTwophaseCompressiblePolymer::solveGravityColumn(const std::vector<int>& cells)
     {
         // Set up column gravflux.
         const int nc = cells.size();
@@ -1363,7 +1363,7 @@ namespace Opm
     }
 
 
-    void TransportModelCompressiblePolymer::solveGravity(const std::vector<std::vector<int> >& columns,
+    void TransportSolverTwophaseCompressiblePolymer::solveGravity(const std::vector<std::vector<int> >& columns,
                                                          const double dt,
                                                          std::vector<double>& saturation,
                                                          std::vector<double>& surfacevol,
@@ -1409,7 +1409,7 @@ namespace Opm
 
     }
 
-    void TransportModelCompressiblePolymer::scToc(const double* x, double* x_c) const {
+    void TransportSolverTwophaseCompressiblePolymer::scToc(const double* x, double* x_c) const {
         x_c[0] = x[0];
         if (x[0] < 1e-2*tol_) {
             x_c[1] = 0.5*polyprops_.cMax();

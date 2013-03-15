@@ -47,7 +47,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/polymer/TransportModelCompressiblePolymer.hpp>
+#include <opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
@@ -130,7 +130,7 @@ namespace Opm
         const double* gravity_;
         // Solvers
         CompressibleTpfaPolymer psolver_;
-        TransportModelCompressiblePolymer tsolver_;
+        TransportSolverTwophaseCompressiblePolymer tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
         // Misc. data
@@ -198,7 +198,7 @@ namespace Opm
                    param.getDefault("nl_pressure_maxiter", 10),
                    gravity, wells_manager.c_wells()),
           tsolver_(grid, props, poly_props,
-                   TransportModelCompressiblePolymer::Bracketing,
+                   TransportSolverTwophaseCompressiblePolymer::Bracketing,
                    param.getDefault("nl_tolerance", 1e-9),
                    param.getDefault("nl_maxiter", 30))
     {
@@ -223,12 +223,12 @@ namespace Opm
         max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
 
         // Transport related init.
-        TransportModelCompressiblePolymer::SingleCellMethod method;
+        TransportSolverTwophaseCompressiblePolymer::SingleCellMethod method;
         std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
         if (method_string == "Bracketing") {
-            method = Opm::TransportModelCompressiblePolymer::Bracketing;
+            method = Opm::TransportSolverTwophaseCompressiblePolymer::Bracketing;
         } else if (method_string == "Newton") {
-            method = Opm::TransportModelCompressiblePolymer::Newton;
+            method = Opm::TransportSolverTwophaseCompressiblePolymer::Newton;
         } else {
             THROW("Unknown method: " << method_string);
         }

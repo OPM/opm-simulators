@@ -47,7 +47,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/polymer/TransportModelPolymer.hpp>
+#include <opm/polymer/TransportSolverTwophasePolymer.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
@@ -141,7 +141,7 @@ namespace Opm
         const double* gravity_;
         // Solvers
         IncompTpfaPolymer psolver_;
-        TransportModelPolymer tsolver_;
+        TransportSolverTwophasePolymer tsolver_;
         // Needed by column-based gravity segregation solver.
         std::vector< std::vector<int> > columns_;
         // Misc. data
@@ -208,7 +208,7 @@ namespace Opm
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
                    gravity, wells_manager.c_wells(), src, bcs),
-          tsolver_(grid, props, poly_props, TransportModelPolymer::Bracketing,
+          tsolver_(grid, props, poly_props, TransportSolverTwophasePolymer::Bracketing,
                    param.getDefault("nl_tolerance", 1e-9),
                    param.getDefault("nl_maxiter", 30))
     {
@@ -239,12 +239,12 @@ namespace Opm
         max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
 
         // Transport related init.
-        TransportModelPolymer::SingleCellMethod method;
+        TransportSolverTwophasePolymer::SingleCellMethod method;
         std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
         if (method_string == "Bracketing") {
-            method = Opm::TransportModelPolymer::Bracketing;
+            method = Opm::TransportSolverTwophasePolymer::Bracketing;
         } else if (method_string == "Newton") {
-            method = Opm::TransportModelPolymer::Newton;
+            method = Opm::TransportSolverTwophasePolymer::Newton;
         } else {
             THROW("Unknown method: " << method_string);
         }
