@@ -43,6 +43,7 @@ namespace Opm
         /// \param[in] maxit     Maximum number of non-linear iterations used.
         TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
                                        const Opm::IncompPropertiesInterface& props,
+                                       const double* gravity,
                                        const double tol,
                                        const int maxit);
 
@@ -60,29 +61,25 @@ namespace Opm
                            const double dt,
                            TwophaseState& state);
 
-        /// Initialise quantities needed by gravity solver.
-        /// \param[in] grav    gravity vector
-        void initGravity(const double* grav);
-
         /// Solve for gravity segregation.
         /// This uses a column-wise nonlinear Gauss-Seidel approach.
-        /// It assumes that the input columns contain cells in a single
-        /// vertical stack, that do not interact with other columns (for
-        /// gravity segregation.
-        /// \param[in] columns           Vector of cell-columns.
+        /// It assumes that the grid can be divided into vertical columns
+        /// that do not interact with each other (for gravity segregation).
         /// \param[in] porevolume        Array of pore volumes.
         /// \param[in] dt                Time step.
-        /// \param[in, out] saturation   Phase saturations.
-        void solveGravity(const std::vector<std::vector<int> >& columns,
-                          const double* porevolume,
+        /// \param[in, out] state        Reservoir state. Calling solveGravity() will read state.faceflux() and
+        ///                              read and write state.saturation().
+        void solveGravity(const double* porevolume,
                           const double dt,
-                          std::vector<double>& saturation);
+                          TwophaseState& state);
 
         //// Return the number of iterations used by the reordering solver.
         //// \return vector of iteration per cell
         const std::vector<int>& getReorderIterations() const;
 
     private:
+        void initGravity(const double* grav);
+        void initColumns();
         virtual void solveSingleCell(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
 
@@ -111,6 +108,7 @@ namespace Opm
         std::vector<double> gravflux_;
         std::vector<double> mob_;
         std::vector<double> s0_;
+        std::vector<std::vector<int> > columns_;
 
         // Storing the upwind and downwind graphs for experiments.
         std::vector<int> ia_upw_;

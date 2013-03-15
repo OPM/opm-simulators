@@ -21,6 +21,7 @@
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
+#include <opm/core/utility/ColumnExtract.hpp>
 #include <opm/core/utility/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
@@ -42,6 +43,7 @@ namespace Opm
 
     TransportSolverTwophaseReorder::TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
                                                                    const Opm::IncompPropertiesInterface& props,
+                                                                   const double* gravity,
                                                                    const double tol,
                                                                    const int maxit)
         : grid_(grid),
@@ -74,6 +76,10 @@ namespace Opm
             cells[i] = i;
         }
         props.satRange(props.numCells(), &cells[0], &smin_[0], &smax_[0]);
+        if (gravity) {
+            initGravity(gravity);
+            initColumns();
+        }
     }
 
 
@@ -552,9 +558,16 @@ namespace Opm
 
 
 
+    void TransportSolverTwophaseReorder::initColumns()
+    {
+        extractColumn(grid_, columns_);
+    }
+
+
+
     void TransportSolverTwophaseReorder::solveSingleCellGravity(const std::vector<int>& cells,
-                                                        const int pos,
-                                                        const double* gravflux)
+                                                                const int pos,
+                                                                const double* gravflux)
     {
         const int cell = cells[pos];
         GravityResidual res(*this, cells, pos, gravflux);
@@ -622,10 +635,9 @@ namespace Opm
 
 
 
-    void TransportSolverTwophaseReorder::solveGravity(const std::vector<std::vector<int> >& columns,
-                                              const double* porevolume,
-                                              const double dt,
-                                              std::vector<double>& saturation)
+    void TransportSolverTwophaseReorder::solveGravity(const double* porevolume,
+                                                      const double dt,
+                                                      TwophaseState& state)
     {
         // Initialize mobilities.
         const int nc = grid_.number_of_cells;
@@ -634,7 +646,7 @@ namespace Opm
             cells[c] = c;
         }
         mob_.resize(2*nc);
-        props_.relperm(cells.size(), &saturation[0], &cells[0], &mob_[0], 0);
+        props_.relperm(cells.size(), &state.saturation()[0], &cells[0], &mob_[0], 0);
         const double* mu = props_.viscosity();
         for (int c = 0; c < nc; ++c) {
             mob_[2*c] /= mu[0];
@@ -644,18 +656,18 @@ namespace Opm
         // Set up other variables.
         porevolume_ = porevolume;
         dt_ = dt;
-        toWaterSat(saturation, saturation_);
+        toWaterSat(state.saturation(), saturation_);
 
         // Solve on all columns.
         int num_iters = 0;
-        for (std::vector<std::vector<int> >::size_type i = 0; i < columns.size(); i++) {
+        for (std::vector<std::vector<int> >::size_type i = 0; i < columns_.size(); i++) {
             // std::cout << "==== new column" << std::endl;
-            num_iters += solveGravityColumn(columns[i]);
+            num_iters += solveGravityColumn(columns_[i]);
         }
         std::cout << "Gauss-Seidel column solver average iterations: "
-                  << double(num_iters)/double(columns.size()) << std::endl;
+                  << double(num_iters)/double(columns_.size()) << std::endl;
 
-        toBothSat(saturation_, saturation);
+        toBothSat(saturation_, state.saturation());
     }
 
 } // namespace Opm
