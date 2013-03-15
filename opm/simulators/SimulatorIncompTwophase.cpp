@@ -340,7 +340,7 @@ namespace Opm
                                                                    param.getDefault("nl_maxiter", 30)));
 
         } else {
-            if (rock_comp_props->isActive()) {
+            if (rock_comp_props && rock_comp_props->isActive()) {
                 THROW("The implicit pressure solver cannot handle rock compressibility.");
             }
             if (use_segregation_split_) {
