@@ -318,7 +318,7 @@ namespace Opm
                                         WellsManager& wells_manager,
                                         const std::vector<double>& src,
                                         const FlowBoundaryConditions* bcs,
-                                        LinearSolverInterface& linsolverp,
+                                        LinearSolverInterface& linsolver,
                                         const double* gravity)
         : grid_(grid),
           props_(props),
@@ -327,14 +327,14 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           src_(src),
           bcs_(bcs),
-          psolver_(grid, props, rock_comp_props, linsolverp,
+          psolver_(grid, props, rock_comp_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
                    param.getDefault("nl_pressure_maxiter", 10),
                    gravity, wells_manager.c_wells(), src, bcs)
     {
         const bool use_reorder = param.getDefault("use_reorder", true);
-        if(use_reorder){
+        if (use_reorder) {
             /*
             tsolver_.reset(new Opm::TransportModelTwoPhase(grid, props, rock_comp_props, linsolver,
                                                            param.getDefault("nl_pressure_residual_tolerance", 0.0),
@@ -342,7 +342,7 @@ namespace Opm
                                                            param.getDefault("nl_pressure_maxiter", 10),
                                                            gravity, wells_manager.c_wells(), src, bcs));
                                                            */
-        }else{
+        } else {
             //Opm::ImplicitTransportDetails::NRReport  rpt;
             Opm::ImplicitTransportDetails::NRControl ctrl;
             ctrl.max_it = param.getDefault("max_it", 20);
@@ -367,7 +367,6 @@ namespace Opm
                                grid,
                                props,
                                param));
-
         }
 
         // For output.
@@ -392,7 +391,7 @@ namespace Opm
 
         // Transport related init.
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
-        use_segregation_split_ = param.getDefault("use_segregation_split", false);        
+        use_segregation_split_ = param.getDefault("use_segregation_split", false);
         // Misc init.
         const int num_cells = grid.number_of_cells;
         allcells_.resize(num_cells);
