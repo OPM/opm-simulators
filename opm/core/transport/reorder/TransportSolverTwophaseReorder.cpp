@@ -41,9 +41,9 @@ namespace Opm
 
 
     TransportSolverTwophaseReorder::TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
-                                                   const Opm::IncompPropertiesInterface& props,
-                                                   const double tol,
-                                                   const int maxit)
+                                                                   const Opm::IncompPropertiesInterface& props,
+                                                                   const double tol,
+                                                                   const int maxit)
         : grid_(grid),
           props_(props),
           tol_(tol),
@@ -76,17 +76,22 @@ namespace Opm
         props.satRange(props.numCells(), &cells[0], &smin_[0], &smax_[0]);
     }
 
-    void TransportSolverTwophaseReorder::solve(const double* darcyflux,
-                                       const double* porevolume,
-                                       const double* source,
-                                       const double dt,
-                                       std::vector<double>& saturation)
+
+    TransportSolverTwophaseReorder::~TransportSolverTwophaseReorder()
     {
-        darcyflux_ = darcyflux;
+    }
+
+
+    void TransportSolverTwophaseReorder::solve(const double* porevolume,
+                                               const double* source,
+                                               const double dt,
+                                               TwophaseState& state)
+    {
+        darcyflux_ = &state.faceflux()[0];
         porevolume_ = porevolume;
         source_ = source;
         dt_ = dt;
-        toWaterSat(saturation, saturation_);
+        toWaterSat(state.saturation(), saturation_);
 
 #ifdef EXPERIMENT_GAUSS_SEIDEL
         std::vector<int> seq(grid_.number_of_cells);
@@ -97,14 +102,14 @@ namespace Opm
                                &ia_upw_[0], &ja_upw_[0]);
         const int nf = grid_.number_of_faces;
         std::vector<double> neg_darcyflux(nf);
-        std::transform(darcyflux, darcyflux + nf, neg_darcyflux.begin(), std::negate<double>());
+        std::transform(darcyflux_, darcyflux_ + nf, neg_darcyflux.begin(), std::negate<double>());
         compute_sequence_graph(&grid_, &neg_darcyflux[0],
                                &seq[0], &comp[0], &ncomp,
                                &ia_downw_[0], &ja_downw_[0]);
 #endif
         std::fill(reorder_iterations_.begin(),reorder_iterations_.end(),0);
-        reorderAndTransport(grid_, darcyflux);
-        toBothSat(saturation_, saturation);
+        reorderAndTransport(grid_, darcyflux_);
+        toBothSat(saturation_, state.saturation());
     }
 
 

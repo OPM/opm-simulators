@@ -21,6 +21,7 @@
 #define OPM_TRANSPORTSOLVERTWOPHASEREORDER_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
+#include <opm/core/transport/TransportSolverTwophaseInterface.hpp>
 #include <vector>
 #include <map>
 #include <ostream>
@@ -32,7 +33,7 @@ namespace Opm
     class IncompPropertiesInterface;
 
     /// Implements a reordering transport solver for incompressible two-phase flow.
-    class TransportSolverTwophaseReorder : public ReorderSolverInterface
+    class TransportSolverTwophaseReorder : public TransportSolverTwophaseInterface, ReorderSolverInterface
     {
     public:
         /// Construct solver.
@@ -45,17 +46,19 @@ namespace Opm
                                        const double tol,
                                        const int maxit);
 
+        // Virtual destructor.
+        virtual ~TransportSolverTwophaseReorder();
+
         /// Solve for saturation at next timestep.
-        /// \param[in] darcyflux         Array of signed face fluxes.
-        /// \param[in] porevolume        Array of pore volumes.
-        /// \param[in] source            Transport source term.
-        /// \param[in] dt                Time step.
-        /// \param[in, out] saturation   Phase saturations.
-        void solve(const double* darcyflux,
-                   const double* porevolume,
-                   const double* source,
-                   const double dt,
-                   std::vector<double>& saturation);
+        /// \param[in]      porevolume   Array of pore volumes.
+        /// \param[in]      source       Transport source term. For interpretation see Opm::computeTransportSource().
+        /// \param[in]      dt           Time step.
+        /// \param[in, out] state        Reservoir state. Calling solve() will read state.faceflux() and
+        ///                              read and write state.saturation().
+        virtual void solve(const double* porevolume,
+                           const double* source,
+                           const double dt,
+                           TwophaseState& state);
 
         /// Initialise quantities needed by gravity solver.
         /// \param[in] grav    gravity vector
