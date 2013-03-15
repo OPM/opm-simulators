@@ -343,29 +343,19 @@ namespace Opm
                                                            gravity, wells_manager.c_wells(), src, bcs));
                                                            */
         } else {
-            //Opm::ImplicitTransportDetails::NRReport  rpt;
-            Opm::ImplicitTransportDetails::NRControl ctrl;
-            ctrl.max_it = param.getDefault("max_it", 20);
-            ctrl.verbosity = param.getDefault("verbosity", 0);
-            ctrl.max_it_ls = param.getDefault("max_it_ls", 5);
-            const bool guess_old_solution = param.getDefault("guess_old_solution", false);
-            Opm::SimpleFluid2pWrappingProps fluid(props);
+            if (rock_comp_props->isActive()) {
+                THROW("The implicit pressure solver cannot handle rock compressibility.");
+            }
             std::vector<double> porevol;
-            //if (rock_comp->isActive()) {
-            //    computePorevolume(grid, props->porosity(), rock_comp, state.pressure(), porevol);
-            //} else {
-                computePorevolume(grid, props.porosity(), porevol);
-            //}
-            SinglePointUpwindTwoPhase<Opm::SimpleFluid2pWrappingProps>
-                    model(fluid, grid, porevol, gravity, guess_old_solution);
-            model.initGravityTrans(grid_, psolver_.getHalfTrans());
+            computePorevolume(grid, props.porosity(), porevol);
             tsolver_.reset(new Opm::TransportSolverTwophaseImplicit(
                                wells_manager,
                                *rock_comp_props,
-                               ctrl,
-                               model,
                                grid,
                                props,
+                               porevol,
+                               gravity,
+                               psolver_.getHalfTrans(),
                                param));
         }
 
