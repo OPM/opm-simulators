@@ -35,14 +35,13 @@ namespace Opm
 
         /// Solve for saturation at next timestep.
         /// \param[in]      porevolume   Array of pore volumes.
-        /// \param[in]      source       Transport source term.
+        /// \param[in]      source       Transport source term. For interpretation see Opm::computeTransportSource().
         /// \param[in]      dt           Time step.
-        /// \param[in]      wstate       Well state.
-        /// \param[in, out] state        Reservoir state. Saturation will be modified.
+        /// \param[in, out] state        Reservoir state. Calling solve() will read state.faceflux() and
+        ///                              read and write state.saturation().
         virtual void solve(const double* porevolume,
                            const double* source,
                            const double dt,
-                           const WellState& wstate,
                            TwophaseState& state) = 0;
     };
 
