@@ -550,12 +550,9 @@ namespace Opm
             double injected[2] = { 0.0 };
             double produced[2] = { 0.0 };
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                //tsolver_.solve(&state.faceflux()[0], &initial_porevol[0], &transport_src[0],
-                //              stepsize, state.saturation());
                 tsolver_->solve(&transport_src[0],
                                 &porevol[0],
                                 stepsize,
-                                well_state,
                                 state);
 
                 double substep_injected[2] = { 0.0 };
