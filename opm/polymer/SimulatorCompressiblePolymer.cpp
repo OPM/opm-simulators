@@ -28,7 +28,7 @@
 #include <opm/polymer/CompressibleTpfaPolymer.hpp>
 
 #include <opm/core/grid.h>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -43,7 +43,7 @@
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-#include <opm/core/utility/ColumnExtract.hpp>
+#include <opm/core/grid/ColumnExtract.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>

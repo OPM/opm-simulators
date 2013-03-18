@@ -25,11 +25,11 @@
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
-#include <opm/core/GridManager.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/grid/GridManager.hpp>
+#include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/initState.hpp>
+#include <opm/core/simulator/initState.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
