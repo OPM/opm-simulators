@@ -26,7 +26,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/initState.hpp>
