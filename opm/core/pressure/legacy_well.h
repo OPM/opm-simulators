@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_WELL_HEADER_INCLUDED
-#define OPM_WELL_HEADER_INCLUDED
+#ifndef OPM_LEGACY_WELL_HEADER_INCLUDED
+#define OPM_LEGACY_WELL_HEADER_INCLUDED
 
 /**
  * \file
@@ -133,4 +133,4 @@ derive_cell_wells(int nc, well_t *W, int *cwpos, int *cwells);
 }
 #endif
 
-#endif /* OPM_WELL_HEADER_INCLUDED */
+#endif /* OPM_LEGACY_WELL_HEADER_INCLUDED */
