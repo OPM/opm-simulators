@@ -9,7 +9,7 @@
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/grid.h>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/simulator/TwophaseState.hpp>
