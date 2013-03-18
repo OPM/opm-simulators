@@ -43,7 +43,11 @@ namespace Opm
         ///                                 FastAMG=3, KAMG=4 };
         ///   linsolver_save_system         false
         ///   linsolver_save_filename       <empty string>
-        ///   linsolver_max_iterations      0 (unlimited)
+        ///   linsolver_max_iterations      0 (unlimited=5000)
+        ///   linsolver_residual_tolerance  1e-8
+        ///   linsolver_smooth_steps        2
+        ///   linsolver_prolongate_factor   1.6
+        ///   linsolver_verbosity           0
         LinearSolverIstl();
 
         /// Construct from parameters
