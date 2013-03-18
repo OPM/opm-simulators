@@ -32,7 +32,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/core/grid.h>
-#include <opm/core/GridManager.hpp>
+#include <opm/core/grid/GridManager.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <iostream>
 #include <fstream>
