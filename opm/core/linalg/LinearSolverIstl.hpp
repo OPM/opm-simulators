@@ -40,6 +40,7 @@ namespace Opm
         ///   linsolver_verbosity           0
         ///   linsolver_type                1 ( = CG_AMG), alternatives are:
         ///                                 CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2
+        ///                                 FastAMG=3, KAMG=4 };
         ///   linsolver_save_system         false
         ///   linsolver_save_filename       <empty string>
         ///   linsolver_max_iterations      0 (unlimited)
@@ -83,11 +84,16 @@ namespace Opm
     private:
         double linsolver_residual_tolerance_;
         int linsolver_verbosity_;
-        enum LinsolverType { CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2 };
+        enum LinsolverType { CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2, FastAMG=3, KAMG=4 };
         LinsolverType linsolver_type_;
         bool linsolver_save_system_;
         std::string linsolver_save_filename_;
         int linsolver_max_iterations_;
+        /** \brief The number smoothing steps to apply in AMG. */
+        int linsolver_smooth_steps_;
+        /** \brief The factor to scale the coarse grid correction with. */
+        double linsolver_prolongate_factor_;
+      
     };
 
 
