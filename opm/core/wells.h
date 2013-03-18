@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_NEWWELLS_H_INCLUDED
-#define OPM_NEWWELLS_H_INCLUDED
+#ifndef OPM_WELLS_H_INCLUDED
+#define OPM_WELLS_H_INCLUDED
 
 
 /**
@@ -332,4 +332,4 @@ clone_wells(const struct Wells *W);
 }
 #endif
 
-#endif /* OPM_NEWWELLS_H_INCLUDED */
+#endif /* OPM_WELLS_H_INCLUDED */

@@ -27,7 +27,7 @@
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>

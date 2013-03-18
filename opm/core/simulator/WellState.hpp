@@ -20,7 +20,7 @@
 #ifndef OPM_WELLSTATE_HEADER_INCLUDED
 #define OPM_WELLSTATE_HEADER_INCLUDED
 
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <vector>
 
 namespace Opm

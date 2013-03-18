@@ -19,7 +19,7 @@
 
 #include <opm/core/wells/WellsGroup.hpp>
 #include <cmath>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 namespace Opm

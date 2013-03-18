@@ -20,7 +20,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/linalg/sparse_sys.h>
 

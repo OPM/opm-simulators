@@ -1,7 +1,7 @@
 #ifndef OPM_PRODUCTIONSPECIFICATION_HPP
 #define	OPM_PRODUCTIONSPECIFICATION_HPP
 
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 
 namespace Opm
 {

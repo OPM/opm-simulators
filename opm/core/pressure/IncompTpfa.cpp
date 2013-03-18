@@ -31,7 +31,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>

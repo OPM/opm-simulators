@@ -1,7 +1,7 @@
 #ifndef OPM_INJECTORSPECIFICATION_HPP
 #define	OPM_INJECTORSPECIFICATION_HPP
 
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 
 namespace Opm
 {

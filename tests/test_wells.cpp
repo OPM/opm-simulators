@@ -28,7 +28,7 @@
 #define BOOST_TEST_MODULE WellsModuleTest
 #include <boost/test/unit_test.hpp>
 
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 
 #include <iostream>
 #include <vector>
