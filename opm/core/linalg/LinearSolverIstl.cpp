@@ -61,10 +61,10 @@ namespace Opm
         LinearSolverInterface::LinearSolverReport
         solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
 
+#ifdef HAS_DUNE_FAST_AMG
         LinearSolverInterface::LinearSolverReport
         solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
 
-#ifdef HAS_DUNE_FAST_AMG
         LinearSolverInterface::LinearSolverReport
         solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
 #endif
@@ -178,7 +178,11 @@ namespace Opm
             res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
             break;
         case KAMG:
+#ifdef HAS_DUNE_FAST_AMG
             res = solveKAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+#else
+            throw std::runtime_error("KAMG not supported with this version of DUNE");
+#endif
             break;
         case FastAMG:
 #ifdef HAS_DUNE_FAST_AMG
@@ -298,6 +302,7 @@ namespace Opm
     }
 
 
+#ifdef HAS_DUNE_FAST_AMG
     LinearSolverInterface::LinearSolverReport
     solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
     {
@@ -321,8 +326,7 @@ namespace Opm
         typedef Dune::SeqSOR<Mat,Vector,Vector>        Smoother;
 #endif
         typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
-        typedef Dune::Amg::KAMG<Operator,Vector,Smoother,Dune::Amg::SequentialInformation,Dune::GeneralizedPCGSolver<Vector>, std::allocator<Vector> >   Precond;
-
+        typedef Dune::Amg::KAMG<Operator,Vector,Smoother,Dune::Amg::SequentialInformation>   Precond;
         Operator opA(A);
 
         // Construct preconditioner.
@@ -351,7 +355,6 @@ namespace Opm
         return res;
     }
 
-#ifdef HAS_DUNE_FAST_AMG
     LinearSolverInterface::LinearSolverReport
     solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
     {
