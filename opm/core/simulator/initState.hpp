@@ -114,6 +114,6 @@ namespace Opm
 
 } // namespace Opm
 
-#include <opm/core/utility/initState_impl.hpp>
+#include <opm/core/simulator/initState_impl.hpp>
 
 #endif // OPM_INITSTATE_HEADER_INCLUDED
