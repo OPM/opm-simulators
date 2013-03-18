@@ -20,7 +20,7 @@
 #ifndef OPM_INCOMPPROPERTIESDEFAULTPOLYMER_HEADER_INCLUDED
 #define OPM_INCOMPPROPERTIESDEFAULTPOLYMER_HEADER_INCLUDED
 
-#include <opm/core/fluid/IncompPropertiesBasic.hpp>
+#include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>

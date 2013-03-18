@@ -19,7 +19,7 @@
 
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <map>
 
 namespace Opm

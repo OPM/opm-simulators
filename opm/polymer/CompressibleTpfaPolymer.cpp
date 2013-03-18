@@ -20,8 +20,8 @@
 
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/CompressibleTpfaPolymer.hpp>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
@@ -32,7 +32,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>

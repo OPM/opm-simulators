@@ -22,12 +22,12 @@
 
 
 #include <opm/core/grid.h>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/utility/SparseVector.hpp>
 #include <vector>
 

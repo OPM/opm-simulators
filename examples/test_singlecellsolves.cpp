@@ -25,26 +25,26 @@
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
-#include <opm/core/GridManager.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/grid/GridManager.hpp>
+#include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/initState.hpp>
+#include <opm/core/simulator/initState.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/fluid/IncompPropertiesBasic.hpp>
-#include <opm/core/fluid/IncompPropertiesFromDeck.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/IncompPropertiesBasic.hpp>
+#include <opm/core/props/IncompPropertiesFromDeck.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/IncompTpfaPolymer.hpp>
-#include <opm/polymer/TransportModelPolymer.hpp>
+#include <opm/polymer/TransportSolverTwophasePolymer.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -154,22 +154,22 @@ main(int argc, char** argv)
     // Reordering solver.
     const double nl_tolerance = param.getDefault("nl_tolerance", 1e-9);
     const int nl_maxiter = param.getDefault("nl_maxiter", 30);
-    Opm::TransportModelPolymer::SingleCellMethod method;
+    Opm::TransportSolverTwophasePolymer::SingleCellMethod method;
     std::string method_string = param.getDefault("single_cell_method", std::string("Bracketing"));
     if (method_string == "Bracketing") {
-        method = Opm::TransportModelPolymer::Bracketing;
+        method = Opm::TransportSolverTwophasePolymer::Bracketing;
     } else if (method_string == "Newton") {
-        method = Opm::TransportModelPolymer::Newton;
+        method = Opm::TransportSolverTwophasePolymer::Newton;
     } else if (method_string == "Gradient") {
-        method = Opm::TransportModelPolymer::Gradient;
+        method = Opm::TransportSolverTwophasePolymer::Gradient;
     } else if (method_string == "NewtonSimpleSC") {
-        method = Opm::TransportModelPolymer::NewtonSimpleSC;
+        method = Opm::TransportSolverTwophasePolymer::NewtonSimpleSC;
     } else if (method_string == "NewtonSimpleC") {
-        method = Opm::TransportModelPolymer::NewtonSimpleC;
+        method = Opm::TransportSolverTwophasePolymer::NewtonSimpleC;
     } else {
         THROW("Unknown method: " << method_string);
     }
-    Opm::TransportModelPolymer reorder_model(*grid->c_grid(), *props, poly_props,
+    Opm::TransportSolverTwophasePolymer reorder_model(*grid->c_grid(), *props, poly_props,
                                              method, nl_tolerance, nl_maxiter);
 
     // Warn if any parameters are unused.
@@ -187,7 +187,7 @@ main(int argc, char** argv)
     // but the compressibility term in the solver
     // assumes that all inflow is water inflow. Therefore
     // one must zero the compressibility term in
-    // TransportModelPolymer line 365 before compiling this program.
+    // TransportSolverTwophasePolymer line 365 before compiling this program.
     // (To fix this we should add proper all-phase src terms.)
     std::vector<double> transport_src = src;
     const double dt = param.getDefault("dt", 1.0);
@@ -232,7 +232,7 @@ main(int argc, char** argv)
 
 #ifdef PROFILING
             // Extract residual counts.
-            typedef std::list<Opm::TransportModelPolymer::Newton_Iter> ListRes;
+            typedef std::list<Opm::TransportSolverTwophasePolymer::Newton_Iter> ListRes;
             const ListRes& res_counts = reorder_model.res_counts;
             double counts[2] = { 0, 0 };
             for (ListRes::const_iterator it = res_counts.begin(); it != res_counts.end(); ++it) {

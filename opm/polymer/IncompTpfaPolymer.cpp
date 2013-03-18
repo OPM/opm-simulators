@@ -20,8 +20,8 @@
 
 #include <opm/polymer/IncompTpfaPolymer.hpp>
 
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
@@ -33,7 +33,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>
