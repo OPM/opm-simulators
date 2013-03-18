@@ -42,8 +42,8 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
-#include <opm/core/transport/reorder/TofReorder.hpp>
-#include <opm/core/transport/reorder/TofDiscGalReorder.hpp>
+#include <opm/core/tof/TofReorder.hpp>
+#include <opm/core/tof/TofDiscGalReorder.hpp>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>

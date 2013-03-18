@@ -27,7 +27,7 @@
 #define BOOST_TEST_MODULE DGBasisTest
 #include <boost/test/unit_test.hpp>
 
-#include <opm/core/transport/reorder/DGBasis.hpp>
+#include <opm/core/tof/DGBasis.hpp>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/grid.h>
 #include <cmath>
