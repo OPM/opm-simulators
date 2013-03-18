@@ -28,7 +28,7 @@
 #include <opm/core/pressure/IncompTpfa.hpp>
 
 #include <opm/core/grid.h>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
