@@ -19,8 +19,8 @@
 
 #include <opm/core/grid/CellQuadrature.hpp>
 #include <opm/core/grid/FaceQuadrature.hpp>
-#include <opm/core/transport/reorder/TofDiscGalReorder.hpp>
-#include <opm/core/transport/reorder/DGBasis.hpp>
+#include <opm/core/tof/TofDiscGalReorder.hpp>
+#include <opm/core/tof/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
