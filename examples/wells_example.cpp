@@ -6,7 +6,7 @@
 #include <opm/core/utility/initState.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/GridManager.hpp>
+#include <opm/core/grid/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
 #include <opm/core/newwells.h>
