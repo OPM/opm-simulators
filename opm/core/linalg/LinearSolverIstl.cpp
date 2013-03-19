@@ -39,6 +39,7 @@
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/kamg.hh>
 
 #include <stdexcept>
 
@@ -46,14 +47,13 @@
 namespace Opm
 {
 
-    using namespace Dune; // While not great, it's okay in a cpp file like this.
 
     namespace {
-        typedef FieldVector<double, 1   > VectorBlockType;
-        typedef FieldMatrix<double, 1, 1> MatrixBlockType;
-        typedef BCRSMatrix <MatrixBlockType>        Mat;
-        typedef BlockVector<VectorBlockType>        Vector;
-        typedef MatrixAdapter<Mat,Vector,Vector> Operator;
+        typedef Dune::FieldVector<double, 1   > VectorBlockType;
+        typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
+        typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
+        typedef Dune::BlockVector<VectorBlockType>        Vector;
+        typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
 
         LinearSolverInterface::LinearSolverReport
         solveCG_ILU0(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
@@ -61,6 +61,14 @@ namespace Opm
         LinearSolverInterface::LinearSolverReport
         solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
 
+#ifdef HAS_DUNE_FAST_AMG
+        LinearSolverInterface::LinearSolverReport
+        solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
+
+        LinearSolverInterface::LinearSolverReport
+        solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
+#endif
+    
         LinearSolverInterface::LinearSolverReport
         solveBiCGStab_ILU0(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
     } // anonymous namespace
@@ -73,7 +81,9 @@ namespace Opm
           linsolver_verbosity_(0),
           linsolver_type_(CG_AMG),
           linsolver_save_system_(false),
-          linsolver_max_iterations_(0)
+          linsolver_max_iterations_(0),
+          linsolver_smooth_steps_(2),
+          linsolver_prolongate_factor_(1.6)
     {
     }
 
@@ -85,7 +95,9 @@ namespace Opm
           linsolver_verbosity_(0),
           linsolver_type_(CG_AMG),
           linsolver_save_system_(false),
-          linsolver_max_iterations_(0)
+          linsolver_max_iterations_(0),
+          linsolver_smooth_steps_(2),
+          linsolver_prolongate_factor_(1.6)
     {
         linsolver_residual_tolerance_ = param.getDefault("linsolver_residual_tolerance", linsolver_residual_tolerance_);
         linsolver_verbosity_ = param.getDefault("linsolver_verbosity", linsolver_verbosity_);
@@ -95,6 +107,9 @@ namespace Opm
             linsolver_save_filename_ = param.getDefault("linsolver_save_filename", std::string("linsys"));
         }
         linsolver_max_iterations_ = param.getDefault("linsolver_max_iterations", linsolver_max_iterations_);
+        linsolver_smooth_steps_ = param.getDefault("linsolver_smooth_steps", linsolver_smooth_steps_);
+        linsolver_prolongate_factor_ = param.getDefault("linsolver_prolongate_factor", linsolver_prolongate_factor_);
+        
     }
 
 
@@ -151,16 +166,32 @@ namespace Opm
         
         int maxit = linsolver_max_iterations_;
         if (maxit == 0) {
-            maxit = A.N();
+            maxit = 5000;
         }
 
-        LinearSolverReport res;
+        LinearSolverReport res;        
         switch (linsolver_type_) {
         case CG_ILU0:
             res = solveCG_ILU0(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
             break;
         case CG_AMG:
             res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+            break;
+        case KAMG:
+#ifdef HAS_DUNE_FAST_AMG
+            res = solveKAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+#else
+            throw std::runtime_error("KAMG not supported with this version of DUNE");
+#endif
+            break;
+        case FastAMG:
+#ifdef HAS_DUNE_FAST_AMG
+            res = solveFastAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+#else
+	    if(linsolver_verbosity_)
+	      std::cerr<<"Fast AMG is not available; falling back to CG preconditioned with the normal one"<<std::endl;
+	    res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+#endif
             break;
         case BiCGStab_ILU0:
             res = solveBiCGStab_ILU0(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
@@ -194,13 +225,13 @@ namespace Opm
         Operator opA(A);
 
         // Construct preconditioner.
-        SeqILU0<Mat,Vector,Vector> precond(A, 1.0);
+        Dune::SeqILU0<Mat,Vector,Vector> precond(A, 1.0);
 
         // Construct linear solver.
-        CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
+        Dune::CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
 
         // Solve system.
-        InverseOperatorResult result;
+        Dune::InverseOperatorResult result;
         linsolve.apply(x, b, result);
 
         // Output results.
@@ -213,35 +244,35 @@ namespace Opm
 
 
 
+#define FIRST_DIAGONAL 1
+#define SYMMETRIC 1
+#define SMOOTHER_ILU 0
+#define ANISOTROPIC_3D 0
 
     LinearSolverInterface::LinearSolverReport
     solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
     {
         // Solve with AMG solver.
-#define FIRST_DIAGONAL 1
-#define SYMMETRIC 1
-#define SMOOTHER_ILU 1
-#define ANISOTROPIC_3D 0
 
 #if FIRST_DIAGONAL
-        typedef Amg::FirstDiagonal CouplingMetric;
+        typedef Dune::Amg::FirstDiagonal CouplingMetric;
 #else
-        typedef Amg::RowSum        CouplingMetric;
+        typedef Dune::Amg::RowSum        CouplingMetric;
 #endif
 
 #if SYMMETRIC
-        typedef Amg::SymmetricCriterion<Mat,CouplingMetric>   CriterionBase;
+        typedef Dune::Amg::SymmetricCriterion<Mat,CouplingMetric>   CriterionBase;
 #else
-        typedef Amg::UnSymmetricCriterion<Mat,CouplingMetric> CriterionBase;
+        typedef Dune::Amg::UnSymmetricCriterion<Mat,CouplingMetric> CriterionBase;
 #endif
 
 #if SMOOTHER_ILU
-        typedef SeqILU0<Mat,Vector,Vector>        Smoother;
+        typedef Dune::SeqILU0<Mat,Vector,Vector>        Smoother;
 #else
-        typedef SeqSSOR<Mat,Vector,Vector>        Smoother;
+        typedef Dune::SeqSOR<Mat,Vector,Vector>        Smoother;
 #endif
-        typedef Amg::CoarsenCriterion<CriterionBase> Criterion;
-        typedef Amg::AMG<Operator,Vector,Smoother>   Precond;
+        typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
+        typedef Dune::Amg::AMG<Operator,Vector,Smoother>   Precond;
 
         Operator opA(A);
 
@@ -254,13 +285,13 @@ namespace Opm
 #if ANISOTROPIC_3D
         criterion.setDefaultValuesAnisotropic(3, 2);
 #endif
-        Precond precond(opA, criterion, smootherArgs);
-
+        Precond precond(opA, criterion, smootherArgs, 1,1,1);
+        
         // Construct linear solver.
-        CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
+        Dune::CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
 
         // Solve system.
-        InverseOperatorResult result;
+        Dune::InverseOperatorResult result;
         linsolve.apply(x, b, result);
 
         // Output results.
@@ -272,6 +303,112 @@ namespace Opm
     }
 
 
+#ifdef HAS_DUNE_FAST_AMG
+    LinearSolverInterface::LinearSolverReport
+    solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
+    {
+        // Solve with AMG solver.
+
+#if FIRST_DIAGONAL
+        typedef Dune::Amg::FirstDiagonal CouplingMetric;
+#else
+        typedef Dune::Amg::RowSum        CouplingMetric;
+#endif
+
+#if SYMMETRIC
+        typedef Dune::Amg::SymmetricCriterion<Mat,CouplingMetric>   CriterionBase;
+#else
+        typedef Dune::Amg::UnSymmetricCriterion<Mat,CouplingMetric> CriterionBase;
+#endif
+
+#if SMOOTHER_ILU
+        typedef Dune::SeqILU0<Mat,Vector,Vector>        Smoother;
+#else
+        typedef Dune::SeqSOR<Mat,Vector,Vector>        Smoother;
+#endif
+        typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
+        typedef Dune::Amg::KAMG<Operator,Vector,Smoother,Dune::Amg::SequentialInformation>   Precond;
+        Operator opA(A);
+
+        // Construct preconditioner.
+        double relax = 1;
+        Precond::SmootherArgs smootherArgs;
+        smootherArgs.relaxationFactor = relax;
+        Criterion criterion;
+        criterion.setDebugLevel(verbosity);
+#if ANISOTROPIC_3D
+        criterion.setDefaultValuesAnisotropic(3, 2);
+#endif
+        Precond precond(opA, criterion, smootherArgs, 1,1,1,2,.2);
+
+        // Construct linear solver.
+        Dune::GeneralizedPCGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
+
+        // Solve system.
+        Dune::InverseOperatorResult result;
+        linsolve.apply(x, b, result);
+
+        // Output results.
+        LinearSolverInterface::LinearSolverReport res;
+        res.converged = result.converged;
+        res.iterations = result.iterations;
+        res.residual_reduction = result.reduction;
+        return res;
+    }
+
+    LinearSolverInterface::LinearSolverReport
+    solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
+    {
+        // Solve with AMG solver.
+
+#if FIRST_DIAGONAL
+        typedef Dune::Amg::FirstDiagonal CouplingMetric;
+#else
+        typedef Dune::Amg::RowSum        CouplingMetric;
+#endif
+
+#if SYMMETRIC
+        typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
+#else
+	typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
+#endif
+
+        typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
+        typedef Dune::Amg::FastAMG<Operator,Vector>   Precond;
+
+        Operator opA(A);
+        
+        // Construct preconditioner.
+	Criterion criterion;
+        criterion.setDebugLevel(verbosity);
+#if ANISOTROPIC_3D
+        criterion.setDefaultValuesAnisotropic(3, 2);
+#else 
+        criterion.setDefaultValuesIsotropic(3,2);
+#endif
+        criterion.setProlongationDampingFactor(1.6);
+	Dune::Amg::Parameters parms;
+	parms.setDebugLevel(verbosity);
+	parms.setNoPreSmoothSteps(1);
+	parms.setNoPostSmoothSteps(1);
+        Precond precond(opA, criterion, parms);
+
+        // Construct linear solver.
+        Dune::GeneralizedPCGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
+
+        // Solve system.
+        Dune::InverseOperatorResult result;
+        linsolve.apply(x, b, result);
+
+        // Output results.
+        LinearSolverInterface::LinearSolverReport res;
+        res.converged = result.converged;
+        res.iterations = result.iterations;
+        res.residual_reduction = result.reduction;
+        return res;
+    }
+#endif
+
 
     LinearSolverInterface::LinearSolverReport
     solveBiCGStab_ILU0(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
@@ -279,13 +416,13 @@ namespace Opm
         Operator opA(A);
 
         // Construct preconditioner.
-        SeqILU0<Mat,Vector,Vector> precond(A, 1.0);
+        Dune::SeqILU0<Mat,Vector,Vector> precond(A, 1.0);
 
         // Construct linear solver.
-        BiCGSTABSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
+        Dune::BiCGSTABSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
 
         // Solve system.
-        InverseOperatorResult result;
+        Dune::InverseOperatorResult result;
         linsolve.apply(x, b, result);
 
         // Output results.
