@@ -78,6 +78,19 @@ main(int argc, char** argv)
     parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
+#ifndef HAVE_SUITESPARSE_UMFPACK_H
+    // This is an extra check to intercept a potentially invalid request for the
+    // implicit transport solver as early as possible for the user.
+    {
+        const bool use_reorder = param.getDefault("use_reorder", true);
+        if (!use_reorder) {
+            THROW("Cannot use implicit transport solver without UMFPACK. "
+                  "Either reconfigure opm-core with SuiteSparse/UMFPACK support and recompile, "
+                  "or use the reordering solver (use_reorder=true).");
+        }
+    }
+#endif
+
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
     boost::scoped_ptr<EclipseGridParser> deck;
