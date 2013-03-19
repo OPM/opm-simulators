@@ -78,7 +78,7 @@ main(int argc, char** argv)
     parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
-#ifndef HAVE_SUITESPARSE_UMFPACK_H
+#if ! HAVE_SUITESPARSE_UMFPACK_H
     // This is an extra check to intercept a potentially invalid request for the
     // implicit transport solver as early as possible for the user.
     {
