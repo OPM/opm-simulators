@@ -188,7 +188,8 @@ namespace Opm
 #ifdef HAS_DUNE_FAST_AMG
             res = solveFastAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
 #else
-	    #warning "Fast AMG is not available; falling back to CG preconditioned with the normal one"
+	    if(linsolver_verbosity_)
+	      std::cerr<<"Fast AMG is not available; falling back to CG preconditioned with the normal one"<<std::endl;
 	    res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
 #endif
             break;
@@ -370,7 +371,6 @@ namespace Opm
         typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
 #else
 	typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
-	#warn "Only symmetric matrices are supported currently. Computing anyway..."
 #endif
 
         typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
