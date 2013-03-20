@@ -88,7 +88,7 @@ struct WellControls
     enum WellControlType *type;
 
     /**
-     * Array of control targets
+     * Array of control targets.
      */
     double *target;
 

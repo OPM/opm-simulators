@@ -49,7 +49,7 @@ enum surface_component { WATER = 0, OIL = 1, GAS = 2 };
 /**
  * Basic representation of well topology.
  */
-struct WellCompletions {
+struct LegacyWellCompletions {
     int  number_of_wells; /**< Number of wells. */
     int *well_connpos;    /**< Well topology start pointers. */
     int *well_cells;      /**< Well connections */
@@ -58,7 +58,7 @@ struct WellCompletions {
 /**
  * Basic representation of well controls.
  */
-struct WellControls {
+struct LegacyWellControls {
     enum well_type    *type;    /**< Individual well taxonomy */
     enum well_control *ctrl;    /**< Individual well controls */
     double            *target;  /**< Control target */
@@ -79,13 +79,13 @@ struct completion_data {
  * Convenience type alias to preserve backwards compatibility in
  * well topology definitions used by hybridised pressure solver.
  */
-typedef struct WellCompletions well_t;
+typedef struct LegacyWellCompletions well_t;
 
 /**
  * Convenience type alias to preserve backwards compatiblity in
  * well control definitions used by hybridised pressure solver.
  */
-typedef struct WellControls    well_control_t;
+typedef struct LegacyWellControls    well_control_t;
 
 /**
  * Allocate cell-to-well mapping (as a sparse array).
