@@ -35,22 +35,6 @@ namespace Opm
 
 
     /// Construct solver.
-    /// \param[in] grid      A 2d or 3d grid.
-    /// \param[in] param     Parameters for the solver.
-    ///                      The following parameters are accepted (defaults):
-    ///   use_cvi (false)                         Use ECVI velocity interpolation.
-    ///   use_limiter (false)                     Use a slope limiter. If true, the next three parameters are used.
-    ///   limiter_relative_flux_threshold (1e-3)  Ignore upstream fluxes below this threshold, relative to total cell flux.
-    ///   limiter_method ("MinUpwindFace")        Limiter method used. Accepted methods are:
-    ///                                             MinUpwindFace              Limit cell tof to >= inflow face tofs.
-    ///   limiter_usage ("DuringComputations")    Usage pattern for limiter. Accepted choices are:
-    ///                                             DuringComputations         Apply limiter to cells as they are computed,
-    ///                                                                        so downstream cells' solutions may be affected
-    ///                                                                        by limiting in upstream cells.
-    ///                                             AsPostProcess              Apply in dependency order, but only after
-    ///                                                                        computing (unlimited) solution.
-    ///                                             AsSimultaneousPostProcess  Apply to each cell independently, using un-
-    ///                                                                        limited solution in neighbouring cells.
     TofDiscGalReorder::TofDiscGalReorder(const UnstructuredGrid& grid,
                                          const parameter::ParameterGroup& param)
         : grid_(grid),
@@ -111,18 +95,6 @@ namespace Opm
 
 
     /// Solve for time-of-flight.
-    /// \param[in]  darcyflux         Array of signed face fluxes.
-    /// \param[in]  porevolume        Array of pore volumes.
-    /// \param[in]  source            Source term. Sign convention is:
-    ///                                 (+) inflow flux,
-    ///                                 (-) outflow flux.
-    /// \param[in]  degree            Polynomial degree of DG basis functions used.
-    /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
-    ///                               The values are ordered by cell, meaning that
-    ///                               the K coefficients corresponding to the first
-    ///                               cell comes before the K coefficients corresponding
-    ///                               to the second cell etc.
-    ///                               K depends on degree and grid dimension.
     void TofDiscGalReorder::solveTof(const double* darcyflux,
                                                   const double* porevolume,
                                                   const double* source,

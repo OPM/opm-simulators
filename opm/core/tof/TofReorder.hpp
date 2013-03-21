@@ -34,10 +34,10 @@ namespace Opm
     /// Implements a first-order finite volume solver for
     /// (single-phase) time-of-flight using reordering.
     /// The equation solved is:
-    ///     v \cdot \grad\tau = \phi
-    /// where v is the fluid velocity, \tau is time-of-flight and
-    /// \phi is the porosity. This is a boundary value problem, where
-    /// \tau is specified to be zero on all inflow boundaries.
+    ///     \f[v \cdot \nabla\tau = \phi\f]
+    /// where \f$ v \f$ is the fluid velocity, \f$ \tau \f$ is time-of-flight and
+    /// \f$ \phi \f$ is the porosity. This is a boundary value problem, where
+    /// \f$ \tau \f$ is specified to be zero on all inflow boundaries.
     class TofReorder : public ReorderSolverInterface
     {
     public:

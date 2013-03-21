@@ -30,6 +30,7 @@ namespace Opm
 
     /// Construct solver.
     /// \param[in] grid      A 2d or 3d grid.
+    /// \param[in] use_multidim_upwind  If true, use multidimensional tof upwinding.
     TofReorder::TofReorder(const UnstructuredGrid& grid,
                            const bool use_multidim_upwind)
         : grid_(grid),
