@@ -39,6 +39,7 @@ namespace Opm
         /// Construct solver.
         /// \param[in] grid      A 2d or 3d grid.
         /// \param[in] props     Rock and fluid properties.
+        /// \param[in] gravity   Gravity vector (null for no gravity).
         /// \param[in] tol       Tolerance used in the solver.
         /// \param[in] maxit     Maximum number of non-linear iterations used.
         TransportSolverTwophaseReorder(const UnstructuredGrid& grid,
@@ -51,6 +52,8 @@ namespace Opm
         virtual ~TransportSolverTwophaseReorder();
 
         /// Solve for saturation at next timestep.
+        /// Note that this only performs advection by total velocity, and
+        /// no gravity segregation.
         /// \param[in]      porevolume   Array of pore volumes.
         /// \param[in]      source       Transport source term. For interpretation see Opm::computeTransportSource().
         /// \param[in]      dt           Time step.
