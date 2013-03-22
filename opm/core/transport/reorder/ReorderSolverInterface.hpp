@@ -30,7 +30,7 @@ namespace Opm
     /// Interface for implementing reordering solvers.
     /// A subclass must provide the solveSingleCell() and
     /// solveMultiCell methods, and is expected to implement a solve()
-    /// method that will have an interface geared to the its own
+    /// method that will have an interface geared to its own
     /// needs. (The solve() method is therefore not virtual in this
     /// class.) The reorderAndTransport() method is provided as an aid
     /// to implementing solve() in subclasses, together with the

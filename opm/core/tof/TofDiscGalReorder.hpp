@@ -40,8 +40,8 @@ namespace Opm
     /// (single-phase) time-of-flight using reordering.
     /// The equation solved is:
     ///     \f[v \cdot \nabla\tau = \phi\f]
-    /// where \f$ v \f$ is the fluid velocity, \f$ \tau \f$ is time-of-flight and
-    /// \f$ \phi \f$ is the porosity. This is a boundary value problem, where
+    /// in which \f$ v \f$ is the fluid velocity, \f$ \tau \f$ is time-of-flight and
+    /// \f$ \phi \f$ is the porosity. This is a boundary value problem, and
     /// \f$ \tau \f$ is specified to be zero on all inflow boundaries.
     /// The user may specify the polynomial degree of the basis function space
     /// used, but only degrees 0 and 1 are supported so far.
