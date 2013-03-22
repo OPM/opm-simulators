@@ -52,28 +52,24 @@ namespace Opm
         /// \param[in] grid      A 2d or 3d grid.
         /// \param[in] param     Parameters for the solver.
         ///                      The following parameters are accepted (defaults):\n
-        ///   <ul>
-        ///   <li> \c dg_degree (0)                           Polynomial degree of basis functions.
-        ///   <li> \c use_tensorial_basis (false)             Use tensor-product basis, interpreting dg_degree as
+        ///   - \c dg_degree (0)                           -- Polynomial degree of basis functions.
+        ///   - \c use_tensorial_basis (false)             -- Use tensor-product basis, interpreting dg_degree as
         ///                                                   bi/tri-degree not total degree.
-        ///   <li> \c use_cvi (false)                         Use ECVI velocity interpolation.
-        ///   <li> \c use_limiter (false)                     Use a slope limiter. If true, the next three parameters are used.
-        ///   <li> \c limiter_relative_flux_threshold (1e-3)  Ignore upstream fluxes below this threshold, relative to total cell flux.
-        ///   <li> \c limiter_method ("MinUpwindFace")        Limiter method used. Accepted methods are:
-        ///             <ul>
-        ///             <li> MinUpwindFace              Limit cell tof to >= inflow face tofs.
-        ///             <li> MinUpwindAverage           Limit cell tof to >= inflow cell average tofs.
-        ///             </ul>
-        ///   <li> \c limiter_usage ("DuringComputations")    Usage pattern for limiter. Accepted choices are:
-        ///             <ul>
-        ///             <li> DuringComputations         Apply limiter to cells as they are computed,
+        ///   - \c use_cvi (false)                         -- Use ECVI velocity interpolation.
+        ///   - \c use_limiter (false)                     -- Use a slope limiter. If true, the next three parameters are used.
+        ///   - \c limiter_relative_flux_threshold (1e-3)  -- Ignore upstream fluxes below this threshold,
+        ///                                                   relative to total cell flux.
+        ///   - \c limiter_method ("MinUpwindFace")        -- Limiter method used. Accepted methods are:
+        ///             - MinUpwindFace              -- Limit cell tof to >= inflow face tofs.
+        ///             - MinUpwindAverage           -- Limit cell tof to >= inflow cell average tofs.
+        ///   - \c limiter_usage ("DuringComputations")    -- Usage pattern for limiter. Accepted choices are:
+        ///             - DuringComputations         -- Apply limiter to cells as they are computed,
         ///                                             so downstream cells' solutions may be affected
         ///                                             by limiting in upstream cells.
-        ///             <li> AsPostProcess              Apply in dependency order, but only after
+        ///             - AsPostProcess              -- Apply in dependency order, but only after
         ///                                             computing (unlimited) solution.
-        ///             <li> AsSimultaneousPostProcess  Apply to each cell independently, using un-
+        ///             - AsSimultaneousPostProcess  -- Apply to each cell independently, using un-
         ///                                             limited solution in neighbouring cells.
-        ///   </ul>
         TofDiscGalReorder(const UnstructuredGrid& grid,
                           const parameter::ParameterGroup& param);
 
