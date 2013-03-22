@@ -30,26 +30,32 @@ namespace Opm
     class IncompPropertiesInterface;
     class BlackoilPropertiesInterface;
 
+    /// \file
+    /// 
+    /// Functions for initializing a reservoir state.
+
     /// Initialize a two-phase state from parameters.
     /// The following parameters are accepted (defaults):
-    ///    convection_testcase   (false)    Water in the 'left' part of the grid.
-    ///    ref_pressure          (100)      Initial pressure in bar for all cells
+    ///    - convection_testcase   (false) -- Water in the 'left' part of the grid.
+    ///    - ref_pressure          (100)   -- Initial pressure in bar for all cells
     ///                                     (if convection_testcase is true),
     ///                                     or pressure at woc depth.
-    ///    segregation_testcase  (false)    Water above the woc instead of below.
-    ///    water_oil_contact     (none)     Depth of water-oil contact (woc).
-    ///    init_saturation       (none)     Initial water saturation for all cells.
+    ///    - segregation_testcase  (false) -- Water above the woc instead of below.
+    ///    - water_oil_contact     (none)  -- Depth of water-oil contact (woc).
+    ///    - init_saturation       (none)  -- Initial water saturation for all cells.
+    ///
     /// If convection_testcase is true, the saturation is initialised
     /// as indicated, and pressure is initialised to a constant value
     /// ('ref_pressure').
     /// If segregation_testcase is true, the saturation is initialised
     /// as indicated, and pressure is initialised hydrostatically.
     /// Otherwise we have 3 cases:
-    ///   1) If 'water_oil_contact' is given, saturation is initialised
+    ///   1. If 'water_oil_contact' is given, saturation is initialised
     ///      accordingly.
-    ///   2) If 'water_oil_contact' is not given, but 'init_saturation'
+    ///   2. If 'water_oil_contact' is not given, but 'init_saturation'
     ///      is given, water saturation is set to that value everywhere.
-    ///   3) If neither are given, water saturation is set to minimum.
+    ///   3. If neither are given, water saturation is set to minimum.
+    ///
     /// In all three cases, pressure is initialised hydrostatically.
     /// In case 2) and 3), the depth of the first cell is used as reference depth.
     template <class State>
@@ -61,20 +67,20 @@ namespace Opm
 
     /// Initialize a blackoil state from parameters.
     /// The following parameters are accepted (defaults):
-    ///    convection_testcase   (false)    Water in the 'left' part of the grid.
-    ///    ref_pressure          (100)      Initial pressure in bar for all cells
+    ///    - convection_testcase   (false) -- Water in the 'left' part of the grid.
+    ///    - ref_pressure          (100)   -- Initial pressure in bar for all cells
     ///                                     (if convection_testcase is true),
     ///                                     or pressure at woc depth.
-    ///    water_oil_contact     (none)     Depth of water-oil contact (woc).
+    ///    - water_oil_contact     (none)  -- Depth of water-oil contact (woc).
     /// If convection_testcase is true, the saturation is initialised
     /// as indicated, and pressure is initialised to a constant value
     /// ('ref_pressure').
     /// Otherwise we have 2 cases:
-    ///   1) If 'water_oil_contact' is given, saturation is initialised
+    ///   1. If 'water_oil_contact' is given, saturation is initialised
     ///      accordingly.
-    ///   2) Water saturation is set to minimum.
+    ///   2. Water saturation is set to minimum.
     /// In both cases, pressure is initialised hydrostatically.
-    /// In case 2), the depth of the first cell is used as reference depth.
+    /// In case 2., the depth of the first cell is used as reference depth.
     template <class State>
     void initStateBasic(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,

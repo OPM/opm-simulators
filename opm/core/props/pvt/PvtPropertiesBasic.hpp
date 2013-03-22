@@ -39,9 +39,9 @@ namespace Opm
 
         /// Initialize from parameters.
         /// The following parameters are accepted (defaults):
-        ///    num_phases         (2)          Must be 1, 2 or 3.
-        ///    rho1 [rho2, rho3]  (1.0e3)      Density in kg/m^3
-        ///    mu1 [mu2, mu3]     (1.0)        Viscosity in cP
+        ///   - num_phases        (2)      --  Must be 1, 2 or 3.
+        ///   - rho1, rho2, rho3  (1.0e3)  --  Density in kg/m^3
+        ///   - mu1, mu2, mu3     (1.0)    --  Viscosity in cP
         void init(const parameter::ParameterGroup& param);
 
         /// Initialize from arguments.
