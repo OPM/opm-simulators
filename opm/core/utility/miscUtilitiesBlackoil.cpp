@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>

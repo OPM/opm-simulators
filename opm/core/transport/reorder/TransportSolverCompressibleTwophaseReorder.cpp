@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/grid.h>

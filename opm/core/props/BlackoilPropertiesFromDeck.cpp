@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 

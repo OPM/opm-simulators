@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <opm/core/grid/CellQuadrature.hpp>
 #include <opm/core/grid/FaceQuadrature.hpp>
 #include <opm/core/tof/TofDiscGalReorder.hpp>

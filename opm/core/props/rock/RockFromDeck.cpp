@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/grid.h>
 #include <tr1/array>

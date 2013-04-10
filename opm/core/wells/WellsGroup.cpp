@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <opm/core/wells/WellsGroup.hpp>
 #include <cmath>
 #include <opm/core/wells.h>

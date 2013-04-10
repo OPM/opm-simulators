@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>

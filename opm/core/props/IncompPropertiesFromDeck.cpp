@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

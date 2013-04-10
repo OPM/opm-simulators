@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/pressure/CompressibleTpfa.hpp>
 #include <opm/core/pressure/tpfa/cfs_tpfa_residual.h>
 #include <opm/core/pressure/tpfa/compr_quant_general.h>

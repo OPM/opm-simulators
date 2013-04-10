@@ -1,5 +1,6 @@
 /* Copyright 2011 (c) Jostein R. Natvig <Jostein.R.Natvig at sintef.no> */
 
+#include "config.h"
 #include <opm/core/grid.h>
 
 #ifdef MATLAB_MEX_FILE

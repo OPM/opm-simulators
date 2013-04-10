@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/linalg/call_umfpack.h>

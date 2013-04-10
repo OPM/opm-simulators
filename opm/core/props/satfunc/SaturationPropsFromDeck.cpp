@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/buildUniformMonotoneTable.hpp>
