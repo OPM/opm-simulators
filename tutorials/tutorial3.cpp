@@ -1,5 +1,5 @@
+/// \cond SKIP
 /*!
-\cond SKIP
   Copyright 2012 SINTEF ICT, Applied Mathematics.
 
   This file is part of the Open Porous Media project (OPM).
@@ -16,11 +16,9 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-\endcond
 */
-#if HAVE_CONFIG_H
+/// \endcond
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <iostream>
 #include <iomanip>
