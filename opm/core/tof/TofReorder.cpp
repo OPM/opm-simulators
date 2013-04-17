@@ -219,7 +219,7 @@ namespace Opm
             // Add flux to upwind_term or downwind_term_[face|cell_factor].
             if (flux < 0.0) {
                 upwind_term += flux*face_tof_[f];
-            } else {
+            } else if (flux > 0.0) {
                 double fterm, cterm_factor;
                 multidimUpwindTerms(f, cell, fterm, cterm_factor);
                 downwind_term_face += fterm*flux;
