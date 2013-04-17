@@ -102,6 +102,8 @@ namespace Opm
         int num_tracers_;
         enum { OutsideBlock = -1 };
         std::vector<int> block_index_;       // For solveMultiCell().
+        int num_multicell_;
+        int max_size_multicell_;
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.
         mutable std::vector<int> adj_faces_; // For multidim upwind logic.

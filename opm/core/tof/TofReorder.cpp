@@ -83,7 +83,11 @@ namespace Opm
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
         }
         num_tracers_ = 0;
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
         reorderAndTransport(grid_, darcyflux);
+        std::cout << num_multicell_ << " multicell blocks with max size "
+                  << max_size_multicell_ << " cells." << std::endl;
     }
 
 
@@ -307,7 +311,9 @@ namespace Opm
             solveSingleCell(cells[i]);
         }
 #else
-        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
+        // std::cout << "Solving multi-cell dependent equation with " << num_cells << " cells." << std::endl;
+        ++num_multicell_;
+        max_size_multicell_ = std::max(max_size_multicell_, num_cells);
         // Give each cell a local index in this multi-cell block.
         for (int ci = 0; ci < num_cells; ++ci) {
             block_index_[cells[ci]] = ci;
