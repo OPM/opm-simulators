@@ -30,6 +30,7 @@ namespace Opm
 {
 
     class IncompPropertiesInterface;
+    class LinearSolverInterface;
 
     /// Implements a first-order finite volume solver for
     /// (single-phase) time-of-flight using reordering.
@@ -42,9 +43,11 @@ namespace Opm
     {
     public:
         /// Construct solver.
-        /// \param[in] grid      A 2d or 3d grid.
+        /// \param[in] grid       A 2d or 3d grid.
+        /// \param[in] linsolver  Linear solver used for multi-cell blocks.
         /// \param[in] use_multidim_upwind  If true, use multidimensional tof upwinding.
         TofReorder(const UnstructuredGrid& grid,
+                   const LinearSolverInterface& linsolver,
                    const bool use_multidim_upwind = false);
 
         /// Solve for time-of-flight.
@@ -79,6 +82,10 @@ namespace Opm
     private:
         virtual void solveSingleCell(const int cell);
         void solveSingleCellMultidimUpwind(const int cell);
+        void assembleSingleCell(const int cell,
+                                std::vector<int>& local_column,
+                                std::vector<double>& local_coefficient,
+                                double& rhs);
         virtual void solveMultiCell(const int num_cells, const int* cells);
 
         void multidimUpwindTerms(const int face, const int upwind_cell,
@@ -86,12 +93,15 @@ namespace Opm
 
     private:
         const UnstructuredGrid& grid_;
+        const LinearSolverInterface& linsolver_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
         double* tof_;
         double* tracer_;
         int num_tracers_;
+        enum { OutsideBlock = -1 };
+        std::vector<int> block_index_;       // For solveMultiCell().
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.
         mutable std::vector<int> adj_faces_; // For multidim upwind logic.

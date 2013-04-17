@@ -20,6 +20,7 @@
 #include "config.h"
 #include <opm/core/tof/TofReorder.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <numeric>
@@ -30,17 +31,21 @@ namespace Opm
 
 
     /// Construct solver.
-    /// \param[in] grid      A 2d or 3d grid.
+    /// \param[in] gri d      A 2d or 3d grid.
+    /// \param[in] linsolver  Linear solver used for multi-cell blocks.
     /// \param[in] use_multidim_upwind  If true, use multidimensional tof upwinding.
     TofReorder::TofReorder(const UnstructuredGrid& grid,
+                           const LinearSolverInterface& linsolver,
                            const bool use_multidim_upwind)
         : grid_(grid),
+          linsolver_(linsolver),
           darcyflux_(0),
           porevolume_(0),
           source_(0),
           tof_(0),
           tracer_(0),
           num_tracers_(0),
+          block_index_(grid.number_of_cells, OutsideBlock),
           use_multidim_upwind_(use_multidim_upwind)
     {
     }
@@ -195,6 +200,55 @@ namespace Opm
 
 
 
+    void TofReorder::assembleSingleCell(const int cell,
+                                        std::vector<int>& local_column,
+                                        std::vector<double>& local_coefficient,
+                                        double& rhs)
+    {
+        // Compute flux terms.
+        // Sources have zero tof, and therefore do not contribute
+        // to upwind_term. Sinks on the other hand, must be added
+        // to the downwind_flux (note sign change resulting from
+        // different sign conventions: pos. source is injection,
+        // pos. flux is outflow).
+        double downwind_flux = std::max(-source_[cell], 0.0);
+        double upwind_term = 0.0;
+        for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
+            int f = grid_.cell_faces[i];
+            double flux;
+            int other;
+            // Compute cell flux
+            if (cell == grid_.face_cells[2*f]) {
+                flux  = darcyflux_[f];
+                other = grid_.face_cells[2*f+1];
+            } else {
+                flux  =-darcyflux_[f];
+                other = grid_.face_cells[2*f];
+            }
+            // Add flux to upwind_term or downwind_flux
+            if (flux < 0.0) {
+                // Using tof == 0 on inflow, so we only add a
+                // nonzero contribution if we are on an internal
+                // face.
+                if (other != -1) {
+                    if (block_index_[other] == OutsideBlock) {
+                        upwind_term += flux*tof_[other];
+                    } else {
+                        local_column.push_back(block_index_[other]);
+                        local_coefficient.push_back(flux);
+                    }
+                }
+            } else {
+                downwind_flux += flux;
+            }
+        }
+        local_column.push_back(block_index_[cell]);
+        local_coefficient.push_back(downwind_flux);
+        rhs = porevolume_[cell] - upwind_term;
+    }
+
+
+
 
     void TofReorder::solveSingleCellMultidimUpwind(const int cell)
     {
@@ -247,10 +301,60 @@ namespace Opm
 
     void TofReorder::solveMultiCell(const int num_cells, const int* cells)
     {
+#if 0
         std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         for (int i = 0; i < num_cells; ++i) {
             solveSingleCell(cells[i]);
         }
+#else
+        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
+        // Give each cell a local index in this multi-cell block.
+        for (int ci = 0; ci < num_cells; ++ci) {
+            block_index_[cells[ci]] = ci;
+        }
+
+        // Create sparse matrix and rhs vector for block equation system.
+        std::vector<int> ia(num_cells+1);
+        std::vector<int> ja;
+        std::vector<double> sa;
+        ja.reserve(2*num_cells);
+        sa.reserve(2*num_cells);
+        std::vector<double> rhs(num_cells);
+        std::vector< std::pair<int, double> > rowdata;
+        for (int ci = 0; ci < num_cells; ++ci) {
+            ia[ci] = ja.size();
+            assembleSingleCell(cells[ci], ja, sa, rhs[ci]);
+            // We standardize sparse row format: must sort row content by column index.
+            int num_row_elem = ja.size() - ia[ci];
+            rowdata.resize(num_row_elem);
+            for (int i = 0; i < num_row_elem; ++i) {
+                rowdata[i].first = ja[ia[ci] + i];
+                rowdata[i].second = sa[ia[ci] + i];
+            }
+            std::sort(rowdata.begin(), rowdata.end());
+            for (int i = 0; i < num_row_elem; ++i) {
+                ja[ia[ci] + i] = rowdata[i].first;
+                sa[ia[ci] + i] = rowdata[i].second;
+            }
+        }
+        ia.back() = ja.size();
+        ASSERT(ja.size() == sa.size());
+
+        // Solve system.
+        std::vector<double> tof_block(num_cells);
+        LinearSolverInterface::LinearSolverReport rep
+            = linsolver_.solve(num_cells, ja.size(), &ia[0], &ja[0], &sa[0], &rhs[0], &tof_block[0]);
+        if (!rep.converged) {
+            THROW("Multicell system with " << num_cells << " failed to converge.");
+        }
+
+        // Write to global tof vector, and reset block indices to make
+        // it usable for next solveMultiCell() call.
+        for (int ci = 0; ci < num_cells; ++ci) {
+            tof_[cells[ci]] = tof_block[ci];
+            block_index_[cells[ci]] = OutsideBlock;
+        }
+#endif
     }
 
 
