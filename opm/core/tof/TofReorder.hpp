@@ -30,7 +30,6 @@ namespace Opm
 {
 
     class IncompPropertiesInterface;
-    class LinearSolverInterface;
 
     /// Implements a first-order finite volume solver for
     /// (single-phase) time-of-flight using reordering.
@@ -44,10 +43,8 @@ namespace Opm
     public:
         /// Construct solver.
         /// \param[in] grid       A 2d or 3d grid.
-        /// \param[in] linsolver  Linear solver used for multi-cell blocks.
         /// \param[in] use_multidim_upwind  If true, use multidimensional tof upwinding.
         TofReorder(const UnstructuredGrid& grid,
-                   const LinearSolverInterface& linsolver,
                    const bool use_multidim_upwind = false);
 
         /// Solve for time-of-flight.
@@ -93,7 +90,6 @@ namespace Opm
 
     private:
         const UnstructuredGrid& grid_;
-        const LinearSolverInterface& linsolver_;
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
@@ -101,16 +97,10 @@ namespace Opm
         double* tracer_;
         int num_tracers_;
         // For solveMultiCell():
-        enum { OutsideBlock = -1 };
-        std::vector<int> block_index_;
+        double gauss_seidel_tol_;
         int num_multicell_;
         int max_size_multicell_;
-        std::vector<int> ia_;
-        std::vector<int> ja_;
-        std::vector<double> sa_;
-        std::vector< std::pair<int, double> > rowdata_;
-        std::vector<double> rhs_;
-        std::vector<double> tof_block_;
+        int max_iter_multicell_;
         // For multidim upwinding:
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.

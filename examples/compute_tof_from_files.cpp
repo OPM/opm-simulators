@@ -120,9 +120,6 @@ main(int argc, char** argv)
         }
     }
 
-    // Linear solver.
-    LinearSolverFactory linsolver(param);
-
     // Choice of tof solver.
     bool use_dg = param.getDefault("use_dg", false);
     bool use_multidim_upwind = false;
@@ -166,7 +163,7 @@ main(int argc, char** argv)
     if (use_dg) {
         dg_solver->solveTof(&flux[0], &porevol[0], &src[0], tof);
     } else {
-        Opm::TofReorder tofsolver(grid, linsolver, use_multidim_upwind);
+        Opm::TofReorder tofsolver(grid, use_multidim_upwind);
         if (compute_tracer) {
             tofsolver.solveTofTracer(&flux[0], &porevol[0], &src[0], tof, tracer);
         } else {
