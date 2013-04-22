@@ -150,6 +150,7 @@ namespace Opm
 
     void TofReorder::solveSingleCell(const int cell)
     {
+#if 1
         if (use_multidim_upwind_) {
             solveSingleCellMultidimUpwind(cell);
             return;
@@ -189,7 +190,6 @@ namespace Opm
                 downwind_flux += flux;
             }
         }
-
         // Compute tof.
         tof_[cell] = (porevolume_[cell] - upwind_term)/downwind_flux;
 
@@ -200,6 +200,18 @@ namespace Opm
                 tracer_[num_tracers_*cell + tr] *= -1.0/downwind_flux;
             }
         }
+#else
+        ja_.clear();
+        sa_.clear();
+        block_index_[cell] = 0;
+        double rhs = 0.0;
+        assembleSingleCell(cell, ja_, sa_, rhs);
+        ASSERT(sa_.size() == 1);
+        ASSERT(ja_.size() == sa_.size());
+        ASSERT(ja_[0] == 0);
+        tof_[cell] = rhs/sa_[0];
+        block_index_[cell] = OutsideBlock;
+#endif
     }
 
 
@@ -305,51 +317,48 @@ namespace Opm
 
     void TofReorder::solveMultiCell(const int num_cells, const int* cells)
     {
-#if 0
-        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
-        for (int i = 0; i < num_cells; ++i) {
-            solveSingleCell(cells[i]);
-        }
-#else
-        // std::cout << "Solving multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         ++num_multicell_;
         max_size_multicell_ = std::max(max_size_multicell_, num_cells);
+#if 0
+        if (use_multidim_upwind_) {
+            THROW("Encountered multi-cell dependent block. "
+                  "Block solve not implemented for multidimensional upwind method");
+        }
+        // std::cout << "Solving multi-cell dependent equation with " << num_cells << " cells." << std::endl;
         // Give each cell a local index in this multi-cell block.
         for (int ci = 0; ci < num_cells; ++ci) {
             block_index_[cells[ci]] = ci;
         }
 
         // Create sparse matrix and rhs vector for block equation system.
-        std::vector<int> ia(num_cells+1);
-        std::vector<int> ja;
-        std::vector<double> sa;
-        ja.reserve(2*num_cells);
-        sa.reserve(2*num_cells);
-        std::vector<double> rhs(num_cells);
-        std::vector< std::pair<int, double> > rowdata;
+        ia_.clear();
+        ja_.clear();
+        sa_.clear();
+        rhs_.resize(num_cells);
+        rowdata_.clear();
         for (int ci = 0; ci < num_cells; ++ci) {
-            ia[ci] = ja.size();
-            assembleSingleCell(cells[ci], ja, sa, rhs[ci]);
+            ia_.push_back(ja_.size());
+            assembleSingleCell(cells[ci], ja_, sa_, rhs_[ci]);
             // We standardize sparse row format: must sort row content by column index.
-            int num_row_elem = ja.size() - ia[ci];
-            rowdata.resize(num_row_elem);
+            int num_row_elem = ja_.size() - ia_[ci];
+            rowdata_.resize(num_row_elem);
             for (int i = 0; i < num_row_elem; ++i) {
-                rowdata[i].first = ja[ia[ci] + i];
-                rowdata[i].second = sa[ia[ci] + i];
+                rowdata_[i].first = ja_[ia_[ci] + i];
+                rowdata_[i].second = sa_[ia_[ci] + i];
             }
-            std::sort(rowdata.begin(), rowdata.end());
+            std::sort(rowdata_.begin(), rowdata_.end());
             for (int i = 0; i < num_row_elem; ++i) {
-                ja[ia[ci] + i] = rowdata[i].first;
-                sa[ia[ci] + i] = rowdata[i].second;
+                ja_[ia_[ci] + i] = rowdata_[i].first;
+                sa_[ia_[ci] + i] = rowdata_[i].second;
             }
         }
-        ia.back() = ja.size();
-        ASSERT(ja.size() == sa.size());
+        ia_.push_back(ja_.size());
+        ASSERT(ja_.size() == sa_.size());
 
         // Solve system.
-        std::vector<double> tof_block(num_cells);
+        tof_block_.resize(num_cells);
         LinearSolverInterface::LinearSolverReport rep
-            = linsolver_.solve(num_cells, ja.size(), &ia[0], &ja[0], &sa[0], &rhs[0], &tof_block[0]);
+            = linsolver_.solve(num_cells, ja_.size(), &ia_[0], &ja_[0], &sa_[0], &rhs_[0], &tof_block_[0]);
         if (!rep.converged) {
             THROW("Multicell system with " << num_cells << " failed to converge.");
         }
@@ -357,8 +366,21 @@ namespace Opm
         // Write to global tof vector, and reset block indices to make
         // it usable for next solveMultiCell() call.
         for (int ci = 0; ci < num_cells; ++ci) {
-            tof_[cells[ci]] = tof_block[ci];
+            tof_[cells[ci]] = tof_block_[ci];
             block_index_[cells[ci]] = OutsideBlock;
+        }
+#else
+        // std::cout << "Multiblock solve with " << num_cells << " cells." << std::endl;
+        double max_delta = 1e100;
+        while (max_delta > 1e-3) {
+            max_delta = 0.0;
+            for (int ci = 0; ci < num_cells; ++ci) {
+                const int cell = cells[ci];
+                const double tof_before = tof_[cell];
+                solveSingleCell(cell);
+                max_delta = std::max(max_delta, std::fabs(tof_[cell] - tof_before));
+            }
+            // std::cout << "Max delta = " << max_delta << std::endl;
         }
 #endif
     }

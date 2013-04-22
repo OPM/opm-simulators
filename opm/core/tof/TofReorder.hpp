@@ -100,10 +100,18 @@ namespace Opm
         double* tof_;
         double* tracer_;
         int num_tracers_;
+        // For solveMultiCell():
         enum { OutsideBlock = -1 };
-        std::vector<int> block_index_;       // For solveMultiCell().
+        std::vector<int> block_index_;
         int num_multicell_;
         int max_size_multicell_;
+        std::vector<int> ia_;
+        std::vector<int> ja_;
+        std::vector<double> sa_;
+        std::vector< std::pair<int, double> > rowdata_;
+        std::vector<double> rhs_;
+        std::vector<double> tof_block_;
+        // For multidim upwinding:
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.
         mutable std::vector<int> adj_faces_; // For multidim upwind logic.
