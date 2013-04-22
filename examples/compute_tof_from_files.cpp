@@ -29,6 +29,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -120,6 +121,23 @@ main(int argc, char** argv)
         }
     }
 
+    const bool compute_tracer = param.getDefault("compute_tracer", false);
+    Opm::SparseTable<int> tracerheads;
+    {
+        std::ifstream tr_stream(param.get<std::string>("tracerheads_filename").c_str());
+        int num_rows;
+        tr_stream >> num_rows;
+        for (int row = 0; row < num_rows; ++row) {
+            int row_size;
+            tr_stream >> row_size;
+            std::vector<int> rowdata(row_size);
+            for (int elem = 0; elem < row_size; ++elem) {
+                tr_stream >> rowdata[elem];
+            }
+            tracerheads.appendRow(rowdata.begin(), rowdata.end());
+        }
+    }
+
     // Choice of tof solver.
     bool use_dg = param.getDefault("use_dg", false);
     bool use_multidim_upwind = false;
@@ -130,7 +148,6 @@ main(int argc, char** argv)
     } else {
         use_multidim_upwind = param.getDefault("use_multidim_upwind", false);
     }
-    bool compute_tracer = param.getDefault("compute_tracer", false);
     if (use_dg && compute_tracer) {
         THROW("DG for tracer not yet implemented.");
     }
@@ -165,7 +182,7 @@ main(int argc, char** argv)
     } else {
         Opm::TofReorder tofsolver(grid, use_multidim_upwind);
         if (compute_tracer) {
-            tofsolver.solveTofTracer(&flux[0], &porevol[0], &src[0], tof, tracer);
+            tofsolver.solveTofTracer(&flux[0], &porevol[0], &src[0], tracerheads, tof, tracer);
         } else {
             tofsolver.solveTof(&flux[0], &porevol[0], &src[0], tof);
         }

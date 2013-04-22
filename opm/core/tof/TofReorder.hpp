@@ -24,12 +24,14 @@
 #include <vector>
 #include <map>
 #include <ostream>
+
 struct UnstructuredGrid;
 
 namespace Opm
 {
 
     class IncompPropertiesInterface;
+    template <typename T> class SparseTable;
 
     /// Implements a first-order finite volume solver for
     /// (single-phase) time-of-flight using reordering.
@@ -67,12 +69,15 @@ namespace Opm
         /// \param[in]  source            Source term. Sign convention is:
         ///                                 (+) inflow flux,
         ///                                 (-) outflow flux.
+        /// \param[in]  tracerheads       Table containing one row per tracer, and each
+        ///                               row contains the source cells for that tracer.
         /// \param[out] tof               Array of time-of-flight values (1 per cell).
         /// \param[out] tracer            Array of tracer values (N per cell, where N is
         ///                               the number of cells c for which source[c] > 0.0).
         void solveTofTracer(const double* darcyflux,
                             const double* porevolume,
                             const double* source,
+                            const SparseTable<int>& tracerheads,
                             std::vector<double>& tof,
                             std::vector<double>& tracer);
 

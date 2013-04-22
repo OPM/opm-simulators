@@ -21,6 +21,7 @@
 #include <opm/core/tof/TofReorder.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/SparseTable.hpp>
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -57,9 +58,9 @@ namespace Opm
     ///                                 (-) outflow flux.
     /// \param[out] tof               Array of time-of-flight values.
     void TofReorder::solveTof(const double* darcyflux,
-                                           const double* porevolume,
-                                           const double* source,
-                                           std::vector<double>& tof)
+                              const double* porevolume,
+                              const double* source,
+                              std::vector<double>& tof)
     {
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
@@ -101,12 +102,15 @@ namespace Opm
     /// \param[in]  source            Source term. Sign convention is:
     ///                                 (+) inflow flux,
     ///                                 (-) outflow flux.
+    /// \param[in]  tracerheads       Table containing one row per tracer, and each
+    ///                               row contains the source cells for that tracer.
     /// \param[out] tof               Array of time-of-flight values (1 per cell).
     /// \param[out] tracer            Array of tracer values (N per cell, where N is
     ///                               the number of cells c for which source[c] > 0.0).
     void TofReorder::solveTofTracer(const double* darcyflux,
                                     const double* porevolume,
                                     const double* source,
+                                    const SparseTable<int>& tracerheads,
                                     std::vector<double>& tof,
                                     std::vector<double>& tracer)
     {
@@ -123,26 +127,33 @@ namespace Opm
         tof.resize(grid_.number_of_cells);
         std::fill(tof.begin(), tof.end(), 0.0);
         tof_ = &tof[0];
+
         // Find the tracer heads (injectors).
-        std::vector<int> tracerheads;
-        for (int c = 0; c < grid_.number_of_cells; ++c) {
-            if (source[c] > 0.0) {
-                tracerheads.push_back(c);
-            }
-        }
         num_tracers_ = tracerheads.size();
         tracer.resize(grid_.number_of_cells*num_tracers_);
         std::fill(tracer.begin(), tracer.end(), 0.0);
         for (int tr = 0; tr < num_tracers_; ++tr) {
-            tracer[tracerheads[tr]*num_tracers_ + tr] = 1.0;
+            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+                const int cell = tracerheads[tr][i];
+                tracer[cell*num_tracers_ + tr] = 1.0;
+            }
         }
+
         tracer_ = &tracer[0];
         if (use_multidim_upwind_) {
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
             THROW("Multidimensional upwind not yet implemented for tracer.");
         }
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
         reorderAndTransport(grid_, darcyflux);
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+        }
     }
 
 
