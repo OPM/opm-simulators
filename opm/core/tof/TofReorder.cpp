@@ -387,6 +387,9 @@ namespace Opm
         // This will over-weight the immediate upstream cell value in an extruded 2d grid with
         // one layer (top and bottom no-flow faces will enter the computation) compared to the
         // original 2d case. Improvements are welcome.
+        // Note: Modified algorithm to consider faces that share even a single vertex with
+        // the input face. This reduces the problem of non-edge-conformal grids, but does not
+        // eliminate it entirely.
 
         // Identify the adjacent faces of the upwind cell.
         const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
@@ -404,11 +407,11 @@ namespace Opm
                 for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
                     num_common += std::count(face_nodes_beg, face_nodes_end, *f_iter);
                 }
-                if (num_common == grid_.dimensions - 1) {
-                    // Neighbours over an edge (3d) or vertex (2d).
+                // Before: neighbours over an edge (3d) or vertex (2d).
+                // Now: neighbours across a vertex.
+                // if (num_common == grid_.dimensions - 1) {
+                if (num_common > 0) {
                     adj_faces_.push_back(f);
-                } else {
-                    ASSERT(num_common == 0);
                 }
             }
         }
@@ -416,7 +419,9 @@ namespace Opm
         // Indentify adjacent faces with inflows, compute omega_star, omega,
         // add up contributions.
         const int num_adj = adj_faces_.size();
-        ASSERT(num_adj == face_nodes_end - face_nodes_beg);
+        // The assertion below only holds if the grid is edge-conformal.
+        // No longer testing, since method no longer requires it.
+        // ASSERT(num_adj == face_nodes_end - face_nodes_beg);
         const double flux_face = std::fabs(darcyflux_[face]);
         face_term = 0.0;
         cell_term_factor = 0.0;
