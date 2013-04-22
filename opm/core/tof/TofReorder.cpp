@@ -30,7 +30,7 @@ namespace Opm
 
 
     /// Construct solver.
-    /// \param[in] gri d      A 2d or 3d grid.
+    /// \param[in] grid      A 2d or 3d grid.
     /// \param[in] use_multidim_upwind  If true, use multidimensional tof upwinding.
     TofReorder::TofReorder(const UnstructuredGrid& grid,
                            const bool use_multidim_upwind)
@@ -189,6 +189,7 @@ namespace Opm
                 downwind_flux += flux;
             }
         }
+
         // Compute tof.
         tof_[cell] = (porevolume_[cell] - upwind_term)/downwind_flux;
 
@@ -200,6 +201,7 @@ namespace Opm
             }
         }
     }
+
 
 
 
