@@ -45,7 +45,8 @@ namespace Opm
           limiter_method_(MinUpwindAverage),
           limiter_usage_(DuringComputations),
           coord_(grid.dimensions),
-          velocity_(grid.dimensions)
+          velocity_(grid.dimensions),
+          gauss_seidel_tol_(1e-3)
     {
         const int dg_degree = param.getDefault("dg_degree", 0);
         const bool use_tensorial_basis = param.getDefault("use_tensorial_basis", false);
@@ -123,6 +124,10 @@ namespace Opm
         basis_nb_.resize(num_basis);
         grad_basis_.resize(num_basis*grid_.dimensions);
         velocity_interpolation_->setupFluxes(darcyflux);
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
+        num_singlesolves_ = 0;
         reorderAndTransport(grid_, darcyflux);
         switch (limiter_usage_) {
         case AsPostProcess:
@@ -136,6 +141,13 @@ namespace Opm
             break;
         default:
             THROW("Unknown limiter usage choice: " << limiter_usage_);
+        }
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+            std::cout << "Average solves per cell (for all cells) was "
+                      << double(num_singlesolves_)/double(grid_.number_of_cells) << std::endl;
         }
     }
 
@@ -156,6 +168,7 @@ namespace Opm
 
         const int dim = grid_.dimensions;
         const int num_basis = basis_func_->numBasisFunc();
+        ++num_singlesolves_;
 
         std::fill(rhs_.begin(), rhs_.end(), 0.0);
         std::fill(jac_.begin(), jac_.end(), 0.0);
@@ -367,10 +380,27 @@ namespace Opm
 
     void TofDiscGalReorder::solveMultiCell(const int num_cells, const int* cells)
     {
-        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
-        for (int i = 0; i < num_cells; ++i) {
-            solveSingleCell(cells[i]);
+        ++num_multicell_;
+        max_size_multicell_ = std::max(max_size_multicell_, num_cells);
+        // std::cout << "Multiblock solve with " << num_cells << " cells." << std::endl;
+
+        // Using a Gauss-Seidel approach.
+        const int nb = basis_func_->numBasisFunc();
+        double max_delta = 1e100;
+        int num_iter = 0;
+        while (max_delta > gauss_seidel_tol_) {
+            max_delta = 0.0;
+            ++num_iter;
+            for (int ci = 0; ci < num_cells; ++ci) {
+                const int cell = cells[ci];
+                const double tof_before = basis_func_->functionAverage(&tof_coeff_[nb*cell]);
+                solveSingleCell(cell);
+                const double tof_after = basis_func_->functionAverage(&tof_coeff_[nb*cell]);
+                max_delta = std::max(max_delta, std::fabs(tof_after - tof_before));
+            }
+            // std::cout << "Max delta = " << max_delta << std::endl;
         }
+        max_iter_multicell_ = std::max(max_iter_multicell_, num_iter);
     }
 
 
@@ -462,7 +492,7 @@ namespace Opm
         double limiter = (tof_c - min_upstream_tof)/(tof_c - min_here_tof);
         if (tof_c < min_upstream_tof) {
             // Handle by setting a flat solution.
-            std::cout << "Trouble in cell " << cell << std::endl;
+            // std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
             basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }

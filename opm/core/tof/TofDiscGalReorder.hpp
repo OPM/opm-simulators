@@ -125,6 +125,12 @@ namespace Opm
         mutable std::vector<double> basis_nb_;
         std::vector<double> grad_basis_;
         std::vector<double> velocity_;
+        int num_singlesolves_;
+        // Used by solveMultiCell():
+        double gauss_seidel_tol_;
+        int num_multicell_;
+        int max_size_multicell_;
+        int max_iter_multicell_;
 
         // Private methods
 
