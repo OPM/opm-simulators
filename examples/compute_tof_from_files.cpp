@@ -123,7 +123,7 @@ main(int argc, char** argv)
 
     const bool compute_tracer = param.getDefault("compute_tracer", false);
     Opm::SparseTable<int> tracerheads;
-    {
+    if (compute_tracer) {
         std::ifstream tr_stream(param.get<std::string>("tracerheads_filename").c_str());
         int num_rows;
         tr_stream >> num_rows;
