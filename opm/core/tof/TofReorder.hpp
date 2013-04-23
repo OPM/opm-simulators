@@ -101,6 +101,8 @@ namespace Opm
         double* tof_;
         double* tracer_;
         int num_tracers_;
+        enum { NoTracerHead = -1 };
+        std::vector<int> tracerhead_by_cell_;
         // For solveMultiCell():
         double gauss_seidel_tol_;
         int num_multicell_;

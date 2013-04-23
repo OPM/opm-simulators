@@ -132,10 +132,13 @@ namespace Opm
         num_tracers_ = tracerheads.size();
         tracer.resize(grid_.number_of_cells*num_tracers_);
         std::fill(tracer.begin(), tracer.end(), 0.0);
+        tracerhead_by_cell_.clear();
+        tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
         for (int tr = 0; tr < num_tracers_; ++tr) {
             for (int i = 0; i < tracerheads[tr].size(); ++i) {
                 const int cell = tracerheads[tr][i];
                 tracer[cell*num_tracers_ + tr] = 1.0;
+                tracerhead_by_cell_[cell] = tr;
             }
         }
 
@@ -171,6 +174,11 @@ namespace Opm
         // to the downwind_flux (note sign change resulting from
         // different sign conventions: pos. source is injection,
         // pos. flux is outflow).
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+            for (int tr = 0; tr < num_tracers_; ++tr) {
+                tracer_[num_tracers_*cell + tr] = 0.0;
+            }
+        }
         double upwind_term = 0.0;
         double downwind_flux = std::max(-source_[cell], 0.0);
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
@@ -192,8 +200,10 @@ namespace Opm
                 // face.
                 if (other != -1) {
                     upwind_term += flux*tof_[other];
-                    for (int tr = 0; tr < num_tracers_; ++tr) {
-                        tracer_[num_tracers_*cell + tr] += flux*tracer_[num_tracers_*other + tr];
+                    if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                        for (int tr = 0; tr < num_tracers_; ++tr) {
+                            tracer_[num_tracers_*cell + tr] += flux*tracer_[num_tracers_*other + tr];
+                        }
                     }
                 }
             } else {
@@ -206,7 +216,7 @@ namespace Opm
 
         // Compute tracers (if any).
         // Do not change tracer solution in source cells.
-        if (source_[cell] <= 0.0) {
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
             for (int tr = 0; tr < num_tracers_; ++tr) {
                 tracer_[num_tracers_*cell + tr] *= -1.0/downwind_flux;
             }
