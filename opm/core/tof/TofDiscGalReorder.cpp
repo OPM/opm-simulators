@@ -500,7 +500,11 @@ namespace Opm
             std::cout << std::endl;
 #endif
             applyLimiter(cell, tof_coeff_);
-            // We do not (yet) apply a limiter to the tracer solution.
+            if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                for (int tr = 0; tr < num_tracers_; ++tr) {
+                    applyTracerLimiter(cell, tracer_coeff_ + cell*num_tracers_*num_basis + tr*num_basis);
+                }
+            }
         }
     }
 
@@ -717,6 +721,48 @@ namespace Opm
             min_cornerval = std::min(min_cornerval, tof_corner);
         }
         return min_cornerval;
+    }
+
+
+
+    void TofDiscGalReorder::applyTracerLimiter(const int cell, double* local_coeff)
+    {
+        // Evaluate the solution in all corners of all faces. Extract max and min.
+        const int dim = grid_.dimensions;
+        const int num_basis = basis_func_->numBasisFunc();
+        double min_cornerval = 1e100;
+        double max_cornerval = -1e100;
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
+                const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
+                basis_func_->eval(cell, nc, &basis_[0]);
+                const double tracer_corner = std::inner_product(basis_.begin(), basis_.end(),
+                                                                local_coeff, 0.0);
+                min_cornerval = std::min(min_cornerval, tracer_corner);
+                max_cornerval = std::max(min_cornerval, tracer_corner);
+            }
+        }
+        const double average = basis_func_->functionAverage(local_coeff);
+        if (average < 0.0 || average > 1.0) {
+            // Adjust average. Flatten gradient.
+            std::fill(local_coeff, local_coeff + num_basis, 0.0);
+            if (average > 1.0) {
+                basis_func_->addConstant(1.0, local_coeff);
+            }
+        } else {
+            // Possibly adjust gradient.
+            double factor = 1.0;
+            if (min_cornerval < 0.0) {
+                factor = average/(average - min_cornerval);
+            }
+            if (max_cornerval > 1.0) {
+                factor = std::min(factor, (1.0 - average)/(max_cornerval - average));
+            }
+            if (factor != 1.0) {
+                basis_func_->multiplyGradient(factor, local_coeff);
+            }
+        }
     }
 
 

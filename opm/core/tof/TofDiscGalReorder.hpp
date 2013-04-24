@@ -174,6 +174,10 @@ namespace Opm
         void applyLimiterAsSimultaneousPostProcess();
         double totalFlux(const int cell) const;
         double minCornerVal(const int cell, const int face) const;
+
+        // Apply a simple (restrict to [0,1]) limiter.
+        // Intended for tracers.
+        void applyTracerLimiter(const int cell, double* local_coeff);
     };
 
 } // namespace Opm
