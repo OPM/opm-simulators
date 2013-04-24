@@ -24,6 +24,7 @@
 #include <opm/core/tof/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/blas_lapack.h>
@@ -98,9 +99,9 @@ namespace Opm
 
     /// Solve for time-of-flight.
     void TofDiscGalReorder::solveTof(const double* darcyflux,
-                                                  const double* porevolume,
-                                                  const double* source,
-                                                  std::vector<double>& tof_coeff)
+                                     const double* porevolume,
+                                     const double* source,
+                                     std::vector<double>& tof_coeff)
     {
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
@@ -124,6 +125,103 @@ namespace Opm
         basis_nb_.resize(num_basis);
         grad_basis_.resize(num_basis*grid_.dimensions);
         velocity_interpolation_->setupFluxes(darcyflux);
+        num_tracers_ = 0;
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
+        num_singlesolves_ = 0;
+        reorderAndTransport(grid_, darcyflux);
+        switch (limiter_usage_) {
+        case AsPostProcess:
+            applyLimiterAsPostProcess();
+            break;
+        case AsSimultaneousPostProcess:
+            applyLimiterAsSimultaneousPostProcess();
+            break;
+        case DuringComputations:
+            // Do nothing.
+            break;
+        default:
+            THROW("Unknown limiter usage choice: " << limiter_usage_);
+        }
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+            std::cout << "Average solves per cell (for all cells) was "
+                      << double(num_singlesolves_)/double(grid_.number_of_cells) << std::endl;
+        }
+    }
+
+
+
+
+    /// Solve for time-of-flight and a number of tracers.
+    /// \param[in]  darcyflux         Array of signed face fluxes.
+    /// \param[in]  porevolume        Array of pore volumes.
+    /// \param[in]  source            Source term. Sign convention is:
+    ///                                 (+) inflow flux,
+    ///                                 (-) outflow flux.
+    /// \param[in]  tracerheads       Table containing one row per tracer, and each
+    ///                               row contains the source cells for that tracer.
+    /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
+    ///                               The values are ordered by cell, meaning that
+    ///                               the K coefficients corresponding to the first
+    ///                               cell comes before the K coefficients corresponding
+    ///                               to the second cell etc.
+    ///                               K depends on degree and grid dimension.
+    /// \param[out] tracer_coeff      Array of tracer solution coefficients. N*K per cell,
+    ///                               where N is equal to tracerheads.size(). All K coefs
+    ///                               for a tracer are consecutive, and all tracers' coefs
+    ///                               for a cell come before those for the next cell.
+    void TofDiscGalReorder::solveTofTracer(const double* darcyflux,
+                                           const double* porevolume,
+                                           const double* source,
+                                           const SparseTable<int>& tracerheads,
+                                           std::vector<double>& tof_coeff,
+                                           std::vector<double>& tracer_coeff)
+    {
+        darcyflux_ = darcyflux;
+        porevolume_ = porevolume;
+        source_ = source;
+#ifndef NDEBUG
+        // Sanity check for sources.
+        const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
+        if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
+            // THROW("Sources do not sum to zero: " << cum_src);
+            MESSAGE("Warning: sources do not sum to zero: " << cum_src);
+        }
+#endif
+        const int num_basis = basis_func_->numBasisFunc();
+        num_tracers_ = tracerheads.size();
+        tof_coeff.resize(num_basis*grid_.number_of_cells);
+        std::fill(tof_coeff.begin(), tof_coeff.end(), 0.0);
+        tof_coeff_ = &tof_coeff[0];
+        rhs_.resize(num_basis*(num_tracers_ + 1));
+        jac_.resize(num_basis*num_basis);
+        orig_jac_.resize(num_basis*num_basis);
+        basis_.resize(num_basis);
+        basis_nb_.resize(num_basis);
+        grad_basis_.resize(num_basis*grid_.dimensions);
+        velocity_interpolation_->setupFluxes(darcyflux);
+
+        // Set up tracer
+        tracer_coeff.resize(grid_.number_of_cells*num_tracers_*num_basis);
+        std::fill(tracer_coeff.begin(), tracer_coeff.end(), 0.0);
+        if (num_tracers_ > 0) {
+            tracerhead_by_cell_.clear();
+            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
+        }
+        for (int tr = 0; tr < num_tracers_; ++tr) {
+            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+                const int cell = tracerheads[tr][i];
+                basis_func_->addConstant(1.0, &tracer_coeff[cell*num_tracers_*num_basis + tr*num_basis]);
+                tracer_coeff[cell*num_tracers_ + tr] = 1.0;
+                tracerhead_by_cell_[cell] = tr;
+            }
+        }
+
+        tracer_coeff_ = &tracer_coeff[0];
         num_multicell_ = 0;
         max_size_multicell_ = 0;
         max_iter_multicell_ = 0;
@@ -165,6 +263,13 @@ namespace Opm
         // This is linear in c_i, so we do not need any nonlinear iterations.
         // We assemble the jacobian and the right-hand side. The residual is
         // equal to Res = Jac*c - rhs, and we compute rhs directly.
+        //
+        // For tracers, the equation is the same, except for the last
+        // term being zero (the one with \phi).
+        //
+        // The rhs_ vector contains a (Fortran ordering) matrix of all
+        // right-hand-sides, first for tof and then (optionally) for
+        // all tracers.
 
         const int dim = grid_.dimensions;
         const int num_basis = basis_func_->numBasisFunc();
@@ -183,6 +288,7 @@ namespace Opm
                 basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
+                    // Only adding to the tof rhs.
                     rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
                 }
             }
@@ -206,6 +312,8 @@ namespace Opm
             }
             if (upstream_cell < 0) {
                 // This is an outer boundary. Assumed tof = 0 on inflow, so no contribution.
+                // For tracers, a cell with inflow should be marked as a tracer head cell,
+                // and not be modified.
                 continue;
             }
             // Do quadrature over the face to compute
@@ -222,11 +330,22 @@ namespace Opm
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 basis_func_->eval(upstream_cell, &coord_[0], &basis_nb_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                // Modify tof rhs
                 const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                                tof_coeff_ + num_basis*upstream_cell, 0.0);
-                const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     rhs_[j] -= w * tof_upstream * normal_velocity * basis_[j];
+                }
+                // Modify tracer rhs
+                if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                    for (int tr = 0; tr < num_tracers_; ++tr) {
+                        const double* up_tr_co = tracer_coeff_ + num_tracers_*num_basis*upstream_cell + num_basis*tr;
+                        const double tracer_up = std::inner_product(basis_nb_.begin(), basis_nb_.end(), up_tr_co, 0.0);
+                        for (int j = 0; j < num_basis; ++j) {
+                            rhs_[num_basis*(tr + 1) + j] -= w * tracer_up * normal_velocity * basis_[j];
+                        }
+                    }
                 }
             }
         }
@@ -318,7 +437,13 @@ namespace Opm
 
         // Solve linear equation.
         MAT_SIZE_T n = num_basis;
-        MAT_SIZE_T nrhs = 1;
+        int num_tracer_to_compute = num_tracers_;
+        if (num_tracers_) {
+            if (tracerhead_by_cell_[cell] != NoTracerHead) {
+                num_tracer_to_compute = 0;
+            }
+        }
+        MAT_SIZE_T nrhs = 1 + num_tracer_to_compute;
         MAT_SIZE_T lda = num_basis;
         std::vector<MAT_SIZE_T> piv(num_basis);
         MAT_SIZE_T ldb = num_basis;
@@ -344,7 +469,10 @@ namespace Opm
         }
 
         // The solution ends up in rhs_, so we must copy it.
-        std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);
+        std::copy(rhs_.begin(), rhs_.begin() + num_basis, tof_coeff_ + num_basis*cell);
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+            std::copy(rhs_.begin() + num_basis, rhs_.end(), tracer_coeff_ + num_tracers_*num_basis*cell);
+        }
 
         // Apply limiter.
         if (basis_func_->degree() > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
@@ -372,6 +500,7 @@ namespace Opm
             std::cout << std::endl;
 #endif
             applyLimiter(cell, tof_coeff_);
+            // We do not (yet) apply a limiter to the tracer solution.
         }
     }
 
