@@ -148,9 +148,6 @@ main(int argc, char** argv)
     } else {
         use_multidim_upwind = param.getDefault("use_multidim_upwind", false);
     }
-    if (use_dg && compute_tracer) {
-        THROW("DG for tracer not yet implemented.");
-    }
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
@@ -178,7 +175,11 @@ main(int argc, char** argv)
     std::vector<double> tof;
     std::vector<double> tracer;
     if (use_dg) {
-        dg_solver->solveTof(&flux[0], &porevol[0], &src[0], tof);
+        if (compute_tracer) {
+            dg_solver->solveTofTracer(&flux[0], &porevol[0], &src[0], tracerheads, tof, tracer);
+        } else {
+            dg_solver->solveTof(&flux[0], &porevol[0], &src[0], tof);
+        }
     } else {
         Opm::TofReorder tofsolver(grid, use_multidim_upwind);
         if (compute_tracer) {
