@@ -95,8 +95,6 @@ namespace Opm
 
 
     /// Solve for time-of-flight and a number of tracers.
-    /// One tracer will be used for each inflow flux specified in
-    /// the source parameter.
     /// \param[in]  darcyflux         Array of signed face fluxes.
     /// \param[in]  porevolume        Array of pore volumes.
     /// \param[in]  source            Source term. Sign convention is:
@@ -105,8 +103,8 @@ namespace Opm
     /// \param[in]  tracerheads       Table containing one row per tracer, and each
     ///                               row contains the source cells for that tracer.
     /// \param[out] tof               Array of time-of-flight values (1 per cell).
-    /// \param[out] tracer            Array of tracer values (N per cell, where N is
-    ///                               the number of cells c for which source[c] > 0.0).
+    /// \param[out] tracer            Array of tracer values. N per cell, where N is
+    ///                               equalt to tracerheads.size().
     void TofReorder::solveTofTracer(const double* darcyflux,
                                     const double* porevolume,
                                     const double* source,
@@ -132,8 +130,10 @@ namespace Opm
         num_tracers_ = tracerheads.size();
         tracer.resize(grid_.number_of_cells*num_tracers_);
         std::fill(tracer.begin(), tracer.end(), 0.0);
-        tracerhead_by_cell_.clear();
-        tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
+        if (num_tracers_ > 0) {
+            tracerhead_by_cell_.clear();
+            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
+        }
         for (int tr = 0; tr < num_tracers_; ++tr) {
             for (int i = 0; i < tracerheads[tr].size(); ++i) {
                 const int cell = tracerheads[tr][i];

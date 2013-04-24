@@ -62,8 +62,6 @@ namespace Opm
                       std::vector<double>& tof);
 
         /// Solve for time-of-flight and a number of tracers.
-        /// One tracer will be used for each inflow flux specified in
-        /// the source parameter.
         /// \param[in]  darcyflux         Array of signed face fluxes.
         /// \param[in]  porevolume        Array of pore volumes.
         /// \param[in]  source            Source term. Sign convention is:
@@ -72,8 +70,8 @@ namespace Opm
         /// \param[in]  tracerheads       Table containing one row per tracer, and each
         ///                               row contains the source cells for that tracer.
         /// \param[out] tof               Array of time-of-flight values (1 per cell).
-        /// \param[out] tracer            Array of tracer values (N per cell, where N is
-        ///                               the number of cells c for which source[c] > 0.0).
+        /// \param[out] tracer            Array of tracer values. N per cell, where N is
+        ///                               equalt to tracerheads.size().
         void solveTofTracer(const double* darcyflux,
                             const double* porevolume,
                             const double* source,
