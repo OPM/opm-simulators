@@ -6,6 +6,7 @@
 
 #include "AutoDiff.hpp"
 
+#include <cmath>
 #include <boost/test/unit_test.hpp>
 
 BOOST_AUTO_TEST_CASE(Initialisation)
@@ -170,4 +171,61 @@ BOOST_AUTO_TEST_CASE(Division)
     AdFW otb = 2 / b;           // two over b
     BOOST_CHECK_CLOSE(otb.val(), 2 / b.val(), atol);
     BOOST_CHECK_CLOSE(otb.der(), -2*b.der() / (b.val() * b.val()), atol);
+}
+
+
+BOOST_AUTO_TEST_CASE(Polynomial)
+{
+    typedef AutoDiff::Forward<double> AdFW;
+
+    const double atol = 1.0e-14;
+
+    const AdFW x(1.234e-1);
+
+    const AdFW p0 = x * x;
+    BOOST_CHECK_CLOSE(p0.val(), x.val() * x.val(), atol);
+    BOOST_CHECK_CLOSE(p0.der(), 2*x.val()*x.der(), atol);
+
+    const AdFW p = 10*x*x - x/2.0 + 3.0;
+    BOOST_CHECK_CLOSE(p.val(), 10  *x.val()*x.val() - x.val()/2.0 + 3.0, atol);
+    BOOST_CHECK_CLOSE(p.der(), 10*2*x.val()*x.der() - x.der()/2.0      , atol);
+}
+
+
+BOOST_AUTO_TEST_CASE(Cosine)
+{
+    typedef AutoDiff::Forward<double> AdFW;
+
+    const double atol = 1.0e-14;
+
+    const AdFW x(3.14159265358979323846264338327950288);
+
+    const AdFW f = std::cos(x);
+    BOOST_CHECK_CLOSE(f.val(),   std::cos(x.val()), atol);
+    BOOST_CHECK_CLOSE(f.der(), - std::sin(x.val()), atol);
+
+    const AdFW p = 10*x*x - x/2.0 + 3.0;
+    const AdFW g = std::cos(p);
+    BOOST_CHECK_CLOSE(g.val(),   std::cos(p.val())        , atol);
+    BOOST_CHECK_CLOSE(g.der(), - std::sin(p.val())*p.der(), atol);
+}
+
+
+BOOST_AUTO_TEST_CASE(SquareRoot)
+{
+    typedef AutoDiff::Forward<double> AdFW;
+
+    const double atol = 1.0e-14;
+
+    const AdFW x(1.234e-5);
+
+    const AdFW x2 = x * x;
+    const AdFW g  = std::cos(x2) + x;
+    const AdFW f  = std::sqrt(g) - 1.2;
+
+    BOOST_CHECK_CLOSE(g.val(),  std::cos(x2.val())          + x.val(), atol);
+    BOOST_CHECK_CLOSE(g.der(), -std::sin(x2.val())*x2.der() + x.der(), atol);
+
+    BOOST_CHECK_CLOSE(f.val(),  std::sqrt(g.val()) - 1.2, atol);
+    BOOST_CHECK_CLOSE(f.der(), 1.0/(2.0 * std::sqrt(g.val())) * g.der(), atol);
 }
