@@ -96,7 +96,7 @@ namespace AutoDiff {
         Forward&
         operator *=(const Forward& rhs)
         {
-            dx_ *= dx_*rhs.x_ + x_*rhs.dx_;
+            dx_  = dx_*rhs.x_ + x_*rhs.dx_;
             x_  *= rhs.x_;
 
             return *this;
