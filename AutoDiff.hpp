@@ -272,8 +272,8 @@ namespace AutoDiff {
     operator /(const Forward<Scalar>& lhs,
                const T                rhs)
     {
-        Scalar a = rhs.val() / Scalar(lhs);
-        Scalar b = rhs.der() / Scalar(lhs);
+        Scalar a = lhs.val() / Scalar(rhs);
+        Scalar b = lhs.der() / Scalar(rhs);
 
         Forward<Scalar> ret(a, b);
 
