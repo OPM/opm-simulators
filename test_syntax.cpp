@@ -97,3 +97,77 @@ BOOST_AUTO_TEST_CASE(Subtraction)
     BOOST_CHECK_CLOSE(omb.val(), 1 - b.val(), atol);
     BOOST_CHECK_CLOSE(omb.der(),   - b.der(), atol);
 }
+
+
+BOOST_AUTO_TEST_CASE(Multiplication)
+{
+    typedef AutoDiff::Forward<double> AdFW;
+
+    const double atol = 1.0e-14;
+
+    AdFW a(1.0), b(1.0);
+
+    AdFW no_a = a * 0;
+    BOOST_CHECK_CLOSE(no_a.val(), 0.0, atol);
+    BOOST_CHECK_CLOSE(no_a.der(), 0.0, atol);
+
+    AdFW atb = a * b;
+    BOOST_CHECK_CLOSE(atb.val(), a.val() * b.val(), atol);
+    BOOST_CHECK_CLOSE(atb.der(), a.der()*b.val() + a.val()*b.der(), atol);
+
+    double av = a.val();
+    double ad = a.der();
+    a *= b;
+    BOOST_CHECK_CLOSE(a.val(), av * b.val(), atol);
+    BOOST_CHECK_CLOSE(a.der(), ad*b.val() + av*b.der(), atol);
+
+    av = a.val();
+    ad = a.der();
+    a *= 1;
+    BOOST_CHECK_CLOSE(a.val(), av, atol);
+    BOOST_CHECK_CLOSE(a.der(), ad, atol);
+
+    AdFW bto = b * 1;           // b times one
+    BOOST_CHECK_CLOSE(bto.val(), b.val(), atol);
+    BOOST_CHECK_CLOSE(bto.der(), b.der(), atol);
+
+    AdFW otb = 1 * b;           // one times b
+    BOOST_CHECK_CLOSE(otb.val(), b.val(), atol);
+    BOOST_CHECK_CLOSE(otb.der(), b.der(), atol);
+}
+
+
+BOOST_AUTO_TEST_CASE(Division)
+{
+    typedef AutoDiff::Forward<double> AdFW;
+
+    const double atol = 1.0e-14;
+
+    AdFW a(10.0), b(1.0);
+
+    AdFW aob = a / b;
+    BOOST_CHECK_CLOSE(aob.val(), a.val() * b.val(), atol);
+    const double res = ((a.der()*b.val() - a.val()*b.der()) /
+                        (b.val() * b.val()));
+    BOOST_CHECK_CLOSE(aob.der(), res, atol);
+
+    double av = a.val();
+    double ad = a.der();
+    a /= b;
+    BOOST_CHECK_CLOSE(a.val(), av * b.val(), atol);
+    BOOST_CHECK_CLOSE(a.der(), res, atol);
+
+    av = a.val();
+    ad = a.der();
+    a /= 2;
+    BOOST_CHECK_CLOSE(a.val(), av / 2, atol);
+    BOOST_CHECK_CLOSE(a.der(), ad / 2, atol);
+
+    AdFW bot = b / 2;           // b over two
+    BOOST_CHECK_CLOSE(bot.val(), b.val() / 2, atol);
+    BOOST_CHECK_CLOSE(bot.der(), b.der() / 2, atol);
+
+    AdFW otb = 2 / b;           // two over b
+    BOOST_CHECK_CLOSE(otb.val(), 2 / b.val(), atol);
+    BOOST_CHECK_CLOSE(otb.der(), -2*b.der() / (b.val() * b.val()), atol);
+}
