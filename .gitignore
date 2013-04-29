@@ -14,3 +14,9 @@
 *.lai
 *.la
 *.a
+
+# Compiled executables
+a.out
+test_syntax
+test_ad
+find_zero
