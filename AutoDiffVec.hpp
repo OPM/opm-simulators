@@ -42,8 +42,10 @@ namespace AutoDiff
         static ForwardVec variable(const V& val)
         {
             ForwardVec ret(val);
+
+            ret.jac_.reserve(Eigen::VectorXi::Constant(val.size(), 1));
             for (typename M::Index row = 0; row < val.size(); ++row) {
-                ret.jac_.insert(row, row) = 1.0;
+                ret.jac_.insert(row, row) = Scalar(1.0);
             }
             ret.jac_.makeCompressed();
             return ret;
