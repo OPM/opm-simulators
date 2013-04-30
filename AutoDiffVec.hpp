@@ -23,7 +23,6 @@
 #include "AutoDiff.hpp"
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
-#include <iostream>
 
 namespace AutoDiff
 {
