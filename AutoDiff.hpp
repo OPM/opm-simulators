@@ -45,13 +45,15 @@ namespace AutoDiff {
         static Forward
         constant(const Scalar x)
         {
-            return Forward(x, Scalar(0));
+            // Constant is function with zero derivative.
+            return function(x, Scalar(0));
         }
 
         static Forward
         variable(const Scalar x)
         {
-            return Forward(x, Scalar(1));
+            // Variable is function with unit derivative (wrt. itself).
+            return function(x, Scalar(1));
         }
 
         static Forward
