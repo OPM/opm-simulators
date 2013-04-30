@@ -38,12 +38,12 @@ int main()
         jacs[i].insert(0,0) = -1.0;
     }
     ADV f = ADV::function(FirstVar, v2, jacs);
-    std::cout << a << x << f;
-    /*
+
     ADV xpx = x + x;
     std::cout << xpx;
     ADV xpxpa = x + x + a;
     std::cout << xpxpa;
+
 
     std::cout << xpxpa - xpx;
 
@@ -54,7 +54,4 @@ int main()
     ADV sqxdx = sqx / x;
 
     std::cout << sqxdx;
-
-    // std::cout << a << "\n\n" << x << "\n\n" << f << std::endl;
-    */
 }
