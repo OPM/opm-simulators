@@ -40,8 +40,10 @@
 int
 main()
 {
-    AutoDiff::Forward<double> a(0.0);
-    AutoDiff::Forward<double> b(1.0);
+    typedef AutoDiff::Forward<double> AdFW;
+
+    AdFW a = AdFW::variable(0.0);
+    AdFW b = AdFW::variable(1.0);
 
     std::cout << "a:     " << a << '\n';
     std::cout << "b:     " << b << '\n';
@@ -52,7 +54,7 @@ main()
     std::cout << "b:     " << b << '\n';
     std::cout << "a + b: " << a + b << '\n';
 
-    a = AutoDiff::Forward<double>(0.0);
+    a = AdFW::variable(0.0);
     std::cout << "a:     " << a << '\n';
 
     a += 1;
@@ -60,7 +62,7 @@ main()
     std::cout << "a + 1: " << (a + 1) << '\n';
     std::cout << "1 + a: " << (1.0f + a) << '\n';
 
-    a = AutoDiff::Forward<double>(1);
+    a = AdFW::variable(1);
     std::cout << "a:     " << a << '\n';
     std::cout << "a - 1: " << (a - 1) << '\n';
     std::cout << "a - b: " << (a - b) << '\n';

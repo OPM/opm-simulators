@@ -15,7 +15,8 @@ BOOST_AUTO_TEST_CASE(Initialisation)
 
     const double atol = 1.0e-14;
 
-    AdFW a(0.0), b(1.0);
+    AdFW a = AdFW::variable(0.0);
+    AdFW b = AdFW::variable(1.0);
 
     BOOST_CHECK_CLOSE(a.val(), 0.0, atol);
     BOOST_CHECK_CLOSE(b.val(), 1.0, atol);
@@ -34,7 +35,8 @@ BOOST_AUTO_TEST_CASE(Addition)
 
     const double atol = 1.0e-14;
 
-    AdFW a(0.0), b(1.0);
+    AdFW a = AdFW::variable(0.0);
+    AdFW b = AdFW::variable(1.0);
 
     AdFW two_a = a + a;
     BOOST_CHECK_CLOSE(two_a.val(), 2*a.val(), atol);
@@ -68,7 +70,8 @@ BOOST_AUTO_TEST_CASE(Subtraction)
 
     const double atol = 1.0e-14;
 
-    AdFW a(0.0), b(1.0);
+    AdFW a = AdFW::variable(0.0);
+    AdFW b = AdFW::variable(1.0);
 
     AdFW no_a = a - a;
     BOOST_CHECK_CLOSE(no_a.val(), 0.0, atol);
@@ -106,7 +109,8 @@ BOOST_AUTO_TEST_CASE(Multiplication)
 
     const double atol = 1.0e-14;
 
-    AdFW a(1.0), b(1.0);
+    AdFW a = AdFW::variable(0.0);
+    AdFW b = AdFW::variable(1.0);
 
     AdFW no_a = a * 0;
     BOOST_CHECK_CLOSE(no_a.val(), 0.0, atol);
@@ -144,7 +148,8 @@ BOOST_AUTO_TEST_CASE(Division)
 
     const double atol = 1.0e-14;
 
-    AdFW a(10.0), b(1.0);
+    AdFW a = AdFW::variable(10.0);
+    AdFW b = AdFW::variable(1.0);
 
     AdFW aob = a / b;
     BOOST_CHECK_CLOSE(aob.val(), a.val() * b.val(), atol);
@@ -180,7 +185,7 @@ BOOST_AUTO_TEST_CASE(Polynomial)
 
     const double atol = 1.0e-14;
 
-    const AdFW x(1.234e-1);
+    const AdFW x = AdFW::variable(1.234e-1);
 
     const AdFW p0 = x * x;
     BOOST_CHECK_CLOSE(p0.val(), x.val() * x.val(), atol);
@@ -198,7 +203,7 @@ BOOST_AUTO_TEST_CASE(Cosine)
 
     const double atol = 1.0e-14;
 
-    const AdFW x(3.14159265358979323846264338327950288);
+    const AdFW x = AdFW::variable(3.14159265358979323846264338327950288);
 
     const AdFW f = std::cos(x);
     BOOST_CHECK_CLOSE(f.val(),   std::cos(x.val()), atol);
@@ -217,7 +222,7 @@ BOOST_AUTO_TEST_CASE(SquareRoot)
 
     const double atol = 1.0e-14;
 
-    const AdFW x(1.234e-5);
+    const AdFW x = AdFW::variable(1.234e-5);
 
     const AdFW x2 = x * x;
     const AdFW g  = std::cos(x2) + x;

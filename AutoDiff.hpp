@@ -41,14 +41,22 @@
 namespace AutoDiff {
     template <typename Scalar>
     class Forward {
+    private:
     public:
-        explicit Forward(const Scalar& x)
-            : val_(x), der_(Scalar(1))
-        {}
+        static Forward constant(const Scalar x)
+        {
+            return Forward(x, Scalar(0));
+        }
 
-        Forward(const Scalar x, const Scalar dx)
-            : val_(x), der_(dx)
-        {}
+        static Forward variable(const Scalar x)
+        {
+            return Forward(x, Scalar(1));
+        }
+
+        static Forward function(const Scalar x, const Scalar dx)
+        {
+            return Forward(x, dx);
+        }
 
         Forward&
         operator +=(const Scalar& rhs)
@@ -133,10 +141,13 @@ namespace AutoDiff {
         const Scalar der() const { return der_; }
 
     private:
+        Forward(const Scalar x, const Scalar dx)
+            : val_(x), der_(dx)
+        {}
         Scalar val_ ;
         Scalar der_;
-
     };
+
 
     template <class Ostream, typename Scalar>
     Ostream&
@@ -194,9 +205,7 @@ namespace AutoDiff {
     operator -(const T                lhs,
                const Forward<Scalar>& rhs)
     {
-        Forward<Scalar> ret(Scalar(lhs) - rhs.val(), -rhs.der());
-
-        return ret;
+        return Forward<Scalar>::function(Scalar(lhs) - rhs.val(), -rhs.der());
     }
 
     template <typename Scalar, typename T>
@@ -262,9 +271,7 @@ namespace AutoDiff {
         Scalar a =  Scalar(lhs) / rhs.val();
         Scalar b = -Scalar(lhs) / (rhs.val() * rhs.val());
 
-        Forward<Scalar> ret(a, b);
-
-        return ret;
+        return Forward<Scalar>::function(a, b);
     }
 
     template <typename Scalar, typename T>
@@ -275,19 +282,17 @@ namespace AutoDiff {
         Scalar a = lhs.val() / Scalar(rhs);
         Scalar b = lhs.der() / Scalar(rhs);
 
-        Forward<Scalar> ret(a, b);
-
-        return ret;
+        return Forward<Scalar>::function(a, b);
     }
 
     template <typename Scalar>
     Forward<Scalar>
     cos(const Forward<Scalar>& x)
     {
-        Forward<Scalar> ret( std::cos(x.val()),
-                            -std::sin(x.val()) * x.der());
+        Scalar a = std::cos(x.val());
+        Scalar b = -std::sin(x.val()) * x.der();
 
-        return ret;
+        return Forward<Scalar>::function(a, b);
     }
 
     template <typename Scalar>
@@ -295,10 +300,9 @@ namespace AutoDiff {
     sqrt(const Forward<Scalar>& x)
     {
         Scalar a = std::sqrt(x.val());
-        Scalar b = Scalar(1.0) / (Scalar(2.0) * a);
-        Forward<Scalar> ret(a, b * x.der());
+        Scalar b = (Scalar(1.0) / (Scalar(2.0) * a)) * x.der();
 
-        return ret;
+        return Forward<Scalar>::function(a, b);
     }
 } // namespace AutoDiff
 
