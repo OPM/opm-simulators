@@ -21,8 +21,8 @@
 #define OPM_AUTODIFFVEC_HEADER_INCLUDED
 
 #include "AutoDiff.hpp"
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/Sparse>
+#include <Eigen/Eigen>
+#include <Eigen/Sparse>
 #include <iostream>
 
 namespace AutoDiff
