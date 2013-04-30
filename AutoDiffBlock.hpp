@@ -120,7 +120,7 @@ namespace AutoDiff
                 std::cout << jac[block].rows() << ' ' << rhs.jac_[block].rows() << std::endl;
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
-                jac[block] = D2*rhs.jac_[block] + D1*rhs.jac_[block];
+                jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
             }
             return function(index(), val_ * rhs.val_, jac);
         }
