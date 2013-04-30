@@ -75,7 +75,7 @@ namespace AutoDiff
             return os;
         }
 
-        
+
     private:
         V val_;
         M jac_;
@@ -89,7 +89,7 @@ namespace AutoDiff
         return fw.print(os);
     }
 
-        
+
 
 } // namespace Autodiff
 
