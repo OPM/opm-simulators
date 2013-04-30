@@ -43,17 +43,17 @@ namespace AutoDiff {
     class Forward {
     public:
         explicit Forward(const Scalar& x)
-            : x_(x), dx_(Scalar(1))
+            : val_(x), der_(Scalar(1))
         {}
 
         Forward(const Scalar x, const Scalar dx)
-            : x_(x), dx_(dx)
+            : val_(x), der_(dx)
         {}
 
         Forward&
         operator +=(const Scalar& rhs)
         {
-            x_ += rhs;
+            val_ += rhs;
 
             return *this;
         }
@@ -61,8 +61,8 @@ namespace AutoDiff {
         Forward&
         operator +=(const Forward& rhs)
         {
-            x_  += rhs.x_;
-            dx_ += rhs.dx_;
+            val_ += rhs.val_;
+            der_ += rhs.der_;
 
             return *this;
         }
@@ -70,7 +70,7 @@ namespace AutoDiff {
         Forward&
         operator -=(const Scalar& rhs)
         {
-            x_ -= rhs;
+            val_ -= rhs;
 
             return *this;
         }
@@ -78,8 +78,8 @@ namespace AutoDiff {
         Forward&
         operator -=(const Forward& rhs)
         {
-            x_  -= rhs.x_;
-            dx_ -= rhs.dx_;
+            val_ -= rhs.val_;
+            der_ -= rhs.der_;
 
             return *this;
         }
@@ -87,8 +87,8 @@ namespace AutoDiff {
         Forward&
         operator *=(const Scalar& rhs)
         {
-            x_  *= rhs;
-            dx_ *= rhs;
+            val_ *= rhs;
+            der_ *= rhs;
 
             return *this;
         }
@@ -96,8 +96,8 @@ namespace AutoDiff {
         Forward&
         operator *=(const Forward& rhs)
         {
-            dx_  = dx_*rhs.x_ + x_*rhs.dx_;
-            x_  *= rhs.x_;
+            der_   = der_*rhs.val_ + val_*rhs.der_;
+            val_  *= rhs.val_;
 
             return *this;
         }
@@ -105,8 +105,8 @@ namespace AutoDiff {
         Forward&
         operator /=(const Scalar& rhs)
         {
-            x_  /= rhs;
-            dx_ /= rhs;
+            val_ /= rhs;
+            der_ /= rhs;
 
             return *this;
         }
@@ -114,8 +114,8 @@ namespace AutoDiff {
         Forward&
         operator /=(const Forward& rhs)
         {
-            dx_  = (dx_*rhs.x_ - x_*rhs.dx_) / (rhs.x_ * rhs.x_);
-            x_  /= rhs.x_;
+            der_   = (der_*rhs.val_ - val_*rhs.der_) / (rhs.val_ * rhs.val_);
+            val_  /= rhs.val_;
 
             return *this;
         }
@@ -124,17 +124,17 @@ namespace AutoDiff {
         Ostream&
         print(Ostream& os) const
         {
-            os << "(x,dx) = (" << x_ << ',' << dx_ << ")";
+            os << "(x,dx) = (" << val_ << ',' << der_ << ")";
 
             return os;
         }
 
-        const Scalar val() const { return x_ ; }
-        const Scalar der() const { return dx_; }
+        const Scalar val() const { return val_; }
+        const Scalar der() const { return der_; }
 
     private:
-        Scalar x_ ;
-        Scalar dx_;
+        Scalar val_ ;
+        Scalar der_;
 
     };
 
