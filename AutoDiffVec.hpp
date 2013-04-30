@@ -31,9 +31,11 @@ namespace AutoDiff
     class ForwardVec
     {
     public:
+        /// Underlying types for scalar vectors and jacobians.
         typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> V;
         typedef Eigen::SparseMatrix<Scalar> M;
 
+        /// Named constructor pattern used here.
         static ForwardVec constant(const V& val)
         {
             return ForwardVec(val);
@@ -43,6 +45,9 @@ namespace AutoDiff
         {
             ForwardVec ret(val);
 
+            // typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
+            // D ones = V::Ones(val.size()).matrix().asDiagonal();
+            // ret.jac_ = ones;
             ret.jac_.reserve(Eigen::VectorXi::Constant(val.size(), 1));
             for (typename M::Index row = 0; row < val.size(); ++row) {
                 ret.jac_.insert(row, row) = Scalar(1.0);
@@ -56,6 +61,48 @@ namespace AutoDiff
             return ForwardVec(val, jac);
         }
 
+        /// Operators.
+        ForwardVec operator+(const ForwardVec& rhs)
+        {
+            return function(val_ + rhs.val_, jac_ + rhs.jac_);
+        }
+
+        /// Operators.
+        ForwardVec operator-(const ForwardVec& rhs)
+        {
+            return function(val_ - rhs.val_, jac_ - rhs.jac_);
+        }
+
+        /// Operators.
+        ForwardVec operator*(const ForwardVec& rhs)
+        {
+            typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
+            D D1 = val_.matrix().asDiagonal();
+            D D2 = rhs.val_.matrix().asDiagonal();
+            return function(val_ * rhs.val_, D2*jac_ + D1*rhs.jac_);
+        }
+
+        /// Operators.
+        ForwardVec operator/(const ForwardVec& rhs)
+        {
+            typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
+            D D1 = val_.matrix().asDiagonal();
+            D D2 = rhs.val_.matrix().asDiagonal();
+            D D3 = std::pow(rhs.val_, -2).matrix().asDiagonal();
+            return function(val_ / rhs.val_, D3 * (D2*jac_ - D1*rhs.jac_));
+        }
+
+        /// I/O.
+        template <class Ostream>
+        Ostream&
+        print(Ostream& os) const
+        {
+            os << "val =\n" << val_ << "\n\njac =\n" << jac_ << "\n";
+
+            return os;
+        }
+
+    private:
         explicit ForwardVec(const V& val)
             : val_(val), jac_(val.size(), val.size())
         {
@@ -66,17 +113,6 @@ namespace AutoDiff
         {
         }
 
-        template <class Ostream>
-        Ostream&
-        print(Ostream& os) const
-        {
-            os << "val =\n" << val_ << "\n\njac =\n" << jac_ << "\n";
-
-            return os;
-        }
-
-
-    private:
         V val_;
         M jac_;
     };

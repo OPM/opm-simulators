@@ -25,12 +25,29 @@ int main()
     typedef AutoDiff::ForwardVec<double> ADV;
     ADV::V v(3);
     v << 1.0, 2.2, 3.4;
-    std::cout << v << std::endl;
-    ADV a = ADV::constant(v);
+    ADV::V v2(3);
+    v2 << 0.2, 1.2, 13.4;
+    // std::cout << v << std::endl;
+    ADV a = ADV::constant(v2);
     ADV x = ADV::variable(v);
     ADV::M jac(3,3);
     jac.insert(0, 0) = 1.0;
     ADV f = ADV::function(v, jac);
 
-    std::cout << a << "\n\n" << x << "\n\n" << f << std::endl;
+    ADV xpx = x + x;
+    std::cout << xpx;
+    ADV xpxpa = x + x + a;
+    std::cout << xpxpa;
+
+    std::cout << xpxpa - xpx;
+
+    ADV sqx = x * x;
+
+    std::cout << sqx;
+
+    ADV sqxdx = sqx / x;
+
+    std::cout << sqxdx;
+
+    // std::cout << a << "\n\n" << x << "\n\n" << f << std::endl;
 }
