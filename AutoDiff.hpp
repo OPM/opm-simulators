@@ -58,74 +58,58 @@ namespace AutoDiff {
             return Forward(x, dx);
         }
 
-        Forward&
+        void
         operator +=(const Scalar& rhs)
         {
             val_ += rhs;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator +=(const Forward& rhs)
         {
             val_ += rhs.val_;
             der_ += rhs.der_;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator -=(const Scalar& rhs)
         {
             val_ -= rhs;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator -=(const Forward& rhs)
         {
             val_ -= rhs.val_;
             der_ -= rhs.der_;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator *=(const Scalar& rhs)
         {
             val_ *= rhs;
             der_ *= rhs;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator *=(const Forward& rhs)
         {
             der_   = der_*rhs.val_ + val_*rhs.der_;
             val_  *= rhs.val_;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator /=(const Scalar& rhs)
         {
             val_ /= rhs;
             der_ /= rhs;
-
-            return *this;
         }
 
-        Forward&
+        void
         operator /=(const Forward& rhs)
         {
             der_   = (der_*rhs.val_ - val_*rhs.der_) / (rhs.val_ * rhs.val_);
             val_  /= rhs.val_;
-
-            return *this;
         }
 
         template <class Ostream>
