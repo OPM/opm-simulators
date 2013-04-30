@@ -20,3 +20,9 @@ a.out
 test_syntax
 test_ad
 find_zero
+test_vec
+test_block
+
+# Mac OS X debug info
+*.dSYM
+
