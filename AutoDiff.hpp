@@ -41,19 +41,21 @@
 namespace AutoDiff {
     template <typename Scalar>
     class Forward {
-    private:
     public:
-        static Forward constant(const Scalar x)
+        static Forward
+        constant(const Scalar x)
         {
             return Forward(x, Scalar(0));
         }
 
-        static Forward variable(const Scalar x)
+        static Forward
+        variable(const Scalar x)
         {
             return Forward(x, Scalar(1));
         }
 
-        static Forward function(const Scalar x, const Scalar dx)
+        static Forward
+        function(const Scalar x, const Scalar dx)
         {
             return Forward(x, dx);
         }
@@ -128,7 +130,8 @@ namespace AutoDiff {
         Forward(const Scalar x, const Scalar dx)
             : val_(x), der_(dx)
         {}
-        Scalar val_ ;
+
+        Scalar val_;
         Scalar der_;
     };
 
