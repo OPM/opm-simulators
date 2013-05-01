@@ -17,12 +17,11 @@
 
 # Compiled executables
 a.out
-test_syntax
-test_ad
 find_zero
-test_vec
+test_ad
 test_block
+test_syntax
+test_vec
 
 # Mac OS X debug info
 *.dSYM
-
