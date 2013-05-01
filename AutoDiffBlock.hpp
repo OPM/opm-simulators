@@ -194,6 +194,20 @@ namespace AutoDiff
         return fw.print(os);
     }
 
+    /// Multiply with sparse matrix from the left.
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator*(const typename ForwardBlock<Scalar>::M& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
+    {
+        int num_blocks = rhs.numBlocks();
+        std::vector<typename ForwardBlock<Scalar>::M> jac(num_blocks);
+        assert(lhs.cols() == num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jac[block] = lhs*rhs.derivative()[block];
+        }
+        typename ForwardBlock<Scalar>::V val = lhs*rhs.value().matrix();
+        return ForwardBlock<Scalar>::function(val, jac);
+    }
 
 
 } // namespace Autodiff

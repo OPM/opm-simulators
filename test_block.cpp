@@ -30,14 +30,14 @@ int main()
     ADV::V v2(3);
     v2 << 1.0, 2.2, 3.4;
     enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
-    ADV a = ADV::constant(FirstVar, v1, blocksizes);
+    ADV a = ADV::constant(v1, blocksizes);
     ADV x = ADV::variable(FirstVar, v2, blocksizes);
     std::vector<ADV::M> jacs(num_blocks);
     for (int i = 0; i < num_blocks; ++i) {
         jacs[i] = ADV::M(blocksizes[FirstVar], blocksizes[i]);
         jacs[i].insert(0,0) = -1.0;
     }
-    ADV f = ADV::function(FirstVar, v2, jacs);
+    ADV f = ADV::function(v2, jacs);
 
     ADV xpx = x + x;
     std::cout << xpx;
@@ -54,4 +54,10 @@ int main()
     ADV sqxdx = sqx / x;
 
     std::cout << sqxdx;
+
+    ADV::M m(2,3);
+    m.insert(0,0) = 4;
+    m.insert(0,1) = 3;
+    m.insert(1,1) = 1;
+    std::cout << m*sqx;
 }
