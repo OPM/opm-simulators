@@ -114,7 +114,6 @@ namespace AutoDiff
             D D1 = val_.matrix().asDiagonal();
             D D2 = rhs.val_.matrix().asDiagonal();
             for (int block = 0; block < num_blocks; ++block) {
-                std::cout << jac[block].rows() << ' ' << rhs.jac_[block].rows() << std::endl;
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
                 jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
@@ -201,7 +200,7 @@ namespace AutoDiff
     {
         int num_blocks = rhs.numBlocks();
         std::vector<typename ForwardBlock<Scalar>::M> jac(num_blocks);
-        assert(lhs.cols() == num_blocks);
+        assert(lhs.cols() == rhs.value().rows());
         for (int block = 0; block < num_blocks; ++block) {
             jac[block] = lhs*rhs.derivative()[block];
         }
