@@ -34,18 +34,18 @@
 
 BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 {
-    typedef AutoDiff::ForwardBlock<double> ADV;
+    typedef AutoDiff::ForwardBlock<double> ADB;
 
     std::vector<int> blocksizes = { 3, 1, 2 };
 
-    ADV::V v(3);
+    ADB::V v(3);
     v << 0.2, 1.2, 13.4;
 
-    ADV a = ADV::constant(v, blocksizes);
+    ADB a = ADB::constant(v, blocksizes);
     BOOST_REQUIRE(a.value().matrix() == v.matrix());
 
-    const std::vector<ADV::M>& J = a.derivative();
-    for (std::vector<ADV::M>::const_iterator
+    const std::vector<ADB::M>& J = a.derivative();
+    for (std::vector<ADB::M>::const_iterator
              b = J.begin(), e = J.end(); b != e; ++b) {
         BOOST_REQUIRE(b->nonZeros() == 0);
     }
@@ -53,26 +53,26 @@ BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 
 BOOST_AUTO_TEST_CASE(VariableInitialisation)
 {
-    typedef AutoDiff::ForwardBlock<double> ADV;
+    typedef AutoDiff::ForwardBlock<double> ADB;
 
     std::vector<int> blocksizes = { 3, 1, 2 };
 
-    ADV::V v(3);
+    ADB::V v(3);
     v << 1.0, 2.2, 3.4;
 
     enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
 
-    ADV x = ADV::variable(FirstVar, v, blocksizes);
+    ADB x = ADB::variable(FirstVar, v, blocksizes);
 
     BOOST_REQUIRE(x.value().matrix() == v.matrix());
 
-    const std::vector<ADV::M>& J = x.derivative();
+    const std::vector<ADB::M>& J = x.derivative();
     BOOST_REQUIRE(J[0].nonZeros() == v.size());
 
-    const Eigen::Diagonal<const ADV::M, 0>& d = J[0].diagonal();
+    const Eigen::Diagonal<const ADB::M, 0>& d = J[0].diagonal();
     BOOST_REQUIRE((d.array() == 1.0).all());
 
-    for (std::vector<ADV::M>::const_iterator
+    for (std::vector<ADB::M>::const_iterator
              b = J.begin() + 1, e = J.end(); b != e; ++b) {
         BOOST_REQUIRE(b->nonZeros() == 0);
     }
@@ -80,28 +80,28 @@ BOOST_AUTO_TEST_CASE(VariableInitialisation)
 
 BOOST_AUTO_TEST_CASE(FunctionInitialisation)
 {
-    typedef AutoDiff::ForwardBlock<double> ADV;
+    typedef AutoDiff::ForwardBlock<double> ADB;
 
     std::vector<int>            blocksizes = { 3, 1, 2 };
     std::vector<int>::size_type num_blocks = blocksizes.size();
 
     enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
 
-    ADV::V v(3);
+    ADB::V v(3);
     v << 1.0, 2.2, 3.4;
 
-    std::vector<ADV::M> jacs(num_blocks);
+    std::vector<ADB::M> jacs(num_blocks);
     for (std::vector<int>::size_type j = 0; j < num_blocks; ++j) {
-        jacs[j] = ADV::M(blocksizes[FirstVar], blocksizes[j]);
+        jacs[j] = ADB::M(blocksizes[FirstVar], blocksizes[j]);
         jacs[j].insert(0,0) = -1.0;
     }
 
-    ADV f = ADV::function(v, jacs);
+    ADB f = ADB::function(v, jacs);
 
     BOOST_REQUIRE(f.value().matrix() == v.matrix());
 
-    const std::vector<ADV::M>& J = f.derivative();
-    for (std::vector<ADV::M>::const_iterator
+    const std::vector<ADB::M>& J = f.derivative();
+    for (std::vector<ADB::M>::const_iterator
              bf = J.begin(), ef = J.end(), bj = jacs.begin();
          bf != ef; ++bf, ++bj) {
         BOOST_REQUIRE(bf->nonZeros() == bj->nonZeros());
@@ -109,8 +109,8 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
         BOOST_REQUIRE(bf->outerSize() == bj->outerSize());
         BOOST_REQUIRE(bf->innerSize() == bj->innerSize());
 
-        for (ADV::M::Index k = 0; k < bf->outerSize(); ++k) {
-            for (ADV::M::InnerIterator
+        for (ADB::M::Index k = 0; k < bf->outerSize(); ++k) {
+            for (ADB::M::InnerIterator
                      ileft(*bf, k), iright(*bj, k);
                  ileft && iright; ++ileft, ++iright) {
                 BOOST_REQUIRE(ileft.row()   == iright.row()  );
@@ -127,40 +127,40 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
 
 int main()
 {
-    typedef AutoDiff::ForwardBlock<double> ADV;
+    typedef AutoDiff::ForwardBlock<double> ADB;
     std::vector<int> blocksizes = { 3, 1, 2 };
     int num_blocks = blocksizes.size();
-    ADV::V v1(3);
+    ADB::V v1(3);
     v1 << 0.2, 1.2, 13.4;
-    ADV::V v2(3);
+    ADB::V v2(3);
     v2 << 1.0, 2.2, 3.4;
     enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
-    ADV a = ADV::constant(v1, blocksizes);
-    ADV x = ADV::variable(FirstVar, v2, blocksizes);
-    std::vector<ADV::M> jacs(num_blocks);
+    ADB a = ADB::constant(v1, blocksizes);
+    ADB x = ADB::variable(FirstVar, v2, blocksizes);
+    std::vector<ADB::M> jacs(num_blocks);
     for (int i = 0; i < num_blocks; ++i) {
-        jacs[i] = ADV::M(blocksizes[FirstVar], blocksizes[i]);
+        jacs[i] = ADB::M(blocksizes[FirstVar], blocksizes[i]);
         jacs[i].insert(0,0) = -1.0;
     }
-    ADV f = ADV::function(v2, jacs);
+    ADB f = ADB::function(v2, jacs);
 
-    ADV xpx = x + x;
+    ADB xpx = x + x;
     std::cout << xpx;
-    ADV xpxpa = x + x + a;
+    ADB xpxpa = x + x + a;
     std::cout << xpxpa;
 
 
     std::cout << xpxpa - xpx;
 
-    ADV sqx = x * x;
+    ADB sqx = x * x;
 
     std::cout << sqx;
 
-    ADV sqxdx = sqx / x;
+    ADB sqxdx = sqx / x;
 
     std::cout << sqxdx;
 
-    ADV::M m(2,3);
+    ADB::M m(2,3);
     m.insert(0,0) = 4;
     m.insert(0,1) = 3;
     m.insert(1,1) = 1;
