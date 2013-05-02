@@ -22,6 +22,7 @@
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/utility/Units.hpp>
+#include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <Eigen/UmfPackSupport>
 
@@ -50,7 +51,9 @@ int main()
     typedef ADB::V V;
     typedef ADB::M M;
 
-    Opm::GridManager gm(100,100);
+    Opm::time::StopWatch clock;
+    clock.start();
+    Opm::GridManager gm(50, 50, 10);
     const UnstructuredGrid& grid = *gm.c_grid();
     using namespace Opm::unit;
     using namespace Opm::prefix;
@@ -70,6 +73,8 @@ int main()
     for (int i = 0; i < nc; ++i) {
         allcells[i] = i;
     }
+    std::cerr << "Opm core " << clock.secsSinceLast() << std::endl;
+
     // Define neighbourhood-derived matrices.
     typedef Eigen::Array<int, Eigen::Dynamic, 1> OneColInt;
     typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
@@ -98,13 +103,21 @@ int main()
     //   div  - a matrix for computing divergence at a cell from face-given fluxes.
     M cdiff(num_internal, nc);
     M caver(num_internal, nc);
+    typedef Eigen::Triplet<double> Tri;
+    std::vector<Tri> cdiff_tri;
+    std::vector<Tri> caver_tri;
+    cdiff_tri.reserve(2*num_internal);
+    caver_tri.reserve(2*num_internal);
     for (int i = 0; i < num_internal; ++i) {
-        cdiff.insert(i, nbi(i,0)) = 1.0;
-        cdiff.insert(i, nbi(i,1)) = -1.0;
-        caver.insert(i, nbi(i,0)) = 0.5;
-        caver.insert(i, nbi(i,1)) = 0.5;
+        cdiff_tri.emplace_back(i, nbi(i,0), 1.0);
+        cdiff_tri.emplace_back(i, nbi(i,1), -1.0);
+        caver_tri.emplace_back(i, nbi(i,0), 0.5);
+        caver_tri.emplace_back(i, nbi(i,1), 0.5);
     }
+    cdiff.setFromTriplets(cdiff_tri.begin(), cdiff_tri.end());
+    caver.setFromTriplets(caver_tri.begin(), caver_tri.end());
     M div = cdiff.transpose();
+    std::cerr << "Topology matrices " << clock.secsSinceLast() << std::endl;
 
     typedef AutoDiff::ForwardBlock<double> ADB;
     typedef ADB::V V;
@@ -134,6 +147,9 @@ int main()
     // Still explicit, and no upwinding!
     V mobtransf = totmobf*transi;
 
+    std::cerr << "Property arrays " << clock.secsSinceLast() << std::endl;
+
+
     // First actual AD usage: defining pressure.
     std::vector<int> block_pattern = { nc };
     // Could actually write { nc } instead of block_pattern below,
@@ -147,6 +163,7 @@ int main()
     ADB mobtransf_ad = ADB::constant(mobtransf, block_pattern);
     ADB flux = mobtransf_ad*pdiff_face;
     ADB residual = div*flux - ADB::constant(q, block_pattern);
+    std::cerr << "Construct AD residual " << clock.secsSinceLast() << std::endl;
 
     // std::cout << div << pdiff_face;
     // std::cout << div*pdiff_face;
@@ -170,5 +187,6 @@ int main()
     //     std::cerr << "Solve failure!\n";
     //     return 1;
     // }
+    std::cerr << "Solve " << clock.secsSinceLast() << std::endl;
     std::cout << x << std::endl;
 }
