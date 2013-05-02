@@ -25,7 +25,6 @@
 #include <Eigen/Sparse>
 #include <vector>
 #include <cassert>
-#include <iostream>
 
 namespace AutoDiff
 {
