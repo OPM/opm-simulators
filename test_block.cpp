@@ -120,6 +120,25 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
     }
 }
 
+BOOST_AUTO_TEST_CASE(Addition)
+{
+    typedef AutoDiff::ForwardBlock<double> ADB;
+    std::vector<int> blocksizes = { 3, 1, 2 };
+
+    ADB::V va(3);
+    va << 0.2, 1.2, 13.4;
+
+    ADB::V vx(3);
+    vx << 1.0, 2.2, 3.4;
+
+    enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
+
+    ADB a = ADB::constant(va, blocksizes);
+    ADB x = ADB::variable(FirstVar, vx, blocksizes);
+
+    ADB xpx = x + x;
+}
+
 #if 0
 #include <iostream>
 
