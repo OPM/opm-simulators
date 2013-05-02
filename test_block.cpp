@@ -30,8 +30,6 @@
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
-#include <iostream>
-
 BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 {
     typedef AutoDiff::ForwardBlock<double> ADB;
