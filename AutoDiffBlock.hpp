@@ -174,11 +174,13 @@ namespace AutoDiff
                      const std::vector<M>& jac)
             : val_(val), jac_(jac)
         {
+#ifndef NDEBUG
             const int num_elem = val_.size();
             const int num_blocks = jac_.size();
             for (int block = 0; block < num_blocks; ++block) {
                 assert(num_elem == jac_[block].rows());
             }
+#endif
         }
 
         V val_;
