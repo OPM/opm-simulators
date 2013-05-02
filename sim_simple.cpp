@@ -120,9 +120,6 @@ int main()
     TwoCol s(nc, 2);
     s.leftCols<1>().setZero();
     s.rightCols<1>().setOnes();
-    
-    V sw = s.leftCols<1>();
-    V so = s.rightCols<1>();
 
     // totmob - explicit as well
     TwoCol kr(nc, 2);
