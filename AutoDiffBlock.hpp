@@ -76,7 +76,7 @@ namespace AutoDiff
         }
 
         /// Operator +
-        ForwardBlock operator+(const ForwardBlock& rhs)
+        ForwardBlock operator+(const ForwardBlock& rhs) const
         {
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
@@ -90,7 +90,7 @@ namespace AutoDiff
         }
 
         /// Operator -
-        ForwardBlock operator-(const ForwardBlock& rhs)
+        ForwardBlock operator-(const ForwardBlock& rhs) const
         {
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
@@ -104,7 +104,7 @@ namespace AutoDiff
         }
 
         /// Operator *
-        ForwardBlock operator*(const ForwardBlock& rhs)
+        ForwardBlock operator*(const ForwardBlock& rhs) const
         {
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
@@ -121,7 +121,7 @@ namespace AutoDiff
         }
 
         /// Operator /
-        ForwardBlock operator/(const ForwardBlock& rhs)
+        ForwardBlock operator/(const ForwardBlock& rhs) const
         {
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
