@@ -174,6 +174,17 @@ BOOST_AUTO_TEST_CASE(Addition)
          j1b != j1e; ++j1b, ++j2b) {
         BOOST_CHECK(*j2b == ADB::M((*j1b) * 2));
     }
+
+    ADB::V  r = 2*x.value() + a.value();
+    ADB xpxpa = x + x + a;
+    BOOST_CHECK_EQUAL(xpxpa.value().cwiseNotEqual(r).count(), 0);
+
+    const std::vector<ADB::M>& J3 = xpxpa.derivative();
+    for (std::vector<ADB::M>::const_iterator
+             j1b = J1x.begin(), j1e = J1x.end(), j3b = J3.begin();
+         j1b != j1e; ++j1b, ++j3b) {
+        BOOST_CHECK(*j3b == ADB::M((*j1b) * 2));
+    }
 }
 
 #if 0
