@@ -55,7 +55,8 @@ struct HelperOps
     typedef AutoDiff::ForwardBlock<double>::V V;
 
     /// A list of internal faces.
-    Eigen::Array<int, Eigen::Dynamic, 1> internal_faces;
+    typedef Eigen::Array<int, Eigen::Dynamic, 1> iFaces;
+    iFaces internal_faces;
 
     /// Extract for each face the difference of its adjacent cells'values.
     M ngrad;
@@ -111,11 +112,73 @@ struct HelperOps
     }
 };
 
-/// Returns fw(sw).
+namespace {
+    template <typename Scalar>
+    class UpwindSelector {
+    public:
+        typedef AutoDiff::ForwardBlock<Scalar> ADB;
+
+        UpwindSelector(const UnstructuredGrid& g,
+                       const HelperOps&        h)
+            : g_(g), h_(h)
+        {
+        }
+
+        // Upwind selection in absence of counter-current flow (i.e.,
+        // without effects of gravity and/or capillary pressure).
+        std::vector<ADB>
+        select(const typename ADB::V&  press,
+               const std::vector<ADB>& xc   ) const
+        {
+            typedef HelperOps::iFaces::Index ifIndex;
+            const ifIndex nif = h_.internal_faces.size();
+
+            // Define selector structure.
+            typedef typename Eigen::Triplet<Scalar> Triplet;
+            std::vector<Triplet> s;  s.reserve(nif);
+            for (ifIndex i = 0; i < nif; ++i) {
+                const int f  = h_.internal_faces[i];
+                const int c1 = g_.face_cells[2*f + 0];
+                const int c2 = g_.face_cells[2*f + 1];
+
+                assert ((c1 >= 0) && (c2 >= 0));
+
+                const Scalar dp = press[c1] - press[c2];
+                const int c = (! (dp < Scalar(0))) ? c1 : c2;
+
+                s.push_back(Triplet(i, c, Scalar(1)));
+            }
+
+            // Assemble explicit selector operator.
+            typename ADB::M S(nif, g_.number_of_cells);
+            S.setFromTriplets(s.begin(), s.end());
+
+            // Apply selector.
+            //
+            // Absence of counter-current flow means that the same
+            // selector applies to all quantities, 'x', defined per
+            // cell.
+            std::vector<ADB> xf;  xf.reserve(xc.size());
+            for (typename std::vector<ADB>::const_iterator
+                     b = xc.begin(), e = xc.end(); b != e; ++b)
+            {
+                xf.push_back(S * (*b));
+            }
+
+            return xf;
+        }
+
+    private:
+        const UnstructuredGrid& g_;
+        const HelperOps&        h_;
+    };
+}
+
 template <class ADB>
-ADB fluxFunc(const Opm::IncompPropertiesInterface& props,
-             const std::vector<int>& cells,
-             const typename ADB::V& sw)
+std::vector<ADB>
+phaseMobility(const Opm::IncompPropertiesInterface& props,
+              const std::vector<int>& cells,
+              const typename ADB::V& sw)
 {
     typedef Eigen::Array<double, Eigen::Dynamic, 2, Eigen::RowMajor> TwoCol;
     typedef Eigen::Array<double, Eigen::Dynamic, 4, Eigen::RowMajor> FourCol;
@@ -144,11 +207,22 @@ ADB fluxFunc(const Opm::IncompPropertiesInterface& props,
     const double* mu = props.viscosity();
     std::vector<M> dmw = { krwjac/mu[0] };
     std::vector<M> dmo = { krojac/mu[1] };
-    ADB mw_ad = ADB::function(krw/mu[0], dmw);
-    ADB mo_ad = ADB::function(kro/mu[1], dmo);
-    ADB fw = mw_ad / (mw_ad + mo_ad);
-    // std::cout << mw_ad << mo_ad << (mw_ad + mo_ad) << fw;
-    return fw;
+
+    std::vector<ADB> pmobc = { ADB::function(krw / mu[0], dmw) ,
+                               ADB::function(kro / mu[1], dmo) };
+    return pmobc;
+}
+
+/// Returns fw(sw).
+template <class ADB>
+ADB
+fluxFunc(const std::vector<ADB>& m)
+{
+    assert (m.size() == 2);
+
+    ADB f = m[0] / (m[0] + m[1]);
+
+    return f;
 }
 
 
@@ -286,6 +360,7 @@ int main()
 
     double res_norm = 1e100;
     V s1 =  /*s0.leftCols<1>()*/0.5*V::Ones(nc,1); // Initial guess.
+    UpwindSelector<double> upws(grid, ops);
     do {
         const std::vector<int>& bp = block_pattern;
         ADB s = ADB::variable(0, s1, bp);
@@ -296,9 +371,12 @@ int main()
         // std::cout << dtpv;
         V ngradp1 = ops.ngrad*p1.matrix();
         // std::cout << ngradp1 << std::endl;
-        ADB fw_cell = fluxFunc<ADB>(props, allcells, s.value());
-        // std::cout << fw_cell;
-        ADB fw_face = ops.caver*fw_cell; 
+        std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, s.value());
+        std::vector<ADB> pmobf = upws.select(p1, pmobc);
+
+        ADB fw_cell = fluxFunc(pmobc);
+        ADB fw_face = fluxFunc(pmobf);
+
         // std::cout << fw_face;
         ADB flux1 = fw_face*ADB::constant(ngradp1, bp);
         // std::cout << flux1;
