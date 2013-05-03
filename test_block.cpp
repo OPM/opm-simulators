@@ -163,6 +163,17 @@ BOOST_AUTO_TEST_CASE(Addition)
     ADB x = ADB::variable(FirstVar, vx, blocksizes);
 
     ADB xpx = x + x;
+
+    BOOST_CHECK_EQUAL(xpx.value().cwiseNotEqual(2 * x.value()).count(), 0);
+
+    const std::vector<ADB::M>& J1x = x  .derivative();
+    const std::vector<ADB::M>& J2x = xpx.derivative();
+    BOOST_CHECK_EQUAL(J1x.size(), J2x.size());
+    for (std::vector<ADB::M>::const_iterator
+             j1b = J1x.begin(), j1e = J1x.end(), j2b = J2x.begin();
+         j1b != j1e; ++j1b, ++j2b) {
+        BOOST_CHECK(*j2b == ADB::M((*j1b) * 2));
+    }
 }
 
 #if 0
