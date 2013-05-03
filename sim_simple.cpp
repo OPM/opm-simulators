@@ -112,7 +112,49 @@ struct HelperOps
     }
 };
 
+#if !defined(NDEBUG)
+#include <cstdio>
+#endif  // !defined(NDEBUG)
+
 namespace {
+#if !defined(NDEBUG)
+    void
+    printSparseMatrix(const Eigen::SparseMatrix<double>& A,
+                      std::FILE*                         fp)
+    {
+        typedef Eigen::SparseMatrix<double>::Index Index;
+
+        const Index*  const p = A.outerIndexPtr();
+        const Index*  const i = A.innerIndexPtr();
+        const double* const x = A.valuePtr();
+
+        const Index cols = A.outerSize();
+        assert (A.innerSize() == cols);
+
+        for (Index j = 0; j < cols; j++) {
+            for (Index k = p[j]; k < p[j + 1]; k++) {
+                std::fprintf(fp, "%lu %lu %26.18e\n",
+                             static_cast<unsigned long>(i[k] + 1),
+                             static_cast<unsigned long>(j    + 1), x[k]);
+            }
+        }
+    }
+
+    void
+    printSparseMatrix(const Eigen::SparseMatrix<double>& A ,
+                      const char* const                  fn)
+    {
+        std::FILE* fp;
+
+        fp = std::fopen(fn, "w");
+        if (fp != 0) {
+            printSparseMatrix(A, fp);
+        }
+
+        std::fclose(fp);
+    }
+#endif  // !defined(NDEBUG)
+
     template <typename Scalar>
     class UpwindSelector {
     public:
