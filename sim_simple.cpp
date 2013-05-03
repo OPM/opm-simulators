@@ -26,6 +26,8 @@
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <Eigen/UmfPackSupport>
 
+#include <iostream>
+
 /*
   Equations for incompressible two-phase flow.
 
