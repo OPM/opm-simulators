@@ -14,8 +14,9 @@ function x = sim_simple(cartDims, physDims, tf, verb)
 
    src = addSource([], [1, g.cells.num], [1, -1], 'sat', [ 1, 0 ; 0, 1]);
 
-   state = initState(g, [], 0, repmat([ 0.5, 0.5 ], [g.cells.num, 1]));
-   state = incompTPFA(state, g, T, fluid, 'src', src);
+   s0    = [0, 1];
+   state = incompTPFA(initState(g, [], 0, s0), ...
+                      g, T, fluid, 'src', src);
 
    if nargin < 4, verb = false; end
    state = implicitTransport(state, g, tf, rock, fluid, ...
