@@ -27,6 +27,7 @@
 #include <Eigen/UmfPackSupport>
 
 #include <iostream>
+#include <cstdlib>
 
 /*
   Equations for incompressible two-phase flow.
@@ -261,15 +262,15 @@ int main()
     matr.coeffRef(0,0) *= 2.0;
     matr.makeCompressed();
     solver.compute(matr);
-    // if (solver.info() != Eigen::Succeeded) {
-    //     std::cerr << "Decomposition error!\n";
-    //     return 1;
-    // }
+    if (solver.info() != Eigen::Success) {
+        std::cerr << "Pressure/flow Jacobian decomposition error\n";
+        return EXIT_FAILURE;
+    }
     Eigen::VectorXd x = solver.solve(residual.value().matrix());
-    // if (solver.info() != Eigen::Succeeded) {
-    //     std::cerr << "Solve failure!\n";
-    //     return 1;
-    // }
+    if (solver.info() != Eigen::Success) {
+        std::cerr << "Pressure/solve failure\n";
+        return EXIT_FAILURE;
+    }
     V p1 = p0 - x.array();
     std::cerr << "Solve " << clock.secsSinceLast() << std::endl;
     // std::cout << p1 << std::endl;
@@ -317,15 +318,15 @@ int main()
         matr.makeCompressed();
         // std::cout << transport_residual;
         solver.compute(matr);
-        // if (solver.info() != Eigen::Succeeded) {
-        //     std::cerr << "Decomposition error!\n";
-        //     return 1;
-        // }
+        if (solver.info() != Eigen::Success) {
+            std::cerr << "Transport Jacobian decomposition error\n";
+            return EXIT_FAILURE;
+        }
         x = solver.solve(transport_residual.value().matrix());
-        // if (solver.info() != Eigen::Succeeded) {
-        //     std::cerr << "Solve failure!\n";
-        //     return 1;
-        // }
+        if (solver.info() != Eigen::Success) {
+            std::cerr << "Transport solve failure\n";
+            return EXIT_FAILURE;
+        }
         // std::cout << x << std::endl;
         s1 = s.value() - x.array();
         std::cerr << "Solve for s " << clock.secsSinceLast() << std::endl;
