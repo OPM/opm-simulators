@@ -260,7 +260,7 @@ int main()
     M matr = residual.derivative()[0];
     matr.coeffRef(0,0) *= 2.0;
     matr.makeCompressed();
-    solver.compute(residual.derivative()[0]);
+    solver.compute(matr);
     // if (solver.info() != Eigen::Succeeded) {
     //     std::cerr << "Decomposition error!\n";
     //     return 1;
