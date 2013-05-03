@@ -141,8 +141,10 @@ ADB fluxFunc(const Opm::IncompPropertiesInterface& props,
         krojac.insert(c,c) = dkro(c);
     }
     const double* mu = props.viscosity();
-    ADB mw_ad = ADB::function(krw/mu[0], { krwjac/mu[0] });
-    ADB mo_ad = ADB::function(kro/mu[1], { krojac/mu[1] });
+    std::vector<M> dmw = { krwjac/mu[0] };
+    std::vector<M> dmo = { krojac/mu[1] };
+    ADB mw_ad = ADB::function(krw/mu[0], dmw);
+    ADB mo_ad = ADB::function(kro/mu[1], dmo);
     ADB fw = mw_ad / (mw_ad + mo_ad);
     // std::cout << mw_ad << mo_ad << (mw_ad + mo_ad) << fw;
     return fw;
