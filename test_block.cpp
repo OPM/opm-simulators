@@ -30,6 +30,45 @@
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
+namespace {
+    template <typename Scalar>
+    bool
+    operator ==(const Eigen::SparseMatrix<Scalar>& A,
+                const Eigen::SparseMatrix<Scalar>& B)
+    {
+        // Two SparseMatrices are equal if
+        //   0) They have the same ordering (enforced by equal types)
+        //   1) They have the same outer and inner dimensions
+        //   2) They have the same number of non-zero elements
+        //   3) They have the same sparsity structure
+        //   4) The non-zero elements are equal
+
+        // 1) Outer and inner dimensions
+        bool eq =       (A.outerSize() == B.outerSize());
+        eq      = eq && (A.innerSize() == B.innerSize());
+
+        // 2) Equal number of non-zero elements
+        eq      = eq && (A.nonZeros() == B.nonZeros());
+
+        for (typename Eigen::SparseMatrix<Scalar>::Index
+                 k0 = 0, kend = A.outerSize(); eq && (k0 < kend); ++k0) {
+            for (typename Eigen::SparseMatrix<Scalar>::InnerIterator
+                     iA(A, k0), iB(B, k0); eq && (iA && iB); ++iA, ++iB) {
+                // 3) Sparsity structure
+                eq = (iA.row() == iB.row()) && (iA.col() == iB.col());
+
+                // 4) Equal non-zero elements
+                eq = eq && (iA.value() == iB.value());
+            }
+        }
+
+        return eq;
+
+        // Note: Investigate implementing this operator as
+        // return A.cwiseNotEqual(B).count() == 0;
+    }
+}
+
 BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 {
     typedef AutoDiff::ForwardBlock<double> ADB;
@@ -102,21 +141,8 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
     for (std::vector<ADB::M>::const_iterator
              bf = J.begin(), ef = J.end(), bj = jacs.begin();
          bf != ef; ++bf, ++bj) {
-        BOOST_REQUIRE(bf->nonZeros() == bj->nonZeros());
 
-        BOOST_REQUIRE(bf->outerSize() == bj->outerSize());
-        BOOST_REQUIRE(bf->innerSize() == bj->innerSize());
-
-        for (ADB::M::Index k = 0; k < bf->outerSize(); ++k) {
-            for (ADB::M::InnerIterator
-                     ileft(*bf, k), iright(*bj, k);
-                 ileft && iright; ++ileft, ++iright) {
-                BOOST_REQUIRE(ileft.row()   == iright.row()  );
-                BOOST_REQUIRE(ileft.col()   == iright.col()  );
-                BOOST_REQUIRE(ileft.index() == iright.index());
-                BOOST_REQUIRE(ileft.value() == iright.value());
-            }
-        }
+        BOOST_CHECK(*bf == *bj);
     }
 }
 
