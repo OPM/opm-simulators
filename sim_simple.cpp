@@ -108,6 +108,43 @@ struct HelperOps
     }
 };
 
+/// Returns fw(sw).
+template <class ADB>
+ADB fluxFunc(const Opm::IncompPropertiesInterface& props,
+             const std::vector<int>& cells,
+             const typename ADB::V& sw)
+{
+    typedef Eigen::Array<double, Eigen::Dynamic, 2, Eigen::RowMajor> TwoCol;
+    typedef Eigen::Array<double, Eigen::Dynamic, 4, Eigen::RowMajor> FourCol;
+    typedef typename ADB::V V;
+    typedef typename ADB::M M;
+    const int nc = props.numCells();
+    TwoCol s(nc, 2);
+    s.leftCols<1>() = sw;
+    s.rightCols<1>() = 1.0 - s.leftCols<1>();
+    TwoCol kr(nc, 2);
+    FourCol dkr(nc, 4);
+    props.relperm(nc, s.data(), cells.data(), kr.data(), dkr.data());
+    V krw = kr.leftCols<1>();
+    V kro = kr.rightCols<1>();
+    V dkrw = dkr.leftCols<1>();  // Left column is top-left of dkr/ds 2x2 matrix.
+    V dkro = -dkr.rightCols<1>(); // Right column is bottom-right of dkr/ds 2x2 matrix.
+    M krwjac(nc,nc);
+    M krojac(nc,nc);
+    auto sizes = Eigen::ArrayXi::Ones(nc);
+    krwjac.reserve(sizes);
+    krojac.reserve(sizes);
+    for (int c = 0; c < nc; ++c) {
+        krwjac.insert(c,c) = dkrw(c);
+        krojac.insert(c,c) = dkro(c);
+    }
+    const double* mu = props.viscosity();
+    ADB mw_ad = ADB::function(krw/mu[0], { krwjac/mu[0] });
+    ADB mo_ad = ADB::function(kro/mu[1], { krojac/mu[1] });
+    ADB fw = mw_ad / (mw_ad + mo_ad);
+    // std::cout << mw_ad << mo_ad << (mw_ad + mo_ad) << fw;
+    return fw;
+}
 
 
 int main()
@@ -118,14 +155,24 @@ int main()
 
     Opm::time::StopWatch clock;
     clock.start();
-    Opm::GridManager gm(50, 50, 10);
+    Opm::GridManager gm(3,3);//(50, 50, 10);
     const UnstructuredGrid& grid = *gm.c_grid();
     using namespace Opm::unit;
     using namespace Opm::prefix;
-    Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Quadratic,
-                                     { 1000.0, 800.0 },
-                                     { 1.0*centi*Poise, 5.0*centi*Poise },
-                                     0.2, 100*milli*darcy,
+    // Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
+    //                                  { 1000.0, 800.0 },
+    //                                  { 1.0*centi*Poise, 5.0*centi*Poise },
+    //                                  0.2, 100*milli*darcy,
+    //                                  grid.dimensions, grid.number_of_cells);
+    // Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
+    //                                  { 1000.0, 1000.0 },
+    //                                  { 1.0, 1.0 },
+    //                                  1.0, 1.0,
+    //                                  grid.dimensions, grid.number_of_cells);
+    Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
+                                     { 1000.0, 1000.0 },
+                                     { 1.0, 30.0 },
+                                     1.0, 1.0,
                                      grid.dimensions, grid.number_of_cells);
     std::vector<double> htrans(grid.cell_facepos[grid.number_of_cells]);
     tpfa_htrans_compute((UnstructuredGrid*)&grid, props.permeability(), htrans.data());
@@ -157,15 +204,15 @@ int main()
     q[0] = 1.0;
     q[nc-1] = -1.0;
 
-    // s - this is explicit now
+    // s0 - this is explicit now
     typedef Eigen::Array<double, Eigen::Dynamic, 2, Eigen::RowMajor> TwoCol;
-    TwoCol s(nc, 2);
-    s.leftCols<1>().setZero();
-    s.rightCols<1>().setOnes();
+    TwoCol s0(nc, 2);
+    s0.leftCols<1>().setZero();
+    s0.rightCols<1>().setOnes();
 
     // totmob - explicit as well
     TwoCol kr(nc, 2);
-    props.relperm(nc, s.data(), allcells.data(), kr.data(), 0);
+    props.relperm(nc, s0.data(), allcells.data(), kr.data(), 0);
     V krw = kr.leftCols<1>();
     V kro = kr.rightCols<1>();
     const double* mu = props.viscosity();
@@ -197,11 +244,6 @@ int main()
     ADB residual = ops.div*flux - ADB::constant(q, block_pattern);
     std::cerr << "Construct AD residual " << clock.secsSinceLast() << std::endl;
 
-    // std::cout << div << pdiff_face;
-    // std::cout << div*pdiff_face;
-    // std::cout << q << std::endl;
-    // std::cout << residual << std::endl;
-
     // It's the residual we want to be zero. We know it's linear in p,
     // so we just need a single linear solve. Since we have formulated
     // ourselves with a residual and jacobian we do this with a single
@@ -224,7 +266,68 @@ int main()
     //     std::cerr << "Solve failure!\n";
     //     return 1;
     // }
-    V p_new = p0 - x.array();
+    V p1 = p0 - x.array();
     std::cerr << "Solve " << clock.secsSinceLast() << std::endl;
-    std::cout << p_new << std::endl;
+    // std::cout << p1 << std::endl;
+
+    // ------ Transport solve ------
+
+    // Now we'll try to do a transport step as well.
+    // Residual formula is
+    //   R_w = s_w - s_w^0 + dt/pv * (div v_w)
+    // where
+    //   v_w = f_w v
+    // and f_w is (for now) based on averaged mobilities, not upwind.
+
+    double res_norm = 1e100;
+    V s1 =  /*s0.leftCols<1>()*/0.5*V::Ones(nc,1); // Initial guess.
+    do {
+        const std::vector<int>& bp = block_pattern;
+        ADB s = ADB::variable(0, s1, bp);
+        const double dt = 0.0005;
+        V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
+            * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
+        V dtpv = dt/pv;
+        // std::cout << dtpv;
+        V ngradp1 = ops.ngrad*p1.matrix();
+        // std::cout << ngradp1 << std::endl;
+        ADB fw_cell = fluxFunc<ADB>(props, allcells, s.value());
+        // std::cout << fw_cell;
+        ADB fw_face = ops.caver*fw_cell; 
+        // std::cout << fw_face;
+        ADB flux1 = fw_face*ADB::constant(ngradp1, bp);
+        // std::cout << flux1;
+        V qneg = dtpv*q;
+        V qpos = dtpv*q;
+        // Cheating a bit...
+        qneg[0] = 0.0;
+        qpos[nc-1] = 0.0;
+        ADB qtr_ad = ADB::constant(qpos, bp) + fw_cell*ADB::constant(qneg, bp);
+        ADB transport_residual = s - ADB::constant(s0.leftCols<1>(), bp)
+            + ADB::constant(dtpv, bp)*(ops.div*flux1)
+            - qtr_ad;
+        res_norm = transport_residual.value().matrix().norm();
+        std::cout << "res_norm = " << res_norm << std::endl;
+
+        matr = transport_residual.derivative()[0];
+        matr.makeCompressed();
+        // std::cout << transport_residual;
+        solver.compute(matr);
+        // if (solver.info() != Eigen::Succeeded) {
+        //     std::cerr << "Decomposition error!\n";
+        //     return 1;
+        // }
+        x = solver.solve(transport_residual.value().matrix());
+        // if (solver.info() != Eigen::Succeeded) {
+        //     std::cerr << "Solve failure!\n";
+        //     return 1;
+        // }
+        // std::cout << x << std::endl;
+        s1 = s.value() - x.array();
+        std::cerr << "Solve for s " << clock.secsSinceLast() << std::endl;
+        for (int c = 0; c < nc; ++c) {
+            s1[c] = std::min(1.0, std::max(0.0, s1[c]));
+        }
+        std::cout << "s1 = \n" << s1 << std::endl;
+    } while (res_norm > 1e-7);
 }
