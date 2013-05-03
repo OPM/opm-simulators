@@ -268,7 +268,7 @@ int main()
     }
     Eigen::VectorXd x = solver.solve(residual.value().matrix());
     if (solver.info() != Eigen::Success) {
-        std::cerr << "Pressure/solve failure\n";
+        std::cerr << "Pressure/flow solve failure\n";
         return EXIT_FAILURE;
     }
     V p1 = p0 - x.array();
