@@ -415,6 +415,7 @@ int main()
     std::cout.setf(std::ios::scientific);
     std::cout.precision(16);
 
+    int it = 0;
     do {
         const std::vector<int>& bp = block_pattern;
         ADB s = ADB::variable(0, s1, bp);
@@ -440,7 +441,8 @@ int main()
             + ADB::constant(dtpv, bp)*(ops.div*flux1)
             - qtr_ad;
         res_norm = transport_residual.value().matrix().norm();
-        std::cout << "res_norm = " << res_norm << std::endl;
+        std::cout << "res_norm[" << it << "] = "
+                  << res_norm << std::endl;
 
         matr = transport_residual.derivative()[0];
         matr.makeCompressed();
@@ -457,10 +459,14 @@ int main()
         }
         // std::cout << x << std::endl;
         s1 = s.value() - x.array();
-        std::cerr << "Solve for s " << clock.secsSinceLast() << std::endl;
+        std::cerr << "Solve for s[" << it << "]: "
+                  << clock.secsSinceLast() << '\n';
         for (int c = 0; c < nc; ++c) {
             s1[c] = std::min(1.0, std::max(0.0, s1[c]));
         }
-        std::cout << "s1 = \n" << s1 << std::endl;
+
+        it += 1;
     } while (res_norm > 1e-7);
+
+    std::cout << "Saturation solution:\ns1 = [\n" << s1 << "\n]\n";
 }
