@@ -403,6 +403,8 @@ int main()
     double res_norm = 1e100;
     V s1 =  /*s0.leftCols<1>()*/0.5*V::Ones(nc,1); // Initial guess.
     UpwindSelector<double> upws(grid, ops);
+    const ADB nkdp = (ADB::constant(transi                 , block_pattern) *
+                      ADB::constant(ops.ngrad * p1.matrix(), block_pattern));
     do {
         const std::vector<int>& bp = block_pattern;
         ADB s = ADB::variable(0, s1, bp);
@@ -411,16 +413,11 @@ int main()
             * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
         V dtpv = dt/pv;
         // std::cout << dtpv;
-        V ngradp1 = ops.ngrad*p1.matrix();
-        // std::cout << ngradp1 << std::endl;
         std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, s.value());
         std::vector<ADB> pmobf = upws.select(p1, pmobc);
 
         ADB fw_cell = fluxFunc(pmobc);
-        ADB fw_face = fluxFunc(pmobf);
-
-        // std::cout << fw_face;
-        ADB flux1 = fw_face*ADB::constant(ngradp1, bp);
+        ADB flux1 = pmobf[0] * nkdp;
         // std::cout << flux1;
         V qneg = dtpv*q;
         V qpos = dtpv*q;
