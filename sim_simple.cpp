@@ -409,7 +409,12 @@ int main()
     const std::vector<ADB> pmobc0 = phaseMobility<ADB>(props, allcells, s00.value());
     const std::vector<ADB> pmobf0 = upws.select(p1, pmobc0);
     const std::vector<ADB::M> null = { ADB::M(transi.size(), nc) };
-    const ADB dflux = (pmobf0[0] + pmobf0[1]) * ADB::function(nkdp.value(), null);
+    const ADB dflux = (ADB::function((pmobf0[0] + pmobf0[1]).value(), null) *
+                       ADB::function(nkdp.value()                   , null));
+
+    std::cout.setf(std::ios::scientific);
+    std::cout.precision(16);
+
     do {
         const std::vector<int>& bp = block_pattern;
         ADB s = ADB::variable(0, s1, bp);
