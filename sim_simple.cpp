@@ -293,11 +293,10 @@ int main()
                                            { 1.0, 30.0 },
                                            1.0, 1.0,
                                            grid.dimensions, grid.number_of_cells);
-    std::vector<double> htrans(grid.cell_facepos[grid.number_of_cells]);
+    V htrans(grid.cell_facepos[grid.number_of_cells]);
     tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid), props.permeability(), htrans.data());
-    // std::vector<double> trans(grid.number_of_faces);
     V trans_all(grid.number_of_faces);
-    tpfa_trans_compute((UnstructuredGrid*)&grid, htrans.data(), trans_all.data());
+    // tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid), htrans.data(), trans_all.data());
     const int nc = grid.number_of_cells;
     std::vector<int> allcells(nc);
     for (int i = 0; i < nc; ++i) {
@@ -308,10 +307,6 @@ int main()
     // Define neighbourhood-derived operator matrices.
     const HelperOps ops(grid);
     const int num_internal = ops.internal_faces.size();
-    V transi(num_internal);
-    for (int fi = 0; fi < num_internal; ++fi) {
-        transi[fi] = trans_all[ops.internal_faces[fi]];
-    }
     std::cerr << "Topology matrices " << clock.secsSinceLast() << std::endl;
 
     typedef AutoDiff::ForwardBlock<double> ADB;
@@ -336,12 +331,15 @@ int main()
     const V kro = kr.rightCols<1>();
     const double* mu = props.viscosity();
     const V totmob = krw/mu[0] + kro/mu[1];
-    const V totmobf = (ops.caver*totmob.matrix()).array();
 
-    // Mobility-weighted transmissibilities per internal face.
+    // Moved down here because we need total mobility.
+    tpfa_eff_trans_compute(const_cast<UnstructuredGrid*>(&grid), totmob.data(),
+                           htrans.data(), trans_all.data());
     // Still explicit, and no upwinding!
-    const V mobtransf = totmobf*transi;
-
+    V mobtransf(num_internal);
+    for (int fi = 0; fi < num_internal; ++fi) {
+        mobtransf[fi] = trans_all[ops.internal_faces[fi]];
+    }
     std::cerr << "Property arrays " << clock.secsSinceLast() << std::endl;
 
     // Initial pressure.
@@ -399,8 +397,8 @@ int main()
     const V sw0 = s0.leftCols<1>();
     // V sw1 = sw0;
     V sw1 = 0.5*V::Ones(nc,1);
-    const V nkdp = transi * (ops.ngrad * p1.matrix()).array();
-    const V dflux = totmobf * nkdp;
+    const V ndp = (ops.ngrad * p1.matrix()).array();
+    const V dflux = mobtransf * ndp;
     const UpwindSelectorTotalFlux<double> upwind(grid, ops, dflux);
     const V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
         * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
