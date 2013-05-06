@@ -156,44 +156,43 @@ namespace {
 #endif  // !defined(NDEBUG)
 
     template <typename Scalar>
-    class UpwindSelector {
+    class UpwindSelectorTotalFlux {
     public:
         typedef AutoDiff::ForwardBlock<Scalar> ADB;
 
-        UpwindSelector(const UnstructuredGrid& g,
-                       const HelperOps&        h)
-            : g_(g), h_(h)
+        UpwindSelectorTotalFlux(const UnstructuredGrid& g,
+                                const HelperOps&        h,
+                                const typename ADB::V&  ifaceflux)
         {
+            typedef HelperOps::IFaces::Index IFIndex;
+            const IFIndex nif = h.internal_faces.size();
+
+            // Define selector structure.
+            typedef typename Eigen::Triplet<Scalar> Triplet;
+            std::vector<Triplet> s;  s.reserve(nif);
+            for (IFIndex iface = 0; iface < nif; ++iface) {
+                const int f  = h.internal_faces[iface];
+                const int c1 = g.face_cells[2*f + 0];
+                const int c2 = g.face_cells[2*f + 1];
+
+                assert ((c1 >= 0) && (c2 >= 0));
+
+                // Select upwind cell.
+                const int c = (ifaceflux[iface] >= 0) ? c1 : c2;
+
+                s.push_back(Triplet(iface, c, Scalar(1)));
+            }
+
+            // Assemble explicit selector operator.
+            select_.resize(nif, g.number_of_cells);
+            select_.setFromTriplets(s.begin(), s.end());
         }
 
         // Upwind selection in absence of counter-current flow (i.e.,
         // without effects of gravity and/or capillary pressure).
         std::vector<ADB>
-        select(const typename ADB::V&  press,
-               const std::vector<ADB>& xc   ) const
+        select(const std::vector<ADB>& xc) const
         {
-            typedef HelperOps::IFaces::Index IFIndex;
-            const IFIndex nif = h_.internal_faces.size();
-
-            // Define selector structure.
-            typedef typename Eigen::Triplet<Scalar> Triplet;
-            std::vector<Triplet> s;  s.reserve(nif);
-            for (IFIndex i = 0; i < nif; ++i) {
-                const int f  = h_.internal_faces[i];
-                const int c1 = g_.face_cells[2*f + 0];
-                const int c2 = g_.face_cells[2*f + 1];
-
-                assert ((c1 >= 0) && (c2 >= 0));
-
-                const Scalar dp = press[c1] - press[c2];
-                const int c = (! (dp < Scalar(0))) ? c1 : c2;
-
-                s.push_back(Triplet(i, c, Scalar(1)));
-            }
-
-            // Assemble explicit selector operator.
-            typename ADB::M S(nif, g_.number_of_cells);
-            S.setFromTriplets(s.begin(), s.end());
 
             // Apply selector.
             //
@@ -204,15 +203,14 @@ namespace {
             for (typename std::vector<ADB>::const_iterator
                      b = xc.begin(), e = xc.end(); b != e; ++b)
             {
-                xf.push_back(S * (*b));
+                xf.push_back(select_ * (*b));
             }
 
             return xf;
         }
 
     private:
-        const UnstructuredGrid& g_;
-        const HelperOps&        h_;
+        typename ADB::M select_;
     };
 }
 
@@ -401,9 +399,9 @@ int main()
     const V sw0 = s0.leftCols<1>();
     // V sw1 = sw0;
     V sw1 = 0.5*V::Ones(nc,1);
-    const UpwindSelector<double> upws(grid, ops);
     const V nkdp = transi * (ops.ngrad * p1.matrix()).array();
     const V dflux = totmobf * nkdp;
+    const UpwindSelectorTotalFlux<double> upwind(grid, ops, dflux);
     const V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
         * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
     const double dt = 0.0005;
@@ -418,7 +416,7 @@ int main()
     do {
         const ADB sw = ADB::variable(0, sw1, bpat);
         const std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, sw.value());
-        const std::vector<ADB> pmobf = upws.select(p1, pmobc);
+        const std::vector<ADB> pmobf = upwind.select(pmobc);
         const ADB fw_cell = fluxFunc(pmobc);
         const ADB fw_face = fluxFunc(pmobf);
         const ADB flux1 = fw_face * dflux;
