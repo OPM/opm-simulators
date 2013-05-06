@@ -403,14 +403,8 @@ int main()
     double res_norm = 1e100;
     V s1 =  /*s0.leftCols<1>()*/0.5*V::Ones(nc,1); // Initial guess.
     UpwindSelector<double> upws(grid, ops);
-    const ADB nkdp = (ADB::constant(transi                 , block_pattern) *
-                      ADB::constant(ops.ngrad * p1.matrix(), block_pattern));
-    const ADB sw0 = ADB::constant(s0.leftCols<1>(), block_pattern);
-    const std::vector<ADB> pmobc0 = phaseMobility<ADB>(props, allcells, sw0.value());
-    const std::vector<ADB> pmobf0 = upws.select(p1, pmobc0);
-    const std::vector<ADB::M> null = { ADB::M(transi.size(), nc) };
-    const ADB dflux = (ADB::function((pmobf0[0] + pmobf0[1]).value(), null) *
-                       ADB::function(nkdp.value()                   , null));
+    const V nkdp = transi * (ops.ngrad * p1.matrix()).array();
+    const V dflux = totmobf * nkdp;
 
     std::cout.setf(std::ios::scientific);
     std::cout.precision(16);
@@ -429,7 +423,7 @@ int main()
 
         ADB fw_cell = fluxFunc(pmobc);
         const ADB fw_face = fluxFunc(pmobf);
-        ADB flux1 = fw_face * dflux;
+        const ADB flux1 = fw_face * ADB::constant(dflux, bp);
         // std::cout << flux1;
         V qneg = dtpv*q;
         V qpos = dtpv*q;
