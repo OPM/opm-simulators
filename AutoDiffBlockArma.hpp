@@ -17,12 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_AUTODIFFBLOCK_HEADER_INCLUDED
-#define OPM_AUTODIFFBLOCK_HEADER_INCLUDED
+#ifndef OPM_AUTODIFFBLOCKARMA_HEADER_INCLUDED
+#define OPM_AUTODIFFBLOCKARMA_HEADER_INCLUDED
 
-#include "AutoDiff.hpp"
-#include <Eigen/Eigen>
-#include <Eigen/Sparse>
+
+// #include "AutoDiff.hpp"
+// #include <Eigen/Eigen>
+// #include <Eigen/Sparse>
+#include <armadillo>
 #include <vector>
 #include <cassert>
 
@@ -34,8 +36,8 @@ namespace AutoDiff
     {
     public:
         /// Underlying types for scalar vectors and jacobians.
-        typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> V;
-        typedef Eigen::SparseMatrix<Scalar> M;
+        typedef arma::Col<Scalar> V;
+        typedef arma::SpMat<Scalar> M;
 
         /// Named constructor pattern used here.
         static ForwardBlock constant(const V& val, const std::vector<int>& blocksizes)
@@ -63,10 +65,7 @@ namespace AutoDiff
             }
             // ... then set the one corrresponding to this variable to identity.
             assert(blocksizes[index] == num_elem);
-            jac[index].reserve(Eigen::VectorXi::Constant(val.size(), 1));
-            for (typename M::Index row = 0; row < val.size(); ++row) {
-                jac[index].insert(row, row) = Scalar(1.0);
-            }
+            jac[index].eye(num_elem, num_elem);
             return ForwardBlock(val, jac);
         }
 
@@ -76,35 +75,35 @@ namespace AutoDiff
         }
 
         /// Operator +
-        ForwardBlock operator+(const ForwardBlock& rhs) const
+        ForwardBlock operator+(const ForwardBlock& rhs)
         {
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
             int num_blocks = numBlocks();
             for (int block = 0; block < num_blocks; ++block) {
-                assert(jac[block].rows() == rhs.jac_[block].rows());
-                assert(jac[block].cols() == rhs.jac_[block].cols());
+                assert(jac[block].n_rows == rhs.jac_[block].n_rows);
+                assert(jac[block].n_cols == rhs.jac_[block].n_cols);
                 jac[block] += rhs.jac_[block];
             }
             return function(val_ + rhs.val_, jac);
         }
 
         /// Operator -
-        ForwardBlock operator-(const ForwardBlock& rhs) const
+        ForwardBlock operator-(const ForwardBlock& rhs)
         {
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
             int num_blocks = numBlocks();
             for (int block = 0; block < num_blocks; ++block) {
-                assert(jac[block].rows() == rhs.jac_[block].rows());
-                assert(jac[block].cols() == rhs.jac_[block].cols());
+                assert(jac[block].n_rows == rhs.jac_[block].n_rows);
+                assert(jac[block].n_cols == rhs.jac_[block].n_cols);
                 jac[block] -= rhs.jac_[block];
             }
             return function(val_ - rhs.val_, jac);
         }
 
         /// Operator *
-        ForwardBlock operator*(const ForwardBlock& rhs) const
+        ForwardBlock operator*(const ForwardBlock& rhs)
         {
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
@@ -113,15 +112,15 @@ namespace AutoDiff
             D D1 = val_.matrix().asDiagonal();
             D D2 = rhs.val_.matrix().asDiagonal();
             for (int block = 0; block < num_blocks; ++block) {
-                assert(jac_[block].rows() == rhs.jac_[block].rows());
-                assert(jac_[block].cols() == rhs.jac_[block].cols());
+                assert(jac_[block].n_rows == rhs.jac_[block].n_rows);
+                assert(jac_[block].n_cols == rhs.jac_[block].n_cols);
                 jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
             }
             return function(val_ * rhs.val_, jac);
         }
 
         /// Operator /
-        ForwardBlock operator/(const ForwardBlock& rhs) const
+        ForwardBlock operator/(const ForwardBlock& rhs)
         {
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
@@ -131,8 +130,8 @@ namespace AutoDiff
             D D2 = rhs.val_.matrix().asDiagonal();
             D D3 = std::pow(rhs.val_, -2).matrix().asDiagonal();
             for (int block = 0; block < num_blocks; ++block) {
-                assert(jac_[block].rows() == rhs.jac_[block].rows());
-                assert(jac_[block].cols() == rhs.jac_[block].cols());
+                assert(jac_[block].n_rows == rhs.jac_[block].n_rows);
+                assert(jac_[block].n_cols == rhs.jac_[block].n_cols);
                 jac[block] = D3 * (D2*jac_[block] - D1*rhs.jac_[block]);
             }
             return function(val_ / rhs.val_, jac);
@@ -156,17 +155,6 @@ namespace AutoDiff
             return jac_.size();
         }
 
-        /// Sizes (number of columns) of Jacobian blocks.
-        std::vector<int> blockPattern() const
-        {
-            const int nb = numBlocks();
-            std::vector<int> bp(nb);
-            for (int block = 0; block < nb; ++block) {
-                bp[block] = jac_[block].cols();
-            }
-            return bp;
-        }
-
         /// Function value
         const V& value() const
         {
@@ -188,7 +176,7 @@ namespace AutoDiff
             const int num_elem = val_.size();
             const int num_blocks = jac_.size();
             for (int block = 0; block < num_blocks; ++block) {
-                assert(num_elem == jac_[block].rows());
+                assert(num_elem == jac_[block].n_rows);
             }
 #endif
         }
@@ -205,7 +193,6 @@ namespace AutoDiff
         return fw.print(os);
     }
 
-
     /// Multiply with sparse matrix from the left.
     template <typename Scalar>
     ForwardBlock<Scalar> operator*(const typename ForwardBlock<Scalar>::M& lhs,
@@ -213,7 +200,7 @@ namespace AutoDiff
     {
         int num_blocks = rhs.numBlocks();
         std::vector<typename ForwardBlock<Scalar>::M> jac(num_blocks);
-        assert(lhs.cols() == rhs.value().rows());
+        assert(lhs.n_cols == rhs.value().n_rows);
         for (int block = 0; block < num_blocks; ++block) {
             jac[block] = lhs*rhs.derivative()[block];
         }
@@ -222,72 +209,8 @@ namespace AutoDiff
     }
 
 
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator*(const typename ForwardBlock<Scalar>::V& lhs,
-                                   const ForwardBlock<Scalar>& rhs)
-    {
-        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) * rhs;
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator*(const ForwardBlock<Scalar>& lhs,
-                                   const typename ForwardBlock<Scalar>::V& rhs)
-    {
-        return rhs * lhs; // Commutative operation.
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator+(const typename ForwardBlock<Scalar>::V& lhs,
-                                   const ForwardBlock<Scalar>& rhs)
-    {
-        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) + rhs;
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator+(const ForwardBlock<Scalar>& lhs,
-                                   const typename ForwardBlock<Scalar>::V& rhs)
-    {
-        return rhs + lhs; // Commutative operation.
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator-(const typename ForwardBlock<Scalar>::V& lhs,
-                                   const ForwardBlock<Scalar>& rhs)
-    {
-        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) - rhs;
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator-(const ForwardBlock<Scalar>& lhs,
-                                   const typename ForwardBlock<Scalar>::V& rhs)
-    {
-        return lhs - ForwardBlock<Scalar>::constant(rhs, lhs.blockPattern());
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator/(const typename ForwardBlock<Scalar>::V& lhs,
-                                   const ForwardBlock<Scalar>& rhs)
-    {
-        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) / rhs;
-    }
-
-
-    template <typename Scalar>
-    ForwardBlock<Scalar> operator/(const ForwardBlock<Scalar>& lhs,
-                                   const typename ForwardBlock<Scalar>::V& rhs)
-    {
-        return lhs / ForwardBlock<Scalar>::constant(rhs, lhs.blockPattern());
-    }
-
-
 } // namespace Autodiff
 
 
 
-#endif // OPM_AUTODIFFBLOCK_HEADER_INCLUDED
+#endif // OPM_AUTODIFFBLOCKARMA_HEADER_INCLUDED
