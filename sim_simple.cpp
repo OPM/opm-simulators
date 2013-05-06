@@ -172,13 +172,13 @@ namespace {
         select(const typename ADB::V&  press,
                const std::vector<ADB>& xc   ) const
         {
-            typedef HelperOps::IFaces::Index ifIndex;
-            const ifIndex nif = h_.internal_faces.size();
+            typedef HelperOps::IFaces::Index IFIndex;
+            const IFIndex nif = h_.internal_faces.size();
 
             // Define selector structure.
             typedef typename Eigen::Triplet<Scalar> Triplet;
             std::vector<Triplet> s;  s.reserve(nif);
-            for (ifIndex i = 0; i < nif; ++i) {
+            for (IFIndex i = 0; i < nif; ++i) {
                 const int f  = h_.internal_faces[i];
                 const int c1 = g_.face_cells[2*f + 0];
                 const int c2 = g_.face_cells[2*f + 1];
