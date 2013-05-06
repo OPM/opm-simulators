@@ -276,27 +276,27 @@ int main()
 
     Opm::time::StopWatch clock;
     clock.start();
-    Opm::GridManager gm(3,3);//(50, 50, 10);
+    const Opm::GridManager gm(3,3);//(50, 50, 10);
     const UnstructuredGrid& grid = *gm.c_grid();
     using namespace Opm::unit;
     using namespace Opm::prefix;
-    // Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
-    //                                  { 1000.0, 800.0 },
-    //                                  { 1.0*centi*Poise, 5.0*centi*Poise },
-    //                                  0.2, 100*milli*darcy,
-    //                                  grid.dimensions, grid.number_of_cells);
-    // Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
-    //                                  { 1000.0, 1000.0 },
-    //                                  { 1.0, 1.0 },
-    //                                  1.0, 1.0,
-    //                                  grid.dimensions, grid.number_of_cells);
-    Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
-                                     { 1000.0, 1000.0 },
-                                     { 1.0, 30.0 },
-                                     1.0, 1.0,
-                                     grid.dimensions, grid.number_of_cells);
+    // const Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
+    //                                        { 1000.0, 800.0 },
+    //                                        { 1.0*centi*Poise, 5.0*centi*Poise },
+    //                                        0.2, 100*milli*darcy,
+    //                                        grid.dimensions, grid.number_of_cells);
+    // const Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
+    //                                        { 1000.0, 1000.0 },
+    //                                        { 1.0, 1.0 },
+    //                                        1.0, 1.0,
+    //                                        grid.dimensions, grid.number_of_cells);
+    const Opm::IncompPropertiesBasic props(2, Opm::SaturationPropsBasic::Linear,
+                                           { 1000.0, 1000.0 },
+                                           { 1.0, 30.0 },
+                                           1.0, 1.0,
+                                           grid.dimensions, grid.number_of_cells);
     std::vector<double> htrans(grid.cell_facepos[grid.number_of_cells]);
-    tpfa_htrans_compute((UnstructuredGrid*)&grid, props.permeability(), htrans.data());
+    tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid), props.permeability(), htrans.data());
     // std::vector<double> trans(grid.number_of_faces);
     V trans_all(grid.number_of_faces);
     tpfa_trans_compute((UnstructuredGrid*)&grid, htrans.data(), trans_all.data());
@@ -308,7 +308,7 @@ int main()
     std::cerr << "Opm core " << clock.secsSinceLast() << std::endl;
 
     // Define neighbourhood-derived operator matrices.
-    HelperOps ops(grid);
+    const HelperOps ops(grid);
     const int num_internal = ops.internal_faces.size();
     V transi(num_internal);
     for (int fi = 0; fi < num_internal; ++fi) {
@@ -334,15 +334,15 @@ int main()
     // totmob - explicit as well
     TwoCol kr(nc, 2);
     props.relperm(nc, s0.data(), allcells.data(), kr.data(), 0);
-    V krw = kr.leftCols<1>();
-    V kro = kr.rightCols<1>();
+    const V krw = kr.leftCols<1>();
+    const V kro = kr.rightCols<1>();
     const double* mu = props.viscosity();
-    V totmob = krw/mu[0] + kro/mu[1];
-    V totmobf = (ops.caver*totmob.matrix()).array();
+    const V totmob = krw/mu[0] + kro/mu[1];
+    const V totmobf = (ops.caver*totmob.matrix()).array();
 
     // Mobility-weighted transmissibilities per internal face.
     // Still explicit, and no upwinding!
-    V mobtransf = totmobf*transi;
+    const V mobtransf = totmobf*transi;
 
     std::cerr << "Property arrays " << clock.secsSinceLast() << std::endl;
 
@@ -351,18 +351,18 @@ int main()
     p0.fill(200*Opm::unit::barsa);
 
     // First actual AD usage: defining pressure variable.
-    std::vector<int> block_pattern = { nc };
-    // Could actually write { nc } instead of block_pattern below,
+    const std::vector<int> bpat = { nc };
+    // Could actually write { nc } instead of bpat below,
     // but we prefer a named variable since we will repeat it.
-    ADB p = ADB::variable(0, p0, block_pattern);
-    ADB ngradp = ops.ngrad*p;
+    const ADB p = ADB::variable(0, p0, bpat);
+    const ADB ngradp = ops.ngrad*p;
     // We want flux = totmob*trans*(p_i - p_j) for the ij-face.
     // We only need to multiply mobtransf and pdiff_face,
     // but currently multiplication with constants is not in,
     // so we define an AD constant to multiply with.
-    ADB mobtransf_ad = ADB::constant(mobtransf, block_pattern);
-    ADB flux = mobtransf_ad*ngradp;
-    ADB residual = ops.div*flux - ADB::constant(q, block_pattern);
+    const ADB mobtransf_ad = ADB::constant(mobtransf, bpat);
+    const ADB flux = mobtransf_ad*ngradp;
+    const ADB residual = ops.div*flux - ADB::constant(q, bpat);
     std::cerr << "Construct AD residual " << clock.secsSinceLast() << std::endl;
 
     // It's the residual we want to be zero. We know it's linear in p,
@@ -374,20 +374,21 @@ int main()
     // residual.derived()[0].
 
     Eigen::UmfPackLU<M> solver;
-    M matr = residual.derivative()[0];
-    matr.coeffRef(0,0) *= 2.0;
-    matr.makeCompressed();
-    solver.compute(matr);
+    M pmatr = residual.derivative()[0];
+    pmatr.coeffRef(0,0) *= 2.0;
+    pmatr.makeCompressed();
+    solver.compute(pmatr);
     if (solver.info() != Eigen::Success) {
         std::cerr << "Pressure/flow Jacobian decomposition error\n";
         return EXIT_FAILURE;
     }
-    Eigen::VectorXd x = solver.solve(residual.value().matrix());
+    // const Eigen::VectorXd dp = solver.solve(residual.value().matrix());
+    const V dp = solver.solve(residual.value().matrix()).array();
     if (solver.info() != Eigen::Success) {
         std::cerr << "Pressure/flow solve failure\n";
         return EXIT_FAILURE;
     }
-    V p1 = p0 - x.array();
+    const V p1 = p0 - dp;
     std::cerr << "Solve " << clock.secsSinceLast() << std::endl;
     // std::cout << p1 << std::endl;
 
@@ -402,57 +403,51 @@ int main()
 
     double res_norm = 1e100;
     V s1 =  /*s0.leftCols<1>()*/0.5*V::Ones(nc,1); // Initial guess.
-    UpwindSelector<double> upws(grid, ops);
+    const UpwindSelector<double> upws(grid, ops);
     const V nkdp = transi * (ops.ngrad * p1.matrix()).array();
     const V dflux = totmobf * nkdp;
+    const V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
+        * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
+    const double dt = 0.0005;
+    const V dtpv = dt/pv;
+    V qneg = dtpv*q;
+    V qpos = dtpv*q;
+    // Cheating a bit...
+    qneg[0] = 0.0;
+    qpos[nc-1] = 0.0;
 
     std::cout.setf(std::ios::scientific);
     std::cout.precision(16);
 
     int it = 0;
     do {
-        const std::vector<int>& bp = block_pattern;
-        ADB s = ADB::variable(0, s1, bp);
-        const double dt = 0.0005;
-        V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
-            * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
-        V dtpv = dt/pv;
-        // std::cout << dtpv;
-        std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, s.value());
-        std::vector<ADB> pmobf = upws.select(p1, pmobc);
-
-        ADB fw_cell = fluxFunc(pmobc);
+        const ADB s = ADB::variable(0, s1, bpat);
+        const std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, s.value());
+        const std::vector<ADB> pmobf = upws.select(p1, pmobc);
+        const ADB fw_cell = fluxFunc(pmobc);
         const ADB fw_face = fluxFunc(pmobf);
-        const ADB flux1 = fw_face * ADB::constant(dflux, bp);
-        // std::cout << flux1;
-        V qneg = dtpv*q;
-        V qpos = dtpv*q;
-        // Cheating a bit...
-        qneg[0] = 0.0;
-        qpos[nc-1] = 0.0;
-        ADB qtr_ad = ADB::constant(qpos, bp) + fw_cell*ADB::constant(qneg, bp);
-        ADB transport_residual = s - ADB::constant(s0.leftCols<1>(), bp)
-            + ADB::constant(dtpv, bp)*(ops.div*flux1)
+        const ADB flux1 = fw_face * ADB::constant(dflux, bpat);
+        const ADB qtr_ad = ADB::constant(qpos, bpat) + fw_cell*ADB::constant(qneg, bpat);
+        const ADB transport_residual = s - ADB::constant(s0.leftCols<1>(), bpat)
+            + ADB::constant(dtpv, bpat)*(ops.div*flux1)
             - qtr_ad;
         res_norm = transport_residual.value().matrix().norm();
         std::cout << "res_norm[" << it << "] = "
                   << res_norm << std::endl;
 
-        matr = transport_residual.derivative()[0];
-        matr.makeCompressed();
-        // std::cout << transport_residual;
-        solver.compute(matr);
+        M smatr = transport_residual.derivative()[0];
+        smatr.makeCompressed();
+        solver.compute(smatr);
         if (solver.info() != Eigen::Success) {
             std::cerr << "Transport Jacobian decomposition error\n";
             return EXIT_FAILURE;
         }
-        x = solver.solve(transport_residual.value().matrix());
+        const V ds = solver.solve(transport_residual.value().matrix()).array();
         if (solver.info() != Eigen::Success) {
             std::cerr << "Transport solve failure\n";
             return EXIT_FAILURE;
         }
-        // std::cout << x << std::endl;
-        s1 = s.value() - x.array();
+        s1 = s.value() - ds;
         std::cerr << "Solve for s[" << it << "]: "
                   << clock.secsSinceLast() << '\n';
         for (int c = 0; c < nc; ++c) {
