@@ -450,5 +450,5 @@ int main()
 
     std::cout << "Saturation solution:\n"
               << "function s1 = solution\n"
-              << "s1 = [\n" << s1 << "\n]\n";
+              << "s1 = [\n" << sw1 << "\n]\n";
 }
