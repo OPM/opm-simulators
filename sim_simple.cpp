@@ -405,8 +405,8 @@ int main()
     UpwindSelector<double> upws(grid, ops);
     const ADB nkdp = (ADB::constant(transi                 , block_pattern) *
                       ADB::constant(ops.ngrad * p1.matrix(), block_pattern));
-    const ADB s00 = ADB::constant(s0.leftCols<1>(), block_pattern);
-    const std::vector<ADB> pmobc0 = phaseMobility<ADB>(props, allcells, s00.value());
+    const ADB sw0 = ADB::constant(s0.leftCols<1>(), block_pattern);
+    const std::vector<ADB> pmobc0 = phaseMobility<ADB>(props, allcells, sw0.value());
     const std::vector<ADB> pmobf0 = upws.select(p1, pmobc0);
     const std::vector<ADB::M> null = { ADB::M(transi.size(), nc) };
     const ADB dflux = (ADB::function((pmobf0[0] + pmobf0[1]).value(), null) *
