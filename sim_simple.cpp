@@ -410,11 +410,8 @@ int main()
         * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
     const double dt = 0.0005;
     const V dtpv = dt/pv;
-    V qneg = dtpv*q;
-    V qpos = dtpv*q;
-    // Cheating a bit...
-    qneg[0] = 0.0;
-    qpos[nc-1] = 0.0;
+    const V qneg = q.min(V::Zero(nc,1));
+    const V qpos = q.max(V::Zero(nc,1));
 
     std::cout.setf(std::ios::scientific);
     std::cout.precision(16);
@@ -429,8 +426,7 @@ int main()
         const ADB flux1 = fw_face * ADB::constant(dflux, bpat);
         const ADB qtr_ad = ADB::constant(qpos, bpat) + fw_cell*ADB::constant(qneg, bpat);
         const ADB transport_residual = s - ADB::constant(s0.leftCols<1>(), bpat)
-            + ADB::constant(dtpv, bpat)*(ops.div*flux1)
-            - qtr_ad;
+            + ADB::constant(dtpv, bpat)*(ops.div*flux1 - qtr_ad);
         res_norm = transport_residual.value().matrix().norm();
         std::cout << "res_norm[" << it << "] = "
                   << res_norm << std::endl;
