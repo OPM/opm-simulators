@@ -16,11 +16,12 @@ function x = sim_simple(cartDims, physDims, tf, verb)
 
    s0    = [0, 1];
    state = incompTPFA(initState(g, [], 0, s0), ...
-                      g, T, fluid, 'src', src);
+                      g, T, fluid, 'src', src, 'matrixoutput', true);
 
    if nargin < 4, verb = false; end
    state = implicitTransport(state, g, tf, rock, fluid, ...
-                             'src', src, 'verbose', verb);
+                             'src', src, 'verbose', verb, ...
+                             'nltol', 1e-12);
 
    x = struct('g', g, 'rock', rock, 'T', T, 'fluid', fluid, ...
               'src', src, 'state', state);
