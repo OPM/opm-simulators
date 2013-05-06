@@ -357,12 +357,8 @@ int main()
     const ADB p = ADB::variable(0, p0, bpat);
     const ADB ngradp = ops.ngrad*p;
     // We want flux = totmob*trans*(p_i - p_j) for the ij-face.
-    // We only need to multiply mobtransf and pdiff_face,
-    // but currently multiplication with constants is not in,
-    // so we define an AD constant to multiply with.
-    const ADB mobtransf_ad = ADB::constant(mobtransf, bpat);
-    const ADB flux = mobtransf_ad*ngradp;
-    const ADB residual = ops.div*flux - ADB::constant(q, bpat);
+    const ADB flux = mobtransf*ngradp;
+    const ADB residual = ops.div*flux - q;
     std::cerr << "Construct AD residual " << clock.secsSinceLast() << std::endl;
 
     // It's the residual we want to be zero. We know it's linear in p,
@@ -402,7 +398,9 @@ int main()
     // and f_w is (for now) based on averaged mobilities, not upwind.
 
     double res_norm = 1e100;
-    V s1 =  /*s0.leftCols<1>()*/0.5*V::Ones(nc,1); // Initial guess.
+    const V sw0 = s0.leftCols<1>();
+    // V sw1 = sw0;
+    V sw1 = 0.5*V::Ones(nc,1);
     const UpwindSelector<double> upws(grid, ops);
     const V nkdp = transi * (ops.ngrad * p1.matrix()).array();
     const V dflux = totmobf * nkdp;
@@ -418,15 +416,14 @@ int main()
 
     int it = 0;
     do {
-        const ADB s = ADB::variable(0, s1, bpat);
-        const std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, s.value());
+        const ADB sw = ADB::variable(0, sw1, bpat);
+        const std::vector<ADB> pmobc = phaseMobility<ADB>(props, allcells, sw.value());
         const std::vector<ADB> pmobf = upws.select(p1, pmobc);
         const ADB fw_cell = fluxFunc(pmobc);
         const ADB fw_face = fluxFunc(pmobf);
-        const ADB flux1 = fw_face * ADB::constant(dflux, bpat);
-        const ADB qtr_ad = ADB::constant(qpos, bpat) + fw_cell*ADB::constant(qneg, bpat);
-        const ADB transport_residual = s - ADB::constant(s0.leftCols<1>(), bpat)
-            + ADB::constant(dtpv, bpat)*(ops.div*flux1 - qtr_ad);
+        const ADB flux1 = fw_face * dflux;
+        const ADB qtr_ad = qpos + fw_cell*qneg;
+        const ADB transport_residual = sw - sw0 + dtpv*(ops.div*flux1 - qtr_ad);
         res_norm = transport_residual.value().matrix().norm();
         std::cout << "res_norm[" << it << "] = "
                   << res_norm << std::endl;
@@ -443,15 +440,13 @@ int main()
             std::cerr << "Transport solve failure\n";
             return EXIT_FAILURE;
         }
-        s1 = s.value() - ds;
+        sw1 = sw.value() - ds;
         std::cerr << "Solve for s[" << it << "]: "
                   << clock.secsSinceLast() << '\n';
-        for (int c = 0; c < nc; ++c) {
-            s1[c] = std::min(1.0, std::max(0.0, s1[c]));
-        }
+        sw1 = sw1.min(V::Ones(nc,1)).max(V::Zero(nc,1));
 
         it += 1;
     } while (res_norm > 1e-7);
 
-    std::cout << "Saturation solution:\ns1 = [\n" << s1 << "\n]\n";
+    std::cout << "Saturation solution:\ns1 = [\n" << sw1 << "\n]\n";
 }

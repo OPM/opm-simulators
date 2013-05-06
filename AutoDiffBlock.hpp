@@ -156,6 +156,17 @@ namespace AutoDiff
             return jac_.size();
         }
 
+        /// Sizes (number of columns) of Jacobian blocks.
+        std::vector<int> blockPattern() const
+        {
+            const int nb = numBlocks();
+            std::vector<int> bp(nb);
+            for (int block = 0; block < nb; ++block) {
+                bp[block] = jac_[block].cols();
+            }
+            return bp;
+        }
+
         /// Function value
         const V& value() const
         {
@@ -194,6 +205,7 @@ namespace AutoDiff
         return fw.print(os);
     }
 
+
     /// Multiply with sparse matrix from the left.
     template <typename Scalar>
     ForwardBlock<Scalar> operator*(const typename ForwardBlock<Scalar>::M& lhs,
@@ -207,6 +219,70 @@ namespace AutoDiff
         }
         typename ForwardBlock<Scalar>::V val = lhs*rhs.value().matrix();
         return ForwardBlock<Scalar>::function(val, jac);
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator*(const typename ForwardBlock<Scalar>::V& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
+    {
+        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) * rhs;
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator*(const ForwardBlock<Scalar>& lhs,
+                                   const typename ForwardBlock<Scalar>::V& rhs)
+    {
+        return rhs * lhs; // Commutative operation.
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator+(const typename ForwardBlock<Scalar>::V& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
+    {
+        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) + rhs;
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator+(const ForwardBlock<Scalar>& lhs,
+                                   const typename ForwardBlock<Scalar>::V& rhs)
+    {
+        return rhs + lhs; // Commutative operation.
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator-(const typename ForwardBlock<Scalar>::V& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
+    {
+        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) - rhs;
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator-(const ForwardBlock<Scalar>& lhs,
+                                   const typename ForwardBlock<Scalar>::V& rhs)
+    {
+        return lhs - ForwardBlock<Scalar>::constant(rhs, lhs.blockPattern());
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator/(const typename ForwardBlock<Scalar>::V& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
+    {
+        return ForwardBlock<Scalar>::constant(lhs, rhs.blockPattern()) / rhs;
+    }
+
+
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator/(const ForwardBlock<Scalar>& lhs,
+                                   const typename ForwardBlock<Scalar>::V& rhs)
+    {
+        return lhs / ForwardBlock<Scalar>::constant(rhs, lhs.blockPattern());
     }
 
 
