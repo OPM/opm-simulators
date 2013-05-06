@@ -55,8 +55,8 @@ struct HelperOps
     typedef AutoDiff::ForwardBlock<double>::V V;
 
     /// A list of internal faces.
-    typedef Eigen::Array<int, Eigen::Dynamic, 1> iFaces;
-    iFaces internal_faces;
+    typedef Eigen::Array<int, Eigen::Dynamic, 1> IFaces;
+    IFaces internal_faces;
 
     /// Extract for each face the difference of its adjacent cells'values.
     M ngrad;
@@ -172,7 +172,7 @@ namespace {
         select(const typename ADB::V&  press,
                const std::vector<ADB>& xc   ) const
         {
-            typedef HelperOps::iFaces::Index ifIndex;
+            typedef HelperOps::IFaces::Index ifIndex;
             const ifIndex nif = h_.internal_faces.size();
 
             // Define selector structure.
