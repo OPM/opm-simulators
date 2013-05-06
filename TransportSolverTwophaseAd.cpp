@@ -86,8 +86,16 @@ namespace Opm
             props.relperm(nc, s.data(), cells.data(), kr.data(), dkr.data());
             V krw = kr.leftCols<1>();
             V kro = kr.rightCols<1>();
-            V dkrw = dkr.leftCols<1>();  // Left column is top-left of dkr/ds 2x2 matrix.
-            V dkro = -dkr.rightCols<1>(); // Right column is bottom-right of dkr/ds 2x2 matrix.
+            // In dkr, columns col(0..3) are:
+            //    dkrw/dsw  dkro/dsw  dkrw/dso  dkrw/dso  <-- partial derivatives, really.
+            // If we want the derivatives with respect to some variable x,
+            // we must apply the chain rule:
+            //    dkrw/dx = dkrw/dsw*dsw/dx + dkrw/dso*dso/dx.
+            // If x is sw as in our case we are left with.
+            //    dkrw/dsw = col(0) - col(2)
+            //    dkro/dsw = col(1) - col(3)
+            V dkrw = dkr.leftCols<1>() - dkr.rightCols<2>().leftCols<1>();
+            V dkro = dkr.leftCols<2>().rightCols<1>() - dkr.rightCols<1>();
             M krwjac(nc,nc);
             M krojac(nc,nc);
             auto sizes = Eigen::ArrayXi::Ones(nc);
@@ -165,7 +173,7 @@ namespace Opm
         // Newton-Raphson loop.
         int it = 0;
         do {
-            // Assemble linear system/
+            // Assemble linear system.
             const ADB sw = ADB::variable(0, sw1, bpat);
             const std::vector<ADB> pmobc = phaseMobility<ADB>(props_, allcells_, sw.value());
             const std::vector<ADB> pmobf = upwind.select(pmobc);
@@ -175,6 +183,7 @@ namespace Opm
             const ADB qtr_ad = qpos + fw_cell*qneg;
             const ADB transport_residual = sw - sw0 + dtpv*(ops_.div*flux1 - qtr_ad);
             res_norm = transport_residual.value().matrix().norm();
+            std::cout << "Residual l2-norm = " << res_norm << std::endl;
 
             // Solve linear system.
             Eigen::SparseMatrix<double, Eigen::RowMajor> smatr = transport_residual.derivative()[0];
