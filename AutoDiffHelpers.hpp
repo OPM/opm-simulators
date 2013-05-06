@@ -108,18 +108,15 @@ namespace {
     {
         typedef Eigen::SparseMatrix<double>::Index Index;
 
-        const Index*  const p = A.outerIndexPtr();
-        const Index*  const i = A.innerIndexPtr();
-        const double* const x = A.valuePtr();
+        const Index osize = A.outerSize();
 
-        const Index cols = A.outerSize();
-        assert (A.innerSize() == cols);
-
-        for (Index j = 0; j < cols; j++) {
-            for (Index k = p[j]; k < p[j + 1]; k++) {
+        for (Index k = 0; k < osize; ++k) {
+            for (Eigen::SparseMatrix<double>::InnerIterator
+                     i(A, k); i ; ++i) {
                 std::fprintf(fp, "%lu %lu %26.18e\n",
-                             static_cast<unsigned long>(i[k] + 1),
-                             static_cast<unsigned long>(j    + 1), x[k]);
+                             static_cast<unsigned long>(i.row() + 1),
+                             static_cast<unsigned long>(i.col() + 1),
+                             i.value());
             }
         }
     }
