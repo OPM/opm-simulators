@@ -468,5 +468,7 @@ int main()
         it += 1;
     } while (res_norm > 1e-7);
 
-    std::cout << "Saturation solution:\ns1 = [\n" << s1 << "\n]\n";
+    std::cout << "Saturation solution:\n"
+              << "function s1 = solution\n"
+              << "s1 = [\n" << s1 << "\n]\n";
 }
