@@ -83,11 +83,12 @@ main(int argc, char** argv)
     // This is an extra check to intercept a potentially invalid request for the
     // implicit transport solver as early as possible for the user.
     {
-        const bool use_reorder = param.getDefault("use_reorder", true);
-        if (!use_reorder) {
+        const std::string transport_solver_type
+            = param.getDefault<std::string>("transport_solver_type", "ad");
+        if (transport_solver_type == "implicit") {
             THROW("Cannot use implicit transport solver without UMFPACK. "
                   "Either reconfigure opm-core with SuiteSparse/UMFPACK support and recompile, "
-                  "or use the reordering solver (use_reorder=true).");
+                  "or use the reordering solver (transport_solver_type=reorder).");
         }
     }
 #endif
