@@ -368,6 +368,7 @@ namespace Opm
             tsolver_.reset(new Opm::TransportSolverTwophaseAd(grid,
                                                               props,
                                                               linsolver,
+                                                              gravity,
                                                               param));
         } else {
             THROW("Unknown transport solver type: " << transport_solver_type_);

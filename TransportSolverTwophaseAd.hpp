@@ -43,10 +43,12 @@ namespace Opm
         /// \param[in] grid       A 2d or 3d grid.
         /// \param[in] props      Rock and fluid properties.
         /// \param[in] linsolver  Linear solver for Newton-Raphson scheme.
+        /// \param[in] gravity    Gravity vector (null for no gravity).
         /// \param[in] param      Parameters for the solver.
         TransportSolverTwophaseAd(const UnstructuredGrid& grid,
                                   const IncompPropertiesInterface& props,
                                   const LinearSolverInterface& linsolver,
+                                  const double* gravity,
                                   const parameter::ParameterGroup& param);
 
         // Virtual destructor.
@@ -75,42 +77,11 @@ namespace Opm
         const IncompPropertiesInterface& props_;
         const LinearSolverInterface& linsolver_;
         const HelperOps ops_;
+        double gravity_;
         double tol_;
         int maxit_;
         std::vector<int> allcells_;
-
-
-        #if 0
-        const double* visc_;
-        std::vector<double> smin_;
-        std::vector<double> smax_;
-
-        const double* darcyflux_;   // one flux per grid face
-        const double* porevolume_;  // one volume per cell
-        const double* source_;      // one source per cell
-        double dt_;
-        std::vector<double> saturation_;        // one per cell, only water saturation!
-        std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
-        std::vector<int> reorder_iterations_;
-        //std::vector<double> reorder_fval_;
-        // For gravity segregation.
-        std::vector<double> gravflux_;
-        std::vector<double> mob_;
-        std::vector<double> s0_;
-        std::vector<std::vector<int> > columns_;
-
-        // Storing the upwind and downwind graphs for experiments.
-        std::vector<int> ia_upw_;
-        std::vector<int> ja_upw_;
-        std::vector<int> ia_downw_;
-        std::vector<int> ja_downw_;
-
-        struct Residual;
-        double fracFlow(double s, int cell) const;
-
-        struct GravityResidual;
-        void mobility(double s, int cell, double* mob) const;
-#endif
+        V transi_;
     };
 
 } // namespace Opm
