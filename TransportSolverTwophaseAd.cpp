@@ -54,7 +54,7 @@ namespace Opm
         for (int i = 0; i < nc; ++i) {
             allcells_[i] = i;
         }
-        if (gravity) {
+        if (gravity && gravity[grid_.dimensions - 1] != 0.0) {
             gravity_ = gravity[grid_.dimensions - 1];
             for (int dd = 0; dd < grid_.dimensions - 1; ++dd) {
                 if (gravity[dd] != 0.0) {
@@ -205,7 +205,8 @@ namespace Opm
         const V qneg = q.min(V::Zero(nc,1));
         const V qpos = q.max(V::Zero(nc,1));
         const double gfactor = gravity_*(density[0] - density[1]);
-        const V gravflux = ndz*transi_*gfactor;
+        const V gravflux = (gravity_ == 0.0) ? V(V::Zero(num_internal, 1))
+            : ndz*transi_*gfactor;
 
         // Block pattern for variables.
         // Primary variables:
@@ -219,11 +220,12 @@ namespace Opm
             const ADB sw = ADB::variable(0, sw1, bpat);
             const std::vector<ADB> pmobc = phaseMobility<ADB>(props_, allcells_, sw.value());
             const ADB fw_cell = fluxFunc(pmobc);
-            // const ADB fw_face = upwind.select(fw_cell);
             const std::vector<ADB> pmobf = { upwind_w.select(pmobc[0]),
                                              upwind_o.select(pmobc[1])  };
             const ADB fw_face = fluxFunc(pmobf);
             const ADB flux = fw_face * (dflux - pmobf[1]*gravflux);
+            // const ADB fw_face = upwind_w.select(fw_cell);
+            // const ADB flux = fw_face * dflux;
             const ADB qtr_ad = qpos + fw_cell*qneg;
             const ADB transport_residual = sw - sw0 + dtpv*(ops_.div*flux - qtr_ad);
             res_norm = transport_residual.value().matrix().norm();
