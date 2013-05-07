@@ -20,6 +20,7 @@
 #include "TransportSolverTwophaseAd.hpp"
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>
@@ -33,15 +34,18 @@ namespace Opm
     /// \param[in] grid       A 2d or 3d grid.
     /// \param[in] props      Rock and fluid properties.
     /// \param[in] linsolver  Linear solver for Newton-Raphson scheme.
+    /// \param[in] gravity    Gravity vector (null for no gravity).
     /// \param[in] param      Parameters for the solver.
     TransportSolverTwophaseAd::TransportSolverTwophaseAd(const UnstructuredGrid& grid,
                                                          const IncompPropertiesInterface& props,
                                                          const LinearSolverInterface& linsolver,
+                                                         const double* gravity,
                                                          const parameter::ParameterGroup& param)
         : grid_(grid),
           props_(props),
           linsolver_(linsolver),
           ops_(grid),
+          gravity_(0.0),
           tol_(param.getDefault("nl_tolerance", 1e-9)),
           maxit_(param.getDefault("nl_maxiter", 30))
     {
@@ -49,6 +53,23 @@ namespace Opm
         allcells_.resize(nc);
         for (int i = 0; i < nc; ++i) {
             allcells_[i] = i;
+        }
+        if (gravity) {
+            gravity_ = gravity[grid_.dimensions - 1];
+            for (int dd = 0; dd < grid_.dimensions - 1; ++dd) {
+                if (gravity[dd] != 0.0) {
+                    THROW("TransportSolverTwophaseAd: can only handle gravity aligned with last dimension");
+                }
+            }
+            V htrans(grid.cell_facepos[grid.number_of_cells]);
+            tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid), props.permeability(), htrans.data());
+            V trans(grid_.number_of_faces);
+            tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid), htrans.data(), trans.data());
+            const int num_internal = ops_.internal_faces.size();
+            transi_.resize(num_internal);
+            for (int fi = 0; fi < num_internal; ++fi) {
+                transi_[fi] = trans[ops_.internal_faces[fi]];
+            }
         }
     }
 
@@ -148,22 +169,43 @@ namespace Opm
         const TwoCol s0 = Eigen::Map<const TwoCol>(state.saturation().data(), nc, 2);
         double res_norm = 1e100;
         const V sw0 = s0.leftCols<1>();
+        // sw1 is the object that will be changed every Newton iteration.
         // V sw1 = sw0;
         V sw1 = 0.5*V::Ones(nc,1);
-        const V p1 = Vec(state.pressure().data(), nc, 1);
-        const V ndp = (ops_.ngrad * p1.matrix()).array();
         const V dflux_all = Vec(state.faceflux().data(), grid_.number_of_faces, 1);
         const int num_internal = ops_.internal_faces.size();
         V dflux(num_internal);
         for (int fi = 0; fi < num_internal; ++fi) {
             dflux[fi] = dflux_all[ops_.internal_faces[fi]];
         }
-        const UpwindSelectorTotalFlux<double> upwind(grid_, ops_, dflux);
+
+        // Upwind selection of mobilities by phase.
+        // We have that for a phase P
+        //   v_P = lambda_P K (-grad p + rho_P g grad z)
+        // and we assume that this has the same direction as
+        //   v_P' = -grad p + rho_P g grad z.
+        // This may not be true for arbitrary anisotropic situations,
+        // but for scalar lambda and using TPFA it holds.
+        const V p1 = Vec(state.pressure().data(), nc, 1);
+        const V ndp = (ops_.ngrad * p1.matrix()).array();
+        typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DynArr;
+        const V z = Eigen::Map<DynArr>(grid_.cell_centroids, nc, grid_.dimensions).rightCols<1>();
+        const V ndz = (ops_.ngrad * z.matrix()).array();
+        ASSERT(num_internal == ndp.size());
+        const double* density = props_.density();
+        const V vw = ndp - ndz*(gravity_*density[0]);
+        const V vo = ndp - ndz*(gravity_*density[1]);
+        const UpwindSelector<double> upwind_w(grid_, ops_, vw);
+        const UpwindSelector<double> upwind_o(grid_, ops_, vo);
+
+        // Compute more explicit and constant terms used in the equations.
         const V pv = Vec(porevolume, nc, 1);
         const V dtpv = dt/pv;
         const V q = Vec(source, nc, 1);
         const V qneg = q.min(V::Zero(nc,1));
         const V qpos = q.max(V::Zero(nc,1));
+        const double gfactor = gravity_*(density[0] - density[1]);
+        const V gravflux = ndz*transi_*gfactor;
 
         // Block pattern for variables.
         // Primary variables:
@@ -177,10 +219,13 @@ namespace Opm
             const ADB sw = ADB::variable(0, sw1, bpat);
             const std::vector<ADB> pmobc = phaseMobility<ADB>(props_, allcells_, sw.value());
             const ADB fw_cell = fluxFunc(pmobc);
-            const ADB fw_face = upwind.select(fw_cell);
-            const ADB flux1 = fw_face * dflux;
+            // const ADB fw_face = upwind.select(fw_cell);
+            const std::vector<ADB> pmobf = { upwind_w.select(pmobc[0]),
+                                             upwind_o.select(pmobc[1])  };
+            const ADB fw_face = fluxFunc(pmobf);
+            const ADB flux = fw_face * (dflux - pmobf[1]*gravflux);
             const ADB qtr_ad = qpos + fw_cell*qneg;
-            const ADB transport_residual = sw - sw0 + dtpv*(ops_.div*flux1 - qtr_ad);
+            const ADB transport_residual = sw - sw0 + dtpv*(ops_.div*flux - qtr_ad);
             res_norm = transport_residual.value().matrix().norm();
             std::cout << "Residual l2-norm = " << res_norm << std::endl;
 

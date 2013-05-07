@@ -43,10 +43,12 @@ namespace Opm
         /// \param[in] grid       A 2d or 3d grid.
         /// \param[in] props      Rock and fluid properties.
         /// \param[in] linsolver  Linear solver for Newton-Raphson scheme.
+        /// \param[in] gravity    Gravity vector (null for no gravity).
         /// \param[in] param      Parameters for the solver.
         TransportSolverTwophaseAd(const UnstructuredGrid& grid,
                                   const IncompPropertiesInterface& props,
                                   const LinearSolverInterface& linsolver,
+                                  const double* gravity,
                                   const parameter::ParameterGroup& param);
 
         // Virtual destructor.
@@ -75,9 +77,11 @@ namespace Opm
         const IncompPropertiesInterface& props_;
         const LinearSolverInterface& linsolver_;
         const HelperOps ops_;
+        double gravity_;
         double tol_;
         int maxit_;
         std::vector<int> allcells_;
+        V transi_;
     };
 
 } // namespace Opm

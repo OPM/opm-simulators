@@ -144,16 +144,17 @@ namespace {
     /// Upwind selection in absence of counter-current flow (i.e.,
     /// without effects of gravity and/or capillary pressure).
     template <typename Scalar>
-    class UpwindSelectorTotalFlux {
+    class UpwindSelector {
     public:
         typedef AutoDiff::ForwardBlock<Scalar> ADB;
 
-        UpwindSelectorTotalFlux(const UnstructuredGrid& g,
-                                const HelperOps&        h,
-                                const typename ADB::V&  ifaceflux)
+        UpwindSelector(const UnstructuredGrid& g,
+                       const HelperOps&        h,
+                       const typename ADB::V&  ifaceflux)
         {
             typedef HelperOps::IFaces::Index IFIndex;
             const IFIndex nif = h.internal_faces.size();
+            assert(nif == ifaceflux.size());
 
             // Define selector structure.
             typedef typename Eigen::Triplet<Scalar> Triplet;
