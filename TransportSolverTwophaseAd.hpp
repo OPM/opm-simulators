@@ -78,39 +78,6 @@ namespace Opm
         double tol_;
         int maxit_;
         std::vector<int> allcells_;
-
-
-        #if 0
-        const double* visc_;
-        std::vector<double> smin_;
-        std::vector<double> smax_;
-
-        const double* darcyflux_;   // one flux per grid face
-        const double* porevolume_;  // one volume per cell
-        const double* source_;      // one source per cell
-        double dt_;
-        std::vector<double> saturation_;        // one per cell, only water saturation!
-        std::vector<double> fractionalflow_;  // = m[0]/(m[0] + m[1]) per cell
-        std::vector<int> reorder_iterations_;
-        //std::vector<double> reorder_fval_;
-        // For gravity segregation.
-        std::vector<double> gravflux_;
-        std::vector<double> mob_;
-        std::vector<double> s0_;
-        std::vector<std::vector<int> > columns_;
-
-        // Storing the upwind and downwind graphs for experiments.
-        std::vector<int> ia_upw_;
-        std::vector<int> ja_upw_;
-        std::vector<int> ia_downw_;
-        std::vector<int> ja_downw_;
-
-        struct Residual;
-        double fracFlow(double s, int cell) const;
-
-        struct GravityResidual;
-        void mobility(double s, int cell, double* mob) const;
-#endif
     };
 
 } // namespace Opm
