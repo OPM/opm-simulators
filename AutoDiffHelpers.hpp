@@ -141,6 +141,8 @@ namespace {
 // -------------------- upwinding helper class --------------------
 
 
+    /// Upwind selection in absence of counter-current flow (i.e.,
+    /// without effects of gravity and/or capillary pressure).
     template <typename Scalar>
     class UpwindSelectorTotalFlux {
     public:
@@ -174,14 +176,10 @@ namespace {
             select_.setFromTriplets(s.begin(), s.end());
         }
 
-        // Upwind selection in absence of counter-current flow (i.e.,
-        // without effects of gravity and/or capillary pressure).
+        /// Apply selector to multiple per-cell quantities.
         std::vector<ADB>
         select(const std::vector<ADB>& xc) const
         {
-
-            // Apply selector.
-            //
             // Absence of counter-current flow means that the same
             // selector applies to all quantities, 'x', defined per
             // cell.
@@ -193,6 +191,12 @@ namespace {
             }
 
             return xf;
+        }
+
+        /// Apply selector to single per-cell quantity.
+        ADB select(const ADB& xc) const
+        {
+            return select_*xc;
         }
 
     private:
