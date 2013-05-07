@@ -33,9 +33,7 @@
 
 struct UnstructuredGrid;
 
-namespace Opm {
-    class LinearSolverInterface;
-
+namespace {
     std::vector<int>
     buildAllCells(const int nc)
     {
@@ -45,6 +43,10 @@ namespace Opm {
 
         return all_cells;
     }
+}
+
+namespace Opm {
+    class LinearSolverInterface;
 
     template <typename Scalar, class BOProps>
     class PressureDependentFluidData {
