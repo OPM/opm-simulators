@@ -18,6 +18,8 @@
 # Compiled executables
 a.out
 find_zero
+sim_2p_incomp_adfi
+sim_simple
 test_ad
 test_block
 test_syntax
