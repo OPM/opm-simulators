@@ -176,9 +176,8 @@ namespace Opm
             // Assemble linear system.
             const ADB sw = ADB::variable(0, sw1, bpat);
             const std::vector<ADB> pmobc = phaseMobility<ADB>(props_, allcells_, sw.value());
-            const std::vector<ADB> pmobf = upwind.select(pmobc);
             const ADB fw_cell = fluxFunc(pmobc);
-            const ADB fw_face = fluxFunc(pmobf);
+            const ADB fw_face = upwind.select(fw_cell);
             const ADB flux1 = fw_face * dflux;
             const ADB qtr_ad = qpos + fw_cell*qneg;
             const ADB transport_residual = sw - sw0 + dtpv*(ops_.div*flux1 - qtr_ad);
