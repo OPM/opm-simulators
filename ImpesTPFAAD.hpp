@@ -27,6 +27,7 @@
 #include <opm/core/simulator/WellState.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
