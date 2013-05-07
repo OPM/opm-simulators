@@ -10,7 +10,7 @@
 int
 main(int argc, char* argv[])
 {
-    const Opm::parameter::ParameterGroup param(argc, argv);
+    const Opm::parameter::ParameterGroup param(argc, argv, false);
     const Opm::GridManager               gm(3, 3);
 
     const UnstructuredGrid*              g  = gm.c_grid();
@@ -19,4 +19,6 @@ main(int argc, char* argv[])
 
     typedef Opm::ImpesTPFAAD<Opm::BlackoilPropertiesInterface> PSolver;
     PSolver ps(*g, props);
+
+    return 0;
 }
