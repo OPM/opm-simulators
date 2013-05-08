@@ -233,7 +233,8 @@ namespace Opm {
 
                 const V   kr = pdepfdata_.phaseRelPerm(phase);
                 const ADB mu = pdepfdata_.phaseViscosity(phase);
-                const ADB flux = (kr / mu) * nkgradp;
+                const ADB mf = upwind.select(kr / mu);
+                const ADB flux = mf * nkgradp;
 
                 const ADB face_B = upwind.select(cell_B);
 
