@@ -183,7 +183,7 @@ namespace Opm
         // We have that for a phase P
         //   v_P = lambda_P K (-grad p + rho_P g grad z)
         // and we assume that this has the same direction as
-        //   v_P' = -grad p + rho_P g grad z.
+        //   dh_P = -grad p + rho_P g grad z.
         // This may not be true for arbitrary anisotropic situations,
         // but for scalar lambda and using TPFA it holds.
         const V p1 = Vec(state.pressure().data(), nc, 1);
@@ -193,10 +193,10 @@ namespace Opm
         const V ndz = (ops_.ngrad * z.matrix()).array();
         ASSERT(num_internal == ndp.size());
         const double* density = props_.density();
-        const V vw = ndp - ndz*(gravity_*density[0]);
-        const V vo = ndp - ndz*(gravity_*density[1]);
-        const UpwindSelector<double> upwind_w(grid_, ops_, vw);
-        const UpwindSelector<double> upwind_o(grid_, ops_, vo);
+        const V dhw = ndp - ndz*(gravity_*density[0]);
+        const V dho = ndp - ndz*(gravity_*density[1]);
+        const UpwindSelector<double> upwind_w(grid_, ops_, dhw);
+        const UpwindSelector<double> upwind_o(grid_, ops_, dho);
 
         // Compute more explicit and constant terms used in the equations.
         const V pv = Vec(porevolume, nc, 1);
