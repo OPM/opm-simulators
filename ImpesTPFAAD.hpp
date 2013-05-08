@@ -49,17 +49,17 @@ namespace {
 namespace Opm {
     class LinearSolverInterface;
 
-    template <typename Scalar, class BOProps>
+    template <typename Scalar, class BOFluid>
     class PressureDependentFluidData {
     public:
         typedef AutoDiff::ForwardBlock<Scalar> ADB;
 
         PressureDependentFluidData(const int      nc,
-                                   const BOProps& props)
+                                   const BOFluid& fluid)
             : nc_   (nc)
-            , np_   (props.numPhases())
+            , np_   (fluid.numPhases())
             , cells_(buildAllCells(nc))
-            , props_(props)
+            , fluid_(fluid)
             , A_    (nc_, np_ * np_)
             , dA_   (nc_, np_ * np_)
             , mu_   (nc_, np_      )
@@ -76,7 +76,7 @@ namespace Opm {
             const std::vector<double>& s = state.saturation();
 
             double* dkrds = 0;  // Ignore rel-perm derivatives
-            props_.relperm(nc_, & s[0], & cells_[0],
+            fluid_.relperm(nc_, & s[0], & cells_[0],
                            kr_.data(), dkrds);
         }
 
@@ -86,10 +86,10 @@ namespace Opm {
             const std::vector<double>& p = state.pressure();
             const std::vector<double>& z = state.surfacevol();
 
-            props_.matrix   (nc_, & p[0], & z[0], & cells_[0],
+            fluid_.matrix   (nc_, & p[0], & z[0], & cells_[0],
                              A_ .data(), dA_ .data());
 
-            props_.viscosity(nc_, & p[0], & z[0], & cells_[0],
+            fluid_.viscosity(nc_, & p[0], & z[0], & cells_[0],
                              mu_.data(), dmu_.data());
         }
 
@@ -132,7 +132,7 @@ namespace Opm {
         const int np_;
 
         const std::vector<int> cells_;
-        const BOProps&         props_;
+        const BOFluid&         fluid_;
 
         typedef Eigen::Array<Scalar,
                              Eigen::Dynamic,
@@ -152,14 +152,15 @@ namespace Opm {
         const typename ADB::V one_ ;
     };
 
-
-    template <class BOProps>
+    template <class BOFluid, class GeoProps>
     class ImpesTPFAAD {
     public:
         ImpesTPFAAD(const UnstructuredGrid& grid ,
-                    const BOProps&          props)
+                    const BOFluid&          fluid,
+                    const GeoProps&         geo  )
             : grid_     (grid)
-            , pdepfdata_(grid.number_of_cells, props)
+            , geo_      (geo)
+            , pdepfdata_(grid.number_of_cells, fluid)
         {
         }
 
@@ -168,9 +169,11 @@ namespace Opm {
         ImpesTPFAAD(const ImpesTPFAAD& rhs);
         ImpesTPFAAD& operator=(const ImpesTPFAAD& rhs);
 
-        typedef PressureDependentFluidData<double,BOProps> PDepFData;
+        typedef PressureDependentFluidData<double, BOFluid> PDepFData;
+        typedef typename PDepFData::ADB ADB;
 
         const UnstructuredGrid& grid_;
+        const GeoProps&         geo_ ;
         PDepFData               pdepfdata_;
     };
 } // namespace Opm

@@ -25,7 +25,44 @@
 
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 
+#include <opm/core/pressure/tpfa/trans_tpfa.h>
+
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+
+#include <algorithm>
+
+namespace {
+    template <class Geology, class Vector>
+    class DerivedGeology {
+    public:
+        typedef Vector V;
+
+        DerivedGeology(const UnstructuredGrid& grid,
+                       const Geology&          geo)
+            : pvol_ (grid.number_of_cells)
+            , trans_(grid.number_of_faces)
+        {
+            // Pore volume
+            const typename Vector::Index nc = grid.number_of_cells;
+            std::transform(grid.cell_volumes, grid.cell_volumes + nc,
+                           geo.porosity(), pvol_.data(),
+                           std::multiplies<double>());
+
+            // Transmissibility
+            Vector htrans(grid.cell_facepos[nc]);
+            UnstructuredGrid* ug = const_cast<UnstructuredGrid*>(& grid);
+            tpfa_htrans_compute(ug, geo.permeability(), htrans.data());
+            tpfa_trans_compute (ug, htrans.data()     , trans_.data());
+        }
+
+        const Vector& poreVolume()       const { return pvol_ ; }
+        const Vector& transmissibility() const { return trans_; }
+
+    private:
+        Vector pvol_ ;
+        Vector trans_;
+    };
+}
 
 int
 main(int argc, char* argv[])
@@ -37,8 +74,14 @@ main(int argc, char* argv[])
     const int                            nc = g->number_of_cells;
     const Opm::BlackoilPropertiesBasic   props(param, 2, nc);
 
-    typedef Opm::ImpesTPFAAD<Opm::BlackoilPropertiesInterface> PSolver;
-    PSolver ps(*g, props);
+    typedef AutoDiff::ForwardBlock<double>      ADB;
+    typedef Opm::BlackoilPropertiesInterface    Geology;
+    typedef DerivedGeology<Geology, ADB::V>     GeoProps;
+    typedef Opm::BlackoilPropertiesInterface    BOFluid;
+    typedef Opm::ImpesTPFAAD<BOFluid, GeoProps> PSolver;
+
+    GeoProps geo(*g, props);
+    PSolver  ps (*g, props, geo);
 
     return 0;
 }
