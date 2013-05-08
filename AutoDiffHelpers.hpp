@@ -194,10 +194,16 @@ namespace {
             return xf;
         }
 
-        /// Apply selector to single per-cell quantity.
+        /// Apply selector to single per-cell ADB quantity.
         ADB select(const ADB& xc) const
         {
             return select_*xc;
+        }
+
+        /// Apply selector to single per-cell constant quantity.
+        typename ADB::V select(const typename ADB::V& xc) const
+        {
+            return (select_*xc.matrix()).array();
         }
 
     private:
@@ -205,5 +211,40 @@ namespace {
     };
 }
 
+namespace {
+
+    template <typename Scalar, class IntVec>
+    Eigen::SparseMatrix<Scalar>
+    constructSubsetSparseMatrix(const int full_size, const IntVec& indices)
+    {
+        typedef Eigen::Triplet<Scalar> Tri;
+        const int subset_size = indices.size();
+        std::vector<Tri> triplets(subset_size);
+        for (int i = 0; i < subset_size; ++i) {
+            triplets[i] = Tri(i, indices[i], 1);
+        }
+        Eigen::SparseMatrix<Scalar> sub(subset_size, full_size);
+        sub.setFromTriplets(triplets.begin(), triplets.end());
+        return sub;
+    }
+} // anon namespace
+
+
+template <typename Scalar, class IntVec>
+AutoDiff::ForwardBlock<Scalar>
+subset(const AutoDiff::ForwardBlock<Scalar>& x,
+       const IntVec& indices)
+{
+    return ::constructSubsetSparseMatrix<Scalar>(x.value().size(), indices) * x;
+}
+
+
+template <typename Scalar, class IntVec>
+Eigen::Array<Scalar, Eigen::Dynamic, 1>
+subset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
+       const IntVec& indices)
+{
+    return (::constructSubsetSparseMatrix<Scalar>(x.size(), indices) * x.matrix()).array();
+}
 
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
