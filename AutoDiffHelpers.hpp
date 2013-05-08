@@ -247,4 +247,20 @@ subset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
     return (::constructSubsetSparseMatrix<Scalar>(x.size(), indices) * x.matrix()).array();
 }
 
+
+AutoDiff::ForwardBlock<double>::M
+spdiag(const AutoDiff::ForwardBlock<double>::V& d)
+{
+    typedef AutoDiff::ForwardBlock<double>::M M;
+
+    const int n = d.size();
+    M mat(n, n);
+    mat.reserve(Eigen::ArrayXi::Ones(n, 1));
+    for (M::Index i = 0; i < n; ++i) {
+        mat.insert(i, i) = d[i];
+    }
+
+    return mat;
+}
+
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
