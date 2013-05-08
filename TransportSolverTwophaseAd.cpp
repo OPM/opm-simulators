@@ -65,11 +65,7 @@ namespace Opm
             tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid), props.permeability(), htrans.data());
             V trans(grid_.number_of_faces);
             tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid), htrans.data(), trans.data());
-            const int num_internal = ops_.internal_faces.size();
-            transi_.resize(num_internal);
-            for (int fi = 0; fi < num_internal; ++fi) {
-                transi_[fi] = trans[ops_.internal_faces[fi]];
-            }
+            transi_ = subset(trans, ops_.internal_faces);
         }
     }
 
@@ -174,10 +170,7 @@ namespace Opm
         V sw1 = 0.5*V::Ones(nc,1);
         const V dflux_all = Vec(state.faceflux().data(), grid_.number_of_faces, 1);
         const int num_internal = ops_.internal_faces.size();
-        V dflux(num_internal);
-        for (int fi = 0; fi < num_internal; ++fi) {
-            dflux[fi] = dflux_all[ops_.internal_faces[fi]];
-        }
+        V dflux = subset(dflux_all, ops_.internal_faces);
 
         // Upwind selection of mobilities by phase.
         // We have that for a phase P
