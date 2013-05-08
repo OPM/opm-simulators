@@ -75,6 +75,8 @@ namespace Opm {
         {
             const std::vector<double>& s = state.saturation();
 
+            assert (s.size() == std::vector<double>::size_type(nc_ * np_));
+
             double* dkrds = 0;  // Ignore rel-perm derivatives
             fluid_.relperm(nc_, & s[0], & cells_[0],
                            kr_.data(), dkrds);
@@ -85,6 +87,9 @@ namespace Opm {
         {
             const std::vector<double>& p = state.pressure();
             const std::vector<double>& z = state.surfacevol();
+
+            assert (p.size() == std::vector<double>::size_type(nc_ * 1  ));
+            assert (z.size() == std::vector<double>::size_type(nc_ * np_));
 
             fluid_.matrix   (nc_, & p[0], & z[0], & cells_[0],
                              A_ .data(), dA_ .data());
