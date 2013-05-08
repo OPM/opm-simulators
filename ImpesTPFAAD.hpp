@@ -99,34 +99,34 @@ namespace Opm {
         }
 
         ADB
-        fvf(const int p) const
+        fvf(const int phase) const
         {
-            assert (0 <= p  );
-            assert (p <  np_);
+            assert (0     <= phase);
+            assert (phase <  np_  );
 
-            typename ADB::V A   = A_ .block(0, p * (np_ + 1), nc_, 1);
-            typename ADB::V dA  = dA_.block(0, p * (np_ + 1), nc_, 1);
+            typename ADB::V A   = A_ .block(0, phase * (np_ + 1), nc_, 1);
+            typename ADB::V dA  = dA_.block(0, phase * (np_ + 1), nc_, 1);
             typename ADB::M jac = dA.matrix().asDiagonal();
 
             return one_ / ADB::function(A, jac);
         }
 
         typename ADB::V
-        phaseRelPerm(const int p) const
+        phaseRelPerm(const int phase) const
         {
-            typename ADB::V kr = kr_.block(0, p, nc_, 1);
+            typename ADB::V kr = kr_.block(0, phase, nc_, 1);
 
             return kr;
         }
 
         ADB
-        phaseViscosity(const int p) const
+        phaseViscosity(const int phase) const
         {
-            assert (0 <= p  );
-            assert (p <  np_);
+            assert (0     <= phase);
+            assert (phase <  np_  );
 
-            typename ADB::V mu  = mu_ .block(0, p, nc_, 1);
-            typename ADB::V dmu = dmu_.block(0, p, nc_, 1);
+            typename ADB::V mu  = mu_ .block(0, phase, nc_, 1);
+            typename ADB::V dmu = dmu_.block(0, phase, nc_, 1);
             typename ADB::M jac = dmu.matrix().asDiagonal();
 
             return ADB::function(mu, jac);
