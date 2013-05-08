@@ -65,11 +65,7 @@ namespace Opm
             tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid), props.permeability(), htrans.data());
             V trans(grid_.number_of_faces);
             tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid), htrans.data(), trans.data());
-            const int num_internal = ops_.internal_faces.size();
-            transi_.resize(num_internal);
-            for (int fi = 0; fi < num_internal; ++fi) {
-                transi_[fi] = trans[ops_.internal_faces[fi]];
-            }
+            transi_ = subset(trans, ops_.internal_faces);
         }
     }
 
@@ -174,16 +170,13 @@ namespace Opm
         V sw1 = 0.5*V::Ones(nc,1);
         const V dflux_all = Vec(state.faceflux().data(), grid_.number_of_faces, 1);
         const int num_internal = ops_.internal_faces.size();
-        V dflux(num_internal);
-        for (int fi = 0; fi < num_internal; ++fi) {
-            dflux[fi] = dflux_all[ops_.internal_faces[fi]];
-        }
+        V dflux = subset(dflux_all, ops_.internal_faces);
 
         // Upwind selection of mobilities by phase.
         // We have that for a phase P
         //   v_P = lambda_P K (-grad p + rho_P g grad z)
         // and we assume that this has the same direction as
-        //   v_P' = -grad p + rho_P g grad z.
+        //   dh_P = -grad p + rho_P g grad z.
         // This may not be true for arbitrary anisotropic situations,
         // but for scalar lambda and using TPFA it holds.
         const V p1 = Vec(state.pressure().data(), nc, 1);
@@ -193,10 +186,10 @@ namespace Opm
         const V ndz = (ops_.ngrad * z.matrix()).array();
         ASSERT(num_internal == ndp.size());
         const double* density = props_.density();
-        const V vw = ndp - ndz*(gravity_*density[0]);
-        const V vo = ndp - ndz*(gravity_*density[1]);
-        const UpwindSelector<double> upwind_w(grid_, ops_, vw);
-        const UpwindSelector<double> upwind_o(grid_, ops_, vo);
+        const V dhw = ndp - ndz*(gravity_*density[0]);
+        const V dho = ndp - ndz*(gravity_*density[1]);
+        const UpwindSelector<double> upwind_w(grid_, ops_, dhw);
+        const UpwindSelector<double> upwind_o(grid_, ops_, dho);
 
         // Compute more explicit and constant terms used in the equations.
         const V pv = Vec(porevolume, nc, 1);
