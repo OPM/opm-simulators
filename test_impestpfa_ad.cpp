@@ -29,6 +29,8 @@
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <opm/core/simulator/initState.hpp>
+
 #include <algorithm>
 
 namespace {
@@ -82,6 +84,12 @@ main(int argc, char* argv[])
 
     GeoProps geo(*g, props);
     PSolver  ps (*g, props, geo);
+
+    Opm::BlackoilState state;
+    initStateBasic(*g, props, param, 0.0, state);
+    initBlackoilSurfvol(*g, props, state);
+
+    ps.solve(1.0, state);
 
     return 0;
 }

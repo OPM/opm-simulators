@@ -22,6 +22,7 @@
 #define OPM_IMPESTPFAAD_HEADER_INCLUDED
 
 #include "AutoDiffBlock.hpp"
+#include "AutoDiffHelpers.hpp"
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -104,9 +105,10 @@ namespace Opm {
             assert (0     <= phase);
             assert (phase <  np_  );
 
-            typename ADB::V A   = A_ .block(0, phase * (np_ + 1), nc_, 1);
-            typename ADB::V dA  = dA_.block(0, phase * (np_ + 1), nc_, 1);
-            typename ADB::M jac = dA.matrix().asDiagonal();
+            typename ADB::V A  = A_ .block(0, phase * (np_ + 1), nc_, 1);
+            typename ADB::V dA = dA_.block(0, phase * (np_ + 1), nc_, 1);
+
+            std::vector<typename ADB::M> jac(1, spdiag(dA));
 
             return one_ / ADB::function(A, jac);
         }
@@ -127,7 +129,8 @@ namespace Opm {
 
             typename ADB::V mu  = mu_ .block(0, phase, nc_, 1);
             typename ADB::V dmu = dmu_.block(0, phase, nc_, 1);
-            typename ADB::M jac = dmu.matrix().asDiagonal();
+
+            std::vector<typename ADB::M> jac(1, spdiag(dmu));
 
             return ADB::function(mu, jac);
         }
@@ -166,7 +169,17 @@ namespace Opm {
             : grid_     (grid)
             , geo_      (geo)
             , pdepfdata_(grid.number_of_cells, fluid)
+            , ops_      (grid)
         {
+        }
+
+        void
+        solve(const double   dt,
+              BlackoilState& state)
+        {
+            pdepfdata_.computeSatQuant(state);
+
+            assemble(dt, state);
         }
 
     private:
@@ -180,6 +193,57 @@ namespace Opm {
         const UnstructuredGrid& grid_;
         const GeoProps&         geo_ ;
         PDepFData               pdepfdata_;
+        HelperOps               ops_;
+
+        void
+        assemble(const double         dt,
+                 const BlackoilState& state)
+        {
+            typedef typename ADB::V V;
+
+            typedef Eigen::Array<double,
+                                 Eigen::Dynamic,
+                                 Eigen::Dynamic,
+                                 Eigen::RowMajor> DataBlock;
+
+            const V& pv = geo_.poreVolume();
+            const int nc = grid_.number_of_cells;
+            const int np = state.numPhases();
+
+            pdepfdata_.computePressQuant(state);
+
+            const Eigen::Map<const DataBlock> z0all(&state.surfacevol()[0], nc, np);
+            const DataBlock qall = DataBlock::Zero(nc, np);
+
+            const V transi = subset(geo_.transmissibility(),
+                                    ops_.internal_faces);
+            const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+
+            const std::vector<int> bpat(1, nc);
+            ADB p = ADB::variable(0, p0, bpat);
+            const ADB nkgradp = transi * (ops_.ngrad * p);
+
+            const UpwindSelector<double> upwind(grid_, ops_, nkgradp.value());
+
+            const V delta_t = dt * V::Ones(nc, 1);
+
+            ADB residual = ADB::constant(pv, bpat);
+            for (int phase = 0; phase < np; ++phase) {
+                const ADB cell_B = pdepfdata_.fvf(phase);
+
+                const V   kr = pdepfdata_.phaseRelPerm(phase);
+                const ADB mu = pdepfdata_.phaseViscosity(phase);
+                const ADB flux = (kr / mu) * nkgradp;
+
+                const ADB face_B = upwind.select(cell_B);
+
+                const V z0 = z0all.block(0, phase, nc, 1);
+                const V q  = qall .block(0, phase, nc, 1);
+
+                ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
+                residual = residual - (cell_B * component_contrib);
+            }
+        }
     };
 } // namespace Opm
 
