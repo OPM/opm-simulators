@@ -106,10 +106,12 @@ namespace Opm {
             assert (0     <= phase);
             assert (phase <  np_  );
 
-            typename ADB::V A  = A_ .block(0, phase * (np_ + 1), nc_, 1);
-            typename ADB::V dA = dA_.block(0, phase * (np_ + 1), nc_, 1);
+            typedef typename ADB::V V;
 
-            std::vector<typename ADB::M> jac(1, spdiag(dA));
+            const V A  = A_ .block(0, phase * (np_ + 1), nc_, 1);
+            const V dA = dA_.block(0, phase * (np_ + 1), nc_, 1);
+
+            const std::vector<typename ADB::M> jac(1, spdiag(dA));
 
             return one_ / ADB::function(A, jac);
         }
@@ -117,7 +119,7 @@ namespace Opm {
         typename ADB::V
         phaseRelPerm(const int phase) const
         {
-            typename ADB::V kr = kr_.block(0, phase, nc_, 1);
+            const typename ADB::V kr = kr_.block(0, phase, nc_, 1);
 
             return kr;
         }
@@ -128,10 +130,12 @@ namespace Opm {
             assert (0     <= phase);
             assert (phase <  np_  );
 
-            typename ADB::V mu  = mu_ .block(0, phase, nc_, 1);
-            typename ADB::V dmu = dmu_.block(0, phase, nc_, 1);
+            typedef typename ADB::V V;
 
-            std::vector<typename ADB::M> jac(1, spdiag(dmu));
+            const V mu  = mu_ .block(0, phase, nc_, 1);
+            const V dmu = dmu_.block(0, phase, nc_, 1);
+
+            const std::vector<typename ADB::M> jac(1, spdiag(dmu));
 
             return ADB::function(mu, jac);
         }
