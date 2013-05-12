@@ -75,6 +75,22 @@ namespace AutoDiff
             return ForwardBlock(val, jac);
         }
 
+        /// Construct a set of primary variables,
+        /// each initialized to a given vector.
+        static std::vector<ForwardBlock> variables(const std::vector<V>& initial_values)
+        {
+            const int num_vars = initial_values.size();
+            std::vector<int> bpat;
+            for (int v = 0; v < num_vars; ++v) {
+                bpat.push_back(initial_values[v].size());
+            }
+            std::vector<ForwardBlock> vars;
+            for (int v = 0; v < num_vars; ++v) {
+                vars.emplace_back(variable(v, initial_values[v], bpat));
+            }
+            return vars;
+        }
+
         /// Operator +
         ForwardBlock operator+(const ForwardBlock& rhs) const
         {
