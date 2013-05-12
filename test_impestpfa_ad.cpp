@@ -28,8 +28,12 @@
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/Units.hpp>
 
 #include <opm/core/simulator/initState.hpp>
+
+#include <opm/core/wells.h>
+// #include <opm/core/WellsManager.hpp>
 
 #include <algorithm>
 
@@ -82,14 +86,30 @@ main(int argc, char* argv[])
     typedef Opm::BlackoilPropertiesInterface    BOFluid;
     typedef Opm::ImpesTPFAAD<BOFluid, GeoProps> PSolver;
 
+    Wells* wells = create_wells(2, 2, 2);
+    const double inj_frac[] = { 1.0, 0.0 };
+    const double prod_frac[] = { 0.0, 0.0 };
+    const int inj_cell = 0;
+    const int prod_cell = g->number_of_cells - 1;
+    const double WI = 1e-8;
+    bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Inj", wells);
+    ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, &prod_cell, &WI, "Prod", wells);
+    ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells);
+    ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+    if (!ok) {
+        THROW("Something went wrong with well init.");
+    }
+
     GeoProps geo(*g, props);
-    PSolver  ps (*g, props, geo);
+    PSolver  ps (*g, props, geo, *wells);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props, param, 0.0, state);
     initBlackoilSurfvol(*g, props, state);
+    Opm::WellState well_state;
+    well_state.init(wells, state);
 
-    ps.solve(1.0, state);
+    ps.solve(1.0, state, well_state);
 
     return 0;
 }

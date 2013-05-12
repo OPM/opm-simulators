@@ -26,6 +26,7 @@
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/core/wells.h>
 
 #include <algorithm>
 #include <cassert>
@@ -96,7 +97,7 @@ namespace Opm {
                              A_ .data(), dA_ .data());
 
             fluid_.viscosity(nc_, & p[0], & z[0], & cells_[0],
-                             mu_.data(), dmu_.data());
+                             mu_.data(), /*dmu_.data()*/ 0);
         }
 
         ADB
@@ -165,9 +166,11 @@ namespace Opm {
     public:
         ImpesTPFAAD(const UnstructuredGrid& grid ,
                     const BOFluid&          fluid,
-                    const GeoProps&         geo  )
+                    const GeoProps&         geo  ,
+                    const Wells&            wells)
             : grid_     (grid)
             , geo_      (geo)
+            , wells_    (wells)
             , pdepfdata_(grid.number_of_cells, fluid)
             , ops_      (grid)
         {
@@ -175,11 +178,12 @@ namespace Opm {
 
         void
         solve(const double   dt,
-              BlackoilState& state)
+              BlackoilState& state,
+              WellState& well_state)
         {
             pdepfdata_.computeSatQuant(state);
 
-            assemble(dt, state);
+            assemble(dt, state, well_state);
         }
 
     private:
@@ -192,12 +196,14 @@ namespace Opm {
 
         const UnstructuredGrid& grid_;
         const GeoProps&         geo_ ;
+        const Wells&            wells_;
         PDepFData               pdepfdata_;
         HelperOps               ops_;
 
         void
         assemble(const double         dt,
-                 const BlackoilState& state)
+                 const BlackoilState& state,
+                 const WellState& well_state)
         {
             typedef typename ADB::V V;
 
@@ -209,6 +215,7 @@ namespace Opm {
             const V& pv = geo_.poreVolume();
             const int nc = grid_.number_of_cells;
             const int np = state.numPhases();
+            const int nw = wells_.number_of_wells;
 
             pdepfdata_.computePressQuant(state);
 
@@ -218,6 +225,7 @@ namespace Opm {
             const V transi = subset(geo_.transmissibility(),
                                     ops_.internal_faces);
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            const V bhp = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
 
             const std::vector<int> bpat(1, nc);
             ADB p = ADB::variable(0, p0, bpat);
