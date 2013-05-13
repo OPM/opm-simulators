@@ -293,7 +293,7 @@ namespace Opm {
             const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
             // Finally construct well perforation pressures.
             const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
- 
+
             cell_residual_ = ADB::constant(pv, bpat);
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_B = pdepfdata_.fvf(phase, p);
