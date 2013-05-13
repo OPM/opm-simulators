@@ -38,6 +38,13 @@ namespace AutoDiff
         typedef Eigen::SparseMatrix<Scalar> M;
 
         /// Named constructor pattern used here.
+        static ForwardBlock null()
+        {
+            V val;
+            std::vector<M> jac;
+            return ForwardBlock(val, jac);
+        }
+
         static ForwardBlock constant(const V& val, const std::vector<int>& blocksizes)
         {
             std::vector<M> jac;
