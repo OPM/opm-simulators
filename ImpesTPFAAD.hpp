@@ -26,6 +26,8 @@
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/wells.h>
 
 #include <algorithm>
@@ -49,12 +51,14 @@ namespace {
 }
 
 namespace Opm {
-    class LinearSolverInterface;
+
 
     template <typename Scalar, class BOFluid>
     class PressureDependentFluidData {
     public:
         typedef AutoDiff::ForwardBlock<Scalar> ADB;
+        typedef typename AutoDiff::ForwardBlock<Scalar>::V V;
+        typedef typename AutoDiff::ForwardBlock<Scalar>::M M;
 
         PressureDependentFluidData(const int      nc,
                                    const BOFluid& fluid)
@@ -101,7 +105,7 @@ namespace Opm {
         }
 
         ADB
-        fvf(const int phase) const
+        fvf(const int phase, const ADB& p) const
         {
             assert (0     <= phase);
             assert (phase <  np_  );
@@ -109,8 +113,11 @@ namespace Opm {
             typename ADB::V A  = A_ .block(0, phase * (np_ + 1), nc_, 1);
             typename ADB::V dA = dA_.block(0, phase * (np_ + 1), nc_, 1);
 
-            std::vector<typename ADB::M> jac(1, spdiag(dA));
-
+            std::vector<typename ADB::M> jac(p.numBlocks());
+            assert(p.numBlocks() == 2);
+            jac[0] = spdiag(dA);
+            assert(jac[0].cols() == p.blockPattern()[0]);
+            jac[1] = M(A.rows(), p.blockPattern()[1]);
             return one_ / ADB::function(A, jac);
         }
 
@@ -123,7 +130,7 @@ namespace Opm {
         }
 
         ADB
-        phaseViscosity(const int phase) const
+        phaseViscosity(const int phase, const ADB& p) const
         {
             assert (0     <= phase);
             assert (phase <  np_  );
@@ -131,7 +138,11 @@ namespace Opm {
             typename ADB::V mu  = mu_ .block(0, phase, nc_, 1);
             typename ADB::V dmu = dmu_.block(0, phase, nc_, 1);
 
-            std::vector<typename ADB::M> jac(1, spdiag(dmu));
+            std::vector<typename ADB::M> jac(p.numBlocks());
+            assert(p.numBlocks() == 2);
+            jac[0] = spdiag(dmu);
+            assert(jac[0].cols() == p.blockPattern()[0]);
+            jac[1] = M(mu.rows(), p.blockPattern()[1]);
 
             return ADB::function(mu, jac);
         }
@@ -167,12 +178,15 @@ namespace Opm {
         ImpesTPFAAD(const UnstructuredGrid& grid ,
                     const BOFluid&          fluid,
                     const GeoProps&         geo  ,
-                    const Wells&            wells)
+                    const Wells&            wells,
+                    const LinearSolverInterface& linsolver)
             : grid_     (grid)
             , geo_      (geo)
             , wells_    (wells)
+            , linsolver_(linsolver)
             , pdepfdata_(grid.number_of_cells, fluid)
             , ops_      (grid)
+            , residual_ (ADB::null())
         {
         }
 
@@ -184,6 +198,20 @@ namespace Opm {
             pdepfdata_.computeSatQuant(state);
 
             assemble(dt, state, well_state);
+
+            const int nc = grid_.number_of_cells;
+            M matr = residual_.derivative()[0];
+            V dp(nc);
+            const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            Opm::LinearSolverInterface::LinearSolverReport rep
+                = linsolver_.solve(nc, matr.nonZeros(),
+                                   matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
+                                   residual_.value().data(), dp.data());
+            if (!rep.converged) {
+                THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            }
+            const V p = p0 - dp;
+            std::copy(&p[0], &p[0] + nc, state.pressure().begin());
         }
 
     private:
@@ -193,20 +221,22 @@ namespace Opm {
 
         typedef PressureDependentFluidData<double, BOFluid> PDepFData;
         typedef typename PDepFData::ADB ADB;
+        typedef typename ADB::V V;
+        typedef typename ADB::M M;
 
         const UnstructuredGrid& grid_;
         const GeoProps&         geo_ ;
         const Wells&            wells_;
+        const LinearSolverInterface& linsolver_;
         PDepFData               pdepfdata_;
         HelperOps               ops_;
+        ADB                     residual_;
 
         void
         assemble(const double         dt,
                  const BlackoilState& state,
                  const WellState& well_state)
         {
-            typedef typename ADB::V V;
-
             typedef Eigen::Array<double,
                                  Eigen::Dynamic,
                                  Eigen::Dynamic,
@@ -221,26 +251,49 @@ namespace Opm {
 
             const Eigen::Map<const DataBlock> z0all(&state.surfacevol()[0], nc, np);
             const DataBlock qall = DataBlock::Zero(nc, np);
-
+            const V delta_t = dt * V::Ones(nc, 1);
             const V transi = subset(geo_.transmissibility(),
                                     ops_.internal_faces);
+            const std::vector<int> well_cells(wells_.well_cells,
+                                              wells_.well_cells + wells_.well_connpos[nw]);
+
+            // Initialize AD variables: p (cell pressures) and bhp (well bhp).
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-            const V bhp = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
+            const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
+            std::vector<V> vars0 = { p0, bhp0 };
+            std::vector<ADB> vars= ADB::variables(vars0);
+            const ADB& p = vars[0];
+            const ADB& bhp = vars[1];
+            std::vector<int> bpat = p.blockPattern();
 
-            const std::vector<int> bpat(1, nc);
-            ADB p = ADB::variable(0, p0, bpat);
+            // Compute T_ij * (p_i - p_j) and use for upwinding.
             const ADB nkgradp = transi * (ops_.ngrad * p);
-
             const UpwindSelector<double> upwind(grid_, ops_, nkgradp.value());
 
-            const V delta_t = dt * V::Ones(nc, 1);
-
-            ADB residual = ADB::constant(pv, bpat);
+            // Extract variables for perforation cell pressures
+            // and corresponding perforation well pressures.
+            const ADB p_perfcell = subset(p, well_cells);
+            // Construct matrix to map wells->perforations.
+            M well_to_perf(well_cells.size(), nw);
+            typedef Eigen::Triplet<double> Tri;
+            std::vector<Tri> w2p;
+            for (int w = 0; w < nw; ++w) {
+                for (int perf = wells_.well_connpos[w]; perf < wells_.well_connpos[w+1]; ++perf) {
+                    w2p.emplace_back(perf, w, 1.0);
+                }
+            }
+            well_to_perf.setFromTriplets(w2p.begin(), w2p.end());
+            // Construct pressure difference vector for wells.
+            const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
+            // Finally construct well perforation pressures.
+            const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
+ 
+            residual_ = ADB::constant(pv, bpat);
             for (int phase = 0; phase < np; ++phase) {
-                const ADB cell_B = pdepfdata_.fvf(phase);
+                const ADB cell_B = pdepfdata_.fvf(phase, p);
 
                 const V   kr = pdepfdata_.phaseRelPerm(phase);
-                const ADB mu = pdepfdata_.phaseViscosity(phase);
+                const ADB mu = pdepfdata_.phaseViscosity(phase, p);
                 const ADB mf = upwind.select(kr / mu);
                 const ADB flux = mf * nkgradp;
 
@@ -250,7 +303,7 @@ namespace Opm {
                 const V q  = qall .block(0, phase, nc, 1);
 
                 ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
-                residual = residual - (cell_B * component_contrib);
+                residual_ = residual_ - (cell_B * component_contrib);
             }
         }
     };

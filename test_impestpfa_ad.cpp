@@ -23,6 +23,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 
+#include <opm/core/linalg/LinearSolverFactory.hpp>
+
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
@@ -101,7 +103,8 @@ main(int argc, char* argv[])
     }
 
     GeoProps geo(*g, props);
-    PSolver  ps (*g, props, geo, *wells);
+    Opm::LinearSolverFactory linsolver(param);
+    PSolver  ps (*g, props, geo, *wells, linsolver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props, param, 0.0, state);
@@ -110,6 +113,11 @@ main(int argc, char* argv[])
     well_state.init(wells, state);
 
     ps.solve(1.0, state, well_state);
+
+    std::copy(state.pressure().begin(), state.pressure().end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
+    std::copy(well_state.bhp().begin(), well_state.bhp().end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
 
     return 0;
 }
