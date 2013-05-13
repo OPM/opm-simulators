@@ -199,6 +199,30 @@ namespace Opm {
             return ADB::function(mu, jac);
         }
 
+        ADB
+        phaseDensity(const int phase, const ADB& p) const
+        {
+            typedef typename ADB::V V;
+
+            const double* rho0 = fluid_.surfaceDensity();
+
+            V rho  = V::Zero(nc_, 1);
+            V drho = V::Zero(nc_, 1);
+            for (int i = 0; i < np_; ++i) {
+                rho  += rho0[i] * A_ .block(0, phase*np_ + i, nc_, 1);
+                drho += rho0[i] * dA_.block(0, phase*np_ + i, nc_, 1);
+            }
+
+            assert (p.numBlocks() == 2);
+            std::vector<typename ADB::M> jac(p.numBlocks());
+            jac[0] = spdiag(drho);
+            jac[1] = M(rho.rows(), p.blockPattern()[1]);
+
+            assert (jac[0].cols() == p.blockPattern()[0]);
+
+            return ADB::function(rho, jac);
+        }
+
     private:
         const int nc_;
         const int np_;
@@ -347,11 +371,12 @@ namespace Opm {
             cell_residual_ = ADB::constant(pv, bpat);
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_B = pdepfdata_.fvf(phase, p);
+                const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
 
                 const V   kr = pdepfdata_.phaseRelPerm(phase);
                 const ADB mu = pdepfdata_.phaseViscosity(phase, p);
                 const ADB mf = upwind.select(kr / mu);
-                const ADB flux = mf * nkgradp;
+                const ADB flux = mf * (nkgradp + (grav_ * cell_rho));
 
                 const ADB face_B = upwind.select(cell_B);
 
