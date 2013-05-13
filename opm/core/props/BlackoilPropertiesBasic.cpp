@@ -83,6 +83,12 @@ namespace Opm
         return pvt_.numPhases();
     }
 
+    /// \return   Object describing the active phases.
+    PhaseUsage BlackoilPropertiesBasic::phaseUsage() const
+    {
+        return pvt_.phaseUsage();
+    }
+
     /// \param[in]  n      Number of data points.
     /// \param[in]  p      Array of n pressure values.
     /// \param[in]  z      Array of nP surface volume values.

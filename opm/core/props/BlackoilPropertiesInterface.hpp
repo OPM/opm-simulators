@@ -23,6 +23,8 @@
 namespace Opm
 {
 
+    class PhaseUsage;
+
     /// Abstract base class for blackoil fluid and reservoir properties.
     /// Supports variable number of spatial dimensions, called D.
     /// Supports variable number of phases, but assumes that
@@ -58,6 +60,9 @@ namespace Opm
 
         /// \return   P, the number of phases (also the number of components).
         virtual int numPhases() const = 0;
+
+        /// \return   Object describing the active phases.
+        virtual PhaseUsage phaseUsage() const = 0;
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  p      Array of n pressure values.

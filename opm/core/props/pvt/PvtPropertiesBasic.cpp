@@ -85,6 +85,30 @@ namespace Opm
         return density_.size();
     }
 
+    PhaseUsage PvtPropertiesBasic::phaseUsage() const
+    {
+        PhaseUsage pu;
+        pu.num_phases = numPhases();
+        if (pu.num_phases == 2) {
+            // Might just as well assume water-oil.
+            pu.phase_used[BlackoilPhases::Aqua] = true;
+            pu.phase_used[BlackoilPhases::Liquid] = true;
+            pu.phase_used[BlackoilPhases::Vapour] = false;
+            pu.phase_pos[BlackoilPhases::Aqua] = 0;
+            pu.phase_pos[BlackoilPhases::Liquid] = 1;
+            pu.phase_pos[BlackoilPhases::Vapour] = 1; // Unused.
+        } else {
+            ASSERT(pu.num_phases == 3);
+            pu.phase_used[BlackoilPhases::Aqua] = true;
+            pu.phase_used[BlackoilPhases::Liquid] = true;
+            pu.phase_used[BlackoilPhases::Vapour] = true;
+            pu.phase_pos[BlackoilPhases::Aqua] = 0;
+            pu.phase_pos[BlackoilPhases::Liquid] = 1;
+            pu.phase_pos[BlackoilPhases::Vapour] = 2;
+        }
+        return pu;
+    }
+
 
 
     void PvtPropertiesBasic::mu(const int n,

@@ -21,6 +21,8 @@
 #define OPM_PVTPROPERTIESBASIC_HEADER_INCLUDED
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
+#include <vector>
 
 namespace Opm
 {
@@ -52,6 +54,9 @@ namespace Opm
 
         /// Number of active phases.
         int numPhases() const;
+
+        /// \return   Object describing the active phases.
+        PhaseUsage phaseUsage() const;
 
         /// Densities of stock components at surface conditions.
         /// \return  Array of size numPhases().

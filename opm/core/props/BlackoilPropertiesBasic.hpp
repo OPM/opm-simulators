@@ -73,6 +73,9 @@ namespace Opm
         /// \return   P, the number of phases (also the number of components).
         virtual int numPhases() const;
 
+        /// \return   Object describing the active phases.
+        virtual PhaseUsage phaseUsage() const;
+
         /// \param[in]  n      Number of data points.
         /// \param[in]  p      Array of n pressure values.
         /// \param[in]  z      Array of nP surface volume values.
