@@ -506,6 +506,26 @@ namespace Opm
                 }
             }
         }
+
+        // Ensure that tracer averages sum to 1.
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+            std::vector<double> tr_aver(num_tracers_);
+            double tr_sum = 0.0;
+            for (int tr = 0; tr < num_tracers_; ++tr) {
+                const double* local_basis = tracer_coeff_ + cell*num_tracers_*num_basis + tr*num_basis;
+                tr_aver[tr] = basis_func_->functionAverage(local_basis);
+                tr_sum += tr_aver[tr];
+            }
+            if (tr_sum == 0.0) {
+                std::cout << "Tracer sum is zero in cell " << cell << std::endl;
+            } else {
+                for (int tr = 0; tr < num_tracers_; ++tr) {
+                    const double increment = tr_aver[tr]/tr_sum - tr_aver[tr];
+                    double* local_basis = tracer_coeff_ + cell*num_tracers_*num_basis + tr*num_basis;
+                    basis_func_->addConstant(increment, local_basis);
+                }
+            }
+        }
     }
 
 
