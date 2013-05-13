@@ -48,6 +48,54 @@ namespace {
 
         return all_cells;
     }
+
+    template <class GeoProps>
+    AutoDiff::ForwardBlock<double>::M
+    gravityOperator(const UnstructuredGrid& grid,
+                    const HelperOps&        ops ,
+                    const GeoProps&         geo )
+    {
+        const int nc = grid.number_of_cells;
+
+        std::vector<int> f2hf(2 * grid.number_of_faces, -1);
+        for (int c = 0, i = 0; c < nc; ++c) {
+            for (; i < grid.cell_facepos[c + 1]; ++i) {
+                const int f = grid.cell_faces[ i ];
+                const int p = 0 + (grid.face_cells[2*f + 0] != c);
+
+                f2hf[2*f + p] = i;
+            }
+        }
+
+        typedef AutoDiff::ForwardBlock<double>::V V;
+        typedef AutoDiff::ForwardBlock<double>::M M;
+
+        const V& gpot  = geo.gravityPotential();
+        const V& trans = geo.transmissibility();
+
+        const HelperOps::IFaces::Index ni = ops.internal_faces.size();
+
+        typedef Eigen::Triplet<double> Tri;
+        std::vector<Tri> grav;  grav.reserve(2 * ni);
+        for (HelperOps::IFaces::Index i = 0; i < ni; ++i) {
+            const int f  = ops.internal_faces[ i ];
+            const int c1 = grid.face_cells[2*f + 0];
+            const int c2 = grid.face_cells[2*f + 1];
+
+            assert ((c1 >= 0) && (c2 >= 0));
+
+            const double dG1 = gpot[ f2hf[2*f + 0] ];
+            const double dG2 = gpot[ f2hf[2*f + 1] ];
+            const double t   = trans[ f ];
+
+            grav.push_back(Tri(i, c1,   t * dG1));
+            grav.push_back(Tri(i, c2, - t * dG2));
+        }
+
+        M G(ni, nc);  G.setFromTriplets(grav.begin(), grav.end());
+
+        return G;
+    }
 }
 
 namespace Opm {
@@ -190,6 +238,7 @@ namespace Opm {
             , linsolver_(linsolver)
             , pdepfdata_(grid.number_of_cells, fluid)
             , ops_      (grid)
+            , grav_     (gravityOperator(grid_, ops_, geo_))
             , cell_residual_ (ADB::null())
             , well_residual_ (ADB::null())
         {
@@ -235,6 +284,7 @@ namespace Opm {
         const LinearSolverInterface& linsolver_;
         PDepFData               pdepfdata_;
         HelperOps               ops_;
+        const M                 grav_;
         ADB                     cell_residual_;
         ADB                     well_residual_;
 
