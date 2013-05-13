@@ -186,7 +186,8 @@ namespace Opm {
             , linsolver_(linsolver)
             , pdepfdata_(grid.number_of_cells, fluid)
             , ops_      (grid)
-            , residual_ (ADB::null())
+            , cell_residual_ (ADB::null())
+            , well_residual_ (ADB::null())
         {
         }
 
@@ -200,13 +201,13 @@ namespace Opm {
             assemble(dt, state, well_state);
 
             const int nc = grid_.number_of_cells;
-            M matr = residual_.derivative()[0];
+            M matr = cell_residual_.derivative()[0];
             V dp(nc);
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
             Opm::LinearSolverInterface::LinearSolverReport rep
                 = linsolver_.solve(nc, matr.nonZeros(),
                                    matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                                   residual_.value().data(), dp.data());
+                                   cell_residual_.value().data(), dp.data());
             if (!rep.converged) {
                 THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
             }
@@ -230,7 +231,8 @@ namespace Opm {
         const LinearSolverInterface& linsolver_;
         PDepFData               pdepfdata_;
         HelperOps               ops_;
-        ADB                     residual_;
+        ADB                     cell_residual_;
+        ADB                     well_residual_;
 
         void
         assemble(const double         dt,
@@ -288,7 +290,7 @@ namespace Opm {
             // Finally construct well perforation pressures.
             const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
  
-            residual_ = ADB::constant(pv, bpat);
+            cell_residual_ = ADB::constant(pv, bpat);
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_B = pdepfdata_.fvf(phase, p);
 
@@ -303,7 +305,7 @@ namespace Opm {
                 const V q  = qall .block(0, phase, nc, 1);
 
                 ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
-                residual_ = residual_ - (cell_B * component_contrib);
+                cell_residual_ = cell_residual_ - (cell_B * component_contrib);
             }
         }
     };
