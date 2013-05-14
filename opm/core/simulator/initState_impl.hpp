@@ -337,7 +337,7 @@ namespace Opm
                 }
             }
             state.setFirstSat(left_cells, props, State::MaxSat);
-            const double init_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double init_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             std::fill(state.pressure().begin(), state.pressure().end(), init_p);
         } else if (segregation_testcase) {
             // Warn against error-prone usage.
@@ -351,7 +351,7 @@ namespace Opm
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterAbove, state);
             // Initialise pressure to hydrostatic state.
-            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             double dens[2] = { props.density()[1], props.density()[0] };
             initHydrostaticPressure(grid, dens, woc, gravity, woc, ref_p, state);
         } else if (param.has("water_oil_contact")) {
@@ -366,7 +366,7 @@ namespace Opm
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterBelow, state);
             // Initialise pressure to hydrostatic state.
-            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             initHydrostaticPressure(grid, props.density(), woc, gravity, woc, ref_p, state);
         } else if (param.has("init_saturation")) {
             // Initialise water saturation to init_saturation parameter.
@@ -376,7 +376,7 @@ namespace Opm
                 state.saturation()[2*cell + 1] = 1.0 - init_saturation;
             }
             // Initialise pressure to hydrostatic state.
-            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             const double rho =  props.density()[0]*init_saturation + props.density()[1]*(1.0 - init_saturation);
             const double dens[2] = { rho, rho };
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
@@ -384,7 +384,7 @@ namespace Opm
         } else {
             // Use default: water saturation is minimum everywhere.
             // Initialise pressure to hydrostatic state.
-            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             const double rho =  props.density()[1];
             const double dens[2] = { rho, rho };
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
@@ -432,7 +432,7 @@ namespace Opm
                 }
             }
             state.setFirstSat(left_cells, props, State::MaxSat);
-            const double init_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double init_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             std::fill(state.pressure().begin(), state.pressure().end(), init_p);
         } else if (param.has("water_oil_contact")) {
             // Warn against error-prone usage.
@@ -446,12 +446,12 @@ namespace Opm
             const double woc = param.get<double>("water_oil_contact");
             initWaterOilContact(grid, props, woc, WaterBelow, state);
             // Initialise pressure to hydrostatic state.
-            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             initHydrostaticPressure(grid, props, woc, gravity, woc, ref_p, state);
         } else {
             // Use default: water saturation is minimum everywhere.
             // Initialise pressure to hydrostatic state.
-            const double ref_p = param.getDefault("ref_pressure", 100)*unit::barsa;
+            const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             const double ref_z = grid.cell_centroids[0 + grid.dimensions - 1];
             const double woc = -1e100;
             initHydrostaticPressure(grid, props, woc, gravity, ref_z, ref_p, state);
