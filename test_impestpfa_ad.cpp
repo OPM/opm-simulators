@@ -99,7 +99,7 @@ int
 main(int argc, char* argv[])
 {
     const Opm::parameter::ParameterGroup param(argc, argv, false);
-    const Opm::GridManager               gm(3, 3);
+    const Opm::GridManager               gm(20, 1);
 
     const UnstructuredGrid*              g  = gm.c_grid();
     const int                            nc = g->number_of_cells;
@@ -125,7 +125,8 @@ main(int argc, char* argv[])
         THROW("Something went wrong with well init.");
     }
 
-    GeoProps geo(*g, props);
+    double grav[] = { 1.0, 0.0 };
+    GeoProps geo(*g, props, grav);
     Opm::LinearSolverFactory linsolver(param);
     PSolver  ps (*g, props, geo, *wells, linsolver);
 

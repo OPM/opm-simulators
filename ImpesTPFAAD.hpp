@@ -279,6 +279,11 @@ namespace Opm {
 
             const int nc = grid_.number_of_cells;
             M matr = cell_residual_.derivative()[0];
+
+#if HACK_INCOMPRESSIBLE_GRAVITY
+            matr.coeffRef(0, 0) *= 2;
+#endif
+
             V dp(nc);
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
             Opm::LinearSolverInterface::LinearSolverReport rep
