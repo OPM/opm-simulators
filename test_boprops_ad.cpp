@@ -57,11 +57,14 @@ struct TestFixture : public Setup
 {
     TestFixture()
         : Setup()
-        , grid (Setup::deck)
-        , props(Setup::deck, *grid.c_grid(), Setup::param,
-                Setup::param.getDefault("init_rock", false))
+        , grid (deck)
+        , props(deck, *grid.c_grid(), param,
+                param.getDefault("init_rock", false))
     {
     }
+
+    using Setup::param;
+    using Setup::deck;
 
     Opm::GridManager                grid;
     Opm::BlackoilPropertiesFromDeck props;
