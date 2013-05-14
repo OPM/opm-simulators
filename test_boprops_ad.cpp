@@ -45,6 +45,8 @@ struct SetupSimple {
 
         param.insertParameter("init_rock"       , "false" );
         param.insertParameter("threephase_model", "simple");
+        param.insertParameter("pvt_tab_size"    , "0"     );
+        param.insertParameter("sat_tab_size"    , "0"     );
     }
 
     Opm::parameter::ParameterGroup  param;
