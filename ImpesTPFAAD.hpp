@@ -48,6 +48,54 @@ namespace {
 
         return all_cells;
     }
+
+    template <class GeoProps>
+    AutoDiff::ForwardBlock<double>::M
+    gravityOperator(const UnstructuredGrid& grid,
+                    const HelperOps&        ops ,
+                    const GeoProps&         geo )
+    {
+        const int nc = grid.number_of_cells;
+
+        std::vector<int> f2hf(2 * grid.number_of_faces, -1);
+        for (int c = 0, i = 0; c < nc; ++c) {
+            for (; i < grid.cell_facepos[c + 1]; ++i) {
+                const int f = grid.cell_faces[ i ];
+                const int p = 0 + (grid.face_cells[2*f + 0] != c);
+
+                f2hf[2*f + p] = i;
+            }
+        }
+
+        typedef AutoDiff::ForwardBlock<double>::V V;
+        typedef AutoDiff::ForwardBlock<double>::M M;
+
+        const V& gpot  = geo.gravityPotential();
+        const V& trans = geo.transmissibility();
+
+        const HelperOps::IFaces::Index ni = ops.internal_faces.size();
+
+        typedef Eigen::Triplet<double> Tri;
+        std::vector<Tri> grav;  grav.reserve(2 * ni);
+        for (HelperOps::IFaces::Index i = 0; i < ni; ++i) {
+            const int f  = ops.internal_faces[ i ];
+            const int c1 = grid.face_cells[2*f + 0];
+            const int c2 = grid.face_cells[2*f + 1];
+
+            assert ((c1 >= 0) && (c2 >= 0));
+
+            const double dG1 = gpot[ f2hf[2*f + 0] ];
+            const double dG2 = gpot[ f2hf[2*f + 1] ];
+            const double t   = trans[ f ];
+
+            grav.push_back(Tri(i, c1,   t * dG1));
+            grav.push_back(Tri(i, c2, - t * dG2));
+        }
+
+        M G(ni, nc);  G.setFromTriplets(grav.begin(), grav.end());
+
+        return G;
+    }
 }
 
 namespace Opm {
@@ -151,6 +199,30 @@ namespace Opm {
             return ADB::function(mu, jac);
         }
 
+        ADB
+        phaseDensity(const int phase, const ADB& p) const
+        {
+            typedef typename ADB::V V;
+
+            const double* rho0 = fluid_.surfaceDensity();
+
+            V rho  = V::Zero(nc_, 1);
+            V drho = V::Zero(nc_, 1);
+            for (int i = 0; i < np_; ++i) {
+                rho  += rho0[i] * A_ .block(0, phase*np_ + i, nc_, 1);
+                drho += rho0[i] * dA_.block(0, phase*np_ + i, nc_, 1);
+            }
+
+            assert (p.numBlocks() == 2);
+            std::vector<typename ADB::M> jac(p.numBlocks());
+            jac[0] = spdiag(drho);
+            jac[1] = M(rho.rows(), p.blockPattern()[1]);
+
+            assert (jac[0].cols() == p.blockPattern()[0]);
+
+            return ADB::function(rho, jac);
+        }
+
     private:
         const int nc_;
         const int np_;
@@ -190,6 +262,7 @@ namespace Opm {
             , linsolver_(linsolver)
             , pdepfdata_(grid.number_of_cells, fluid)
             , ops_      (grid)
+            , grav_     (gravityOperator(grid_, ops_, geo_))
             , cell_residual_ (ADB::null())
             , well_residual_ (ADB::null())
         {
@@ -205,7 +278,12 @@ namespace Opm {
             assemble(dt, state, well_state);
 
             const int nc = grid_.number_of_cells;
-            M matr = cell_residual_.derivative()[0];
+            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = cell_residual_.derivative()[0];
+
+#if HACK_INCOMPRESSIBLE_GRAVITY
+            matr.coeffRef(0, 0) *= 2;
+#endif
+
             V dp(nc);
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
             Opm::LinearSolverInterface::LinearSolverReport rep
@@ -235,6 +313,7 @@ namespace Opm {
         const LinearSolverInterface& linsolver_;
         PDepFData               pdepfdata_;
         HelperOps               ops_;
+        const M                 grav_;
         ADB                     cell_residual_;
         ADB                     well_residual_;
 
@@ -293,15 +372,16 @@ namespace Opm {
             const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
             // Finally construct well perforation pressures.
             const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
- 
+
             cell_residual_ = ADB::constant(pv, bpat);
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_B = pdepfdata_.fvf(phase, p);
+                const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
 
                 const V   kr = pdepfdata_.phaseRelPerm(phase);
                 const ADB mu = pdepfdata_.phaseViscosity(phase, p);
                 const ADB mf = upwind.select(kr / mu);
-                const ADB flux = mf * nkgradp;
+                const ADB flux = mf * (nkgradp + (grav_ * cell_rho));
 
                 const ADB face_B = upwind.select(cell_B);
 

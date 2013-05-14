@@ -46,9 +46,11 @@ namespace {
         typedef Vector V;
 
         DerivedGeology(const UnstructuredGrid& grid,
-                       const Geology&          geo)
+                       const Geology&          geo ,
+                       const double*           grav = 0)
             : pvol_ (grid.number_of_cells)
             , trans_(grid.number_of_faces)
+            , gpot_ (grid.cell_facepos[ grid.number_of_cells ])
         {
             // Pore volume
             const typename Vector::Index nc = grid.number_of_cells;
@@ -61,14 +63,35 @@ namespace {
             UnstructuredGrid* ug = const_cast<UnstructuredGrid*>(& grid);
             tpfa_htrans_compute(ug, geo.permeability(), htrans.data());
             tpfa_trans_compute (ug, htrans.data()     , trans_.data());
+
+            if (grav != 0) {
+                const typename Vector::Index nd = grid.dimensions;
+
+                for (typename Vector::Index c = 0; c < nc; ++c) {
+                    const double* const cc = & grid.cell_centroids[c*nd + 0];
+
+                    const int* const p = grid.cell_facepos;
+                    for (int i = p[c]; i < p[c + 1]; ++i) {
+                        const int f = grid.cell_faces[i];
+
+                        const double* const fc = & grid.face_centroids[f*nd + 0];
+
+                        for (typename Vector::Index d = 0; d < nd; ++d) {
+                            gpot_[i] += grav[d] * (fc[d] - cc[d]);
+                        }
+                    }
+                }
+            }
         }
 
         const Vector& poreVolume()       const { return pvol_ ; }
         const Vector& transmissibility() const { return trans_; }
+        const Vector& gravityPotential() const { return gpot_ ; }
 
     private:
         Vector pvol_ ;
         Vector trans_;
+        Vector gpot_ ;
     };
 }
 
@@ -76,7 +99,7 @@ int
 main(int argc, char* argv[])
 {
     const Opm::parameter::ParameterGroup param(argc, argv, false);
-    const Opm::GridManager               gm(3, 3);
+    const Opm::GridManager               gm(20, 1);
 
     const UnstructuredGrid*              g  = gm.c_grid();
     const int                            nc = g->number_of_cells;
@@ -102,7 +125,8 @@ main(int argc, char* argv[])
         THROW("Something went wrong with well init.");
     }
 
-    GeoProps geo(*g, props);
+    double grav[] = { 1.0, 0.0 };
+    GeoProps geo(*g, props, grav);
     Opm::LinearSolverFactory linsolver(param);
     PSolver  ps (*g, props, geo, *wells, linsolver);
 
