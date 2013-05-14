@@ -43,6 +43,7 @@ struct SetupSimple {
         std::ifstream str("fluid.data");
         deck.read(str);
 
+        param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
         param.insertParameter("threephase_model", "simple");
         param.insertParameter("pvt_tab_size"    , "0"     );
