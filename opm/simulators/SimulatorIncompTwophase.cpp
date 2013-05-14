@@ -57,9 +57,8 @@
 namespace Opm
 {
 
-    class SimulatorIncompTwophase::Impl
+    struct SimulatorIncompTwophase::Impl
     {
-    public:
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
              const IncompPropertiesInterface& props,
@@ -74,7 +73,6 @@ namespace Opm
                             TwophaseState& state,
                             WellState& well_state);
 
-    private:
         // Data.
         // Parameters for output.
         bool output_;
