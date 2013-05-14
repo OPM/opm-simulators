@@ -419,6 +419,8 @@ namespace Opm
         double ptime = 0.0;
         Opm::time::StopWatch transport_timer;
         double ttime = 0.0;
+        Opm::time::StopWatch callback_timer;
+        double time_in_callbacks = 0.0;
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
@@ -597,7 +599,10 @@ namespace Opm
             }
 
             // notify all clients that we are done with the timestep
+            callback_timer.start ();
             timestep_completed ();
+            callback_timer.stop ();
+            time_in_callbacks += callback_timer.secsSinceStart ();
         }
 
         if (output_) {
@@ -623,7 +628,7 @@ namespace Opm
         SimulatorReport report;
         report.pressure_time = ptime;
         report.transport_time = ttime;
-        report.total_time = total_timer.secsSinceStart();
+        report.total_time = total_timer.secsSinceStart() - time_in_callbacks;
         return report;
     }
 
