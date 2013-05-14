@@ -458,6 +458,33 @@ namespace Opm
                                             const V& sg,
                                             const Cells& cells) const
     {
+        const int n = cells.size();
+        const int np = props_.numPhases();
+        Block s_all(n, np);
+        if (pu_.phase_used[Water]) {
+            ASSERT(sw.size() == n);
+            s_all.col(pu_.phase_pos[Water]) = sw;
+        }
+        if (pu_.phase_used[Oil]) {
+            ASSERT(so.size() == n);
+            s_all.col(pu_.phase_pos[Oil]) = so;
+        }
+        if (pu_.phase_used[Gas]) {
+            ASSERT(sg.size() == n);
+            s_all.col(pu_.phase_pos[Gas]) = sg;
+        }
+        Block kr(n, np);
+        props_.relperm(n, s_all.data(), cells.data(), kr.data(), 0);
+        std::vector<V> relperms;
+        relperms.reserve(3);
+        for (int phase = 0; phase < 3; ++phase) {
+            if (pu_.phase_used[phase]) {
+                relperms.emplace_back(kr.col(pu_.phase_pos[phase]));
+            } else {
+                relperms.emplace_back();
+            }
+        }
+        return relperms;
     }
 
     /// Relative permeabilities for all phases.
@@ -472,6 +499,56 @@ namespace Opm
                                               const ADB& sg,
                                               const Cells& cells) const
     {
+        const int n = cells.size();
+        const int np = props_.numPhases();
+        Block s_all(n, np);
+        if (pu_.phase_used[Water]) {
+            ASSERT(sw.value().size() == n);
+            s_all.col(pu_.phase_pos[Water]) = sw.value();
+        }
+        if (pu_.phase_used[Oil]) {
+            ASSERT(so.value().size() == n);
+            s_all.col(pu_.phase_pos[Oil]) = so.value();
+        } else {
+            THROW("BlackoilPropsAd::relperm() assumes oil phase is active.");
+        }
+        if (pu_.phase_used[Gas]) {
+            ASSERT(sg.value().size() == n);
+            s_all.col(pu_.phase_pos[Gas]) = sg.value();
+        }
+        Block kr(n, np);
+        Block dkr(n, np*np);
+        props_.relperm(n, s_all.data(), cells.data(), kr.data(), dkr.data());
+        const int num_blocks = so.numBlocks();
+        std::vector<ADB> relperms;
+        relperms.reserve(3);
+        typedef const ADB* ADBPtr;
+        ADBPtr s[3] = { &sw, &so, &sg };
+        for (int phase1 = 0; phase1 < 3; ++phase1) {
+            if (pu_.phase_used[phase1]) {
+                const int phase1_pos = pu_.phase_pos[phase1];
+                std::vector<ADB::M> jacs(num_blocks);
+                for (int block = 0; block < num_blocks; ++block) {
+                    jacs[block] = ADB::M(n, s[phase1]->derivative()[block].cols());
+                }
+                for (int phase2 = 0; phase2 < 3; ++phase2) {
+                    if (!pu_.phase_used[phase2]) {
+                        continue;
+                    }
+                    const int phase2_pos = pu_.phase_pos[phase2];
+                    // Assemble dkr1/ds2.
+                    const int column = phase1_pos + np*phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                    ADB::M dkr1_ds2_diag = spdiag(dkr.col(column));
+                    for (int block = 0; block < num_blocks; ++block) {
+                        jacs[block] += dkr1_ds2_diag * s[phase2]->derivative()[block];
+                    }
+                }
+                relperms.emplace_back(ADB::function(kr.col(phase1_pos), jacs));
+            } else {
+                relperms.emplace_back(ADB::null());
+            }
+        }
+        return relperms;
     }
 
 } // namespace Opm
