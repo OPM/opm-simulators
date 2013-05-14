@@ -21,9 +21,12 @@
 #define OPM_BLACKOILPROPSAD_HEADER_INCLUDED
 
 #include "AutoDiffBlock.hpp"
+#include <opm/core/props/BlackoilPhases.hpp>
 
 namespace Opm
 {
+
+    class BlackoilPropertiesInterface;
 
     /// This class is intended to present a fluid interface for
     /// three-phase black-oil that is easy to use with the AD-using
@@ -37,6 +40,9 @@ namespace Opm
     class BlackoilPropsAd
     {
     public:
+        /// Constructor wrapping an opm-core black oil interface.
+        explicit BlackoilPropsAd(const BlackoilPropertiesInterface& props);
+
         ////////////////////////////
         //      Rock interface    //
         ////////////////////////////
@@ -63,6 +69,12 @@ namespace Opm
         typedef AutoDiff::ForwardBlock<double> ADB;
         typedef ADB::V V;
         typedef std::vector<int> Cells;
+
+
+        // ------ Canonical named indices for each phase ------
+
+        /// Canonical named indices for each phase.
+        enum PhaseIndex { Water = 0, Oil = 1, Gas = 2 };
 
 
         // ------ Density ------
@@ -171,7 +183,7 @@ namespace Opm
 
 
         // ------ Rs bubble point curve ------
-
+#if 0
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -185,7 +197,7 @@ namespace Opm
         /// \return            Array of n bubble point values for Rs.
         ADB rsMax(const ADB& po,
                   const Cells& cells) const;
-
+#endif
 
         // ------ Relative permeability ------
 
@@ -195,7 +207,7 @@ namespace Opm
         /// \param[in]  sg     Array of n gas saturation values.
         /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
         /// \return            An std::vector with 3 elements, each an array of n relperm values,
-        ///                    containing krw, kro, krg.
+        ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
         std::vector<V> relperm(const V& sw,
                                const V& so,
                                const V& sg,
@@ -207,12 +219,15 @@ namespace Opm
         /// \param[in]  sg     Array of n gas saturation values.
         /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
         /// \return            An std::vector with 3 elements, each an array of n relperm values,
-        ///                    containing krw, kro, krg.
+        ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
         std::vector<ADB> relperm(const ADB& sw,
                                  const ADB& so,
                                  const ADB& sg,
                                  const Cells& cells) const;
 
+    private:
+        const BlackoilPropertiesInterface& props_;
+        PhaseUsage pu_;
     };
 
 } // namespace Opm
