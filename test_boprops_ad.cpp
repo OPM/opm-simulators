@@ -43,7 +43,7 @@ struct SetupSimple {
         std::ifstream str("fluid.data");
         deck.read(str);
 
-        param.insertParameter("init_rock"       , false   );
+        param.insertParameter("init_rock"       , "false" );
         param.insertParameter("threephase_model", "simple");
     }
 
