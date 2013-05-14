@@ -21,6 +21,8 @@
 #define OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
 
 #include <boost/shared_ptr.hpp>
+#include <boost/function.hpp>
+#include <functional> // bind
 #include <vector>
 
 struct UnstructuredGrid;
@@ -88,10 +90,42 @@ namespace Opm
                             TwophaseState& state,
                             WellState& well_state);
 
+        /// Register a callback for notifications about completed timestep.
+        /// The specified method of the object is called when the simulator
+        /// has completed a timestep and the state objects are (possibly)
+        /// changed.
+        /// If you want to know the current timestep, the callback must
+        /// also monitor the timer object which was passed to run().
+        /// \tparam T        Type of the callback object.
+        /// \tparam callback Address of a member function of T which will
+        ///                  be invoked when a timestep completes.
+        /// \param[in] t     Object which will receive notifications. The
+        ///                  lifetime of the object must span over the
+        ///                  duration of the simulation, and it is your
+        ///                  responsibility to ensure that.
+        /// \example
+        /// \code{.cpp}
+        /// struct Foo {
+        ///   void bar () { cout << "Called!" << endl; }
+        /// };
+        ///
+        /// SimulatorIncompTwophase sim (...);
+        /// Foo f;
+        /// sim.connect_timestep <Foo, &Foo::bar> (f);
+        /// sim.run (...);
+        /// \endcode
+        template <typename T, void (T::*callback)()>
+        void connect_timestep (T& t) {
+            connect_timestep_impl (boost::function0<void> (std::bind (callback, t)));
+        }
+
     private:
         class Impl;
         // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
         boost::shared_ptr<Impl> pimpl_;
+
+        // implementation which is not templated, and can be in library
+        void connect_timestep_impl (boost::function0<void> hook);
     };
 
 } // namespace Opm

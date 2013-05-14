@@ -49,6 +49,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/function.hpp>
+#include <boost/signal.hpp>
 
 #include <numeric>
 #include <fstream>
@@ -99,6 +101,9 @@ namespace Opm
         boost::scoped_ptr<TransportSolverTwophaseInterface> tsolver_;
         // Misc. data
         std::vector<int> allcells_;
+
+        // list of hooks that are notified when a timestep completes
+        boost::signal0 <void> timestep_completed;
     };
 
 
@@ -126,6 +131,11 @@ namespace Opm
                                                  WellState& well_state)
     {
         return pimpl_->run(timer, state, well_state);
+    }
+
+    // connect the hook to the signal in the implementation class
+    void SimulatorIncompTwophase::connect_timestep_impl (boost::function0 <void> hook) {
+        pimpl_->timestep_completed.connect (hook);
     }
 
     static void reportVolumes(std::ostream &os, double satvol[2], double tot_porevol_init,
@@ -585,6 +595,9 @@ namespace Opm
             if (output_) {
                 sreport.reportParam(tstep_os);
             }
+
+            // notify all clients that we are done with the timestep
+            timestep_completed ();
         }
 
         if (output_) {
