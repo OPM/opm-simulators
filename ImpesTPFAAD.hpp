@@ -275,26 +275,33 @@ namespace Opm {
         {
             pdepfdata_.computeSatQuant(state);
 
+            const double atol  = 1.0e-9;
+            const double rtol  = 5.0e-10;
+            const int    maxit = 15;
+
             assemble(dt, state, well_state);
 
-            const int nc = grid_.number_of_cells;
-            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = cell_residual_.derivative()[0];
+            const double r0  = residualNorm();
+            int          it  = 0;
+            bool resTooLarge = r0 > atol;
+            while (resTooLarge && (it < maxit)) {
+                solveJacobianSystem(state);
 
-#if HACK_INCOMPRESSIBLE_GRAVITY
-            matr.coeffRef(0, 0) *= 2;
-#endif
+                assemble(dt, state, well_state);
 
-            V dp(nc);
-            const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-            Opm::LinearSolverInterface::LinearSolverReport rep
-                = linsolver_.solve(nc, matr.nonZeros(),
-                                   matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                                   cell_residual_.value().data(), dp.data());
-            if (!rep.converged) {
-                THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+                const double r = residualNorm();
+
+                resTooLarge = (r > atol) && (r > rtol*r0);
+
+                it += 1;
             }
-            const V p = p0 - dp;
-            std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+
+            if (resTooLarge) {
+                THROW("Failed to compute converged pressure solution");
+            }
+            else {
+                computeFluxes();
+            }
         }
 
     private:
@@ -391,6 +398,40 @@ namespace Opm {
                 ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
                 cell_residual_ = cell_residual_ - (cell_B * component_contrib);
             }
+        }
+
+        void
+        solveJacobianSystem(BlackoilState& state) const
+        {
+            const int nc = grid_.number_of_cells;
+            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = cell_residual_.derivative()[0];
+
+#if HACK_INCOMPRESSIBLE_GRAVITY
+            matr.coeffRef(0, 0) *= 2;
+#endif
+
+            V dp(nc);
+            const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            Opm::LinearSolverInterface::LinearSolverReport rep
+                = linsolver_.solve(nc, matr.nonZeros(),
+                                   matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
+                                   cell_residual_.value().data(), dp.data());
+            if (!rep.converged) {
+                THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            }
+            const V p = p0 - dp;
+            std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+        }
+
+        double
+        residualNorm() const
+        {
+            return cell_residual_.value().matrix().norm();
+        }
+
+        void
+        computeFluxes() const
+        {
         }
     };
 } // namespace Opm
