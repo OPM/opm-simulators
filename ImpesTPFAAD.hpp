@@ -278,7 +278,7 @@ namespace Opm {
             assemble(dt, state, well_state);
 
             const int nc = grid_.number_of_cells;
-            M matr = cell_residual_.derivative()[0];
+            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = cell_residual_.derivative()[0];
 
 #if HACK_INCOMPRESSIBLE_GRAVITY
             matr.coeffRef(0, 0) *= 2;
