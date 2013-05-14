@@ -1,5 +1,6 @@
 # Editor autosave files
 *~
+*.swp
 
 # Compiled Object files
 *.slo
