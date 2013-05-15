@@ -2,23 +2,17 @@
 # vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
 
 # key information about the library
-set (project "opm-core")
+set (project "opm-autodiff")
 set (${project}_NAME "${project}")
-set (${project}_DESCRIPTION "Open Porous Media Initiative Core Library")
+set (${project}_DESCRIPTION "OPM module for automatic differentiation")
 set (${project}_DIR "opm")
 set (${project}_VERSION_MAJOR 1)
 set (${project}_VERSION_MINOR 0)
-set (doxy_dir "Documentation")
+set (doxy_dir "doc/doxygen")
 
 # defines that must be present in config.h for our headers
 set (${project}_CONFIG_VAR
-	HAVE_AGMG
-	HAVE_DUNE_ISTL
 	HAVE_DYNAMIC_BOOST_TEST
-	HAVE_ERT
-	HAVE_SUITESPARSE_UMFPACK_H
-	HAVE_NULLPTR
-	HAVE_STATIC_ASSERT
 	)
 
 # dependencies
@@ -29,21 +23,11 @@ set (${project}_DEPS
 	"CXX11Features"
 	# various runtime library enhancements
 	"Boost 1.39.0
-		COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
-	# matrix library
-	"BLAS REQUIRED"
-	"LAPACK REQUIRED"
-	# Tim Davis' SuiteSparse archive
-	"SuiteSparse COMPONENTS umfpack"
-	# solver
-	"SuperLU"
-	# xml processing (for config parsing)
-	"TinyXML"
-	# Ensembles-based Reservoir Tools (ERT)
-	"ERT"
+		COMPONENTS system unit_test_framework REQUIRED"
 	# DUNE dependency
-	"dune-common"
-	"dune-istl"
+	"dune-common REQUIRED;
+	dune-istl REQUIRED;
+	opm-core REQUIRED"
 	)
 
 # additional search modules
@@ -107,10 +91,11 @@ if (NOT USE_MPI)
 	set (CMAKE_DISABLE_FIND_PACKAGE_MPI TRUE)
 endif (NOT USE_MPI)
 
-### --- begin opm-core specific --- ###
+### --- begin opm-porsol specific --- ###
+# parallel programming
 include (UseOpenMP)
 find_openmp (${project})
-### --- end opm-core specific --- ###
+### --- end opm-porsol specific --- ###
 
 # macro to set standard variables (INCLUDE_DIRS, LIBRARIES etc.)
 include (OpmFind)
@@ -140,68 +125,8 @@ opm_auto_dirs ()
 opm_out_dirs ()
 
 # identify the compilation units in the library; sources in opm/,
-# tests files in tests/, examples in tutorials/ and examples/
+# tests files in tests/, examples in examples/
 opm_sources (${project})
-
-### --- begin AGMG specific --- ###
-# Algebraic Multigrid must be compiled together with our program;
-# if it is not available, then remove our corresponding component
-find_package (AGMG)
-if (AGMG_FOUND)
-	list (APPEND ${project}_SOURCES ${AGMG_SOURCES})
-endif (AGMG_FOUND)
-### --- end AGMG specific --- ###
-
-### --- begin opm-core specific --- ###
-# these solvers are only compiled in if their dependency is found
-if (NOT AGMG_FOUND)
-	list (REMOVE_ITEM opm-core_SOURCES
-		${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/linalg/LinearSolverAGMG.cpp
-		)
-endif (NOT AGMG_FOUND)
-if (NOT dune-istl_FOUND)
-	list (REMOVE_ITEM opm-core_SOURCES
-		${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/linalg/LinearSolverIstl.cpp
-		)
-endif (NOT dune-istl_FOUND)
-if (NOT SuiteSparse_FOUND)
-	list (REMOVE_ITEM opm-core_SOURCES
-		${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/linalg/call_umfpack.c
-		${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/linalg/LinearSolverUmfpack.cpp
-		)
-	list (REMOVE_ITEM examples_SOURCES
-		${PROJECT_SOURCE_DIR}/tutorials/tutorial2.cpp
-		${PROJECT_SOURCE_DIR}/tutorials/tutorial3.cpp
-		${PROJECT_SOURCE_DIR}/tutorials/tutorial4.cpp
-		)
-endif (NOT SuiteSparse_FOUND)
-
-# we are not supposed to include the TinyXML test prog. regardless
-list (REMOVE_ITEM opm-core_SOURCES
-	${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/utility/parameters/tinyxml/xmltest.cpp
-	)
-
-# remove inline TinyXML if a system version was found
-if (TinyXML_FOUND)
-	file (GLOB_RECURSE _inline_tinyxml "${opm-core_DIR}/core/utility/parameters/tinyxml/*")
-	foreach (_file IN LISTS _inline_tinyxml)
-		list (REMOVE_ITEM opm-core_SOURCES ${_file})
-	endforeach (_file)
-endif (TinyXML_FOUND)
-
-# anyhow remove it from the header list (so it doesn't get installed)
-list (REMOVE_ITEM opm-core_HEADERS "${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/utility/parameters/tinyxml/tinystr.h")
-list (REMOVE_ITEM opm-core_HEADERS "${PROJECT_SOURCE_DIR}/${opm-core_DIR}/core/utility/parameters/tinyxml/tinyxml.h")
-
-# HAVE_ERT is used as an #ifdef, not as an #if in the source code, if it
-# is not true, then it should be unset altogether
-if (NOT HAVE_ERT)
-	set (HAVE_ERT)
-	list (REMOVE_ITEM examples_SOURCES
-		${PROJECT_SOURCE_DIR}/examples/import_rewrite.cpp
-		)
-endif (NOT HAVE_ERT)
-### --- end opm-core specific --- ###
 
 # create configuration header which describes available features
 # necessary to compile this library. singular version is the names that
@@ -216,12 +141,6 @@ set (CONFIG_H "${PROJECT_BINARY_DIR}/config.h.tmp")
 configure_vars (
 	FILE  CXX  ${CONFIG_H}
 	WRITE ${${project}_CONFIG_VARS}
-	)
-
-include (UseFortranWrappers)
-define_fc_func (
-	APPEND ${CONFIG_H}
-	IF HAVE_AGMG # HAVE_BLAS HAVE_LAPACK
 	)
 
 # overwrite the config.h that is used by the code only if we have some
@@ -248,26 +167,12 @@ opm_cmake_config (${project})
 # routines to build satellites such as tests, tutorials and samples
 include (OpmSatellites)
 
-# example programs are found in the tutorials/ and examples/ directory
+# example programs are found in the examples/ directory
 opm_compile_satellites (${project} examples "" "")
 
 # infrastructure for testing
 enable_testing ()
 include (CTest)
-
-### --- begin opm-core specific --- ###
-# conditionally disable tests when features aren't available
-macro (cond_disable_test name)
-	if ((NOT DEFINED HAVE_${name}) OR (NOT HAVE_${name}))
-		message (STATUS "${name} test disabled, since ${name} is not found.")
-		string (TOLOWER "${name}" name_lower)
-		get_filename_component (test_${name}_FILE "tests/test_${name_lower}.cpp" ABSOLUTE)
-		list (REMOVE_ITEM tests_SOURCES "${test_${name}_FILE}")
-	endif ((NOT DEFINED HAVE_${name}) OR (NOT HAVE_${name}))
-endmacro (cond_disable_test name)
-cond_disable_test ("AGMG")
-cond_disable_test ("ERT")
-### --- end opm-core specific --- ###
 
 # make datafiles necessary for tests available in output directory
 opm_data (tests datafiles "${tests_DIR}")
