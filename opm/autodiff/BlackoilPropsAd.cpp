@@ -17,8 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "BlackoilPropsAd.hpp"
-#include "AutoDiffHelpers.hpp"
+#include <config.h>
+
+#include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

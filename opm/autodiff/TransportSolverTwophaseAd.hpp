@@ -20,8 +20,8 @@
 #ifndef OPM_TRANSPORTSOLVERTWOPHASEAD_HEADER_INCLUDED
 #define OPM_TRANSPORTSOLVERTWOPHASEAD_HEADER_INCLUDED
 
-#include "AutoDiffBlock.hpp"
-#include "AutoDiffHelpers.hpp"
+#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/transport/TransportSolverTwophaseInterface.hpp>
 #include <vector>
 

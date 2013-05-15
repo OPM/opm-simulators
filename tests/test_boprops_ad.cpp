@@ -18,13 +18,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #if HAVE_DYNAMIC_BOOST_TEST
 #define BOOST_TEST_DYN_LINK
 #endif
 
 #define BOOST_TEST_MODULE FluidPropertiesTest
 
-#include "BlackoilPropsAd.hpp"
+#include <opm/autodiff/BlackoilPropsAd.hpp>
 
 #include <boost/test/unit_test.hpp>
 

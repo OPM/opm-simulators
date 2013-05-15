@@ -44,7 +44,7 @@
 
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include "SimulatorIncompTwophaseAdfi.hpp"
+#include <opm/autodiff/SimulatorIncompTwophaseAdfi.hpp>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>

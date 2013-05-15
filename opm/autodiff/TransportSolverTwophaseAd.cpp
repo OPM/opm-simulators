@@ -17,7 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "TransportSolverTwophaseAd.hpp"
+#include <config.h>
+
+#include <opm/autodiff/TransportSolverTwophaseAd.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>

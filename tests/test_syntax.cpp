@@ -1,10 +1,12 @@
+#include <config.h>
+
 #if HAVE_DYNAMIC_BOOST_TEST
 #define BOOST_TEST_DYN_LINK
 #endif
 
 #define BOOST_TEST_MODULE SyntaxTest
 
-#include "AutoDiff.hpp"
+#include <opm/autodiff/AutoDiff.hpp>
 
 #include <cmath>
 #include <boost/test/unit_test.hpp>

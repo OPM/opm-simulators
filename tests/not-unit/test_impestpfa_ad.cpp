@@ -18,7 +18,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "ImpesTPFAAD.hpp"
+#include <config.h>
+
+#include <opm/autodiff/ImpesTPFAAD.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>

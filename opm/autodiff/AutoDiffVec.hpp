@@ -20,7 +20,7 @@
 #ifndef OPM_AUTODIFFVEC_HEADER_INCLUDED
 #define OPM_AUTODIFFVEC_HEADER_INCLUDED
 
-#include "AutoDiff.hpp"
+#include <opm/autodiff/AutoDiff.hpp>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 

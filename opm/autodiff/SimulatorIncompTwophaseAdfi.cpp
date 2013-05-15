@@ -22,7 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include "SimulatorIncompTwophaseAdfi.hpp"
+#include <opm/autodiff/SimulatorIncompTwophaseAdfi.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -47,7 +47,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
 #include <opm/core/transport/implicit/TransportSolverTwophaseImplicit.hpp>
-#include "TransportSolverTwophaseAd.hpp"
+#include <opm/autodiff/TransportSolverTwophaseAd.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>

@@ -21,8 +21,8 @@
 #ifndef OPM_IMPESTPFAAD_HEADER_INCLUDED
 #define OPM_IMPESTPFAAD_HEADER_INCLUDED
 
-#include "AutoDiffBlock.hpp"
-#include "AutoDiffHelpers.hpp"
+#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>

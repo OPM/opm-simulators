@@ -33,7 +33,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "AutoDiff.hpp"
+#include <config.h>
+
+#include <opm/autodiff/AutoDiff.hpp>
 
 #include <iostream>
 #include <cmath>

@@ -20,7 +20,7 @@
 #ifndef OPM_BLACKOILPROPSAD_HEADER_INCLUDED
 #define OPM_BLACKOILPROPSAD_HEADER_INCLUDED
 
-#include "AutoDiffBlock.hpp"
+#include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 namespace Opm
