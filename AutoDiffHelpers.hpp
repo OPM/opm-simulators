@@ -289,9 +289,6 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
 /// Need to mark this as inline since it is defined in a header and not a template.
 inline
 AutoDiff::ForwardBlock<double>::M
-spdiag(const AutoDiff::ForwardBlock<double>::V& d);
-
-AutoDiff::ForwardBlock<double>::M
 spdiag(const AutoDiff::ForwardBlock<double>::V& d)
 {
     typedef AutoDiff::ForwardBlock<double>::M M;
