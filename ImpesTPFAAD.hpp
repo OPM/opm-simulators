@@ -346,8 +346,10 @@ namespace Opm {
             const V delta_t = dt * V::Ones(nc, 1);
             const V transi = subset(geo_.transmissibility(),
                                     ops_.internal_faces);
+            const int num_perf = wells_.well_connpos[nw];
             const std::vector<int> well_cells(wells_.well_cells,
-                                              wells_.well_cells + wells_.well_connpos[nw]);
+                                              wells_.well_cells + num_perf);
+            const V transw = Eigen::Map<const V>(wells_.WI, num_perf, 1);
 
             // Initialize AD variables: p (cell pressures) and bhp (well bhp).
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
@@ -379,6 +381,8 @@ namespace Opm {
             const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
             // Finally construct well perforation pressures.
             const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
+
+            // const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
 
             cell_residual_ = ADB::constant(pv, bpat);
             for (int phase = 0; phase < np; ++phase) {
