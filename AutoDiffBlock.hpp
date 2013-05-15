@@ -173,7 +173,13 @@ namespace AutoDiff
             return os;
         }
 
-        /// Number of variables or Jacobian blocks.
+        /// Number of elements
+        int size() const
+        {
+            return val_.size();
+        }
+
+        /// Number of Jacobian blocks.
         int numBlocks() const
         {
             return jac_.size();
