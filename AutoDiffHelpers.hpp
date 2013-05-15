@@ -287,6 +287,9 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
 /// Construct square sparse matrix with the
 /// elements of d on the diagonal.
 AutoDiff::ForwardBlock<double>::M
+spdiag(const AutoDiff::ForwardBlock<double>::V& d);
+
+AutoDiff::ForwardBlock<double>::M
 spdiag(const AutoDiff::ForwardBlock<double>::V& d)
 {
     typedef AutoDiff::ForwardBlock<double>::M M;
