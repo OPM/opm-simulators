@@ -150,6 +150,7 @@ namespace Opm {
 
             fluid_.viscosity(nc_, & p[0], & z[0], & cells_[0],
                              mu_.data(), /*dmu_.data()*/ 0);
+            dmu_.fill(0.0);
         }
 
         ADB
