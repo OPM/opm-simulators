@@ -24,12 +24,14 @@
 #include <vector>
 #include <map>
 #include <ostream>
+
 struct UnstructuredGrid;
 
 namespace Opm
 {
 
     class IncompPropertiesInterface;
+    template <typename T> class SparseTable;
 
     /// Implements a first-order finite volume solver for
     /// (single-phase) time-of-flight using reordering.
@@ -60,25 +62,30 @@ namespace Opm
                       std::vector<double>& tof);
 
         /// Solve for time-of-flight and a number of tracers.
-        /// One tracer will be used for each inflow flux specified in
-        /// the source parameter.
         /// \param[in]  darcyflux         Array of signed face fluxes.
         /// \param[in]  porevolume        Array of pore volumes.
         /// \param[in]  source            Source term. Sign convention is:
         ///                                 (+) inflow flux,
         ///                                 (-) outflow flux.
+        /// \param[in]  tracerheads       Table containing one row per tracer, and each
+        ///                               row contains the source cells for that tracer.
         /// \param[out] tof               Array of time-of-flight values (1 per cell).
-        /// \param[out] tracer            Array of tracer values (N per cell, where N is
-        ///                               the number of cells c for which source[c] > 0.0).
+        /// \param[out] tracer            Array of tracer values. N per cell, where N is
+        ///                               equalt to tracerheads.size().
         void solveTofTracer(const double* darcyflux,
                             const double* porevolume,
                             const double* source,
+                            const SparseTable<int>& tracerheads,
                             std::vector<double>& tof,
                             std::vector<double>& tracer);
 
     private:
         virtual void solveSingleCell(const int cell);
         void solveSingleCellMultidimUpwind(const int cell);
+        void assembleSingleCell(const int cell,
+                                std::vector<int>& local_column,
+                                std::vector<double>& local_coefficient,
+                                double& rhs);
         virtual void solveMultiCell(const int num_cells, const int* cells);
 
         void multidimUpwindTerms(const int face, const int upwind_cell,
@@ -92,6 +99,14 @@ namespace Opm
         double* tof_;
         double* tracer_;
         int num_tracers_;
+        enum { NoTracerHead = -1 };
+        std::vector<int> tracerhead_by_cell_;
+        // For solveMultiCell():
+        double gauss_seidel_tol_;
+        int num_multicell_;
+        int max_size_multicell_;
+        int max_iter_multicell_;
+        // For multidim upwinding:
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.
         mutable std::vector<int> adj_faces_; // For multidim upwind logic.

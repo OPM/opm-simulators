@@ -35,6 +35,7 @@ namespace Opm
     class VelocityInterpolationInterface;
     class DGBasisInterface;
     namespace parameter { class ParameterGroup; }
+    template <typename T> class SparseTable;
 
     /// Implements a discontinuous Galerkin solver for
     /// (single-phase) time-of-flight using reordering.
@@ -83,13 +84,38 @@ namespace Opm
         /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
         ///                               The values are ordered by cell, meaning that
         ///                               the K coefficients corresponding to the first
-        ///                               cell comes before the K coefficients corresponding
+        ///                               cell come before the K coefficients corresponding
         ///                               to the second cell etc.
         ///                               K depends on degree and grid dimension.
         void solveTof(const double* darcyflux,
                       const double* porevolume,
                       const double* source,
                       std::vector<double>& tof_coeff);
+
+        /// Solve for time-of-flight and a number of tracers.
+        /// \param[in]  darcyflux         Array of signed face fluxes.
+        /// \param[in]  porevolume        Array of pore volumes.
+        /// \param[in]  source            Source term. Sign convention is:
+        ///                                 (+) inflow flux,
+        ///                                 (-) outflow flux.
+        /// \param[in]  tracerheads       Table containing one row per tracer, and each
+        ///                               row contains the source cells for that tracer.
+        /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
+        ///                               The values are ordered by cell, meaning that
+        ///                               the K coefficients corresponding to the first
+        ///                               cell comes before the K coefficients corresponding
+        ///                               to the second cell etc.
+        ///                               K depends on degree and grid dimension.
+        /// \param[out] tracer_coeff      Array of tracer solution coefficients. N*K per cell,
+        ///                               where N is equal to tracerheads.size(). All K coefs
+        ///                               for a tracer are consecutive, and all tracers' coefs
+        ///                               for a cell come before those for the next cell.
+        void solveTofTracer(const double* darcyflux,
+                            const double* porevolume,
+                            const double* source,
+                            const SparseTable<int>& tracerheads,
+                            std::vector<double>& tof_coeff,
+                            std::vector<double>& tracer_coeff);
 
     private:
         virtual void solveSingleCell(const int cell);
@@ -115,16 +141,27 @@ namespace Opm
         const double* source_;      // one volumetric source term per cell
         boost::shared_ptr<DGBasisInterface> basis_func_;
         double* tof_coeff_;
-        std::vector<double> rhs_;   // single-cell right-hand-side
+        // For tracers.
+        double* tracer_coeff_;
+        int num_tracers_;
+        enum { NoTracerHead = -1 };
+        std::vector<int> tracerhead_by_cell_;
+        // Used by solveSingleCell().
+        std::vector<double> rhs_;   // single-cell right-hand-sides
         std::vector<double> jac_;   // single-cell jacobian
-        std::vector<double> orig_rhs_;   // single-cell right-hand-side (copy)
+        std::vector<double> orig_rhs_;   // single-cell right-hand-sides (copy)
         std::vector<double> orig_jac_;   // single-cell jacobian (copy)
-        // Below: storage for quantities needed by solveSingleCell().
         std::vector<double> coord_;
         mutable std::vector<double> basis_;
         mutable std::vector<double> basis_nb_;
         std::vector<double> grad_basis_;
         std::vector<double> velocity_;
+        int num_singlesolves_;
+        // Used by solveMultiCell():
+        double gauss_seidel_tol_;
+        int num_multicell_;
+        int max_size_multicell_;
+        int max_iter_multicell_;
 
         // Private methods
 
@@ -137,6 +174,10 @@ namespace Opm
         void applyLimiterAsSimultaneousPostProcess();
         double totalFlux(const int cell) const;
         double minCornerVal(const int cell, const int face) const;
+
+        // Apply a simple (restrict to [0,1]) limiter.
+        // Intended for tracers.
+        void applyTracerLimiter(const int cell, double* local_coeff);
     };
 
 } // namespace Opm

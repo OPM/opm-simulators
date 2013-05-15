@@ -24,6 +24,7 @@
 #include <opm/core/tof/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/blas_lapack.h>
@@ -45,7 +46,8 @@ namespace Opm
           limiter_method_(MinUpwindAverage),
           limiter_usage_(DuringComputations),
           coord_(grid.dimensions),
-          velocity_(grid.dimensions)
+          velocity_(grid.dimensions),
+          gauss_seidel_tol_(1e-3)
     {
         const int dg_degree = param.getDefault("dg_degree", 0);
         const bool use_tensorial_basis = param.getDefault("use_tensorial_basis", false);
@@ -97,9 +99,9 @@ namespace Opm
 
     /// Solve for time-of-flight.
     void TofDiscGalReorder::solveTof(const double* darcyflux,
-                                                  const double* porevolume,
-                                                  const double* source,
-                                                  std::vector<double>& tof_coeff)
+                                     const double* porevolume,
+                                     const double* source,
+                                     std::vector<double>& tof_coeff)
     {
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
@@ -123,6 +125,11 @@ namespace Opm
         basis_nb_.resize(num_basis);
         grad_basis_.resize(num_basis*grid_.dimensions);
         velocity_interpolation_->setupFluxes(darcyflux);
+        num_tracers_ = 0;
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
+        num_singlesolves_ = 0;
         reorderAndTransport(grid_, darcyflux);
         switch (limiter_usage_) {
         case AsPostProcess:
@@ -136,6 +143,109 @@ namespace Opm
             break;
         default:
             THROW("Unknown limiter usage choice: " << limiter_usage_);
+        }
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+            std::cout << "Average solves per cell (for all cells) was "
+                      << double(num_singlesolves_)/double(grid_.number_of_cells) << std::endl;
+        }
+    }
+
+
+
+
+    /// Solve for time-of-flight and a number of tracers.
+    /// \param[in]  darcyflux         Array of signed face fluxes.
+    /// \param[in]  porevolume        Array of pore volumes.
+    /// \param[in]  source            Source term. Sign convention is:
+    ///                                 (+) inflow flux,
+    ///                                 (-) outflow flux.
+    /// \param[in]  tracerheads       Table containing one row per tracer, and each
+    ///                               row contains the source cells for that tracer.
+    /// \param[out] tof_coeff         Array of time-of-flight solution coefficients.
+    ///                               The values are ordered by cell, meaning that
+    ///                               the K coefficients corresponding to the first
+    ///                               cell comes before the K coefficients corresponding
+    ///                               to the second cell etc.
+    ///                               K depends on degree and grid dimension.
+    /// \param[out] tracer_coeff      Array of tracer solution coefficients. N*K per cell,
+    ///                               where N is equal to tracerheads.size(). All K coefs
+    ///                               for a tracer are consecutive, and all tracers' coefs
+    ///                               for a cell come before those for the next cell.
+    void TofDiscGalReorder::solveTofTracer(const double* darcyflux,
+                                           const double* porevolume,
+                                           const double* source,
+                                           const SparseTable<int>& tracerheads,
+                                           std::vector<double>& tof_coeff,
+                                           std::vector<double>& tracer_coeff)
+    {
+        darcyflux_ = darcyflux;
+        porevolume_ = porevolume;
+        source_ = source;
+#ifndef NDEBUG
+        // Sanity check for sources.
+        const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
+        if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
+            // THROW("Sources do not sum to zero: " << cum_src);
+            MESSAGE("Warning: sources do not sum to zero: " << cum_src);
+        }
+#endif
+        const int num_basis = basis_func_->numBasisFunc();
+        num_tracers_ = tracerheads.size();
+        tof_coeff.resize(num_basis*grid_.number_of_cells);
+        std::fill(tof_coeff.begin(), tof_coeff.end(), 0.0);
+        tof_coeff_ = &tof_coeff[0];
+        rhs_.resize(num_basis*(num_tracers_ + 1));
+        jac_.resize(num_basis*num_basis);
+        orig_jac_.resize(num_basis*num_basis);
+        basis_.resize(num_basis);
+        basis_nb_.resize(num_basis);
+        grad_basis_.resize(num_basis*grid_.dimensions);
+        velocity_interpolation_->setupFluxes(darcyflux);
+
+        // Set up tracer
+        tracer_coeff.resize(grid_.number_of_cells*num_tracers_*num_basis);
+        std::fill(tracer_coeff.begin(), tracer_coeff.end(), 0.0);
+        if (num_tracers_ > 0) {
+            tracerhead_by_cell_.clear();
+            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
+        }
+        for (int tr = 0; tr < num_tracers_; ++tr) {
+            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+                const int cell = tracerheads[tr][i];
+                basis_func_->addConstant(1.0, &tracer_coeff[cell*num_tracers_*num_basis + tr*num_basis]);
+                tracer_coeff[cell*num_tracers_ + tr] = 1.0;
+                tracerhead_by_cell_[cell] = tr;
+            }
+        }
+
+        tracer_coeff_ = &tracer_coeff[0];
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
+        num_singlesolves_ = 0;
+        reorderAndTransport(grid_, darcyflux);
+        switch (limiter_usage_) {
+        case AsPostProcess:
+            applyLimiterAsPostProcess();
+            break;
+        case AsSimultaneousPostProcess:
+            applyLimiterAsSimultaneousPostProcess();
+            break;
+        case DuringComputations:
+            // Do nothing.
+            break;
+        default:
+            THROW("Unknown limiter usage choice: " << limiter_usage_);
+        }
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+            std::cout << "Average solves per cell (for all cells) was "
+                      << double(num_singlesolves_)/double(grid_.number_of_cells) << std::endl;
         }
     }
 
@@ -153,9 +263,17 @@ namespace Opm
         // This is linear in c_i, so we do not need any nonlinear iterations.
         // We assemble the jacobian and the right-hand side. The residual is
         // equal to Res = Jac*c - rhs, and we compute rhs directly.
+        //
+        // For tracers, the equation is the same, except for the last
+        // term being zero (the one with \phi).
+        //
+        // The rhs_ vector contains a (Fortran ordering) matrix of all
+        // right-hand-sides, first for tof and then (optionally) for
+        // all tracers.
 
         const int dim = grid_.dimensions;
         const int num_basis = basis_func_->numBasisFunc();
+        ++num_singlesolves_;
 
         std::fill(rhs_.begin(), rhs_.end(), 0.0);
         std::fill(jac_.begin(), jac_.end(), 0.0);
@@ -170,6 +288,7 @@ namespace Opm
                 basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
+                    // Only adding to the tof rhs.
                     rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
                 }
             }
@@ -193,6 +312,8 @@ namespace Opm
             }
             if (upstream_cell < 0) {
                 // This is an outer boundary. Assumed tof = 0 on inflow, so no contribution.
+                // For tracers, a cell with inflow should be marked as a tracer head cell,
+                // and not be modified.
                 continue;
             }
             // Do quadrature over the face to compute
@@ -209,11 +330,22 @@ namespace Opm
                 quad.quadPtCoord(quad_pt, &coord_[0]);
                 basis_func_->eval(cell, &coord_[0], &basis_[0]);
                 basis_func_->eval(upstream_cell, &coord_[0], &basis_nb_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                // Modify tof rhs
                 const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
                                                                tof_coeff_ + num_basis*upstream_cell, 0.0);
-                const double w = quad.quadPtWeight(quad_pt);
                 for (int j = 0; j < num_basis; ++j) {
                     rhs_[j] -= w * tof_upstream * normal_velocity * basis_[j];
+                }
+                // Modify tracer rhs
+                if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                    for (int tr = 0; tr < num_tracers_; ++tr) {
+                        const double* up_tr_co = tracer_coeff_ + num_tracers_*num_basis*upstream_cell + num_basis*tr;
+                        const double tracer_up = std::inner_product(basis_nb_.begin(), basis_nb_.end(), up_tr_co, 0.0);
+                        for (int j = 0; j < num_basis; ++j) {
+                            rhs_[num_basis*(tr + 1) + j] -= w * tracer_up * normal_velocity * basis_[j];
+                        }
+                    }
                 }
             }
         }
@@ -305,7 +437,13 @@ namespace Opm
 
         // Solve linear equation.
         MAT_SIZE_T n = num_basis;
-        MAT_SIZE_T nrhs = 1;
+        int num_tracer_to_compute = num_tracers_;
+        if (num_tracers_) {
+            if (tracerhead_by_cell_[cell] != NoTracerHead) {
+                num_tracer_to_compute = 0;
+            }
+        }
+        MAT_SIZE_T nrhs = 1 + num_tracer_to_compute;
         MAT_SIZE_T lda = num_basis;
         std::vector<MAT_SIZE_T> piv(num_basis);
         MAT_SIZE_T ldb = num_basis;
@@ -331,7 +469,10 @@ namespace Opm
         }
 
         // The solution ends up in rhs_, so we must copy it.
-        std::copy(rhs_.begin(), rhs_.end(), tof_coeff_ + num_basis*cell);
+        std::copy(rhs_.begin(), rhs_.begin() + num_basis, tof_coeff_ + num_basis*cell);
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+            std::copy(rhs_.begin() + num_basis, rhs_.end(), tracer_coeff_ + num_tracers_*num_basis*cell);
+        }
 
         // Apply limiter.
         if (basis_func_->degree() > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
@@ -359,6 +500,31 @@ namespace Opm
             std::cout << std::endl;
 #endif
             applyLimiter(cell, tof_coeff_);
+            if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                for (int tr = 0; tr < num_tracers_; ++tr) {
+                    applyTracerLimiter(cell, tracer_coeff_ + cell*num_tracers_*num_basis + tr*num_basis);
+                }
+            }
+        }
+
+        // Ensure that tracer averages sum to 1.
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+            std::vector<double> tr_aver(num_tracers_);
+            double tr_sum = 0.0;
+            for (int tr = 0; tr < num_tracers_; ++tr) {
+                const double* local_basis = tracer_coeff_ + cell*num_tracers_*num_basis + tr*num_basis;
+                tr_aver[tr] = basis_func_->functionAverage(local_basis);
+                tr_sum += tr_aver[tr];
+            }
+            if (tr_sum == 0.0) {
+                std::cout << "Tracer sum is zero in cell " << cell << std::endl;
+            } else {
+                for (int tr = 0; tr < num_tracers_; ++tr) {
+                    const double increment = tr_aver[tr]/tr_sum - tr_aver[tr];
+                    double* local_basis = tracer_coeff_ + cell*num_tracers_*num_basis + tr*num_basis;
+                    basis_func_->addConstant(increment, local_basis);
+                }
+            }
         }
     }
 
@@ -367,10 +533,27 @@ namespace Opm
 
     void TofDiscGalReorder::solveMultiCell(const int num_cells, const int* cells)
     {
-        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
-        for (int i = 0; i < num_cells; ++i) {
-            solveSingleCell(cells[i]);
+        ++num_multicell_;
+        max_size_multicell_ = std::max(max_size_multicell_, num_cells);
+        // std::cout << "Multiblock solve with " << num_cells << " cells." << std::endl;
+
+        // Using a Gauss-Seidel approach.
+        const int nb = basis_func_->numBasisFunc();
+        double max_delta = 1e100;
+        int num_iter = 0;
+        while (max_delta > gauss_seidel_tol_) {
+            max_delta = 0.0;
+            ++num_iter;
+            for (int ci = 0; ci < num_cells; ++ci) {
+                const int cell = cells[ci];
+                const double tof_before = basis_func_->functionAverage(&tof_coeff_[nb*cell]);
+                solveSingleCell(cell);
+                const double tof_after = basis_func_->functionAverage(&tof_coeff_[nb*cell]);
+                max_delta = std::max(max_delta, std::fabs(tof_after - tof_before));
+            }
+            // std::cout << "Max delta = " << max_delta << std::endl;
         }
+        max_iter_multicell_ = std::max(max_iter_multicell_, num_iter);
     }
 
 
@@ -462,7 +645,7 @@ namespace Opm
         double limiter = (tof_c - min_upstream_tof)/(tof_c - min_here_tof);
         if (tof_c < min_upstream_tof) {
             // Handle by setting a flat solution.
-            std::cout << "Trouble in cell " << cell << std::endl;
+            // std::cout << "Trouble in cell " << cell << std::endl;
             limiter = 0.0;
             basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }
@@ -558,6 +741,48 @@ namespace Opm
             min_cornerval = std::min(min_cornerval, tof_corner);
         }
         return min_cornerval;
+    }
+
+
+
+    void TofDiscGalReorder::applyTracerLimiter(const int cell, double* local_coeff)
+    {
+        // Evaluate the solution in all corners of all faces. Extract max and min.
+        const int dim = grid_.dimensions;
+        const int num_basis = basis_func_->numBasisFunc();
+        double min_cornerval = 1e100;
+        double max_cornerval = -1e100;
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            for (int fnode = grid_.face_nodepos[face]; fnode < grid_.face_nodepos[face+1]; ++fnode) {
+                const double* nc = grid_.node_coordinates + dim*grid_.face_nodes[fnode];
+                basis_func_->eval(cell, nc, &basis_[0]);
+                const double tracer_corner = std::inner_product(basis_.begin(), basis_.end(),
+                                                                local_coeff, 0.0);
+                min_cornerval = std::min(min_cornerval, tracer_corner);
+                max_cornerval = std::max(min_cornerval, tracer_corner);
+            }
+        }
+        const double average = basis_func_->functionAverage(local_coeff);
+        if (average < 0.0 || average > 1.0) {
+            // Adjust average. Flatten gradient.
+            std::fill(local_coeff, local_coeff + num_basis, 0.0);
+            if (average > 1.0) {
+                basis_func_->addConstant(1.0, local_coeff);
+            }
+        } else {
+            // Possibly adjust gradient.
+            double factor = 1.0;
+            if (min_cornerval < 0.0) {
+                factor = average/(average - min_cornerval);
+            }
+            if (max_cornerval > 1.0) {
+                factor = std::min(factor, (1.0 - average)/(max_cornerval - average));
+            }
+            if (factor != 1.0) {
+                basis_func_->multiplyGradient(factor, local_coeff);
+            }
+        }
     }
 
 

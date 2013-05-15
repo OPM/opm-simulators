@@ -21,6 +21,7 @@
 #include <opm/core/tof/TofReorder.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/SparseTable.hpp>
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -41,6 +42,7 @@ namespace Opm
           tof_(0),
           tracer_(0),
           num_tracers_(0),
+          gauss_seidel_tol_(1e-3),
           use_multidim_upwind_(use_multidim_upwind)
     {
     }
@@ -56,9 +58,9 @@ namespace Opm
     ///                                 (-) outflow flux.
     /// \param[out] tof               Array of time-of-flight values.
     void TofReorder::solveTof(const double* darcyflux,
-                                           const double* porevolume,
-                                           const double* source,
-                                           std::vector<double>& tof)
+                              const double* porevolume,
+                              const double* source,
+                              std::vector<double>& tof)
     {
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
@@ -78,26 +80,35 @@ namespace Opm
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
         }
         num_tracers_ = 0;
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
         reorderAndTransport(grid_, darcyflux);
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+        }
     }
 
 
 
 
     /// Solve for time-of-flight and a number of tracers.
-    /// One tracer will be used for each inflow flux specified in
-    /// the source parameter.
     /// \param[in]  darcyflux         Array of signed face fluxes.
     /// \param[in]  porevolume        Array of pore volumes.
     /// \param[in]  source            Source term. Sign convention is:
     ///                                 (+) inflow flux,
     ///                                 (-) outflow flux.
+    /// \param[in]  tracerheads       Table containing one row per tracer, and each
+    ///                               row contains the source cells for that tracer.
     /// \param[out] tof               Array of time-of-flight values (1 per cell).
-    /// \param[out] tracer            Array of tracer values (N per cell, where N is
-    ///                               the number of cells c for which source[c] > 0.0).
+    /// \param[out] tracer            Array of tracer values. N per cell, where N is
+    ///                               equalt to tracerheads.size().
     void TofReorder::solveTofTracer(const double* darcyflux,
                                     const double* porevolume,
                                     const double* source,
+                                    const SparseTable<int>& tracerheads,
                                     std::vector<double>& tof,
                                     std::vector<double>& tracer)
     {
@@ -114,26 +125,38 @@ namespace Opm
         tof.resize(grid_.number_of_cells);
         std::fill(tof.begin(), tof.end(), 0.0);
         tof_ = &tof[0];
+
         // Find the tracer heads (injectors).
-        std::vector<int> tracerheads;
-        for (int c = 0; c < grid_.number_of_cells; ++c) {
-            if (source[c] > 0.0) {
-                tracerheads.push_back(c);
-            }
-        }
         num_tracers_ = tracerheads.size();
         tracer.resize(grid_.number_of_cells*num_tracers_);
         std::fill(tracer.begin(), tracer.end(), 0.0);
-        for (int tr = 0; tr < num_tracers_; ++tr) {
-            tracer[tracerheads[tr]*num_tracers_ + tr] = 1.0;
+        if (num_tracers_ > 0) {
+            tracerhead_by_cell_.clear();
+            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
         }
+        for (int tr = 0; tr < num_tracers_; ++tr) {
+            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+                const int cell = tracerheads[tr][i];
+                tracer[cell*num_tracers_ + tr] = 1.0;
+                tracerhead_by_cell_[cell] = tr;
+            }
+        }
+
         tracer_ = &tracer[0];
         if (use_multidim_upwind_) {
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
             THROW("Multidimensional upwind not yet implemented for tracer.");
         }
+        num_multicell_ = 0;
+        max_size_multicell_ = 0;
+        max_iter_multicell_ = 0;
         reorderAndTransport(grid_, darcyflux);
+        if (num_multicell_ > 0) {
+            std::cout << num_multicell_ << " multicell blocks with max size "
+                      << max_size_multicell_ << " cells in upto "
+                      << max_iter_multicell_ << " iterations." << std::endl;
+        }
     }
 
 
@@ -151,6 +174,11 @@ namespace Opm
         // to the downwind_flux (note sign change resulting from
         // different sign conventions: pos. source is injection,
         // pos. flux is outflow).
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+            for (int tr = 0; tr < num_tracers_; ++tr) {
+                tracer_[num_tracers_*cell + tr] = 0.0;
+            }
+        }
         double upwind_term = 0.0;
         double downwind_flux = std::max(-source_[cell], 0.0);
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
@@ -172,8 +200,10 @@ namespace Opm
                 // face.
                 if (other != -1) {
                     upwind_term += flux*tof_[other];
-                    for (int tr = 0; tr < num_tracers_; ++tr) {
-                        tracer_[num_tracers_*cell + tr] += flux*tracer_[num_tracers_*other + tr];
+                    if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                        for (int tr = 0; tr < num_tracers_; ++tr) {
+                            tracer_[num_tracers_*cell + tr] += flux*tracer_[num_tracers_*other + tr];
+                        }
                     }
                 }
             } else {
@@ -186,7 +216,7 @@ namespace Opm
 
         // Compute tracers (if any).
         // Do not change tracer solution in source cells.
-        if (source_[cell] <= 0.0) {
+        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
             for (int tr = 0; tr < num_tracers_; ++tr) {
                 tracer_[num_tracers_*cell + tr] *= -1.0/downwind_flux;
             }
@@ -219,7 +249,7 @@ namespace Opm
             // Add flux to upwind_term or downwind_term_[face|cell_factor].
             if (flux < 0.0) {
                 upwind_term += flux*face_tof_[f];
-            } else {
+            } else if (flux > 0.0) {
                 double fterm, cterm_factor;
                 multidimUpwindTerms(f, cell, fterm, cterm_factor);
                 downwind_term_face += fterm*flux;
@@ -228,7 +258,7 @@ namespace Opm
         }
 
         // Compute tof for cell.
-        tof_[cell] = (porevolume_[cell] - upwind_term - downwind_term_face)/downwind_term_cell_factor;        // }
+        tof_[cell] = (porevolume_[cell] - upwind_term - downwind_term_face)/downwind_term_cell_factor;
 
         // Compute tof for downwind faces.
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
@@ -247,10 +277,25 @@ namespace Opm
 
     void TofReorder::solveMultiCell(const int num_cells, const int* cells)
     {
-        std::cout << "Pretending to solve multi-cell dependent equation with " << num_cells << " cells." << std::endl;
-        for (int i = 0; i < num_cells; ++i) {
-            solveSingleCell(cells[i]);
+        ++num_multicell_;
+        max_size_multicell_ = std::max(max_size_multicell_, num_cells);
+        // std::cout << "Multiblock solve with " << num_cells << " cells." << std::endl;
+
+        // Using a Gauss-Seidel approach.
+        double max_delta = 1e100;
+        int num_iter = 0;
+        while (max_delta > gauss_seidel_tol_) {
+            max_delta = 0.0;
+            ++num_iter;
+            for (int ci = 0; ci < num_cells; ++ci) {
+                const int cell = cells[ci];
+                const double tof_before = tof_[cell];
+                solveSingleCell(cell);
+                max_delta = std::max(max_delta, std::fabs(tof_[cell] - tof_before));
+            }
+            // std::cout << "Max delta = " << max_delta << std::endl;
         }
+        max_iter_multicell_ = std::max(max_iter_multicell_, num_iter);
     }
 
 
@@ -277,6 +322,9 @@ namespace Opm
         // This will over-weight the immediate upstream cell value in an extruded 2d grid with
         // one layer (top and bottom no-flow faces will enter the computation) compared to the
         // original 2d case. Improvements are welcome.
+        // Note: Modified algorithm to consider faces that share even a single vertex with
+        // the input face. This reduces the problem of non-edge-conformal grids, but does not
+        // eliminate it entirely.
 
         // Identify the adjacent faces of the upwind cell.
         const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
@@ -294,11 +342,11 @@ namespace Opm
                 for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
                     num_common += std::count(face_nodes_beg, face_nodes_end, *f_iter);
                 }
-                if (num_common == grid_.dimensions - 1) {
-                    // Neighbours over an edge (3d) or vertex (2d).
+                // Before: neighbours over an edge (3d) or vertex (2d).
+                // Now: neighbours across a vertex.
+                // if (num_common == grid_.dimensions - 1) {
+                if (num_common > 0) {
                     adj_faces_.push_back(f);
-                } else {
-                    ASSERT(num_common == 0);
                 }
             }
         }
@@ -306,7 +354,9 @@ namespace Opm
         // Indentify adjacent faces with inflows, compute omega_star, omega,
         // add up contributions.
         const int num_adj = adj_faces_.size();
-        ASSERT(num_adj == face_nodes_end - face_nodes_beg);
+        // The assertion below only holds if the grid is edge-conformal.
+        // No longer testing, since method no longer requires it.
+        // ASSERT(num_adj == face_nodes_end - face_nodes_beg);
         const double flux_face = std::fabs(darcyflux_[face]);
         face_term = 0.0;
         cell_term_factor = 0.0;
