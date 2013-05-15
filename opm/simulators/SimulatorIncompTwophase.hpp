@@ -115,9 +115,7 @@ namespace Opm
         /// sim.run (...);
         /// \endcode
         template <typename T, void (T::*callback)()>
-        void connect_timestep (T& t) {
-            connect_timestep_impl (boost::function0<void> (std::bind (callback, t)));
-        }
+        void connect_timestep (T& t);
 
     private:
         class Impl;
@@ -129,5 +127,7 @@ namespace Opm
     };
 
 } // namespace Opm
+
+#include "SimulatorIncompTwophase_impl.hpp"
 
 #endif // OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
