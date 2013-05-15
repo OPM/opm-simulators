@@ -234,7 +234,7 @@ int main()
     V sw1 = 0.5*V::Ones(nc,1);
     const V ndp = (ops.ngrad * p1.matrix()).array();
     const V dflux = mobtransf * ndp;
-    const UpwindSelectorTotalFlux<double> upwind(grid, ops, dflux);
+    const UpwindSelector<double> upwind(grid, ops, dflux);
     const V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
         * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
     const double dt = 0.0005;
