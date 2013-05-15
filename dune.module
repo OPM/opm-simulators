@@ -1,0 +1,4 @@
+Module: opm-core
+Version: 1.0
+Maintainer: atgeirr@sintef.no
+Depends: dune-common (>= 2.2) dune-istl (>= 2.2)
