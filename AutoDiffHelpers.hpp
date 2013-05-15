@@ -227,9 +227,18 @@ namespace {
         sub.setFromTriplets(triplets.begin(), triplets.end());
         return sub;
     }
+
+    template <typename Scalar, class IntVec>
+    Eigen::SparseMatrix<Scalar>
+    constructSupersetSparseMatrix(const int full_size, const IntVec& indices)
+    {
+        return constructSubsetSparseMatrix<Scalar>(full_size, indices).transpose();
+    }
+
 } // anon namespace
 
 
+/// Returns x(indices).
 template <typename Scalar, class IntVec>
 AutoDiff::ForwardBlock<Scalar>
 subset(const AutoDiff::ForwardBlock<Scalar>& x,
@@ -239,6 +248,8 @@ subset(const AutoDiff::ForwardBlock<Scalar>& x,
 }
 
 
+
+/// Returns x(indices).
 template <typename Scalar, class IntVec>
 Eigen::Array<Scalar, Eigen::Dynamic, 1>
 subset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
@@ -248,6 +259,33 @@ subset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
 }
 
 
+
+/// Returns v where v(indices) == x, v(!indices) == 0 and v.size() == n.
+template <typename Scalar, class IntVec>
+AutoDiff::ForwardBlock<Scalar>
+superset(const AutoDiff::ForwardBlock<Scalar>& x,
+         const IntVec& indices,
+         const int n)
+{
+    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x;
+}
+
+
+
+/// Returns v where v(indices) == x, v(!indices) == 0 and v.size() == n.
+template <typename Scalar, class IntVec>
+Eigen::Array<Scalar, Eigen::Dynamic, 1>
+superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
+         const IntVec& indices,
+         const int n)
+{
+    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x;
+}
+
+
+
+/// Construct square sparse matrix with the
+/// elements of d on the diagonal.
 AutoDiff::ForwardBlock<double>::M
 spdiag(const AutoDiff::ForwardBlock<double>::V& d)
 {
