@@ -457,14 +457,13 @@ namespace Opm {
             const int np = state.numPhases();
 
             const V   p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-            const ADB p  = ADB::constant(p0, std::vector<int>(1, nc));
+            const ADB p  = ADB::constant(p0, cell_residual_.blockPattern());
 
             const V transi  = subset(geo_.transmissibility(),
                                      ops_.internal_faces);
             const V nkgradp = transi * (ops_.ngrad * p0.matrix()).array();
 
-            V flux = Eigen::Map<const V>(&state.faceflux()[0],
-                                         grid_.number_of_faces, 1);
+            V flux = V::Zero(ops_.internal_faces.size(), 1);
 
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
@@ -479,6 +478,8 @@ namespace Opm {
 
                 flux += mf * head;
             }
+            V all_flux = superset(flux, ops_.internal_faces, grid_.number_of_faces);
+            std::copy(all_flux.data(), all_flux.data() + grid_.number_of_faces, state.faceflux().data());
         }
     };
 } // namespace Opm
