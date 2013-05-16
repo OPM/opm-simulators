@@ -20,6 +20,8 @@
 
 #include <config.h>
 
+#define HACK_INCOMPRESSIBLE_GRAVITY 1
+
 #include <opm/autodiff/ImpesTPFAAD.hpp>
 
 #include <opm/core/grid.h>
@@ -140,8 +142,13 @@ main(int argc, char* argv[])
 
     ps.solve(1.0, state, well_state);
 
+    std::cout << "Cell pressure:" << std::endl;
     std::copy(state.pressure().begin(), state.pressure().end(), std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
+    std::cout << "Face flux:" << std::endl;
+    std::copy(state.faceflux().begin(), state.faceflux().end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
+    std::cout << "Well bhp pressure:" << std::endl;
     std::copy(well_state.bhp().begin(), well_state.bhp().end(), std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
 
