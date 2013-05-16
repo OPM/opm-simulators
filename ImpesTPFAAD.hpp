@@ -276,7 +276,7 @@ namespace Opm {
         {
             pdepfdata_.computeSatQuant(state);
 
-            const double atol  = 1.0e-9;
+            const double atol  = 1.0e-15;
             const double rtol  = 5.0e-10;
             const int    maxit = 15;
 
@@ -383,9 +383,13 @@ namespace Opm {
             // Finally construct well perforation pressures.
             const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
 
-            // const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
+            const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
 
             cell_residual_ = ADB::constant(pv, bpat);
+#define COMPENSATE_FLOAT_PRECISION 0
+#if COMPENSATE_FLOAT_PRECISION
+            ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
+#endif
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_B = pdepfdata_.fvf(phase, p);
                 const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
@@ -400,9 +404,21 @@ namespace Opm {
                 const V z0 = z0all.block(0, phase, nc, 1);
                 const V q  = qall .block(0, phase, nc, 1);
 
-                ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
+#if COMPENSATE_FLOAT_PRECISION
+                const ADB divcontrib = delta_t * (ops_.div * (flux / face_B));
+                const V qcontrib = delta_t * q;
+                const ADB pvcontrib = ADB::constant(pv*z0, bpat);
+                const ADB component_contrib = pvcontrib + qcontrib;
+                divcontrib_sum = divcontrib_sum - cell_B*divcontrib;
                 cell_residual_ = cell_residual_ - (cell_B * component_contrib);
+#else
+                const ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
+                cell_residual_ = cell_residual_ - (cell_B * component_contrib);
+#endif
             }
+#if COMPENSATE_FLOAT_PRECISION
+            cell_residual_ = cell_residual_ + divcontrib_sum;
+#endif
         }
 
         void
