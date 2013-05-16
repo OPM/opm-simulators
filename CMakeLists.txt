@@ -28,8 +28,8 @@ set (${project}_DEPS
 	"dune-common REQUIRED;
 	dune-istl REQUIRED;
 	opm-core REQUIRED"
-  # Eigen
-  "Eigen3 REQUIRED"
+	# Eigen
+	"Eigen3 REQUIRED"
 	)
 
 # Additional search modules
@@ -39,8 +39,8 @@ list (APPEND CMAKE_MODULE_PATH ${${project}_MODULE_DIR})
 # Include special
 if (CMAKE_VERSION VERSION_LESS "2.8.5")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.5")
-	list (APPEND CMAKE_MODULE_PATH "${${project}_MODULE_DIR}/compat-2.8.5")	
-endif (CMAKE_VERSION VERSION_LESS "2.8.5")	
+	list (APPEND CMAKE_MODULE_PATH "${${project}_MODULE_DIR}/compat-2.8.5")
+endif (CMAKE_VERSION VERSION_LESS "2.8.5")
 
 if (CMAKE_VERSION VERSION_LESS "2.8.7")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.7")
