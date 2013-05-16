@@ -49,6 +49,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/sim_2p_incomp_adfi.cpp
 	examples/sim_simple.cpp
+	examples/test_impestpfa_ad.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
