@@ -417,9 +417,11 @@ namespace Opm {
                 const ADB cell_b = fluidFvf(phase, p, cells);
                 const ADB cell_rho = fluidRho(phase, p, cells);
                 const V   kr = fluidKr(phase);
-                const ADB mu = fluidMu(phase, p, cells);
+                // const ADB mu = fluidMu(phase, p, cells);
+                const V mu = fluidMu(phase, p.value(), cells);
 
-                const ADB mf = upwind.select(kr / mu);
+                // const ADB mf = upwind.select(kr / mu);
+                const V mf = upwind.select(kr / mu);
                 const ADB flux = mf * (nkgradp + (grav_ * cell_rho));
 
                 const ADB face_b = upwind.select(cell_b);
@@ -501,8 +503,10 @@ namespace Opm {
                 // const V   kr = pdepfdata_.phaseRelPerm(phase);
                 // const ADB mu = pdepfdata_.phaseViscosity(phase, p);
                 const V   kr = fluidKr(phase);
-                const ADB mu = fluidMu(phase, p, cells);
-                const V   mf = upwind.select(kr / mu.value());
+                // const ADB mu = fluidMu(phase, p, cells);
+                // const V mf = upwind.select(kr / mu.value());
+                const V mu = fluidMu(phase, p.value(), cells);
+                const V mf = upwind.select(kr / mu);
 
                 flux += mf * head;
             }
@@ -511,6 +515,21 @@ namespace Opm {
         }
 
 
+        V fluidMu(const int phase, const V& p, const std::vector<int>& cells) const
+        {
+            switch (phase) {
+            case Water:
+                return fluid_.muWat(p, cells);
+            case Oil: {
+                V dummy_rs = V::Zero(p.size(), 1) * p;
+                return fluid_.muOil(p, dummy_rs, cells);
+            }
+            case Gas:
+                return fluid_.muGas(p, cells);
+            default:
+                THROW("Unknown phase index " << phase);
+            }
+        }
         ADB fluidMu(const int phase, const ADB& p, const std::vector<int>& cells) const
         {
             switch (phase) {
