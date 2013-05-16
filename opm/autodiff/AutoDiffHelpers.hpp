@@ -279,7 +279,7 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
          const IntVec& indices,
          const int n)
 {
-    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x;
+    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x.matrix();
 }
 
 
