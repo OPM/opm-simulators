@@ -301,7 +301,7 @@ namespace Opm {
                 THROW("Failed to compute converged pressure solution");
             }
             else {
-                computeFluxes();
+                computeFluxes(state);
             }
         }
 
@@ -435,8 +435,34 @@ namespace Opm {
         }
 
         void
-        computeFluxes() const
+        computeFluxes(BlackoilState& state) const
         {
+            const int nc = grid_.number_of_cells;
+            const int np = state.numPhases();
+
+            const V   p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            const ADB p  = ADB::constant(p0, std::vector<int>(1, nc));
+
+            const V transi  = subset(geo_.transmissibility(),
+                                     ops_.internal_faces);
+            const V nkgradp = transi * (ops_.ngrad * p0.matrix()).array();
+
+            V flux = Eigen::Map<const V>(&state.faceflux()[0],
+                                         grid_.number_of_faces, 1);
+
+            for (int phase = 0; phase < np; ++phase) {
+                const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
+                const V   kr       = pdepfdata_.phaseRelPerm(phase);
+                const ADB mu       = pdepfdata_.phaseViscosity(phase, p);
+                const V   pflux    = nkgradp +
+                    (grav_ * cell_rho.value().matrix()).array();
+
+                const UpwindSelector<double> upwind(grid_, ops_, pflux);
+
+                const V mf = upwind.select(kr / mu.value());
+
+                flux += mf * pflux;
+            }
         }
     };
 } // namespace Opm
