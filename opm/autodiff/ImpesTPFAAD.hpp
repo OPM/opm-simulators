@@ -454,14 +454,14 @@ namespace Opm {
                 const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
                 const V   kr       = pdepfdata_.phaseRelPerm(phase);
                 const ADB mu       = pdepfdata_.phaseViscosity(phase, p);
-                const V   pflux    = nkgradp +
+                const V   head     = nkgradp +
                     (grav_ * cell_rho.value().matrix()).array();
 
-                const UpwindSelector<double> upwind(grid_, ops_, pflux);
+                const UpwindSelector<double> upwind(grid_, ops_, head);
 
                 const V mf = upwind.select(kr / mu.value());
 
-                flux += mf * pflux;
+                flux += mf * head;
             }
         }
     };
