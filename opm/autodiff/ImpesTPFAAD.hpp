@@ -100,7 +100,7 @@ namespace {
 
 namespace Opm {
 
-
+#if 0
     template <typename Scalar, class BOFluid>
     class PressureDependentFluidData {
     public:
@@ -248,6 +248,10 @@ namespace Opm {
         const typename ADB::V zero_;
         const typename ADB::V one_ ;
     };
+#endif
+
+
+
 
     template <class BOFluid, class GeoProps>
     class ImpesTPFAAD {
@@ -258,10 +262,11 @@ namespace Opm {
                     const Wells&            wells,
                     const LinearSolverInterface& linsolver)
             : grid_     (grid)
+            , fluid_    (fluid)
             , geo_      (geo)
             , wells_    (wells)
             , linsolver_(linsolver)
-            , pdepfdata_(grid.number_of_cells, fluid)
+            // , pdepfdata_(grid.number_of_cells, fluid)
             , ops_      (grid)
             , grav_     (gravityOperator(grid_, ops_, geo_))
             , cell_residual_ (ADB::null())
@@ -274,7 +279,12 @@ namespace Opm {
               BlackoilState& state,
               WellState& well_state)
         {
-            pdepfdata_.computeSatQuant(state);
+            // pdepfdata_.computeSatQuant(state);
+            const int nc = grid_.number_of_cells;
+            const int np = state.numPhases();
+            DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
+            ASSERT(np == 2);
+            kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
 
             const double atol  = 1.0e-15;
             const double rtol  = 5.0e-10;
@@ -310,37 +320,46 @@ namespace Opm {
         ImpesTPFAAD(const ImpesTPFAAD& rhs);
         ImpesTPFAAD& operator=(const ImpesTPFAAD& rhs);
 
-        typedef PressureDependentFluidData<double, BOFluid> PDepFData;
-        typedef typename PDepFData::ADB ADB;
-        typedef typename ADB::V V;
-        typedef typename ADB::M M;
+        // typedef PressureDependentFluidData<double, BOFluid> PDepFData;
+        // typedef typename PDepFData::ADB ADB;
+        typedef AutoDiff::ForwardBlock<double> ADB;
+        typedef ADB::V V;
+        typedef ADB::M M;
+        typedef Eigen::Array<double,
+                             Eigen::Dynamic,
+                             Eigen::Dynamic,
+                             Eigen::RowMajor> DataBlock;
 
         const UnstructuredGrid& grid_;
+        const BOFluid&          fluid_;
         const GeoProps&         geo_ ;
         const Wells&            wells_;
         const LinearSolverInterface& linsolver_;
-        PDepFData               pdepfdata_;
+        // PDepFData               pdepfdata_;
         HelperOps               ops_;
         const M                 grav_;
         ADB                     cell_residual_;
         ADB                     well_residual_;
+        std::vector<V> kr_;
+
+        enum { Water = BOFluid::Water,
+               Oil = BOFluid::Oil,
+               Gas = BOFluid::Gas };
 
         void
         assemble(const double         dt,
                  const BlackoilState& state,
                  const WellState& well_state)
         {
-            typedef Eigen::Array<double,
-                                 Eigen::Dynamic,
-                                 Eigen::Dynamic,
-                                 Eigen::RowMajor> DataBlock;
 
             const V& pv = geo_.poreVolume();
             const int nc = grid_.number_of_cells;
             const int np = state.numPhases();
             const int nw = wells_.number_of_wells;
 
-            pdepfdata_.computePressQuant(state);
+            // pdepfdata_.computePressQuant(state);
+
+            const std::vector<int> cells = buildAllCells(nc);
 
             const Eigen::Map<const DataBlock> z0all(&state.surfacevol()[0], nc, np);
             const DataBlock qall = DataBlock::Zero(nc, np);
@@ -391,29 +410,33 @@ namespace Opm {
             ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
 #endif
             for (int phase = 0; phase < np; ++phase) {
-                const ADB cell_B = pdepfdata_.fvf(phase, p);
-                const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
+                // const ADB cell_B = pdepfdata_.fvf(phase, p);
+                // const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
+                // const V   kr = pdepfdata_.phaseRelPerm(phase);
+                // const ADB mu = pdepfdata_.phaseViscosity(phase, p);
+                const ADB cell_b = fluidFvf(phase, p, cells);
+                const ADB cell_rho = fluidRho(phase, p, cells);
+                const V   kr = fluidKr(phase);
+                const ADB mu = fluidMu(phase, p, cells);
 
-                const V   kr = pdepfdata_.phaseRelPerm(phase);
-                const ADB mu = pdepfdata_.phaseViscosity(phase, p);
                 const ADB mf = upwind.select(kr / mu);
                 const ADB flux = mf * (nkgradp + (grav_ * cell_rho));
 
-                const ADB face_B = upwind.select(cell_B);
+                const ADB face_b = upwind.select(cell_b);
 
                 const V z0 = z0all.block(0, phase, nc, 1);
                 const V q  = qall .block(0, phase, nc, 1);
 
 #if COMPENSATE_FLOAT_PRECISION
-                const ADB divcontrib = delta_t * (ops_.div * (flux / face_B));
+                const ADB divcontrib = delta_t * (ops_.div * (flux * face_b));
                 const V qcontrib = delta_t * q;
                 const ADB pvcontrib = ADB::constant(pv*z0, bpat);
                 const ADB component_contrib = pvcontrib + qcontrib;
-                divcontrib_sum = divcontrib_sum - cell_B*divcontrib;
-                cell_residual_ = cell_residual_ - (cell_B * component_contrib);
+                divcontrib_sum = divcontrib_sum - divcontrib/cell_b;
+                cell_residual_ = cell_residual_ - (component_contrib/cell_b);
 #else
-                const ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux / face_B)));
-                cell_residual_ = cell_residual_ - (cell_B * component_contrib);
+                const ADB component_contrib = pv*z0 + delta_t*(q - (ops_.div * (flux * face_b)));
+                cell_residual_ = cell_residual_ - (component_contrib / cell_b);
 #endif
             }
 #if COMPENSATE_FLOAT_PRECISION
@@ -456,6 +479,8 @@ namespace Opm {
             const int nc = grid_.number_of_cells;
             const int np = state.numPhases();
 
+            const std::vector<int> cells = buildAllCells(nc);
+
             const V   p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
             const ADB p  = ADB::constant(p0, cell_residual_.blockPattern());
 
@@ -466,20 +491,70 @@ namespace Opm {
             V flux = V::Zero(ops_.internal_faces.size(), 1);
 
             for (int phase = 0; phase < np; ++phase) {
-                const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
+                // const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
+                const ADB cell_rho = fluidRho(phase, p, cells);
                 const V   head     = nkgradp +
                     (grav_ * cell_rho.value().matrix()).array();
 
                 const UpwindSelector<double> upwind(grid_, ops_, head);
 
-                const V   kr = pdepfdata_.phaseRelPerm(phase);
-                const ADB mu = pdepfdata_.phaseViscosity(phase, p);
+                // const V   kr = pdepfdata_.phaseRelPerm(phase);
+                // const ADB mu = pdepfdata_.phaseViscosity(phase, p);
+                const V   kr = fluidKr(phase);
+                const ADB mu = fluidMu(phase, p, cells);
                 const V   mf = upwind.select(kr / mu.value());
 
                 flux += mf * head;
             }
             V all_flux = superset(flux, ops_.internal_faces, grid_.number_of_faces);
             std::copy(all_flux.data(), all_flux.data() + grid_.number_of_faces, state.faceflux().data());
+        }
+
+
+        ADB fluidMu(const int phase, const ADB& p, const std::vector<int>& cells) const
+        {
+            switch (phase) {
+            case Water:
+                return fluid_.muWat(p, cells);
+            case Oil: {
+                ADB dummy_rs = V::Zero(p.size(), 1) * p;
+                return fluid_.muOil(p, dummy_rs, cells);
+            }
+            case Gas:
+                return fluid_.muGas(p, cells);
+            default:
+                THROW("Unknown phase index " << phase);
+            }
+        }
+
+        ADB fluidFvf(const int phase, const ADB& p, const std::vector<int>& cells) const
+        {
+            switch (phase) {
+            case Water:
+                return fluid_.bWat(p, cells);
+            case Oil: {
+                ADB dummy_rs = V::Zero(p.size(), 1) * p;
+                return fluid_.bOil(p, dummy_rs, cells);
+            }
+            case Gas:
+                return fluid_.bGas(p, cells);
+            default:
+                THROW("Unknown phase index " << phase);
+            }
+        }
+
+        ADB fluidRho(const int phase, const ADB& p, const std::vector<int>& cells) const
+        {
+            const double* rhos = fluid_.surfaceDensity();
+            ADB b = fluidFvf(phase, p, cells);
+            ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+            return rho;
+        }
+
+
+        V fluidKr(const int phase) const
+        {
+            return kr_[phase];
         }
     };
 } // namespace Opm

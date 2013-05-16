@@ -23,6 +23,7 @@
 #define HACK_INCOMPRESSIBLE_GRAVITY 1
 
 #include <opm/autodiff/ImpesTPFAAD.hpp>
+#include <opm/autodiff/BlackoilPropsAd.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
@@ -99,6 +100,10 @@ namespace {
     };
 }
 
+
+
+
+
 int
 main(int argc, char* argv[])
 {
@@ -107,12 +112,14 @@ main(int argc, char* argv[])
 
     const UnstructuredGrid*              g  = gm.c_grid();
     const int                            nc = g->number_of_cells;
-    const Opm::BlackoilPropertiesBasic   props(param, 2, nc);
+    const Opm::BlackoilPropertiesBasic   oldprops(param, 2, nc);
+    const Opm::BlackoilPropsAd           props(oldprops);
 
     typedef AutoDiff::ForwardBlock<double>      ADB;
     typedef Opm::BlackoilPropertiesInterface    Geology;
     typedef DerivedGeology<Geology, ADB::V>     GeoProps;
-    typedef Opm::BlackoilPropertiesInterface    BOFluid;
+    // typedef Opm::BlackoilPropertiesInterface    BOFluid;
+    typedef Opm::BlackoilPropsAd    BOFluid;
     typedef Opm::ImpesTPFAAD<BOFluid, GeoProps> PSolver;
 
     Wells* wells = create_wells(2, 2, 2);
@@ -130,13 +137,13 @@ main(int argc, char* argv[])
     }
 
     double grav[] = { 1.0, 0.0 };
-    GeoProps geo(*g, props, grav);
+    GeoProps geo(*g, oldprops, grav);
     Opm::LinearSolverFactory linsolver(param);
     PSolver  ps (*g, props, geo, *wells, linsolver);
 
     Opm::BlackoilState state;
-    initStateBasic(*g, props, param, 0.0, state);
-    initBlackoilSurfvol(*g, props, state);
+    initStateBasic(*g, oldprops, param, 0.0, state);
+    initBlackoilSurfvol(*g, oldprops, state);
     Opm::WellState well_state;
     well_state.init(wells, state);
 
