@@ -1,4 +1,4 @@
-autodiff-experimental
-=====================
+opm-autodiff
+============
 
-Experiments in Automatic Differentiation
+Automatic differentiation utilities and simulators using the technique.
