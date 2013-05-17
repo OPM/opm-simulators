@@ -91,7 +91,7 @@ public:
 }; /*@\label{tutorial-decoupled:2p-system-end}@*/
 
 SET_TYPE_PROP(TutorialProblemDecoupled, EvalCflFluxFunction, Ewoms::EvalCflFluxCoats<TypeTag>); /*@\label{tutorial-decoupled:cflflux}@*/
-SET_SCALAR_PROP(TutorialProblemDecoupled, ImpetCflFactor, 0.95); /*@\label{tutorial-decoupled:cflfactor}@*/
+SET_SCALAR_PROP(TutorialProblemDecoupled, ImpetCFLFactor, 0.95); /*@\label{tutorial-decoupled:cflfactor}@*/
 
 // Disable gravity
 SET_BOOL_PROP(TutorialProblemDecoupled, EnableGravity, false); /*@\label{tutorial-decoupled:gravity}@*/
