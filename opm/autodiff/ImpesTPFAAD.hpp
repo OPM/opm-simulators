@@ -410,25 +410,15 @@ namespace Opm {
             ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
 #endif
             for (int phase = 0; phase < np; ++phase) {
-                // const ADB cell_B = pdepfdata_.fvf(phase, p);
-                // const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
-                // const V   kr = pdepfdata_.phaseRelPerm(phase);
-                // const ADB mu = pdepfdata_.phaseViscosity(phase, p);
                 const ADB cell_b = fluidFvf(phase, p, cells);
                 const ADB cell_rho = fluidRho(phase, p, cells);
-                const V   kr = fluidKr(phase);
-                // const ADB mu = fluidMu(phase, p, cells);
+                const V kr = fluidKr(phase);
                 const V mu = fluidMu(phase, p.value(), cells);
-
-                // const ADB mf = upwind.select(kr / mu);
                 const V mf = upwind.select(kr / mu);
                 const ADB flux = mf * (nkgradp + (grav_ * cell_rho));
-
                 const ADB face_b = upwind.select(cell_b);
-
                 const V z0 = z0all.block(0, phase, nc, 1);
                 const V q  = qall .block(0, phase, nc, 1);
-
 #if COMPENSATE_FLOAT_PRECISION
                 const ADB divcontrib = delta_t * (ops_.div * (flux * face_b));
                 const V qcontrib = delta_t * q;
@@ -493,18 +483,10 @@ namespace Opm {
             V flux = V::Zero(ops_.internal_faces.size(), 1);
 
             for (int phase = 0; phase < np; ++phase) {
-                // const ADB cell_rho = pdepfdata_.phaseDensity(phase, p);
                 const ADB cell_rho = fluidRho(phase, p, cells);
-                const V   head     = nkgradp +
-                    (grav_ * cell_rho.value().matrix()).array();
-
+                const V head = nkgradp + (grav_ * cell_rho.value().matrix()).array();
                 const UpwindSelector<double> upwind(grid_, ops_, head);
-
-                // const V   kr = pdepfdata_.phaseRelPerm(phase);
-                // const ADB mu = pdepfdata_.phaseViscosity(phase, p);
-                const V   kr = fluidKr(phase);
-                // const ADB mu = fluidMu(phase, p, cells);
-                // const V mf = upwind.select(kr / mu.value());
+                const V kr = fluidKr(phase);
                 const V mu = fluidMu(phase, p.value(), cells);
                 const V mf = upwind.select(kr / mu);
 
