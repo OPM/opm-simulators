@@ -270,10 +270,7 @@ namespace Opm {
             const Selector<double> cell_to_well_selector(nkgradp_well.value());
 
             cell_residual_ = ADB::constant(pv, bpat);
-#define COMPENSATE_FLOAT_PRECISION 0
-#if COMPENSATE_FLOAT_PRECISION
             ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
-#endif
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_b = fluidFvf(phase, p, cells);
                 const ADB cell_rho = fluidRho(phase, p, cells);
@@ -295,7 +292,6 @@ namespace Opm {
                 const V z0 = z0all.block(0, phase, nc, 1);
                 const V q  = qall .block(0, phase, nc, 1);
                 const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
-#if COMPENSATE_FLOAT_PRECISION
                 const ADB divcontrib = delta_t * (ops_.div * (flux * face_b)
                                                   + well_contrib);
                 const V qcontrib = delta_t * q;
@@ -303,15 +299,8 @@ namespace Opm {
                 const ADB component_contrib = pvcontrib + qcontrib;
                 divcontrib_sum = divcontrib_sum - divcontrib/cell_b;
                 cell_residual_ = cell_residual_ - (component_contrib/cell_b);
-#else
-                const ADB component_contrib = pv*z0
-                    + delta_t*(q - (ops_.div * (flux * face_b) + well_contrib));
-                cell_residual_ = cell_residual_ - (component_contrib / cell_b);
-#endif
             }
-#if COMPENSATE_FLOAT_PRECISION
             cell_residual_ = cell_residual_ + divcontrib_sum;
-#endif
         }
 
 
