@@ -20,7 +20,7 @@
 
 #include <config.h>
 
-#define HACK_INCOMPRESSIBLE_GRAVITY 1
+#define HACK_INCOMPRESSIBLE_GRAVITY 0
 
 #include <opm/autodiff/ImpesTPFAAD.hpp>
 #include <opm/autodiff/BlackoilPropsAd.hpp>
@@ -127,7 +127,7 @@ main(int argc, char* argv[])
     const double prod_frac[] = { 0.0, 0.0 };
     const int inj_cell = 0;
     const int prod_cell = g->number_of_cells - 1;
-    const double WI = 1e-8;
+    const double WI = 1e-14;
     bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Inj", wells);
     ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, &prod_cell, &WI, "Prod", wells);
     ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells);
@@ -135,8 +135,10 @@ main(int argc, char* argv[])
     if (!ok) {
         THROW("Something went wrong with well init.");
     }
+    set_current_control(0, 0, wells);
+    set_current_control(1, 0, wells);
 
-    double grav[] = { 1.0, 0.0 };
+    double grav[] = { /*1.0*/ 0.0, 0.0 };
     GeoProps geo(*g, oldprops, grav);
     Opm::LinearSolverFactory linsolver(param);
     PSolver  ps (*g, props, geo, *wells, linsolver);
@@ -146,6 +148,8 @@ main(int argc, char* argv[])
     initBlackoilSurfvol(*g, oldprops, state);
     Opm::WellState well_state;
     well_state.init(wells, state);
+    well_state.bhp()[0] = 500.0*Opm::unit::barsa;
+    well_state.bhp()[1] = 200.0*Opm::unit::barsa;
 
     ps.solve(1.0, state, well_state);
 
