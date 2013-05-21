@@ -305,4 +305,62 @@ spdiag(const AutoDiff::ForwardBlock<double>::V& d)
     return mat;
 }
 
+
+
+
+    /// Selection. Choose first of two elements if selection basis element is nonnegative.
+    template <typename Scalar>
+    class Selector {
+    public:
+        typedef AutoDiff::ForwardBlock<Scalar> ADB;
+
+        Selector(const typename ADB::V& selection_basis)
+        {
+            // Define selector structure.
+            const int n = selection_basis.size();
+            // Over-reserving so we do not have to count.
+            left_elems_.reserve(n);
+            right_elems_.reserve(n);
+            for (int i = 0; i < n; ++i) {
+                if (selection_basis[i] < 0.0) {
+                    right_elems_.push_back(i);
+                } else {
+                    left_elems_.push_back(i);
+                }
+            }
+        }
+
+        /// Apply selector to ADB quantities.
+        ADB select(const ADB& x1, const ADB& x2) const
+        {
+            if (right_elems_.empty()) {
+                return x1;
+            } else if (left_elems_.empty()) {
+                return x2;
+            } else {
+                return superset(subset(x1, left_elems_), left_elems_, x1.size())
+                    + superset(subset(x2, right_elems_), right_elems_, x2.size());
+            }
+        }
+
+        /// Apply selector to ADB quantities.
+        typename ADB::V select(const typename ADB::V& x1, const typename ADB::V& x2) const
+        {
+            if (right_elems_.empty()) {
+                return x1;
+            } else if (left_elems_.empty()) {
+                return x2;
+            } else {
+                return superset(subset(x1, left_elems_), left_elems_, x1.size())
+                    + superset(subset(x2, right_elems_), right_elems_, x2.size());
+            }
+        }
+
+    private:
+        std::vector<int> left_elems_;
+        std::vector<int> right_elems_;
+    };
+
+
+
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
