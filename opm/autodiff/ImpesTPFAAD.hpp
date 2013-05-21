@@ -121,6 +121,7 @@ namespace Opm {
             , cell_residual_ (ADB::null())
             , well_flow_residual_ ()
             , well_residual_ (ADB::null())
+            , total_residual_ (ADB::null())
         {
         }
 
@@ -206,15 +207,13 @@ namespace Opm {
         ADB                          cell_residual_;
         std::vector<ADB>             well_flow_residual_;
         ADB                          well_residual_;
+        ADB                          total_residual_;
         std::vector<V>               kr_;
         std::vector<V>               well_kr_;
 
         enum { Water = BOFluid::Water,
                Oil = BOFluid::Oil,
                Gas = BOFluid::Gas };
-
-
-
 
 
         void
@@ -242,10 +241,10 @@ namespace Opm {
 
             // Initialize AD variables: p (cell pressures), qs (well rates) and bhp (well bhp).
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-            const V qs0 = V::Zero(np*nw, 1); // WellState has no member for this!
+            const V qs0 = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np, 1);
             const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
             std::vector<V> vars0 = { p0, qs0, bhp0 };
-            std::vector<ADB> vars= ADB::variables(vars0);
+            std::vector<ADB> vars = ADB::variables(vars0);
             const ADB& p = vars[0];
             const ADB& qs = vars[1];
             const ADB& bhp = vars[2];
@@ -325,6 +324,11 @@ namespace Opm {
                 bhp_targets[w] = wc->target[wc->current];
             }
             well_residual_ = bhp - bhp_targets;
+
+            ASSERT(np == 2);
+            const ADB well_flow_res = vertcat(well_flow_residual_[0], well_flow_residual_[1]);
+            const ADB well_res = vertcat(well_flow_res, well_residual_);
+            total_residual_ = collapseJacs(vertcat(cell_residual_, well_res));
         }
 
 
@@ -339,23 +343,17 @@ namespace Opm {
             const int nw = wells_.number_of_wells;
             const int np = state.numPhases();
 
-            ASSERT(np == 2);
-            const ADB well_flow_res = vertcat(well_flow_residual_[0], well_flow_residual_[1]);
-            const ADB well_res = vertcat(well_flow_res, well_residual_);
-            const ADB total_res = collapseJacs(vertcat(cell_residual_, well_res));
-            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_res.derivative()[0];
-
-            std::cout << total_res;
+            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual_.derivative()[0];
 
 #if HACK_INCOMPRESSIBLE_GRAVITY
             matr.coeffRef(0, 0) *= 2;
 #endif
 
-            V dx(total_res.size());
+            V dx(total_residual_.size());
             Opm::LinearSolverInterface::LinearSolverReport rep
                 = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                    matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                                   total_res.value().data(), dx.data());
+                                   total_residual_.value().data(), dx.data());
             if (!rep.converged) {
                 THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
             }
@@ -363,12 +361,22 @@ namespace Opm {
             const V dp = subset(dx, buildAllCells(nc));
             const V p = p0 - dp;
             std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+            const V qs0 = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np, 1);
+            std::vector<int> qs_dofs(np*nw);
+            for (int w = 0; w < nw; ++w) {
+                for (int phase = 0; phase < np; ++phase) {
+                    qs_dofs[w*np + phase] = nc + w*np + phase;
+                }
+            }
+            const V dqs = subset(dx, qs_dofs);
+            const V qs = qs0 - dqs;
+            std::copy(&qs[0], &qs[0] + np*nw, well_state.wellRates().begin());
             const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
             std::vector<int> bhp_dofs(nw);
             for (int w = 0; w < nw; ++w) {
                 bhp_dofs[w] = nc + np*nw + w;
             }
-            ASSERT(bhp_dofs.back() + 1 == total_res.size());
+            ASSERT(bhp_dofs.back() + 1 == total_residual_.size());
             const V dbhp = subset(dx, bhp_dofs);
             const V bhp = bhp0 - dbhp;
             std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
@@ -381,7 +389,7 @@ namespace Opm {
         double
         residualNorm() const
         {
-            return cell_residual_.value().matrix().norm();
+            return total_residual_.value().matrix().norm();
         }
 
 
