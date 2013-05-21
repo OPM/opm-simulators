@@ -119,6 +119,7 @@ namespace Opm {
             , ops_      (grid)
             , grav_     (gravityOperator(grid_, ops_, geo_))
             , cell_residual_ (ADB::null())
+            , well_flow_residual_ ()
             , well_residual_ (ADB::null())
         {
         }
@@ -130,6 +131,8 @@ namespace Opm {
         {
             const int nc = grid_.number_of_cells;
             const int np = state.numPhases();
+
+            well_flow_residual_.resize(np, ADB::null());
 
             // Compute relperms once and for all (since saturations are explicit).
             DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
@@ -159,7 +162,7 @@ namespace Opm {
             int          it  = 0;
             bool resTooLarge = r0 > atol;
             while (resTooLarge && (it < maxit)) {
-                solveJacobianSystem(state);
+                solveJacobianSystem(state, well_state);
 
                 assemble(dt, state, well_state);
 
@@ -201,6 +204,7 @@ namespace Opm {
         HelperOps                    ops_;
         const M                      grav_;
         ADB                          cell_residual_;
+        std::vector<ADB>             well_flow_residual_;
         ADB                          well_residual_;
         std::vector<V>               kr_;
         std::vector<V>               well_kr_;
@@ -236,13 +240,15 @@ namespace Opm {
                                               wells_.well_cells + nperf);
             const V transw = Eigen::Map<const V>(wells_.WI, nperf, 1);
 
-            // Initialize AD variables: p (cell pressures) and bhp (well bhp).
+            // Initialize AD variables: p (cell pressures), qs (well rates) and bhp (well bhp).
             const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            const V qs0 = V::Zero(np*nw, 1); // WellState has no member for this!
             const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-            std::vector<V> vars0 = { p0, bhp0 };
+            std::vector<V> vars0 = { p0, qs0, bhp0 };
             std::vector<ADB> vars= ADB::variables(vars0);
             const ADB& p = vars[0];
-            const ADB& bhp = vars[1];
+            const ADB& qs = vars[1];
+            const ADB& bhp = vars[2];
             std::vector<int> bpat = p.blockPattern();
 
             // Compute T_ij * (p_i - p_j) and use for upwinding.
@@ -262,6 +268,7 @@ namespace Opm {
                 }
             }
             well_to_perf.setFromTriplets(w2p.begin(), w2p.end());
+            const M perf_to_well = well_to_perf.transpose();
             // Construct pressure difference vector for wells.
             const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
             // Finally construct well perforation pressures and well flows.
@@ -270,6 +277,7 @@ namespace Opm {
             const Selector<double> cell_to_well_selector(nkgradp_well.value());
 
             cell_residual_ = ADB::constant(pv, bpat);
+            well_residual_ = ADB::constant(V::Zero(nw,1), bpat);
             ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
             for (int phase = 0; phase < np; ++phase) {
                 const ADB cell_b = fluidFvf(phase, p, cells);
@@ -299,8 +307,24 @@ namespace Opm {
                 const ADB component_contrib = pvcontrib + qcontrib;
                 divcontrib_sum = divcontrib_sum - divcontrib/cell_b;
                 cell_residual_ = cell_residual_ - (component_contrib/cell_b);
+                const ADB well_rates = perf_to_well * (perf_flux*perf_b);
+                std::vector<int> well_flow_res_phase_idx(nw);
+                for (int w = 0; w < nw; ++w) {
+                    well_flow_res_phase_idx[w] = w + phase*nw;
+                }
+                well_flow_residual_[phase] = well_rates - subset(qs, well_flow_res_phase_idx);
             }
             cell_residual_ = cell_residual_ + divcontrib_sum;
+            // Assuming bhp wells.
+            V bhp_targets(nw,1);
+            for (int w = 0; w < nw; ++w) {
+                const WellControls* wc = wells_.ctrls[w];
+                if (wc->type[wc->current] != BHP) {
+                    THROW("Only BHP wells for now, please!");
+                }
+                bhp_targets[w] = wc->target[wc->current];
+            }
+            well_residual_ = bhp - bhp_targets;
         }
 
 
@@ -308,26 +332,46 @@ namespace Opm {
 
 
         void
-        solveJacobianSystem(BlackoilState& state) const
+        solveJacobianSystem(BlackoilState& state,
+                            WellState& well_state) const
         {
             const int nc = grid_.number_of_cells;
-            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = cell_residual_.derivative()[0];
+            const int nw = wells_.number_of_wells;
+            const int np = state.numPhases();
+
+            ASSERT(np == 2);
+            const ADB well_flow_res = vertcat(well_flow_residual_[0], well_flow_residual_[1]);
+            const ADB well_res = vertcat(well_flow_res, well_residual_);
+            const ADB total_res = collapseJacs(vertcat(cell_residual_, well_res));
+            Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_res.derivative()[0];
+
+            std::cout << total_res;
 
 #if HACK_INCOMPRESSIBLE_GRAVITY
             matr.coeffRef(0, 0) *= 2;
 #endif
 
-            V dp(nc);
-            const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            V dx(total_res.size());
             Opm::LinearSolverInterface::LinearSolverReport rep
-                = linsolver_.solve(nc, matr.nonZeros(),
+                = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                    matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                                   cell_residual_.value().data(), dp.data());
+                                   total_res.value().data(), dx.data());
             if (!rep.converged) {
                 THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
             }
+            const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+            const V dp = subset(dx, buildAllCells(nc));
             const V p = p0 - dp;
             std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+            const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
+            std::vector<int> bhp_dofs(nw);
+            for (int w = 0; w < nw; ++w) {
+                bhp_dofs[w] = nc + np*nw + w;
+            }
+            ASSERT(bhp_dofs.back() + 1 == total_res.size());
+            const V dbhp = subset(dx, bhp_dofs);
+            const V bhp = bhp0 - dbhp;
+            std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
         }
 
 
