@@ -130,7 +130,9 @@ main(int argc, char* argv[])
     bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Inj", wells);
     ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, &prod_cell, &WI, "Prod", wells);
     ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells);
-    ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+    // ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+    double oildistr[2] = { 0.0, 1.0 };
+    ok = ok && append_well_controls(SURFACE_RATE, 8.64297e-05, oildistr, 1, wells);
     if (!ok) {
         THROW("Something went wrong with well init.");
     }
