@@ -118,7 +118,6 @@ main(int argc, char* argv[])
     typedef AutoDiff::ForwardBlock<double>      ADB;
     typedef Opm::BlackoilPropertiesInterface    Geology;
     typedef DerivedGeology<Geology, ADB::V>     GeoProps;
-    // typedef Opm::BlackoilPropertiesInterface    BOFluid;
     typedef Opm::BlackoilPropsAd    BOFluid;
     typedef Opm::ImpesTPFAAD<BOFluid, GeoProps> PSolver;
 
@@ -148,8 +147,6 @@ main(int argc, char* argv[])
     initBlackoilSurfvol(*g, oldprops, state);
     Opm::WellState well_state;
     well_state.init(wells, state);
-    well_state.bhp()[0] = 500.0*Opm::unit::barsa;
-    well_state.bhp()[1] = 200.0*Opm::unit::barsa;
 
     ps.solve(1.0, state, well_state);
 
