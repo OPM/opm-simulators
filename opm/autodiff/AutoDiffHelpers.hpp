@@ -363,4 +363,67 @@ spdiag(const AutoDiff::ForwardBlock<double>::V& d)
 
 
 
+
+/// Returns the input expression, but with all Jacobians collapsed to one.
+inline
+AutoDiff::ForwardBlock<double>
+collapseJacs(const AutoDiff::ForwardBlock<double>& x)
+{
+    typedef AutoDiff::ForwardBlock<double> ADB;
+    const int nb = x.numBlocks();
+    typedef Eigen::Triplet<double> Tri;
+    int nnz = 0;
+    for (int block = 0; block < nb; ++block) {
+        nnz += x.derivative()[block].nonZeros();
+    }
+    std::vector<Tri> t;
+    t.reserve(nnz);
+    int block_col_start = 0;
+    for (int block = 0; block < nb; ++block) {
+        const ADB::M& jac = x.derivative()[block];
+        // ADB::M is column major
+        for (int col = 0; col < jac.cols(); ++col) {
+            for (int elem = jac.outerIndexPtr()[col];
+                 elem < jac.outerIndexPtr()[col + 1];
+                 ++elem) {
+                const int row = jac.innerIndexPtr()[elem];
+                t.emplace_back(row, block_col_start + col, jac.valuePtr()[elem]);
+            }
+        }
+        block_col_start += jac.cols();
+    }
+    // Build final jacobian.
+    std::vector<ADB::M> jacs(1);
+    jacs[0].resize(x.size(), block_col_start);
+    jacs[0].setFromTriplets(t.begin(), t.end());
+    return ADB::function(x.value(), jacs);
+}
+
+
+
+
+/// Returns the vertical concatenation [ x; y ] of the inputs.
+inline
+AutoDiff::ForwardBlock<double>
+vertcat(const AutoDiff::ForwardBlock<double>& x,
+        const AutoDiff::ForwardBlock<double>& y)
+{
+    const int nx = x.size();
+    const int ny = y.size();
+    const int n = nx + ny;
+    std::vector<int> xind(nx);
+    for (int i = 0; i < nx; ++i) {
+        xind[i] = i;
+    }
+    std::vector<int> yind(ny);
+    for (int i = 0; i < ny; ++i) {
+        yind[i] = nx + i;
+    }
+    return superset(x, xind, n) + superset(y, yind, n);
+}
+
+
+
+
+
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
