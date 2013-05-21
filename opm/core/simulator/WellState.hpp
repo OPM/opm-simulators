@@ -54,12 +54,17 @@ namespace Opm
                 }
                 perfrates_.resize(wells->well_connpos[nw], 0.0);
                 perfpress_.resize(wells->well_connpos[nw], -1e100);
+                wellrates_.resize(wells->well_connpos[nw] * wells->number_of_phases, 0.0);
             }
         }
 
         /// One bhp pressure per well.
         std::vector<double>& bhp() { return bhp_; }
         const std::vector<double>& bhp() const { return bhp_; }
+
+        /// One rate per well and phase.
+        std::vector<double>& wellRates() { return wellrates_; }
+        const std::vector<double>& wellRates() const { return wellrates_; }
 
         /// One rate per well connection.
         std::vector<double>& perfRates() { return perfrates_; }
@@ -71,6 +76,7 @@ namespace Opm
 
     private:
         std::vector<double> bhp_;
+        std::vector<double> wellrates_;
         std::vector<double> perfrates_;
         std::vector<double> perfpress_;
     };
