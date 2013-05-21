@@ -314,16 +314,30 @@ namespace Opm {
                 well_flow_residual_[phase] = well_rates - subset(qs, well_flow_res_phase_idx);
             }
             cell_residual_ = cell_residual_ + divcontrib_sum;
-            // Assuming bhp wells.
+            // Handling BHP and SURFACE_RATE wells.
             V bhp_targets(nw,1);
+            V rate_targets(nw,1);
+            M rate_distr(nw, np*nw);
             for (int w = 0; w < nw; ++w) {
                 const WellControls* wc = wells_.ctrls[w];
-                if (wc->type[wc->current] != BHP) {
-                    THROW("Only BHP wells for now, please!");
+                if (wc->type[wc->current] == BHP) {
+                    bhp_targets[w] = wc->target[wc->current];
+                    rate_targets[w] = -1e100;
+                } else if (wc->type[wc->current] == SURFACE_RATE) {
+                    bhp_targets[w] = -1e100;
+                    rate_targets[w] = wc->target[wc->current];
+                    for (int phase = 0; phase < np; ++phase) {
+                        rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
+                    }
+                } else {
+                    THROW("Can only handle BHP and SURFACE_RATE type controls.");
                 }
-                bhp_targets[w] = wc->target[wc->current];
             }
-            well_residual_ = bhp - bhp_targets;
+            const ADB bhp_residual = bhp - bhp_targets;
+            const ADB rate_residual = rate_distr * qs - rate_targets;
+            // Choose bhp residual for positive bhp targets.
+            Selector<double> bhp_selector(bhp_targets);
+            well_residual_ = bhp_selector.select(bhp_residual, rate_residual);
 
             ASSERT(np == 2);
             const ADB well_flow_res = vertcat(well_flow_residual_[0], well_flow_residual_[1]);
