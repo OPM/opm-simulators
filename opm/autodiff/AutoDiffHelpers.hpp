@@ -100,8 +100,8 @@ struct HelperOps
 #include <cstdio>
 #endif  // !defined(NDEBUG)
 
-namespace {
 #if !defined(NDEBUG)
+namespace {
     void
     printSparseMatrix(const Eigen::SparseMatrix<double>& A,
                       std::FILE*                         fp)
@@ -134,6 +134,7 @@ namespace {
 
         std::fclose(fp);
     }
+} // anonymous namespace
 #endif  // !defined(NDEBUG)
 
 
@@ -209,7 +210,8 @@ namespace {
     private:
         typename ADB::M select_;
     };
-}
+
+
 
 namespace {
 
