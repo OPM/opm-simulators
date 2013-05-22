@@ -27,6 +27,7 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
+	opm/autodiff/BlackoilPropsAdInterface.cpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	)
@@ -65,6 +66,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
+	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
