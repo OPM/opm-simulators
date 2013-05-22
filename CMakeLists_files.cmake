@@ -67,6 +67,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
+	opm/autodiff/GeoProps.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
