@@ -128,13 +128,13 @@ main(int argc, char* argv[])
     const int inj_cells[num_inj] = { 0, 1, 2 };
     const int num_prod = 2;
     const int prod_cells[num_prod] = { 20, 21 };
-    const double WI[3] = { 1e-12 };
+    const double WI[3] = { 1e-12, 1e-12, 1e-12 };
     bool ok = add_well(INJECTOR, 0.0, num_inj, inj_frac, inj_cells, WI, "Inj", wells);
     ok = ok && add_well(PRODUCER, 0.0, num_prod, prod_frac, prod_cells, WI, "Prod", wells);
     ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells);
-    ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+    // ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
     double oildistr[2] = { 0.0, 1.0 };
-    // ok = ok && append_well_controls(SURFACE_RATE, 8.64297e-05, oildistr, 1, wells);
+    ok = ok && append_well_controls(SURFACE_RATE, 1e-3, oildistr, 1, wells);
     if (!ok) {
         THROW("Something went wrong with well init.");
     }
