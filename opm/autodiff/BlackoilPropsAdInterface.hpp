@@ -17,17 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILPROPSAD_HEADER_INCLUDED
-#define OPM_BLACKOILPROPSAD_HEADER_INCLUDED
+#ifndef OPM_BLACKOILPROPSADINTERFACE_HEADER_INCLUDED
+#define OPM_BLACKOILPROPSADINTERFACE_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 namespace Opm
 {
-
-    class BlackoilPropertiesInterface;
 
     /// This class is intended to present a fluid interface for
     /// three-phase black-oil that is easy to use with the AD-using
@@ -38,29 +35,29 @@ namespace Opm
     /// taking an AD type and returning the same. Derivatives are not
     /// returned separately by any method, only implicitly with the AD
     /// version of the methods.
-    class BlackoilPropsAd : public BlackoilPropsAdInterface
+    class BlackoilPropsAdInterface
     {
     public:
-        /// Constructor wrapping an opm-core black oil interface.
-        explicit BlackoilPropsAd(const BlackoilPropertiesInterface& props);
+        /// Virtual destructor for inheritance.
+        virtual ~BlackoilPropsAdInterface();
 
         ////////////////////////////
         //      Rock interface    //
         ////////////////////////////
 
         /// \return   D, the number of spatial dimensions.
-        int numDimensions() const;
+        virtual int numDimensions() const = 0;
 
         /// \return   N, the number of cells.
-        int numCells() const;
+        virtual int numCells() const = 0;
 
         /// \return   Array of N porosity values.
-        const double* porosity() const;
+        virtual const double* porosity() const = 0;
 
         /// \return   Array of ND^2 permeability values.
         ///           The D^2 permeability values for a cell are organized as a matrix,
         ///           which is symmetric (so ordering does not matter).
-        const double* permeability() const;
+        virtual const double* permeability() const = 0;
 
 
         ////////////////////////////
@@ -69,6 +66,7 @@ namespace Opm
 
         typedef AutoDiff::ForwardBlock<double> ADB;
         typedef ADB::V V;
+        typedef ADB::M M;
         typedef std::vector<int> Cells;
 
 
@@ -82,7 +80,7 @@ namespace Opm
 
         /// Densities of stock components at surface conditions.
         /// \return Array of 3 density values.
-        const double* surfaceDensity() const;
+        virtual const double* surfaceDensity() const = 0;
 
 
         // ------ Viscosity ------
@@ -91,47 +89,53 @@ namespace Opm
         /// \param[in]  pw     Array of n water pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
+        virtual
         V muWat(const V& pw,
-                const Cells& cells) const;
+                const Cells& cells) const = 0;
 
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
+        virtual
         V muOil(const V& po,
                 const V& rs,
-                const Cells& cells) const;
+                const Cells& cells) const = 0;
 
         /// Gas viscosity.
         /// \param[in]  pg     Array of n gas pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
+        virtual
         V muGas(const V& pg,
-                const Cells& cells) const;
+                const Cells& cells) const = 0;
 
         /// Water viscosity.
         /// \param[in]  pw     Array of n water pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
+        virtual
         ADB muWat(const ADB& pw,
-                  const Cells& cells) const;
+                  const Cells& cells) const = 0;
 
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
+        virtual
         ADB muOil(const ADB& po,
                   const ADB& rs,
-                  const Cells& cells) const;
+                  const Cells& cells) const = 0;
 
         /// Gas viscosity.
         /// \param[in]  pg     Array of n gas pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
+        virtual
         ADB muGas(const ADB& pg,
-                  const Cells& cells) const;
+                  const Cells& cells) const = 0;
 
 
         // ------ Formation volume factor (b) ------
@@ -140,47 +144,53 @@ namespace Opm
         /// \param[in]  pw     Array of n water pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
+        virtual
         V bWat(const V& pw,
-               const Cells& cells) const;
+               const Cells& cells) const = 0;
 
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
+        virtual
         V bOil(const V& po,
                const V& rs,
-               const Cells& cells) const;
+               const Cells& cells) const = 0;
 
         /// Gas formation volume factor.
         /// \param[in]  pg     Array of n gas pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
+        virtual
         V bGas(const V& pg,
-               const Cells& cells) const;
+               const Cells& cells) const = 0;
 
         /// Water formation volume factor.
         /// \param[in]  pw     Array of n water pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
+        virtual
         ADB bWat(const ADB& pw,
-                 const Cells& cells) const;
+                 const Cells& cells) const = 0;
 
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
+        virtual
         ADB bOil(const ADB& po,
                  const ADB& rs,
-                 const Cells& cells) const;
+                 const Cells& cells) const = 0;
 
         /// Gas formation volume factor.
         /// \param[in]  pg     Array of n gas pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
+        virtual
         ADB bGas(const ADB& pg,
-                 const Cells& cells) const;
+                 const Cells& cells) const = 0;
 
 
         // ------ Rs bubble point curve ------
@@ -189,15 +199,17 @@ namespace Opm
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
+        virtual
         V rsMax(const V& po,
-                const Cells& cells) const;
+                const Cells& cells) const = 0;
 
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
+        virtual
         ADB rsMax(const ADB& po,
-                  const Cells& cells) const;
+                  const Cells& cells) const = 0;
 #endif
 
         // ------ Relative permeability ------
@@ -209,10 +221,11 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
         /// \return            An std::vector with 3 elements, each an array of n relperm values,
         ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
+        virtual
         std::vector<V> relperm(const V& sw,
                                const V& so,
                                const V& sg,
-                               const Cells& cells) const;
+                               const Cells& cells) const = 0;
 
         /// Relative permeabilities for all phases.
         /// \param[in]  sw     Array of n water saturation values.
@@ -221,16 +234,14 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
         /// \return            An std::vector with 3 elements, each an array of n relperm values,
         ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
+        virtual
         std::vector<ADB> relperm(const ADB& sw,
                                  const ADB& so,
                                  const ADB& sg,
-                                 const Cells& cells) const;
+                                 const Cells& cells) const = 0;
 
-    private:
-        const BlackoilPropertiesInterface& props_;
-        PhaseUsage pu_;
     };
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILPROPSAD_HEADER_INCLUDED
+#endif // OPM_BLACKOILPROPSADINTERFACE_HEADER_INCLUDED

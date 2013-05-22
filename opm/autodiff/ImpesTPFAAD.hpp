@@ -23,6 +23,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -102,11 +103,11 @@ namespace {
 namespace Opm {
 
 
-    template <class BOFluid, class GeoProps>
+    template <class GeoProps>
     class ImpesTPFAAD {
     public:
         ImpesTPFAAD(const UnstructuredGrid& grid ,
-                    const BOFluid&          fluid,
+                    const BlackoilPropsAdInterface&          fluid,
                     const GeoProps&         geo  ,
                     const Wells&            wells,
                     const LinearSolverInterface& linsolver)
@@ -187,8 +188,6 @@ namespace Opm {
         ImpesTPFAAD(const ImpesTPFAAD& rhs);
         ImpesTPFAAD& operator=(const ImpesTPFAAD& rhs);
 
-        // typedef PressureDependentFluidData<double, BOFluid> PDepFData;
-        // typedef typename PDepFData::ADB ADB;
         typedef AutoDiff::ForwardBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
@@ -198,7 +197,7 @@ namespace Opm {
                              Eigen::RowMajor> DataBlock;
 
         const UnstructuredGrid&      grid_;
-        const BOFluid&               fluid_;
+        const BlackoilPropsAdInterface&               fluid_;
         const GeoProps&              geo_ ;
         const Wells&                 wells_;
         const LinearSolverInterface& linsolver_;
@@ -211,9 +210,9 @@ namespace Opm {
         std::vector<V>               kr_;
         std::vector<V>               well_kr_;
 
-        enum { Water = BOFluid::Water,
-               Oil = BOFluid::Oil,
-               Gas = BOFluid::Gas };
+        enum { Water = BlackoilPropsAdInterface::Water,
+               Oil = BlackoilPropsAdInterface::Oil,
+               Gas = BlackoilPropsAdInterface::Gas };
 
 
         void
