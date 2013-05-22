@@ -108,7 +108,7 @@ int
 main(int argc, char* argv[])
 {
     const Opm::parameter::ParameterGroup param(argc, argv, false);
-    const Opm::GridManager               gm(20, 1);
+    const Opm::GridManager               gm(5, 5);
 
     const UnstructuredGrid*              g  = gm.c_grid();
     const int                            nc = g->number_of_cells;
@@ -121,14 +121,14 @@ main(int argc, char* argv[])
     typedef Opm::BlackoilPropsAd    BOFluid;
     typedef Opm::ImpesTPFAAD<BOFluid, GeoProps> PSolver;
 
-    Wells* wells = create_wells(2, 2, 2);
+    Wells* wells = create_wells(2, 2, 5);
     const double inj_frac[] = { 1.0, 0.0 };
     const double prod_frac[] = { 0.0, 0.0 };
-    const int inj_cell = 0;
-    const int prod_cell = g->number_of_cells - 1;
-    const double WI = 1e-14;
-    bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Inj", wells);
-    ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, &prod_cell, &WI, "Prod", wells);
+    const int inj_cells[] = { 0, 1, 2 };
+    const int prod_cells[] = { 20, 21 };
+    const double WI[3] = { 1e-14 };
+    bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, inj_cells, WI, "Inj", wells);
+    ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, prod_cells, WI, "Prod", wells);
     ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells);
     // ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
     double oildistr[2] = { 0.0, 1.0 };
