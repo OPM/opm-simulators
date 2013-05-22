@@ -100,8 +100,8 @@ struct HelperOps
 #include <cstdio>
 #endif  // !defined(NDEBUG)
 
-namespace {
 #if !defined(NDEBUG)
+namespace {
     void
     printSparseMatrix(const Eigen::SparseMatrix<double>& A,
                       std::FILE*                         fp)
@@ -134,6 +134,7 @@ namespace {
 
         std::fclose(fp);
     }
+} // anonymous namespace
 #endif  // !defined(NDEBUG)
 
 
@@ -209,7 +210,8 @@ namespace {
     private:
         typename ADB::M select_;
     };
-}
+
+
 
 namespace {
 
@@ -279,7 +281,7 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
          const IntVec& indices,
          const int n)
 {
-    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x;
+    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x.matrix();
 }
 
 
@@ -302,5 +304,126 @@ spdiag(const AutoDiff::ForwardBlock<double>::V& d)
 
     return mat;
 }
+
+
+
+
+    /// Selection. Choose first of two elements if selection basis element is nonnegative.
+    template <typename Scalar>
+    class Selector {
+    public:
+        typedef AutoDiff::ForwardBlock<Scalar> ADB;
+
+        Selector(const typename ADB::V& selection_basis)
+        {
+            // Define selector structure.
+            const int n = selection_basis.size();
+            // Over-reserving so we do not have to count.
+            left_elems_.reserve(n);
+            right_elems_.reserve(n);
+            for (int i = 0; i < n; ++i) {
+                if (selection_basis[i] < 0.0) {
+                    right_elems_.push_back(i);
+                } else {
+                    left_elems_.push_back(i);
+                }
+            }
+        }
+
+        /// Apply selector to ADB quantities.
+        ADB select(const ADB& x1, const ADB& x2) const
+        {
+            if (right_elems_.empty()) {
+                return x1;
+            } else if (left_elems_.empty()) {
+                return x2;
+            } else {
+                return superset(subset(x1, left_elems_), left_elems_, x1.size())
+                    + superset(subset(x2, right_elems_), right_elems_, x2.size());
+            }
+        }
+
+        /// Apply selector to ADB quantities.
+        typename ADB::V select(const typename ADB::V& x1, const typename ADB::V& x2) const
+        {
+            if (right_elems_.empty()) {
+                return x1;
+            } else if (left_elems_.empty()) {
+                return x2;
+            } else {
+                return superset(subset(x1, left_elems_), left_elems_, x1.size())
+                    + superset(subset(x2, right_elems_), right_elems_, x2.size());
+            }
+        }
+
+    private:
+        std::vector<int> left_elems_;
+        std::vector<int> right_elems_;
+    };
+
+
+
+
+/// Returns the input expression, but with all Jacobians collapsed to one.
+inline
+AutoDiff::ForwardBlock<double>
+collapseJacs(const AutoDiff::ForwardBlock<double>& x)
+{
+    typedef AutoDiff::ForwardBlock<double> ADB;
+    const int nb = x.numBlocks();
+    typedef Eigen::Triplet<double> Tri;
+    int nnz = 0;
+    for (int block = 0; block < nb; ++block) {
+        nnz += x.derivative()[block].nonZeros();
+    }
+    std::vector<Tri> t;
+    t.reserve(nnz);
+    int block_col_start = 0;
+    for (int block = 0; block < nb; ++block) {
+        const ADB::M& jac = x.derivative()[block];
+        // ADB::M is column major
+        for (int col = 0; col < jac.cols(); ++col) {
+            for (int elem = jac.outerIndexPtr()[col];
+                 elem < jac.outerIndexPtr()[col + 1];
+                 ++elem) {
+                const int row = jac.innerIndexPtr()[elem];
+                t.emplace_back(row, block_col_start + col, jac.valuePtr()[elem]);
+            }
+        }
+        block_col_start += jac.cols();
+    }
+    // Build final jacobian.
+    std::vector<ADB::M> jacs(1);
+    jacs[0].resize(x.size(), block_col_start);
+    jacs[0].setFromTriplets(t.begin(), t.end());
+    return ADB::function(x.value(), jacs);
+}
+
+
+
+
+/// Returns the vertical concatenation [ x; y ] of the inputs.
+inline
+AutoDiff::ForwardBlock<double>
+vertcat(const AutoDiff::ForwardBlock<double>& x,
+        const AutoDiff::ForwardBlock<double>& y)
+{
+    const int nx = x.size();
+    const int ny = y.size();
+    const int n = nx + ny;
+    std::vector<int> xind(nx);
+    for (int i = 0; i < nx; ++i) {
+        xind[i] = i;
+    }
+    std::vector<int> yind(ny);
+    for (int i = 0; i < ny; ++i) {
+        yind[i] = nx + i;
+    }
+    return superset(x, xind, n) + superset(y, yind, n);
+}
+
+
+
+
 
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED

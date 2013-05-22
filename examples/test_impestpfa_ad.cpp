@@ -20,7 +20,10 @@
 
 #include <config.h>
 
+#define HACK_INCOMPRESSIBLE_GRAVITY 0
+
 #include <opm/autodiff/ImpesTPFAAD.hpp>
+#include <opm/autodiff/BlackoilPropsAd.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
@@ -97,51 +100,65 @@ namespace {
     };
 }
 
+
+
+
+
 int
 main(int argc, char* argv[])
 {
     const Opm::parameter::ParameterGroup param(argc, argv, false);
-    const Opm::GridManager               gm(20, 1);
+    const Opm::GridManager               gm(5, 5);
 
     const UnstructuredGrid*              g  = gm.c_grid();
     const int                            nc = g->number_of_cells;
-    const Opm::BlackoilPropertiesBasic   props(param, 2, nc);
+    const Opm::BlackoilPropertiesBasic   oldprops(param, 2, nc);
+    const Opm::BlackoilPropsAd           props(oldprops);
 
     typedef AutoDiff::ForwardBlock<double>      ADB;
     typedef Opm::BlackoilPropertiesInterface    Geology;
     typedef DerivedGeology<Geology, ADB::V>     GeoProps;
-    typedef Opm::BlackoilPropertiesInterface    BOFluid;
+    typedef Opm::BlackoilPropsAd    BOFluid;
     typedef Opm::ImpesTPFAAD<BOFluid, GeoProps> PSolver;
 
-    Wells* wells = create_wells(2, 2, 2);
+    Wells* wells = create_wells(2, 2, 5);
     const double inj_frac[] = { 1.0, 0.0 };
     const double prod_frac[] = { 0.0, 0.0 };
-    const int inj_cell = 0;
-    const int prod_cell = g->number_of_cells - 1;
-    const double WI = 1e-8;
-    bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Inj", wells);
-    ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, &prod_cell, &WI, "Prod", wells);
+    const int inj_cells[] = { 0, 1, 2 };
+    const int prod_cells[] = { 20, 21 };
+    const double WI[3] = { 1e-14 };
+    bool ok = add_well(INJECTOR, 0.0, 1, inj_frac, inj_cells, WI, "Inj", wells);
+    ok = ok && add_well(PRODUCER, 0.0, 1, prod_frac, prod_cells, WI, "Prod", wells);
     ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells);
-    ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+    // ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+    double oildistr[2] = { 0.0, 1.0 };
+    ok = ok && append_well_controls(SURFACE_RATE, 8.64297e-05, oildistr, 1, wells);
     if (!ok) {
         THROW("Something went wrong with well init.");
     }
+    set_current_control(0, 0, wells);
+    set_current_control(1, 0, wells);
 
-    double grav[] = { 1.0, 0.0 };
-    GeoProps geo(*g, props, grav);
+    double grav[] = { /*1.0*/ 0.0, 0.0 };
+    GeoProps geo(*g, oldprops, grav);
     Opm::LinearSolverFactory linsolver(param);
     PSolver  ps (*g, props, geo, *wells, linsolver);
 
     Opm::BlackoilState state;
-    initStateBasic(*g, props, param, 0.0, state);
-    initBlackoilSurfvol(*g, props, state);
+    initStateBasic(*g, oldprops, param, 0.0, state);
+    initBlackoilSurfvol(*g, oldprops, state);
     Opm::WellState well_state;
     well_state.init(wells, state);
 
     ps.solve(1.0, state, well_state);
 
+    std::cout << "Cell pressure:" << std::endl;
     std::copy(state.pressure().begin(), state.pressure().end(), std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
+    std::cout << "Face flux:" << std::endl;
+    std::copy(state.faceflux().begin(), state.faceflux().end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
+    std::cout << "Well bhp pressure:" << std::endl;
     std::copy(well_state.bhp().begin(), well_state.bhp().end(), std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
 
