@@ -26,6 +26,8 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/wells.h>
 
+#include <iomanip>
+
 namespace {
     std::vector<int>
     buildAllCells(const int nc)
@@ -142,14 +144,17 @@ namespace Opm {
                                           wells_.well_cells + nperf);
         well_kr_ = fluid_.relperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
 
-        const double atol  = 1.0e-15;
-        const double rtol  = 5.0e-10;
+        const double atol  = 1.0e-10;
+        const double rtol  = 5.0e-8;
         const int    maxit = 15;
 
         assemble(dt, state, well_state);
 
         const double r0  = residualNorm();
         int          it  = 0;
+        std::cout << "\nIteration         Residual\n"
+                  << std::setw(9) << it
+                  << std::setw(18) << r0 << std::endl;
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
             solveJacobianSystem(state, well_state);
@@ -157,6 +162,9 @@ namespace Opm {
             assemble(dt, state, well_state);
 
             const double r = residualNorm();
+
+            std::cout << std::setw(9) << it
+                      << std::setw(18) << r << std::endl;
 
             resTooLarge = (r > atol) && (r > rtol*r0);
 
@@ -167,7 +175,7 @@ namespace Opm {
             THROW("Failed to compute converged pressure solution");
         }
         else {
-            computeFluxes(state);
+            computeFluxes(state, well_state);
         }
     }
 
@@ -362,34 +370,75 @@ namespace Opm {
 
 
     void
-    ImpesTPFAAD::computeFluxes(BlackoilState& state) const
+    ImpesTPFAAD::computeFluxes(BlackoilState& state,
+                               WellState& well_state) const
     {
+        // This method computes state.faceflux(),
+        // well_state.perfRates() and well_state.perfPress().
         const int nc = grid_.number_of_cells;
         const int np = state.numPhases();
+        const int nw = wells_.number_of_wells;
+        const int nperf = wells_.well_connpos[nw];
 
+        // Build cell sets.
         const std::vector<int> cells = buildAllCells(nc);
+        const std::vector<int> well_cells(wells_.well_cells,
+                                          wells_.well_cells + nperf);
+        // Construct matrix to map wells->perforations.
+        M well_to_perf(well_cells.size(), nw);
+        typedef Eigen::Triplet<double> Tri;
+        std::vector<Tri> w2p;
+        for (int w = 0; w < nw; ++w) {
+            for (int perf = wells_.well_connpos[w]; perf < wells_.well_connpos[w+1]; ++perf) {
+                w2p.emplace_back(perf, w, 1.0);
+            }
+        }
+        well_to_perf.setFromTriplets(w2p.begin(), w2p.end());
+        const M perf_to_well = well_to_perf.transpose();
+        const V transw = Eigen::Map<const V>(wells_.WI, nperf, 1);
 
-        const V   p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-        const ADB p  = ADB::constant(p0, cell_residual_.blockPattern());
+        const V p = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V bhp = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
+
+        const V p_perfcell = subset(p, well_cells);
 
         const V transi  = subset(geo_.transmissibility(),
                                  ops_.internal_faces);
-        const V nkgradp = transi * (ops_.ngrad * p0.matrix()).array();
+        const V nkgradp = transi * (ops_.ngrad * p.matrix()).array();
+
+        const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
+        const V p_perfwell = (well_to_perf*bhp.matrix()).array() + well_perf_dp;
+        const V nkgradp_well = transw * (p_perfcell - p_perfwell);
+        const Selector<double> cell_to_well_selector(nkgradp_well);
 
         V flux = V::Zero(ops_.internal_faces.size(), 1);
+        V perf_flux = V::Zero(nperf, 1);
 
         for (int phase = 0; phase < np; ++phase) {
-            const ADB cell_rho = fluidRho(phase, p, cells);
-            const V head = nkgradp + (grav_ * cell_rho.value().matrix()).array();
+            const V cell_rho = fluidRho(phase, p, cells);
+            const V head = nkgradp + (grav_ * cell_rho.matrix()).array();
             const UpwindSelector<double> upwind(grid_, ops_, head);
             const V kr = fluidKr(phase);
-            const V mu = fluidMu(phase, p.value(), cells);
-            const V mf = upwind.select(kr / mu);
+            const V mu = fluidMu(phase, p, cells);
+            const V cell_mob = kr / mu;
+            const V face_mob = upwind.select(cell_mob);
+            const V well_kr = fluidKrWell(phase);
+            const V well_mu = fluidMu(phase, p_perfwell, well_cells);
+            const V well_mob = well_kr / well_mu;
+            const V perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
 
-            flux += mf * head;
+            perf_flux += perf_mob * (nkgradp_well); // No gravity term for perforations.
+            flux += face_mob * head;
         }
+
         V all_flux = superset(flux, ops_.internal_faces, grid_.number_of_faces);
-        std::copy(all_flux.data(), all_flux.data() + grid_.number_of_faces, state.faceflux().data());
+        std::copy(all_flux.data(), all_flux.data() + grid_.number_of_faces, state.faceflux().begin());
+
+        perf_flux = -perf_flux; // well_state.perfRates() assumed to be inflows.
+        std::copy(perf_flux.data(), perf_flux.data() + nperf, well_state.perfRates().begin());
+
+        std::copy(p_perfwell.data(), p_perfwell.data() + nperf, well_state.perfPress().begin());
+
     }
 
 
@@ -436,6 +485,26 @@ namespace Opm {
 
 
 
+    V ImpesTPFAAD::fluidFvf(const int phase, const V& p, const std::vector<int>& cells) const
+    {
+        switch (phase) {
+        case Water:
+            return fluid_.bWat(p, cells);
+        case Oil: {
+            V dummy_rs = V::Zero(p.size(), 1) * p;
+            return fluid_.bOil(p, dummy_rs, cells);
+        }
+        case Gas:
+            return fluid_.bGas(p, cells);
+        default:
+            THROW("Unknown phase index " << phase);
+        }
+    }
+
+
+
+
+
     ADB ImpesTPFAAD::fluidFvf(const int phase, const ADB& p, const std::vector<int>& cells) const
     {
         switch (phase) {
@@ -450,6 +519,18 @@ namespace Opm {
         default:
             THROW("Unknown phase index " << phase);
         }
+    }
+
+
+
+
+
+    V ImpesTPFAAD::fluidRho(const int phase, const V& p, const std::vector<int>& cells) const
+    {
+        const double* rhos = fluid_.surfaceDensity();
+        V b = fluidFvf(phase, p, cells);
+        V rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        return rho;
     }
 
 

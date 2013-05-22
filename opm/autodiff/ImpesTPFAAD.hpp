@@ -96,12 +96,14 @@ namespace Opm {
         void solveJacobianSystem(BlackoilState& state,
                                  WellState& well_state) const;
         double residualNorm() const;
-        void computeFluxes(BlackoilState& state) const;
+        void computeFluxes(BlackoilState& state, WellState& well_state) const;
 
         // Fluid interface forwarding calls to correct methods of fluid_.
         V fluidMu(const int phase, const V& p, const std::vector<int>& cells) const;
         ADB fluidMu(const int phase, const ADB& p, const std::vector<int>& cells) const;
+        V fluidFvf(const int phase, const V& p, const std::vector<int>& cells) const;
         ADB fluidFvf(const int phase, const ADB& p, const std::vector<int>& cells) const;
+        V fluidRho(const int phase, const V& p, const std::vector<int>& cells) const;
         ADB fluidRho(const int phase, const ADB& p, const std::vector<int>& cells) const;
         V fluidKr(const int phase) const;
         V fluidKrWell(const int phase) const;
