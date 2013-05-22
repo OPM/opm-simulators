@@ -64,7 +64,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffBlock.hpp
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
-	opm/autodiff/AutoDiffVec.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
