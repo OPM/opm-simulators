@@ -58,10 +58,6 @@ main(int argc, char* argv[])
     const Opm::BlackoilPropsAd           props(oldprops);
 
     typedef AutoDiff::ForwardBlock<double>      ADB;
-    typedef Opm::BlackoilPropertiesInterface    Geology;
-    typedef Opm::DerivedGeology                 GeoProps;
-    typedef Opm::BlackoilPropsAd    BOFluid;
-    typedef Opm::ImpesTPFAAD<GeoProps> PSolver;
 
     Wells* wells = create_wells(2, 2, 5);
     const double inj_frac[] = { 1.0, 0.0 };
@@ -84,9 +80,9 @@ main(int argc, char* argv[])
     set_current_control(1, 0, wells);
 
     double grav[] = { /*1.0*/ 0.0, 0.0 };
-    GeoProps geo(*g, oldprops, grav);
+    Opm::DerivedGeology geo(*g, props, grav);
     Opm::LinearSolverFactory linsolver(param);
-    PSolver  ps (*g, props, geo, *wells, linsolver);
+    Opm::ImpesTPFAAD ps(*g, props, geo, *wells, linsolver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, oldprops, param, 0.0, state);

@@ -103,14 +103,13 @@ namespace {
 namespace Opm {
 
 
-    template <class GeoProps>
     class ImpesTPFAAD {
     public:
-        ImpesTPFAAD(const UnstructuredGrid& grid ,
-                    const BlackoilPropsAdInterface&          fluid,
-                    const GeoProps&         geo  ,
-                    const Wells&            wells,
-                    const LinearSolverInterface& linsolver)
+        ImpesTPFAAD(const UnstructuredGrid&         grid,
+                    const BlackoilPropsAdInterface& fluid,
+                    const DerivedGeology&           geo,
+                    const Wells&                    wells,
+                    const LinearSolverInterface&    linsolver)
             : grid_     (grid)
             , fluid_    (fluid)
             , geo_      (geo)
@@ -198,7 +197,7 @@ namespace Opm {
 
         const UnstructuredGrid&      grid_;
         const BlackoilPropsAdInterface&               fluid_;
-        const GeoProps&              geo_ ;
+        const DerivedGeology&        geo_ ;
         const Wells&                 wells_;
         const LinearSolverInterface& linsolver_;
         HelperOps                    ops_;
