@@ -28,6 +28,7 @@
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
+	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	)

@@ -20,8 +20,6 @@
 
 #include <config.h>
 
-#define HACK_INCOMPRESSIBLE_GRAVITY 0
-
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/ImpesTPFAAD.hpp>
 #include <opm/autodiff/BlackoilPropsAd.hpp>
@@ -36,10 +34,11 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/Units.hpp>
 
+#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
 
 #include <opm/core/wells.h>
-// #include <opm/core/WellsManager.hpp>
 
 #include <algorithm>
 
