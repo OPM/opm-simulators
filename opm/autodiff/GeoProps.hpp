@@ -40,7 +40,7 @@ namespace Opm
                        const double*           grav = 0)
             : pvol_ (grid.number_of_cells)
             , trans_(grid.number_of_faces)
-            , gpot_ (grid.cell_facepos[ grid.number_of_cells ])
+            , gpot_ (Vector::Zero(grid.cell_facepos[ grid.number_of_cells ], 1))
         {
             // Pore volume
             const typename Vector::Index nc = grid.number_of_cells;
