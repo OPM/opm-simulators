@@ -54,6 +54,8 @@ namespace Opm
             tpfa_htrans_compute(ug, props.permeability(), htrans.data());
             tpfa_trans_compute (ug, htrans.data()     , trans_.data());
 
+            // Gravity potential
+            std::fill(gravity_, gravity_ + 3, 0.0);
             if (grav != 0) {
                 const typename Vector::Index nd = grid.dimensions;
 
@@ -71,17 +73,20 @@ namespace Opm
                         }
                     }
                 }
+                std::copy(grav, grav + nd, gravity_);
             }
         }
 
         const Vector& poreVolume()       const { return pvol_ ; }
         const Vector& transmissibility() const { return trans_; }
         const Vector& gravityPotential() const { return gpot_ ; }
+        const double* gravity()          const { return gravity_; }
 
     private:
         Vector pvol_ ;
         Vector trans_;
         Vector gpot_ ;
+        double gravity_[3]; // Size 3 even if grid is 2-dim.
     };
 }
 
