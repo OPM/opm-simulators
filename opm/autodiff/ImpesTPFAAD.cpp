@@ -28,6 +28,13 @@
 
 #include <iomanip>
 
+
+// Repeated from inside ImpesTPFAAD for convenience.
+typedef AutoDiff::ForwardBlock<double> ADB;
+typedef ADB::V V;
+typedef ADB::M M;
+
+
 namespace {
     std::vector<int>
     buildAllCells(const int nc)
@@ -86,14 +93,37 @@ namespace {
 
         return G;
     }
+
+    V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
+    {
+        const int nw = wells.number_of_wells;
+        const int nperf = wells.well_connpos[nw];
+        const int dim = grid.dimensions;
+        V wdp = V::Zero(nperf,1);
+        ASSERT(wdp.size() == rho.size());
+
+        // Main loop, iterate over all perforations,
+        // using the following formula:
+        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
+        // where the total density rho(perf) is taken to be
+        //    sum_p (rho_p*saturation_p) in the perforation cell.
+        // [although this is computed on the outside of this function].
+        for (int w = 0; w < nw; ++w) {
+            const double ref_depth = wells.depth_ref[w];
+            for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
+                const int cell = wells.well_cells[j];
+                const double cell_depth = grid.cell_centroids[dim * cell + dim - 1];
+                wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
+            }
+        }
+        return wdp;
+    }
+
 } // anonymous namespace
 
 namespace Opm {
 
-    // Repeated from inside ImpesTPFAAD for convenience.
-    typedef AutoDiff::ForwardBlock<double> ADB;
-    typedef ADB::V V;
-    typedef ADB::M M;
+
 
 
     ImpesTPFAAD::ImpesTPFAAD(const UnstructuredGrid&         grid,
@@ -113,8 +143,13 @@ namespace Opm {
         , well_flow_residual_ ()
         , well_residual_ (ADB::null())
         , total_residual_ (ADB::null())
+        , qs_ (ADB::null())
     {
     }
+
+
+
+
 
     void
     ImpesTPFAAD::solve(const double   dt,
@@ -126,6 +161,8 @@ namespace Opm {
 
         well_flow_residual_.resize(np, ADB::null());
 
+        // Compute dynamic data that are treated explicitly.
+        computeExplicitData(dt, state, well_state);
         // Compute relperms once and for all (since saturations are explicit).
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
         ASSERT(np == 2);
@@ -163,12 +200,12 @@ namespace Opm {
 
             const double r = residualNorm();
 
-            std::cout << std::setw(9) << it
-                      << std::setw(18) << r << std::endl;
-
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
+
+            std::cout << std::setw(9) << it
+                      << std::setw(18) << r << std::endl;
         }
 
         if (resTooLarge) {
@@ -178,6 +215,64 @@ namespace Opm {
             computeFluxes(state, well_state);
         }
     }
+
+
+
+
+
+    void
+    ImpesTPFAAD::computeExplicitData(const double         dt,
+                                     const BlackoilState& state,
+                                     const WellState& well_state)
+    {
+        const int nc = grid_.number_of_cells;
+        const int np = state.numPhases();
+        const int nw = wells_.number_of_wells;
+        const int nperf = wells_.well_connpos[nw];
+        const int dim = grid_.dimensions;
+
+        const std::vector<int> cells = buildAllCells(nc);
+
+        // Compute relperms.
+        DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
+        ASSERT(np == 2);
+        kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
+
+        // Compute relperms for wells. This must be revisited for crossflow.
+        DataBlock well_s(nperf, np);
+        for (int w = 0; w < nw; ++w) {
+            const double* comp_frac = &wells_.comp_frac[np*w];
+            for (int j = wells_.well_connpos[w]; j < wells_.well_connpos[w+1]; ++j) {
+                well_s.row(j) = Eigen::Map<const DataBlock>(comp_frac, 1, np);
+            }
+        }
+        const std::vector<int> well_cells(wells_.well_cells,
+                                          wells_.well_cells + nperf);
+        well_kr_ = fluid_.relperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
+
+        // Compute well pressure differentials.
+        // Construct pressure difference vector for wells.
+        const double* g = geo_.gravity();
+        if (g) {
+            // Guard against gravity in anything but last dimension.
+            for (int dd = 0; dd < dim - 1; ++dd) {
+                ASSERT(g[dd] == 0.0);
+            }
+        }
+        V cell_rho_total = V::Zero(nc,1);
+        const Eigen::Map<const V> p(state.pressure().data(), nc, 1);
+        for (int phase = 0; phase < np; ++phase) {
+            const V cell_rho = fluidRho(phase, p, cells);
+            const V cell_s = s.col(phase);
+            cell_rho_total += cell_s * cell_rho;
+        }
+        V rho_perf = subset(cell_rho_total, well_cells);
+        well_perf_dp_ = computePerfPress(grid_, wells_, rho_perf, g ? g[dim-1] : 0.0);
+    }
+
+
+
+
 
     void
     ImpesTPFAAD::assemble(const double         dt,
@@ -231,10 +326,8 @@ namespace Opm {
         }
         well_to_perf.setFromTriplets(w2p.begin(), w2p.end());
         const M perf_to_well = well_to_perf.transpose();
-        // Construct pressure difference vector for wells.
-        const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
         // Finally construct well perforation pressures and well flows.
-        const ADB p_perfwell = well_to_perf*bhp + well_perf_dp;
+        const ADB p_perfwell = well_to_perf*bhp + well_perf_dp_;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
 
@@ -406,8 +499,7 @@ namespace Opm {
                                  ops_.internal_faces);
         const V nkgradp = transi * (ops_.ngrad * p.matrix()).array();
 
-        const V well_perf_dp = V::Zero(well_cells.size()); // No gravity yet!
-        const V p_perfwell = (well_to_perf*bhp.matrix()).array() + well_perf_dp;
+        const V p_perfwell = (well_to_perf*bhp.matrix()).array() + well_perf_dp_;
         const V nkgradp_well = transw * (p_perfcell - p_perfwell);
         const Selector<double> cell_to_well_selector(nkgradp_well);
 
