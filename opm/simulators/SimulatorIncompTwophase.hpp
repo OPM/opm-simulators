@@ -22,7 +22,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
-#include <functional> // bind
+#include <boost/bind.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
