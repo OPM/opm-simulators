@@ -28,6 +28,8 @@
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
+	opm/autodiff/ImpesTPFAAD.cpp
+	opm/autodiff/SimulatorCompressibleAd.cpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	)
@@ -48,6 +50,7 @@ list (APPEND TEST_DATA_FILES
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
+	examples/sim_2p_comp_ad.cpp
 	examples/sim_2p_incomp_adfi.cpp
 	examples/sim_simple.cpp
 	examples/test_impestpfa_ad.cpp
@@ -67,7 +70,9 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
+	opm/autodiff/GeoProps.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
+	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	)

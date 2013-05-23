@@ -20,8 +20,7 @@
 
 #include <config.h>
 
-#define HACK_INCOMPRESSIBLE_GRAVITY 0
-
+#include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/ImpesTPFAAD.hpp>
 #include <opm/autodiff/BlackoilPropsAd.hpp>
 
@@ -32,74 +31,16 @@
 
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
-
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/Units.hpp>
 
+#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
 
 #include <opm/core/wells.h>
-// #include <opm/core/WellsManager.hpp>
 
 #include <algorithm>
-
-namespace {
-    template <class Geology, class Vector>
-    class DerivedGeology {
-    public:
-        typedef Vector V;
-
-        DerivedGeology(const UnstructuredGrid& grid,
-                       const Geology&          geo ,
-                       const double*           grav = 0)
-            : pvol_ (grid.number_of_cells)
-            , trans_(grid.number_of_faces)
-            , gpot_ (grid.cell_facepos[ grid.number_of_cells ])
-        {
-            // Pore volume
-            const typename Vector::Index nc = grid.number_of_cells;
-            std::transform(grid.cell_volumes, grid.cell_volumes + nc,
-                           geo.porosity(), pvol_.data(),
-                           std::multiplies<double>());
-
-            // Transmissibility
-            Vector htrans(grid.cell_facepos[nc]);
-            UnstructuredGrid* ug = const_cast<UnstructuredGrid*>(& grid);
-            tpfa_htrans_compute(ug, geo.permeability(), htrans.data());
-            tpfa_trans_compute (ug, htrans.data()     , trans_.data());
-
-            if (grav != 0) {
-                const typename Vector::Index nd = grid.dimensions;
-
-                for (typename Vector::Index c = 0; c < nc; ++c) {
-                    const double* const cc = & grid.cell_centroids[c*nd + 0];
-
-                    const int* const p = grid.cell_facepos;
-                    for (int i = p[c]; i < p[c + 1]; ++i) {
-                        const int f = grid.cell_faces[i];
-
-                        const double* const fc = & grid.face_centroids[f*nd + 0];
-
-                        for (typename Vector::Index d = 0; d < nd; ++d) {
-                            gpot_[i] += grav[d] * (fc[d] - cc[d]);
-                        }
-                    }
-                }
-            }
-        }
-
-        const Vector& poreVolume()       const { return pvol_ ; }
-        const Vector& transmissibility() const { return trans_; }
-        const Vector& gravityPotential() const { return gpot_ ; }
-
-    private:
-        Vector pvol_ ;
-        Vector trans_;
-        Vector gpot_ ;
-    };
-}
-
 
 
 
@@ -116,10 +57,6 @@ main(int argc, char* argv[])
     const Opm::BlackoilPropsAd           props(oldprops);
 
     typedef AutoDiff::ForwardBlock<double>      ADB;
-    typedef Opm::BlackoilPropertiesInterface    Geology;
-    typedef DerivedGeology<Geology, ADB::V>     GeoProps;
-    typedef Opm::BlackoilPropsAd    BOFluid;
-    typedef Opm::ImpesTPFAAD<GeoProps> PSolver;
 
     Wells* wells = create_wells(2, 2, 5);
     const double inj_frac[] = { 1.0, 0.0 };
@@ -142,9 +79,9 @@ main(int argc, char* argv[])
     set_current_control(1, 0, wells);
 
     double grav[] = { /*1.0*/ 0.0, 0.0 };
-    GeoProps geo(*g, oldprops, grav);
+    Opm::DerivedGeology geo(*g, props, grav);
     Opm::LinearSolverFactory linsolver(param);
-    PSolver  ps (*g, props, geo, *wells, linsolver);
+    Opm::ImpesTPFAAD ps(*g, props, geo, *wells, linsolver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, oldprops, param, 0.0, state);
