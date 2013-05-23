@@ -75,6 +75,17 @@ namespace Opm
     //      Fluid interface   //
     ////////////////////////////
 
+    /// \return   Number of active phases (also the number of components).
+    int BlackoilPropsAd::numPhases() const
+    {
+        return props_.numPhases();
+    }
+
+    /// \return   Object describing the active phases.
+    PhaseUsage BlackoilPropsAd::phaseUsage() const
+    {
+        return props_.phaseUsage();
+    }
 
     // ------ Density ------
 

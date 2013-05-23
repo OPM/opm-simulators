@@ -71,6 +71,11 @@ namespace Opm
         typedef ADB::V V;
         typedef std::vector<int> Cells;
 
+        /// \return   Number of active phases (also the number of components).
+        virtual int numPhases() const;
+
+        /// \return   Object describing the active phases.
+        virtual PhaseUsage phaseUsage() const;
 
         // ------ Canonical named indices for each phase ------
 
