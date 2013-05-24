@@ -381,13 +381,11 @@ collapseJacs(const AutoDiff::ForwardBlock<double>& x)
     int block_col_start = 0;
     for (int block = 0; block < nb; ++block) {
         const ADB::M& jac = x.derivative()[block];
-        // ADB::M is column major
-        for (int col = 0; col < jac.cols(); ++col) {
-            for (int elem = jac.outerIndexPtr()[col];
-                 elem < jac.outerIndexPtr()[col + 1];
-                 ++elem) {
-                const int row = jac.innerIndexPtr()[elem];
-                t.emplace_back(row, block_col_start + col, jac.valuePtr()[elem]);
+        for (ADB::M::Index k = 0; k < jac.outerSize(); ++k) {
+            for (ADB::M::InnerIterator i(jac, k); i ; ++i) {
+                t.push_back(Tri(i.row(),
+                                i.col() + block_col_start,
+                                i.value()));
             }
         }
         block_col_start += jac.cols();
