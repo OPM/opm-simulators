@@ -72,6 +72,15 @@ namespace {
 
         return wells;
     }
+
+    template <class Ostream, typename T, class A>
+    Ostream&
+    operator<<(Ostream& os, const std::vector<T,A>& v)
+    {
+        std::copy(v.begin(), v.end(), std::ostream_iterator<T>(os, " "));
+
+        return os;
+    }
 }
 
 int
@@ -103,17 +112,8 @@ main(int argc, char* argv[])
 
     solver.step(1.0, state, well_state);
 
-#if 0
-    Opm::WellState well_state;
-    well_state.init(wells, state);
-
-    ps.solve(1.0, state, well_state);
-
-    std::copy(state.pressure().begin(), state.pressure().end(), std::ostream_iterator<double>(std::cout, " "));
-    std::cout << std::endl;
-    std::copy(well_state.bhp().begin(), well_state.bhp().end(), std::ostream_iterator<double>(std::cout, " "));
-    std::cout << std::endl;
-#endif
+    std::cout << state.pressure() << '\n'
+              << well_state.bhp() << '\n';
 
     return 0;
 }
