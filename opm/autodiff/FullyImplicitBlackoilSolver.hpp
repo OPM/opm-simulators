@@ -126,6 +126,9 @@ namespace Opm {
                         const std::vector<ADB>& kr    ,
                         const SolutionState&    state );
 
+        double
+        residualNorm() const;
+
         ADB
         fluidViscosity(const int               phase,
                        const ADB&              p    ,
