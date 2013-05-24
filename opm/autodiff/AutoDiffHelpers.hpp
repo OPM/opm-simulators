@@ -22,6 +22,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 
 // -------------------- class HelperOps --------------------
@@ -422,6 +423,96 @@ vertcat(const AutoDiff::ForwardBlock<double>& x,
 
 
 
+
+
+class Span
+{
+public:
+    explicit Span(const int num)
+    : num_(num),
+      stride_(1),
+      start_(0)
+    {
+    }
+    Span(const int num, const int stride, const int start)
+        : num_(num),
+          stride_(stride),
+          start_(start)
+    {
+    }
+    int operator[](const int i) const
+    {
+        ASSERT(i >= 0 && i < num_);
+        return start_ + i*stride_;
+    }
+    int size() const
+    {
+        return num_;
+    }
+
+
+    class SpanIterator
+    {
+    public:
+        SpanIterator(const Span* span, const int index)
+            : span_(span),
+              index_(index)
+        {
+        }
+        SpanIterator operator++()
+        {
+            ++index_;
+            return *this;
+        }
+        SpanIterator operator++(int)
+        {
+            SpanIterator before_increment(*this);
+            ++index_;
+            return before_increment;
+        }
+        bool operator<(const SpanIterator& rhs) const
+        {
+            ASSERT(span_ == rhs.span_);
+            return index_ < rhs.index_;
+        }
+        bool operator==(const SpanIterator& rhs) const
+        {
+            ASSERT(span_ == rhs.span_);
+            return index_ == rhs.index_;
+        }
+        bool operator!=(const SpanIterator& rhs) const
+        {
+            ASSERT(span_ == rhs.span_);
+            return index_ != rhs.index_;
+        }
+    private:
+        const Span* span_;
+        int index_;
+    };
+
+    typedef SpanIterator iterator;
+    typedef SpanIterator const_iterator;
+
+    SpanIterator begin() const
+    {
+        return SpanIterator(this, 0);
+    }
+
+    SpanIterator end() const
+    {
+        return SpanIterator(this, num_);
+    }
+
+    bool operator==(const Span& rhs)
+    {
+        return num_ == rhs.num_ && start_ == rhs.start_ && stride_ == rhs.stride_;
+    }
+
+private:
+    const int num_;
+    const int stride_;
+    const int start_;
+};
 
 
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
