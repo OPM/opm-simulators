@@ -106,14 +106,15 @@ namespace Opm {
 
         std::vector<ReservoirResidualQuant> rq_;
 
+        // The mass_balance vector has one element for each active phase,
+        // each of which has size equal to the number of cells.
+        // The well_eq has size equal to the number of wells.
         struct {
-            std::vector<ADB> reservoir;
+            std::vector<ADB> mass_balance;
+            ADB well_eq;
         } residual_;
 
         // Private methods.
-        void
-        allocateResidual();
-
         SolutionState
         constantState(const BlackoilState& x);
 

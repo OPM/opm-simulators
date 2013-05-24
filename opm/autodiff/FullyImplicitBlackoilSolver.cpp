@@ -150,8 +150,9 @@ namespace Opm {
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
         , rq_    (fluid.numPhases())
+        , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
+                        ADB::null() } )
     {
-        allocateResidual();
     }
 
     void
@@ -243,12 +244,6 @@ namespace Opm {
         p2w.setFromTriplets(gather .begin(), gather .end());
     }
 
-
-    void
-    FullyImplicitBlackoilSolver::allocateResidual()
-    {
-        residual_.reservoir.resize(fluid_.numPhases(), ADB::null());
-    }
 
     FullyImplicitBlackoilSolver::SolutionState
     FullyImplicitBlackoilSolver::constantState(const BlackoilState& x)
@@ -405,7 +400,7 @@ namespace Opm {
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             computeMassFlux(phase, transi, kr, state);
 
-            residual_.reservoir[ phase ] =
+            residual_.mass_balance[ phase ] =
                 dtpv*(rq_[phase].accum[1] - rq_[phase].accum[0])
                 + ops_.div*rq_[phase].mflux;
         }
@@ -416,7 +411,7 @@ namespace Opm {
                                                 rq_[po].head.value());
             const ADB Rs = upwind.select(state.Rs);
 
-            residual_.reservoir[ Gas ] += ops_.div * (Rs * rq_[po].mflux);
+            residual_.mass_balance[ Gas ] += ops_.div * (Rs * rq_[po].mflux);
         }
     }
 
@@ -473,8 +468,8 @@ namespace Opm {
     {
         double r = 0;
         for (std::vector<ADB>::const_iterator
-                 b = residual_.reservoir.begin(),
-                 e = residual_.reservoir.end();
+                 b = residual_.mass_balance.begin(),
+                 e = residual_.mass_balance.end();
              b != e; ++b)
         {
             r = std::max(r, (*b).value().matrix().norm());
