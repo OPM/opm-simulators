@@ -22,6 +22,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <vector>
 
 namespace Opm
@@ -62,6 +63,7 @@ namespace Opm
             const int n = cells.size();
             std::vector<double> smin(num_phases_*n);
             std::vector<double> smax(num_phases_*n);
+            ASSERT(n > 0);
             props.satRange(n, &cells[0], &smin[0], &smax[0]);
             const double* svals = (es == MinSat) ? &smin[0] : &smax[0];
             for (int ci = 0; ci < n; ++ci) {
