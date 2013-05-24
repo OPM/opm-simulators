@@ -131,7 +131,7 @@ class TutorialProblemDecoupled: public IMPESProblem2P<TypeTag> /*@\label{tutoria
     {
         nPhaseIdx = Indices::nPhaseIdx,
         pWIdx = Indices::pwIdx,
-        SwIdx = Indices::SwIdx,
+        swIdx = Indices::swIdx,
         pressEqIdx = Indices::pressEqIdx,
         satEqIdx = Indices::satEqIdx
     };
@@ -253,7 +253,7 @@ public:
     void dirichlet(PrimaryVariables &values, const Intersection& intersection) const /*@\label{tutorial-decoupled:dirichlet}@*/
     {
         values[pWIdx] = 2e5;
-        values[SwIdx] = 1.0;
+        values[swIdx] = 1.0;
     }
     //! Value for neumann boundary condition \f$ [\frac{kg}{m^3 \cdot s}] \f$ at position globalPos.
     /*! In case of a neumann boundary condition, the flux of matter
