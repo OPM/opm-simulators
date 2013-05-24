@@ -190,7 +190,7 @@ namespace Opm {
         const double r0  = residualNorm();
         int          it  = 0;
         std::cout << "\nIteration         Residual\n"
-                  << std::setw(9) << it
+                  << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
@@ -204,7 +204,7 @@ namespace Opm {
 
             it += 1;
 
-            std::cout << std::setw(9) << it
+            std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::endl;
         }
 
@@ -297,20 +297,17 @@ namespace Opm {
                                           wells_.well_cells + nperf);
         const V transw = Eigen::Map<const V>(wells_.WI, nperf, 1);
 
-        // Initialize AD variables: p (cell pressures), qs (well rates) and bhp (well bhp).
+        // Initialize AD variables: p (cell pressures) and bhp (well bhp).
         const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-        const V qs0 = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np, 1);
         const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-        std::vector<V> vars0 = { p0, qs0, bhp0 };
+        std::vector<V> vars0 = { p0, bhp0 };
         std::vector<ADB> vars = ADB::variables(vars0);
         const ADB& p = vars[0];
-        const ADB& qs = vars[1];
-        const ADB& bhp = vars[2];
+        const ADB& bhp = vars[1];
         std::vector<int> bpat = p.blockPattern();
 
-        // Compute T_ij * (p_i - p_j) and use for upwinding.
+        // Compute T_ij * (p_i - p_j).
         const ADB nkgradp = transi * (ops_.ngrad * p);
-        const UpwindSelector<double> upwind(grid_, ops_, nkgradp.value());
 
         // Extract variables for perforation cell pressures
         // and corresponding perforation well pressures.
@@ -334,6 +331,7 @@ namespace Opm {
         cell_residual_ = ADB::constant(pv, bpat);
         well_residual_ = ADB::constant(V::Zero(nw,1), bpat);
         ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
+        qs_ = ADB::constant(V::Zero(nw*np, 1), bpat);
         for (int phase = 0; phase < np; ++phase) {
             const ADB cell_b = fluidFvf(phase, p, cells);
             const ADB cell_rho = fluidRho(phase, p, cells);
@@ -343,20 +341,22 @@ namespace Opm {
             // since they are not available yet.
             const V mu = fluidMu(phase, p.value(), cells);
             const V cell_mob = kr / mu;
+            const ADB head_diff_grav = (grav_ * cell_rho);
+            const ADB head = nkgradp + (grav_ * cell_rho);
+            const UpwindSelector<double> upwind(grid_, ops_, head.value());
             const V face_mob = upwind.select(cell_mob);
             const V well_kr = fluidKrWell(phase);
             const V well_mu = fluidMu(phase, p_perfwell.value(), well_cells);
             const V well_mob = well_kr / well_mu;
             const V perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
-            const ADB flux = face_mob * (nkgradp + (grav_ * cell_rho));
+            const ADB flux = face_mob * head;
             const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
             const ADB face_b = upwind.select(cell_b);
             const ADB perf_b = cell_to_well_selector.select(subset(cell_b, well_cells), well_b);
             const V z0 = z0all.block(0, phase, nc, 1);
             const V q  = qall .block(0, phase, nc, 1);
             const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
-            const ADB divcontrib = delta_t * (ops_.div * (flux * face_b)
-                                              + well_contrib);
+            const ADB divcontrib = delta_t * (ops_.div * (flux * face_b) + well_contrib);
             const V qcontrib = delta_t * q;
             const ADB pvcontrib = ADB::constant(pv*z0, bpat);
             const ADB component_contrib = pvcontrib + qcontrib;
@@ -367,7 +367,7 @@ namespace Opm {
             for (int w = 0; w < nw; ++w) {
                 well_flow_res_phase_idx[w] = w + phase*nw;
             }
-            well_flow_residual_[phase] = well_rates - subset(qs, well_flow_res_phase_idx);
+            qs_ = qs_ +  superset(well_rates, well_flow_res_phase_idx, nw*np);
         }
         cell_residual_ = cell_residual_ + divcontrib_sum;
         // Handling BHP and SURFACE_RATE wells.
@@ -390,15 +390,17 @@ namespace Opm {
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
-        const ADB rate_residual = rate_distr * qs - rate_targets;
+        const ADB rate_residual = rate_distr * qs_ - rate_targets;
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         well_residual_ = bhp_selector.select(bhp_residual, rate_residual);
 
-        ASSERT(np == 2);
-        const ADB well_flow_res = vertcat(well_flow_residual_[0], well_flow_residual_[1]);
-        const ADB well_res = vertcat(well_flow_res, well_residual_);
-        total_residual_ = collapseJacs(vertcat(cell_residual_, well_res));
+        // Build full residual by concatenation of residual arrays and
+        // jacobian matrices.
+        total_residual_ = collapseJacs(vertcat(cell_residual_, well_residual_));
+
+        // std::cout.precision(16);
+        // std::cout << total_residual_;
     }
 
 
@@ -411,11 +413,11 @@ namespace Opm {
     {
         const int nc = grid_.number_of_cells;
         const int nw = wells_.number_of_wells;
-        const int np = state.numPhases();
+        // const int np = state.numPhases();
 
         Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual_.derivative()[0];
 
-        V dx(total_residual_.size());
+        V dx(V::Zero(total_residual_.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
@@ -427,20 +429,10 @@ namespace Opm {
         const V dp = subset(dx, buildAllCells(nc));
         const V p = p0 - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
-        const V qs0 = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np, 1);
-        std::vector<int> qs_dofs(np*nw);
-        for (int w = 0; w < nw; ++w) {
-            for (int phase = 0; phase < np; ++phase) {
-                qs_dofs[w*np + phase] = nc + w*np + phase;
-            }
-        }
-        const V dqs = subset(dx, qs_dofs);
-        const V qs = qs0 - dqs;
-        std::copy(&qs[0], &qs[0] + np*nw, well_state.wellRates().begin());
         const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         std::vector<int> bhp_dofs(nw);
         for (int w = 0; w < nw; ++w) {
-            bhp_dofs[w] = nc + np*nw + w;
+            bhp_dofs[w] = nc + w;
         }
         ASSERT(bhp_dofs.back() + 1 == total_residual_.size());
         const V dbhp = subset(dx, bhp_dofs);
@@ -530,7 +522,7 @@ namespace Opm {
         std::copy(perf_flux.data(), perf_flux.data() + nperf, well_state.perfRates().begin());
 
         std::copy(p_perfwell.data(), p_perfwell.data() + nperf, well_state.perfPress().begin());
-
+        std::copy(qs_.value().data(), qs_.value().data() + np*nw, &well_state.wellRates()[0]);
     }
 
 
