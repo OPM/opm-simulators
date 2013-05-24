@@ -88,8 +88,13 @@ namespace Opm {
         ADB                          total_residual_;
         std::vector<V>               kr_;
         std::vector<V>               well_kr_;
+        ADB                          qs_;
+        V                            well_perf_dp_;
 
         // Methods for assembling and solving.
+        void computeExplicitData(const double         dt,
+                                 const BlackoilState& state,
+                                 const WellState& well_state);
         void assemble(const double         dt,
                       const BlackoilState& state,
                       const WellState& well_state);
