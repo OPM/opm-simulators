@@ -430,6 +430,21 @@ namespace Opm {
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
     }
 
+    double
+    FullyImplicitBlackoilSolver::residualNorm() const
+    {
+        double r = 0;
+        for (std::vector<ADB>::const_iterator
+                 b = residual_.reservoir.begin(),
+                 e = residual_.reservoir.end();
+             b != e; ++b)
+        {
+            r = std::max(r, (*b).value().matrix().norm());
+        }
+
+        return r;
+    }
+
     ADB
     FullyImplicitBlackoilSolver::fluidViscosity(const int               phase,
                                                 const ADB&              p    ,
