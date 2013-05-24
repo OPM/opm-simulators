@@ -147,6 +147,7 @@ namespace Opm {
         , canph_ (active2Canonical(fluid.phaseUsage()))
         , cells_ (buildAllCells(grid.number_of_cells))
         , ops_   (grid)
+        , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
         , rq_    (fluid.numPhases())
     {
@@ -212,6 +213,34 @@ namespace Opm {
         , saturation(np, ADB::null())
         , Rs        (    ADB::null())
     {
+    }
+
+
+    FullyImplicitBlackoilSolver::
+    WellOps::WellOps(const Wells& wells)
+        : w2p(wells.well_connpos[ wells.number_of_wells ],
+              wells.number_of_wells)
+        , p2w(wells.number_of_wells,
+              wells.well_connpos[ wells.number_of_wells ])
+    {
+        const int        nw   = wells.number_of_wells;
+        const int* const wpos = wells.well_connpos;
+
+        typedef Eigen::Triplet<double> Tri;
+
+        std::vector<Tri> scatter, gather;
+        scatter.reserve(wpos[nw]);
+        gather .reserve(wpos[nw]);
+
+        for (int w = 0, i = 0; w < nw; ++w) {
+            for (; i < wpos[ w + 1 ]; ++i) {
+                scatter.push_back(Tri(i, w, 1.0));
+                gather .push_back(Tri(w, i, 1.0));
+            }
+        }
+
+        w2p.setFromTriplets(scatter.begin(), scatter.end());
+        p2w.setFromTriplets(gather .begin(), gather .end());
     }
 
 

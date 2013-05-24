@@ -80,6 +80,12 @@ namespace Opm {
             ADB              Rs;
         };
 
+        struct WellOps {
+            WellOps(const Wells& wells);
+            M w2p;              // well -> perf (scatter)
+            M p2w;              // perf -> well (gather)
+        };
+
         enum { Water = BlackoilPropsAdInterface::Water,
                Oil   = BlackoilPropsAdInterface::Oil  ,
                Gas   = BlackoilPropsAdInterface::Gas  };
@@ -95,6 +101,7 @@ namespace Opm {
         const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
+        const WellOps                   wops_;
         const M                         grav_;
 
         std::vector<ReservoirResidualQuant> rq_;
