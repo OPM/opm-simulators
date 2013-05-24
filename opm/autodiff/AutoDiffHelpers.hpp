@@ -485,6 +485,10 @@ public:
             ASSERT(span_ == rhs.span_);
             return index_ != rhs.index_;
         }
+        int operator*()
+        {
+            return (*span_)[index_];
+        }
     private:
         const Span* span_;
         int index_;
