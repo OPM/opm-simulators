@@ -429,7 +429,7 @@ namespace Opm
             for (int phase = 0; phase < np; ++phase) {
                 int upwindc = -1;
                 if (c[0] >=0 && c[1] >= 0) {
-                    upwindc = (pot[0] < pot[1]) ? c[1] : c[0];
+                    upwindc = (pot[0][phase] < pot[1][phase]) ? c[1] : c[0];
                 } else {
                     upwindc = (c[0] >= 0) ? c[0] : c[1];
                 }
