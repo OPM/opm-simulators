@@ -1,8 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
-  Copyright 2013 Statoil ASA.
 
-  This file is part of the Open Porous Media Project (OPM).
+  This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_IMPLICITBO_HPP_HEADER_INCLUDED
-#define OPM_IMPLICITBO_HPP_HEADER_INCLUDED
+#ifndef OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
+#define OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -123,11 +122,11 @@ namespace {
 namespace Opm {
 
     template <class GeoProps>
-    class ImplicitBOStep {
+    class FullyImplicitBlackoilSolver {
     public:
-        ImplicitBOStep(const UnstructuredGrid&         grid ,
-                       const BlackoilPropsAdInterface& fluid,
-                       const GeoProps&                 geo  )
+        FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
+                                    const BlackoilPropsAdInterface& fluid,
+                                    const GeoProps&                 geo  )
             : grid_  (grid)
             , fluid_ (fluid)
             , geo_   (geo)
@@ -518,4 +517,5 @@ namespace Opm {
     };
 } // namespace Opm
 
-#endif  /* OPM_IMPLICITBO_HPP_HEADER_INCLUDED */
+
+#endif // OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED

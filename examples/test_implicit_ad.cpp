@@ -20,7 +20,7 @@
 
 #include <config.h>
 
-#include <opm/autodiff/ImplicitBOStep.hpp>
+#include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAd.hpp>
 
@@ -50,18 +50,18 @@ main(int argc, char* argv[])
     const Opm::BlackoilPropertiesBasic   props0(param, 2, nc);
     const Opm::BlackoilPropsAd           props(props0);
 
-    typedef Opm::ImplicitBOStep<Opm::DerivedGeology> IStep;
+    typedef Opm::FullyImplicitBlackoilSolver<Opm::DerivedGeology> BOSolver;
 
     double grav[] = { 1.0, 0.0 };
     Opm::DerivedGeology geo(*g, props, grav);
 
-    IStep is(*g, props, geo);
+    BOSolver solver(*g, props, geo);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);
     initBlackoilSurfvol(*g, props0, state);
 
-    is.step(1.0, state);
+    solver.step(1.0, state);
 
 #if 0
     Opm::WellState well_state;
