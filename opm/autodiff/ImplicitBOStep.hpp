@@ -29,6 +29,8 @@
 
 #include <opm/core/utility/ErrorMacros.hpp>
 
+#include <cmath>
+
 namespace {
     std::vector<int>
     buildAllCells(const int nc)
@@ -153,18 +155,18 @@ namespace Opm {
                 computeAccum(state, 0);
             }
 
-#if 0
             const double atol  = 1.0e-15;
+#if 0
             const double rtol  = 5.0e-10;
             const int    maxit = 15;
 #endif
 
             assemble(dtpv, x);
 
-#if 0
             const double r0  = residualNorm();
-            int          it  = 0;
             bool resTooLarge = r0 > atol;
+#if 0
+            int          it  = 0;
             while (resTooLarge && (it < maxit)) {
                 solveJacobianSystem(x);
 
@@ -176,11 +178,10 @@ namespace Opm {
 
                 it += 1;
             }
-
+#endif
             if (resTooLarge) {
                 THROW("Failed to compute converge solution");
             }
-#endif
         }
 
     private:
@@ -463,6 +464,21 @@ namespace Opm {
             const ADB& b       = rq_[ actph ].b;
             const ADB& mob     = rq_[ actph ].mob;
             rq_[ actph ].mflux = upwind.select(b * mob) * head;
+        }
+
+        double
+        residualNorm() const
+        {
+            double r = 0;
+            for (std::vector<ADB>::const_iterator
+                     b = residual_.reservoir.begin(),
+                     e = residual_.reservoir.end();
+                 b != e; ++b)
+            {
+                r = std::max(r, (*b).value().matrix().norm());
+            }
+
+            return r;
         }
 
         ADB
