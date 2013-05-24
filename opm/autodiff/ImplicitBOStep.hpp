@@ -225,8 +225,10 @@ namespace Opm {
         const UnstructuredGrid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const GeoProps&                 geo_;
-        const std::vector<bool>         active_; // Canonical -> active
-        const std::vector<int>          canph_;  // Active -> canonical phases
+        // For each canonical phase -> true if active
+        const std::vector<bool>         active_;
+        // Size = # active faces. Maps active -> canonical phase indices.
+        const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
         const M                         grav_;
