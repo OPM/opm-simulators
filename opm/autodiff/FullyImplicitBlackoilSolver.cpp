@@ -30,6 +30,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
+#include <cassert>
 
 typedef AutoDiff::ForwardBlock<double> ADB;
 typedef ADB::V V;
