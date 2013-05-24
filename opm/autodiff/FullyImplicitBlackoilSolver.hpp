@@ -78,6 +78,7 @@ namespace Opm {
             ADB              pressure;
             std::vector<ADB> saturation;
             ADB              Rs;
+            ADB              bhp;
         };
 
         struct WellOps {
@@ -116,10 +117,12 @@ namespace Opm {
 
         // Private methods.
         SolutionState
-        constantState(const BlackoilState& x);
+        constantState(const BlackoilState& x,
+                      const WellState&     xw);
 
         SolutionState
-        variableState(const BlackoilState& x);
+        variableState(const BlackoilState& x,
+                      const WellState&     xw);
 
         void
         computeAccum(const SolutionState& state,
