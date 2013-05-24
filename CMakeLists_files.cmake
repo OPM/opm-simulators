@@ -31,6 +31,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/FullyImplicitBlackoilSolver.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorCompressibleAd.cpp
+	opm/autodiff/SimulatorFullyImplicitBlackoil.cpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	)
@@ -76,6 +77,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	)
