@@ -52,6 +52,7 @@ list (APPEND TEST_DATA_FILES
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
+	examples/sim_fibo_ad.cpp
 	examples/sim_2p_comp_ad.cpp
 	examples/sim_2p_incomp_adfi.cpp
 	examples/sim_simple.cpp
@@ -63,6 +64,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_adfi.cpp
+	examples/sim_fibo_ad.cpp
 	)
 
 # originally generated with the command:
