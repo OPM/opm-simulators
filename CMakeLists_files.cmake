@@ -41,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
+	tests/test_span.cpp
 	tests/test_syntax.cpp
 	)
 
