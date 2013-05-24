@@ -395,8 +395,16 @@ namespace Opm {
         const SolutionState    state = variableState(x);
         const std::vector<ADB> kr    = computeRelPerm(state);
 
+        // Compute b_p and the accumulation term b_p*s_p for each phase,
+        // except gas. For gas, we compute b_g*s_g + Rs*b_o*s_o.
+        // These quantities are stored in rq_[phase].accum[1].
+        // The corresponding accumulation terms from the start of
+        // the timestep (b^0_p*s^0_p etc.) were already computed
+        // in step() and stored in rq_[phase].accum[0].
         computeAccum(state, 1);
 
+        // Set up the common parts of the mass balance equations
+        // for each active phase.
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             computeMassFlux(phase, transi, kr, state);
 
@@ -405,6 +413,9 @@ namespace Opm {
                 + ops_.div*rq_[phase].mflux;
         }
 
+        // Add the extra (flux) terms to the gas mass balance equations
+        // from gas dissolved in the oil phase.
+        // The extra terms in the accumulation part of the equation
         if (active_[ Oil ] && active_[ Gas ]) {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
             const UpwindSelector<double> upwind(grid_, ops_,
