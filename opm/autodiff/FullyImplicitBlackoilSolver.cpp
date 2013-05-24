@@ -26,6 +26,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -133,12 +134,15 @@ namespace {
 namespace Opm {
 
 
-    FullyImplicitBlackoilSolver::FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
-                                                             const BlackoilPropsAdInterface& fluid,
-                                                             const DerivedGeology&           geo  )
+    FullyImplicitBlackoilSolver::
+    FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
+                                const BlackoilPropsAdInterface& fluid,
+                                const DerivedGeology&           geo  ,
+                                const Wells&                    wells)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
+        , wells_ (wells)
         , active_(activePhases(fluid.phaseUsage()))
         , canph_ (active2Canonical(fluid.phaseUsage()))
         , cells_ (buildAllCells(grid.number_of_cells))
@@ -150,8 +154,10 @@ namespace Opm {
     }
 
     void
-    FullyImplicitBlackoilSolver::step(const double dt,
-                                      BlackoilState&      x)
+    FullyImplicitBlackoilSolver::
+    step(const double   dt,
+         BlackoilState& x ,
+         WellState&     xw)
     {
         const V dtpv = geo_.poreVolume() / dt;
 
@@ -166,7 +172,7 @@ namespace Opm {
         const int    maxit = 15;
 #endif
 
-        assemble(dtpv, x);
+        assemble(dtpv, x, xw);
 
 #if 0
         const double r0  = residualNorm();
@@ -175,7 +181,7 @@ namespace Opm {
         while (resTooLarge && (it < maxit)) {
             solveJacobianSystem(x);
 
-            assemble(dtpv, x);
+            assemble(dtpv, x, xw);
 
             const double r = residualNorm();
 
@@ -354,7 +360,10 @@ namespace Opm {
     }
 
     void
-    FullyImplicitBlackoilSolver::assemble(const V& dtpv, const BlackoilState& x)
+    FullyImplicitBlackoilSolver::
+    assemble(const V&             dtpv,
+             const BlackoilState& x   ,
+             const WellState&     xw  )
     {
         const V transi = subset(geo_.transmissibility(),
                                 ops_.internal_faces);

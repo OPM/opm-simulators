@@ -41,7 +41,8 @@ namespace Opm {
     public:
         FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                     const BlackoilPropsAdInterface& fluid,
-                                    const DerivedGeology&           geo  );
+                                    const DerivedGeology&           geo  ,
+                                    const Wells&                    wells);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -49,8 +50,9 @@ namespace Opm {
         ///   state.saturation()
         ///   state.surfacevol()
         void
-        step(const double dt,
-             BlackoilState& state);
+        step(const double   dt    ,
+             BlackoilState& state ,
+             WellState&     wstate);
 
     private:
         // Types and enums
@@ -86,6 +88,7 @@ namespace Opm {
         const UnstructuredGrid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
+        const Wells&                    wells_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.
@@ -115,7 +118,9 @@ namespace Opm {
                      const int            aix  );
 
         void
-        assemble(const V& dtpv, const BlackoilState& x);
+        assemble(const V&             dtpv,
+                 const BlackoilState& x   ,
+                 const WellState&     xw  );
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state);
