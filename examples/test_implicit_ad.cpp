@@ -50,7 +50,7 @@ main(int argc, char* argv[])
     const Opm::BlackoilPropertiesBasic   props0(param, 2, nc);
     const Opm::BlackoilPropsAd           props(props0);
 
-    typedef Opm::FullyImplicitBlackoilSolver<Opm::DerivedGeology> BOSolver;
+    typedef Opm::FullyImplicitBlackoilSolver BOSolver;
 
     double grav[] = { 1.0, 0.0 };
     Opm::DerivedGeology geo(*g, props, grav);

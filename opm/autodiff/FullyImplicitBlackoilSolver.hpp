@@ -24,6 +24,9 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
+#include <opm/autodiff/GeoProps.hpp>
+#include <opm/core/simulator/BlackoilState.hpp>
+
 #include <opm/core/grid.h>
 
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -119,14 +122,22 @@ namespace {
 } // Anonymous namespace
 
 
+struct UnstructuredGrid;
+struct Wells;
+
 namespace Opm {
 
-    template <class GeoProps>
-    class FullyImplicitBlackoilSolver {
+    class DerivedGeology;
+    class LinearSolverInterface;
+    class BlackoilState;
+    class WellState;
+
+    class FullyImplicitBlackoilSolver
+    {
     public:
         FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                     const BlackoilPropsAdInterface& fluid,
-                                    const GeoProps&                 geo  )
+                                    const DerivedGeology&           geo  )
             : grid_  (grid)
             , fluid_ (fluid)
             , geo_   (geo)
@@ -140,10 +151,9 @@ namespace Opm {
             allocateResidual();
         }
 
-        template <class ResSol>
         void
         step(const double dt,
-             ResSol&      x)
+             BlackoilState&      x)
         {
             const V dtpv = geo_.poreVolume() / dt;
 
@@ -223,7 +233,7 @@ namespace Opm {
 
         const UnstructuredGrid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
-        const GeoProps&                 geo_;
+        const DerivedGeology&           geo_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.
@@ -248,9 +258,8 @@ namespace Opm {
             residual_.reservoir.resize(fluid_.numPhases(), ADB::null());
         }
 
-        template <class ResSol>
         SolutionState
-        constantState(const ResSol& x)
+        constantState(const BlackoilState& x)
         {
             const int nc = grid_.number_of_cells;
             const int np = x.numPhases();
@@ -298,9 +307,8 @@ namespace Opm {
             return state;
         }
 
-        template <class ResSol>
         SolutionState
-        variableState(const ResSol& x)
+        variableState(const BlackoilState& x)
         {
             const int nc = grid_.number_of_cells;
             const int np = x.numPhases();
@@ -388,9 +396,8 @@ namespace Opm {
             }
         }
 
-        template <class ResSol>
         void
-        assemble(const V& dtpv, const ResSol& x)
+        assemble(const V& dtpv, const BlackoilState& x)
         {
             const V transi = subset(geo_.transmissibility(),
                                     ops_.internal_faces);
