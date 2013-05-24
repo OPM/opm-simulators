@@ -171,6 +171,9 @@ namespace Opm
     ADB BlackoilPropsAd::muWat(const ADB& pw,
                                const Cells& cells) const
     {
+#if 1
+        return ADB::constant(muWat(pw.value(), cells), pw.blockPattern());
+#else
         if (!pu_.phase_used[Water]) {
             THROW("Cannot call muWat(): water phase not present.");
         }
@@ -188,6 +191,7 @@ namespace Opm
             jacs[block] = dmu_diag * pw.derivative()[block];
         }
         return ADB::function(mu.col(pu_.phase_pos[Water]), jacs);
+#endif
     }
 
     /// Oil viscosity.
@@ -199,6 +203,9 @@ namespace Opm
                                const ADB& rs,
                                const Cells& cells) const
     {
+#if 1
+        return ADB::constant(muOil(po.value(), rs.value(), cells), po.blockPattern());
+#else
         if (!pu_.phase_used[Oil]) {
             THROW("Cannot call muOil(): oil phase not present.");
         }
@@ -225,6 +232,7 @@ namespace Opm
             jacs[block] = dmu_diag * po.derivative()[block];
         }
         return ADB::function(mu.col(pu_.phase_pos[Oil]), jacs);
+#endif
     }
 
     /// Gas viscosity.
@@ -234,6 +242,9 @@ namespace Opm
     ADB BlackoilPropsAd::muGas(const ADB& pg,
                                const Cells& cells) const
     {
+#if 1
+        return ADB::constant(muGas(pg.value(), cells), pg.blockPattern());
+#else
         if (!pu_.phase_used[Gas]) {
             THROW("Cannot call muGas(): gas phase not present.");
         }
@@ -251,6 +262,7 @@ namespace Opm
             jacs[block] = dmu_diag * pg.derivative()[block];
         }
         return ADB::function(mu.col(pu_.phase_pos[Gas]), jacs);
+#endif
     }
 
 
