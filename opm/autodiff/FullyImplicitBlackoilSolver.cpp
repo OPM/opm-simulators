@@ -26,6 +26,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -133,16 +134,20 @@ namespace {
 namespace Opm {
 
 
-    FullyImplicitBlackoilSolver::FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
-                                                             const BlackoilPropsAdInterface& fluid,
-                                                             const DerivedGeology&           geo  )
+    FullyImplicitBlackoilSolver::
+    FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
+                                const BlackoilPropsAdInterface& fluid,
+                                const DerivedGeology&           geo  ,
+                                const Wells&                    wells)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
+        , wells_ (wells)
         , active_(activePhases(fluid.phaseUsage()))
         , canph_ (active2Canonical(fluid.phaseUsage()))
         , cells_ (buildAllCells(grid.number_of_cells))
         , ops_   (grid)
+        , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
         , rq_    (fluid.numPhases())
     {
@@ -150,8 +155,10 @@ namespace Opm {
     }
 
     void
-    FullyImplicitBlackoilSolver::step(const double dt,
-                                      BlackoilState&      x)
+    FullyImplicitBlackoilSolver::
+    step(const double   dt,
+         BlackoilState& x ,
+         WellState&     xw)
     {
         const V dtpv = geo_.poreVolume() / dt;
 
@@ -166,7 +173,7 @@ namespace Opm {
         const int    maxit = 15;
 #endif
 
-        assemble(dtpv, x);
+        assemble(dtpv, x, xw);
 
 #if 0
         const double r0  = residualNorm();
@@ -175,7 +182,7 @@ namespace Opm {
         while (resTooLarge && (it < maxit)) {
             solveJacobianSystem(x);
 
-            assemble(dtpv, x);
+            assemble(dtpv, x, xw);
 
             const double r = residualNorm();
 
@@ -206,6 +213,34 @@ namespace Opm {
         , saturation(np, ADB::null())
         , Rs        (    ADB::null())
     {
+    }
+
+
+    FullyImplicitBlackoilSolver::
+    WellOps::WellOps(const Wells& wells)
+        : w2p(wells.well_connpos[ wells.number_of_wells ],
+              wells.number_of_wells)
+        , p2w(wells.number_of_wells,
+              wells.well_connpos[ wells.number_of_wells ])
+    {
+        const int        nw   = wells.number_of_wells;
+        const int* const wpos = wells.well_connpos;
+
+        typedef Eigen::Triplet<double> Tri;
+
+        std::vector<Tri> scatter, gather;
+        scatter.reserve(wpos[nw]);
+        gather .reserve(wpos[nw]);
+
+        for (int w = 0, i = 0; w < nw; ++w) {
+            for (; i < wpos[ w + 1 ]; ++i) {
+                scatter.push_back(Tri(i, w, 1.0));
+                gather .push_back(Tri(w, i, 1.0));
+            }
+        }
+
+        w2p.setFromTriplets(scatter.begin(), scatter.end());
+        p2w.setFromTriplets(gather .begin(), gather .end());
     }
 
 
@@ -354,7 +389,10 @@ namespace Opm {
     }
 
     void
-    FullyImplicitBlackoilSolver::assemble(const V& dtpv, const BlackoilState& x)
+    FullyImplicitBlackoilSolver::
+    assemble(const V&             dtpv,
+             const BlackoilState& x   ,
+             const WellState&     xw  )
     {
         const V transi = subset(geo_.transmissibility(),
                                 ops_.internal_faces);

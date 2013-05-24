@@ -25,6 +25,8 @@
 #include <opm/autodiff/BlackoilPropsAd.hpp>
 
 #include <opm/core/grid.h>
+#include <opm/core/wells.h>
+
 #include <opm/core/grid/GridManager.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
@@ -35,9 +37,51 @@
 #include <opm/core/utility/Units.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
 
 #include <algorithm>
+
+#include <boost/shared_ptr.hpp>
+
+namespace {
+    boost::shared_ptr<Wells>
+    createWellConfig()
+    {
+        boost::shared_ptr<Wells> wells(create_wells(2, 2, 2),
+                                       destroy_wells);
+
+        const double inj_frac[] = { 1.0, 0.0 };
+        const double prod_frac[] = { 0.0, 0.0 };
+        const int num_inj = 1;
+        const int inj_cells[num_inj] = { 0 };
+        const int num_prod = 1;
+        const int prod_cells[num_prod] = { 19 };
+        const double WI[3] = { 1e-12, 1e-12, 1e-12 };
+        bool ok = add_well(INJECTOR, 0.0, num_inj, inj_frac, inj_cells, WI, "Inj", wells.get());
+        ok = ok && add_well(PRODUCER, 0.0, num_prod, prod_frac, prod_cells, WI, "Prod", wells.get());
+        ok = ok && append_well_controls(BHP, 500.0*Opm::unit::barsa, 0, 0, wells.get());
+        // ok = ok && append_well_controls(BHP, 200.0*Opm::unit::barsa, 0, 1, wells);
+        double oildistr[2] = { 0.0, 1.0 };
+        ok = ok && append_well_controls(SURFACE_RATE, 1e-3, oildistr, 1, wells.get());
+        if (!ok) {
+            THROW("Something went wrong with well init.");
+        }
+        set_current_control(0, 0, wells.get());
+        set_current_control(1, 0, wells.get());
+
+        return wells;
+    }
+
+    template <class Ostream, typename T, class A>
+    Ostream&
+    operator<<(Ostream& os, const std::vector<T,A>& v)
+    {
+        std::copy(v.begin(), v.end(), std::ostream_iterator<T>(os, " "));
+
+        return os;
+    }
+}
 
 int
 main(int argc, char* argv[])
@@ -50,30 +94,26 @@ main(int argc, char* argv[])
     const Opm::BlackoilPropertiesBasic   props0(param, 2, nc);
     const Opm::BlackoilPropsAd           props(props0);
 
+    boost::shared_ptr<Wells> wells = createWellConfig();
+
     typedef Opm::FullyImplicitBlackoilSolver BOSolver;
 
-    double grav[] = { 1.0, 0.0 };
+    double grav[] = { 0.0, 0.0 };
     Opm::DerivedGeology geo(*g, props, grav);
 
-    BOSolver solver(*g, props, geo);
+    BOSolver solver(*g, props, geo, *wells);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);
     initBlackoilSurfvol(*g, props0, state);
 
-    solver.step(1.0, state);
-
-#if 0
     Opm::WellState well_state;
-    well_state.init(wells, state);
+    well_state.init(wells.get(), state);
 
-    ps.solve(1.0, state, well_state);
+    solver.step(1.0, state, well_state);
 
-    std::copy(state.pressure().begin(), state.pressure().end(), std::ostream_iterator<double>(std::cout, " "));
-    std::cout << std::endl;
-    std::copy(well_state.bhp().begin(), well_state.bhp().end(), std::ostream_iterator<double>(std::cout, " "));
-    std::cout << std::endl;
-#endif
+    std::cout << state.pressure() << '\n'
+              << well_state.bhp() << '\n';
 
     return 0;
 }
