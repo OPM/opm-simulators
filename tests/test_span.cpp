@@ -35,16 +35,16 @@ BOOST_AUTO_TEST_CASE(OneArgConstr)
 {
     const int num = 4;
     const Span s(num);
-    BOOST_CHECK(s.size() == num);
+    BOOST_CHECK_EQUAL(s.size(), num);
     for (int i = 0; i < num; ++i) {
-        BOOST_CHECK(s[i] == i);
+        BOOST_CHECK_EQUAL(s[i], i);
     }
     int count = 0;
     for (Span::const_iterator it = s.begin(); it != s.end(); ++it) {
-        BOOST_CHECK(*it == count);
+        BOOST_CHECK_EQUAL(*it, count);
         ++count;
     }
-    BOOST_CHECK(count = num);
+    BOOST_CHECK_EQUAL(count, num);
 }
 
 BOOST_AUTO_TEST_CASE(ThreeArgConstr)
@@ -55,15 +55,14 @@ BOOST_AUTO_TEST_CASE(ThreeArgConstr)
     const int seq[num] = { start, start + 1*stride, start + 2*stride };
 
     const Span s(num, stride, start);
-    BOOST_CHECK(s.size() == num);
+    BOOST_CHECK_EQUAL(s.size(), num);
     for (int i = 0; i < num; ++i) {
-        BOOST_CHECK(s[i] == seq[i]);
+        BOOST_CHECK_EQUAL(s[i], seq[i]);
     }
     int count = 0;
     for (Span::const_iterator it = s.begin(); it != s.end(); ++it) {
-        BOOST_CHECK(*it == seq[count]);
+        BOOST_CHECK_EQUAL(*it, seq[count]);
         ++count;
     }
-    BOOST_CHECK(count = num);
+    BOOST_CHECK_EQUAL(count, num);
 }
-
