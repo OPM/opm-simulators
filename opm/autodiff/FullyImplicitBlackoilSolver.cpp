@@ -447,10 +447,77 @@ namespace Opm {
 
             residual_.mass_balance[ Gas ] += ops_.div * (Rs * rq_[po].mflux);
         }
+
+        // -------- Well equation, and well contributions to the mass balance equations --------
+
+        // Contribution to mass balance will have to wait.
+
+        const int nc = grid_.number_of_cells;
+        const int np = wells_.number_of_phases;
+        const int nw = wells_.number_of_wells;
+        const int nperf = wells_.well_connpos[nw];
+
+        const std::vector<int> cells = buildAllCells(nc);
+        const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
+        const V transw = Eigen::Map<const V>(wells_.WI, nperf);
+
+        const ADB& bhp = state.bhp;
+
+        const DataBlock well_s = wops_.w2p * Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np).matrix();
+
+        // Extract variables for perforation cell pressures
+        // and corresponding perforation well pressures.
+        const ADB p_perfcell = subset(state.pressure, well_cells);
+        // Finally construct well perforation pressures and well flows.
+        const V well_perf_dp_ = V::Zero(nperf);
+        const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp_;
+        const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
+        const Selector<double> cell_to_well_selector(nkgradp_well.value());
+        ADB qs = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
+        const std::vector<ADB> well_kr = computeRelPermWells(state, well_s, well_cells);
+        for (int phase = 0; phase < np; ++phase) {
+            const ADB& cell_b = rq_[phase].b;
+            const ADB well_b = fluidReciprocFVF(canph_[phase], p_perfwell, well_cells);
+            const ADB perf_b = cell_to_well_selector.select(subset(cell_b, well_cells), well_b);
+
+            const ADB& cell_mob = rq_[phase].mob;
+
+            const ADB well_mu = fluidViscosity(canph_[phase], p_perfwell, well_cells);
+            const ADB well_mob = well_kr[phase] / well_mu;
+            const ADB perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
+
+            const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
+            const ADB well_rates = wops_.p2w * (perf_flux*perf_b);
+            qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
+        }
+        // Handling BHP and SURFACE_RATE wells.
+        V bhp_targets(nw);
+        V rate_targets(nw);
+        M rate_distr(nw, np*nw);
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells_.ctrls[w];
+            if (wc->type[wc->current] == BHP) {
+                bhp_targets[w] = wc->target[wc->current];
+                rate_targets[w] = -1e100;
+            } else if (wc->type[wc->current] == SURFACE_RATE) {
+                bhp_targets[w] = -1e100;
+                rate_targets[w] = wc->target[wc->current];
+                for (int phase = 0; phase < np; ++phase) {
+                    rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
+                }
+            } else {
+                THROW("Can only handle BHP and SURFACE_RATE type controls.");
+            }
+        }
+        const ADB bhp_residual = bhp - bhp_targets;
+        const ADB rate_residual = rate_distr * qs - rate_targets;
+        // Choose bhp residual for positive bhp targets.
+        Selector<double> bhp_selector(bhp_targets);
+        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
     }
 
     std::vector<ADB>
-    FullyImplicitBlackoilSolver::computeRelPerm(const SolutionState& state)
+    FullyImplicitBlackoilSolver::computeRelPerm(const SolutionState& state) const
     {
         const int               nc   = grid_.number_of_cells;
         const std::vector<int>& bpat = state.pressure.blockPattern();
@@ -471,6 +538,33 @@ namespace Opm {
                         : null);
 
         return fluid_.relperm(sw, so, sg, cells_);
+    }
+
+    std::vector<ADB>
+    FullyImplicitBlackoilSolver::computeRelPermWells(const SolutionState& state,
+                                                     const DataBlock& well_s,
+                                                     const std::vector<int>& well_cells) const
+    {
+        const int nw = wells_.number_of_wells;
+        const int nperf = wells_.well_connpos[nw];
+        const std::vector<int>& bpat = state.pressure.blockPattern();
+
+        const ADB null = ADB::constant(V::Zero(nperf), bpat);
+
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const ADB sw = (active_[ Water ]
+                        ? ADB::constant(well_s.col(pu.phase_pos[ Water ]), bpat)
+                        : null);
+
+        const ADB so = (active_[ Oil ]
+                        ? ADB::constant(well_s.col(pu.phase_pos[ Oil ]), bpat)
+                        : null);
+
+        const ADB sg = (active_[ Gas ]
+                        ? ADB::constant(well_s.col(pu.phase_pos[ Gas ]), bpat)
+                        : null);
+
+        return fluid_.relperm(sw, so, sg, well_cells);
     }
 
     void
