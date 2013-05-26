@@ -34,6 +34,7 @@
 #include <cassert>
 #include <iomanip>
 
+
 typedef AutoDiff::ForwardBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
@@ -200,7 +201,8 @@ namespace Opm {
         }
 
         if (resTooLarge) {
-            THROW("Failed to compute converged solution in " << it << " iterations.");
+            std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
+            // THROW("Failed to compute converged solution in " << it << " iterations.");
         }
     }
 
@@ -329,6 +331,8 @@ namespace Opm {
         assert (not x.saturation().empty());
         const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
         const Opm::PhaseUsage pu = fluid_.phaseUsage();
+        // We do not handle a Water/Gas situation correctly, guard against it.
+        ASSERT (active_[ Oil]);
         if (active_[ Water ]) {
             const V sw = s.col(pu.phase_pos[ Water ]);
             vars0.push_back(sw);
@@ -568,7 +572,7 @@ namespace Opm {
             so -= sw;
             varstart += nc;
             for (int c = 0; c < nc; ++c) {
-                state.saturation()[c*np + pos] = so[c];
+                state.saturation()[c*np + pos] = sw[c];
             }
         }
         if (active_[ Gas ]) {
@@ -583,7 +587,7 @@ namespace Opm {
             }
         }
         if (active_[ Oil ]) {
-            const int pos = pu.phase_pos[ Gas ];
+            const int pos = pu.phase_pos[ Oil ];
             for (int c = 0; c < nc; ++c) {
                 state.saturation()[c*np + pos] = so[c];
             }
