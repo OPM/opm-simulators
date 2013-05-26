@@ -490,6 +490,9 @@ namespace Opm {
             const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
             const ADB well_rates = wops_.p2w * (perf_flux*perf_b);
             qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
+
+            const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
+            residual_.mass_balance[phase] += well_contrib;
         }
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
