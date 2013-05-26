@@ -42,7 +42,8 @@ namespace Opm {
         FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
-                                    const Wells&                    wells);
+                                    const Wells&                    wells,
+                                    const LinearSolverInterface&    linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -96,6 +97,7 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const Wells&                    wells_;
+        const LinearSolverInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.
@@ -132,6 +134,9 @@ namespace Opm {
         assemble(const V&             dtpv,
                  const BlackoilState& x   ,
                  const WellState&     xw  );
+
+        void solveJacobianSystem(BlackoilState& x,
+                                 WellState& xw) const;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;

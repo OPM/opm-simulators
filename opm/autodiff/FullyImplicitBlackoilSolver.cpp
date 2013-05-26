@@ -25,12 +25,14 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 
+#include <opm/core/grid.h>
+#include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
 #include <cassert>
+#include <iomanip>
 
 typedef AutoDiff::ForwardBlock<double> ADB;
 typedef ADB::V V;
@@ -139,11 +141,13 @@ namespace Opm {
     FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                 const BlackoilPropsAdInterface& fluid,
                                 const DerivedGeology&           geo  ,
-                                const Wells&                    wells)
+                                const Wells&                    wells,
+                                const LinearSolverInterface&    linsolver)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
         , wells_ (wells)
+        , linsolver_ (linsolver)
         , active_(activePhases(fluid.phaseUsage()))
         , canph_ (active2Canonical(fluid.phaseUsage()))
         , cells_ (buildAllCells(grid.number_of_cells))
@@ -169,20 +173,20 @@ namespace Opm {
             computeAccum(state, 0);
         }
 
-#if 0
-        const double atol  = 1.0e-15;
-        const double rtol  = 5.0e-10;
+        const double atol  = 1.0e-12;
+        const double rtol  = 5.0e-8;
         const int    maxit = 15;
-#endif
 
         assemble(dtpv, x, xw);
 
-#if 0
         const double r0  = residualNorm();
         int          it  = 0;
+        std::cout << "\nIteration         Residual\n"
+                  << std::setw(9) << it << std::setprecision(9)
+                  << std::setw(18) << r0 << std::endl;
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
-            solveJacobianSystem(x);
+            solveJacobianSystem(x, xw);
 
             assemble(dtpv, x, xw);
 
@@ -191,12 +195,13 @@ namespace Opm {
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
+            std::cout << std::setw(9) << it << std::setprecision(9)
+                      << std::setw(18) << r << std::endl;
         }
 
         if (resTooLarge) {
-            THROW("Failed to compute converge solution");
+            THROW("Failed to compute converged solution in " << it << " iterations.");
         }
-#endif
     }
 
 
@@ -520,6 +525,78 @@ namespace Opm {
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
     }
 
+    void FullyImplicitBlackoilSolver::solveJacobianSystem(BlackoilState& state,
+                                                          WellState& well_state) const
+    {
+        const int np = fluid_.numPhases();
+        const ADB mass_res = (np == 2) ?
+            vertcat(residual_.mass_balance[0], residual_.mass_balance[1])
+            : vertcat(vertcat(residual_.mass_balance[0], residual_.mass_balance[1]), 
+                      residual_.mass_balance[2]);
+        const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
+
+        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
+
+        V dx(V::Zero(total_residual.size()));
+        Opm::LinearSolverInterface::LinearSolverReport rep
+            = linsolver_.solve(matr.rows(), matr.nonZeros(),
+                               matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
+                               total_residual.value().data(), dx.data());
+        if (!rep.converged) {
+            THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+        }
+
+        const int nc = grid_.number_of_cells;
+        const int nw = wells_.number_of_wells;
+
+        // Pressure update.
+        const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V dp = subset(dx, Span(nc));
+        const V p = p_old - dp;
+        std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+
+        // Saturation updates.
+        const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+        int varstart = nc;
+        V so = V::Constant(nc, 1.0);
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        if (active_[ Water ]) {
+            const int pos = pu.phase_pos[ Water ];
+            const V sw_old = s_old.col(pos);
+            const V dsw = subset(dx, Span(nc, 1, varstart));
+            const V sw = sw_old - dsw;
+            so -= sw;
+            varstart += nc;
+            for (int c = 0; c < nc; ++c) {
+                state.saturation()[c*np + pos] = so[c];
+            }
+        }
+        if (active_[ Gas ]) {
+            const int pos = pu.phase_pos[ Gas ];
+            const V sg_old = s_old.col(pos);
+            const V dsg = subset(dx, Span(nc, 1, varstart));
+            const V sg = sg_old - dsg;
+            so -= sg;
+            varstart += nc;
+            for (int c = 0; c < nc; ++c) {
+                state.saturation()[c*np + pos] = sg[c];
+            }
+        }
+        if (active_[ Oil ]) {
+            const int pos = pu.phase_pos[ Gas ];
+            for (int c = 0; c < nc; ++c) {
+                state.saturation()[c*np + pos] = so[c];
+            }
+        }
+        ASSERT(varstart + nw == total_residual.size());
+
+        // Bhp update.
+        const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
+        const V dbhp = subset(dx, Span(nw, 1, varstart));
+        const V bhp = bhp_old - dbhp;
+        std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
+    }
+
     std::vector<ADB>
     FullyImplicitBlackoilSolver::computeRelPerm(const SolutionState& state) const
     {
@@ -606,6 +683,7 @@ namespace Opm {
         {
             r = std::max(r, (*b).value().matrix().norm());
         }
+        r = std::max(r, residual_.well_eq.value().matrix().norm());
 
         return r;
     }

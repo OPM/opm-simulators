@@ -96,12 +96,12 @@ main(int argc, char* argv[])
 
     boost::shared_ptr<Wells> wells = createWellConfig();
 
-    typedef Opm::FullyImplicitBlackoilSolver BOSolver;
-
     double grav[] = { 0.0, 0.0 };
     Opm::DerivedGeology geo(*g, props, grav);
 
-    BOSolver solver(*g, props, geo, *wells);
+    Opm::LinearSolverFactory linsolver(param);
+
+    Opm::FullyImplicitBlackoilSolver solver(*g, props, geo, *wells, linsolver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);

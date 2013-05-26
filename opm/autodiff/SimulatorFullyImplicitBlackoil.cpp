@@ -252,7 +252,7 @@ namespace Opm
           gravity_(gravity),
           fluid_(props_),
           geo_(grid_, fluid_, gravity_),
-          solver_(grid_, fluid_, geo_, *wells_manager.c_wells()/*, linsolver*/)
+          solver_(grid_, fluid_, geo_, *wells_manager.c_wells(), linsolver)
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),
                                param.getDefault("nl_pressure_maxiter", 10),
