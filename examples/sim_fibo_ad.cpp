@@ -104,10 +104,20 @@ main(int argc, char** argv)
         // Init state variables (saturation and pressure).
         if (param.has("init_saturation")) {
             initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
+            initBlackoilSurfvol(*grid->c_grid(), *props, state);
+            enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
+            const PhaseUsage pu = props->phaseUsage();
+            if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+                const int np = props->numPhases();
+                const int nc = grid->c_grid()->number_of_cells;
+                for (int c = 0; c < nc; ++c) {
+                    state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
+                        / state.surfacevol()[c*np + pu.phase_pos[Oil]];
+                }
+            }
         } else {
-            initStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+            initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
         }
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
     } else {
         // Grid init.
         const int nx = param.getDefault("nx", 100);
