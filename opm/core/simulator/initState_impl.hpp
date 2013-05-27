@@ -599,6 +599,29 @@ namespace Opm
     }
 
 
+    /// Initialize a blackoil state from input deck.
+    template <class Props, class State>
+    void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
+                                   const Props& props,
+                                   const EclipseGridParser& deck,
+                                   const double gravity,
+                                   State& state)
+    {
+        initStateFromDeck(grid, props, deck, gravity, state);
+        initBlackoilSurfvol(grid, props, state);
+        if (deck.hasField("RS")) {
+            const std::vector<double>& rs_deck = deck.getFloatingPointValue("RS");
+            const int num_cells = grid.number_of_cells;
+            for (int c = 0; c < num_cells; ++c) {
+                int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                state.gasoilratio()[c] = rs_deck[c_deck];
+            }
+        } else {
+            THROW("Temporarily, we require the RS field.");
+        }
+    }
+
+
 } // namespace Opm
 
 
