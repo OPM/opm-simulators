@@ -168,6 +168,7 @@ namespace Opm {
         , grav_  (gravityOperator(grid_, ops_, geo_))
         , rq_    (fluid.numPhases())
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
+                        ADB::null(),
                         ADB::null() } )
     {
     }
@@ -337,16 +338,9 @@ namespace Opm {
             }
         }
 
-        // Gas solution factor (Rs).
+        // Gas-oil ratio (Rs).
         if (active_[ Oil ] && active_[ Gas ]) {
-            const Eigen::Map<const DataBlock> z(&x.surfacevol()[0], nc, np);
-            const Opm::PhaseUsage pu = fluid_.phaseUsage();
-            const int pos_oil = pu.phase_pos[ Oil ];
-            const int pos_gas = pu.phase_pos[ Gas ];
-            // This may fail unless residual oil > 0.
-            const V rs_from_z = z.col(pos_gas) / z.col(pos_oil);
-            const V rs_max = fluidRsMax(state.pressure, cells_).value();
-            const V rs = rs_from_z.min(rs_max);
+            const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
             state.Rs = ADB::constant(rs, bpat);
         } else {
             const V Rs = V::Zero(nc, 1);
@@ -395,17 +389,9 @@ namespace Opm {
             vars0.push_back(sg);
         }
 
-        // Initial gas solution factor (Rs).
+        // Initial gas-oil ratio (Rs).
         if (active_[ Oil ] && active_[ Gas ]) {
-            const Eigen::Map<const DataBlock> z(&x.surfacevol()[0], nc, np);
-            const Opm::PhaseUsage pu = fluid_.phaseUsage();
-            const int pos_oil = pu.phase_pos[ Oil ];
-            const int pos_gas = pu.phase_pos[ Gas ];
-            // This may fail unless residual oil > 0.
-            const V rs_from_z = z.col(pos_gas) / z.col(pos_oil);
-            std::vector<int> dummy_bpat;
-            const V rs_max = fluidRsMax(ADB::constant(p, dummy_bpat), cells_).value();
-            const V rs = rs_from_z.min(rs_max);
+            const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
             vars0.push_back(rs);
         }
 
@@ -445,7 +431,7 @@ namespace Opm {
             }
         }
 
-        // Rs
+        // Rs.
         if (active_[ Oil ] && active_[ Gas ]) {
             state.Rs = vars[ nextvar++ ];
         } else {
@@ -526,16 +512,26 @@ namespace Opm {
                 + ops_.div*rq_[phase].mflux;
         }
 
+        // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
+
         // Add the extra (flux) terms to the gas mass balance equations
         // from gas dissolved in the oil phase.
-        // The extra terms in the accumulation part of the equation
+        // The extra terms in the accumulation part of the equation are already handled.
         if (active_[ Oil ] && active_[ Gas ]) {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
             const UpwindSelector<double> upwind(grid_, ops_,
                                                 rq_[po].head.value());
-            const ADB Rs = upwind.select(state.Rs);
+            const ADB rs_face = upwind.select(state.Rs);
 
-            residual_.mass_balance[ Gas ] += ops_.div * (Rs * rq_[po].mflux);
+            residual_.mass_balance[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
+
+            // Also, we have another equation: sg = 0 or rs = rsMax.
+            const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
+            const ADB sg_eq = state.saturation[pg];
+            const ADB rs_max = fluidRsMax(state.pressure, cells_);
+            const ADB rs_eq = state.Rs - rs_max;
+            Selector<double> use_rs_eq(rs_eq.value());
+            residual_.rs_or_sg_eq = use_rs_eq.select(rs_eq, sg_eq);
         }
 
         // -------- Well equation, and well contributions to the mass balance equations --------
@@ -617,10 +613,13 @@ namespace Opm {
                                                           WellState& well_state) const
     {
         const int np = fluid_.numPhases();
-        const ADB mass_res = (np == 2) ?
-            vertcat(residual_.mass_balance[0], residual_.mass_balance[1])
-            : vertcat(vertcat(residual_.mass_balance[0], residual_.mass_balance[1]), 
-                      residual_.mass_balance[2]);
+        ADB mass_res = residual_.mass_balance[0];
+        for (int phase = 1; phase < np; ++phase) {
+            mass_res = vertcat(mass_res, residual_.mass_balance[phase]);
+        }
+        if (active_[Oil] && active_[Gas]) {
+            mass_res = vertcat(mass_res, residual_.rs_or_sg_eq);
+        }
         const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
@@ -676,9 +675,18 @@ namespace Opm {
                 state.saturation()[c*np + pos] = so[c];
             }
         }
-        ASSERT(varstart + nw == total_residual.size());
+
+        // Rs update.
+        if (active_[Oil] && active_[Gas]) {
+            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V drs = subset(dx, Span(nc, 1, varstart));
+            const V rs = rs_old - drs;
+            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
+            varstart += nc;
+        }
 
         // Bhp update.
+        ASSERT(varstart + nw == total_residual.size());
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         const V dbhp = subset(dx, Span(nw, 1, varstart));
         const V bhp = bhp_old - dbhp;

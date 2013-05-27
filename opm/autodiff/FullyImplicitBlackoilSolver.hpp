@@ -49,7 +49,8 @@ namespace Opm {
         ///   state.pressure()
         ///   state.faceflux()
         ///   state.saturation()
-        ///   state.surfacevol()
+        ///   state.gasoilratio()
+        ///   wstate.bhp()
         void
         step(const double   dt    ,
              BlackoilState& state ,
@@ -114,6 +115,7 @@ namespace Opm {
         // The well_eq has size equal to the number of wells.
         struct {
             std::vector<ADB> mass_balance;
+            ADB rs_or_sg_eq; // Only used if both gas and oil present
             ADB well_eq;
         } residual_;
 
