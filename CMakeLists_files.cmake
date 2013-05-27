@@ -32,6 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/SimulatorCompressibleAd.cpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
+        opm/autodiff/BlackoilPropsAdFromDeck.cpp
 	)
 
 # originally generated with the command:
@@ -69,6 +70,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
+        opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
