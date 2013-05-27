@@ -447,7 +447,6 @@ namespace Opm
     }
 
 
-#if 0
     // ------ Rs bubble point curve ------
 
     /// Bubble point curve for Rs as function of oil pressure.
@@ -457,6 +456,7 @@ namespace Opm
     V BlackoilPropsAd::rsMax(const V& po,
                              const Cells& cells) const
     {
+        THROW("Method rsMax() not implemented.");
     }
 
     /// Bubble point curve for Rs as function of oil pressure.
@@ -466,8 +466,8 @@ namespace Opm
     ADB BlackoilPropsAd::rsMax(const ADB& po,
                                const Cells& cells) const
     {
+        THROW("Method rsMax() not implemented.");
     }
-#endif
 
     // ------ Relative permeability ------
 

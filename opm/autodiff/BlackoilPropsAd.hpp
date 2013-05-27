@@ -189,7 +189,7 @@ namespace Opm
 
 
         // ------ Rs bubble point curve ------
-#if 0
+
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -203,7 +203,7 @@ namespace Opm
         /// \return            Array of n bubble point values for Rs.
         ADB rsMax(const ADB& po,
                   const Cells& cells) const;
-#endif
+
 
         // ------ Relative permeability ------
 
