@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILPROPSAD_HEADER_INCLUDED
-#define OPM_BLACKOILPROPSAD_HEADER_INCLUDED
+#ifndef OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
+#define OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
@@ -248,4 +248,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILPROPSAD_HEADER_INCLUDED
+#endif // OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
