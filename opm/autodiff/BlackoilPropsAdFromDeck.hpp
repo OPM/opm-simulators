@@ -26,12 +26,12 @@
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
-
+#include <boost/scoped_ptr.hpp>
 
 namespace Opm
 {
 
-    /// class BlackoilPropertiesInterface;
+    class SinglePvtInterface;
 
     /// This class is intended to present a fluid interface for
     /// three-phase black-oil that is easy to use with the AD-using
@@ -47,7 +47,8 @@ namespace Opm
     public:
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
-                              const UnstructuredGrid& grid, bool init_rock=true );
+                                const UnstructuredGrid& grid,
+                                const bool init_rock = true );
 
         ////////////////////////////
         //      Rock interface    //
@@ -76,6 +77,11 @@ namespace Opm
         typedef ADB::V V;
         typedef std::vector<int> Cells;
 
+        /// \return   Number of active phases (also the number of components).
+        int numPhases() const;
+
+        /// \return   Object describing the active phases.
+        PhaseUsage phaseUsage() const;
 
         // ------ Canonical named indices for each phase ------
 
@@ -189,7 +195,7 @@ namespace Opm
 
 
         // ------ Rs bubble point curve ------
-#if 0
+
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -203,7 +209,7 @@ namespace Opm
         /// \return            Array of n bubble point values for Rs.
         ADB rsMax(const ADB& po,
                   const Cells& cells) const;
-#endif
+
 
         // ------ Relative permeability ------
 
@@ -236,10 +242,9 @@ namespace Opm
         boost::scoped_ptr<SaturationPropsInterface> satprops_;
         PhaseUsage phase_usage_;
         std::vector<std::tr1::shared_ptr<SinglePvtInterface> > props_;
-        double densities_[MaxNumPhases];
-
-
+        double densities_[BlackoilPhases::MaxNumPhases];
     };
+
 
 } // namespace Opm
 
