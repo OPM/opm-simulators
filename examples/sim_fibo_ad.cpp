@@ -43,7 +43,10 @@
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
+
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
@@ -83,6 +86,7 @@ main(int argc, char** argv)
     boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
+    boost::scoped_ptr<BlackoilPropsAdInterface> new_props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
@@ -95,6 +99,7 @@ main(int argc, char** argv)
         grid.reset(new GridManager(*deck));
         // Rock and fluid init
         props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
+        new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
@@ -129,6 +134,7 @@ main(int argc, char** argv)
         grid.reset(new GridManager(nx, ny, nz, dx, dy, dz));
         // Rock and fluid init.
         props.reset(new BlackoilPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
+        new_props.reset(new BlackoilPropsAd(*props));
         // Rock compressibility.
         rock_comp.reset(new RockCompressibility(param));
         // Gravity.
@@ -208,7 +214,7 @@ main(int argc, char** argv)
         WellsManager wells; // no wells.
         SimulatorFullyImplicitBlackoil simulator(param,
                                                  *grid->c_grid(),
-                                                 *props,
+                                                 *new_props,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
                                                  src,
@@ -263,7 +269,7 @@ main(int argc, char** argv)
             // Create and run simulator.
             SimulatorFullyImplicitBlackoil simulator(param,
                                                      *grid->c_grid(),
-                                                     *props,
+                                                     *new_props,
                                                      rock_comp->isActive() ? rock_comp.get() : 0,
                                                      wells,
                                                      src,

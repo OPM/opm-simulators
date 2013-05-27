@@ -30,7 +30,7 @@ struct FlowBoundaryConditions;
 namespace Opm
 {
     namespace parameter { class ParameterGroup; }
-    class BlackoilPropertiesInterface;
+    class BlackoilPropsAdInterface;
     class RockCompressibility;
     class WellsManager;
     class LinearSolverInterface;
@@ -69,7 +69,7 @@ namespace Opm
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
                                        const UnstructuredGrid& grid,
-                                       const BlackoilPropertiesInterface& props,
+                                       const BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
                                        const std::vector<double>& src,

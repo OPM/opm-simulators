@@ -28,7 +28,7 @@
 
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
-#include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -43,7 +43,6 @@
 
 #include <opm/core/wells/WellsManager.hpp>
 
-#include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/grid/ColumnExtract.hpp>
@@ -67,7 +66,7 @@ namespace Opm
     public:
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
-             const BlackoilPropertiesInterface& props,
+             const BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              const std::vector<double>& src,
@@ -95,7 +94,7 @@ namespace Opm
         bool use_segregation_split_;
         // Observed objects.
         const UnstructuredGrid& grid_;
-        const BlackoilPropertiesInterface& props_;
+        const BlackoilPropsAdInterface& props_;
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
@@ -103,7 +102,6 @@ namespace Opm
         const FlowBoundaryConditions* bcs_;
         const double* gravity_;
         // Solvers
-        BlackoilPropsAd fluid_;
         DerivedGeology geo_;
         FullyImplicitBlackoilSolver solver_;
         // Misc. data
@@ -115,7 +113,7 @@ namespace Opm
 
     SimulatorFullyImplicitBlackoil::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
                                                                    const UnstructuredGrid& grid,
-                                                                   const BlackoilPropertiesInterface& props,
+                                                                   const BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
                                                                    const std::vector<double>& src,
@@ -235,7 +233,7 @@ namespace Opm
     // \TODO: make CompressibleTpfa take src and bcs.
     SimulatorFullyImplicitBlackoil::Impl::Impl(const parameter::ParameterGroup& param,
                                                const UnstructuredGrid& grid,
-                                               const BlackoilPropertiesInterface& props,
+                                               const BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
                                                const std::vector<double>& src,
@@ -250,9 +248,8 @@ namespace Opm
           src_(src),
           bcs_(bcs),
           gravity_(gravity),
-          fluid_(props_),
-          geo_(grid_, fluid_, gravity_),
-          solver_(grid_, fluid_, geo_, *wells_manager.c_wells(), linsolver)
+          geo_(grid_, props_, gravity_),
+          solver_(grid_, props_, geo_, *wells_manager.c_wells(), linsolver)
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),
                                param.getDefault("nl_pressure_maxiter", 10),
@@ -349,12 +346,12 @@ namespace Opm
             SimulatorReport sreport;
 
             // Solve pressure equation.
-            if (check_well_controls_) {
-                computeFractionalFlow(props_, allcells_,
-                                      state.pressure(), state.surfacevol(), state.saturation(),
-                                      fractional_flows);
-                wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
-            }
+            // if (check_well_controls_) {
+            //     computeFractionalFlow(props_, allcells_,
+            //                           state.pressure(), state.surfacevol(), state.saturation(),
+            //                           fractional_flows);
+            //     wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
+            // }
             bool well_control_passed = !check_well_controls_;
             int well_control_iteration = 0;
             do {
