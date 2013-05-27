@@ -45,6 +45,8 @@ typedef Eigen::Array<double,
 
 
 namespace {
+
+
     std::vector<int>
     buildAllCells(const int nc)
     {
@@ -54,6 +56,8 @@ namespace {
 
         return all_cells;
     }
+
+
 
     template <class GeoProps>
     AutoDiff::ForwardBlock<double>::M
@@ -103,6 +107,8 @@ namespace {
         return G;
     }
 
+
+
     template <class PU>
     std::vector<bool>
     activePhases(const PU& pu)
@@ -116,6 +122,8 @@ namespace {
 
         return active;
     }
+
+
 
     template <class PU>
     std::vector<int>
@@ -132,7 +140,10 @@ namespace {
 
         return act2can;
     }
+
+
 } // Anonymous namespace
+
 
 
 namespace Opm {
@@ -160,6 +171,10 @@ namespace Opm {
                         ADB::null() } )
     {
     }
+
+
+
+
 
     void
     FullyImplicitBlackoilSolver::
@@ -207,6 +222,9 @@ namespace Opm {
     }
 
 
+
+
+
     FullyImplicitBlackoilSolver::ReservoirResidualQuant::ReservoirResidualQuant()
         : accum(2, ADB::null())
         , mflux(   ADB::null())
@@ -217,6 +235,9 @@ namespace Opm {
     }
 
 
+
+
+
     FullyImplicitBlackoilSolver::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
         , saturation(np, ADB::null())
@@ -224,6 +245,9 @@ namespace Opm {
         , bhp       (    ADB::null())
     {
     }
+
+
+
 
 
     FullyImplicitBlackoilSolver::
@@ -254,6 +278,9 @@ namespace Opm {
     }
 
 
+
+
+
     FullyImplicitBlackoilSolver::SolutionState
     FullyImplicitBlackoilSolver::constantState(const BlackoilState& x,
                                                const WellState&     xw)
@@ -261,10 +288,20 @@ namespace Opm {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
 
-        // The block pattern has been changed to account for wells
-        // (bhp as primary variable), and must change still further to
-        // account for Rs as primary when we add miscibility.
+        // The block pattern assumes the following primary variables:
+        //    pressure
+        //    water saturation (if water present)
+        //    gas saturation (if gas present)
+        //    gas solution factor (if both gas and oil present)
+        //    well bottom-hole pressure
+        // Note that oil is assumed to always be present, but is never
+        // a primary variable.
+        ASSERT(active_[ Oil ]);
         std::vector<int> bpat(np, nc);
+        const bool gasandoil = (active_[ Oil ] && active_[ Gas ]);
+        if (gasandoil) {
+            bpat.push_back(nc);
+        }
         bpat.push_back(xw.bhp().size());
 
         SolutionState state(np);
@@ -300,17 +337,33 @@ namespace Opm {
             }
         }
 
+        // Gas solution factor (Rs).
+        if (active_[ Oil ] && active_[ Gas ]) {
+            const Eigen::Map<const DataBlock> z(&x.surfacevol()[0], nc, np);
+            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const int pos_oil = pu.phase_pos[ Oil ];
+            const int pos_gas = pu.phase_pos[ Gas ];
+            // This may fail unless residual oil > 0.
+            const V rs_from_z = z.col(pos_gas) / z.col(pos_oil);
+            const V rs_max = fluidRsMax(state.pressure, cells_).value();
+            const V rs = rs_from_z.min(rs_max);
+            state.Rs = ADB::constant(rs, bpat);
+        } else {
+            const V Rs = V::Zero(nc, 1);
+            state.Rs = ADB::constant(Rs, bpat);
+        }
+
         // Well bottom-hole pressure.
         assert (not xw.bhp().empty());
         const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
         state.bhp = ADB::constant(bhp, bpat);
 
-        // Ignore miscibility effects (no dissolved gas) for now!
-        const V Rs = V::Zero(nc, 1);
-        state.Rs = ADB::constant(Rs, bpat);
-
         return state;
     }
+
+
+
+
 
     FullyImplicitBlackoilSolver::SolutionState
     FullyImplicitBlackoilSolver::variableState(const BlackoilState& x,
@@ -320,7 +373,7 @@ namespace Opm {
         const int np = x.numPhases();
 
         std::vector<V> vars0;
-        vars0.reserve(np + 1);
+        vars0.reserve(active_[Oil] && active_[Gas] ? np + 2 : np + 1); // Rs is primary if oil and gas present.
 
         // Initial pressure.
         assert (not x.pressure().empty());
@@ -342,6 +395,20 @@ namespace Opm {
             vars0.push_back(sg);
         }
 
+        // Initial gas solution factor (Rs).
+        if (active_[ Oil ] && active_[ Gas ]) {
+            const Eigen::Map<const DataBlock> z(&x.surfacevol()[0], nc, np);
+            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const int pos_oil = pu.phase_pos[ Oil ];
+            const int pos_gas = pu.phase_pos[ Gas ];
+            // This may fail unless residual oil > 0.
+            const V rs_from_z = z.col(pos_gas) / z.col(pos_oil);
+            std::vector<int> dummy_bpat;
+            const V rs_max = fluidRsMax(ADB::constant(p, dummy_bpat), cells_).value();
+            const V rs = rs_from_z.min(rs_max);
+            vars0.push_back(rs);
+        }
+
         // Initial well bottom-hole pressure.
         assert (not xw.bhp().empty());
         const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
@@ -352,22 +419,22 @@ namespace Opm {
         SolutionState state(np);
 
         // Pressure.
-        state.pressure = vars[0];
+        int nextvar = 0;
+        state.pressure = vars[ nextvar++ ];
 
         // Saturation.
         const std::vector<int>& bpat = vars[0].blockPattern();
         {
             ADB so  = ADB::constant(V::Ones(nc, 1), bpat);
-            int off = 1;    // First saturation variable at offset 1.
 
             if (active_[ Water ]) {
-                ADB& sw = vars[ off++ ];
+                ADB& sw = vars[ nextvar++ ];
                 state.saturation[ pu.phase_pos[ Water ] ] = sw;
 
                 so = so - sw;
             }
             if (active_[ Gas ]) {
-                ADB& sg = vars[ off++ ];
+                ADB& sg = vars[ nextvar++ ];
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
 
                 so = so - sg;
@@ -378,15 +445,24 @@ namespace Opm {
             }
         }
 
-        // Bhp.
-        state.bhp = vars[np];
+        // Rs
+        if (active_[ Oil ] && active_[ Gas ]) {
+            state.Rs = vars[ nextvar++ ];
+        } else {
+            state.Rs = ADB::constant(V::Zero(nc), bpat);
+        }
 
-        // Ignore miscibility effects (no dissolved gas) for now!
-        V Rs = V::Zero(nc, 1);
-        state.Rs = ADB::constant(Rs, bpat);
+        // Bhp.
+        state.bhp = vars[ nextvar ++];
+
+        ASSERT(nextvar == int(vars.size()));
 
         return state;
     }
+
+
+
+
 
     void
     FullyImplicitBlackoilSolver::computeAccum(const SolutionState& state,
@@ -414,6 +490,10 @@ namespace Opm {
             rq_[pg].accum[aix] += state.Rs * rq_[po].accum[aix];
         }
     }
+
+
+
+
 
     void
     FullyImplicitBlackoilSolver::
@@ -529,6 +609,10 @@ namespace Opm {
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
     }
 
+
+
+
+
     void FullyImplicitBlackoilSolver::solveJacobianSystem(BlackoilState& state,
                                                           WellState& well_state) const
     {
@@ -601,6 +685,10 @@ namespace Opm {
         std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
     }
 
+
+
+
+
     std::vector<ADB>
     FullyImplicitBlackoilSolver::computeRelPerm(const SolutionState& state) const
     {
@@ -624,6 +712,10 @@ namespace Opm {
 
         return fluid_.relperm(sw, so, sg, cells_);
     }
+
+
+
+
 
     std::vector<ADB>
     FullyImplicitBlackoilSolver::computeRelPermWells(const SolutionState& state,
@@ -652,6 +744,10 @@ namespace Opm {
         return fluid_.relperm(sw, so, sg, well_cells);
     }
 
+
+
+
+
     void
     FullyImplicitBlackoilSolver::computeMassFlux(const int               actph ,
                                                  const V&                transi,
@@ -676,6 +772,10 @@ namespace Opm {
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
     }
 
+
+
+
+
     double
     FullyImplicitBlackoilSolver::residualNorm() const
     {
@@ -691,6 +791,10 @@ namespace Opm {
 
         return r;
     }
+
+
+
+
 
     ADB
     FullyImplicitBlackoilSolver::fluidViscosity(const int               phase,
@@ -711,6 +815,10 @@ namespace Opm {
         }
     }
 
+
+
+
+
     ADB
     FullyImplicitBlackoilSolver::fluidReciprocFVF(const int               phase,
                                                   const ADB&              p    ,
@@ -730,6 +838,10 @@ namespace Opm {
         }
     }
 
+
+
+
+
     ADB
     FullyImplicitBlackoilSolver::fluidDensity(const int               phase,
                                               const ADB&              p    ,
@@ -740,6 +852,18 @@ namespace Opm {
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
     }
+
+
+
+
+
+    ADB
+    FullyImplicitBlackoilSolver::fluidRsMax(const ADB&              p,
+                                            const std::vector<int>& cells) const
+    {
+        return fluid_.rsMax(p, cells);
+    }
+
 
 } // namespace Opm
 

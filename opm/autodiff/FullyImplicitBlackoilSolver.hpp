@@ -169,6 +169,10 @@ namespace Opm {
         fluidDensity(const int               phase,
                      const ADB&              p    ,
                      const std::vector<int>& cells) const;
+
+        ADB
+        fluidRsMax(const ADB&              p,
+                   const std::vector<int>& cells) const;
     };
 } // namespace Opm
 
