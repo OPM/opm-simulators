@@ -24,7 +24,6 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
-
 // -------------------- class HelperOps --------------------
 
 /// Contains vectors and sparse matrices that represent subsets or
@@ -99,6 +98,7 @@ struct HelperOps
 
 #if !defined(NDEBUG)
 #include <cstdio>
+#include <string>
 
 namespace {
     void
@@ -129,6 +129,39 @@ namespace {
         fp = std::fopen(fn, "w");
         if (fp != 0) {
             printSparseMatrix(A, fp);
+        }
+
+        std::fclose(fp);
+    }
+
+    void
+    writeAsMATLAB(const std::vector< Eigen::SparseMatrix<double> >& vA,
+                  std::FILE*        fp   ,
+                  const char* const vname)
+    {
+        const int n = static_cast<int>(vA.size());
+
+        fprintf(fp, "%s = cell([1, %d]);\n\n", vname, n);
+
+        for (int i = 0; i < n; ++i) {
+            fprintf(fp, "%s{%d} = spconvert([\n", vname, i + 1);
+            printSparseMatrix(vA[i], fp);
+            const int rows = vA[i].rows();
+            const int cols = vA[i].cols();
+            fprintf(fp, "%d %d 0.0]);\n\n", rows, cols);
+        }
+    }
+
+    void
+    writeAsMATLAB(const std::vector< Eigen::SparseMatrix<double> >& vA,
+                  const char* const fn   ,
+                  const char* const vname)
+    {
+        std::FILE* fp;
+
+        fp = std::fopen(fn, "w");
+        if (fp != 0) {
+            writeAsMATLAB(vA, fp, vname);
         }
 
         std::fclose(fp);
