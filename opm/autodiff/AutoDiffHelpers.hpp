@@ -99,9 +99,7 @@ struct HelperOps
 
 #if !defined(NDEBUG)
 #include <cstdio>
-#endif  // !defined(NDEBUG)
 
-#if !defined(NDEBUG)
 namespace {
     void
     printSparseMatrix(const Eigen::SparseMatrix<double>& A,
