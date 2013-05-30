@@ -46,7 +46,8 @@ namespace Opm
                     if ((ctrl->current < 0) || // SHUT
                         (ctrl->type[ctrl->current] != BHP)) {
                         const int cell = wells->well_cells[wells->well_connpos[w]];
-                        bhp_[w] = state.pressure()[cell];
+                        const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
+                        bhp_[w] = safety_factor*state.pressure()[cell];
                     }
                     else {
                         bhp_[w] = ctrl->target[ctrl->current];
