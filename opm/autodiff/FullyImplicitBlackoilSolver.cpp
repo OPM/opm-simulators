@@ -32,6 +32,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 
 #include <cassert>
+#include <cmath>
 #include <iomanip>
 
 
@@ -203,7 +204,9 @@ namespace Opm {
                   << std::setw(18) << r0 << std::endl;
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
-            solveJacobianSystem(x, xw);
+            const V dx = solveJacobianSystem();
+
+            updateState(dx, x, xw);
 
             assemble(dtpv, x, xw);
 
@@ -458,13 +461,16 @@ namespace Opm {
 
         const ADB&              press = state.pressure;
         const std::vector<ADB>& sat   = state.saturation;
+        const ADB&              rs    = state.Rs;
 
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, press, cells_);
+                rq_[pos].b = fluidReciprocFVF(phase, press, rs, cells_);
                 rq_[pos].accum[aix] = rq_[pos].b * sat[pos];
+                // std::cout << "rq_[" << pos << "].b:\n" << rq_[pos].b;
+                // std::cout << "rq_[" << pos << "].accum[" << aix << "]:\n" << rq_[pos].accum[aix];
             }
         }
 
@@ -506,10 +512,16 @@ namespace Opm {
         const std::vector<ADB> kr = computeRelPerm(state);
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             computeMassFlux(phase, transi, kr, state);
+            // std::cout << "===== kr[" << phase << "] = \n" << std::endl;
+            // std::cout << kr[phase];
+            // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
+            // std::cout << rq_[phase].mflux;
 
             residual_.mass_balance[ phase ] =
                 dtpv*(rq_[phase].accum[1] - rq_[phase].accum[0])
                 + ops_.div*rq_[phase].mflux;
+
+            // std::cout << residual_.mass_balance[phase];
         }
 
         // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
@@ -560,15 +572,18 @@ namespace Opm {
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
         ADB qs = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
+        // We can safely use a dummy rs here (for well calculations)
+        // as long as we do not inject oil.
+        const ADB rs_perfwell = ADB::constant(V::Zero(nperf), state.bhp.blockPattern());
         const std::vector<ADB> well_kr = computeRelPermWells(state, well_s, well_cells);
         for (int phase = 0; phase < np; ++phase) {
             const ADB& cell_b = rq_[phase].b;
-            const ADB well_b = fluidReciprocFVF(canph_[phase], p_perfwell, well_cells);
+            const ADB well_b = fluidReciprocFVF(canph_[phase], p_perfwell, rs_perfwell, well_cells);
             const ADB perf_b = cell_to_well_selector.select(subset(cell_b, well_cells), well_b);
 
             const ADB& cell_mob = rq_[phase].mob;
 
-            const ADB well_mu = fluidViscosity(canph_[phase], p_perfwell, well_cells);
+            const ADB well_mu = fluidViscosity(canph_[phase], p_perfwell, rs_perfwell, well_cells);
             const ADB well_mob = well_kr[phase] / well_mu;
             const ADB perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
 
@@ -609,8 +624,7 @@ namespace Opm {
 
 
 
-    void FullyImplicitBlackoilSolver::solveJacobianSystem(BlackoilState& state,
-                                                          WellState& well_state) const
+    V FullyImplicitBlackoilSolver::solveJacobianSystem() const
     {
         const int np = fluid_.numPhases();
         ADB mass_res = residual_.mass_balance[0];
@@ -621,6 +635,7 @@ namespace Opm {
             mass_res = vertcat(mass_res, residual_.rs_or_sg_eq);
         }
         const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
+        // std::cout << total_residual;
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
 
@@ -632,28 +647,81 @@ namespace Opm {
         if (!rep.converged) {
             THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
+        return dx;
+    }
 
+
+
+
+
+    namespace {
+        struct Chop01 {
+            double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
+        };
+    }
+
+
+
+
+
+    void FullyImplicitBlackoilSolver::updateState(const V& dx,
+                                                  BlackoilState& state,
+                                                  WellState& well_state) const
+    {
+        const int np = fluid_.numPhases();
         const int nc = grid_.number_of_cells;
         const int nw = wells_.number_of_wells;
+        const V null;
+        ASSERT(null.size() == 0);
+        const V zero = V::Zero(nc);
+        const V one = V::Constant(nc, 1.0);
+
+        // Extract parts of dx corresponding to each part.
+        const V dp = subset(dx, Span(nc));
+        int varstart = nc;
+        const V dsw = active_[Water] ? subset(dx, Span(nc, 1, varstart)) : null;
+        varstart += dsw.size();
+        const V dsg = active_[Gas] ? subset(dx, Span(nc, 1, varstart)) : null;
+        varstart += dsg.size();
+        const V drs = (active_[Water] && active_[Gas]) ? subset(dx, Span(nc, 1, varstart)) : null;
+        varstart += drs.size();
+        const V dbhp = subset(dx, Span(nw, 1, varstart));
+        varstart += dbhp.size();
+        ASSERT(varstart == dx.size());
 
         // Pressure update.
+        const double dpmaxrel = 0.8;
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-        const V dp = subset(dx, Span(nc));
-        const V p = p_old - dp;
+        const V absdpmax = dpmaxrel*p_old.abs();
+        const V dpsign = dp/dp.abs();
+        const V dp_limited = dpsign * dp.abs().max(absdpmax);
+        const V p = (p_old - dp_limited).max(zero);
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
+        // Rs update. Moved before the saturation update because it is
+        // needed there.
+        if (active_[Oil] && active_[Gas]) {
+            const double drsmaxrel = 0.8;
+            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V absdrsmax = drsmaxrel*rs_old.abs();
+            const V drssign = drs/drs.abs();
+            const V drs_limited = drssign * drs.abs().min(absdrsmax);
+            const V rs = rs_old - drs_limited;
+            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
+        }
+
         // Saturation updates.
+        const double dsmax = 0.3;
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-        int varstart = nc;
-        V so = V::Constant(nc, 1.0);
+        V so = one;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         if (active_[ Water ]) {
             const int pos = pu.phase_pos[ Water ];
             const V sw_old = s_old.col(pos);
-            const V dsw = subset(dx, Span(nc, 1, varstart));
-            const V sw = sw_old - dsw;
+            const V dswsign = dsw/dsw.abs();
+            const V dsw_limited = dswsign * dsw.abs().min(dsmax);
+            const V sw = (sw_old - dsw_limited).unaryExpr(Chop01());
             so -= sw;
-            varstart += nc;
             for (int c = 0; c < nc; ++c) {
                 state.saturation()[c*np + pos] = sw[c];
             }
@@ -661,10 +729,48 @@ namespace Opm {
         if (active_[ Gas ]) {
             const int pos = pu.phase_pos[ Gas ];
             const V sg_old = s_old.col(pos);
-            const V dsg = subset(dx, Span(nc, 1, varstart));
-            const V sg = sg_old - dsg;
+            const V dsgsign = dsg/dsg.abs();
+            const V dsg_limited = dsgsign * dsg.abs().min(dsmax);
+            V sg = sg_old - dsg_limited;
+            if (active_[ Oil ]) {
+                // Appleyard chop process.
+                const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+                const double above_epsilon = 2.0*epsilon;
+                const double rs_adjust = 1.0;
+                auto sat2usat = (sg_old > 0.0) && (sg <= 0.0);
+                Eigen::Map<V> rs(&state.gasoilratio()[0], nc);
+                const V rs_sat = fluidRsMax(rs, cells_);
+                auto over_saturated = ((sg > 0) || (rs > rs_sat*rs_adjust)) && (sat2usat == false);
+                auto usat2sat = (sg_old < epsilon) && over_saturated;
+                auto zerosg = (sat2usat && sg_old <= above_epsilon);
+                auto epssg = (sat2usat && sg_old > epsilon);
+                // With no simple support for Matlab-style statements below,
+                // we use an explicit for loop.
+                // sg(zerosg) = 0.0;
+                // sg(epssg) = epsilon;
+                // sg(usat2sat) = above_epsilon;
+                // rs(sg > 0) = rs_sat(sg > 0);
+                // rs(rs > rs_sat*rs_adjust) = rs_sat(rs > rs_sat*rs_adjust);
+                for (int c = 0; c < nc; ++c) {
+                    if (zerosg[c]) {
+                        sg[c] = 0.0;
+                    }
+                    if (epssg[c]) {
+                        sg[c] = epsilon;
+                    }
+                    if (usat2sat[c]) {
+                        sg[c] = above_epsilon;
+                    }
+                    if (sg[c] > 0.0) {
+                        rs[c] = rs_sat[c];
+                    }
+                    if (rs[c] > rs_sat[c]*rs_adjust) {
+                        rs[c] = rs_sat[c];
+                    }
+                }
+            }
+            sg.unaryExpr(Chop01());
             so -= sg;
-            varstart += nc;
             for (int c = 0; c < nc; ++c) {
                 state.saturation()[c*np + pos] = sg[c];
             }
@@ -676,21 +782,11 @@ namespace Opm {
             }
         }
 
-        // Rs update.
-        if (active_[Oil] && active_[Gas]) {
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
-            const V drs = subset(dx, Span(nc, 1, varstart));
-            const V rs = rs_old - drs;
-            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
-            varstart += nc;
-        }
-
         // Bhp update.
-        ASSERT(varstart + nw == total_residual.size());
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-        const V dbhp = subset(dx, Span(nw, 1, varstart));
         const V bhp = bhp_old - dbhp;
         std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
+
     }
 
 
@@ -763,11 +859,11 @@ namespace Opm {
                                                  const SolutionState&    state )
     {
         const int phase = canph_[ actph ];
-        const ADB mu    = fluidViscosity(phase, state.pressure, cells_);
+        const ADB mu    = fluidViscosity(phase, state.pressure, state.Rs, cells_);
 
         rq_[ actph ].mob = kr[ phase ] / mu;
 
-        const ADB rho   = fluidDensity(phase, state.pressure, cells_);
+        const ADB rho   = fluidDensity(phase, state.pressure, state.Rs, cells_);
         const ADB gflux = grav_ * rho;
 
         ADB& head = rq_[ actph ].head;
@@ -807,14 +903,14 @@ namespace Opm {
     ADB
     FullyImplicitBlackoilSolver::fluidViscosity(const int               phase,
                                                 const ADB&              p    ,
+                                                const ADB&              rs   ,
                                                 const std::vector<int>& cells) const
     {
         switch (phase) {
         case Water:
             return fluid_.muWat(p, cells);
         case Oil: {
-            ADB dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.muOil(p, dummy_rs, cells);
+            return fluid_.muOil(p, rs, cells);
         }
         case Gas:
             return fluid_.muGas(p, cells);
@@ -830,14 +926,14 @@ namespace Opm {
     ADB
     FullyImplicitBlackoilSolver::fluidReciprocFVF(const int               phase,
                                                   const ADB&              p    ,
+                                                  const ADB&              rs   ,
                                                   const std::vector<int>& cells) const
     {
         switch (phase) {
         case Water:
             return fluid_.bWat(p, cells);
         case Oil: {
-            ADB dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.bOil(p, dummy_rs, cells);
+            return fluid_.bOil(p, rs, cells);
         }
         case Gas:
             return fluid_.bGas(p, cells);
@@ -853,12 +949,24 @@ namespace Opm {
     ADB
     FullyImplicitBlackoilSolver::fluidDensity(const int               phase,
                                               const ADB&              p    ,
+                                              const ADB&              rs   ,
                                               const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b   = fluidReciprocFVF(phase, p, cells);
+        ADB b   = fluidReciprocFVF(phase, p, rs, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
+    }
+
+
+
+
+
+    V
+    FullyImplicitBlackoilSolver::fluidRsMax(const V&                p,
+                                            const std::vector<int>& cells) const
+    {
+        return fluid_.rsMax(p, cells);
     }
 
 

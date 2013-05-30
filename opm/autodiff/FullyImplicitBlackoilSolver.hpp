@@ -137,8 +137,11 @@ namespace Opm {
                  const BlackoilState& x   ,
                  const WellState&     xw  );
 
-        void solveJacobianSystem(BlackoilState& x,
-                                 WellState& xw) const;
+        V solveJacobianSystem() const;
+
+        void updateState(const V& dx,
+                         BlackoilState& state,
+                         WellState& well_state) const;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
@@ -160,17 +163,24 @@ namespace Opm {
         ADB
         fluidViscosity(const int               phase,
                        const ADB&              p    ,
+                       const ADB&              rs   ,
                        const std::vector<int>& cells) const;
 
         ADB
         fluidReciprocFVF(const int               phase,
                          const ADB&              p    ,
+                         const ADB&              rs   ,
                          const std::vector<int>& cells) const;
 
         ADB
         fluidDensity(const int               phase,
                      const ADB&              p    ,
+                     const ADB&              rs   ,
                      const std::vector<int>& cells) const;
+
+        V
+        fluidRsMax(const V&                p,
+                   const std::vector<int>& cells) const;
 
         ADB
         fluidRsMax(const ADB&              p,
