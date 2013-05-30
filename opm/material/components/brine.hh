@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::Brine
  */
-#ifndef EWOMS_BRINE_HH
-#define EWOMS_BRINE_HH
+#ifndef OPM_BRINE_HH
+#define OPM_BRINE_HH
 
 #include <opm/material/components/component.hh>
 

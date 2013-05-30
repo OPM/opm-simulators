@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::EffToAbsLawParams
  */
-#ifndef EWOMS_EFF_TO_ABS_LAW_PARAMS_HH
-#define EWOMS_EFF_TO_ABS_LAW_PARAMS_HH
+#ifndef OPM_EFF_TO_ABS_LAW_PARAMS_HH
+#define OPM_EFF_TO_ABS_LAW_PARAMS_HH
 
 namespace Opm {
 /*!

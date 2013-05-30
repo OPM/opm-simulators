@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::LinearMaterial
  */
-#ifndef EWOMS_LINEAR_MATERIAL_HH
-#define EWOMS_LINEAR_MATERIAL_HH
+#ifndef OPM_LINEAR_MATERIAL_HH
+#define OPM_LINEAR_MATERIAL_HH
 
 #include "linearmaterialparams.hh"
 

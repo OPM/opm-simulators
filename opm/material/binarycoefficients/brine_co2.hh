@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::BinaryCoeff::Brine_CO2
  */
-#ifndef EWOMS_BINARY_COEFF_BRINE_CO2_HH
-#define EWOMS_BINARY_COEFF_BRINE_CO2_HH
+#ifndef OPM_BINARY_COEFF_BRINE_CO2_HH
+#define OPM_BINARY_COEFF_BRINE_CO2_HH
 
 #include <opm/material/components/brine.hh>
 #include <opm/material/components/h2o.hh>

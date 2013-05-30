@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::LNAPL
  */
-#ifndef EWOMS_LNAPL_HH
-#define EWOMS_LNAPL_HH
+#ifndef OPM_LNAPL_HH
+#define OPM_LNAPL_HH
 
 #include "component.hh"
 

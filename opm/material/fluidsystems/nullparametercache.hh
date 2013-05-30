@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullParameterCache
  */
-#ifndef EWOMS_NULL_PARAMETER_CACHE_HH
-#define EWOMS_NULL_PARAMETER_CACHE_HH
+#ifndef OPM_NULL_PARAMETER_CACHE_HH
+#define OPM_NULL_PARAMETER_CACHE_HH
 
 #include "parametercachebase.hh"
 

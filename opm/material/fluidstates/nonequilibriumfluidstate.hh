@@ -23,8 +23,8 @@
  *        multi-phase, multi-component fluid system _not_ assuming
  *        thermodynamic equilibrium.
  */
-#ifndef EWOMS_NON_EQUILIBRIUM_FLUID_STATE_HH
-#define EWOMS_NON_EQUILIBRIUM_FLUID_STATE_HH
+#ifndef OPM_NON_EQUILIBRIUM_FLUID_STATE_HH
+#define OPM_NON_EQUILIBRIUM_FLUID_STATE_HH
 
 #include "modularfluidstate.hh"
 

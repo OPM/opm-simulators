@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::Air_Xylene
  */
-#ifndef EWOMS_BINARY_COEFF_AIR_XYLENE_HH
-#define EWOMS_BINARY_COEFF_AIR_XYLENE_HH
+#ifndef OPM_BINARY_COEFF_AIR_XYLENE_HH
+#define OPM_BINARY_COEFF_AIR_XYLENE_HH
 
 #include <opm/material/components/air.hh>
 #include <opm/material/components/xylene.hh>

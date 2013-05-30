@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::Somerton
  */
-#ifndef EWOMS_SOMERTON_HH
-#define EWOMS_SOMERTON_HH
+#ifndef OPM_SOMERTON_HH
+#define OPM_SOMERTON_HH
 
 #include "somertonparams.hh"
 

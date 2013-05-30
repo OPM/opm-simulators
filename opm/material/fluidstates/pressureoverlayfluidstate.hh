@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::PressureOverlayFluidState
  */
-#ifndef EWOMS_PRESSURE_OVERLAY_FLUID_STATE_HH
-#define EWOMS_PRESSURE_OVERLAY_FLUID_STATE_HH
+#ifndef OPM_PRESSURE_OVERLAY_FLUID_STATE_HH
+#define OPM_PRESSURE_OVERLAY_FLUID_STATE_HH
 
 #include <opm/common/valgrind.hh>
 

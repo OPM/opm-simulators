@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::FluidSystems::BlackOil
  */
-#ifndef EWOMS_BLACK_OIL_FLUID_SYSTEM_HH
-#define EWOMS_BLACK_OIL_FLUID_SYSTEM_HH
+#ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HH
+#define OPM_BLACK_OIL_FLUID_SYSTEM_HH
 
 #include <opm/common/exceptions.hh>
 #include <opm/common/spline.hh>

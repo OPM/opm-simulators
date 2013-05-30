@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::H2O_Xylene
  */
-#ifndef EWOMS_BINARY_COEFF_H2O_XYLENE_HH
-#define EWOMS_BINARY_COEFF_H2O_XYLENE_HH
+#ifndef OPM_BINARY_COEFF_H2O_XYLENE_HH
+#define OPM_BINARY_COEFF_H2O_XYLENE_HH
 
 #include <opm/material/components/h2o.hh>
 #include <opm/material/components/xylene.hh>
@@ -52,9 +52,9 @@ public:
         // after Sanders
         Scalar sanderH = 1.5e-1;    //[M/atm]
         //conversion to our Henry definition
-        Scalar ewomsH = sanderH / 101.325; // has now [(mol/m^3)/Pa]
-        ewomsH *= 18.02e-6;  //multiplied by molar volume of reference phase = water
-        return 1.0/ewomsH; // [Pa]
+        Scalar opmH = sanderH / 101.325; // has now [(mol/m^3)/Pa]
+        opmH *= 18.02e-6;  //multiplied by molar volume of reference phase = water
+        return 1.0/opmH; // [Pa]
     }
 
     /*!

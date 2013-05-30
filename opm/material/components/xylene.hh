@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::Xylene
  */
-#ifndef EWOMS_XYLENE_HH
-#define EWOMS_XYLENE_HH
+#ifndef OPM_XYLENE_HH
+#define OPM_XYLENE_HH
 
 #include <cmath>
 #include <opm/material/idealgas.hh>

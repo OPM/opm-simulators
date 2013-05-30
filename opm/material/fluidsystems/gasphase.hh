@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::GasPhase
  */
-#ifndef EWOMS_GAS_PHASE_HH
-#define EWOMS_GAS_PHASE_HH
+#ifndef OPM_GAS_PHASE_HH
+#define OPM_GAS_PHASE_HH
 
 namespace Opm {
 

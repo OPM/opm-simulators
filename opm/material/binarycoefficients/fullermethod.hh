@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::fullerMethod
  */
-#ifndef EWOMS_FULLERMETHOD_HH
-#define EWOMS_FULLERMETHOD_HH
+#ifndef OPM_FULLERMETHOD_HH
+#define OPM_FULLERMETHOD_HH
 
 #include <opm/common/math.hh>
 

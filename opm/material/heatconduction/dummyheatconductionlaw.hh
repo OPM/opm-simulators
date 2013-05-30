@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::DummyHeatConductionLaw
  */
-#ifndef EWOMS_DUMMY_HEATCONDUCTION_LAW_HH
-#define EWOMS_DUMMY_HEATCONDUCTION_LAW_HH
+#ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HH
+#define OPM_DUMMY_HEATCONDUCTION_LAW_HH
 
 #include <dune/common/exceptions.hh>
 

@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullComponent
  */
-#ifndef EWOMS_NULL_COMPONENT_HH
-#define EWOMS_NULL_COMPONENT_HH
+#ifndef OPM_NULL_COMPONENT_HH
+#define OPM_NULL_COMPONENT_HH
 
 #include "component.hh"
 

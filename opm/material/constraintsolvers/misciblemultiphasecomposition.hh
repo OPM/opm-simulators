@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::MiscibleMultiPhaseComposition
  */
-#ifndef EWOMS_MISCIBLE_MULTIPHASE_COMPOSITION_HH
-#define EWOMS_MISCIBLE_MULTIPHASE_COMPOSITION_HH
+#ifndef OPM_MISCIBLE_MULTIPHASE_COMPOSITION_HH
+#define OPM_MISCIBLE_MULTIPHASE_COMPOSITION_HH
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>

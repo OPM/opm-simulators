@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ParkerLenhard
  */
-#ifndef EWOMS_PARKER_LENHARD_HH
-#define EWOMS_PARKER_LENHARD_HH
+#ifndef OPM_PARKER_LENHARD_HH
+#define OPM_PARKER_LENHARD_HH
 
 #include "parkerlenhardparams.hh"
 

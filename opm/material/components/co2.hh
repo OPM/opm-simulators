@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::CO2
  */
-#ifndef EWOMS_CO2_HH
-#define EWOMS_CO2_HH
+#ifndef OPM_CO2_HH
+#define OPM_CO2_HH
 
 #include <opm/common/exceptions.hh>
 #include <opm/material/components/component.hh>

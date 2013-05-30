@@ -21,8 +21,8 @@
  *
  * \brief The IAPWS formulation of Henry coefficients in water.
  */
-#ifndef EWOMS_HENRY_IAPWS_HH
-#define EWOMS_HENRY_IAPWS_HH
+#ifndef OPM_HENRY_IAPWS_HH
+#define OPM_HENRY_IAPWS_HH
 
 #include <opm/material/components/h2o.hh>
 
@@ -81,4 +81,4 @@ inline Scalar henryIAPWS(Scalar E,
 }
 }
 
-#endif // EWOMS_HENRY_IAPWS_HH
+#endif // OPM_HENRY_IAPWS_HH

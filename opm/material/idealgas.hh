@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::IdealGas
  */
-#ifndef EWOMS_IDEAL_GAS_HH
-#define EWOMS_IDEAL_GAS_HH
+#ifndef OPM_IDEAL_GAS_HH
+#define OPM_IDEAL_GAS_HH
 
 #include <opm/material/constants.hh>
 

@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::ParkerVanGen3PParams
  */
-#ifndef EWOMS_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
-#define EWOMS_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
+#ifndef OPM_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
+#define OPM_3P_PARKER_VAN_GENUCHTEN_PARAMS_HH
 
 #include <dune/common/fvector.hh>
 

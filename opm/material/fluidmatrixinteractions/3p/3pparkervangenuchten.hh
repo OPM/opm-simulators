@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::ThreePParkerVanGenuchten
  */
-#ifndef EWOMS_3P_PARKER_VAN_GENUCHTEN_HH
-#define EWOMS_3P_PARKER_VAN_GENUCHTEN_HH
+#ifndef OPM_3P_PARKER_VAN_GENUCHTEN_HH
+#define OPM_3P_PARKER_VAN_GENUCHTEN_HH
 
 #include "3pparkervangenuchtenparams.hh"
 
@@ -61,8 +61,7 @@ public:
           Sw = wetting phase saturation, or,
           sum of wetting phase saturations
           alpha : VanGenuchten-alpha
-          this function is just copied from MUFTE/pml/constrel3p3cni.c
-          that is why variable names do not yet fulfill eWoms rules, TODO Change */
+          this function is copied from MUFTE/pml/constrel3p3cni.c */
 
         Scalar r,Se,x,vg_m;
         Scalar pc,pc_prime,Se_regu;
@@ -105,8 +104,7 @@ public:
           Sw = wetting phase saturation, or,
           sum of wetting phase saturations
           alpha : VanGenuchten-alpha
-          this function is just copied from MUFTE/pml/constrel3p3cni.c
-          that is why variable names do not yet fulfill eWoms rules, TODO Change */
+          this function is just copied from MUFTE/pml/constrel3p3cni.c */
 
         Scalar r,Se,x,vg_m;
         Scalar pc,pc_prime,Se_regu;
@@ -148,8 +146,7 @@ public:
         /*
           St = sum of wetting (liquid) phase saturations
           alpha : VanGenuchten-alpha
-          this function is just copied from MUFTE/pml/constrel3p3cni.c
-          that is why variable names do not yet fulfill eWoms rules, TODO Change */
+          this function is just copied from MUFTE/pml/constrel3p3cni.c */
 
         Scalar r,Se,x,vg_m;
         Scalar pc,pc_prime,Se_regu;

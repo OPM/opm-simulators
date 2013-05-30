@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::FluidSystems::H2OAir
  */
-#ifndef EWOMS_H2O_AIR_SYSTEM_HH
-#define EWOMS_H2O_AIR_SYSTEM_HH
+#ifndef OPM_H2O_AIR_SYSTEM_HH
+#define OPM_H2O_AIR_SYSTEM_HH
 
 #include "basefluidsystem.hh"
 #include "nullparametercache.hh"

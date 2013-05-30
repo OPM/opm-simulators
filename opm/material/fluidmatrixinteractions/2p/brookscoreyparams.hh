@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BrooksCoreyParams
  */
-#ifndef EWOMS_BROOKS_COREY_PARAMS_HH
-#define EWOMS_BROOKS_COREY_PARAMS_HH
+#ifndef OPM_BROOKS_COREY_PARAMS_HH
+#define OPM_BROOKS_COREY_PARAMS_HH
 
 #include <opm/common/valgrind.hh>
 

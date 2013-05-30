@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::VanGenuchten
  */
-#ifndef EWOMS_VAN_GENUCHTEN_HH
-#define EWOMS_VAN_GENUCHTEN_HH
+#ifndef OPM_VAN_GENUCHTEN_HH
+#define OPM_VAN_GENUCHTEN_HH
 
 #include "vangenuchtenparams.hh"
 

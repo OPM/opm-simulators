@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::TemperatureOverlayFluidState
  */
-#ifndef EWOMS_TEMPERATURE_OVERLAY_FLUID_STATE_HH
-#define EWOMS_TEMPERATURE_OVERLAY_FLUID_STATE_HH
+#ifndef OPM_TEMPERATURE_OVERLAY_FLUID_STATE_HH
+#define OPM_TEMPERATURE_OVERLAY_FLUID_STATE_HH
 
 #include <opm/common/valgrind.hh>
 

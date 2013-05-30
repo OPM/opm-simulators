@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::FluidHeatConduction
  */
-#ifndef EWOMS_FLUID_HEAT_CONDUCTION_HH
-#define EWOMS_FLUID_HEAT_CONDUCTION_HH
+#ifndef OPM_FLUID_HEAT_CONDUCTION_HH
+#define OPM_FLUID_HEAT_CONDUCTION_HH
 
 #include "fluidconductionparams.hh"
 

@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullMaterialLaw
  */
-#ifndef EWOMS_NULL_MATERIAL_LAW_HH
-#define EWOMS_NULL_MATERIAL_LAW_HH
+#ifndef OPM_NULL_MATERIAL_LAW_HH
+#define OPM_NULL_MATERIAL_LAW_HH
 
 #include "nullmateriallawparams.hh"
 

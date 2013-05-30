@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::Component
  */
-#ifndef EWOMS_COMPONENT_HH
-#define EWOMS_COMPONENT_HH
+#ifndef OPM_COMPONENT_HH
+#define OPM_COMPONENT_HH
 
 #include <dune/common/stdstreams.hh>
 

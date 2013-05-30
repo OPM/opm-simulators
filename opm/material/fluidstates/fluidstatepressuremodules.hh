@@ -21,8 +21,8 @@
  *
  * \brief Modules for the ModularFluidState which represent pressure.
  */
-#ifndef EWOMS_FLUID_STATE_PRESSURE_MODULES_HH
-#define EWOMS_FLUID_STATE_PRESSURE_MODULES_HH
+#ifndef OPM_FLUID_STATE_PRESSURE_MODULES_HH
+#define OPM_FLUID_STATE_PRESSURE_MODULES_HH
 
 #include <opm/common/valgrind.hh>
 

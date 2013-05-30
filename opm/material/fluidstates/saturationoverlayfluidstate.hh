@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::SaturationOverlayFluidState
  */
-#ifndef EWOMS_SATURATION_OVERLAY_FLUID_STATE_HH
-#define EWOMS_SATURATION_OVERLAY_FLUID_STATE_HH
+#ifndef OPM_SATURATION_OVERLAY_FLUID_STATE_HH
+#define OPM_SATURATION_OVERLAY_FLUID_STATE_HH
 
 #include <opm/common/valgrind.hh>
 

@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::N2
  */
-#ifndef EWOMS_N2_HH
-#define EWOMS_N2_HH
+#ifndef OPM_N2_HH
+#define OPM_N2_HH
 
 #include <opm/material/idealgas.hh>
 

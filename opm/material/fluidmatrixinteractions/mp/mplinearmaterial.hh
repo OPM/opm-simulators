@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::MpLinearMaterial
  */
-#ifndef EWOMS_MP_LINEAR_MATERIAL_HH
-#define EWOMS_MP_LINEAR_MATERIAL_HH
+#ifndef OPM_MP_LINEAR_MATERIAL_HH
+#define OPM_MP_LINEAR_MATERIAL_HH
 
 #include "mplinearmaterialparams.hh"
 

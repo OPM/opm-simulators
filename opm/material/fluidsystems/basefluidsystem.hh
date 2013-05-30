@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::BaseFluidSystem
  */
-#ifndef EWOMS_BASE_FLUID_SYSTEM_HH
-#define EWOMS_BASE_FLUID_SYSTEM_HH
+#ifndef OPM_BASE_FLUID_SYSTEM_HH
+#define OPM_BASE_FLUID_SYSTEM_HH
 
 #include "nullparametercache.hh"
 

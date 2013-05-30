@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::FluidSystems::Spe5
  */
-#ifndef EWOMS_SPE5_FLUID_SYSTEM_HH
-#define EWOMS_SPE5_FLUID_SYSTEM_HH
+#ifndef OPM_SPE5_FLUID_SYSTEM_HH
+#define OPM_SPE5_FLUID_SYSTEM_HH
 
 #include "basefluidsystem.hh"
 #include "spe5parametercache.hh"

@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::Air
  */
-#ifndef EWOMS_AIR_HH
-#define EWOMS_AIR_HH
+#ifndef OPM_AIR_HH
+#define OPM_AIR_HH
 
 #include <dune/common/exceptions.hh>
 #include <opm/material/components/component.hh>

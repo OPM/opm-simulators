@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::RegularizedLinearMaterial
  */
-#ifndef EWOMS_REGULARIZED_LINEAR_MATERIAL_HH
-#define EWOMS_REGULARIZED_LINEAR_MATERIAL_HH
+#ifndef OPM_REGULARIZED_LINEAR_MATERIAL_HH
+#define OPM_REGULARIZED_LINEAR_MATERIAL_HH
 
 #include "linearmaterial.hh"
 #include "regularizedlinearmaterialparams.hh"

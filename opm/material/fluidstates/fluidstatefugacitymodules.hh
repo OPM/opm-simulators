@@ -21,8 +21,8 @@
  *
  * \brief Modules for the ModularFluidState which represent fugacity/chemical potential.
  */
-#ifndef EWOMS_FLUID_STATE_FUGACITY_MODULES_HH
-#define EWOMS_FLUID_STATE_FUGACITY_MODULES_HH
+#ifndef OPM_FLUID_STATE_FUGACITY_MODULES_HH
+#define OPM_FLUID_STATE_FUGACITY_MODULES_HH
 
 #include <opm/common/valgrind.hh>
 

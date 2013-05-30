@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ParkerLenhardParams
  */
-#ifndef EWOMS_PARKER_LENHARD_PARAMS_HH
-#define EWOMS_PARKER_LENHARD_PARAMS_HH
+#ifndef OPM_PARKER_LENHARD_PARAMS_HH
+#define OPM_PARKER_LENHARD_PARAMS_HH
 
 #include <opm/material/fluidmatrixinteractions/2p/regularizedvangenuchten.hh>
 

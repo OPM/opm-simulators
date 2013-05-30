@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::Unit
  */
-#ifndef EWOMS_UNIT_HH
-#define EWOMS_UNIT_HH
+#ifndef OPM_UNIT_HH
+#define OPM_UNIT_HH
 
 #include "component.hh"
 

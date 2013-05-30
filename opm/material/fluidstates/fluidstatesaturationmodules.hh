@@ -21,8 +21,8 @@
  *
  * \brief Modules for the ModularFluidState which represent saturation.
  */
-#ifndef EWOMS_FLUID_STATE_SATURATION_MODULES_HH
-#define EWOMS_FLUID_STATE_SATURATION_MODULES_HH
+#ifndef OPM_FLUID_STATE_SATURATION_MODULES_HH
+#define OPM_FLUID_STATE_SATURATION_MODULES_HH
 
 #include <opm/common/valgrind.hh>
 

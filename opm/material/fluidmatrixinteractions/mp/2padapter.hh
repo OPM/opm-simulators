@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::TwoPAdapter
  */
-#ifndef EWOMS_MP_2P_ADAPTER_HH
-#define EWOMS_MP_2P_ADAPTER_HH
+#ifndef OPM_MP_2P_ADAPTER_HH
+#define OPM_MP_2P_ADAPTER_HH
 
 #include <algorithm>
 

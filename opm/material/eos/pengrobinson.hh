@@ -21,14 +21,16 @@
  *
  * \copydoc Opm::PengRobinson
  */
-#ifndef EWOMS_PENG_ROBINSON_HH
-#define EWOMS_PENG_ROBINSON_HH
+#ifndef OPM_PENG_ROBINSON_HH
+#define OPM_PENG_ROBINSON_HH
 
 #include <opm/material/fluidstates/temperatureoverlayfluidstate.hh>
 #include <opm/material/idealgas.hh>
 #include <opm/common/exceptions.hh>
 #include <opm/common/math.hh>
 #include <opm/common/dynamictabulated2dfunction.hh>
+
+#include <dune/common/unused.hh>
 
 #include <csignal>
 

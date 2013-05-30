@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::RegularizedBrooksCoreyParams
  */
-#ifndef EWOMS_REGULARIZED_BROOKS_COREY_PARAMS_HH
-#define EWOMS_REGULARIZED_BROOKS_COREY_PARAMS_HH
+#ifndef OPM_REGULARIZED_BROOKS_COREY_PARAMS_HH
+#define OPM_REGULARIZED_BROOKS_COREY_PARAMS_HH
 
 #include "brookscoreyparams.hh"
 

@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BrooksCorey
  */
-#ifndef EWOMS_BROOKS_COREY_HH
-#define EWOMS_BROOKS_COREY_HH
+#ifndef OPM_BROOKS_COREY_HH
+#define OPM_BROOKS_COREY_HH
 
 #include "brookscoreyparams.hh"
 

@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ThreePAdapter
  */
-#ifndef EWOMS_MP_3P_ADAPTER_HH
-#define EWOMS_MP_3P_ADAPTER_HH
+#ifndef OPM_MP_3P_ADAPTER_HH
+#define OPM_MP_3P_ADAPTER_HH
 
 #include <dune/common/exceptions.hh>
 

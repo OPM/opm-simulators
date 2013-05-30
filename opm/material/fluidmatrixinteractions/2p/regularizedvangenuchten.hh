@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::RegularizedVanGenuchten
  */
-#ifndef EWOMS_REGULARIZED_VAN_GENUCHTEN_HH
-#define EWOMS_REGULARIZED_VAN_GENUCHTEN_HH
+#ifndef OPM_REGULARIZED_VAN_GENUCHTEN_HH
+#define OPM_REGULARIZED_VAN_GENUCHTEN_HH
 
 #include "vangenuchten.hh"
 #include "regularizedvangenuchtenparams.hh"

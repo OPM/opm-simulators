@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::FluidSystems::BrineCO2
  */
-#ifndef EWOMS_BRINE_CO2_SYSTEM_HH
-#define EWOMS_BRINE_CO2_SYSTEM_HH
+#ifndef OPM_BRINE_CO2_SYSTEM_HH
+#define OPM_BRINE_CO2_SYSTEM_HH
 
 #include "basefluidsystem.hh"
 #include "nullparametercache.hh"

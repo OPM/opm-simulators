@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ImmiscibleFlash
  */
-#ifndef EWOMS_IMMISCIBLE_FLASH_HH
-#define EWOMS_IMMISCIBLE_FLASH_HH
+#ifndef OPM_IMMISCIBLE_FLASH_HH
+#define OPM_IMMISCIBLE_FLASH_HH
 
 #include <opm/common/exceptions.hh>
 #include <opm/common/valgrind.hh>
