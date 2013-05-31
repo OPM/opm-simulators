@@ -35,6 +35,7 @@
 #include <cmath>
 #include <iomanip>
 
+#define DUMP(foo) std::cout << "==========================================\n" #foo ":\n" << collapseJacs(foo) << std::endl
 
 typedef AutoDiff::ForwardBlock<double> ADB;
 typedef ADB::V V;
@@ -106,6 +107,33 @@ namespace {
         M G(ni, nc);  G.setFromTriplets(grav.begin(), grav.end());
 
         return G;
+    }
+
+
+
+    V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
+    {
+        const int nw = wells.number_of_wells;
+        const int nperf = wells.well_connpos[nw];
+        const int dim = grid.dimensions;
+        V wdp = V::Zero(nperf,1);
+        ASSERT(wdp.size() == rho.size());
+
+        // Main loop, iterate over all perforations,
+        // using the following formula:
+        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
+        // where the total density rho(perf) is taken to be
+        //    sum_p (rho_p*saturation_p) in the perforation cell.
+        // [although this is computed on the outside of this function].
+        for (int w = 0; w < nw; ++w) {
+            const double ref_depth = wells.depth_ref[w];
+            for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
+                const int cell = wells.well_cells[j];
+                const double cell_depth = grid.cell_centroids[dim * cell + dim - 1];
+                wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
+            }
+        }
+        return wdp;
     }
 
 
@@ -469,8 +497,8 @@ namespace Opm {
                 const int pos = pu.phase_pos[ phase ];
                 rq_[pos].b = fluidReciprocFVF(phase, press, rs, cells_);
                 rq_[pos].accum[aix] = rq_[pos].b * sat[pos];
-                // std::cout << "rq_[" << pos << "].b:\n" << rq_[pos].b;
-                // std::cout << "rq_[" << pos << "].accum[" << aix << "]:\n" << rq_[pos].accum[aix];
+                // DUMP(rq_[pos].b);
+                // DUMP(rq_[pos].accum[aix]);
             }
         }
 
@@ -480,6 +508,7 @@ namespace Opm {
             const int pg = pu.phase_pos[ Gas ];
 
             rq_[pg].accum[aix] += state.Rs * rq_[po].accum[aix];
+            // DUMP(rq_[pg].accum[aix]);
         }
     }
 
@@ -521,7 +550,7 @@ namespace Opm {
                 dtpv*(rq_[phase].accum[1] - rq_[phase].accum[0])
                 + ops_.div*rq_[phase].mflux;
 
-            // std::cout << residual_.mass_balance[phase];
+            // DUMP(residual_.mass_balance[phase]);
         }
 
         // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
@@ -536,6 +565,7 @@ namespace Opm {
             const ADB rs_face = upwind.select(state.Rs);
 
             residual_.mass_balance[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
+            // DUMP(residual_.mass_balance[ Gas ]);
 
             // Also, we have another equation: sg = 0 or rs = rsMax.
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
@@ -544,6 +574,7 @@ namespace Opm {
             const ADB rs_eq = state.Rs - rs_max;
             Selector<double> use_rs_eq(rs_eq.value());
             residual_.rs_or_sg_eq = use_rs_eq.select(rs_eq, sg_eq);
+            // DUMP(residual_.rs_or_sg_eq);
         }
 
         // -------- Well equation, and well contributions to the mass balance equations --------
@@ -555,7 +586,6 @@ namespace Opm {
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
 
-        const std::vector<int> cells = buildAllCells(nc);
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
         const V transw = Eigen::Map<const V>(wells_.WI, nperf);
 
@@ -567,32 +597,87 @@ namespace Opm {
         // and corresponding perforation well pressures.
         const ADB p_perfcell = subset(state.pressure, well_cells);
         // Finally construct well perforation pressures and well flows.
-        const V well_perf_dp_ = V::Zero(nperf);
-        const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp_;
+
+        // Compute well pressure differentials.
+        // Construct pressure difference vector for wells.
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const int dim = grid_.dimensions;
+        const double* g = geo_.gravity();
+        if (g) {
+            // Guard against gravity in anything but last dimension.
+            for (int dd = 0; dd < dim - 1; ++dd) {
+                ASSERT(g[dd] == 0.0);
+            }
+        }
+        ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
+        for (int phase = 0; phase < 3; ++phase) {
+            if (active_[phase]) {
+                const int pos = pu.phase_pos[phase];
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                cell_rho_total += state.saturation[pos] * cell_rho;
+            }
+        }
+        ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        ASSERT(np == wells_.number_of_phases);
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
+        for (int phase = 0; phase < 3; ++phase) {
+            if (active_[phase]) {
+                const int pos = pu.phase_pos[phase];
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                const V fraction = compi.col(pos);
+                inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
+            }
+        }
+        const V rho_perf_cell = subset(cell_rho_total, well_cells).value();
+        const V rho_perf_well = inj_rho_total.value();
+        V prodperfs = V::Constant(nperf, -1.0);
+        for (int w = 0; w < nw; ++w) {
+            if (wells_.type[w] == PRODUCER) {
+                std::fill(prodperfs.data() + wells_.well_connpos[w],
+                          prodperfs.data() + wells_.well_connpos[w+1], 1.0);
+            }
+        }
+        const Selector<double> producer(prodperfs);
+        const V rho_perf = producer.select(rho_perf_cell, rho_perf_well);
+        const V well_perf_dp = computePerfPress(grid_, wells_, rho_perf, g ? g[dim-1] : 0.0);
+
+        const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
+        DUMP(nkgradp_well);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
         ADB qs = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
         // We can safely use a dummy rs here (for well calculations)
         // as long as we do not inject oil.
         const ADB rs_perfwell = ADB::constant(V::Zero(nperf), state.bhp.blockPattern());
         const std::vector<ADB> well_kr = computeRelPermWells(state, well_s, well_cells);
+        ADB perf_total_mob = subset(rq_[0].mob, well_cells);
+        for (int phase = 1; phase < np; ++phase) {
+            perf_total_mob += subset(rq_[phase].mob, well_cells);
+        }
+        std::vector<ADB> well_contribs(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             const ADB& cell_b = rq_[phase].b;
-            const ADB well_b = fluidReciprocFVF(canph_[phase], p_perfwell, rs_perfwell, well_cells);
-            const ADB perf_b = cell_to_well_selector.select(subset(cell_b, well_cells), well_b);
-
+            const ADB perf_b = subset(cell_b, well_cells);
             const ADB& cell_mob = rq_[phase].mob;
-
-            const ADB well_mu = fluidViscosity(canph_[phase], p_perfwell, rs_perfwell, well_cells);
-            const ADB well_mob = well_kr[phase] / well_mu;
-            const ADB perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
-
+            const V well_fraction = compi.col(phase);
+            // Using total mobilities for all phases for injection.
+            const ADB perf_mob_injector = (wops_.w2p * well_fraction.matrix()).array() * perf_total_mob;
+            const ADB perf_mob = producer.select(subset(cell_mob, well_cells),
+                                                 perf_mob_injector);
             const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
             const ADB well_rates = wops_.p2w * (perf_flux*perf_b);
             qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
 
-            const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
-            residual_.mass_balance[phase] += well_contrib;
+            // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
+            well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
+            // DUMP(well_contribs[phase]);
+            residual_.mass_balance[phase] += well_contribs[phase];
+        }
+        if (active_[Gas] && active_[Oil]) {
+            const int oilpos = pu.phase_pos[Oil];
+            const int gaspos = pu.phase_pos[Gas];
+            // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.Rs);
+            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.Rs;
         }
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
@@ -635,7 +720,7 @@ namespace Opm {
             mass_res = vertcat(mass_res, residual_.rs_or_sg_eq);
         }
         const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
-        // std::cout << total_residual;
+        DUMP(total_residual);
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
 
@@ -874,6 +959,8 @@ namespace Opm {
         const ADB& b       = rq_[ actph ].b;
         const ADB& mob     = rq_[ actph ].mob;
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
+        // DUMP(rq_[ actph ].mob);
+        // DUMP(rq_[ actph ].mflux);
     }
 
 
@@ -953,8 +1040,12 @@ namespace Opm {
                                               const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b   = fluidReciprocFVF(phase, p, rs, cells);
+        ADB b = fluidReciprocFVF(phase, p, rs, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        if (phase == Oil && active_[Gas]) {
+            // It is correct to index into rhos with canonical phase indices.
+            rho += V::Constant(p.size(), 1, rhos[Gas]) * rs * b;
+        }
         return rho;
     }
 
