@@ -650,24 +650,34 @@ namespace Opm {
         // as long as we do not inject oil.
         const ADB rs_perfwell = ADB::constant(V::Zero(nperf), state.bhp.blockPattern());
         const std::vector<ADB> well_kr = computeRelPermWells(state, well_s, well_cells);
+        ADB perf_total_mob = subset(rq_[0].mob, well_cells);
+        for (int phase = 1; phase < np; ++phase) {
+            perf_total_mob += subset(rq_[phase].mob, well_cells);
+        }
+        std::vector<ADB> well_contribs(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             const ADB& cell_b = rq_[phase].b;
-            const ADB well_b = fluidReciprocFVF(canph_[phase], p_perfwell, rs_perfwell, well_cells);
-            const ADB perf_b = cell_to_well_selector.select(subset(cell_b, well_cells), well_b);
-
+            const ADB perf_b = subset(cell_b, well_cells);
             const ADB& cell_mob = rq_[phase].mob;
-
-            const ADB well_mu = fluidViscosity(canph_[phase], p_perfwell, rs_perfwell, well_cells);
-            const ADB well_mob = well_kr[phase] / well_mu;
-            const ADB perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
-
+            const V well_fraction = compi.col(phase);
+            // Using total mobilities for all phases for injection.
+            const ADB perf_mob_injector = (wops_.w2p * well_fraction.matrix()).array() * perf_total_mob;
+            const ADB perf_mob = producer.select(subset(cell_mob, well_cells),
+                                                 perf_mob_injector);
             const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
             const ADB well_rates = wops_.p2w * (perf_flux*perf_b);
             qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
 
-            const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
-            DUMP(well_contrib);
-            residual_.mass_balance[phase] += well_contrib;
+            // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
+            well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
+            // DUMP(well_contribs[phase]);
+            residual_.mass_balance[phase] += well_contribs[phase];
+        }
+        if (active_[Gas] && active_[Oil]) {
+            const int oilpos = pu.phase_pos[Oil];
+            const int gaspos = pu.phase_pos[Gas];
+            // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.Rs);
+            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.Rs;
         }
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
