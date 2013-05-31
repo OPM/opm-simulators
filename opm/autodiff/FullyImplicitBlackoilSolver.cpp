@@ -954,8 +954,12 @@ namespace Opm {
                                               const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b   = fluidReciprocFVF(phase, p, rs, cells);
+        ADB b = fluidReciprocFVF(phase, p, rs, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        if (phase == Oil && active_[Gas]) {
+            // It is correct to index into rhos with canonical phase indices.
+            rho += V::Constant(p.size(), 1, rhos[Gas]) * rs * b;
+        }
         return rho;
     }
 
