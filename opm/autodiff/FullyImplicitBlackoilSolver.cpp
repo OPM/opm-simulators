@@ -470,8 +470,8 @@ namespace Opm {
                 const int pos = pu.phase_pos[ phase ];
                 rq_[pos].b = fluidReciprocFVF(phase, press, rs, cells_);
                 rq_[pos].accum[aix] = rq_[pos].b * sat[pos];
-                // std::cout << "rq_[" << pos << "].b:\n" << rq_[pos].b;
-                // std::cout << "rq_[" << pos << "].accum[" << aix << "]:\n" << rq_[pos].accum[aix];
+                // DUMP(rq_[pos].b);
+                // DUMP(rq_[pos].accum[aix]);
             }
         }
 
@@ -481,6 +481,7 @@ namespace Opm {
             const int pg = pu.phase_pos[ Gas ];
 
             rq_[pg].accum[aix] += state.Rs * rq_[po].accum[aix];
+            // DUMP(rq_[pg].accum[aix]);
         }
     }
 
@@ -522,7 +523,7 @@ namespace Opm {
                 dtpv*(rq_[phase].accum[1] - rq_[phase].accum[0])
                 + ops_.div*rq_[phase].mflux;
 
-            // std::cout << residual_.mass_balance[phase];
+            // DUMP(residual_.mass_balance[phase]);
         }
 
         // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
@@ -537,6 +538,7 @@ namespace Opm {
             const ADB rs_face = upwind.select(state.Rs);
 
             residual_.mass_balance[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
+            // DUMP(residual_.mass_balance[ Gas ]);
 
             // Also, we have another equation: sg = 0 or rs = rsMax.
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
@@ -545,6 +547,7 @@ namespace Opm {
             const ADB rs_eq = state.Rs - rs_max;
             Selector<double> use_rs_eq(rs_eq.value());
             residual_.rs_or_sg_eq = use_rs_eq.select(rs_eq, sg_eq);
+            // DUMP(residual_.rs_or_sg_eq);
         }
 
         // -------- Well equation, and well contributions to the mass balance equations --------
@@ -593,6 +596,7 @@ namespace Opm {
             qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
 
             const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
+            DUMP(well_contrib);
             residual_.mass_balance[phase] += well_contrib;
         }
         // Handling BHP and SURFACE_RATE wells.
@@ -636,7 +640,7 @@ namespace Opm {
             mass_res = vertcat(mass_res, residual_.rs_or_sg_eq);
         }
         const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
-        // std::cout << total_residual;
+        DUMP(total_residual);
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
 
@@ -875,6 +879,8 @@ namespace Opm {
         const ADB& b       = rq_[ actph ].b;
         const ADB& mob     = rq_[ actph ].mob;
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
+        // DUMP(rq_[ actph ].mob);
+        // DUMP(rq_[ actph ].mflux);
     }
 
 
