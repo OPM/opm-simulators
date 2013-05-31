@@ -111,6 +111,33 @@ namespace {
 
 
 
+    V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
+    {
+        const int nw = wells.number_of_wells;
+        const int nperf = wells.well_connpos[nw];
+        const int dim = grid.dimensions;
+        V wdp = V::Zero(nperf,1);
+        ASSERT(wdp.size() == rho.size());
+
+        // Main loop, iterate over all perforations,
+        // using the following formula:
+        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
+        // where the total density rho(perf) is taken to be
+        //    sum_p (rho_p*saturation_p) in the perforation cell.
+        // [although this is computed on the outside of this function].
+        for (int w = 0; w < nw; ++w) {
+            const double ref_depth = wells.depth_ref[w];
+            for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
+                const int cell = wells.well_cells[j];
+                const double cell_depth = grid.cell_centroids[dim * cell + dim - 1];
+                wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
+            }
+        }
+        return wdp;
+    }
+
+
+
     template <class PU>
     std::vector<bool>
     activePhases(const PU& pu)
@@ -559,7 +586,6 @@ namespace Opm {
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
 
-        const std::vector<int> cells = buildAllCells(nc);
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
         const V transw = Eigen::Map<const V>(wells_.WI, nperf);
 
@@ -571,9 +597,53 @@ namespace Opm {
         // and corresponding perforation well pressures.
         const ADB p_perfcell = subset(state.pressure, well_cells);
         // Finally construct well perforation pressures and well flows.
-        const V well_perf_dp_ = V::Zero(nperf);
-        const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp_;
+
+        // Compute well pressure differentials.
+        // Construct pressure difference vector for wells.
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const int dim = grid_.dimensions;
+        const double* g = geo_.gravity();
+        if (g) {
+            // Guard against gravity in anything but last dimension.
+            for (int dd = 0; dd < dim - 1; ++dd) {
+                ASSERT(g[dd] == 0.0);
+            }
+        }
+        ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
+        for (int phase = 0; phase < 3; ++phase) {
+            if (active_[phase]) {
+                const int pos = pu.phase_pos[phase];
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                cell_rho_total += state.saturation[pos] * cell_rho;
+            }
+        }
+        ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        ASSERT(np == wells_.number_of_phases);
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
+        for (int phase = 0; phase < 3; ++phase) {
+            if (active_[phase]) {
+                const int pos = pu.phase_pos[phase];
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                const V fraction = compi.col(pos);
+                inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
+            }
+        }
+        const V rho_perf_cell = subset(cell_rho_total, well_cells).value();
+        const V rho_perf_well = inj_rho_total.value();
+        V prodperfs = V::Constant(nperf, -1.0);
+        for (int w = 0; w < nw; ++w) {
+            if (wells_.type[w] == PRODUCER) {
+                std::fill(prodperfs.data() + wells_.well_connpos[w],
+                          prodperfs.data() + wells_.well_connpos[w+1], 1.0);
+            }
+        }
+        const Selector<double> producer(prodperfs);
+        const V rho_perf = producer.select(rho_perf_cell, rho_perf_well);
+        const V well_perf_dp = computePerfPress(grid_, wells_, rho_perf, g ? g[dim-1] : 0.0);
+
+        const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
+        DUMP(nkgradp_well);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
         ADB qs = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
         // We can safely use a dummy rs here (for well calculations)
