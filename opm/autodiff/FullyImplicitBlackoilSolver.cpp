@@ -213,7 +213,7 @@ namespace Opm {
          BlackoilState& x ,
          WellState&     xw)
     {
-        const V dtpv = geo_.poreVolume() / dt;
+        const V pvdt = geo_.poreVolume() / dt;
 
         {
             const SolutionState state = constantState(x, xw);
@@ -224,7 +224,7 @@ namespace Opm {
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
 
-        assemble(dtpv, x, xw);
+        assemble(pvdt, x, xw);
 
         const double r0  = residualNorm();
         int          it  = 0;
@@ -237,7 +237,7 @@ namespace Opm {
 
             updateState(dx, x, xw);
 
-            assemble(dtpv, x, xw);
+            assemble(pvdt, x, xw);
 
             const double r = residualNorm();
 
@@ -274,7 +274,7 @@ namespace Opm {
     FullyImplicitBlackoilSolver::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
         , saturation(np, ADB::null())
-        , Rs        (    ADB::null())
+        , rs        (    ADB::null())
         , bhp       (    ADB::null())
     {
     }
@@ -370,13 +370,13 @@ namespace Opm {
             }
         }
 
-        // Gas-oil ratio (Rs).
+        // Gas-oil ratio (rs).
         if (active_[ Oil ] && active_[ Gas ]) {
             const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
-            state.Rs = ADB::constant(rs, bpat);
+            state.rs = ADB::constant(rs, bpat);
         } else {
             const V Rs = V::Zero(nc, 1);
-            state.Rs = ADB::constant(Rs, bpat);
+            state.rs = ADB::constant(Rs, bpat);
         }
 
         // Well bottom-hole pressure.
@@ -465,9 +465,9 @@ namespace Opm {
 
         // Rs.
         if (active_[ Oil ] && active_[ Gas ]) {
-            state.Rs = vars[ nextvar++ ];
+            state.rs = vars[ nextvar++ ];
         } else {
-            state.Rs = ADB::constant(V::Zero(nc), bpat);
+            state.rs = ADB::constant(V::Zero(nc), bpat);
         }
 
         // Bhp.
@@ -490,7 +490,7 @@ namespace Opm {
 
         const ADB&              press = state.pressure;
         const std::vector<ADB>& sat   = state.saturation;
-        const ADB&              rs    = state.Rs;
+        const ADB&              rs    = state.rs;
 
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         for (int phase = 0; phase < maxnp; ++phase) {
@@ -508,7 +508,7 @@ namespace Opm {
             const int po = pu.phase_pos[ Oil ];
             const int pg = pu.phase_pos[ Gas ];
 
-            rq_[pg].accum[aix] += state.Rs * rq_[po].accum[aix];
+            rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
             // DUMP(rq_[pg].accum[aix]);
         }
     }
@@ -519,7 +519,7 @@ namespace Opm {
 
     void
     FullyImplicitBlackoilSolver::
-    assemble(const V&             dtpv,
+    assemble(const V&             pvdt,
              const BlackoilState& x   ,
              const WellState&     xw  )
     {
@@ -548,7 +548,7 @@ namespace Opm {
             // std::cout << rq_[phase].mflux;
 
             residual_.mass_balance[ phase ] =
-                dtpv*(rq_[phase].accum[1] - rq_[phase].accum[0])
+                pvdt*(rq_[phase].accum[1] - rq_[phase].accum[0])
                 + ops_.div*rq_[phase].mflux;
 
             // DUMP(residual_.mass_balance[phase]);
@@ -563,7 +563,7 @@ namespace Opm {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
             const UpwindSelector<double> upwind(grid_, ops_,
                                                 rq_[po].head.value());
-            const ADB rs_face = upwind.select(state.Rs);
+            const ADB rs_face = upwind.select(state.rs);
 
             residual_.mass_balance[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
             // DUMP(residual_.mass_balance[ Gas ]);
@@ -572,7 +572,7 @@ namespace Opm {
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
             const ADB sg_eq = state.saturation[pg];
             const ADB rs_max = fluidRsMax(state.pressure, cells_);
-            const ADB rs_eq = state.Rs - rs_max;
+            const ADB rs_eq = state.rs - rs_max;
             Selector<double> use_rs_eq(rs_eq.value());
             residual_.rs_or_sg_eq = use_rs_eq.select(rs_eq, sg_eq);
             // DUMP(residual_.rs_or_sg_eq);
@@ -614,7 +614,7 @@ namespace Opm {
         for (int phase = 0; phase < 3; ++phase) {
             if (active_[phase]) {
                 const int pos = pu.phase_pos[phase];
-                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.rs, cells_);
                 cell_rho_total += state.saturation[pos] * cell_rho;
             }
         }
@@ -624,7 +624,7 @@ namespace Opm {
         for (int phase = 0; phase < 3; ++phase) {
             if (active_[phase]) {
                 const int pos = pu.phase_pos[phase];
-                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.rs, cells_);
                 const V fraction = compi.col(pos);
                 inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
             }
@@ -679,10 +679,10 @@ namespace Opm {
         if (active_[Gas] && active_[Oil]) {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
-            const ADB rs_perf = subset(state.Rs, well_cells);
+            const ADB rs_perf = subset(state.rs, well_cells);
             qs += superset(well_perf_rates[oilpos]*rs_perf, Span(nw, 1, gaspos*nw), nw*np);
-            // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.Rs);
-            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.Rs;
+            // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.rs);
+            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.rs;
         }
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
@@ -950,11 +950,11 @@ namespace Opm {
                                                  const SolutionState&    state )
     {
         const int phase = canph_[ actph ];
-        const ADB mu    = fluidViscosity(phase, state.pressure, state.Rs, cells_);
+        const ADB mu    = fluidViscosity(phase, state.pressure, state.rs, cells_);
 
         rq_[ actph ].mob = kr[ phase ] / mu;
 
-        const ADB rho   = fluidDensity(phase, state.pressure, state.Rs, cells_);
+        const ADB rho   = fluidDensity(phase, state.pressure, state.rs, cells_);
         const ADB gflux = grav_ * rho;
 
         ADB& head = rq_[ actph ].head;

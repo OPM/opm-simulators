@@ -79,7 +79,7 @@ namespace Opm {
             SolutionState(const int np);
             ADB              pressure;
             std::vector<ADB> saturation;
-            ADB              Rs;
+            ADB              rs;
             ADB              bhp;
         };
 
