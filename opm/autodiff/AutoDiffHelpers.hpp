@@ -550,4 +550,16 @@ private:
 };
 
 
+
+/// Return a vector of (-1.0, 0.0 or 1.0), depending on sign per element.
+inline Eigen::ArrayXd sign (const Eigen::ArrayXd& x)
+{
+    const int n = x.size();
+    Eigen::ArrayXd retval(n);
+    for (int i = 0; i < n; ++i) {
+        retval[i] = x[i] < 0.0 ? -1.0 : (x[i] > 0.0 ? 1.0 : 0.0);
+    }
+    return retval;
+}
+
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
