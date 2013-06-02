@@ -814,8 +814,7 @@ namespace Opm {
         const double dpmaxrel = 0.8;
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
-        const V dpsign = dp/dp.abs();
-        const V dp_limited = dpsign * dp.abs().min(absdpmax);
+        const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
         const V p = (p_old - dp_limited).max(zero);
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
@@ -825,8 +824,7 @@ namespace Opm {
             const double drsmaxrel = 0.8;
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             const V absdrsmax = drsmaxrel*rs_old.abs();
-            const V drssign = drs/drs.abs();
-            const V drs_limited = drssign * drs.abs().min(absdrsmax);
+            const V drs_limited = sign(drs) * drs.abs().min(absdrsmax);
             const V rs = rs_old - drs_limited;
             std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
         }
@@ -839,8 +837,7 @@ namespace Opm {
         if (active_[ Water ]) {
             const int pos = pu.phase_pos[ Water ];
             const V sw_old = s_old.col(pos);
-            const V dswsign = dsw/dsw.abs();
-            const V dsw_limited = dswsign * dsw.abs().min(dsmax);
+            const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
             const V sw = (sw_old - dsw_limited).unaryExpr(Chop01());
             so -= sw;
             for (int c = 0; c < nc; ++c) {
@@ -850,8 +847,7 @@ namespace Opm {
         if (active_[ Gas ]) {
             const int pos = pu.phase_pos[ Gas ];
             const V sg_old = s_old.col(pos);
-            const V dsgsign = dsg/dsg.abs();
-            const V dsg_limited = dsgsign * dsg.abs().min(dsmax);
+            const V dsg_limited = sign(dsg) * dsg.abs().min(dsmax);
             V sg = sg_old - dsg_limited;
             if (active_[ Oil ]) {
                 // Appleyard chop process.
@@ -860,7 +856,7 @@ namespace Opm {
                 const double rs_adjust = 1.0;
                 auto sat2usat = (sg_old > 0.0) && (sg <= 0.0);
                 Eigen::Map<V> rs(&state.gasoilratio()[0], nc);
-                const V rs_sat = fluidRsMax(rs, cells_);
+                const V rs_sat = fluidRsMax(p, cells_);
                 auto over_saturated = ((sg > 0) || (rs > rs_sat*rs_adjust)) && (sat2usat == false);
                 auto usat2sat = (sg_old < epsilon) && over_saturated;
                 auto zerosg = (sat2usat && sg_old <= above_epsilon);
