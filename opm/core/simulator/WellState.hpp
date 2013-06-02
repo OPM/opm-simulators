@@ -60,11 +60,10 @@ namespace Opm
                     }
                     // Initialize well rates to match controls if type is SURFACE_RATE
                     if ((ctrl->current >= 0) && // open well
-                        (ctrl->type[ctrl->current] != SURFACE_RATE)) {
+                        (ctrl->type[ctrl->current] == SURFACE_RATE)) {
                         const double rate_target = ctrl->target[ctrl->current];
                         for (int p = 0; p < np; ++p) {
-                            const double phase_distr = ctrl->distr[np * ctrl->current + p]
-                                * wells->comp_frac[np * w + p];
+                            const double phase_distr = ctrl->distr[np * ctrl->current + p];
                             wellrates_[np*w + p] = rate_target * phase_distr;
                         }
                     }

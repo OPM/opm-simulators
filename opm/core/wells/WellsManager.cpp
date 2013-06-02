@@ -505,13 +505,33 @@ namespace Opm
                         int control_pos[5] = { -1, -1, -1, -1, -1 };
                         if (ok && wci_line.surface_flow_max_rate_ >= 0.0) {
                             control_pos[InjectionControl::RATE] = w_->ctrls[wix]->num;
-                            const double distr[3] = { 1.0, 1.0, 1.0 };
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            if (wci_line.injector_type_ == "WATER") {
+                                distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                            } else if (wci_line.injector_type_ == "OIL") {
+                                distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                            } else if (wci_line.injector_type_ == "GAS") {
+                                distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                            } else {
+                                THROW("Injector type " << wci_line.injector_type_ << " not supported."
+                                      "WellsManager only supports WATER, OIL and GAS injector types.");
+                            }
                             ok = append_well_controls(SURFACE_RATE, wci_line.surface_flow_max_rate_,
                                                       distr, wix, w_);
                         }
                         if (ok && wci_line.reservoir_flow_max_rate_ >= 0.0) {
                             control_pos[InjectionControl::RESV] = w_->ctrls[wix]->num;
-                            const double distr[3] = { 1.0, 1.0, 1.0 };
+                            double distr[3] = { 0.0, 0.0, 0.0 };
+                            if (wci_line.injector_type_ == "WATER") {
+                                distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                            } else if (wci_line.injector_type_ == "OIL") {
+                                distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                            } else if (wci_line.injector_type_ == "GAS") {
+                                distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                            } else {
+                                THROW("Injector type " << wci_line.injector_type_ << " not supported."
+                                      "WellsManager only supports WATER, OIL and GAS injector types.");
+                            }
                             ok = append_well_controls(RESERVOIR_RATE, wci_line.reservoir_flow_max_rate_,
                                                       distr, wix, w_);
                         }
