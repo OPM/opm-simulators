@@ -198,6 +198,7 @@ namespace Opm {
         , rq_    (fluid.numPhases())
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
+                        std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null() } )
     {
     }
@@ -643,7 +644,7 @@ namespace Opm {
 
         const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
-        DUMP(nkgradp_well);
+        // DUMP(nkgradp_well);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
         ADB qs = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
         // We can safely use a dummy rs here (for well calculations)
@@ -655,6 +656,7 @@ namespace Opm {
             perf_total_mob += subset(rq_[phase].mob, well_cells);
         }
         std::vector<ADB> well_contribs(np, ADB::null());
+        std::vector<ADB> well_perf_rates(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             const ADB& cell_b = rq_[phase].b;
             const ADB perf_b = subset(cell_b, well_cells);
@@ -665,8 +667,9 @@ namespace Opm {
             const ADB perf_mob = producer.select(subset(cell_mob, well_cells),
                                                  perf_mob_injector);
             const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
-            const ADB well_rates = wops_.p2w * (perf_flux*perf_b);
-            qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
+            well_perf_rates[phase] = (perf_flux*perf_b);
+            const ADB well_rates = wops_.p2w * well_perf_rates[phase];
+            qs += superset(well_rates, Span(nw, 1, phase*nw), nw*np);
 
             // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
             well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
@@ -676,6 +679,8 @@ namespace Opm {
         if (active_[Gas] && active_[Oil]) {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
+            const ADB rs_perf = subset(state.Rs, well_cells);
+            qs += superset(well_perf_rates[oilpos]*rs_perf, Span(nw, 1, gaspos*nw), nw*np);
             // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.Rs);
             residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.Rs;
         }
@@ -703,6 +708,7 @@ namespace Opm {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+        DUMP(residual_.well_eq);
     }
 
 
@@ -779,7 +785,7 @@ namespace Opm {
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dpsign = dp/dp.abs();
-        const V dp_limited = dpsign * dp.abs().max(absdpmax);
+        const V dp_limited = dpsign * dp.abs().min(absdpmax);
         const V p = (p_old - dp_limited).max(zero);
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
@@ -974,6 +980,16 @@ namespace Opm {
         for (std::vector<ADB>::const_iterator
                  b = residual_.mass_balance.begin(),
                  e = residual_.mass_balance.end();
+             b != e; ++b)
+        {
+            r = std::max(r, (*b).value().matrix().norm());
+        }
+        if (active_[Oil] && active_[Gas]) {
+            r = std::max(r, residual_.rs_or_sg_eq.value().matrix().norm());
+        }
+        for (std::vector<ADB>::const_iterator
+                 b = residual_.well_flux_eq.begin(),
+                 e = residual_.well_flux_eq.end();
              b != e; ++b)
         {
             r = std::max(r, (*b).value().matrix().norm());

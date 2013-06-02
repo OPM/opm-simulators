@@ -116,6 +116,7 @@ namespace Opm {
         struct {
             std::vector<ADB> mass_balance;
             ADB rs_or_sg_eq; // Only used if both gas and oil present
+            std::vector<ADB> well_flux_eq;
             ADB well_eq;
         } residual_;
 
