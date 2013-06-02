@@ -384,7 +384,12 @@ namespace Opm {
 
         // Well rates.
         assert (not xw.wellRates().empty());
-        const V qs = Eigen::Map<const V>(& xw.wellRates()[0], xw.wellRates().size());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
         state.qs = ADB::constant(qs, bpat);
 
         // Well bottom-hole pressure.
@@ -437,7 +442,12 @@ namespace Opm {
 
         // Initial well rates.
         assert (not xw.wellRates().empty());
-        const V qs = Eigen::Map<const V>(& xw.wellRates()[0], xw.wellRates().size());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
         vars0.push_back(qs);
 
         // Initial well bottom-hole pressure.
@@ -698,7 +708,8 @@ namespace Opm {
         }
 
         // Set the well flux equation
-        residual_.well_flux_eq = state.qs - well_rates_all;
+        residual_.well_flux_eq = state.qs + well_rates_all;
+        // DUMP(residual_.well_flux_eq);
 
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
@@ -724,7 +735,7 @@ namespace Opm {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
-        DUMP(residual_.well_eq);
+        // DUMP(residual_.well_eq);
     }
 
 
@@ -741,8 +752,9 @@ namespace Opm {
         if (active_[Oil] && active_[Gas]) {
             mass_res = vertcat(mass_res, residual_.rs_or_sg_eq);
         }
-        const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
-        DUMP(total_residual);
+        const ADB well_res = vertcat(residual_.well_flux_eq, residual_.well_eq);
+        const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
+        // DUMP(total_residual);
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
 
@@ -792,6 +804,8 @@ namespace Opm {
         varstart += dsg.size();
         const V drs = (active_[Water] && active_[Gas]) ? subset(dx, Span(nc, 1, varstart)) : null;
         varstart += drs.size();
+        const V dqs = subset(dx, Span(np*nw, 1, varstart));
+        varstart += dqs.size();
         const V dbhp = subset(dx, Span(nw, 1, varstart));
         varstart += dbhp.size();
         ASSERT(varstart == dx.size());
@@ -889,10 +903,20 @@ namespace Opm {
             }
         }
 
+        // Qs update.
+        // Since we need to update the wellrates, that are ordered by wells,
+        // from dqs which are ordered by phase, the simplest is to compute
+        // dwr, which is the data from dqs but ordered by wells.
+        const DataBlock wwr = Eigen::Map<const DataBlock>(dqs.data(), np, nw).transpose();
+        const V dwr = Eigen::Map<const V>(wwr.data(), nw*np);
+        const V wr_old = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np);
+        const V wr = wr_old - dwr;
+        std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
+
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         const V bhp = bhp_old - dbhp;
-        std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
+        std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
     }
 
