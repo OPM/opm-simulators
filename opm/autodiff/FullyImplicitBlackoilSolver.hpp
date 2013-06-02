@@ -79,7 +79,8 @@ namespace Opm {
             SolutionState(const int np);
             ADB              pressure;
             std::vector<ADB> saturation;
-            ADB              Rs;
+            ADB              rs;
+            ADB              qs;
             ADB              bhp;
         };
 
@@ -116,6 +117,7 @@ namespace Opm {
         struct {
             std::vector<ADB> mass_balance;
             ADB rs_or_sg_eq; // Only used if both gas and oil present
+            ADB well_flux_eq;
             ADB well_eq;
         } residual_;
 

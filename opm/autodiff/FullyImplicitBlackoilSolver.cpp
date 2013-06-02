@@ -203,6 +203,7 @@ namespace Opm {
         , rq_    (fluid.numPhases())
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
+                        ADB::null(),
                         ADB::null() } )
     {
     }
@@ -217,7 +218,7 @@ namespace Opm {
          BlackoilState& x ,
          WellState&     xw)
     {
-        const V dtpv = geo_.poreVolume() / dt;
+        const V pvdt = geo_.poreVolume() / dt;
 
         {
             const SolutionState state = constantState(x, xw);
@@ -228,7 +229,7 @@ namespace Opm {
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
 
-        assemble(dtpv, x, xw);
+        assemble(pvdt, x, xw);
 
         const double r0  = residualNorm();
         int          it  = 0;
@@ -241,7 +242,7 @@ namespace Opm {
 
             updateState(dx, x, xw);
 
-            assemble(dtpv, x, xw);
+            assemble(pvdt, x, xw);
 
             const double r = residualNorm();
 
@@ -278,7 +279,8 @@ namespace Opm {
     FullyImplicitBlackoilSolver::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
         , saturation(np, ADB::null())
-        , Rs        (    ADB::null())
+        , rs        (    ADB::null())
+        , qs        (    ADB::null())
         , bhp       (    ADB::null())
     {
     }
@@ -330,6 +332,7 @@ namespace Opm {
         //    water saturation (if water present)
         //    gas saturation (if gas present)
         //    gas solution factor (if both gas and oil present)
+        //    well rates per active phase and well
         //    well bottom-hole pressure
         // Note that oil is assumed to always be present, but is never
         // a primary variable.
@@ -339,6 +342,7 @@ namespace Opm {
         if (gasandoil) {
             bpat.push_back(nc);
         }
+        bpat.push_back(xw.bhp().size() * np);
         bpat.push_back(xw.bhp().size());
 
         SolutionState state(np);
@@ -374,14 +378,24 @@ namespace Opm {
             }
         }
 
-        // Gas-oil ratio (Rs).
+        // Gas-oil ratio (rs).
         if (active_[ Oil ] && active_[ Gas ]) {
             const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
-            state.Rs = ADB::constant(rs, bpat);
+            state.rs = ADB::constant(rs, bpat);
         } else {
             const V Rs = V::Zero(nc, 1);
-            state.Rs = ADB::constant(Rs, bpat);
+            state.rs = ADB::constant(Rs, bpat);
         }
+
+        // Well rates.
+        assert (not xw.wellRates().empty());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        state.qs = ADB::constant(qs, bpat);
 
         // Well bottom-hole pressure.
         assert (not xw.bhp().empty());
@@ -431,6 +445,16 @@ namespace Opm {
             vars0.push_back(rs);
         }
 
+        // Initial well rates.
+        assert (not xw.wellRates().empty());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        vars0.push_back(qs);
+
         // Initial well bottom-hole pressure.
         assert (not xw.bhp().empty());
         const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
@@ -469,13 +493,16 @@ namespace Opm {
 
         // Rs.
         if (active_[ Oil ] && active_[ Gas ]) {
-            state.Rs = vars[ nextvar++ ];
+            state.rs = vars[ nextvar++ ];
         } else {
-            state.Rs = ADB::constant(V::Zero(nc), bpat);
+            state.rs = ADB::constant(V::Zero(nc), bpat);
         }
 
+        // Qs.
+        state.qs = vars[ nextvar++ ];
+
         // Bhp.
-        state.bhp = vars[ nextvar ++];
+        state.bhp = vars[ nextvar++ ];
 
         ASSERT(nextvar == int(vars.size()));
 
@@ -494,7 +521,7 @@ namespace Opm {
 
         const ADB&              press = state.pressure;
         const std::vector<ADB>& sat   = state.saturation;
-        const ADB&              rs    = state.Rs;
+        const ADB&              rs    = state.rs;
 
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         for (int phase = 0; phase < maxnp; ++phase) {
@@ -512,7 +539,7 @@ namespace Opm {
             const int po = pu.phase_pos[ Oil ];
             const int pg = pu.phase_pos[ Gas ];
 
-            rq_[pg].accum[aix] += state.Rs * rq_[po].accum[aix];
+            rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
             // DUMP(rq_[pg].accum[aix]);
         }
     }
@@ -523,7 +550,7 @@ namespace Opm {
 
     void
     FullyImplicitBlackoilSolver::
-    assemble(const V&             dtpv,
+    assemble(const V&             pvdt,
              const BlackoilState& x   ,
              const WellState&     xw  )
     {
@@ -552,7 +579,7 @@ namespace Opm {
             // std::cout << rq_[phase].mflux;
 
             residual_.mass_balance[ phase ] =
-                dtpv*(rq_[phase].accum[1] - rq_[phase].accum[0])
+                pvdt*(rq_[phase].accum[1] - rq_[phase].accum[0])
                 + ops_.div*rq_[phase].mflux;
 
             // DUMP(residual_.mass_balance[phase]);
@@ -567,7 +594,7 @@ namespace Opm {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
             const UpwindSelector<double> upwind(grid_, ops_,
                                                 rq_[po].head.value());
-            const ADB rs_face = upwind.select(state.Rs);
+            const ADB rs_face = upwind.select(state.rs);
 
             residual_.mass_balance[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
             // DUMP(residual_.mass_balance[ Gas ]);
@@ -576,7 +603,7 @@ namespace Opm {
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
             const ADB sg_eq = state.saturation[pg];
             const ADB rs_max = fluidRsMax(state.pressure, cells_);
-            const ADB rs_eq = state.Rs - rs_max;
+            const ADB rs_eq = state.rs - rs_max;
             Selector<double> use_rs_eq(rs_eq.value());
             residual_.rs_or_sg_eq = use_rs_eq.select(rs_eq, sg_eq);
             // DUMP(residual_.rs_or_sg_eq);
@@ -618,7 +645,7 @@ namespace Opm {
         for (int phase = 0; phase < 3; ++phase) {
             if (active_[phase]) {
                 const int pos = pu.phase_pos[phase];
-                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.rs, cells_);
                 cell_rho_total += state.saturation[pos] * cell_rho;
             }
         }
@@ -628,7 +655,7 @@ namespace Opm {
         for (int phase = 0; phase < 3; ++phase) {
             if (active_[phase]) {
                 const int pos = pu.phase_pos[phase];
-                const ADB cell_rho = fluidDensity(phase, state.pressure, state.Rs, cells_);
+                const ADB cell_rho = fluidDensity(phase, state.pressure, state.rs, cells_);
                 const V fraction = compi.col(pos);
                 inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
             }
@@ -648,18 +675,15 @@ namespace Opm {
 
         const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
-        DUMP(nkgradp_well);
+        // DUMP(nkgradp_well);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
-        ADB qs = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
-        // We can safely use a dummy rs here (for well calculations)
-        // as long as we do not inject oil.
-        const ADB rs_perfwell = ADB::constant(V::Zero(nperf), state.bhp.blockPattern());
-        const std::vector<ADB> well_kr = computeRelPermWells(state, well_s, well_cells);
+        ADB well_rates_all = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
         ADB perf_total_mob = subset(rq_[0].mob, well_cells);
         for (int phase = 1; phase < np; ++phase) {
             perf_total_mob += subset(rq_[phase].mob, well_cells);
         }
         std::vector<ADB> well_contribs(np, ADB::null());
+        std::vector<ADB> well_perf_rates(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             const ADB& cell_b = rq_[phase].b;
             const ADB perf_b = subset(cell_b, well_cells);
@@ -670,8 +694,9 @@ namespace Opm {
             const ADB perf_mob = producer.select(subset(cell_mob, well_cells),
                                                  perf_mob_injector);
             const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
-            const ADB well_rates = wops_.p2w * (perf_flux*perf_b);
-            qs = qs + superset(well_rates, Span(nw, 1, phase*nw), nw*np);
+            well_perf_rates[phase] = (perf_flux*perf_b);
+            const ADB well_rates = wops_.p2w * well_perf_rates[phase];
+            well_rates_all += superset(well_rates, Span(nw, 1, phase*nw), nw*np);
 
             // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
             well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
@@ -681,9 +706,16 @@ namespace Opm {
         if (active_[Gas] && active_[Oil]) {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
-            // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.Rs);
-            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.Rs;
+            const ADB rs_perf = subset(state.rs, well_cells);
+            well_rates_all += superset(well_perf_rates[oilpos]*rs_perf, Span(nw, 1, gaspos*nw), nw*np);
+            // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.rs);
+            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.rs;
         }
+
+        // Set the well flux equation
+        residual_.well_flux_eq = state.qs + well_rates_all;
+        // DUMP(residual_.well_flux_eq);
+
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
         V rate_targets(nw);
@@ -704,10 +736,11 @@ namespace Opm {
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
-        const ADB rate_residual = rate_distr * qs - rate_targets;
+        const ADB rate_residual = rate_distr * state.qs - rate_targets;
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+        // DUMP(residual_.well_eq);
     }
 
 
@@ -724,8 +757,9 @@ namespace Opm {
         if (active_[Oil] && active_[Gas]) {
             mass_res = vertcat(mass_res, residual_.rs_or_sg_eq);
         }
-        const ADB total_residual = collapseJacs(vertcat(mass_res, residual_.well_eq));
-        DUMP(total_residual);
+        const ADB well_res = vertcat(residual_.well_flux_eq, residual_.well_eq);
+        const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
+        // DUMP(total_residual);
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
 
@@ -775,6 +809,8 @@ namespace Opm {
         varstart += dsg.size();
         const V drs = (active_[Water] && active_[Gas]) ? subset(dx, Span(nc, 1, varstart)) : null;
         varstart += drs.size();
+        const V dqs = subset(dx, Span(np*nw, 1, varstart));
+        varstart += dqs.size();
         const V dbhp = subset(dx, Span(nw, 1, varstart));
         varstart += dbhp.size();
         ASSERT(varstart == dx.size());
@@ -784,7 +820,7 @@ namespace Opm {
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dpsign = dp/dp.abs();
-        const V dp_limited = dpsign * dp.abs().max(absdpmax);
+        const V dp_limited = dpsign * dp.abs().min(absdpmax);
         const V p = (p_old - dp_limited).max(zero);
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
@@ -872,10 +908,20 @@ namespace Opm {
             }
         }
 
+        // Qs update.
+        // Since we need to update the wellrates, that are ordered by wells,
+        // from dqs which are ordered by phase, the simplest is to compute
+        // dwr, which is the data from dqs but ordered by wells.
+        const DataBlock wwr = Eigen::Map<const DataBlock>(dqs.data(), np, nw).transpose();
+        const V dwr = Eigen::Map<const V>(wwr.data(), nw*np);
+        const V wr_old = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np);
+        const V wr = wr_old - dwr;
+        std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
+
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         const V bhp = bhp_old - dbhp;
-        std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());
+        std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
     }
 
@@ -949,11 +995,11 @@ namespace Opm {
                                                  const SolutionState&    state )
     {
         const int phase = canph_[ actph ];
-        const ADB mu    = fluidViscosity(phase, state.pressure, state.Rs, cells_);
+        const ADB mu    = fluidViscosity(phase, state.pressure, state.rs, cells_);
 
         rq_[ actph ].mob = kr[ phase ] / mu;
 
-        const ADB rho   = fluidDensity(phase, state.pressure, state.Rs, cells_);
+        const ADB rho   = fluidDensity(phase, state.pressure, state.rs, cells_);
         const ADB gflux = grav_ * rho;
 
         ADB& head = rq_[ actph ].head;
@@ -983,6 +1029,10 @@ namespace Opm {
         {
             r = std::max(r, (*b).value().matrix().norm());
         }
+        if (active_[Oil] && active_[Gas]) {
+            r = std::max(r, residual_.rs_or_sg_eq.value().matrix().norm());
+        }
+        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
         r = std::max(r, residual_.well_eq.value().matrix().norm());
 
         return r;
