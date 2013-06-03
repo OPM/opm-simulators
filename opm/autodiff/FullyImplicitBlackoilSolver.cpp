@@ -35,7 +35,12 @@
 #include <cmath>
 #include <iomanip>
 
-#define DUMP(foo) std::cout << "==========================================\n" #foo ":\n" << collapseJacs(foo) << std::endl
+#define DUMP(foo)                                                       \
+    do {                                                                \
+        std::cout << "==========================================\n"     \
+                  << #foo ":\n"                                         \
+                  << collapseJacs(foo) << std::endl;                    \
+    } while (0)
 
 typedef AutoDiff::ForwardBlock<double> ADB;
 typedef ADB::V V;
