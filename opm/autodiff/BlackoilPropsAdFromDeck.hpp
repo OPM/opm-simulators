@@ -17,17 +17,21 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILPROPSAD_HEADER_INCLUDED
-#define OPM_BLACKOILPROPSAD_HEADER_INCLUDED
+#ifndef OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
+#define OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
+#include <opm/core/props/rock/RockFromDeck.hpp>
+#include <boost/scoped_ptr.hpp>
 
 namespace Opm
 {
 
-    class BlackoilPropertiesInterface;
+    class SinglePvtInterface;
 
     /// This class is intended to present a fluid interface for
     /// three-phase black-oil that is easy to use with the AD-using
@@ -38,11 +42,13 @@ namespace Opm
     /// taking an AD type and returning the same. Derivatives are not
     /// returned separately by any method, only implicitly with the AD
     /// version of the methods.
-    class BlackoilPropsAd : public BlackoilPropsAdInterface
+    class BlackoilPropsAdFromDeck : public BlackoilPropsAdInterface
     {
     public:
         /// Constructor wrapping an opm-core black oil interface.
-        explicit BlackoilPropsAd(const BlackoilPropertiesInterface& props);
+        BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+                                const UnstructuredGrid& grid,
+                                const bool init_rock = true );
 
         ////////////////////////////
         //      Rock interface    //
@@ -72,10 +78,10 @@ namespace Opm
         typedef std::vector<int> Cells;
 
         /// \return   Number of active phases (also the number of components).
-        virtual int numPhases() const;
+        int numPhases() const;
 
         /// \return   Object describing the active phases.
-        virtual PhaseUsage phaseUsage() const;
+        PhaseUsage phaseUsage() const;
 
         // ------ Canonical named indices for each phase ------
 
@@ -232,10 +238,14 @@ namespace Opm
                                  const Cells& cells) const;
 
     private:
-        const BlackoilPropertiesInterface& props_;
-        PhaseUsage pu_;
+        RockFromDeck rock_;
+        boost::scoped_ptr<SaturationPropsInterface> satprops_;
+        PhaseUsage phase_usage_;
+        std::vector<std::tr1::shared_ptr<SinglePvtInterface> > props_;
+        double densities_[BlackoilPhases::MaxNumPhases];
     };
+
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILPROPSAD_HEADER_INCLUDED
+#endif // OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED

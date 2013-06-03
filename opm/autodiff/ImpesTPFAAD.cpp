@@ -363,11 +363,7 @@ namespace Opm {
             divcontrib_sum = divcontrib_sum - divcontrib/cell_b;
             cell_residual_ = cell_residual_ - (component_contrib/cell_b);
             const ADB well_rates = perf_to_well * (perf_flux*perf_b);
-            std::vector<int> well_flow_res_phase_idx(nw);
-            for (int w = 0; w < nw; ++w) {
-                well_flow_res_phase_idx[w] = w + phase*nw;
-            }
-            qs_ = qs_ +  superset(well_rates, well_flow_res_phase_idx, nw*np);
+            qs_ = qs_ +  superset(well_rates, Span(nw, 1, phase*nw), nw*np);
         }
         cell_residual_ = cell_residual_ + divcontrib_sum;
         // Handling BHP and SURFACE_RATE wells.
@@ -426,15 +422,11 @@ namespace Opm {
             THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
         const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-        const V dp = subset(dx, buildAllCells(nc));
+        const V dp = subset(dx, Span(nc));
         const V p = p0 - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
         const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-        std::vector<int> bhp_dofs(nw);
-        for (int w = 0; w < nw; ++w) {
-            bhp_dofs[w] = nc + w;
-        }
-        ASSERT(bhp_dofs.back() + 1 == total_residual_.size());
+        Span bhp_dofs(nw, 1, nc);
         const V dbhp = subset(dx, bhp_dofs);
         const V bhp = bhp0 - dbhp;
         std::copy(&bhp[0], &bhp[0] + nw, well_state.bhp().begin());

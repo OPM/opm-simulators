@@ -98,6 +98,24 @@ namespace AutoDiff
             return vars;
         }
 
+        /// Operator +=
+        ForwardBlock& operator+=(const ForwardBlock& rhs)
+        {
+            assert (numBlocks()    == rhs.numBlocks());
+            assert (value().size() == rhs.value().size());
+
+            const int num_blocks = numBlocks();
+            for (int block = 0; block < num_blocks; ++block) {
+                assert(jac_[block].rows() == rhs.jac_[block].rows());
+                assert(jac_[block].cols() == rhs.jac_[block].cols());
+                jac_[block] += rhs.jac_[block];
+            }
+
+            val_ += rhs.val_;
+
+            return *this;
+        }
+
         /// Operator +
         ForwardBlock operator+(const ForwardBlock& rhs) const
         {
