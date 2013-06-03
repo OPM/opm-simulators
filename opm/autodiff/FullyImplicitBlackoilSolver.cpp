@@ -27,6 +27,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -187,11 +188,13 @@ namespace Opm {
     FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                 const BlackoilPropsAdInterface& fluid,
                                 const DerivedGeology&           geo  ,
+                                const RockCompressibility*      rock_comp_props,
                                 const Wells&                    wells,
                                 const LinearSolverInterface&    linsolver)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
+        , rock_comp_props_(rock_comp_props)
         , wells_ (wells)
         , linsolver_ (linsolver)
         , active_(activePhases(fluid.phaseUsage()))
@@ -523,12 +526,14 @@ namespace Opm {
         const std::vector<ADB>& sat   = state.saturation;
         const ADB&              rs    = state.rs;
 
+        const ADB pv_mult = poroMult(press);
+
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
                 rq_[pos].b = fluidReciprocFVF(phase, press, rs, cells_);
-                rq_[pos].accum[aix] = rq_[pos].b * sat[pos];
+                rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // DUMP(rq_[pos].b);
                 // DUMP(rq_[pos].accum[aix]);
             }
@@ -539,7 +544,7 @@ namespace Opm {
             const int po = pu.phase_pos[ Oil ];
             const int pg = pu.phase_pos[ Gas ];
 
-            rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
+            rq_[pg].accum[aix] += pv_mult * state.rs * rq_[po].accum[aix];
             // DUMP(rq_[pg].accum[aix]);
         }
     }
@@ -992,8 +997,9 @@ namespace Opm {
     {
         const int phase = canph_[ actph ];
         const ADB mu    = fluidViscosity(phase, state.pressure, state.rs, cells_);
+        const ADB tr_mult = transMult(state.pressure);
 
-        rq_[ actph ].mob = kr[ phase ] / mu;
+        rq_[ actph ].mob = tr_mult * kr[ phase ] / mu;
 
         const ADB rho   = fluidDensity(phase, state.pressure, state.rs, cells_);
         const ADB gflux = grav_ * rho;
@@ -1120,6 +1126,60 @@ namespace Opm {
                                             const std::vector<int>& cells) const
     {
         return fluid_.rsMax(p, cells);
+    }
+
+
+
+
+
+    ADB
+    FullyImplicitBlackoilSolver::poroMult(const ADB& p) const
+    {
+        const int n = p.size();
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            V pm(n);
+            V dpm(n);
+            for (int i = 0; i < n; ++i) {
+                pm[i] = rock_comp_props_->poroMult(p.value()[i]);
+                dpm[i] = rock_comp_props_->poroMultDeriv(p.value()[i]);
+            }
+            ADB::M dpm_diag = spdiag(dpm);
+            const int num_blocks = p.numBlocks();
+            std::vector<ADB::M> jacs(num_blocks);
+            for (int block = 0; block < num_blocks; ++block) {
+                jacs[block] = dpm_diag * p.derivative()[block];
+            }
+            return ADB::function(pm, jacs);
+        } else {
+            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+        }
+    }
+
+
+
+
+
+    ADB
+    FullyImplicitBlackoilSolver::transMult(const ADB& p) const
+    {
+        const int n = p.size();
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            V tm(n);
+            V dtm(n);
+            for (int i = 0; i < n; ++i) {
+                tm[i] = rock_comp_props_->transMult(p.value()[i]);
+                dtm[i] = rock_comp_props_->transMultDeriv(p.value()[i]);
+            }
+            ADB::M dtm_diag = spdiag(dtm);
+            const int num_blocks = p.numBlocks();
+            std::vector<ADB::M> jacs(num_blocks);
+            for (int block = 0; block < num_blocks; ++block) {
+                jacs[block] = dtm_diag * p.derivative()[block];
+            }
+            return ADB::function(tm, jacs);
+        } else {
+            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+        }
     }
 
 
