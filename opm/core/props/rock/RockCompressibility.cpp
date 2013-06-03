@@ -42,12 +42,16 @@ namespace Opm
     {
         if (deck.hasField("ROCKTAB")) {
             const table_t& rt = deck.getROCKTAB().rocktab_;
-            int n = rt[0][0].size();
+            if (rt.size() != 1) {
+                THROW("Can only handle a single region in ROCKTAB.");
+            }
+            const int n = rt[0][0].size();
             p_.resize(n);
             poromult_.resize(n);
             for (int i = 0; i < n; ++i) {
                 p_[i] = rt[0][0][i];
                 poromult_[i] = rt[0][1][i];
+                transmult_[i] = rt[0][2][i];
             }
         } else if (deck.hasField("ROCK")) {
             const ROCK& r = deck.getROCK();
@@ -70,8 +74,36 @@ namespace Opm
             const double cpnorm = rock_comp_*(pressure - pref_);
             return (1.0 + cpnorm + 0.5*cpnorm*cpnorm);
         } else {
-            // return Opm::linearInterpolation(p_, poromult_, pressure);
             return Opm::linearInterpolation(p_, poromult_, pressure);
+        }
+    }
+
+    double RockCompressibility::poroMultDeriv(double pressure) const
+    {
+        if (p_.empty()) {
+            // Approximating poro multiplier with a quadratic curve,
+            // we must use its derivative.
+            return rock_comp_ + 2 * rock_comp_ * rock_comp_ * (pressure - pref_);
+        } else {
+            return Opm::linearInterpolationDerivative(p_, poromult_, pressure);
+        }
+    }
+
+    double RockCompressibility::transMult(double pressure) const
+    {
+        if (p_.empty()) {
+            return 1.0;
+        } else {
+            return Opm::linearInterpolation(p_, transmult_, pressure);
+        }
+    }
+
+    double RockCompressibility::transMultDeriv(double pressure) const
+    {
+        if (p_.empty()) {
+            return 0.0;
+        } else {
+            return Opm::linearInterpolationDerivative(p_, transmult_, pressure);
         }
     }
 
