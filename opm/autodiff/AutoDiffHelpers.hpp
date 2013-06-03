@@ -22,7 +22,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/grid.h>
-
+#include <opm/core/utility/ErrorMacros.hpp>
 
 // -------------------- class HelperOps --------------------
 
@@ -98,9 +98,8 @@ struct HelperOps
 
 #if !defined(NDEBUG)
 #include <cstdio>
-#endif  // !defined(NDEBUG)
+#include <string>
 
-#if !defined(NDEBUG)
 namespace {
     void
     printSparseMatrix(const Eigen::SparseMatrix<double>& A,
@@ -130,6 +129,39 @@ namespace {
         fp = std::fopen(fn, "w");
         if (fp != 0) {
             printSparseMatrix(A, fp);
+        }
+
+        std::fclose(fp);
+    }
+
+    void
+    writeAsMATLAB(const std::vector< Eigen::SparseMatrix<double> >& vA,
+                  std::FILE*        fp   ,
+                  const char* const vname)
+    {
+        const int n = static_cast<int>(vA.size());
+
+        fprintf(fp, "%s = cell([1, %d]);\n\n", vname, n);
+
+        for (int i = 0; i < n; ++i) {
+            fprintf(fp, "%s{%d} = spconvert([\n", vname, i + 1);
+            printSparseMatrix(vA[i], fp);
+            const int rows = vA[i].rows();
+            const int cols = vA[i].cols();
+            fprintf(fp, "%d %d 0.0]);\n\n", rows, cols);
+        }
+    }
+
+    void
+    writeAsMATLAB(const std::vector< Eigen::SparseMatrix<double> >& vA,
+                  const char* const fn   ,
+                  const char* const vname)
+    {
+        std::FILE* fp;
+
+        fp = std::fopen(fn, "w");
+        if (fp != 0) {
+            writeAsMATLAB(vA, fp, vname);
         }
 
         std::fclose(fp);
@@ -423,5 +455,111 @@ vertcat(const AutoDiff::ForwardBlock<double>& x,
 
 
 
+
+class Span
+{
+public:
+    explicit Span(const int num)
+    : num_(num),
+      stride_(1),
+      start_(0)
+    {
+    }
+    Span(const int num, const int stride, const int start)
+        : num_(num),
+          stride_(stride),
+          start_(start)
+    {
+    }
+    int operator[](const int i) const
+    {
+        ASSERT(i >= 0 && i < num_);
+        return start_ + i*stride_;
+    }
+    int size() const
+    {
+        return num_;
+    }
+
+
+    class SpanIterator
+    {
+    public:
+        SpanIterator(const Span* span, const int index)
+            : span_(span),
+              index_(index)
+        {
+        }
+        SpanIterator operator++()
+        {
+            ++index_;
+            return *this;
+        }
+        SpanIterator operator++(int)
+        {
+            SpanIterator before_increment(*this);
+            ++index_;
+            return before_increment;
+        }
+        bool operator<(const SpanIterator& rhs) const
+        {
+            ASSERT(span_ == rhs.span_);
+            return index_ < rhs.index_;
+        }
+        bool operator==(const SpanIterator& rhs) const
+        {
+            ASSERT(span_ == rhs.span_);
+            return index_ == rhs.index_;
+        }
+        bool operator!=(const SpanIterator& rhs) const
+        {
+            ASSERT(span_ == rhs.span_);
+            return index_ != rhs.index_;
+        }
+        int operator*()
+        {
+            return (*span_)[index_];
+        }
+    private:
+        const Span* span_;
+        int index_;
+    };
+
+    typedef SpanIterator iterator;
+    typedef SpanIterator const_iterator;
+
+    SpanIterator begin() const
+    {
+        return SpanIterator(this, 0);
+    }
+
+    SpanIterator end() const
+    {
+        return SpanIterator(this, num_);
+    }
+
+    bool operator==(const Span& rhs)
+    {
+        return num_ == rhs.num_ && start_ == rhs.start_ && stride_ == rhs.stride_;
+    }
+
+private:
+    const int num_;
+    const int stride_;
+    const int start_;
+};
+
+
+
+/// Return a vector of (-1.0, 0.0 or 1.0), depending on sign per element.
+inline Eigen::ArrayXd sign (const Eigen::ArrayXd& x)
+{
+    const int n = x.size();
+    Eigen::ArrayXd retval(n);
+    for (int i = 0; i < n; ++i) {
+        retval[i] = x[i] < 0.0 ? -1.0 : (x[i] > 0.0 ? 1.0 : 0.0);
+    }
+    return retval;
+}
 
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED

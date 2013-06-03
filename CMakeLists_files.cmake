@@ -28,10 +28,13 @@
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
+	opm/autodiff/FullyImplicitBlackoilSolver.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorCompressibleAd.cpp
+	opm/autodiff/SimulatorFullyImplicitBlackoil.cpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
+        opm/autodiff/BlackoilPropsAdFromDeck.cpp
 	)
 
 # originally generated with the command:
@@ -39,6 +42,7 @@ list (APPEND MAIN_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
+	tests/test_span.cpp
 	tests/test_syntax.cpp
 	)
 
@@ -50,16 +54,19 @@ list (APPEND TEST_DATA_FILES
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
+	examples/sim_fibo_ad.cpp
 	examples/sim_2p_comp_ad.cpp
 	examples/sim_2p_incomp_adfi.cpp
 	examples/sim_simple.cpp
 	examples/test_impestpfa_ad.cpp
+	examples/test_implicit_ad.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_adfi.cpp
+	examples/sim_fibo_ad.cpp
 	)
 
 # originally generated with the command:
@@ -69,10 +76,13 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
+        opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
+	opm/autodiff/FullyImplicitBlackoilSolver.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	)

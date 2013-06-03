@@ -75,6 +75,17 @@ namespace Opm
     //      Fluid interface   //
     ////////////////////////////
 
+    /// \return   Number of active phases (also the number of components).
+    int BlackoilPropsAd::numPhases() const
+    {
+        return props_.numPhases();
+    }
+
+    /// \return   Object describing the active phases.
+    PhaseUsage BlackoilPropsAd::phaseUsage() const
+    {
+        return props_.phaseUsage();
+    }
 
     // ------ Density ------
 
@@ -160,6 +171,9 @@ namespace Opm
     ADB BlackoilPropsAd::muWat(const ADB& pw,
                                const Cells& cells) const
     {
+#if 1
+        return ADB::constant(muWat(pw.value(), cells), pw.blockPattern());
+#else
         if (!pu_.phase_used[Water]) {
             THROW("Cannot call muWat(): water phase not present.");
         }
@@ -177,6 +191,7 @@ namespace Opm
             jacs[block] = dmu_diag * pw.derivative()[block];
         }
         return ADB::function(mu.col(pu_.phase_pos[Water]), jacs);
+#endif
     }
 
     /// Oil viscosity.
@@ -188,6 +203,9 @@ namespace Opm
                                const ADB& rs,
                                const Cells& cells) const
     {
+#if 1
+        return ADB::constant(muOil(po.value(), rs.value(), cells), po.blockPattern());
+#else
         if (!pu_.phase_used[Oil]) {
             THROW("Cannot call muOil(): oil phase not present.");
         }
@@ -214,6 +232,7 @@ namespace Opm
             jacs[block] = dmu_diag * po.derivative()[block];
         }
         return ADB::function(mu.col(pu_.phase_pos[Oil]), jacs);
+#endif
     }
 
     /// Gas viscosity.
@@ -223,6 +242,9 @@ namespace Opm
     ADB BlackoilPropsAd::muGas(const ADB& pg,
                                const Cells& cells) const
     {
+#if 1
+        return ADB::constant(muGas(pg.value(), cells), pg.blockPattern());
+#else
         if (!pu_.phase_used[Gas]) {
             THROW("Cannot call muGas(): gas phase not present.");
         }
@@ -240,6 +262,7 @@ namespace Opm
             jacs[block] = dmu_diag * pg.derivative()[block];
         }
         return ADB::function(mu.col(pu_.phase_pos[Gas]), jacs);
+#endif
     }
 
 
@@ -424,7 +447,6 @@ namespace Opm
     }
 
 
-#if 0
     // ------ Rs bubble point curve ------
 
     /// Bubble point curve for Rs as function of oil pressure.
@@ -434,6 +456,7 @@ namespace Opm
     V BlackoilPropsAd::rsMax(const V& po,
                              const Cells& cells) const
     {
+        THROW("Method rsMax() not implemented.");
     }
 
     /// Bubble point curve for Rs as function of oil pressure.
@@ -443,8 +466,8 @@ namespace Opm
     ADB BlackoilPropsAd::rsMax(const ADB& po,
                                const Cells& cells) const
     {
+        THROW("Method rsMax() not implemented.");
     }
-#endif
 
     // ------ Relative permeability ------
 

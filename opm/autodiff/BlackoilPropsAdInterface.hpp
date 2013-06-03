@@ -69,12 +69,16 @@ namespace Opm
         typedef ADB::M M;
         typedef std::vector<int> Cells;
 
+        /// \return   Number of active phases (also the number of components).
+        virtual int numPhases() const = 0;
+
+        /// \return   Object describing the active phases.
+        virtual PhaseUsage phaseUsage() const = 0;
 
         // ------ Canonical named indices for each phase ------
 
         /// Canonical named indices for each phase.
         enum PhaseIndex { Water = 0, Oil = 1, Gas = 2 };
-
 
         // ------ Density ------
 
@@ -194,7 +198,7 @@ namespace Opm
 
 
         // ------ Rs bubble point curve ------
-#if 0
+
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -210,7 +214,6 @@ namespace Opm
         virtual
         ADB rsMax(const ADB& po,
                   const Cells& cells) const = 0;
-#endif
 
         // ------ Relative permeability ------
 
