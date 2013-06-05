@@ -30,9 +30,9 @@ endif (AGMG_SOURCES)
 
 # set value for config.h
 if (AGMG_SOURCES)
-  set (HAVE_AGMG 1)
+  set (HAVE_AGMG 1 CACHE INT "Is AGMG present?")
 else (AGMG_SOURCES)
-  set (HAVE_AGMG 0)
+  set (HAVE_AGMG "" CACHE INT "Is AGMG present?")
 endif (AGMG_SOURCES)
 
 # handle REQUIRED and QUIET standard options

@@ -95,6 +95,15 @@ macro (opm_compile_satellites opm satellite excl_all test_regexp)
 		  )
 	  endif (CMAKE_VERSION VERSION_LESS "2.8.4")
 	endif(NOT "${test_regexp}" STREQUAL "")
+
+	# if this program on the list of files that should be distributed?
+	# we check by the name of the source file
+	list (FIND ${satellite}_SOURCES_DIST "${_sat_FILE}" _is_util)
+	if (NOT (_is_util EQUAL -1))
+	  install (TARGETS ${_sat_NAME} RUNTIME
+		DESTINATION bin/
+		)
+	endif (NOT (_is_util EQUAL -1))
   endforeach (_sat_FILE)
 endmacro (opm_compile_satellites opm prefix)
 

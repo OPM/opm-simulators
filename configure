@@ -17,17 +17,17 @@ Optional Features:
   --enable-shared         build a shared library [default=yes]
   --enable-static         build a static library [default=no]. Note: only one
                           of the options shared and static may be built.
-  --disable-debug         build a release version of the library [default=no]
+  --enable-debug          build a non-optimized version of the library
+                          [default=no]
+  --disable-lto           do not use whole program optimization [default=yes]
   --disable-pch           do not use precompiled headers (if buggy compiler)
   --disable-silent-rules  print every compilation statement as executed
   --enable-system-debug   put .debug files in global GDB debug dir
                           [default=yes if prefix=/usr, no otherwise]
+  --enable-parallel       process in parallel using MPI [default=no]
   --disable-option-checking  ignore unrecognized --enable/--with options
 
 Optional Packages:
-  --with-boost=PATH       use Boost library from a specified location
-  --with-dune-MODULE=PATH use given DUNE module from a specified location
-  --with-opm-MODULE=PATH  use given OPM module from a specified location
   --with-cmake=PROGRAM    use this program instead of \`cmake' to configure
 
 Some influential environment variables:
@@ -77,7 +77,8 @@ invalid_opt () {
 
 # default values
 prefix=/usr/local
-buildtype=Debug
+#buildtype=" -DCMAKE_BUILD_TYPE=Debug"
+buildtype=
 #pch_use=" -DPRECOMPILE_HEADERS:BOOL=ON"
 pch_use=
 #use_openmp=" -DUSE_OPENMP=OFF"
@@ -87,6 +88,8 @@ use_mpi=
 silent_rules=
 #debug_loc=" -DSYSTEM_DEBUG=OFF"
 debug_loc=
+#use_lto=" -DWHOLE_PROG_OPTIM=ON"
+use_lto=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -137,7 +140,44 @@ for OPT in "$@"; do
           # expand to full path since CMake changes to source directory (!)
           # this also normalize the path name wrt. not having a trailing slash
           test -d "${pkgloc}" && pkgloc=$(sh -c "cd \"${pkgloc}\"; pwd")
-
+          # special aliases
+          case "${pkgname}" in
+            umfpack)
+              pkgname="SuiteSparse"
+              ;;
+            tinyxml)
+              pkgname="TinyXML"
+              ;;
+          esac
+          # packages need different suffix for their root (sic)
+          case "${pkgname}" in
+            pch)
+              pch_use=" -DPRECOMPILE_HEADERS:BOOL=ON"
+              rootvar=""
+              ;;
+            mpi         |\
+            mpi-prefix)
+              rootvar="_MPI_PREFIX_PATH"
+              ;;
+            agmg        |\
+            ert         |\
+            boost       |\
+            superlu     |\
+            SuiteSparse |\
+            TinyXML     |\
+            opm         |\
+            opm-*       |\
+            dune        |\
+            dune-*      |\
+            zlib)
+              rootvar="${pkgname^^}_ROOT"
+              rootvar="${rootvar/-/_}"
+              ;;
+            *)
+              invalid_opt --with-${pkgname}
+              rootvar=""
+              ;;
+          esac
           # add this to the list of existing features
           test -n "${rootvar}" && \
           FEATURES="${FEATURES} \"-D${rootvar}=${pkgloc}\""
@@ -148,6 +188,15 @@ for OPT in "$@"; do
           pkgname=$OPTARG
           pkgname=${pkgname#disable-}
           pkgname=${pkgname#without-}
+          # special aliases
+          case "${pkgname}" in
+            umfpack)
+              pkgname="SuiteSparse"
+              ;;
+            tinyxml)
+              pkgname="TinyXML"
+              ;;
+          esac
           # casing is of course different
           case "${pkgname}" in
             option-checking)
@@ -156,7 +205,7 @@ for OPT in "$@"; do
               pkgname=""
               ;;
             debug)
-              buildtype=Release
+              buildtype=" -DCMAKE_BUILD_TYPE=Release"
               # special flag: don't disable any particular package
               pkgname=""
               ;;
@@ -171,6 +220,28 @@ for OPT in "$@"; do
             system-debug)
               debug_loc=" -DSYSTEM_DEBUG=OFF"
               pkgname=""
+              ;;
+            wpo  |\
+            lto  )
+              use_lto=" -DWHOLE_PROG_OPTIM=OFF"
+              pkgname=""
+              ;;
+            openmp)
+              use_openmp=" -DUSE_OPENMP=OFF"
+              pkgname=""
+              ;;
+            mpi  | \
+            parallel)
+              use_mpi=" -DUSE_MPI=OFF"
+              pkgname=""
+              ;;
+            agmg |\
+            ert  |\
+            superlu)
+              pkgname="${pkgname^^}"
+              ;;
+            openmp)
+              pkgname="OpenMP"
               ;;
             gxx11check)
               pkgname="CXX11Features"
@@ -198,9 +269,14 @@ for OPT in "$@"; do
               # special flag; don't set shared/static
               shared=""
               ;;
+            mpi  | \
             parallel)
               use_openmp=" -DUSE_MPI=ON"
               # special flag; don't set shared/static
+              shared=""
+              ;;
+            debug)
+              buildtype=" -DCMAKE_BUILD_TYPE=Debug"
               shared=""
               ;;
             pch)
@@ -255,7 +331,7 @@ for a in "${VARS[@]}"; do
 done
 
 # pass everything on to CMake
-CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\" -DCMAKE_BUILD_TYPE=${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi} ${FEATURES}"
+CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}

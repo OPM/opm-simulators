@@ -1,14 +1,7 @@
-function (configure_la name target)
-  if (NOT (UNIX OR MSYS OR MINGW))
-	return ()
-  endif (NOT (UNIX OR MSYS OR MINGW))
-  
-  # these generic variables are initialized from the project info
-  set (current "${${name}_VERSION_MAJOR}")
-  set (age "${${name}_VERSION_MINOR}")
-  set (inherited_linker_flags "${${name}_LINKER_FLAGS}")
-  set (dependency_libs "${${name}_LIBRARIES}")
-
+# translate a list of libraries into a command-line that can be passed to the
+# compiler/linker. first parameter is the name of the variable that will
+# receive this list, the rest is considered the list of libraries
+function (linker_cmdline what INTO outvar FROM)
   # if we are going to put these in regexps, we must escape period
   string (REPLACE "." "\\." esc_dl_pref "${CMAKE_SHARED_LIBRARY_PREFIX}")
   string (REPLACE "." "\\." esc_dl_suff "${CMAKE_SHARED_LIBRARY_SUFFIX}")
@@ -19,7 +12,7 @@ function (configure_la name target)
   # (you get an error message about argument not parsed). translate each
   # of the libraries into a linker option
   set (deplib_list "")
-  foreach (deplib IN LISTS dependency_libs)
+  foreach (deplib IN LISTS ARGN)
 	# starts with a hyphen already? then just add it
 	string (SUBSTRING ${deplib} 0 1 dash)
 	if (${dash} STREQUAL "-")
@@ -61,8 +54,30 @@ function (configure_la name target)
 	  endif (deplib_orig STREQUAL deplib_name)
 	endif (${dash} STREQUAL "-")
   endforeach (deplib)
-  set (dependency_libs ${deplib_list})
+  # caller determines whether we want it returned as a list or a string
+  if ("${what}" STREQUAL "LIST")
+	set (${outvar} ${deplib_list})
+  else ("${what}" STREQUAL "LIST")
+	set (${outvar} "${deplib_list}")
+	string (REPLACE ";" " " ${outvar} "${${outvar}}")
+  endif ("${what}" STREQUAL "LIST")
+  set (${outvar} "${${outvar}}" PARENT_SCOPE)
+endfunction (linker_cmdline what INTO outvar FROM)
 
+function (configure_la name target)
+  if (NOT (UNIX OR MSYS OR MINGW))
+	return ()
+  endif (NOT (UNIX OR MSYS OR MINGW))
+  
+  # these generic variables are initialized from the project info
+  set (current "${${name}_VERSION_MAJOR}")
+  set (age "${${name}_VERSION_MINOR}")
+  set (inherited_linker_flags "${${name}_LINKER_FLAGS}")
+  set (dependency_libs "${${name}_LIBRARIES}")
+
+  # translate list of libraries to command line
+  linker_cmdline (LIST INTO dependency_libs FROM ${dependency_libs})
+  
   # convert from CMake list (i.e. semi-colon separated)
   string (REPLACE ";" " " inherited_linker_flags "${inherited_linker_flags}")
   string (REPLACE ";" " " dependency_libs "${dependency_libs}")

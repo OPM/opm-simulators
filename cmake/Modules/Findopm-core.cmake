@@ -20,11 +20,11 @@ find_opm_package (
   "C99;
   CXX11Features;
   Boost 1.39.0
-    COMPONENTS date_time filesystem system unit_test_framework REQUIRED;
+    COMPONENTS date_time filesystem system unit_test_framework signals REQUIRED;
   BLAS REQUIRED;
   LAPACK REQUIRED;
   SuiteSparse COMPONENTS umfpack;
-  SUPERLU;
+  SuperLU;
   TinyXML;
   ERT;
   dune-istl

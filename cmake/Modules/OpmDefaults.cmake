@@ -3,9 +3,9 @@
 include (UseCompVer)
 
 macro (opm_defaults opm)
-  # build debug by default
+  # build release by default
   if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE "Debug")
+	set (CMAKE_BUILD_TYPE "Release")
   endif (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 
   # default to building a static library, but let user override
