@@ -67,29 +67,40 @@ endif (NOT BLAS_FOUND)
 if (NOT LAPACK_FOUND)
   find_package (LAPACK ${SuiteSparse_QUIET} REQUIRED)
 endif (NOT LAPACK_FOUND)
-set (SuiteSparse_EXTRA_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+
+# we also need the math part of the runtime library
+find_library (MATH_LIBRARY NAMES "m")
+set (SuiteSparse_EXTRA_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${MATH_LIBRARY})
 
 # search paths for the library outside of standard system paths. these are the
 # paths in which the package managers on various distros put the files
 list (APPEND SuiteSparse_SEARCH_PATH "/usr")              # Linux
 list (APPEND SuiteSparse_SEARCH_PATH "/opt/local")        # MacOS X
 
+# if we don't get any further clues about where to look, then start
+# roaming around the system
+set (_no_default_path "")
+
 # pick up paths from the environment if specified there; these replace the
 # pre-defined paths so that we don't accidentially pick up old stuff
 if (NOT $ENV{SuiteSparse_DIR} STREQUAL "")
   set (SuiteSparse_SEARCH_PATH "$ENV{SuiteSparse_DIR}")
+  set (_no_default_path "NO_DEFAULT_PATH")
 endif (NOT $ENV{SuiteSparse_DIR} STREQUAL "")
 if (${SuiteSparse_DIR})
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_DIR}")
+  set (_no_default_path "NO_DEFAULT_PATH")
 endif (${SuiteSparse_DIR})
 # CMake uses _DIR suffix as default for config-mode files; it is unlikely
 # that we are building SuiteSparse ourselves; use _ROOT suffix to specify
 # location to pre-canned binaries
 if (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
   set (SuiteSparse_SEARCH_PATH "$ENV{SuiteSparse_ROOT}")
+  set (_no_default_path "NO_DEFAULT_PATH")
 endif (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
 if (${SuiteSparse_ROOT})
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_ROOT}")
+  set (_no_default_path "NO_DEFAULT_PATH")
 endif (${SuiteSparse_ROOT})
 
 # transitive closure of dependencies; after this SuiteSparse_MODULES is the
@@ -120,13 +131,19 @@ if (SuiteSparse_EVERYTHING_FOUND)
   return ()
 endif (SuiteSparse_EVERYTHING_FOUND)
 
+# only search in architecture-relevant directory
+if (CMAKE_SIZEOF_VOID_P)
+  math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
+endif (CMAKE_SIZEOF_VOID_P)
+
 # if SuiteSparse >= 4.0 we must also link with libsuitesparseconfig
 # assume that this is the case if we find the library; otherwise just
 # ignore it (older versions don't have a file named like this)
 find_library (config_LIBRARY
   NAMES suitesparseconfig
   PATHS ${SuiteSparse_SEARCH_PATH}
-  PATH_SUFFIXES ".libs" "lib" "lib32" "lib64" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
+  PATH_SUFFIXES ".libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
+  ${_no_default_path}
   )
 if (config_LIBRARY)
   list (APPEND SuiteSparse_EXTRA_LIBS ${config_LIBRARY})
@@ -145,11 +162,13 @@ foreach (module IN LISTS SuiteSparse_MODULES)
 	NAMES ${module}.h
 	PATHS ${SuiteSparse_SEARCH_PATH}
 	PATH_SUFFIXES "include" "include/suitesparse" "include/ufsparse"
+	${_no_default_path}
 	)
   find_library (${MODULE}_LIBRARY
 	NAMES ${module}
 	PATHS ${SuiteSparse_SEARCH_PATH}
-	PATH_SUFFIXES "lib/.libs" "lib" "lib32" "lib64" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
+	PATH_SUFFIXES "lib/.libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
+	${_no_default_path}
 	)
   # start out by including the module itself; other dependencies will be added later
   set (${MODULE}_INCLUDE_DIRS ${${MODULE}_INCLUDE_DIR})
@@ -178,21 +197,26 @@ if (UMFPACK_LIBRARY)
   if (HAVE_UMFPACK_WITHOUT_CHOLMOD)
 	list (APPEND UMFPACK_EXTRA_LIBS ${AMD_LIBRARIES})
   else (HAVE_UMFPACK_WITHOUT_CHOLMOD)
-	try_compile_umfpack (HAVE_UMFPACK_WITH_CHOLMOD ${CHOLMOD_LIBRARIES})
-	if (HAVE_UMFPACK_WITH_CHOLMOD)
-	  list (APPEND UMFPACK_EXTRA_LIBS ${CHOLMOD_LIBRARIES})
-	else (HAVE_UMFPACK_WITH_CHOLMOD)
+	if (CHOLMOD_LIBRARIES)
+	  try_compile_umfpack (HAVE_UMFPACK_WITH_CHOLMOD ${CHOLMOD_LIBRARIES})
+	  if (HAVE_UMFPACK_WITH_CHOLMOD)
+		list (APPEND UMFPACK_EXTRA_LIBS ${CHOLMOD_LIBRARIES})
+	  else (HAVE_UMFPACK_WITH_CHOLMOD)
+		set (UMFPACK_EXTRA_LIBS "-NOTFOUND")
+	  endif (HAVE_UMFPACK_WITH_CHOLMOD)
+	else (CHOLMOD_LIBRARIES)
+	  # if we don't have cholmod, then we certainly cannot have umfpack with cholmod
 	  set (UMFPACK_EXTRA_LIBS "-NOTFOUND")
-	endif (HAVE_UMFPACK_WITH_CHOLMOD)
+	endif (CHOLMOD_LIBRARIES)
   endif (HAVE_UMFPACK_WITHOUT_CHOLMOD)
   # test if umfpack is underlinked (CentOS 5.9), i.e. doesn't specify
   # that it depends on amd. in that case, force amd to be linked
-  if ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
+  if (UMFPACK_EXTRA_LIBS AND (CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
 	try_compile_umfpack (HAVE_UMFPACK_NOT_UNDERLINKED "-Wl,--as-needed" ${UMFPACK_EXTRA_LIBS})
 	if (NOT HAVE_UMFPACK_NOT_UNDERLINKED)
 	  list (APPEND UMFPACK_LINKER_FLAGS "-Wl,--no-as-needed")
 	endif (NOT HAVE_UMFPACK_NOT_UNDERLINKED)
-  endif ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
+  endif (UMFPACK_EXTRA_LIBS AND (CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
   list (APPEND UMFPACK_LIBRARIES ${UMFPACK_EXTRA_LIBS})
   list (REVERSE UMFPACK_LIBRARIES)
   list (REMOVE_DUPLICATES UMFPACK_LIBRARIES)
@@ -218,7 +242,9 @@ foreach (module IN LISTS SuiteSparse_FIND_COMPONENTS)
   endforeach (file)
   if (NOT SuiteSparse_${MODULE}_FOUND)
 	set (SuiteSparse_FOUND FALSE)
-	set (HAVE_SUITESPARSE_${MODULE}_H 0 CACHE INT "Is ${module} header present?")
+	# use empty string instead of zero, so it can be tested with #ifdef
+	# as well as #if in the source code
+	set (HAVE_SUITESPARSE_${MODULE}_H "" CACHE INT "Is ${module} header present?")
   else (NOT SuiteSparse_${MODULE}_FOUND)
 	set (HAVE_SUITESPARSE_${MODULE}_H 1 CACHE INT "Is ${module} header present?")
 	list (APPEND SuiteSparse_LIBRARIES "${${MODULE}_LIBRARIES}")

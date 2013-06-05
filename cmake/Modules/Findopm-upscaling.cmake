@@ -21,7 +21,7 @@ find_opm_package (
   dune-istl REQUIRED;
   opm-core REQUIRED;
   dune-cornerpoint REQUIRED;  
-  opm-porsol REQUIRED;
+  opm-porsol REQUIRED
   "
   # header to search for
   "opm/upscaling/SinglePhaseUpscaler.hpp"

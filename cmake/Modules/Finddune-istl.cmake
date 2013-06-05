@@ -24,7 +24,7 @@ find_opm_package (
 
   # required dependencies
   "dune-common ${_require_dune_common};
-  SUPERLU
+  SuperLU
   "
   # header to search for
   "dune/istl/bcrsmatrix.hh"

@@ -59,3 +59,24 @@ function (add_options langs builds)
 	endforeach (build)
   endforeach (lang)
 endfunction (add_options lang build)
+
+# set varname to flag unless user has specified something that matches regex
+function (set_default_option varname flag regex)
+  if (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
+	  AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
+	  AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+	set (${varname} ${flag} PARENT_SCOPE)
+  else (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
+	  AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
+	  AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+	set (${varname} PARENT_SCOPE)
+  endif (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
+	AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
+	AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+endfunction (set_default_option)
+
+# note: this must be called before project()
+macro (no_default_options)
+  # prevent the platform probe to set options
+  set (CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
+endmacro (no_default_options)

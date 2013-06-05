@@ -51,12 +51,52 @@ foreach (name IN LISTS _opm_proj_vars)
   endif (NOT DEFINED ${CMAKE_PROJECT_NAME}_${name})
 endforeach (name)
 
+# these dependencies must always be handled by the find module
+set (_opm_proj_exemptions
+  dune-common
+  dune-istl
+  dune-grid
+  dune-geometry
+  )
+
+# although a DUNE module, it is delivered in the OPM suite
+set (dune-cornerpoint_SUITE "opm")
+set (ewoms_SUITE "opm")
+
 # insert this boilerplate whenever we are going to find a new package
 macro (find_and_append_package_to prefix name)
+  # special handling for Boost to avoid inadvertedly picking up system
+  # libraries when we want our own version. this is done here because
+  # having a custom Boost is common, but the logic to search only there
+  # does not follow any particular convention.
+  if (BOOST_ROOT AND NOT DEFINED Boost_NO_SYSTEM_PATHS)
+	set (Boost_NO_SYSTEM_PATHS TRUE)
+  endif (BOOST_ROOT AND NOT DEFINED Boost_NO_SYSTEM_PATHS)
+
   # if we have specified a directory, don't revert to searching the
   # system default paths afterwards
   string (TOUPPER "${name}" NAME)
   string (REPLACE "-" "_" NAME "${NAME}")
+
+  # only use suite if module-specific variable is not set. this allows
+  # us to override one dir in a suite
+  if (NOT (${name}_DIR OR ${name}_ROOT OR ${NAME}_ROOT))
+	# module is part of a suite if it has name with the pattern xxx-yyy
+	if (("${name}" MATCHES "[^-]+-.+") OR ${name}_SUITE)
+	  # allow to override if the module doesn't quite fit the convention
+	  # e.g. dune-cornerpoint
+	  if (NOT DEFINED ${name}_SUITE)
+		# extract suite name from module
+		string (REGEX REPLACE "([^-]+)-.+" "\\1" ${name}_SUITE "${name}")
+	  endif (NOT DEFINED ${name}_SUITE)
+	  # assume that each module has its own subdir directly under suite dir
+	  string (TOUPPER "${${name}_SUITE}" ${name}_SUITE_UPPER)
+	  if (DEFINED ${${name}_SUITE_UPPER}_ROOT)
+		set (${NAME}_ROOT ${${${name}_SUITE_UPPER}_ROOT}/${name})
+	  endif (DEFINED ${${name}_SUITE_UPPER}_ROOT)
+	endif (("${name}" MATCHES "[^-]+-.+") OR ${name}_SUITE)
+  endif (NOT (${name}_DIR OR ${name}_ROOT OR ${NAME}_ROOT))
+
   # the documentation says that if *-config.cmake files are not found,
   # find_package will revert to doing a full search, but that is not
   # true, so unconditionally setting ${name}_DIR is not safe. however,
@@ -71,6 +111,22 @@ macro (find_and_append_package_to prefix name)
 	  set (${name}_DIR "${${NAME}_ROOT}")
 	endif (EXISTS ${${NAME}_ROOT}/${name}-config.cmake OR EXISTS ${${NAME}_ROOT}/${name}Config.cmake)
   endif (NOT DEFINED ${name}_DIR AND (DEFINED ${name}_ROOT OR DEFINED ${NAME}_ROOT))
+
+  # these libraries need special handling which is not provided in
+  # the -config.cmake file, but which must be provided by this project,
+  # something which is done in our find module
+  list (FIND _opm_proj_exemptions "${name}" _${name}_exempted)
+  if ((NOT (_${name}_exempted EQUAL -1)) AND (DEFINED ${name}_DIR))
+	set (${name}_ROOT "${${name}_DIR}")
+	# store this for later, in case we reconfigure
+	set (${name}_ROOT "${${name}_ROOT}" CACHE LOCATION "Path to ${name}")
+	# clear this to not use config mode
+	unset (${name}_DIR)
+	# variables that are given on the command-line is also put in the cache
+	# removing the local copy only "unshadows" this one
+	unset (${name}_DIR CACHE)
+  endif ((NOT (_${name}_exempted EQUAL -1)) AND (DEFINED ${name}_DIR))
+
   # using config mode is better than using module (aka. find) mode
   # because then the package has already done all its probes and
   # stored them in the config file for us
@@ -81,23 +137,46 @@ macro (find_and_append_package_to prefix name)
 	message (STATUS "Finding package ${name} using module mode")
 	find_package (${name} ${ARGN})
   endif (${name}_DIR)
-  if (${name}_FOUND)
+
+  # the variable "NAME" may be replaced during find_package (as this is
+  # now a macro, and not a function anymore), so we must reinitialize
+  string (TOUPPER "${name}" NAME)
+  string (REPLACE "-" "_" NAME "${NAME}")
+
+  if (${name}_FOUND OR ${NAME}_FOUND)
 	foreach (var IN LISTS _opm_proj_vars)
 	  if (DEFINED ${name}_${var})
 		list (APPEND ${prefix}_${var} ${${name}_${var}})
-		# cleanup lists
-		if ("${var}" STREQUAL "LIBRARIES")
-		  remove_duplicate_libraries (${prefix})
-		else ("${var}" STREQUAL "LIBRARIES")
-		  list (REMOVE_DUPLICATES ${prefix}_${var})
-		endif ("${var}" STREQUAL "LIBRARIES")
+	  # some packages define an uppercase version of their own name
+	  elseif (DEFINED ${NAME}_${var})
+		list (APPEND ${prefix}_${var} ${${NAME}_${var}})
 	  endif (DEFINED ${name}_${var})
+	  # some packages define _PATH instead of _DIRS (Hi, MPI!)
+	  if ("${var}" STREQUAL "INCLUDE_DIRS")
+		if (DEFINED ${name}_INCLUDE_PATH)
+		  list (APPEND ${prefix}_INCLUDE_DIRS ${${name}_INCLUDE_PATH})
+		elseif (DEFINED ${NAME}_INCLUDE_PATH)
+		  list (APPEND ${prefix}_INCLUDE_DIRS ${${NAME}_INCLUDE_PATH})
+		endif (DEFINED ${name}_INCLUDE_PATH)
+		# some packages define only _DIR and not _DIRS (Hi, Eigen3!)
+		if (DEFINED ${name}_INCLUDE_DIR)
+		  list (APPEND ${prefix}_INCLUDE_DIRS ${${name}_INCLUDE_DIR})
+		elseif (DEFINED ${NAME}_INCLUDE_DIR)
+		  list (APPEND ${prefix}_INCLUDE_DIRS ${${NAME}_INCLUDE_DIR})
+		endif (DEFINED ${name}_INCLUDE_DIR)
+	  endif ("${var}" STREQUAL "INCLUDE_DIRS")
+	  # cleanup lists
+	  if ("${var}" STREQUAL "LIBRARIES")
+		remove_duplicate_libraries (${prefix})
+	  else ("${var}" STREQUAL "LIBRARIES")
+		remove_duplicate_var (${prefix} ${var})
+	  endif ("${var}" STREQUAL "LIBRARIES")
 	endforeach (var)
 	# some libraries only define xxx_FOUND and not a corresponding HAVE_xxx
 	if (NOT DEFINED HAVE_${NAME})
 	  set (HAVE_${NAME} 1)
 	endif (NOT DEFINED HAVE_${NAME})
-  endif (${name}_FOUND)
+  endif (${name}_FOUND OR ${NAME}_FOUND)
 endmacro (find_and_append_package_to prefix name)
 
 # append to the list of variables associated with the project

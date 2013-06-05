@@ -9,5 +9,5 @@ Name: @name@
 Description: @description@ @major@.@minor@
 Version: @major@.@minor@
 URL: http://opm-project.org
-Libs: -l@target@ @libs@
+Libs: @target@ @libs@
 Cflags: @includes@ @defs@

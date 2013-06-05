@@ -18,13 +18,11 @@ macro (opm_install opm)
 	  DESTINATION include/${_rel_dir}
 	  )
   endforeach (_hdr)
-  if (${opm}_TARGET)
-    install (
-      TARGETS ${${opm}_TARGET}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      )
-  endif()
+  install (
+	TARGETS ${${opm}_TARGET}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	)
   # only /usr/lib/debug seems to be searched for debug info; if we have
   # write access to that directory (package installation), then default
   # to use it; otherwise put the debug files together with the library

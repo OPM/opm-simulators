@@ -22,23 +22,17 @@ endmacro (remove_duplicate_libraries module)
 
 # headers can be trimmed from the end, since adding a directory to
 # the list is an idempotent action
-macro (remove_duplicate_headers module)
-  if (DEFINED ${module}_INCLUDE_DIRS)
-	list (REMOVE_DUPLICATES ${module}_INCLUDE_DIRS)
-  endif (DEFINED ${module}_INCLUDE_DIRS)
-endmacro (remove_duplicate_headers module)
-
-# linker flags may not be specified at all
-macro (remove_duplicate_flags module)
-  if (DEFINED ${module}_LINKER_FLAGS)
-	list (REMOVE_DUPLICATES ${module}_LINKER_FLAGS)
-  endif (DEFINED ${module}_LINKER_FLAGS)
-endmacro (remove_duplicate_flags module)
+macro (remove_duplicate_var module suffix)
+  if (DEFINED ${module}_${suffix})
+	list (REMOVE_DUPLICATES ${module}_${suffix})
+  endif (DEFINED ${module}_${suffix})
+endmacro (remove_duplicate_var module suffix)
 
 # fix up both headers and libraries, in case two dependencies have
 # included the same second-level library independently
 macro (remove_dup_deps module)
-  remove_duplicate_headers (${module})
+  remove_duplicate_var (${module} INCLUDE_DIRS)
+  remove_duplicate_var (${module} LINKER_FLAGS)
+  remove_duplicate_var (${module} CONFIG_VARS)
   remove_duplicate_libraries (${module})
-  remove_duplicate_flags (${module})
 endmacro (remove_dup_deps module)

@@ -19,7 +19,7 @@ find_opm_package (
   # TODO: we should probe for all the HAVE_* values listed below;
   # however, we don't actually use them in our implementation, so
   # we just include them to forward here in case anyone else does
-  "CXX11Features REQUIRED;
+  "CXX11Features;
   dune-common REQUIRED;
   dune-geometry REQUIRED
   "
@@ -34,12 +34,9 @@ find_opm_package (
 
   # test program
 "#include <dune/grid/onedgrid.hh>
-#include <vector>
 int main (void) {
-  std::vector<Dune::OneDGrid::ctype> coords;
-  Dune::OneDGrid grid(coords);
+  Dune::OneDGrid grid(1, 0., 1.);
   return grid.lbegin<0>(0) == grid.lend<0>(0);
-  return 0;
 }
 "
   # config variables

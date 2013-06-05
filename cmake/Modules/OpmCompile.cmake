@@ -4,28 +4,28 @@ macro (opm_compile opm)
   # some CMake properties do not do list expansion
   string (REPLACE ";" " " ${opm}_LINKER_FLAGS_STR "${${opm}_LINKER_FLAGS}")
 
-  # all public header files are together with the source
+  # name of the library should not contain dashes, as CMake will
+  # define a symbol with that name, and those cannot contain dashes
+  string (REPLACE "-" "" ${opm}_TARGET "${${opm}_NAME}")
+
+  # all public header files are together with the source. prepend our own
+  # source path to the one of the dependencies so that our version of any
+  # ambigious paths are used.
   set (${opm}_INCLUDE_DIR "${PROJECT_SOURCE_DIR}")
-  list (APPEND ${opm}_INCLUDE_DIRS "${${opm}_INCLUDE_DIR}")
+  set (${opm}_INCLUDE_DIRS ${${opm}_INCLUDE_DIR} ${${opm}_INCLUDE_DIRS})
 
   # create this library
   include_directories (${${opm}_INCLUDE_DIRS})
   link_directories (${${opm}_LIBRARY_DIRS})
   add_definitions (${${opm}_DEFINITIONS})
-  if(${opm}_SOURCES) 
-    # name of the library should not contain dashes, as CMake will
-    # define a symbol with that name, and those cannot contain dashes
-    string (REPLACE "-" "" ${opm}_TARGET "${${opm}_NAME}")
-
-    add_library (${${opm}_TARGET} ${${opm}_LIBRARY_TYPE} ${${opm}_SOURCES})
-    set (${opm}_VERSION "${${opm}_VERSION_MAJOR}.${${opm}_VERSION_MINOR}")
-    set_target_properties (${${opm}_TARGET} PROPERTIES
-      SOVERSION ${${opm}_VERSION_MAJOR}
-      VERSION ${${opm}_VERSION}
-      LINK_FLAGS "${${opm}_LINKER_FLAGS_STR}"
-      )
-    target_link_libraries (${${opm}_TARGET} ${${opm}_LIBRARIES})
-  endif()
+  add_library (${${opm}_TARGET} ${${opm}_LIBRARY_TYPE} ${${opm}_SOURCES})
+  set (${opm}_VERSION "${${opm}_VERSION_MAJOR}.${${opm}_VERSION_MINOR}")
+  set_target_properties (${${opm}_TARGET} PROPERTIES
+	SOVERSION ${${opm}_VERSION_MAJOR}
+	VERSION ${${opm}_VERSION}
+	LINK_FLAGS "${${opm}_LINKER_FLAGS_STR}"
+	)
+  target_link_libraries (${${opm}_TARGET} ${${opm}_LIBRARIES})
 
   # queue this executable to be stripped
   strip_debug_symbols (${${opm}_TARGET} ${opm}_DEBUG)
@@ -48,9 +48,7 @@ macro (opm_compile opm)
 	message (STATUS "Precompiled headers: ${${opm}_CXX_pch}")
   endif (PRECOMPILE_HEADERS)
 
-  if (${opm}_TARGET)
-    # we need to know the name of the library which is generated
-    get_target_property (${opm}_LIBRARY ${${opm}_TARGET} LOCATION)
-  endif()
+  # we need to know the name of the library which is generated
+  get_target_property (${opm}_LIBRARY ${${opm}_TARGET} LOCATION)
   
 endmacro (opm_compile opm)

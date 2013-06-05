@@ -1,5 +1,7 @@
 # - Helper routines for opm-core like projects
 
+include (LibtoolArchives) # linker_cmdline
+
 # convert a list back to a command-line string
 function (unseparate_args var_name prefix value)
   separate_arguments (value)
@@ -18,15 +20,16 @@ endfunction (unseparate_args var_name prefix value)
 function (configure_pc_file name source dest prefix libdir includedir)
   # escape set of standard strings
   unseparate_args (includes "-I" "${${name}_INCLUDE_DIRS}")
-  unseparate_args (libs "-l" "${${name}_LIBRARIES}")
   unseparate_args (defs "" "${${name}_DEFINITIONS}")
+  linker_cmdline (STRING INTO libs FROM ${${name}_LIBRARIES})
 
   # necessary to make these variables visible to configure_file
   set (name "${${name}_NAME}")
   set (description "${${name}_DESCRIPTION}")
-  set (target "${${name}_LIBRARY}")
   set (major "${${name}_VERSION_MAJOR}")
   set (minor "${${name}_VERSION_MINOR}")
+  set (target "${${name}_LIBRARY}")
+  linker_cmdline (STRING INTO target from ${target})
 
   configure_file (${source} ${dest} @ONLY)
 endfunction (configure_pc_file name source dist prefix libdir includedir)

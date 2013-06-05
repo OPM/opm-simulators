@@ -35,32 +35,33 @@ if(NOT BLAS_FOUND)
   return()
 endif(NOT BLAS_FOUND)
 
-# look for header files, only at positions given by the user
+# look for files only at the positions given by the user if
+# an explicit path is specified
+if (SUPERLU_PREFIX OR SUPERLU_ROOT)
+  set (_no_default_path "NO_DEFAULT_PATH")
+else (SUPERLU_PREFIX OR SUPERLU_ROOT)
+  set (_no_default_path "")
+endif (SUPERLU_PREFIX OR SUPERLU_ROOT)
+
+# look for header files
 find_path(SUPERLU_INCLUDE_DIR
   NAMES supermatrix.h
   PATHS ${SUPERLU_PREFIX} ${SUPERLU_ROOT}
   PATH_SUFFIXES "superlu" "include/superlu" "include" "SRC"
-  NO_DEFAULT_PATH
+  ${_no_default_path}
 )
 
-# look for header files, including default paths
-find_path(SUPERLU_INCLUDE_DIR
-  NAMES supermatrix.h
-  PATH_SUFFIXES "superlu" "include/superlu" "include" "SRC"
-)
+# only search in architecture-relevant directory
+if (CMAKE_SIZEOF_VOID_P)
+  math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
+endif (CMAKE_SIZEOF_VOID_P)
 
-# look for library, only at positions given by the user
+# look for library
 find_library(SUPERLU_LIBRARY
   NAMES "superlu_4.3" "superlu_4.2" "superlu_4.1" "superlu_4.0" "superlu_3.1" "superlu_3.0" "superlu"
   PATHS ${SUPERLU_PREFIX} ${SUPERLU_ROOT}
-  PATH_SUFFIXES "lib" "lib32" "lib64" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-  NO_DEFAULT_PATH
-)
-
-# look for library files, including default paths
-find_library(SUPERLU_LIBRARY
-  NAMES "superlu_4.3" "superlu_4.2" "superlu_4.1" "superlu_4.0" "superlu_3.1" "superlu_3.0" "superlu"
-  PATH_SUFFIXES "lib" "lib32" "lib64" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+  PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+  ${_no_default_path}
 )
 
 # check version specific macros
@@ -158,5 +159,5 @@ endif(SUPERLU_FOUND)
 if(SUPERLU_FOUND)
   set(HAVE_SUPERLU 1)
 else(SUPERLU_FOUND)
-  set(HAVE_SUPERLU 0)
+  set(HAVE_SUPERLU "")
 endif(SUPERLU_FOUND)
