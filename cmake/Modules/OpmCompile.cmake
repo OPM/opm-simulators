@@ -14,22 +14,27 @@ macro (opm_compile opm)
   set (${opm}_INCLUDE_DIR "${PROJECT_SOURCE_DIR}")
   set (${opm}_INCLUDE_DIRS ${${opm}_INCLUDE_DIR} ${${opm}_INCLUDE_DIRS})
 
-  # create this library
+  # create this library, if there are any compilation units
   include_directories (${${opm}_INCLUDE_DIRS})
   link_directories (${${opm}_LIBRARY_DIRS})
   add_definitions (${${opm}_DEFINITIONS})
-  add_library (${${opm}_TARGET} ${${opm}_LIBRARY_TYPE} ${${opm}_SOURCES})
   set (${opm}_VERSION "${${opm}_VERSION_MAJOR}.${${opm}_VERSION_MINOR}")
-  set_target_properties (${${opm}_TARGET} PROPERTIES
-	SOVERSION ${${opm}_VERSION_MAJOR}
-	VERSION ${${opm}_VERSION}
-	LINK_FLAGS "${${opm}_LINKER_FLAGS_STR}"
-	)
-  target_link_libraries (${${opm}_TARGET} ${${opm}_LIBRARIES})
+  if (${opm}_SOURCES)
+	add_library (${${opm}_TARGET} ${${opm}_LIBRARY_TYPE} ${${opm}_SOURCES})
+	set_target_properties (${${opm}_TARGET} PROPERTIES
+	  SOVERSION ${${opm}_VERSION_MAJOR}
+	  VERSION ${${opm}_VERSION}
+	  LINK_FLAGS "${${opm}_LINKER_FLAGS_STR}"
+	  )
+	target_link_libraries (${${opm}_TARGET} ${${opm}_LIBRARIES})
 
-  # queue this executable to be stripped
-  strip_debug_symbols (${${opm}_TARGET} ${opm}_DEBUG)
-
+	# queue this executable to be stripped
+	strip_debug_symbols (${${opm}_TARGET} ${opm}_DEBUG)
+  else (${opm}_SOURCES)
+	# unset this variable to signal that no library is generated
+	set (${opm}_TARGET)
+  endif (${opm}_SOURCES)
+  
   # pre-compile common headers; this is setup *after* the library to pick
   # up extra options set there
   if (PRECOMPILE_HEADERS)
@@ -49,6 +54,8 @@ macro (opm_compile opm)
   endif (PRECOMPILE_HEADERS)
 
   # we need to know the name of the library which is generated
-  get_target_property (${opm}_LIBRARY ${${opm}_TARGET} LOCATION)
+  if (${opm}_TARGET)
+	get_target_property (${opm}_LIBRARY ${${opm}_TARGET} LOCATION)
+  endif (${opm}_TARGET)
   
 endmacro (opm_compile opm)
