@@ -32,10 +32,13 @@ set (@opm-project_NAME@_LIBRARY "@opm-project_LIBRARY@")
 set (@opm-project_NAME@_LIBRARIES ${@opm-project_NAME@_LIBRARY} "@opm-project_LIBRARIES@")
 mark_as_advanced (@opm-project_NAME@_LIBRARY)
 
-# add the library as a target, so that other things in the project including
-# this file may depend on it and get rebuild if this library changes.
-add_library (@opm-project_TARGET@ UNKNOWN IMPORTED)
-set_property (TARGET @opm-project_TARGET@ PROPERTY IMPORTED_LOCATION "${@opm-project_NAME@_LIBRARY}")
+# not all projects have targets; conditionally add this part
+if (NOT "@opm-project_TARGET@" STREQUAL "")
+  # add the library as a target, so that other things in the project including
+  # this file may depend on it and get rebuild if this library changes.
+  add_library (@opm-project_TARGET@ UNKNOWN IMPORTED)
+  set_property (TARGET @opm-project_TARGET@ PROPERTY IMPORTED_LOCATION "${@opm-project_NAME@_LIBRARY}")
+endif (NOT "@opm-project_TARGET@" STREQUAL "")
 
 # ensure that we build with support for C++11 to preserve ABI
 string (REPLACE "@CXX_STD0X_FLAGS@" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
