@@ -48,7 +48,7 @@ public:
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static constexpr bool liquidIsCompressible()
+    static bool liquidIsCompressible()
     { return false; }
 
     /*!
@@ -57,7 +57,7 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static constexpr Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { return 890; }
 
     /*!
@@ -66,7 +66,7 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static constexpr Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { return 8e-3; };
 };
 

@@ -231,7 +231,7 @@ protected:
         }
 
         // assemble jacobian matrix of the constraints for the composition
-        static constexpr Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e6;
+        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e6;
         for (int i = 0; i < numComponents; ++ i) {
             ////////
             // approximately calculate partial derivatives of the

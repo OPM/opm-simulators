@@ -145,13 +145,13 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static constexpr bool gasIsCompressible()
+    static const bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static constexpr bool gasIsIdeal()
+    static const bool gasIsIdeal()
     { return false; }
 
     /*!

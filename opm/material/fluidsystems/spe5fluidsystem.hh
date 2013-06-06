@@ -92,7 +92,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
@@ -103,21 +103,21 @@ public:
      *
      * In the SPE-5 problems all fluids are compressible...
      */
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return true;
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return false; // gas is not ideal here!
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         // always use the reference oil for the fugacity coefficents,
         // so they cannot be dependent on composition and they the
@@ -158,7 +158,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static constexpr Scalar molarMass(int compIdx)
+    static Scalar molarMass(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -181,7 +181,7 @@ public:
     /*!
      * \brief Critical temperature of a component [K].
      */
-    static constexpr Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -204,7 +204,7 @@ public:
     /*!
      * \brief Critical pressure of a component [Pa].
      */
-    static constexpr Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -250,7 +250,7 @@ public:
     /*!
      * \brief The acentric factor of a component [].
      */
-    static constexpr Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -277,8 +277,6 @@ public:
      */
     static Scalar interactionCoefficient(int comp1Idx, int comp2Idx)
     {
-        // TODO: make this a constexpr method !?
-
         int i = std::min(comp1Idx, comp2Idx);
         int j = std::max(comp1Idx, comp2Idx);
         if (i == C1Idx && (j == C15Idx || j == C20Idx))

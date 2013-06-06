@@ -66,7 +66,7 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numPhases
-    static constexpr int numPhases = 1;
+    static const int numPhases = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
@@ -77,7 +77,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -85,7 +85,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -94,7 +94,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -103,7 +103,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -116,7 +116,7 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
-    static constexpr int numComponents = 1;
+    static const int numComponents = 1;
 
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
@@ -127,7 +127,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static constexpr Scalar molarMass(int compIdx)
+    static const Scalar molarMass(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -139,7 +139,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static constexpr Scalar criticalTemperature(int compIdx)
+    static const Scalar criticalTemperature(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -151,7 +151,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static constexpr Scalar criticalPressure(int compIdx)
+    static const Scalar criticalPressure(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -163,7 +163,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static constexpr Scalar acentricFactor(int compIdx)
+    static const Scalar acentricFactor(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 

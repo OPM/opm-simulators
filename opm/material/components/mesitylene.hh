@@ -52,25 +52,25 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of mesitylene
      */
-    constexpr static Scalar molarMass()
+    static Scalar molarMass()
     { return 0.120; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of mesitylene
      */
-    constexpr static Scalar criticalTemperature()
+    static Scalar criticalTemperature()
     { return 637.3; }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of mesitylene
      */
-    constexpr static Scalar criticalPressure()
+    static Scalar criticalPressure()
     { return 31.3e5; }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at mesitylene's boiling point (1 atm).
      */
-    constexpr static Scalar boilingTemperature()
+    static Scalar boilingTemperature()
     { return 437.9; }
 
     /*!
@@ -140,9 +140,9 @@ public:
         temperature = std::min(temperature, criticalTemperature()); // regularization
         temperature = std::max(temperature, 0.0); // regularization
 
-        constexpr Scalar T_crit = criticalTemperature();
-        constexpr Scalar Tr1 = boilingTemperature()/criticalTemperature();
-        constexpr Scalar p_crit = criticalPressure();
+        const Scalar T_crit = criticalTemperature();
+        const Scalar Tr1 = boilingTemperature()/criticalTemperature();
+        const Scalar p_crit = criticalPressure();
 
         //        Chen method, eq. 7-11.4 (at boiling)
         const Scalar DH_v_boil =
@@ -198,19 +198,19 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static constexpr bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static constexpr bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static constexpr bool liquidIsCompressible()
+    static bool liquidIsCompressible()
     { return false; }
 
     /*!

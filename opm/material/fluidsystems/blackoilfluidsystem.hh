@@ -286,7 +286,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(const int phaseIdx)
+    static bool isLiquid(const int phaseIdx)
     {
         // assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
@@ -320,7 +320,7 @@ public:
     { return molarMass_[compIdx]; }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         // fugacity coefficients are only pressure dependent -> we
         // have an ideal mixture
@@ -328,11 +328,11 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     { return true; /* all phases are compressible */ }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     { return false; }
 
     /****************************************

@@ -54,19 +54,19 @@ public:
      *
      * Taken from constrelair.hh.
      */
-    static constexpr Scalar molarMass()
+    static Scalar molarMass()
     { return 0.02896; /* [kg/mol] */ }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of \f$AIR\f$.
      */
-    static constexpr Scalar criticalTemperature()
+    static Scalar criticalTemperature()
     { return 132.531 ; /* [K] */ }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of \f$AIR\f$.
      */
-    static constexpr Scalar criticalPressure()
+    static Scalar criticalPressure()
     { return 37.86e5; /* [Pa] */ }
 
     /*!
@@ -84,13 +84,13 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static constexpr bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static constexpr bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return true; }
 
     /*!

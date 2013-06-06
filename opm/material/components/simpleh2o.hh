@@ -63,31 +63,31 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of water.
      */
-    static constexpr Scalar molarMass()
+    static Scalar molarMass()
     { return 18e-3; }
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of water.
      */
-    static constexpr Scalar criticalTemperature()
+    static Scalar criticalTemperature()
     { return 647.096; /* [K] */ }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of water.
      */
-    static constexpr Scalar criticalPressure()
+    static Scalar criticalPressure()
     { return 22.064e6; /* [N/m^2] */ }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at water's triple point.
      */
-    static constexpr Scalar tripleTemperature()
+    static Scalar tripleTemperature()
     { return 273.16; /* [K] */ }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at water's triple point.
      */
-    static constexpr Scalar triplePressure()
+    static Scalar triplePressure()
     { return 611.657; /* [N/m^2] */ }
 
     /*!
@@ -109,7 +109,7 @@ public:
         if (T < tripleTemperature())
             return 0; // water is solid: We don't take sublimation into account
 
-        static constexpr Scalar n[10] = {
+        static const Scalar n[10] = {
             0.11670521452767e4, -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5, -0.32325550322333e7, 0.14915108613530e2,
             -0.48232657361591e4, 0.40511340542057e6, -0.23855557567849,
@@ -207,13 +207,13 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static constexpr bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static constexpr bool liquidIsCompressible()
+    static bool liquidIsCompressible()
     { return false; }
 
     /*!
@@ -231,7 +231,7 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static constexpr bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return true; }
 
     /*!

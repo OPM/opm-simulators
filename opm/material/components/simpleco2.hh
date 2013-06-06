@@ -85,13 +85,13 @@ public:
     /*!
      * \copydoc Component::gasIsCompressible
      */
-    static constexpr bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \copydoc Component::gasIsIdeal
      */
-    static constexpr bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return true; }
 
     /*!

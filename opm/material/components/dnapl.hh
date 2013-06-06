@@ -52,7 +52,7 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
      */
-    static constexpr Scalar molarMass()
+    static Scalar molarMass()
     { return 131.39e-3; /* [kg/mol] */ };
 
     /*!
@@ -67,13 +67,13 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static constexpr bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
-    static constexpr bool liquidIsCompressible()
+    static bool liquidIsCompressible()
     { return false; }
 
     /*!
@@ -92,7 +92,7 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static constexpr bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return true; }
 
     /*!
@@ -101,7 +101,7 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static constexpr Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
     { return 1460.0; /* [kg/m^3] */ }
 
     /*!
@@ -110,7 +110,7 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
     { return 5.7e-4; /* [Pa s] */ };
 
     /*!
@@ -119,7 +119,7 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
     { return 120.0/molarMass() * temperature; /* [J/kg] */ }
 
     /*!
@@ -130,7 +130,7 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
     { return 0.3; }
 };
 

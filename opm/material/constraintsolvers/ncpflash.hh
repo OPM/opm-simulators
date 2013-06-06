@@ -83,7 +83,7 @@ class NcpFlash
 
     typedef typename FluidSystem::ParameterCache ParameterCache;
 
-    static constexpr int numEq = numPhases*(numComponents + 1);
+    static const int numEq = numPhases*(numComponents + 1);
 
     typedef Dune::FieldMatrix<Scalar, numEq, numEq> Matrix;
     typedef Dune::FieldVector<Scalar, numEq> Vector;

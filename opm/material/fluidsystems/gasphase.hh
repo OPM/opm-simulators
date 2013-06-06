@@ -48,49 +48,49 @@ public:
     /*!
      * \brief Returs whether the fluid is a liquid
      */
-    static constexpr bool isLiquid()
+    static bool isLiquid()
     { return false; }
 
     /*!
      * \brief Returns true iff the fluid is assumed to be compressible
      */
-    static constexpr bool isCompressible()
+    static bool isCompressible()
     { return Component::gasIsCompressible(); }
 
     /*!
      * \brief Returns true iff the fluid is assumed to be an ideal gas
      */
-    static constexpr bool isIdealGas()
+    static bool isIdealGas()
     { return Component::gasIsIdeal(); }
 
     /*!
      * \brief The mass in [kg] of one mole of the component.
      */
-    static constexpr Scalar molarMass()
+    static Scalar molarMass()
     {  return Component::molarMass(); }
 
     /*!
      * \brief Returns the critical temperature of the component
      */
-    static constexpr Scalar criticalTemperature()
+    static Scalar criticalTemperature()
     {  return Component::criticalTemperature(); }
 
     /*!
      * \brief Returns the critical pressure of the component
      */
-    static constexpr Scalar criticalPressure()
+    static Scalar criticalPressure()
     {  return Component::criticalPressure(); }
 
     /*!
      * \brief Returns the temperature at the component's triple point.
      */
-    static constexpr Scalar tripleTemperature()
+    static Scalar tripleTemperature()
     {  return Component::tripleTemperature(); }
 
     /*!
      * \brief Returns the pressure at the component's triple point.
      */
-    static constexpr Scalar triplePressure()
+    static Scalar triplePressure()
     { return Component::triplePressure(); }
 
     /*!

@@ -56,7 +56,7 @@ public:
      */
     static Scalar saturationPressure(Scalar temperature)
     {
-        static constexpr Scalar n[10] = {
+        static const Scalar n[10] = {
             0.11670521452767e4, -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5, -0.32325550322333e7, 0.14915108613530e2,
             -0.48232657361591e4, 0.40511340542057e6, -0.23855557567849,

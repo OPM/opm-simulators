@@ -72,12 +72,12 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numPhases
-    static constexpr int numPhases = 2;
+    static const int numPhases = 2;
 
     //! Index of the wetting phase
-    static constexpr int wPhaseIdx = 0;
+    static const int wPhaseIdx = 0;
     //! Index of the non-wetting phase
-    static constexpr int nPhaseIdx = 1;
+    static const int nPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
@@ -92,7 +92,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return
@@ -102,7 +102,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -113,7 +113,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -125,7 +125,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -138,12 +138,12 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
-    static constexpr int numComponents = 2;
+    static const int numComponents = 2;
 
     //! Index of the wetting phase's component
-    static constexpr int wCompIdx = 0;
+    static const int wCompIdx = 0;
     //! Index of the non-wetting phase's component
-    static constexpr int nCompIdx = 1;
+    static const int nCompIdx = 1;
 
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
@@ -156,7 +156,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static constexpr Scalar molarMass(int compIdx)
+    static Scalar molarMass(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -170,7 +170,7 @@ public:
     /*!
      * \brief Critical temperature of a component [K].
      */
-    static constexpr Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         // let the fluids decide
@@ -183,7 +183,7 @@ public:
     /*!
      * \brief Critical pressure of a component [Pa].
      */
-    static constexpr Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         // let the fluids decide
@@ -196,7 +196,7 @@ public:
     /*!
      * \brief The acentric factor of a component [].
      */
-    static constexpr Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         // let the fluids decide

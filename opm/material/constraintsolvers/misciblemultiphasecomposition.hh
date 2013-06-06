@@ -114,8 +114,8 @@ private:
 template <class Scalar, class FluidSystem>
 class MiscibleMultiPhaseComposition
 {
-    static constexpr int numPhases = FluidSystem::numPhases;
-    static constexpr int numComponents = FluidSystem::numComponents;
+    static const int numPhases = FluidSystem::numPhases;
+    static const int numComponents = FluidSystem::numComponents;
 
     static_assert(numPhases <= numComponents,
                   "This solver requires that the number fluid phases is smaller or equal "
@@ -180,7 +180,7 @@ public:
 
         // create the linear system of equations which defines the
         // mole fractions
-        static constexpr int numEq = numComponents*numPhases;
+        static const int numEq = numComponents*numPhases;
         Dune::FieldMatrix<Scalar, numEq, numEq> M(0.0);
         Dune::FieldVector<Scalar, numEq> x(0.0);
         Dune::FieldVector<Scalar, numEq> b(0.0);

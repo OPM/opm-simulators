@@ -128,18 +128,18 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // gases are always compressible
@@ -151,7 +151,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // we assume Henry's and Rault's laws for the water phase and
@@ -183,7 +183,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static constexpr Scalar molarMass(int compIdx)
+    static Scalar molarMass(int compIdx)
     {
         return
             (compIdx == H2OIdx)

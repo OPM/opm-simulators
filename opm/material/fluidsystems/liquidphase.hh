@@ -42,35 +42,35 @@ public:
     { return Component::name(); }
 
     //! \copydoc GasPhase::isLiquid
-    static constexpr bool isLiquid()
+    static bool isLiquid()
     { return true; }
 
     //! \copydoc GasPhase::isCompressible
-    static constexpr bool isCompressible()
+    static bool isCompressible()
     { return Component::liquidIsCompressible(); }
 
     //! \copydoc GasPhase::isIdealGas
-    static constexpr bool isIdealGas()
+    static bool isIdealGas()
     { return false; /* we're a liquid! */ }
 
     //! \copydoc GasPhase::molarMass
-    static constexpr Scalar molarMass()
+    static Scalar molarMass()
     {  return Component::molarMass(); }
 
     //! \copydoc GasPhase::criticalTemperature
-    static constexpr Scalar criticalTemperature()
+    static Scalar criticalTemperature()
     {  return Component::criticalTemperature(); }
 
     //! \copydoc GasPhase::criticalPressure
-    static constexpr Scalar criticalPressure()
+    static Scalar criticalPressure()
     {  return Component::criticalPressure(); }
 
     //! \copydoc GasPhase::tripleTemperature
-    static constexpr Scalar tripleTemperature()
+    static Scalar tripleTemperature()
     {  return Component::tripleTemperature(); }
 
     //! \copydoc GasPhase::triplePressure
-    static constexpr Scalar triplePressure()
+    static Scalar triplePressure()
     { return Component::triplePressure(); }
 
     //! \copydoc GasPhase::vaporPressure

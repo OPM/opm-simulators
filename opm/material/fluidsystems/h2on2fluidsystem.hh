@@ -68,12 +68,12 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numPhases
-    static constexpr int numPhases = 2;
+    static const int numPhases = 2;
 
     //! Index of the liquid phase
-    static constexpr int lPhaseIdx = 0;
+    static const int lPhaseIdx = 0;
     //! Index of the gas phase
-    static constexpr int gPhaseIdx = 1;
+    static const int gPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
@@ -88,14 +88,14 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // gases are always compressible
@@ -106,7 +106,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -117,7 +117,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // we assume Henry's and Rault's laws for the water phase and
@@ -131,12 +131,12 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
-    static constexpr int numComponents = 2;
+    static const int numComponents = 2;
 
     //! The component index of water
-    static constexpr int H2OIdx = 0;
+    static const int H2OIdx = 0;
     //! The component index of molecular nitrogen
-    static constexpr int N2Idx = 1;
+    static const int N2Idx = 1;
 
     //! The component for pure water
     typedef TabulatedH2O H2O;
@@ -159,7 +159,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static constexpr Scalar molarMass(int compIdx)
+    static Scalar molarMass(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         return (compIdx == H2OIdx)
@@ -174,7 +174,7 @@ public:
      *
      * \copydetails Doxygen::compIdxParam
      */
-    static constexpr Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(int compIdx)
     {
         return (compIdx == H2OIdx)
             ? H2O::criticalTemperature()
@@ -188,7 +188,7 @@ public:
      *
      * \copydetails Doxygen::compIdxParam
      */
-    static constexpr Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(int compIdx)
     {
         return (compIdx == H2OIdx)
             ? H2O::criticalPressure()
@@ -202,7 +202,7 @@ public:
      *
      * \copydetails Doxygen::compIdxParam
      */
-    static constexpr Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(int compIdx)
     {
         return (compIdx == H2OIdx)
             ? H2O::acentricFactor()

@@ -56,31 +56,31 @@ public:
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of molecular nitrogen.
      */
-    static constexpr Scalar molarMass()
+    static Scalar molarMass()
     { return 28.0134e-3;}
 
     /*!
      * \brief Returns the critical temperature \f$\mathrm{[K]}\f$ of molecular nitrogen
      */
-    static constexpr Scalar criticalTemperature()
+    static Scalar criticalTemperature()
     { return 126.192; /* [K] */ }
 
     /*!
      * \brief Returns the critical pressure \f$\mathrm{[Pa]}\f$ of molecular nitrogen.
      */
-    static constexpr Scalar criticalPressure()
+    static Scalar criticalPressure()
     { return 3.39858e6; /* [N/m^2] */ }
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at molecular nitrogen's triple point.
      */
-    static constexpr Scalar tripleTemperature()
+    static Scalar tripleTemperature()
     { return 63.151; /* [K] */ }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at molecular nitrogen's triple point.
      */
-    static constexpr Scalar triplePressure()
+    static Scalar triplePressure()
     { return 12.523e3; /* [N/m^2] */ }
 
     /*!
@@ -136,13 +136,13 @@ public:
      /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static constexpr bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static constexpr bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return true; }
 
     /*!

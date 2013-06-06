@@ -63,15 +63,15 @@ namespace Opm {
 template <class Scalar, class FluidSystem>
 class ImmiscibleFlash
 {
-    static constexpr int numPhases = FluidSystem::numPhases;
-    static constexpr int numComponents = FluidSystem::numComponents;
+    static const int numPhases = FluidSystem::numPhases;
+    static const int numComponents = FluidSystem::numComponents;
     static_assert(numPhases == numComponents,
                   "Immiscibility assumes that the number of phases"
                   " is equal to the number of components");
 
     typedef typename FluidSystem::ParameterCache ParameterCache;
 
-    static constexpr int numEq = numPhases;
+    static const int numEq = numPhases;
 
     typedef Dune::FieldMatrix<Scalar, numEq, numEq> Matrix;
     typedef Dune::FieldVector<Scalar, numEq> Vector;

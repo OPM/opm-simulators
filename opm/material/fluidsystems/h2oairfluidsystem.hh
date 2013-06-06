@@ -71,12 +71,12 @@ public:
     typedef Opm::Air<Scalar> Air;
 
     //! \copydoc BaseFluidSystem::numPhases
-    static constexpr int numPhases = 2;
+    static const int numPhases = 2;
 
     //! The index of the liquid phase
-    static constexpr int lPhaseIdx = 0;
+    static const int lPhaseIdx = 0;
     //! The index of the gas phase
-    static constexpr int gPhaseIdx = 1;
+    static const int gPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
@@ -89,14 +89,14 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static constexpr bool isLiquid(int phaseIdx)
+    static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static constexpr bool isCompressible(int phaseIdx)
+    static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return (phaseIdx == gPhaseIdx)
@@ -108,7 +108,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static constexpr bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(int phaseIdx)
     {
         return
             (phaseIdx == gPhaseIdx)
@@ -117,7 +117,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static constexpr bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         // we assume Henry's and Rault's laws for the water phase and
@@ -131,12 +131,12 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
-    static constexpr int numComponents = 2;
+    static const int numComponents = 2;
 
     //! The index of the water component
-    static constexpr int H2OIdx = 0;
+    static const int H2OIdx = 0;
     //! The index of the air component
-    static constexpr int AirIdx = 1;
+    static const int AirIdx = 1;
 
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
@@ -150,7 +150,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static constexpr Scalar molarMass(int compIdx)
+    static Scalar molarMass(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -166,7 +166,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static constexpr Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -181,7 +181,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static constexpr Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(int compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -196,7 +196,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static constexpr Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(int compIdx)
     {
         return
             (compIdx == H2OIdx)
