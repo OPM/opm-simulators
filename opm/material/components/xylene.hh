@@ -164,6 +164,12 @@ public:
                           + spHeatCapLiquidPhase(0.7887*temperature,pressure));
     }
 
+     /*!
+     * \brief Returns the temperature \f$\mathrm{[K]}\f$ at xylene's boiling point (1 atm).
+     */
+    static Scalar boilingTemperature()
+    { return 412.3; }
+
     /*!
      * \brief Latent heat of vaporization for xylene \f$\mathrm{[J/kg]}\f$.
      *
