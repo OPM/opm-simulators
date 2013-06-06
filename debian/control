@@ -1,0 +1,32 @@
+Source: opm-material
+Priority: extra
+Maintainer: Arne Morten Kvarving <arne.morten.kvarving@sintef.no>
+Build-Depends: build-essential, debhelper (>= 9), libboost-filesystem-dev,
+               libboost-system-dev, libboost-date-time-dev, libboost-test-dev,
+               libsuperlu3-dev, gfortran, libsuitesparse-dev, pkg-config,
+               libdune-common-dev, libdune-istl-dev, cmake, libtinyxml-dev, bc,
+               libert.ecl-dev, git, zlib1g-dev, libtool, doxygen,
+               texlive-latex-extra, texlive-latex-recommended, ghostscript
+Standards-Version: 3.9.2
+Section: libs
+Homepage: http://opm-project.org
+Vcs-Git: git://github.com/OPM/opm-material.git
+Vcs-Browser: https://github.com/OPM/opm-material
+
+Package: libopm-material1-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: foreign
+Depends: libdune-istl-dev, libdune-common-dev
+Provides: libopm-material-dev
+Suggests: libopm-material1-doc
+Description: OPM thermodynamic framework library -- development files
+ This library contains the thermodynamic framework used in OPM.
+
+Package: libopm-material1-doc
+Section: doc
+Architecture: all
+Multi-Arch: foreign
+Provides: libopm-material-doc
+Description: OPM thermodynamic framework library -- documentation
+ This library contains the thermodynamic framework used in OPM.
