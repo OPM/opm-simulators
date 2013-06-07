@@ -249,7 +249,7 @@ namespace Opm
           bcs_(bcs),
           gravity_(gravity),
           geo_(grid_, props_, gravity_),
-          solver_(grid_, props_, geo_, *wells_manager.c_wells(), linsolver)
+          solver_(grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver)
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),
                                param.getDefault("nl_pressure_maxiter", 10),
