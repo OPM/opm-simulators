@@ -712,7 +712,7 @@ namespace Opm {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
             const ADB rs_perf = subset(state.rs, well_cells);
-            well_rates_all += superset(well_perf_rates[oilpos]*rs_perf, Span(nw, 1, gaspos*nw), nw*np);
+            well_rates_all += superset(wops_.p2w * (well_perf_rates[oilpos]*rs_perf), Span(nw, 1, gaspos*nw), nw*np);
             // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.rs);
             residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.rs;
         }
