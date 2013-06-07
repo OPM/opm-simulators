@@ -30,6 +30,7 @@ struct Wells;
 namespace Opm {
 
     class DerivedGeology;
+    class RockCompressibility;
     class LinearSolverInterface;
     class BlackoilState;
     class WellState;
@@ -42,6 +43,7 @@ namespace Opm {
         FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
+                                    const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
                                     const LinearSolverInterface&    linsolver);
 
@@ -98,6 +100,7 @@ namespace Opm {
         const UnstructuredGrid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
+        const RockCompressibility*      rock_comp_props_;
         const Wells&                    wells_;
         const LinearSolverInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -187,6 +190,12 @@ namespace Opm {
         ADB
         fluidRsMax(const ADB&              p,
                    const std::vector<int>& cells) const;
+
+        ADB
+        poroMult(const ADB& p) const;
+
+        ADB
+        transMult(const ADB& p) const;
     };
 } // namespace Opm
 
