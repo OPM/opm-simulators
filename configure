@@ -283,6 +283,10 @@ for OPT in "$@"; do
               pch_use=" -DPRECOMPILE_HEADERS:BOOL=ON"
               shared=""
               ;;
+            lto)
+              use_lto=" -DWHOLE_PROG_OPTIM=ON"
+              shared=""
+              ;;
             # this flag is just for compatibility with the deprecation
             # flag in DUNE, so we can build without warnings
             fieldvector-size-is-method)
