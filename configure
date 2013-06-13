@@ -19,7 +19,7 @@ Optional Features:
                           of the options shared and static may be built.
   --enable-debug          build a non-optimized version of the library
                           [default=no]
-  --disable-lto           do not use whole program optimization [default=yes]
+  --enable-lto            use whole program optimization [default=no]
   --disable-pch           do not use precompiled headers (if buggy compiler)
   --disable-silent-rules  print every compilation statement as executed
   --enable-system-debug   put .debug files in global GDB debug dir
@@ -88,7 +88,7 @@ use_mpi=
 silent_rules=
 #debug_loc=" -DSYSTEM_DEBUG=OFF"
 debug_loc=
-#use_lto=" -DWHOLE_PROG_OPTIM=ON"
+#use_lto=" -DWHOLE_PROG_OPTIM=OFF"
 use_lto=
 
 # default is to warn for unknown options, but this can be disabled

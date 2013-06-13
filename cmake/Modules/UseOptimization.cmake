@@ -16,7 +16,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   set (_opt_flags "")
 
   # link-time (a.k.a. global) optimizations
-  option (WHOLE_PROG_OPTIM "Whole program optimization (lto)" ON)
+  # disabled due to widespread bugs in the linker plugin
+  option (WHOLE_PROG_OPTIM "Whole program optimization (lto)" OFF)
   if (WHOLE_PROG_OPTIM)
 	check_cxx_accepts_flag ("-flto" HAVE_LINK_OPTS)
 	if (HAVE_LINK_OPTS)
