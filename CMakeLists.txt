@@ -46,6 +46,7 @@ set (${project}_DEPS
 	${${PROJECT}_DEPENDS_LIST}
 	)
 
+
 # C++ project
 cmake_minimum_required (VERSION 2.8)
 project(${${project}_NAME})
@@ -91,6 +92,19 @@ include (UseWarnings)
 # macro to set standard variables (INCLUDE_DIRS, LIBRARIES etc.)
 include (OpmFind)
 find_and_append_package_list_to (${project} ${${project}_DEPS})
+
+# make sure the C++-2011 features which we rely on are supported
+if (NOT HAVE_ARRAY)
+	message(FATAL_ERROR "std::array must be supported by the compiler for the ${project} module to work")
+endif()
+
+if (NOT HAVE_STATIC_ASSERT)
+	message(FATAL_ERROR "static assertations (via static_assert) must be supported for the ${project} module to work")
+endif()
+
+if (NOT HAVE_AUTO)
+	message(FATAL_ERROR "The 'auto' keyword must be supported by the compiler for the ${project} module to work")
+endif()
 
 # put debug information into every executable
 include (UseDebugSymbols)
