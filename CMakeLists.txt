@@ -204,3 +204,6 @@ configure_la (${project} ${${project}_TARGET} ${project}_LIBTOOL_ARCHIVE)
 ### clean in-source builds ###
 include (OpmDistClean)
 opm_dist_clean (${project})
+
+### emulate the with-xxx feature of autotools;
+include (OpmKnown)
