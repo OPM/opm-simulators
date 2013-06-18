@@ -25,6 +25,7 @@
 #include <opm/core/fluid/RockBasic.hpp>
 #include <opm/core/fluid/PvtPropertiesBasic.hpp>
 #include <opm/core/fluid/SaturationPropsBasic.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm
 {
