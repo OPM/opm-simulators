@@ -1,3 +1,4 @@
+#include "config.h"
 #include <opm/core/wells/ProductionSpecification.hpp>
 
 namespace Opm

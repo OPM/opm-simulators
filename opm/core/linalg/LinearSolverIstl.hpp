@@ -40,9 +40,14 @@ namespace Opm
         ///   linsolver_verbosity           0
         ///   linsolver_type                1 ( = CG_AMG), alternatives are:
         ///                                 CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2
+        ///                                 FastAMG=3, KAMG=4 };
         ///   linsolver_save_system         false
         ///   linsolver_save_filename       <empty string>
-        ///   linsolver_max_iterations      0 (unlimited)
+        ///   linsolver_max_iterations      0 (unlimited=5000)
+        ///   linsolver_residual_tolerance  1e-8
+        ///   linsolver_smooth_steps        2
+        ///   linsolver_prolongate_factor   1.6
+        ///   linsolver_verbosity           0
         LinearSolverIstl();
 
         /// Construct from parameters
@@ -83,7 +88,7 @@ namespace Opm
     private:
         double linsolver_residual_tolerance_;
         int linsolver_verbosity_;
-        enum LinsolverType { CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2 };
+        enum LinsolverType { CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2, FastAMG=3, KAMG=4 };
         LinsolverType linsolver_type_;
         bool linsolver_save_system_;
         std::string linsolver_save_filename_;

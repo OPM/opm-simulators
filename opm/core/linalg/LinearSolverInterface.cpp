@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/linalg/call_umfpack.h>

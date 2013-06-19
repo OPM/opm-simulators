@@ -1,3 +1,4 @@
+#include "config.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -6,7 +7,7 @@
 
 #include <opm/core/linalg/sparse_sys.h>
 
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 

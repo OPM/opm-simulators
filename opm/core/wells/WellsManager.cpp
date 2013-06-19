@@ -17,15 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
+#include "config.h"
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/eclipse/EclipseGridParser.hpp>
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/newwells.h>
+#include <opm/core/wells.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/wells/WellCollection.hpp>
-#include <opm/core/fluid/blackoil/phaseUsageFromDeck.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <tr1/array>
 #include <algorithm>
@@ -223,8 +223,7 @@ namespace Opm
         : w_(0)
     {
     }
-
-
+   
 
     /// Construct from existing wells object.
     WellsManager::WellsManager(struct Wells* W)

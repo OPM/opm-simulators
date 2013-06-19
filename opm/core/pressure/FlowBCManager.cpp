@@ -18,6 +18,7 @@
 */
 
 
+#include "config.h"
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/grid.h>

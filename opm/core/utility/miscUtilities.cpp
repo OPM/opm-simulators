@@ -17,13 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/newwells.h>
-#include <opm/core/fluid/IncompPropertiesInterface.hpp>
-#include <opm/core/fluid/BlackoilPropertiesInterface.hpp>
-#include <opm/core/fluid/RockCompressibility.hpp>
+#include <opm/core/wells.h>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 #include <functional>
@@ -474,7 +475,7 @@ namespace Opm
             if (wells.type[w] == INJECTOR) {
                 flow *= wells.comp_frac[np*w + 0]; // Obtaining water rate for inflow source.
             }
-            const double cell = wells.well_cells[wells.well_connpos[w]];
+            const int cell = wells.well_cells[wells.well_connpos[w]];
             src[cell] = flow;
         }
     }
