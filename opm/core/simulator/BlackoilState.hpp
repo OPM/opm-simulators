@@ -22,6 +22,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <vector>
 
 namespace Opm
@@ -47,6 +48,7 @@ namespace Opm
                 // but use available phase information instead.
                 sat_[num_phases*cell + 1] = 1.0;
             }
+            gor_.resize(g.number_of_cells, 0.0);
         }
 
         enum ExtremalSat { MinSat, MaxSat };
@@ -59,7 +61,11 @@ namespace Opm
                          const Opm::BlackoilPropertiesInterface& props,
                          ExtremalSat es)
         {
+            if (cells.empty()) {
+                return;
+            }
             const int n = cells.size();
+            ASSERT(n > 0);
             std::vector<double> smin(num_phases_*n);
             std::vector<double> smax(num_phases_*n);
             props.satRange(n, &cells[0], &smin[0], &smax[0]);
@@ -81,12 +87,14 @@ namespace Opm
         std::vector<double>& faceflux    () { return flux_  ; }
         std::vector<double>& surfacevol  () { return surfvol_; }
         std::vector<double>& saturation  () { return sat_   ; }
+        std::vector<double>& gasoilratio () { return gor_   ; }
 
         const std::vector<double>& pressure    () const { return press_ ; }
         const std::vector<double>& facepressure() const { return fpress_; }
         const std::vector<double>& faceflux    () const { return flux_  ; }
         const std::vector<double>& surfacevol  () const { return surfvol_; }
         const std::vector<double>& saturation  () const { return sat_   ; }
+        const std::vector<double>& gasoilratio () const { return gor_   ; }
 
     private:
         int num_phases_;
@@ -95,6 +103,7 @@ namespace Opm
         std::vector<double> flux_  ;
         std::vector<double> surfvol_;
         std::vector<double> sat_   ;
+        std::vector<double> gor_   ;
     };
 
 } // namespace Opm

@@ -31,27 +31,46 @@ namespace Opm
     {
     public:
         /// Allocate and initialize if wells is non-null.
+        /// Also tries to give useful initial values to the bhp() and
+        /// wellRates() fields, depending on controls.  The
+        /// perfRates() field is filled with zero, and perfPress()
+        /// with -1e100.
         template <class State>
         void init(const Wells* wells, const State& state)
         {
             if (wells) {
                 const int nw = wells->number_of_wells;
+                const int np = wells->number_of_phases;
                 bhp_.resize(nw);
-                // Initialize bhp to be target pressure
-                // if bhp-controlled well, otherwise set
-                // to pressure in first perforation cell.
+                wellrates_.resize(nw * np, 0.0);
                 for (int w = 0; w < nw; ++w) {
                     const WellControls* ctrl = wells->ctrls[w];
-
+                    // Initialize bhp to be target pressure if
+                    // bhp-controlled well, otherwise set to a little
+                    // above or below (depending on if the well is an
+                    // injector or producer) pressure in first perforation
+                    // cell.
                     if ((ctrl->current < 0) || // SHUT
                         (ctrl->type[ctrl->current] != BHP)) {
-                        const int cell = wells->well_cells[wells->well_connpos[w]];
-                        bhp_[w] = state.pressure()[cell];
-                    }
-                    else {
+                        const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                        const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
+                        bhp_[w] = safety_factor*state.pressure()[first_cell];
+                    } else {
                         bhp_[w] = ctrl->target[ctrl->current];
                     }
+                    // Initialize well rates to match controls if type is SURFACE_RATE
+                    if ((ctrl->current >= 0) && // open well
+                        (ctrl->type[ctrl->current] == SURFACE_RATE)) {
+                        const double rate_target = ctrl->target[ctrl->current];
+                        for (int p = 0; p < np; ++p) {
+                            const double phase_distr = ctrl->distr[np * ctrl->current + p];
+                            wellrates_[np*w + p] = rate_target * phase_distr;
+                        }
+                    }
                 }
+                // The perforation rates and perforation pressures are
+                // not expected to be consistent with bhp_ and wellrates_
+                // after init().
                 perfrates_.resize(wells->well_connpos[nw], 0.0);
                 perfpress_.resize(wells->well_connpos[nw], -1e100);
             }
@@ -60,6 +79,10 @@ namespace Opm
         /// One bhp pressure per well.
         std::vector<double>& bhp() { return bhp_; }
         const std::vector<double>& bhp() const { return bhp_; }
+
+        /// One rate per well and phase.
+        std::vector<double>& wellRates() { return wellrates_; }
+        const std::vector<double>& wellRates() const { return wellrates_; }
 
         /// One rate per well connection.
         std::vector<double>& perfRates() { return perfrates_; }
@@ -71,6 +94,7 @@ namespace Opm
 
     private:
         std::vector<double> bhp_;
+        std::vector<double> wellrates_;
         std::vector<double> perfrates_;
         std::vector<double> perfpress_;
     };

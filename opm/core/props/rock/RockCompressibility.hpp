@@ -47,12 +47,22 @@ namespace Opm
         /// Porosity multiplier.
         double poroMult(double pressure) const;
 
+        /// Derivative of porosity multiplier with respect to pressure.
+        double poroMultDeriv(double pressure) const;
+
+        /// Transmissibility multiplier.
+        double transMult(double pressure) const;
+
+        /// Derivative of transmissibility multiplier with respect to pressure.
+        double transMultDeriv(double pressure) const;
+
         /// Rock compressibility = (d poro / d p)*(1 / poro).
         double rockComp(double pressure) const;
 
     private:
         std::vector<double> p_;
         std::vector<double> poromult_;
+        std::vector<double> transmult_;
         double pref_;
         double rock_comp_;
     };
