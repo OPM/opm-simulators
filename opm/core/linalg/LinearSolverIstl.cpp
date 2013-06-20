@@ -60,16 +60,16 @@ namespace Opm
 
         LinearSolverInterface::LinearSolverReport
         solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
-                    double prolongateFactor, int smothsteps);
+                    double prolongateFactor, int smoothsteps);
 
 #ifdef HAS_DUNE_FAST_AMG
         LinearSolverInterface::LinearSolverReport
         solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
-                  double prolongateFactor, int smothsteps);
+                  double prolongateFactor, int smoothsteps);
 
         LinearSolverInterface::LinearSolverReport
         solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
-                     double prolongateFactor, int smothsteps);
+                     double prolongateFactor, int smoothsteps);
 #endif
     
         LinearSolverInterface::LinearSolverReport
