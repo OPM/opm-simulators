@@ -64,10 +64,12 @@ namespace Opm
 
 #ifdef HAS_DUNE_FAST_AMG
         LinearSolverInterface::LinearSolverReport
-        solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
+        solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
+                  double prolongateFactor, int smothsteps);
 
         LinearSolverInterface::LinearSolverReport
-        solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
+        solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
+                     double prolongateFactor, int smothsteps);
 #endif
     
         LinearSolverInterface::LinearSolverReport
@@ -181,14 +183,16 @@ namespace Opm
             break;
         case KAMG:
 #ifdef HAS_DUNE_FAST_AMG
-            res = solveKAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+            res = solveKAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
+                            linsolver_prolongate_factor_, linsolver_smooth_steps_);
 #else
             throw std::runtime_error("KAMG not supported with this version of DUNE");
 #endif
             break;
         case FastAMG:
 #ifdef HAS_DUNE_FAST_AMG
-            res = solveFastAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+            res = solveFastAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
+                               linsolver_prolongate_factor_, linsolver_smooth_steps_);
 #else
 	    if(linsolver_verbosity_)
 	      std::cerr<<"Fast AMG is not available; falling back to CG preconditioned with the normal one"<<std::endl;
@@ -252,7 +256,8 @@ namespace Opm
 #define ANISOTROPIC_3D 0
 
     LinearSolverInterface::LinearSolverReport
-    solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity, double linsolver_prolongate_factor, int linsolver_smooth_steps)
+    solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
+                double linsolver_prolongate_factor, int linsolver_smooth_steps)
     {
         // Solve with AMG solver.
 
@@ -287,7 +292,8 @@ namespace Opm
 #if ANISOTROPIC_3D
         criterion.setDefaultValuesAnisotropic(3, 2);
 #endif
-        Precond precond(opA, criterion, smootherArgs, 1,1,1);
+        Precond precond(opA, criterion, smootherArgs, 1, linsolver_smooth_steps,
+                        linsolver_smooth_steps);
         
         // Construct linear solver.
         Dune::CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
@@ -307,7 +313,8 @@ namespace Opm
 
 #ifdef HAS_DUNE_FAST_AMG
     LinearSolverInterface::LinearSolverReport
-    solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
+    solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
+              double linsolver_prolongate_factor, int linsolver_smooth_steps)
     {
         // Solve with AMG solver.
 
@@ -361,7 +368,8 @@ namespace Opm
     }
 
     LinearSolverInterface::LinearSolverReport
-    solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity)
+    solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
+                 double linsolver_prolongate_factor, int linsolver_smooth_steps)
     {
         // Solve with AMG solver.
 
