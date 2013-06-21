@@ -69,9 +69,9 @@ namespace Opm
 
         LinearSolverInterface::LinearSolverReport
         solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
-                     double prolongateFactor, int smoothsteps);
+                     double prolongateFactor);
 #endif
-    
+
         LinearSolverInterface::LinearSolverReport
         solveBiCGStab_ILU0(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity);
     } // anonymous namespace
@@ -112,18 +112,10 @@ namespace Opm
         linsolver_max_iterations_ = param.getDefault("linsolver_max_iterations", linsolver_max_iterations_);
         linsolver_smooth_steps_ = param.getDefault("linsolver_smooth_steps", linsolver_smooth_steps_);
         linsolver_prolongate_factor_ = param.getDefault("linsolver_prolongate_factor", linsolver_prolongate_factor_);
-        
     }
-
-
-
 
     LinearSolverIstl::~LinearSolverIstl()
-    {
-    }
-
-
-
+    {}
 
     LinearSolverInterface::LinearSolverReport
     LinearSolverIstl::solve(const int size,
@@ -166,13 +158,13 @@ namespace Opm
             std::copy(b.begin(), b.end(),
                       std::ostream_iterator<VectorBlockType>(rhsf, "\n"));
         }
-        
+
         int maxit = linsolver_max_iterations_;
         if (maxit == 0) {
             maxit = 5000;
         }
 
-        LinearSolverReport res;        
+        LinearSolverReport res;
         switch (linsolver_type_) {
         case CG_ILU0:
             res = solveCG_ILU0(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
@@ -192,11 +184,12 @@ namespace Opm
         case FastAMG:
 #ifdef HAS_DUNE_FAST_AMG
             res = solveFastAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
-                               linsolver_prolongate_factor_, linsolver_smooth_steps_);
+                               linsolver_prolongate_factor_);
 #else
-	    if(linsolver_verbosity_)
-	      std::cerr<<"Fast AMG is not available; falling back to CG preconditioned with the normal one"<<std::endl;
-	    res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
+            if(linsolver_verbosity_)
+              std::cerr<<"Fast AMG is not available; falling back to CG preconditioned with the normal one"<<std::endl;
+            res = solveCG_AMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
+                               linsolver_prolongate_factor_, linsolver_smooth_steps_);
 #endif
             break;
         case BiCGStab_ILU0:
@@ -255,6 +248,17 @@ namespace Opm
 #define SMOOTHER_ILU 0
 #define ANISOTROPIC_3D 0
 
+    template<typename C>
+    void setUpCriterion(C& criterion, double linsolver_prolongate_factor,
+                        int verbosity)
+    {
+        criterion.setDebugLevel(verbosity);
+#if ANISOTROPIC_3D
+        criterion.setDefaultValuesAnisotropic(3, 2);
+#endif
+        criterion.setProlongationDampingFactor(linsolver_prolongate_factor);
+    }
+
     LinearSolverInterface::LinearSolverReport
     solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
                 double linsolver_prolongate_factor, int linsolver_smooth_steps)
@@ -281,20 +285,14 @@ namespace Opm
         typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
         typedef Dune::Amg::AMG<Operator,Vector,Smoother>   Precond;
 
-        Operator opA(A);
-
         // Construct preconditioner.
-        double relax = 1;
-        Precond::SmootherArgs smootherArgs;
-        smootherArgs.relaxationFactor = relax;
         Criterion criterion;
-        criterion.setDebugLevel(verbosity);
-#if ANISOTROPIC_3D
-        criterion.setDefaultValuesAnisotropic(3, 2);
-#endif
+        Precond::SmootherArgs smootherArgs;
+        Operator opA(A);
+        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity);
         Precond precond(opA, criterion, smootherArgs, 1, linsolver_smooth_steps,
                         linsolver_smooth_steps);
-        
+
         // Construct linear solver.
         Dune::CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
 
@@ -337,18 +335,12 @@ namespace Opm
 #endif
         typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
         typedef Dune::Amg::KAMG<Operator,Vector,Smoother,Dune::Amg::SequentialInformation>   Precond;
-        Operator opA(A);
 
         // Construct preconditioner.
-        double relax = 1;
+        Operator opA(A);
         Precond::SmootherArgs smootherArgs;
-        smootherArgs.relaxationFactor = relax;
         Criterion criterion;
-        criterion.setDebugLevel(verbosity);
-#if ANISOTROPIC_3D
-        criterion.setDefaultValuesAnisotropic(3, 2);
-#endif
-        criterion.setProlongationDampingFactor(linsolver_prolongate_factor);
+        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity);
         Precond precond(opA, criterion, smootherArgs, 1, linsolver_smooth_steps,
                         linsolver_smooth_steps);
 
@@ -369,7 +361,7 @@ namespace Opm
 
     LinearSolverInterface::LinearSolverReport
     solveFastAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
-                 double linsolver_prolongate_factor, int linsolver_smooth_steps)
+                 double linsolver_prolongate_factor)
     {
         // Solve with AMG solver.
 
@@ -382,27 +374,21 @@ namespace Opm
 #if SYMMETRIC
         typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
 #else
-	typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
+        typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Mat,CouplingMetric> > CriterionBase;
 #endif
 
         typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
         typedef Dune::Amg::FastAMG<Operator,Vector>   Precond;
 
-        Operator opA(A);
-        
         // Construct preconditioner.
-	Criterion criterion;
-        criterion.setDebugLevel(verbosity);
-#if ANISOTROPIC_3D
-        criterion.setDefaultValuesAnisotropic(3, 2);
-#else 
-        criterion.setDefaultValuesIsotropic(3,2);
-#endif
-        criterion.setProlongationDampingFactor(1.6);
-	Dune::Amg::Parameters parms;
-	parms.setDebugLevel(verbosity);
-	parms.setNoPreSmoothSteps(1);
-	parms.setNoPostSmoothSteps(1);
+        Operator opA(A);
+        Criterion criterion;
+        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity);
+        Dune::Amg::Parameters parms;
+        parms.setDebugLevel(verbosity);
+        parms.setNoPreSmoothSteps(1);
+        parms.setNoPostSmoothSteps(1);
+        parms.setProlongationDampingFactor(linsolver_prolongate_factor);
         Precond precond(opA, criterion, parms);
 
         // Construct linear solver.
@@ -452,4 +438,3 @@ namespace Opm
 
 
 } // namespace Opm
-
