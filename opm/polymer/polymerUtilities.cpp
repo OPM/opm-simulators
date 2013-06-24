@@ -157,7 +157,7 @@ namespace Opm
 	std::vector<double> kr(num_cells*num_phases);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
 	std::vector<double> mu(num_cells*num_phases);
-	props.viscosity(num_phases, &p[0], &z[0], &cells[0], &mu[0], 0);
+	props.viscosity(num_cells, &p[0], &z[0], &cells[0], &mu[0], 0);
         double mob[2]; // here we assume num_phases=2
 	for (int cell = 0; cell < num_cells; ++cell) {
             double* kr_cell = &kr[2*cell];
