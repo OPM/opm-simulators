@@ -68,6 +68,7 @@ if (NOT EIGEN3_INCLUDE_DIR)
 	find_path (EIGEN3_INCLUDE_DIR
 	  NAMES signature_of_eigen3_matrix_library
 	  PATHS ${EIGEN3_ROOT}
+	  PATH_SUFFIXES eigen3 include/eigen3 eigen include/eigen
 	  NO_DEFAULT_PATH
 	  )
   else (EIGEN3_ROOT)
