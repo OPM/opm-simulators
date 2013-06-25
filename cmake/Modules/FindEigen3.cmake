@@ -61,6 +61,11 @@ if (EIGEN3_INCLUDE_DIR)
 
 else (EIGEN3_INCLUDE_DIR)
 
+  # allow Eigen3_ROOT to be used in addition to EIGEN3_ROOT
+  if (Eigen3_ROOT)
+	set (EIGEN3_ROOT "${Eigen3_ROOT}")
+  endif (Eigen3_ROOT)
+
   # if the _ROOT is specified, then look *only* there; don't allow any
   # other version to be swapped in to substitute; if not specified, then
   # go search usual locations
