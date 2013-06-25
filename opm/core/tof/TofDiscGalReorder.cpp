@@ -273,202 +273,20 @@ namespace Opm
         // right-hand-sides, first for tof and then (optionally) for
         // all tracers.
 
-        const int dim = grid_.dimensions;
         const int num_basis = basis_func_->numBasisFunc();
         ++num_singlesolves_;
 
         std::fill(rhs_.begin(), rhs_.end(), 0.0);
         std::fill(jac_.begin(), jac_.end(), 0.0);
 
-        // Compute cell residual contribution.
-        {
-            const int deg_needed = basis_func_->degree();
-            CellQuadrature quad(grid_, cell, deg_needed);
-            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
-                // Integral of: b_i \phi
-                quad.quadPtCoord(quad_pt, &coord_[0]);
-                basis_func_->eval(cell, &coord_[0], &basis_[0]);
-                const double w = quad.quadPtWeight(quad_pt);
-                for (int j = 0; j < num_basis; ++j) {
-                    // Only adding to the tof rhs.
-                    rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
-                }
-            }
-        }
+        // Add cell contributions to res_ and jac_.
+        cellContribs(cell);
 
-        // Compute upstream residual contribution.
-        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
-            const int face = grid_.cell_faces[hface];
-            double flux = 0.0;
-            int upstream_cell = -1;
-            if (cell == grid_.face_cells[2*face]) {
-                flux = darcyflux_[face];
-                upstream_cell = grid_.face_cells[2*face+1];
-            } else {
-                flux = -darcyflux_[face];
-                upstream_cell = grid_.face_cells[2*face];
-            }
-            if (flux >= 0.0) {
-                // This is an outflow boundary.
-                continue;
-            }
-            if (upstream_cell < 0) {
-                // This is an outer boundary. Assumed tof = 0 on inflow, so no contribution.
-                // For tracers, a cell with inflow should be marked as a tracer head cell,
-                // and not be modified.
-                continue;
-            }
-            // Do quadrature over the face to compute
-            // \int_{\partial K} u_h^{ext} (v(x) \cdot n) b_j ds
-            // (where u_h^{ext} is the upstream unknown (tof)).
-            // Quadrature degree set to 2*D, since u_h^{ext} varies
-            // with degree D, and b_j too. We assume that the normal
-            // velocity is constant (this assumption may have to go
-            // for higher order than DG1).
-            const double normal_velocity = flux / grid_.face_areas[face];
-            const int deg_needed = 2*basis_func_->degree();
-            FaceQuadrature quad(grid_, face, deg_needed);
-            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
-                quad.quadPtCoord(quad_pt, &coord_[0]);
-                basis_func_->eval(cell, &coord_[0], &basis_[0]);
-                basis_func_->eval(upstream_cell, &coord_[0], &basis_nb_[0]);
-                const double w = quad.quadPtWeight(quad_pt);
-                // Modify tof rhs
-                const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
-                                                               tof_coeff_ + num_basis*upstream_cell, 0.0);
-                for (int j = 0; j < num_basis; ++j) {
-                    rhs_[j] -= w * tof_upstream * normal_velocity * basis_[j];
-                }
-                // Modify tracer rhs
-                if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
-                    for (int tr = 0; tr < num_tracers_; ++tr) {
-                        const double* up_tr_co = tracer_coeff_ + num_tracers_*num_basis*upstream_cell + num_basis*tr;
-                        const double tracer_up = std::inner_product(basis_nb_.begin(), basis_nb_.end(), up_tr_co, 0.0);
-                        for (int j = 0; j < num_basis; ++j) {
-                            rhs_[num_basis*(tr + 1) + j] -= w * tracer_up * normal_velocity * basis_[j];
-                        }
-                    }
-                }
-            }
-        }
-
-        // Compute cell jacobian contribution. We use Fortran ordering
-        // for jac_, i.e. rows cycling fastest.
-        {
-            // Even with ECVI velocity interpolation, degree of precision 1
-            // is sufficient for optimal convergence order for DG1 when we
-            // use linear (total degree 1) basis functions.
-            // With bi(tri)-linear basis functions, it still seems sufficient
-            // for convergence order 2, but the solution looks much better and
-            // has significantly lower error with degree of precision 2.
-            // For now, we err on the side of caution, and use 2*degree, even
-            // though this is wasteful for the pure linear basis functions.
-            // const int deg_needed = 2*basis_func_->degree() - 1;
-            const int deg_needed = 2*basis_func_->degree();
-            CellQuadrature quad(grid_, cell, deg_needed);
-            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
-                // b_i (v \cdot \grad b_j)
-                quad.quadPtCoord(quad_pt, &coord_[0]);
-                basis_func_->eval(cell, &coord_[0], &basis_[0]);
-                basis_func_->evalGrad(cell, &coord_[0], &grad_basis_[0]);
-                velocity_interpolation_->interpolate(cell, &coord_[0], &velocity_[0]);
-                const double w = quad.quadPtWeight(quad_pt);
-                for (int j = 0; j < num_basis; ++j) {
-                    for (int i = 0; i < num_basis; ++i) {
-                        for (int dd = 0; dd < dim; ++dd) {
-                            jac_[j*num_basis + i] -= w * basis_[j] * grad_basis_[dim*i + dd] * velocity_[dd];
-                        }
-                    }
-                }
-            }
-        }
-
-        // Compute downstream jacobian contribution from faces.
-        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
-            const int face = grid_.cell_faces[hface];
-            double flux = 0.0;
-            if (cell == grid_.face_cells[2*face]) {
-                flux = darcyflux_[face];
-            } else {
-                flux = -darcyflux_[face];
-            }
-            if (flux <= 0.0) {
-                // This is an inflow boundary.
-                continue;
-            }
-            // Do quadrature over the face to compute
-            // \int_{\partial K} b_i (v(x) \cdot n) b_j ds
-            const double normal_velocity = flux / grid_.face_areas[face];
-            FaceQuadrature quad(grid_, face, 2*basis_func_->degree());
-            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
-                // u^ext flux B   (B = {b_j})
-                quad.quadPtCoord(quad_pt, &coord_[0]);
-                basis_func_->eval(cell, &coord_[0], &basis_[0]);
-                const double w = quad.quadPtWeight(quad_pt);
-                for (int j = 0; j < num_basis; ++j) {
-                    for (int i = 0; i < num_basis; ++i) {
-                        jac_[j*num_basis + i] += w * basis_[i] * normal_velocity * basis_[j];
-                    }
-                }
-            }
-        }
-
-        // Compute downstream jacobian contribution from sink terms.
-        // Contribution from inflow sources would be
-        // similar to the contribution from upstream faces, but
-        // it is zero since we let all external inflow be associated
-        // with a zero tof.
-        if (source_[cell] < 0.0) {
-            // A sink.
-            const double flux = -source_[cell]; // Sign convention for flux: outflux > 0.
-            const double flux_density = flux / grid_.cell_volumes[cell];
-            // Do quadrature over the cell to compute
-            // \int_{K} b_i flux b_j dx
-            CellQuadrature quad(grid_, cell, 2*basis_func_->degree());
-            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
-                quad.quadPtCoord(quad_pt, &coord_[0]);
-                basis_func_->eval(cell, &coord_[0], &basis_[0]);
-                const double w = quad.quadPtWeight(quad_pt);
-                for (int j = 0; j < num_basis; ++j) {
-                    for (int i = 0; i < num_basis; ++i) {
-                        jac_[j*num_basis + i] += w * basis_[i] * flux_density * basis_[j];
-                    }
-                }
-            }
-        }
+        // Add face contributions to res_ and jac_.
+        faceContribs(cell);
 
         // Solve linear equation.
-        MAT_SIZE_T n = num_basis;
-        int num_tracer_to_compute = num_tracers_;
-        if (num_tracers_) {
-            if (tracerhead_by_cell_[cell] != NoTracerHead) {
-                num_tracer_to_compute = 0;
-            }
-        }
-        MAT_SIZE_T nrhs = 1 + num_tracer_to_compute;
-        MAT_SIZE_T lda = num_basis;
-        std::vector<MAT_SIZE_T> piv(num_basis);
-        MAT_SIZE_T ldb = num_basis;
-        MAT_SIZE_T info = 0;
-        orig_jac_ = jac_;
-        orig_rhs_ = rhs_;
-        dgesv_(&n, &nrhs, &jac_[0], &lda, &piv[0], &rhs_[0], &ldb, &info);
-        if (info != 0) {
-            // Print the local matrix and rhs.
-            std::cerr << "Failed solving single-cell system Ax = b in cell " << cell
-                      << " with A = \n";
-            for (int row = 0; row < n; ++row) {
-                for (int col = 0; col < n; ++col) {
-                    std::cerr << "    " << orig_jac_[row + n*col];
-                }
-                std::cerr << '\n';
-            }
-            std::cerr << "and b = \n";
-            for (int row = 0; row < n; ++row) {
-                std::cerr << "    " << orig_rhs_[row] << '\n';
-            }
-            OPM_THROW(std::runtime_error, "Lapack error: " << info << " encountered in cell " << cell);
-        }
+        solveLinearSystem(cell);
 
         // The solution ends up in rhs_, so we must copy it.
         std::copy(rhs_.begin(), rhs_.begin() + num_basis, tof_coeff_ + num_basis*cell);
@@ -527,6 +345,221 @@ namespace Opm
                     basis_func_->addConstant(increment, local_basis);
                 }
             }
+        }
+    }
+
+
+
+
+    void TofDiscGalReorder::cellContribs(const int cell)
+    {
+        const int num_basis = basis_func_->numBasisFunc();
+        const int dim = grid_.dimensions;
+
+        // Compute cell residual contribution.
+        {
+            const int deg_needed = basis_func_->degree();
+            CellQuadrature quad(grid_, cell, deg_needed);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // Integral of: b_i \phi
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    // Only adding to the tof rhs.
+                    rhs_[j] += w * basis_[j] * porevolume_[cell] / grid_.cell_volumes[cell];
+                }
+            }
+        }
+
+        // Compute cell jacobian contribution. We use Fortran ordering
+        // for jac_, i.e. rows cycling fastest.
+        {
+            // Even with ECVI velocity interpolation, degree of precision 1
+            // is sufficient for optimal convergence order for DG1 when we
+            // use linear (total degree 1) basis functions.
+            // With bi(tri)-linear basis functions, it still seems sufficient
+            // for convergence order 2, but the solution looks much better and
+            // has significantly lower error with degree of precision 2.
+            // For now, we err on the side of caution, and use 2*degree, even
+            // though this is wasteful for the pure linear basis functions.
+            // const int deg_needed = 2*basis_func_->degree() - 1;
+            const int deg_needed = 2*basis_func_->degree();
+            CellQuadrature quad(grid_, cell, deg_needed);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // b_i (v \cdot \grad b_j)
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                basis_func_->evalGrad(cell, &coord_[0], &grad_basis_[0]);
+                velocity_interpolation_->interpolate(cell, &coord_[0], &velocity_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    for (int i = 0; i < num_basis; ++i) {
+                        for (int dd = 0; dd < dim; ++dd) {
+                            jac_[j*num_basis + i] -= w * basis_[j] * grad_basis_[dim*i + dd] * velocity_[dd];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Compute downstream jacobian contribution from sink terms.
+        // Contribution from inflow sources would be
+        // similar to the contribution from upstream faces, but
+        // it is zero since we let all external inflow be associated
+        // with a zero tof.
+        if (source_[cell] < 0.0) {
+            // A sink.
+            const double flux = -source_[cell]; // Sign convention for flux: outflux > 0.
+            const double flux_density = flux / grid_.cell_volumes[cell];
+            // Do quadrature over the cell to compute
+            // \int_{K} b_i flux b_j dx
+            CellQuadrature quad(grid_, cell, 2*basis_func_->degree());
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    for (int i = 0; i < num_basis; ++i) {
+                        jac_[j*num_basis + i] += w * basis_[i] * flux_density * basis_[j];
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+    void TofDiscGalReorder::faceContribs(const int cell)
+    {
+        const int num_basis = basis_func_->numBasisFunc();
+
+        // Compute upstream residual contribution from faces.
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            int upstream_cell = -1;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+                upstream_cell = grid_.face_cells[2*face+1];
+            } else {
+                flux = -darcyflux_[face];
+                upstream_cell = grid_.face_cells[2*face];
+            }
+            if (flux >= 0.0) {
+                // This is an outflow boundary.
+                continue;
+            }
+            if (upstream_cell < 0) {
+                // This is an outer boundary. Assumed tof = 0 on inflow, so no contribution.
+                // For tracers, a cell with inflow should be marked as a tracer head cell,
+                // and not be modified.
+                continue;
+            }
+            // Do quadrature over the face to compute
+            // \int_{\partial K} u_h^{ext} (v(x) \cdot n) b_j ds
+            // (where u_h^{ext} is the upstream unknown (tof)).
+            // Quadrature degree set to 2*D, since u_h^{ext} varies
+            // with degree D, and b_j too. We assume that the normal
+            // velocity is constant (this assumption may have to go
+            // for higher order than DG1).
+            const double normal_velocity = flux / grid_.face_areas[face];
+            const int deg_needed = 2*basis_func_->degree();
+            FaceQuadrature quad(grid_, face, deg_needed);
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                basis_func_->eval(upstream_cell, &coord_[0], &basis_nb_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                // Modify tof rhs
+                const double tof_upstream = std::inner_product(basis_nb_.begin(), basis_nb_.end(),
+                                                               tof_coeff_ + num_basis*upstream_cell, 0.0);
+                for (int j = 0; j < num_basis; ++j) {
+                    rhs_[j] -= w * tof_upstream * normal_velocity * basis_[j];
+                }
+                // Modify tracer rhs
+                if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+                    for (int tr = 0; tr < num_tracers_; ++tr) {
+                        const double* up_tr_co = tracer_coeff_ + num_tracers_*num_basis*upstream_cell + num_basis*tr;
+                        const double tracer_up = std::inner_product(basis_nb_.begin(), basis_nb_.end(), up_tr_co, 0.0);
+                        for (int j = 0; j < num_basis; ++j) {
+                            rhs_[num_basis*(tr + 1) + j] -= w * tracer_up * normal_velocity * basis_[j];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Compute downstream jacobian contribution from faces.
+        for (int hface = grid_.cell_facepos[cell]; hface < grid_.cell_facepos[cell+1]; ++hface) {
+            const int face = grid_.cell_faces[hface];
+            double flux = 0.0;
+            if (cell == grid_.face_cells[2*face]) {
+                flux = darcyflux_[face];
+            } else {
+                flux = -darcyflux_[face];
+            }
+            if (flux <= 0.0) {
+                // This is an inflow boundary.
+                continue;
+            }
+            // Do quadrature over the face to compute
+            // \int_{\partial K} b_i (v(x) \cdot n) b_j ds
+            const double normal_velocity = flux / grid_.face_areas[face];
+            FaceQuadrature quad(grid_, face, 2*basis_func_->degree());
+            for (int quad_pt = 0; quad_pt < quad.numQuadPts(); ++quad_pt) {
+                // u^ext flux B   (B = {b_j})
+                quad.quadPtCoord(quad_pt, &coord_[0]);
+                basis_func_->eval(cell, &coord_[0], &basis_[0]);
+                const double w = quad.quadPtWeight(quad_pt);
+                for (int j = 0; j < num_basis; ++j) {
+                    for (int i = 0; i < num_basis; ++i) {
+                        jac_[j*num_basis + i] += w * basis_[i] * normal_velocity * basis_[j];
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    // This function assumes that jac_ and rhs_ contain the
+    // linear system to be solved. They are stored in orig_jac_
+    // and orig_rhs_, then the system is solved via LAPACK,
+    // overwriting the input data (jac_ and rhs_).
+    void TofDiscGalReorder::solveLinearSystem(const int cell)
+    {
+        MAT_SIZE_T n = basis_func_->numBasisFunc();
+        int num_tracer_to_compute = num_tracers_;
+        if (num_tracers_) {
+            if (tracerhead_by_cell_[cell] != NoTracerHead) {
+                num_tracer_to_compute = 0;
+            }
+        }
+        MAT_SIZE_T nrhs = 1 + num_tracer_to_compute;
+        MAT_SIZE_T lda = n;
+        std::vector<MAT_SIZE_T> piv(n);
+        MAT_SIZE_T ldb = n;
+        MAT_SIZE_T info = 0;
+        orig_jac_ = jac_;
+        orig_rhs_ = rhs_;
+        dgesv_(&n, &nrhs, &jac_[0], &lda, &piv[0], &rhs_[0], &ldb, &info);
+        if (info != 0) {
+            // Print the local matrix and rhs.
+            std::cerr << "Failed solving single-cell system Ax = b in cell " << cell
+                      << " with A = \n";
+            for (int row = 0; row < n; ++row) {
+                for (int col = 0; col < n; ++col) {
+                    std::cerr << "    " << orig_jac_[row + n*col];
+                }
+                std::cerr << '\n';
+            }
+            std::cerr << "and b = \n";
+            for (int row = 0; row < n; ++row) {
+                std::cerr << "    " << orig_rhs_[row] << '\n';
+            }
+            OPM_THROW(std::runtime_error, "Lapack error: " << info << " encountered in cell " << cell);
         }
     }
 

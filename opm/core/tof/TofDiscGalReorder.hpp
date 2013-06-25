@@ -121,6 +121,10 @@ namespace Opm
         virtual void solveSingleCell(const int cell);
         virtual void solveMultiCell(const int num_cells, const int* cells);
 
+        void cellContribs(const int cell);
+        void faceContribs(const int cell);
+        void solveLinearSystem(const int cell);
+
     private:
         // Disable copying and assignment.
         TofDiscGalReorder(const TofDiscGalReorder&);
