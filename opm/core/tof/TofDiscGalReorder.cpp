@@ -296,29 +296,6 @@ namespace Opm
 
         // Apply limiter.
         if (basis_func_->degree() > 0 && use_limiter_ && limiter_usage_ == DuringComputations) {
-#ifdef EXTRA_VERBOSE
-            std::cout << "Cell: " << cell << "   ";
-            std::cout << "v = ";
-            for (int dd = 0; dd < dim; ++dd) {
-                std::cout << velocity_[dd] << ' ';
-            }
-            std::cout << "     grad tau = ";
-            for (int dd = 0; dd < dim; ++dd) {
-                std::cout << tof_coeff_[num_basis*cell + dd + 1] << ' ';
-            }
-            const double prod = std::inner_product(velocity_.begin(), velocity_.end(),
-                                                   tof_coeff_ + num_basis*cell + 1, 0.0);
-            const double vv = std::inner_product(velocity_.begin(), velocity_.end(),
-                                                 velocity_.begin(), 0.0);
-            const double gg = std::inner_product(tof_coeff_ + num_basis*cell + 1,
-                                                 tof_coeff_ + num_basis*cell + num_basis,
-                                                 tof_coeff_ + num_basis*cell + 1, 0.0);
-            std::cout << "     prod = " << std::inner_product(velocity_.begin(), velocity_.end(),
-                                                              tof_coeff_ + num_basis*cell + 1, 0.0);
-            std::cout << "     normalized = " << prod/std::sqrt(vv*gg);
-            std::cout << "     angle = " << std::acos(prod/std::sqrt(vv*gg))*360.0/(2.0*M_PI);
-            std::cout << std::endl;
-#endif
             applyLimiter(cell, tof_coeff_);
             if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
                 for (int tr = 0; tr < num_tracers_; ++tr) {
