@@ -61,12 +61,23 @@ if (EIGEN3_INCLUDE_DIR)
 
 else (EIGEN3_INCLUDE_DIR)
 
-  find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
+  # if the _ROOT is specified, then look *only* there; don't allow any
+  # other version to be swapped in to substitute; if not specified, then
+  # go search usual locations
+  if (EIGEN3_ROOT)
+	find_path (EIGEN3_INCLUDE_DIR
+	  NAMES signature_of_eigen3_matrix_library
+	  PATHS ${EIGEN3_ROOT}
+	  NO_DEFAULT_PATH
+	  )
+  else (EIGEN3_ROOT)
+    find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
       PATHS
       ${CMAKE_INSTALL_PREFIX}/include
       ${KDE4_INCLUDE_DIR}
       PATH_SUFFIXES eigen3 eigen
     )
+  endif (EIGEN3_ROOT)
 
   if(EIGEN3_INCLUDE_DIR)
     _eigen3_check_version()
