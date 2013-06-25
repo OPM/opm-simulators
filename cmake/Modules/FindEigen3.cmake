@@ -53,13 +53,8 @@ macro(_eigen3_check_version)
   endif(NOT EIGEN3_VERSION_OK)
 endmacro(_eigen3_check_version)
 
-if (EIGEN3_INCLUDE_DIR)
-
-  # in cache already
-  _eigen3_check_version()
-  set(EIGEN3_FOUND ${EIGEN3_VERSION_OK})
-
-else (EIGEN3_INCLUDE_DIR)
+# only probe if we haven't a path in our cache
+if (NOT EIGEN3_INCLUDE_DIR)
 
   # allow Eigen3_ROOT to be used in addition to EIGEN3_ROOT
   if (Eigen3_ROOT)
@@ -83,6 +78,7 @@ else (EIGEN3_INCLUDE_DIR)
       PATH_SUFFIXES eigen3 eigen
     )
   endif (EIGEN3_ROOT)
+endif (NOT EIGEN3_INCLUDE_DIR)
 
   if(EIGEN3_INCLUDE_DIR)
     _eigen3_check_version()
@@ -93,5 +89,4 @@ else (EIGEN3_INCLUDE_DIR)
 
   mark_as_advanced(EIGEN3_INCLUDE_DIR)
 
-endif(EIGEN3_INCLUDE_DIR)
 
