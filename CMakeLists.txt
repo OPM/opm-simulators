@@ -29,7 +29,7 @@ set (${project}_DEPS
 	dune-istl REQUIRED;
 	opm-core REQUIRED"
 	# Eigen
-	"Eigen3 REQUIRED"
+	"Eigen3 3.1 REQUIRED"
 	)
 
 # Additional search modules
