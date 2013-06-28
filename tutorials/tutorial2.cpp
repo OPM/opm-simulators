@@ -126,8 +126,8 @@ int main()
     /// \snippet tutorial2.cpp source
     /// \internal [source]
     std::vector<double> src(num_cells, 0.0);
-    src[0] = 100.;
-    src[num_cells-1] = -100.;
+    src[0] = 150.*cubic(meter)/day;
+    src[num_cells-1] = -150.*cubic(meter)/day;
     /// \internal [source]
     /// \endinternal
     
