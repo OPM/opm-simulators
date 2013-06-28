@@ -127,7 +127,7 @@ int main()
     /// \internal [source]
     std::vector<double> src(num_cells, 0.0);
     src[0] = 150.*cubic(meter)/day;
-    src[num_cells-1] = -150.*cubic(meter)/day;
+    src[num_cells-1] = -src[0];
     /// \internal [source]
     /// \endinternal
     
