@@ -87,8 +87,8 @@ int main()
     using namespace Opm::unit;
     using namespace Opm::prefix;
     int num_phases = 1;
-    std::vector<double> mu(num_phases, 1.0*centi*Poise);
-    std::vector<double> rho(num_phases, 1000.0*kilogram/cubic(meter));
+    std::vector<double> viscosities(num_phases, 1.0*centi*Poise);
+    std::vector<double> densities(num_phases, 1000.0*kilogram/cubic(meter));
     /// \internal [fluid]
     /// \endinternal
     /// \page tutorial2
@@ -96,7 +96,7 @@ int main()
     /// We define a permeability equal to 100 mD.
     /// \snippet tutorial2.cpp perm
     /// \internal [perm]
-    double k = 100.0*milli*darcy;
+    double permeability = 100.0*milli*darcy;
     /// \internal [perm]
     /// \endinternal
 
@@ -105,9 +105,10 @@ int main()
     /// We set up a simple property object for a single-phase situation.
     /// \snippet tutorial2.cpp single-phase property
     /// \internal [single-phase property]
-    const double phi = 1.; // porosity
-    Opm::IncompPropertiesBasic props(1, Opm::SaturationPropsBasic::Constant, rho,
-                                     mu, phi, k, dim, num_cells);
+    const double porosity = 1.;
+    Opm::IncompPropertiesBasic props(1, Opm::SaturationPropsBasic::Constant,
+                                     densities, viscosities, porosity,
+                                     permeability, dim, num_cells);
     /// \internal [single-phase property]
     /// /endinternal
 
