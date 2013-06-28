@@ -105,8 +105,9 @@ int main()
     /// We set up a simple property object for a single-phase situation.
     /// \snippet tutorial2.cpp single-phase property
     /// \internal [single-phase property]
+    const double phi = 1.; // porosity
     Opm::IncompPropertiesBasic props(1, Opm::SaturationPropsBasic::Constant, rho,
-                                     mu, 1.0, k, dim, num_cells);
+                                     mu, phi, k, dim, num_cells);
     /// \internal [single-phase property]
     /// /endinternal
 
