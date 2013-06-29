@@ -84,7 +84,7 @@ find_openmp (${project})
 
 # callback hook to setup additional dependencies
 if (COMMAND prereqs_hook)
-	prereqs_hook (${project})
+	prereqs_hook ()
 endif (COMMAND prereqs_hook)
 
 # macro to set standard variables (INCLUDE_DIRS, LIBRARIES etc.)
@@ -120,7 +120,7 @@ opm_sources (${project})
 
 # processing after base sources have been identified
 if (COMMAND sources_hook)
-	sources_hook (${project})
+	sources_hook ()
 endif (COMMAND sources_hook)
 
 # create configuration header which describes available features
@@ -140,7 +140,7 @@ configure_vars (
 
 # call this hook to let it setup necessary conditions for Fortran support
 if (COMMAND fortran_hook)
-	fortran_hook (${project})
+	fortran_hook ()
 endif (COMMAND fortran_hook)
 
 if (${project}_FORTRAN_IF)
@@ -194,7 +194,7 @@ endmacro (cond_disable_test name)
 
 # special processing for tests
 if (COMMAND tests_hook)
-	tests_hook (${project})
+	tests_hook ()
 endif (COMMAND tests_hook)
 
 # make datafiles necessary for tests available in output directory
