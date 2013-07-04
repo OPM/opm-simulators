@@ -26,6 +26,7 @@
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace Opm
 {
@@ -47,11 +48,11 @@ namespace Opm
         /// and appends it to parent's children.
         /// \param[in] child   the child node
         /// \param[in] parent  name of parent node
-        void addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node,
+        void addChild(boost::shared_ptr<WellsGroupInterface>& child_node,
                       const std::string& parent);
         
         /// Adds the node to the collection (as a root node)
-        void addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node);
+        void addChild(boost::shared_ptr<WellsGroupInterface>& child_node);
 
         /// Checks if each condition is met, applies well controls where needed
         /// (that is, it either changes the active control of violating wells, or shuts
@@ -112,7 +113,7 @@ namespace Opm
         
     private:
         // To account for the possibility of a forest
-        std::vector<std::tr1::shared_ptr<WellsGroupInterface> > roots_;
+        std::vector<boost::shared_ptr<WellsGroupInterface> > roots_;
         
         // This will be used to traverse the bottom nodes.
         std::vector<WellNode*> leaf_nodes_;

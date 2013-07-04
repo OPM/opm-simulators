@@ -22,7 +22,7 @@
 
 
 #include <opm/core/linalg/LinearSolverInterface.hpp>
-#include <tr1/memory>
+#include <boost/shared_ptr.hpp>
 
 namespace Opm
 {
@@ -87,7 +87,7 @@ namespace Opm
         virtual double getTolerance() const;
 
     private:
-        std::tr1::shared_ptr<LinearSolverInterface> solver_;
+        boost::shared_ptr<LinearSolverInterface> solver_;
     };
 
 

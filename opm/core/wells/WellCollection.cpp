@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include <opm/core/wells/WellCollection.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace Opm
 {
@@ -32,7 +33,7 @@ namespace Opm
             roots_.push_back(createWellsGroup(parent_name, deck));
             parent = roots_[roots_.size() - 1].get();
         }
-        std::tr1::shared_ptr<WellsGroupInterface> child;
+        boost::shared_ptr<WellsGroupInterface> child;
 
         for (size_t i = 0; i < roots_.size(); ++i) {
             if (roots_[i]->name() == child_name) {
@@ -98,7 +99,7 @@ namespace Opm
     /// \param[in] child   the child node
     /// \param[in] parent  name of parent node
 
-    void WellCollection::addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node,
+    void WellCollection::addChild(boost::shared_ptr<WellsGroupInterface>& child_node,
                                   const std::string& parent_name)
     {
         WellsGroupInterface* parent = findNode(parent_name);
@@ -115,7 +116,7 @@ namespace Opm
 
     /// Adds the node to the collection (as a root node)
 
-    void WellCollection::addChild(std::tr1::shared_ptr<WellsGroupInterface>& child_node)
+    void WellCollection::addChild(boost::shared_ptr<WellsGroupInterface>& child_node)
     {
         roots_.push_back(child_node);
         if (child_node->isLeafNode()) {
