@@ -26,7 +26,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <string>
-
+#include <boost/shared_ptr.hpp>
 
 namespace Opm
 {
@@ -232,7 +232,7 @@ namespace Opm
 
         virtual WellsGroupInterface* findGroup(const std::string& name_of_node);
 
-        void addChild(std::tr1::shared_ptr<WellsGroupInterface> child);
+        void addChild(boost::shared_ptr<WellsGroupInterface> child);
         
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
                                    const std::vector<double>& well_reservoirrates_phase,
@@ -301,7 +301,7 @@ namespace Opm
                                                       const std::vector<double>& well_surfacerates_phase);
 
     private:
-        std::vector<std::tr1::shared_ptr<WellsGroupInterface> > children_;
+        std::vector<boost::shared_ptr<WellsGroupInterface> > children_;
     };
 
 
@@ -402,7 +402,7 @@ namespace Opm
     /// Creates the WellsGroupInterface for the given name
     /// \param[in] name the name of the wells group.
     /// \param[in] deck the deck from which to fetch information.
-    std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name, 
+    boost::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name, 
                                                                const EclipseGridParser& deck);
 
 

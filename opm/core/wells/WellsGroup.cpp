@@ -401,7 +401,7 @@ namespace Opm
         return true;
     }
 
-    void WellsGroup::addChild(std::tr1::shared_ptr<WellsGroupInterface> child)
+    void WellsGroup::addChild(boost::shared_ptr<WellsGroupInterface> child)
     {
         children_.push_back(child);
     }
@@ -1041,12 +1041,12 @@ namespace Opm
         }
     } // anonymous namespace
 
-    std::tr1::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
+    boost::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
                                                                const EclipseGridParser& deck)
     {
         PhaseUsage phase_usage = phaseUsageFromDeck(deck);
 
-        std::tr1::shared_ptr<WellsGroupInterface> return_value;
+        boost::shared_ptr<WellsGroupInterface> return_value;
         // First we need to determine whether it's a group or just a well:
         bool isWell = false;
         if (deck.hasField("WELSPECS")) {
