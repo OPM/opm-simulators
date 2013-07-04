@@ -41,11 +41,11 @@
 macro (opm_compile_satellites opm satellite excl_all test_regexp)
   # if we are going to build the tests always, then make sure that
   # the datafiles are present too
-  if (NOT (${excl_all} MATCHES "EXCLUDE_ALL"))
+  if (NOT (${excl_all} MATCHES "EXCLUDE_FROM_ALL"))
 	set (_incl_all "ALL")
-  else (NOT (${excl_all} MATCHES "EXCLUDE_ALL"))
+  else (NOT (${excl_all} MATCHES "EXCLUDE_FROM_ALL"))
 	set (_incl_all "")
-  endif (NOT (${excl_all} MATCHES "EXCLUDE_ALL"))
+  endif (NOT (${excl_all} MATCHES "EXCLUDE_FROM_ALL"))
 
   # if a set of datafiles has been setup, pull those in
   add_custom_target (${satellite} ${_incl_all})
