@@ -26,17 +26,13 @@ macro (opm_sources opm)
 	"^([^/]*)_test$"
 	)
 
-  # start out with defined, empty lists which will be specified externally
-  set (MAIN_SOURCE_FILES)
-  set (EXAMPLE_SOURCE_FILES)
-  set (TEST_SOURCE_FILES)
-  set (TEST_DATA_FILES)
-  set (PUBLIC_HEADER_FILES)
-  set (PROGRAM_SOURCE_FILES)
-
-  # read the list of components from this file; it should set the above
-  # lists (which are generic names)
-  include (${PROJECT_SOURCE_DIR}/CMakeLists_files.cmake)
+  # these are the lists that must be defined in CMakeLists_files
+  # - MAIN_SOURCE_FILES
+  # - EXAMPLE_SOURCE_FILES
+  # - TEST_SOURCE_FILES
+  # - TEST_DATA_FILES
+  # - PUBLIC_HEADER_FILES
+  # - PROGRAM_SOURCE_FILES
 
   # rename from "friendly" names to ones that fit the "almost-structural"
   # scheme used in the .cmake modules, converting them to absolute file
