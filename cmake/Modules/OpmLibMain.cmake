@@ -14,9 +14,6 @@
 #	sources_hook    Do special processing before sources are compiled
 #	tests_hook      Do special processing before tests are compiled
 
-# include prerequisites for this particular project
-include (${project}-prereqs)
-
 # include special
 if (CMAKE_VERSION VERSION_LESS "2.8.3")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.3")
