@@ -50,6 +50,7 @@ vcs_info ()
 # print toolchain information to identify compilers with potential bugs
 include (UseCompVer)
 compiler_info ()
+linker_info ()
 
 # default settings: build static debug library
 include (OpmDefaults)
