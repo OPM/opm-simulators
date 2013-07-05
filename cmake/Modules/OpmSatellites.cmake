@@ -28,7 +28,7 @@
 #	                name is also used as name of the target that builds
 #	                all these files.
 #
-#	excl_all        EXCLUDE_ALL if these targets should not be built by
+#	excl_all        EXCLUDE_FROM_ALL if these targets should not be built by
 #	                default, otherwise empty string.
 #
 #	test_regexp     Regular expression which picks the name of a test
