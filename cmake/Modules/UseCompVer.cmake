@@ -64,7 +64,7 @@ function (get_ld_version ver_name)
 	  string (REGEX REPLACE ".*, from Apple (.*\)" "\\1" _version "${_version}")
 	else (APPLE)
 	  # assuming some GNU toolchain now
-	  string (REGEX REPLACE "GNU ([a-zA-Z0-9_]*) \\(.*\\) (.*)" "\\1 \\2" _version "${_version}")
+	  string (REGEX REPLACE "GNU ([a-zA-Z0-9_]*) (version|\\(.*\\)) ([^\\ ]*).*" "\\1 \\3" _version "${_version}")
 	endif (APPLE)
   endif (NOT WIN32)
 
