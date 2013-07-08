@@ -15,6 +15,19 @@ set (${project}_CONFIG_VAR
 	HAVE_DYNAMIC_BOOST_TEST
 	)
 
+option(DOWNLOAD_EIGEN "Download Eigen library?" "OFF")
+
+if (DOWNLOAD_EIGEN)
+	include(ExternalProject)
+	ExternalProject_Add(Eigen3
+											URL http://bitbucket.org/eigen/eigen/get/3.1.3.tar.bz2
+											CMAKE_ARGS -DEIGEN_TEST_NO_OPENGL=1 -DEIGEN_BUILD_PKGCONFIG=0)
+	SET(Eigen3Find "")
+	include_directories(${CMAKE_BINARY_DIR}/Eigen3-installed/include/eigen3)
+else (DOWNLOAD_EIGEN)
+	SET(Eigen3Find "Eigen3 3.1 REQUIRED")
+endif (DOWNLOAD_EIGEN)
+
 # Prerequisites
 set (${project}_DEPS
 	# Compile with C99 support if available
@@ -29,7 +42,7 @@ set (${project}_DEPS
 	dune-istl REQUIRED;
 	opm-core REQUIRED"
 	# Eigen
-	"Eigen3 3.1 REQUIRED"
+	${Eigen3Find}
 	)
 
 # Additional search modules
