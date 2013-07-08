@@ -22,8 +22,8 @@ will be explained in more detail below:
 \noindent In more detail:
 
 \textbf{First} of all, the new directory including all relevant files
-needs to be created (see section \ref{tutorial-coupled} and
-\ref{tutorial-decoupled} for description of how to define problems).
+needs to be created (see section \ref{tutorial-coupled} for a
+description of how to define problems).
 
 \textbf{Second}, a new \texttt{Makefile.am} for the new directory
 needs to be created. It is good practice to simply copy and modify an
@@ -31,7 +31,7 @@ existing file. For example, the file \texttt{tutorial/Makefile.am}
 looks as follows:
 \begin{verbatim}
 # programs just to build when "make check" is used
-check_PROGRAMS = tutorial_decoupled tutorial_coupled
+check_PROGRAMS = tutorial_coupled
 
 noinst_HEADERS= *.hh
 EXTRA_DIST = CMakeLists.txt

@@ -52,10 +52,6 @@ The directory \texttt{ewoms} contains the \eWoms source files. It consists of th
   \texttt{start.hh} which provides the default way for starting a
   simulation.
 
-\item \texttt{decoupled}:
- Numerical models to solve the pressure equation as part of the fractional flow formulation. The specific models are contained 
- in corresponding subdirectories. In each model folder are subdirectories for the implicit pressure equation sorted by the employed discretization method, and for the explicit transport equation. The general semi-implicit formulation for the implicit pressure, explicit transport formulation can be found in the subdirectory \texttt{common}.
-
 \item \texttt{io}: Additional classes that provide in-/output routines
   like writing and reading restart files (often called 'checkpoint'
   files) and for writing a series of VTK files.
@@ -98,11 +94,10 @@ The directory \texttt{ewoms} contains the \eWoms source files. It consists of th
 The directory \texttt{test} contains at least one test/example for
 each numerical model and for each important aspect of the common
 \eWoms infrastructure. The directory \texttt{common} contains a test
-for the property system.  The sub-directory \texttt{boxmodels}
+for the property system.  The sub-directory \texttt{implicit}
 contains test applications for the fully-implicit models (where each
-test is named according to the scheme \texttt{PROBLEMNAME\_MODDEL}),
-while the subdirectory \texttt{decoupled} features tests for the
-semi-implicit models.  Each subdirectory contains one or more program
+test is named according to the scheme \texttt{PROBLEMNAME\_MODDEL}).
+Each subdirectory contains one or more program
 files \texttt{*.cc} which contain the main function for the
 test. Moreover, the problem definitions can be found in the
 \texttt{*problem.hh} files. Simply executing the tests should either
