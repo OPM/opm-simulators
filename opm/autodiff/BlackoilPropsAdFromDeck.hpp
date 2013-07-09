@@ -26,6 +26,8 @@
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
+
+#include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 
 namespace Opm
@@ -241,7 +243,7 @@ namespace Opm
         RockFromDeck rock_;
         boost::scoped_ptr<SaturationPropsInterface> satprops_;
         PhaseUsage phase_usage_;
-        std::vector<std::tr1::shared_ptr<SinglePvtInterface> > props_;
+        std::vector<boost::shared_ptr<SinglePvtInterface> > props_;
         double densities_[BlackoilPhases::MaxNumPhases];
     };
 
