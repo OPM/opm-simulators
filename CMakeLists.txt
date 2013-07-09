@@ -29,7 +29,7 @@ set (${project}_DEPS
 	dune-istl REQUIRED;
 	opm-core REQUIRED"
 	# Eigen
-	"Eigen3 3.1 REQUIRED"
+	"Eigen3 3.1"
 	)
 
 # Additional search modules
@@ -155,6 +155,17 @@ execute_process (COMMAND
 # Compile main library; pull in all required includes and libraries
 include (OpmCompile)
 opm_compile (${project})
+
+if (NOT EIGEN3_FOUND)
+	message(STATUS "Downloading Eigen3")
+	include(ExternalProject)
+	externalProject_Add(Eigen3
+										  GIT_REPOSITORY git://github.com/OPM/eigen3
+											CMAKE_ARGS -DEIGEN_TEST_NO_OPENGL=1 -DEIGEN_BUILD_PKGCONFIG=0 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/eigen3-installed)
+	include_directories(${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
+	add_dependencies(opmautodiff Eigen3)
+endif (NOT EIGEN3_FOUND)
+
 
 # Installation target: copy the library together with debug and
 # configuration files to system directories
