@@ -30,6 +30,8 @@ set (${project}_DEPS
 	opm-core REQUIRED"
 	# Eigen
 	"Eigen3 3.1 REQUIRED"
+	# Tim Davis' SuiteSparse package
+	"SuiteSparse COMPONENTS umfpack"
 	)
 
 # Additional search modules
@@ -129,6 +131,12 @@ opm_out_dirs ()
 # Identify the compilation units in the library; sources in opm/,
 # tests files in tests/, examples in examples/
 opm_sources (${project})
+
+if (NOT SuiteSparse_FOUND)
+	list(REMOVE_ITEM examples_SOURCES
+		${PROJECT_SOURCE_DIR}/examples/sim_simple.cpp
+	)
+endif (NOT SuiteSparse_FOUND)
 
 # Create configuration header which describes available features
 # necessary to compile this library. Singular version is the names that
