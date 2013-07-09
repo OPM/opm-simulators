@@ -27,7 +27,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
-#include <Eigen/UmfPackSupport>
+#include <Eigen/IterativeLinearSolvers>
 
 #include <iostream>
 #include <cstdlib>
@@ -202,7 +202,7 @@ int main()
     // Where R(p0) and J(p0) are contained in residual.value() and
     // residual.derived()[0].
 
-    Eigen::UmfPackLU<M> solver;
+    Eigen::BiCGSTAB<M> solver;
     M pmatr = residual.derivative()[0];
     pmatr.coeffRef(0,0) *= 2.0;
     pmatr.makeCompressed();
