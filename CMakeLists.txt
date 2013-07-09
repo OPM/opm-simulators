@@ -132,12 +132,6 @@ opm_out_dirs ()
 # tests files in tests/, examples in examples/
 opm_sources (${project})
 
-if (NOT SuiteSparse_FOUND)
-	list(REMOVE_ITEM examples_SOURCES
-		${PROJECT_SOURCE_DIR}/examples/sim_simple.cpp
-	)
-endif (NOT SuiteSparse_FOUND)
-
 # Create configuration header which describes available features
 # necessary to compile this library. Singular version is the names that
 # is required by this project alone, plural version transitively
