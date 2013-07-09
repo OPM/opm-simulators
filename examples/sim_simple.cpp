@@ -27,7 +27,12 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
+
+#if HAVE_SUITESPARSE_UMFPACK_H
+#include <Eigen/UmfPackSupport>
+#else
 #include <Eigen/IterativeLinearSolvers>
+#endif
 
 #include <iostream>
 #include <cstdlib>
@@ -202,7 +207,13 @@ int main()
     // Where R(p0) and J(p0) are contained in residual.value() and
     // residual.derived()[0].
 
-    Eigen::BiCGSTAB<M> solver;
+#if HAVE_SUITESPARSE_UMFPACK_H
+    typedef Eigen::UmfPackLU<M> LinSolver;
+#else
+    typedef Eigen::BiCGSTAB<M>  LinSolver;
+#endif  // HAVE_SUITESPARSE_UMFPACK_H
+
+    LinSolver solver;
     M pmatr = residual.derivative()[0];
     pmatr.coeffRef(0,0) *= 2.0;
     pmatr.makeCompressed();
