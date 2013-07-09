@@ -30,6 +30,8 @@ set (${project}_DEPS
 	opm-core REQUIRED"
 	# Eigen
 	"Eigen3 3.1"
+	# Tim Davis' SuiteSparse package (UMFPACK component)
+	"SuiteSparse COMPONENTS umfpack"
 	)
 
 # Additional search modules
