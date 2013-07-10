@@ -1,4 +1,4 @@
 Module: opm-autodiff
 Version: 0.1
 Maintainer: atgeirr@sintef.no
-Depends:
+Depends: opm-core
