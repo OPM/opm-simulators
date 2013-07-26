@@ -76,7 +76,7 @@ int main ()
 
     /// \page tutorial4
     /// \details
-    /// We define the properties of the fluid.\n 
+    /// We define the properties of the fluid.\n
     /// Number of phases.
     /// \snippet tutorial4.cpp Number of phases
     /// \internal[Number of phases]
@@ -85,7 +85,7 @@ int main ()
     using namespace prefix;
     /// \internal[Number of phases]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details density vector (one component per phase).
     /// \snippet tutorial4.cpp density
@@ -93,7 +93,7 @@ int main ()
     std::vector<double> rho(2, 1000.);
     /// \internal[density]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details viscosity vector (one component per phase).
     /// \snippet tutorial4.cpp viscosity
@@ -101,7 +101,7 @@ int main ()
     std::vector<double> mu(2, 1.*centi*Poise);
     /// \internal[viscosity]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details porosity and permeability of the rock.
     /// \snippet tutorial4.cpp rock
@@ -113,7 +113,7 @@ int main ()
 
     /// \page tutorial4
     /// \details We define the relative permeability function. We use a basic fluid
-    /// description and set this function to be linear. For more realistic fluid, the 
+    /// description and set this function to be linear. For more realistic fluid, the
     /// saturation function is given by the data.
     /// \snippet tutorial4.cpp relative permeability
     /// \internal[relative permeability]
@@ -131,13 +131,12 @@ int main ()
     /// \internal[fluid properties]
     /// \endinternal
 
-    
+
     /// \page tutorial4
     /// \details Gravity parameters. Here, we set zero gravity.
     /// \snippet tutorial4.cpp Gravity
     /// \internal[Gravity]
     const double *grav = 0;
-    std::vector<double> omega; 
     /// \internal[Gravity]
     /// \endinternal
 
@@ -182,7 +181,7 @@ int main ()
 
 
     /// \page tutorial4
-    /// \details We define a vector which contains all cell indexes. We use this 
+    /// \details We define a vector which contains all cell indexes. We use this
     /// vector to set up parameters on the whole domains.
     /// \snippet tutorial4.cpp cell indexes
     /// \internal[cell indexes]
@@ -195,7 +194,7 @@ int main ()
 
 
     /// \page tutorial4
-    /// \details We set up the boundary conditions. Letting bcs empty is equivalent 
+    /// \details We set up the boundary conditions. Letting bcs empty is equivalent
     /// to no flow boundary conditions.
     /// \snippet tutorial4.cpp boundary
     /// \internal[boundary]
@@ -204,7 +203,7 @@ int main ()
     /// \endinternal
 
     /// \page tutorial4
-    /// \details 
+    /// \details
     /// We set up a two-phase state object, and
     /// initialise water saturation to minimum everywhere.
     /// \snippet tutorial4.cpp two-phase state
@@ -214,7 +213,7 @@ int main ()
     state.setFirstSat(allcells, props, TwophaseState::MinSat);
     /// \internal[two-phase state]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details This string will contain the name of a VTK output vector.
     /// \snippet tutorial4.cpp VTK output
@@ -232,7 +231,7 @@ int main ()
     phase_usage.phase_used[BlackoilPhases::Aqua] = 1;
     phase_usage.phase_used[BlackoilPhases::Liquid] = 1;
     phase_usage.phase_used[BlackoilPhases::Vapour] = 0;
-    
+
     phase_usage.phase_pos[BlackoilPhases::Aqua] = 0;
     phase_usage.phase_pos[BlackoilPhases::Liquid] = 1;
     /// \internal[PhaseUsage-object]
@@ -245,7 +244,7 @@ int main ()
     WellCollection well_collection;
     /// \internal[well_collection]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details Create the production specification for our top well group.
     ///          We set a target limit for total reservoir rate, and set the controlling
@@ -257,18 +256,18 @@ int main ()
     well_group_prod_spec.control_mode_ = ProductionSpecification::RESV;
     /// \internal[production specification]
     /// \endinternal
-    
+
     /// \page tutorial4
-    /// \details Create our well group. We hand it an empty injection specification, 
-    ///          as we don't want to control its injection target. We use the shared_ptr-type because that's 
+    /// \details Create our well group. We hand it an empty injection specification,
+    ///          as we don't want to control its injection target. We use the shared_ptr-type because that's
     ///          what the interface expects. The first argument is the (unique) name of the group.
     /// \snippet tutorial4.cpp injection specification
     /// \internal[injection specification]
-    boost::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", well_group_prod_spec, InjectionSpecification(), 
+    boost::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", well_group_prod_spec, InjectionSpecification(),
                                                                         phase_usage));
     /// \internal[injection specification]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details We add our well_group to the well_collection
     /// \snippet tutorial4.cpp well_collection
@@ -276,10 +275,10 @@ int main ()
     well_collection.addChild(well_group);
     /// \internal[well_collection]
     /// \endinternal
-    
-    
+
+
     /// \page tutorial4
-    /// \details Create the production specification and Well objects (total 4 wells). We set all our wells to be group controlled. 
+    /// \details Create the production specification and Well objects (total 4 wells). We set all our wells to be group controlled.
     ///          We pass in the string argument \C "group" to set the parent group.
     /// \snippet tutorial4.cpp create well objects
     /// \internal[create well objects]
@@ -289,27 +288,26 @@ int main ()
         well_name << "well" << i;
         ProductionSpecification production_specification;
         production_specification.control_mode_ = ProductionSpecification::GRUP;
-        boost::shared_ptr<WellsGroupInterface> well_leaf_node(new WellNode(well_name.str(), production_specification, InjectionSpecification(), 
+        boost::shared_ptr<WellsGroupInterface> well_leaf_node(new WellNode(well_name.str(), production_specification, InjectionSpecification(),
                                                                               phase_usage));
         well_collection.addChild(well_leaf_node, "group");
-        
+
     }
     /// \internal[create well objects]
     /// \endinternal
-    
+
     /// \page tutorial4
-    /// \details Now we create the C struct to hold our wells (this is to interface with the solver code). For now we
+    /// \details Now we create the C struct to hold our wells (this is to interface with the solver code).
     /// \snippet tutorial4.cpp well struct
     /// \internal[well struct]
     Wells* wells = create_wells(num_phases, num_wells, num_wells /*number of perforations. We'll only have one perforation per well*/);
     /// \internal[well struct]
     /// \endinternal
-    
-    /// 
-    
+
+
     /// \page tutorial4
-    /// \details We need to add each well to the C API. 
-    /// To do this we need to specify the relevant cells the well will be located in (\C well_cells). 
+    /// \details We need to add each well to the C API.
+    /// To do this we need to specify the relevant cells the well will be located in (\C well_cells).
     /// \snippet tutorial4.cpp well cells
     /// \internal[well cells]
     for (int i = 0; i < num_wells; ++i) {
@@ -322,7 +320,7 @@ int main ()
     }
     /// \internal[well cells]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details We need to make the well collection aware of our wells object
     /// \snippet tutorial4.cpp set well pointer
@@ -330,15 +328,15 @@ int main ()
     well_collection.setWellsPointer(wells);
     /// \internal[set well pointer]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// We're not using well controls, just group controls, so we need to apply them.
-    /// \snippet tutorial4.cpp apply group controls 
+    /// \snippet tutorial4.cpp apply group controls
     /// \internal[apply group controls]
     well_collection.applyGroupControls();
     /// \internal[apply group controls]
     /// \endinternal
-    
+
     /// \page tutorial4
     /// \details We set up necessary information for the wells
     /// \snippet tutorial4.cpp init wells
@@ -361,7 +359,7 @@ int main ()
     /// \internal[pressure solver]
     /// \endinternal
 
-    
+
     /// \page tutorial4
     /// \details Loop over the time steps.
     /// \snippet tutorial4.cpp time loop
@@ -371,7 +369,7 @@ int main ()
     /// \endinternal
 
         /// \page tutorial4
-        /// \details We're solving the pressure until the well conditions are met 
+        /// \details We're solving the pressure until the well conditions are met
         ///          or until we reach the maximum number of iterations.
         /// \snippet tutorial4.cpp well iterations
         /// \internal[well iterations]
@@ -389,9 +387,9 @@ int main ()
             psolver.solve(dt, state, well_state);
 	    /// \internal[pressure solve]
 	    /// \endinternal
-            
+
             /// \page tutorial4
-            /// \details We compute the new well rates. Notice that we approximate (wrongly) surfflowsrates := resflowsrate 
+            /// \details We compute the new well rates. Notice that we approximate (wrongly) surfflowsrates := resflowsrate
 	    /// \snippet tutorial4.cpp compute well rates
 	    /// \internal[compute well rates]
             Opm::computeFractionalFlow(props, allcells, state.saturation(), fractional_flows);
@@ -426,7 +424,7 @@ int main ()
         /// \details Write the output to file.
         /// \snippet tutorial4.cpp write output
 	/// \internal[write output]
-        vtkfilename.str(""); 
+        vtkfilename.str("");
         vtkfilename << "tutorial4-" << std::setw(3) << std::setfill('0') << i << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         Opm::DataMap dm;
@@ -463,9 +461,9 @@ int main ()
 /// \page tutorial4
 /// \details
 /// \section completecode4 Complete source code:
-/// \include tutorial4.cpp 
+/// \include tutorial4.cpp
 
 /// \page tutorial4
 /// \details
-/// \section pythonscript4 python script to generate figures: 
+/// \section pythonscript4 python script to generate figures:
 /// \snippet generate_doc_figures.py tutorial4
