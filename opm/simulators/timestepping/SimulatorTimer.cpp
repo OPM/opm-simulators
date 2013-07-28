@@ -100,7 +100,7 @@ namespace Opm
     {
       return boost::posix_time::ptime(start_date_) + boost::posix_time::seconds( (int) current_time_ );
     }
-    
+
 
 
     /// Total time.
