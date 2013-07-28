@@ -43,14 +43,14 @@ namespace Opm
         void addChild(const std::string& child,
                       const std::string& parent,
                       const EclipseGridParser& deck);
-        
+
         /// Adds the child to the collection
         /// and appends it to parent's children.
         /// \param[in] child   the child node
         /// \param[in] parent  name of parent node
         void addChild(boost::shared_ptr<WellsGroupInterface>& child_node,
                       const std::string& parent);
-        
+
         /// Adds the node to the collection (as a root node)
         void addChild(boost::shared_ptr<WellsGroupInterface>& child_node);
 
@@ -65,7 +65,7 @@ namespace Opm
         /// \endcode
         ///
         /// \note It's highly recommended to use the conditionsMet found in WellsManager.
-        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
+        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed
         ///                         to be ordered the same way as the related Wells-struct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -79,26 +79,26 @@ namespace Opm
         bool conditionsMet(const std::vector<double>& well_bhp,
                            const std::vector<double>& well_reservoirrates_phase,
                            const std::vector<double>& well_surfacerates_phase);
-        
+
         /// Adds the well pointer to each leaf node (does not take ownership).
         void setWellsPointer(Wells* wells);
-        
+
         /// \return A set of pointers to every well in the collection
         const std::vector<WellNode*>& getLeafNodes() const;
-        
+
         /// Finds the group with the given name.
         /// \param[in] the name of the group
         /// \return the pointer to the group if found, NULL otherwise
         WellsGroupInterface* findNode(const std::string& name);
-        
+
         /// Finds the group with the given name.
         /// \param[in] the name of the group
         /// \return the pointer to the group if found, NULL otherwise
         const WellsGroupInterface* findNode(const std::string& name) const;
-        
+
         /// Applies all group controls (injection and production)
         void applyGroupControls();
-        
+
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -110,15 +110,15 @@ namespace Opm
         ///                         with all phase rates of a single well adjacent in the array.
         void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                               const std::vector<double>& well_surfacerates_phase);
-        
+
     private:
         // To account for the possibility of a forest
         std::vector<boost::shared_ptr<WellsGroupInterface> > roots_;
-        
+
         // This will be used to traverse the bottom nodes.
         std::vector<WellNode*> leaf_nodes_;
-        
-        
+
+
     };
 
 } // namespace Opm

@@ -124,7 +124,7 @@ namespace Opm
             initEPS(deck, grid, std::string("KRWR"), eps_.krwr_);
             initEPS(deck, grid, std::string("KRO"), eps_.kro_);
             initEPS(deck, grid, std::string("KRORW"), eps_.krorw_);
-        } 
+        }
     }
 
 
@@ -258,7 +258,7 @@ namespace Opm
                                                       const std::string& keyword,
                                                       std::vector<double>& scaleparam)
     {
-        bool useKeyword = deck.hasField(keyword);  
+        bool useKeyword = deck.hasField(keyword);
         bool hasENPTVD = deck.hasField("ENPTVD");
         bool hasENKRVD = deck.hasField("ENKRVD");
         int itab = 0;
@@ -301,8 +301,8 @@ namespace Opm
             }
             if (!useKeyword && itab > 0) {
                 table = deck.getENPTVD().table_;
-            } 
-        } else if (keyword[0] == 'K' && (useKeyword || hasENKRVD)) {    
+            }
+        } else if (keyword[0] == 'K' && (useKeyword || hasENKRVD)) {
             if (keyword == std::string("KRW")) {
                 if (useKeyword || deck.getENKRVD().mask_[0]) {
                     itab = 1;
@@ -336,7 +336,7 @@ namespace Opm
             }
             if (!useKeyword && itab > 0) {
                 table = deck.getENKRVD().table_;
-            } 
+            }
         }
 
         if (scaleparam.empty()) {
@@ -371,7 +371,7 @@ namespace Opm
             }
         }
     }
-    
+
 
     // Saturation scaling
     template <class SatFuncSet>
@@ -380,11 +380,11 @@ namespace Opm
        const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
        const int opos = phase_usage_.phase_pos[BlackoilPhases::Liquid];
        double ss[PhaseUsage::MaxNumPhases];
-       
+
        if (do_3pt_) { // Three-point scaling
-           // Transforms for water saturation 
+           // Transforms for water saturation
            if (eps_.swcr_.empty() && eps_.swu_.empty()) {
-               ss[wpos] = s[wpos]; 
+               ss[wpos] = s[wpos];
            } else {
                double s_r = 1.0-funcForCell(cell).sowcr_;
                double sr = eps_.sowcr_.empty() ? s_r : 1.0-eps_.sowcr_[cell];
@@ -398,9 +398,9 @@ namespace Opm
                    ss[wpos] = (s[wpos] >= swmax) ? sw_max : s_r+(s[wpos]-sr)*(sw_max-s_r)/(swmax-sr);
                }
            }
-           // Transforms for oil saturation 
+           // Transforms for oil saturation
            if (eps_.sowcr_.empty() && eps_.swl_.empty()) {
-               ss[opos] = s[opos]; 
+               ss[opos] = s[opos];
            } else {
                double s_r = 1.0-funcForCell(cell).swcr_;
                double sr = eps_.swcr_.empty() ? s_r : 1.0-eps_.swcr_[cell];
@@ -415,9 +415,9 @@ namespace Opm
                }
            }
        } else { // Two-point scaling
-           // Transforms for water saturation 
+           // Transforms for water saturation
            if (eps_.swcr_.empty() && eps_.swu_.empty()) {
-               ss[wpos] = s[wpos]; 
+               ss[wpos] = s[wpos];
            } else {
                double sw_cr = funcForCell(cell).swcr_;
                double swcr = eps_.swcr_.empty() ? sw_cr : eps_.swcr_[cell];
@@ -429,9 +429,9 @@ namespace Opm
                    ss[wpos] = (s[wpos] >= swmax) ? sw_max : sw_cr + (s[wpos]-swcr)*(sw_max-sw_cr)/(swmax-swcr);
                }
            }
-           // Transforms for oil saturation 
+           // Transforms for oil saturation
            if (eps_.sowcr_.empty() && eps_.swl_.empty()) {
-               ss[opos] = s[opos]; 
+               ss[opos] = s[opos];
            } else {
                double sow_cr = funcForCell(cell).sowcr_;
                double socr = eps_.sowcr_.empty() ? sow_cr : eps_.sowcr_[cell];
@@ -453,7 +453,7 @@ namespace Opm
            // Assume: sw_cr -> krw=0     sw_max -> krw=<max water relperm>
            //         sow_cr -> kro=0    sow_max -> kro=<max oil relperm>
            funcForCell(cell).evalKr(ss, kr);
-       }  
+       }
 
        // Scaling of relperms values
        //  - Water
@@ -471,7 +471,7 @@ namespace Opm
                double sw_max = funcForCell(cell).smax_[wpos];
                double s_r = 1.0-funcForCell(cell).sowcr_;
                sr = swcr + (s_r-sw_cr)*(swmax-swcr)/(sw_max-sw_cr);
-           }          
+           }
            if (s[wpos] <= swcr) {
                kr[wpos] = 0.0;
            } else if (sr > swmax-1.0e-6) {
@@ -496,7 +496,7 @@ namespace Opm
                kr[wpos] = eps_.krw_.empty() ? funcForCell(cell).krwmax_ : eps_.krw_[cell];
            }
        }
-       
+
        //  - Oil
        if (eps_.kro_.empty() && eps_.krorw_.empty()) { // No value scaling
        } else if (eps_.krorw_.empty()) { // Two-point scaling

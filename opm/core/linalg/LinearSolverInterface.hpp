@@ -78,7 +78,7 @@ namespace Opm
         /// Get tolerance for the linear solver.
         /// \param[out] tolerance value
         virtual double getTolerance() const = 0;
- 
+
     };
 
 

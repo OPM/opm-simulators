@@ -31,7 +31,7 @@ namespace Opm
     class BlackoilPropertiesInterface;
 
     /// \file
-    /// 
+    ///
     /// Functions for initializing a reservoir state.
 
     /// Initialize a two-phase state from parameters.

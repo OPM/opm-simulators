@@ -97,7 +97,7 @@ namespace Opm
         int linsolver_smooth_steps_;
         /** \brief The factor to scale the coarse grid correction with. */
         double linsolver_prolongate_factor_;
-      
+
     };
 
 

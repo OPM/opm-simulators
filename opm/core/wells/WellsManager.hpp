@@ -63,7 +63,7 @@ namespace Opm
 
         /// Does the "deck" define any wells?
         bool empty() const;
-        
+
 	/// Access the managed Wells.
 	/// The method is named similarly to c_str() in std::string,
 	/// to make it clear that we are returning a C-compatible struct.
@@ -71,7 +71,7 @@ namespace Opm
 
         /// Access the well group hierarchy.
         const WellCollection& wellCollection() const;
-        
+
         /// Checks if each condition is met, applies well controls where needed
         /// (that is, it either changes the active control of violating wells, or shuts
         /// down wells). Only one change is applied per invocation. Typical use will be
@@ -81,7 +81,7 @@ namespace Opm
         ///     solve_pressure();
         /// }
         /// \endcode
-        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
+        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed
         ///                         to be ordered the same way as the related Wells-struct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -95,7 +95,7 @@ namespace Opm
         bool conditionsMet(const std::vector<double>& well_bhp,
                            const std::vector<double>& well_reservoirrates_phase,
                            const std::vector<double>& well_surfacerates_phase);
-        
+
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -117,7 +117,7 @@ namespace Opm
 	Wells* w_;
         WellCollection well_collection_;
 
-       
+
 
 
     };

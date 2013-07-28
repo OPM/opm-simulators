@@ -28,7 +28,7 @@ namespace Opm
 
     // ==========   WellPhasesSummed methods   ===========
 
-    WellPhasesSummed::WellPhasesSummed() 
+    WellPhasesSummed::WellPhasesSummed()
     {
         for (int i = 0; i < 3; ++i) {
             res_inj_rates[i] = 0.0;
@@ -38,7 +38,7 @@ namespace Opm
         }
     }
 
-    void WellPhasesSummed::operator+=(const WellPhasesSummed& other) 
+    void WellPhasesSummed::operator+=(const WellPhasesSummed& other)
     {
         for (int i = 0; i < 3; ++i) {
             res_inj_rates[i] += other.res_inj_rates[i];
@@ -75,8 +75,8 @@ namespace Opm
     {
         return name_;
     }
-    
-    const PhaseUsage& WellsGroupInterface::phaseUsage() const 
+
+    const PhaseUsage& WellsGroupInterface::phaseUsage() const
     {
         return phase_usage_;
     }
@@ -118,7 +118,7 @@ namespace Opm
     }
 
     /// Calculates the correct rate for the given ProductionSpecification::ControlMode
-    double WellsGroupInterface::rateByMode(const double* res_rates, 
+    double WellsGroupInterface::rateByMode(const double* res_rates,
                                            const double* surf_rates,
                                            const ProductionSpecification::ControlMode mode)
     {
@@ -130,7 +130,7 @@ namespace Opm
         case ProductionSpecification::GRAT:
             return surf_rates[phaseUsage().phase_pos[BlackoilPhases::Vapour]];
         case ProductionSpecification::LRAT:
-            return surf_rates[phaseUsage().phase_pos[BlackoilPhases::Liquid]] 
+            return surf_rates[phaseUsage().phase_pos[BlackoilPhases::Liquid]]
                 + surf_rates[phaseUsage().phase_pos[BlackoilPhases::Aqua]];
         case ProductionSpecification::RESV:
             {
@@ -146,7 +146,7 @@ namespace Opm
     }
 
     /// Calculates the correct rate for the given InjectionSpecification::ControlMode
-    double WellsGroupInterface::rateByMode(const double* res_rates, 
+    double WellsGroupInterface::rateByMode(const double* res_rates,
                                            const double* surf_rates,
                                            const InjectionSpecification::ControlMode mode)
     {
@@ -167,7 +167,7 @@ namespace Opm
         }
         return tot_rate;
     }
-    
+
     double WellsGroupInterface::getTarget(ProductionSpecification::ControlMode mode)
     {
         double target = -1.0;
@@ -194,10 +194,10 @@ namespace Opm
             THROW("Unsupported control mode to query target " << mode);
             break;
         }
-                
+
         return target;
     }
-    
+
     double WellsGroupInterface::getTarget(InjectionSpecification::ControlMode mode)
     {
         double target = -1.0;
@@ -215,13 +215,13 @@ namespace Opm
             THROW("Unsupported control mode to query target " << mode);
             break;
         }
-                
+
         return target;
     }
-    
-   
 
-   
+
+
+
 
     // ==============   WellsGroup members =============
 
@@ -257,10 +257,10 @@ namespace Opm
     /// \param[in] forced if true, all children will be set under group control, otherwise
     ///                   only children that are under group control will be changed.
     void WellsGroup::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
-                                          const double target, 
+                                          const double target,
                                           const bool forced)
     {
-        if (forced || injSpec().control_mode_ == InjectionSpecification::FLD 
+        if (forced || injSpec().control_mode_ == InjectionSpecification::FLD
             || injSpec().control_mode_ == InjectionSpecification::NONE) {
             const double my_guide_rate = injectionGuideRate(!forced);
             if (my_guide_rate == 0.0) {
@@ -284,7 +284,7 @@ namespace Opm
                                            const double target,
                                            const bool forced)
     {
-        if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD 
+        if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD
                        || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
             const double my_guide_rate =  productionGuideRate(!forced);
             if (my_guide_rate == 0.0) {
@@ -334,7 +334,7 @@ namespace Opm
                 double my_rate = rateByMode(child_phases_summed.res_inj_rates,
                                             child_phases_summed.surf_inj_rates,
                                             mode);
-                
+
                 if (my_rate > target_rate) {
                     std::cout << "Group " << mode<<" target not met for group " << name() << std::endl;
                     std::cout << "target = " << target_rate << '\n'
@@ -345,7 +345,7 @@ namespace Opm
                 }
             }
         }
-       
+
         // REIN
         // \TODO: Add support for REIN controls.
 
@@ -364,7 +364,7 @@ namespace Opm
             }
             const double target_rate = getTarget(mode);
             if (target_rate >= 0.0) {
-                const double my_rate = rateByMode(child_phases_summed.res_prod_rates, 
+                const double my_rate = rateByMode(child_phases_summed.res_prod_rates,
                                                   child_phases_summed.surf_prod_rates,
                                                   mode);
                 if (std::fabs(my_rate) > target_rate) {
@@ -377,7 +377,7 @@ namespace Opm
                 }
             }
         }
-      
+
         if (production_violated) {
             switch (prodSpec().procedure_) {
             case ProductionSpecification::WELL:
@@ -387,7 +387,7 @@ namespace Opm
                 return false;
             case ProductionSpecification::RATE:
                 std::cout << "Applying group control" << std::endl;
-                applyProdGroupControl(production_mode_violated, 
+                applyProdGroupControl(production_mode_violated,
                                       getTarget(production_mode_violated),
                                       true);
                 return false;
@@ -396,7 +396,7 @@ namespace Opm
                 return false;
             }
         }
-     
+
         summed_phases += child_phases_summed;
         return true;
     }
@@ -406,19 +406,19 @@ namespace Opm
         children_.push_back(child);
     }
 
-    
+
     int WellsGroup::numberOfLeafNodes() {
-        // This could probably use some caching, but seeing as how the number of 
+        // This could probably use some caching, but seeing as how the number of
         // wells is relatively small, we'll do without for now.
         int sum = 0;
-        
+
         for(size_t i = 0; i < children_.size(); i++) {
             sum += children_[i]->numberOfLeafNodes();
         }
-        
+
         return sum;
     }
-    
+
     std::pair<WellNode*, double> WellsGroup::getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                                const std::vector<double>& well_surfacerates_phase,
                                                                ProductionSpecification::ControlMode mode)
@@ -434,7 +434,7 @@ namespace Opm
         }
         return max;
     }
-    
+
     void WellsGroup::applyProdGroupControls()
     {
         ProductionSpecification::ControlMode prod_mode = prodSpec().control_mode_;
@@ -449,12 +449,12 @@ namespace Opm
                 THROW("Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
             }
             for (size_t i = 0; i < children_.size(); ++i ) {
-                // Apply for all children. 
+                // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
-                children_[i]->applyProdGroupControl(prod_mode, 
-                                                   (children_guide_rate / my_guide_rate) * getTarget(prod_mode), 
+                children_[i]->applyProdGroupControl(prod_mode,
+                                                   (children_guide_rate / my_guide_rate) * getTarget(prod_mode),
                                                     false);
             }
             break;
@@ -470,7 +470,7 @@ namespace Opm
             THROW("Unhandled group production control type " << prod_mode);
         }
     }
-    
+
     void WellsGroup::applyInjGroupControls()
     {
         InjectionSpecification::ControlMode inj_mode = injSpec().control_mode_;
@@ -480,7 +480,7 @@ namespace Opm
         {
             const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
-                // Apply for all children. 
+                // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
@@ -505,11 +505,11 @@ namespace Opm
             THROW("Unhandled group injection control mode " << inj_mode);
         }
     }
-    
+
     /// Calculates the production guide rate for the group.
-    /// \param[in] only_group If true, will only accumelate guide rates for 
+    /// \param[in] only_group If true, will only accumelate guide rates for
     ///                       wells under group control
-    double WellsGroup::productionGuideRate(bool only_group) 
+    double WellsGroup::productionGuideRate(bool only_group)
     {
         double sum = 0.0;
         for (size_t i = 0; i < children_.size(); ++i) {
@@ -519,7 +519,7 @@ namespace Opm
     }
 
     /// Calculates the injection guide rate for the group.
-    /// \param[in] only_group If true, will only accumelate guide rates for 
+    /// \param[in] only_group If true, will only accumelate guide rates for
     ///                       wells under group control
     double WellsGroup::injectionGuideRate(bool only_group)
     {
@@ -530,7 +530,7 @@ namespace Opm
         return sum;
     }
 
-    /// Gets the total production flow of the given phase. 
+    /// Gets the total production flow of the given phase.
     /// \param[in] phase_flows      A vector containing rates by phase for each well.
     ///                             Is assumed to be ordered the same way as the related Wells-struct,
     ///                             with all phase rates of a single well adjacent in the array.
@@ -576,7 +576,7 @@ namespace Opm
             const double total_reinjected = - total_produced; // Production negative, injection positive
             const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
-                // Apply for all children. 
+                // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
@@ -605,7 +605,7 @@ namespace Opm
             const double total_reinjected = - total_produced; // Production negative, injection positive
             const double my_guide_rate = injectionGuideRate(true);
             for (size_t i = 0; i < children_.size(); ++i) {
-                // Apply for all children. 
+                // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
@@ -613,14 +613,14 @@ namespace Opm
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
                         false);
             }
-            
+
         }
     }
 
     // ==============    WellNode members   ============
 
 
-    
+
     WellNode::WellNode(const std::string& myname,
                        const ProductionSpecification& prod_spec,
                        const InjectionSpecification& inj_spec,
@@ -730,13 +730,13 @@ namespace Opm
         wells_ = wells;
         self_index_ = self_index;
     }
-    
-    int WellNode::numberOfLeafNodes() 
+
+    int WellNode::numberOfLeafNodes()
     {
         return 1;
     }
-    
-    void WellNode::shutWell() 
+
+    void WellNode::shutWell()
     {
         if (shut_well_) {
         	// We set the tilde of the current control
@@ -774,13 +774,13 @@ namespace Opm
                                                        &well_surfacerates_phase[index],
                                                        mode));
     }
-    
+
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
                                         const double target,
                                         const bool forced)
     {
         // Not changing if we're not forced to change
-        if (!forced 
+        if (!forced
              && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
             return;
         }
@@ -818,7 +818,7 @@ namespace Opm
     }
 
 
-    /// Gets the total production flow of the given phase. 
+    /// Gets the total production flow of the given phase.
     /// \param[in] phase_flows      A vector containing rates by phase for each well.
     ///                             Is assumed to be ordered the same way as the related Wells-struct,
     ///                             with all phase rates of a single well adjacent in the array.
@@ -832,7 +832,7 @@ namespace Opm
         }
         return phase_flows[self_index_*phaseUsage().num_phases + phaseUsage().phase_pos[phase]];
     }
-    
+
     WellType WellNode::type() const {
         return wells_->type[self_index_];
     }
@@ -867,7 +867,7 @@ namespace Opm
         }
         // We're a producer, so we need to negate the input
         double ntarget = -target;
-        
+
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;
         const int* phase_used = phaseUsage().phase_used;
@@ -895,7 +895,7 @@ namespace Opm
             distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
             break;
         case ProductionSpecification::LRAT:
-            std::cout << "applying rate" << std::endl;  
+            std::cout << "applying rate" << std::endl;
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Liquid]) {
                 THROW("Oil phase not active and LRAT control specified.");
@@ -929,21 +929,21 @@ namespace Opm
         set_current_control(self_index_, group_control_index_, wells_);
     }
 
-    
+
     void WellNode::applyProdGroupControls()
     {
         // Empty
     }
-    
+
     void WellNode::applyInjGroupControls()
     {
         // Empty
     }
-    
+
      /// Calculates the production guide rate for the group.
-    /// \param[in] only_group If true, will only accumelate guide rates for 
+    /// \param[in] only_group If true, will only accumelate guide rates for
     ///                       wells under group control
-    double WellNode::productionGuideRate(bool only_group) 
+    double WellNode::productionGuideRate(bool only_group)
     {
         if (!only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
             return prodSpec().guide_rate_;
@@ -952,7 +952,7 @@ namespace Opm
     }
 
     /// Calculates the injection guide rate for the group.
-    /// \param[in] only_group If true, will only accumelate guide rates for 
+    /// \param[in] only_group If true, will only accumelate guide rates for
     ///                       wells under group control
     double WellNode::injectionGuideRate(bool only_group)
     {
@@ -961,8 +961,8 @@ namespace Opm
         }
         return 0.0;
     }
-    
-    
+
+
     namespace
     {
 

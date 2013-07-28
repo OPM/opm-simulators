@@ -30,10 +30,10 @@
 
 namespace Opm
 {
-    // Need to forward declare this one, some of the methods in the base 
+    // Need to forward declare this one, some of the methods in the base
     // class returns pointers to it.
     class WellNode;
-    
+
     /// Basic information needed for group control (each group should typically
     /// not exceed the sum of its leaf nodes)
     struct WellPhasesSummed
@@ -59,37 +59,37 @@ namespace Opm
 
         /// The unique identifier for the well or well group.
         const std::string& name();
-        
+
         /// Production specifications for the well or well group.
         const ProductionSpecification& prodSpec() const;
-        
+
         /// Injection specifications for the well or well group.
         const InjectionSpecification& injSpec() const;
-        
+
         /// Production specifications for the well or well group.
         ProductionSpecification& prodSpec();
-        
+
         /// Injection specifications for the well or well group.
         InjectionSpecification& injSpec();
 
         /// Phase usage information.
         const PhaseUsage& phaseUsage() const;
-        
+
         /// \returns true if the object is a leaf node (WellNode), false otherwise.
         virtual bool isLeafNode() const;
-        
-        /// \returns the pointer to the WellsGroupInterface with the given name. NULL if 
+
+        /// \returns the pointer to the WellsGroupInterface with the given name. NULL if
         ///          the name is not found.a
         virtual WellsGroupInterface* findGroup(const std::string& name_of_node) = 0;
 
         /// Sets the parent
         /// \param[in] parent the pointer to the parent
         void setParent(WellsGroupInterface* parent);
-        
+
         /// Gets the parent of the group, NULL if no parent.
         const WellsGroupInterface* getParent() const;
-        
-        /// Calculates the number of leaf nodes in the given group. 
+
+        /// Calculates the number of leaf nodes in the given group.
         /// A leaf node is defined to have one leaf node in its group.
         virtual int numberOfLeafNodes() = 0;
 
@@ -104,7 +104,7 @@ namespace Opm
         /// \endcode
         ///
         /// \note It's highly recommended to use the conditionsMet found in WellsManager.
-        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed 
+        /// \param[in]    well_bhp  A vector containing the bhp for each well. Is assumed
         ///                         to be ordered the same way as the related Wells-struct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -121,7 +121,7 @@ namespace Opm
                                    const std::vector<double>& well_reservoirrates_phase,
                                    const std::vector<double>& well_surfacerates_phase,
                                    WellPhasesSummed& summed_phases) = 0;
-        
+
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
@@ -154,39 +154,39 @@ namespace Opm
         virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                                const std::vector<double>& well_surfacerates_phase,
                                                                ProductionSpecification::ControlMode mode) = 0;
-        
+
         /// Gets the target rate for the given mode.
         double getTarget(ProductionSpecification::ControlMode mode);
-        
+
         /// Gets the target rate for the given mode.
         double getTarget(InjectionSpecification::ControlMode mode);
-        
+
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyProdGroupControls() = 0;
-        
+
         /// Applies any injection group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyInjGroupControls() = 0;
-        
+
         /// Calculates the production guide rate for the group.
-        /// \param[in] only_group If true, will only accumelate guide rates for 
+        /// \param[in] only_group If true, will only accumelate guide rates for
         ///                       wells under group control
         virtual double productionGuideRate(bool only_group) = 0;
-        
+
         /// Calculates the injection guide rate for the group.
-        /// \param[in] only_group If true, will only accumelate guide rates for 
+        /// \param[in] only_group If true, will only accumelate guide rates for
         ///                       wells under group control
         virtual double injectionGuideRate(bool only_group) = 0;
-        
-        /// Gets the total production flow of the given phase. 
+
+        /// Gets the total production flow of the given phase.
         /// \param[in] phase_flows      A vector containing rates by phase for each well.
         ///                             Is assumed to be ordered the same way as the related Wells-struct,
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
                                               const BlackoilPhases::PhaseIndex phase) = 0;
-        
+
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -198,16 +198,16 @@ namespace Opm
         ///                         with all phase rates of a single well adjacent in the array.
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase) = 0;
-        
-        
+
+
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
-        double rateByMode(const double* res_rates, 
+        double rateByMode(const double* res_rates,
                           const double* surf_rates,
                           const ProductionSpecification::ControlMode mode);
 
         /// Calculates the correct rate for the given InjectionSpecification::ControlMode
-        double rateByMode(const double* res_rates, 
+        double rateByMode(const double* res_rates,
                           const double* surf_rates,
                           const InjectionSpecification::ControlMode mode);
 
@@ -233,12 +233,12 @@ namespace Opm
         virtual WellsGroupInterface* findGroup(const std::string& name_of_node);
 
         void addChild(boost::shared_ptr<WellsGroupInterface> child);
-        
+
         virtual bool conditionsMet(const std::vector<double>& well_bhp,
                                    const std::vector<double>& well_reservoirrates_phase,
                                    const std::vector<double>& well_surfacerates_phase,
                                    WellPhasesSummed& summed_phases);
-        
+
         virtual int numberOfLeafNodes();
         virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                                const std::vector<double>& well_surfacerates_phase,
@@ -261,33 +261,33 @@ namespace Opm
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
                                            bool forced);
-        
+
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyProdGroupControls();
-        
+
         /// Applies any injection group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyInjGroupControls();
-        
+
         /// Calculates the production guide rate for the group.
-        /// \param[in] only_group If true, will only accumelate guide rates for 
+        /// \param[in] only_group If true, will only accumelate guide rates for
         ///                       wells under group control
         virtual double productionGuideRate(bool only_group);
-        
+
         /// Calculates the injection guide rate for the group.
-        /// \param[in] only_group If true, will only accumelate guide rates for 
+        /// \param[in] only_group If true, will only accumelate guide rates for
         ///                       wells under group control
         virtual double injectionGuideRate(bool only_group);
-        
-        /// Gets the total production flow of the given phase. 
+
+        /// Gets the total production flow of the given phase.
         /// \param[in] phase_flows      A vector containing rates by phase for each well.
         ///                             Is assumed to be ordered the same way as the related Wells-struct,
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
                                               const BlackoilPhases::PhaseIndex phase);
-        
+
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -319,16 +319,16 @@ namespace Opm
                                    const std::vector<double>& well_reservoirrates_phase,
                                    const std::vector<double>& well_surfacerates_phase,
                                    WellPhasesSummed& summed_phases);
-        
+
         virtual bool isLeafNode() const;
-        
+
         void setWellsPointer(Wells* wells, int self_index);
-        
+
         virtual int numberOfLeafNodes();
-        
+
         // Shuts the well (in the well struct)
         void shutWell();
-        
+
        virtual std::pair<WellNode*, double> getWorstOffending(const std::vector<double>& well_reservoirrates_phase,
                                                                const std::vector<double>& well_surfacerates_phase,
                                                                ProductionSpecification::ControlMode mode);
@@ -350,26 +350,26 @@ namespace Opm
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
                                            bool forced);
-        
+
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyProdGroupControls();
-        
+
         /// Applies any injection group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
         virtual void applyInjGroupControls();
-        
+
         /// Calculates the production guide rate for the group.
-        /// \param[in] only_group If true, will only accumelate guide rates for 
+        /// \param[in] only_group If true, will only accumelate guide rates for
         ///                       wells under group control
         virtual double productionGuideRate(bool only_group);
-        
+
         /// Calculates the injection guide rate for the group.
-        /// \param[in] only_group If true, will only accumelate guide rates for 
+        /// \param[in] only_group If true, will only accumelate guide rates for
         ///                       wells under group control
         virtual double injectionGuideRate(bool only_group);
-        
-        /// Gets the total production flow of the given phase. 
+
+        /// Gets the total production flow of the given phase.
         /// \param[in] phase_flows      A vector containing rates by phase for each well.
         ///                             Is assumed to be ordered the same way as the related Wells-struct,
         ///                             with all phase rates of a single well adjacent in the array.
@@ -379,7 +379,7 @@ namespace Opm
 
         /// Returns the type of the well.
         WellType type() const;
-        
+
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
         ///                         A vector containing reservoir rates by phase for each well.
@@ -402,7 +402,7 @@ namespace Opm
     /// Creates the WellsGroupInterface for the given name
     /// \param[in] name the name of the wells group.
     /// \param[in] deck the deck from which to fetch information.
-    boost::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name, 
+    boost::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
                                                                const EclipseGridParser& deck);
 
 

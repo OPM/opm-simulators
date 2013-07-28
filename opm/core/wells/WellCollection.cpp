@@ -27,7 +27,7 @@ namespace Opm
     void WellCollection::addChild(const std::string& child_name,
                                   const std::string& parent_name,
                                   const EclipseGridParser& deck)
-    {   
+    {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
             roots_.push_back(createWellsGroup(parent_name, deck));
@@ -42,7 +42,7 @@ namespace Opm
                 for(size_t j = i; j < roots_.size() - 1; ++j) {
                     roots_[j] = roots_[j+1];
                 }
-                
+
                 roots_.resize(roots_.size()-1);
                 break;
             }
@@ -50,7 +50,7 @@ namespace Opm
         if (!child.get()) {
             child = createWellsGroup(child_name, deck);
         }
-        
+
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
             THROW("Trying to add child to group named " << parent_name << ", but it's not a group.");
@@ -60,12 +60,12 @@ namespace Opm
         if(child->isLeafNode()) {
             leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
         }
-        
+
         child->setParent(parent);
     }
-    
-    
-    
+
+
+
     const std::vector<WellNode*>& WellCollection::getLeafNodes() const {
         return leaf_nodes_;
     }
@@ -81,7 +81,7 @@ namespace Opm
         }
         return NULL;
     }
-    
+
     const WellsGroupInterface* WellCollection::findNode(const std::string& name) const
     {
 
@@ -123,7 +123,7 @@ namespace Opm
             leaf_nodes_.push_back(static_cast<WellNode*> (child_node.get()));
         }
     }
-    
+
     bool WellCollection::conditionsMet(const std::vector<double>& well_bhp,
                                        const std::vector<double>& well_reservoirrates_phase,
                                        const std::vector<double>& well_surfacerates_phase)
@@ -139,13 +139,13 @@ namespace Opm
         }
         return true;
     }
-    
+
     void WellCollection::setWellsPointer(Wells* wells) {
         for(size_t i = 0; i < leaf_nodes_.size(); i++) {
             leaf_nodes_[i]->setWellsPointer(wells, i);
         }
     }
-    
+
     void WellCollection::applyGroupControls()
     {
         for (size_t i = 0; i < roots_.size(); ++i) {

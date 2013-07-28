@@ -23,8 +23,8 @@
 
 #include <opm/core/pressure/msmfem/dfs.h>
 
-/* 
- * Assign color (nonnegative number) to each connected component of graph 
+/*
+ * Assign color (nonnegative number) to each connected component of graph
  */
 void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 {
@@ -35,7 +35,7 @@ void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
     int *bottom = stack;
 
     *ncolors = 0; /* colors are nonnegative */
-  
+
     for (i=0; i<size; ++i) {
         color [i] = UNVISITED;
         count [i] = ia[i+1]-ia[i];
@@ -52,16 +52,16 @@ void dfs (int size, int *ia, int *ja, int *ncolors, int *color, int* work)
 
         while ( stack != bottom ) {
             c = *(stack-1); /* peek */
-            
+
             if (count[c] > 0){
                 int child = ja[ia[c] + count[c]-1];
                 count[c]--;
-                
+
                 if (color[child] == UNVISITED) {
                     *stack++ = child;
                     color[c] = VISITED;
                 }
-   
+
             } else {
                 color[c] = *ncolors;
                 --stack; /* pop c */
@@ -104,9 +104,9 @@ int main (int argc, char *argv [])
 
     fprintf(stderr, "ncolors = %d\n", ncolors);
     for (j=0; j<size; ++j) {
-        fprintf(stderr, "%d\n", color[j]);   
+        fprintf(stderr, "%d\n", color[j]);
     }
- 
+
 
     free (color);
     free (work);

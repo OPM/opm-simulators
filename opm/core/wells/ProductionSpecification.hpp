@@ -18,14 +18,14 @@ namespace Opm
         {
             NONE_P, RATE, WELL
         };
-        
+
         enum GuideRateType
         {
             OIL, NONE_GRT
         };
 
         ProductionSpecification();
- 
+
         ControlMode control_mode_;
         Procedure procedure_;
 

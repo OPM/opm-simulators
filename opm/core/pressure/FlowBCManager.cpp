@@ -99,7 +99,7 @@ namespace Opm
 	int ok = flow_conditions_append_multi(BC_PRESSURE, faces.size(), &faces[0], pressure, bc_);
 	if (!ok) {
 	    THROW("Failed to append pressure boundary conditions for side " << sideString(side));
-	}	
+	}
     }
 
 

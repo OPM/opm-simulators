@@ -507,7 +507,7 @@ namespace Opm
                     if (!deck.hasField("SGAS")) {
                         THROW("initStateFromDeck(): missing SGAS keyword in 2-phase init");
                     }
-                    const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");                
+                    const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                     const int opos = pu.phase_pos[BlackoilPhases::Liquid];
                     for (int c = 0; c < num_cells; ++c) {

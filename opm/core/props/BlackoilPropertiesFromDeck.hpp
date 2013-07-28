@@ -45,7 +45,7 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
-                                   const UnstructuredGrid& grid, bool init_rock=true );        
+                                   const UnstructuredGrid& grid, bool init_rock=true );
 
         /// Initialize from deck, grid and parameters.
         /// \param[in]  deck     Deck input parser
