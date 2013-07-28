@@ -43,12 +43,12 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 /// \page tutorial3 Multiphase flow
-/// The Darcy law gives 
+/// The Darcy law gives
 ///   \f[u_\alpha= -\frac1{\mu_\alpha} K_\alpha\nabla p_\alpha\f]
 /// where \f$\mu_\alpha\f$ and \f$K_\alpha\f$ represent the viscosity
 /// and the permeability tensor for each phase \f$\alpha\f$. In the two phase
-/// case, we have either \f$\alpha=w\f$ or \f$\alpha=o\f$. 
-/// In this tutorial, we do not take into account capillary pressure so that 
+/// case, we have either \f$\alpha=w\f$ or \f$\alpha=o\f$.
+/// In this tutorial, we do not take into account capillary pressure so that
 /// \f$p=p_w=p_o\f$ and gravity
 /// effects. We  denote by \f$K\f$ the absolute permeability tensor and each phase
 /// permeability is defined through its relative permeability by the expression
@@ -67,21 +67,21 @@
 ///   \f[u=u_w+u_o.\f]
 /// Let the total mobility be equal to
 /// \f[\lambda=\lambda_w+\lambda_o\f]
-/// Then, we have 
+/// Then, we have
 /// \f[u=-\lambda K\nabla p.\f]
 /// The set of equations
 /// \f[\nabla\cdot u=\frac{q_w}{\rho_w}+\frac{q_o}{\rho_o},\quad u=-\lambda K\nabla p.\f]
-/// is referred to as the <strong>pressure equation</strong>. We introduce 
+/// is referred to as the <strong>pressure equation</strong>. We introduce
 /// the fractional flow \f$f_w\f$
 /// as
 /// \f[f_w=\frac{\lambda_w}{\lambda_w+\lambda_o}\f]
 /// and obtain
 /// \f[\phi\frac{\partial s_w}{\partial t}+\nabla\cdot(f_w u)=\frac{q_w}{\rho_w}\f]
-/// which is referred to as the <strong>transport equation</strong>. The pressure and 
-/// transport equation are coupled. In this tutorial, we implement a splitting scheme, 
+/// which is referred to as the <strong>transport equation</strong>. The pressure and
+/// transport equation are coupled. In this tutorial, we implement a splitting scheme,
 /// where, at each time step, we decouple the two equations. We solve first
 /// the pressure equation and then update the water saturation by solving
-/// the transport equation assuming that \f$u\f$ is constant in time in the time step 
+/// the transport equation assuming that \f$u\f$ is constant in time in the time step
 /// interval we are considering.
 
 
@@ -95,8 +95,8 @@
 int main ()
 {
     /// \internal [main]
-    /// \endinternal 
-    
+    /// \endinternal
+
     /// \page tutorial3
     /// \details
     /// We define the grid. A Cartesian grid with 400 cells,
@@ -120,11 +120,11 @@ int main ()
     const UnstructuredGrid& grid = *grid_manager.c_grid();
     int num_cells = grid.number_of_cells;
     /// \internal [grid]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details
-    /// We define the properties of the fluid.\n 
+    /// We define the properties of the fluid.\n
     /// Number of phases, phase densities, phase viscosities,
     /// rock porosity and permeability.
     ///
@@ -142,37 +142,37 @@ int main ()
     double porosity = 0.5;
     double permeability = 10.0*milli*darcy;
     /// \internal [set properties]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details We define the relative permeability function. We use a basic fluid
-    /// description and set this function to be linear. For more realistic fluid, the 
+    /// description and set this function to be linear. For more realistic fluid, the
     /// saturation function may be interpolated from experimental data.
     /// \snippet tutorial3.cpp relperm
     /// \internal [relperm]
     SaturationPropsBasic::RelPermFunc rel_perm_func = SaturationPropsBasic::Linear;
     /// \internal [relperm]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details We construct a basic fluid and rock property object
     /// with the properties we have defined above.  Each property is
     /// constant and hold for all cells.
     /// \snippet tutorial3.cpp properties
-    /// \internal [properties] 
+    /// \internal [properties]
     IncompPropertiesBasic props(num_phases, rel_perm_func, density, viscosity,
                                 porosity, permeability, grid.dimensions, num_cells);
     /// \internal [properties]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details Gravity parameters. Here, we set zero gravity.
     /// \snippet tutorial3.cpp gravity
     /// \internal [gravity]
     const double *grav = 0;
-    std::vector<double> omega; 
+    std::vector<double> omega;
     /// \internal [gravity]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details We set up the source term. Positive numbers indicate that the cell is a source,
@@ -183,16 +183,16 @@ int main ()
     src[0] = 1.;
     src[num_cells-1] = -1.;
     /// \internal [source]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
-    /// \details We set up the boundary conditions. Letting bcs be empty is equivalent 
+    /// \details We set up the boundary conditions. Letting bcs be empty is equivalent
     /// to no-flow boundary conditions.
     /// \snippet tutorial3.cpp boundary
-    /// \internal [boundary] 
+    /// \internal [boundary]
     FlowBCManager bcs;
     /// \internal [boundary]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details We may now set up the pressure solver. At this point,
@@ -204,7 +204,7 @@ int main ()
     LinearSolverUmfpack linsolver;
     IncompTpfa psolver(grid, props, linsolver, grav, NULL, src, bcs.c_bcs());
     /// \internal [pressure solver]
-    /// \endinternal 
+    /// \endinternal
 
     /// \page tutorial3
     /// \details We set up a state object for the wells. Here, there are
@@ -245,7 +245,7 @@ int main ()
 
 
     /// \page tutorial3
-    /// \details We define a vector which contains all cell indexes. We use this 
+    /// \details We define a vector which contains all cell indexes. We use this
     /// vector to set up parameters on the whole domain.
     /// \snippet tutorial3.cpp cell indexes
     /// \internal [cell indexes]
@@ -257,7 +257,7 @@ int main ()
     /// \endinternal
 
     /// \page tutorial3
-    /// \details 
+    /// \details
     /// We set up a two-phase state object, and
     /// initialize water saturation to minimum everywhere.
     /// \snippet tutorial3.cpp two-phase state
@@ -280,12 +280,12 @@ int main ()
 
     /// \page tutorial3
     /// \details Loop over the time steps.
-    /// \snippet tutorial3.cpp time loop 
+    /// \snippet tutorial3.cpp time loop
     /// \internal [time loop]
     for (int i = 0; i < num_time_steps; ++i) {
         /// \internal [time loop]
 	/// \endinternal
-        
+
 
         /// \page tutorial3
         /// \details Solve the pressure equation
@@ -294,7 +294,7 @@ int main ()
         psolver.solve(dt, state, well_state);
         /// \internal [solve pressure]
 	/// \endinternal
-	
+
         /// \page tutorial3
         /// \details  Solve the transport equation.
         /// \snippet tutorial3.cpp transport solve
@@ -307,7 +307,7 @@ int main ()
         /// \details Write the output to file.
         /// \snippet tutorial3.cpp write output
 	/// \internal [write output]
-        vtkfilename.str(""); 
+        vtkfilename.str("");
         vtkfilename << "tutorial3-" << std::setw(3) << std::setfill('0') << i << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         Opm::DataMap dm;
@@ -342,9 +342,9 @@ int main ()
 /// \page tutorial3
 /// \details
 /// \section completecode3 Complete source code:
-/// \include tutorial3.cpp 
+/// \include tutorial3.cpp
 
 /// \page tutorial3
 /// \details
-/// \section pythonscript3 python script to generate figures: 
+/// \section pythonscript3 python script to generate figures:
 /// \snippet generate_doc_figures.py tutorial3

@@ -47,11 +47,11 @@
 
 /// \page tutorial2
 /// \section commentedcode2 Program walk-through.
-/// 
+///
 
 int main()
 {
-    
+
     /// \page tutorial2
     /// We construct a Cartesian grid
     /// \snippet tutorial2.cpp cartesian grid
@@ -117,9 +117,9 @@ int main()
     /// We take UMFPACK as the linear solver for the pressure solver
     /// (this library has therefore to be installed).
     /// \snippet tutorial2.cpp linsolver
-    /// \internal [linsolver] 
+    /// \internal [linsolver]
     Opm::LinearSolverUmfpack linsolver;
-    /// \internal [linsolver] 
+    /// \internal [linsolver]
     /// \endinternal
 
     /// \page tutorial2
@@ -131,7 +131,7 @@ int main()
     src[num_cells-1] = -src[0];
     /// \internal [source]
     /// \endinternal
-    
+
     /// \page tutorial2
     /// \details We set up the boundary conditions.
     /// By default, we obtain no-flow boundary conditions.
@@ -151,7 +151,7 @@ int main()
     Opm::IncompTpfa psolver(*grid.c_grid(), props, linsolver, NULL, NULL, src, NULL);
     /// \internal [tpfa]
     /// \endinternal
-    
+
     /// \page tutorial2
     /// We declare the state object, that will contain the pressure and face
     /// flux vectors we are going to compute.  The well state
@@ -207,5 +207,5 @@ int main()
 
 /// \page tutorial2
 /// \details
-/// \section pythonscript2 python script to generate figures: 
+/// \section pythonscript2 python script to generate figures:
 /// \snippet generate_doc_figures.py tutorial2

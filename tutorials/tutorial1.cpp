@@ -30,7 +30,7 @@
 /// in subdirectories.
 /// \snippet tutorial1.cpp including headers
 
-/// \internal [including headers] 
+/// \internal [including headers]
 #include "config.h"
 
 #include <opm/core/grid.h>
@@ -53,7 +53,7 @@ int main()
     int nx = 4;
     int ny = 3;
     int nz = 2;
-    /// \internal [num blocks] 
+    /// \internal [num blocks]
     /// \endinternal
     /// The size of each block is 1m x 1m x 1m. The default units are always the
     /// standard units (SI). But other units can easily be dealt with, see Opm::unit.
@@ -113,6 +113,6 @@ int main()
 
 /// \page tutorial1
 /// \details
-/// \section pythonscript1 Python script to generate figures: 
+/// \section pythonscript1 Python script to generate figures:
 /// \snippet generate_doc_figures.py tutorial1
 

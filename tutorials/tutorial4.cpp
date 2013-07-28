@@ -137,6 +137,7 @@ int main ()
     /// \snippet tutorial4.cpp Gravity
     /// \internal[Gravity]
     const double *grav = 0;
+    std::vector<double> omega;
     /// \internal[Gravity]
     /// \endinternal
 
