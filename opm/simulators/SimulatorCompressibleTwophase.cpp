@@ -96,8 +96,8 @@ namespace Opm
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
-        const std::vector<double>& src_;
-        const FlowBoundaryConditions* bcs_;
+        //const std::vector<double>& src_;
+        //const FlowBoundaryConditions* bcs_;
         const double* gravity_;
         // Solvers
         CompressibleTpfa psolver_;
@@ -245,8 +245,8 @@ namespace Opm
           rock_comp_props_(rock_comp_props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
-          src_(src),
-          bcs_(bcs),
+          //src_(src),
+          //bcs_(bcs),
           gravity_(gravity),
           psolver_(grid, props, rock_comp_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),

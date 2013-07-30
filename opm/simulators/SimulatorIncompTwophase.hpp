@@ -118,7 +118,7 @@ namespace Opm
         void connect_timestep (T& t);
 
     private:
-        class Impl;
+        struct Impl;
         // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
         boost::shared_ptr<Impl> pimpl_;
 
