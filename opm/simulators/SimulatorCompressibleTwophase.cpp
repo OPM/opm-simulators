@@ -236,8 +236,8 @@ namespace Opm
                                               const BlackoilPropertiesInterface& props,
                                               const RockCompressibility* rock_comp_props,
                                               WellsManager& wells_manager,
-                                              const std::vector<double>& src,
-                                              const FlowBoundaryConditions* bcs,
+                                              const std::vector<double>&,
+                                              const FlowBoundaryConditions*,
                                               LinearSolverInterface& linsolver,
                                               const double* gravity)
         : grid_(grid),
