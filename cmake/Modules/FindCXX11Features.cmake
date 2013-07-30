@@ -12,7 +12,8 @@
 # HAVE_CONSTEXPR                   True if constexpr attribute is available
 # HAVE_INTEGRAL_CONSTANT           True if compiler supports integral_constant
 # HAVE_STATIC_ASSERT               True if static_assert is available
-# HAVE_VARIADIC_TEMPLATES          True if variadic templates are supprt
+# HAVE_AUTO                        True if the compiler supports the auto keyword
+# HAVE_VARIADIC_TEMPLATES          True if variadic templates are supported
 # HAVE_VARIADIC_CONSTRUCTOR_SFINAE True if variadic constructor sfinae is supported
 # HAVE_RVALUE_REFERENCES           True if rvalue references are supported
 # HAVE_TUPLE                       True if std::tuple is available
@@ -187,6 +188,16 @@ CHECK_CXX_SOURCE_COMPILES("
      return 0;
    }
 "  HAVE_STATIC_ASSERT
+)
+
+# auto keyword
+CHECK_CXX_SOURCE_COMPILES("
+   int main(void)
+   {
+     auto foo = 1.23;
+     return 0;
+   }
+"  HAVE_AUTO
 )
 
 # variadic template support
