@@ -17,17 +17,17 @@
 # include special
 if (CMAKE_VERSION VERSION_LESS "2.8.3")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.3")
-	list (APPEND CMAKE_MODULE_PATH "${${project}_MODULE_DIR}/compat-2.8.3")
+	list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/compat-2.8.3")
 endif (CMAKE_VERSION VERSION_LESS "2.8.3")
 
 if (CMAKE_VERSION VERSION_LESS "2.8.5")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.5")
-	list (APPEND CMAKE_MODULE_PATH "${${project}_MODULE_DIR}/compat-2.8.5")	
+	list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/compat-2.8.5")
 endif (CMAKE_VERSION VERSION_LESS "2.8.5")	
 
 if (CMAKE_VERSION VERSION_LESS "2.8.7")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.7")
-	list (APPEND CMAKE_MODULE_PATH "${${project}_MODULE_DIR}/compat-2.8.7")
+	list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/compat-2.8.7")
 endif (CMAKE_VERSION VERSION_LESS "2.8.7")
 
 # don't write default flags into the cache, preserve that for user set values
