@@ -23,7 +23,7 @@
 namespace Opm
 {
 
-    class PhaseUsage;
+    struct PhaseUsage;
 
     /// Abstract base class for blackoil fluid and reservoir properties.
     /// Supports variable number of spatial dimensions, called D.
