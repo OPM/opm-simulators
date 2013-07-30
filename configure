@@ -1,0 +1,3 @@
+#!/bin/sh
+# forward to the corresponding script in the cmake/Scripts/ directory
+exec $(dirname $0)/cmake/Scripts/configure "$@"
