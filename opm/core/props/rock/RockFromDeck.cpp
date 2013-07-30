@@ -21,7 +21,7 @@
 #include "config.h"
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/grid.h>
-#include <boost/array.hpp>
+#include <array>
 
 namespace Opm
 {
@@ -32,11 +32,11 @@ namespace Opm
         enum PermeabilityKind { ScalarPerm, DiagonalPerm, TensorPerm, None, Invalid };
 
         PermeabilityKind classifyPermeability(const EclipseGridParser& parser);
-        void setScalarPermIfNeeded(boost::array<int,9>& kmap,
+        void setScalarPermIfNeeded(std::array<int,9>& kmap,
                                    int i, int j, int k);
         PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
                                     std::vector<const std::vector<double>*>& tensor,
-                                    boost::array<int,9>&                     kmap);
+                                    std::array<int,9>&                     kmap);
     } // anonymous namespace
 
 
@@ -99,7 +99,7 @@ namespace Opm
         const std::vector<double> zero(num_global_cells, 0.0);
         tensor.push_back(&zero);
 
-        boost::array<int,9> kmap;
+        std::array<int,9> kmap;
         PermeabilityKind pkind = fillTensor(parser, tensor, kmap);
         if (pkind == Invalid) {
             THROW("Invalid permeability field.");
@@ -225,7 +225,7 @@ namespace Opm
         /// @param [in] i
         /// @param [in] j
         /// @param [in] k
-        void setScalarPermIfNeeded(boost::array<int,9>& kmap,
+        void setScalarPermIfNeeded(std::array<int,9>& kmap,
                                    int i, int j, int k)
         {
             if (kmap[j] == 0) { kmap[j] = kmap[i]; }
@@ -267,7 +267,7 @@ namespace Opm
         /// @param [out] kmap
         PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
                                     std::vector<const std::vector<double>*>& tensor,
-                                    boost::array<int,9>&                     kmap)
+                                    std::array<int,9>&                     kmap)
         {
             PermeabilityKind kind = classifyPermeability(parser);
             if (kind == Invalid) {
