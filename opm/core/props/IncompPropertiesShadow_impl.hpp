@@ -10,8 +10,8 @@ namespace Opm
      * Initialize so that all properties are retrieved from original.
      */
     inline IncompPropertiesShadow::IncompPropertiesShadow (const IncompPropertiesInterface& original)
-        : prototype (original)
-        , shadowed (0)
+        : prototype_ (original)
+        , shadowed_ (0)
         , poro_ (0)
         , perm_ (0)
         , visc_ (0)
@@ -26,17 +26,17 @@ namespace Opm
      */
     inline int IncompPropertiesShadow::numDimensions () const
     {
-        return prototype.numDimensions();
+        return prototype_.numDimensions();
     }
 
     inline int IncompPropertiesShadow::numCells () const
     {
-        return prototype.numCells();
+        return prototype_.numCells();
     }
 
     inline int IncompPropertiesShadow::numPhases () const
     {
-        return prototype.numPhases();
+        return prototype_.numPhases();
     }
 
     /**
@@ -50,7 +50,7 @@ namespace Opm
                                                  double* kr,
                                                  double* dkrds) const
     {
-        prototype.relperm (n, s, cells, kr, dkrds);
+        prototype_.relperm (n, s, cells, kr, dkrds);
     }
 
     inline void IncompPropertiesShadow::capPress (const int n,
@@ -59,7 +59,7 @@ namespace Opm
                                                   double* pc,
                                                   double* dpcds) const
     {
-        prototype.capPress (n, s, cells, pc, dpcds);
+        prototype_.capPress (n, s, cells, pc, dpcds);
     }
 
     inline void IncompPropertiesShadow::satRange (const int n,
@@ -67,7 +67,7 @@ namespace Opm
                                                   double* smin,
                                                   double* smax) const
     {
-        prototype.satRange (n, cells, smin, smax);
+        prototype_.satRange (n, cells, smin, smax);
     }
 
     /**
@@ -76,27 +76,27 @@ namespace Opm
      */
     inline const double* IncompPropertiesShadow::porosity () const
     {
-        return (shadowed & POROSITY) ? poro_ : prototype.porosity ();
+        return (shadowed_ & POROSITY) ? poro_ : prototype_.porosity ();
     }
 
     inline const double* IncompPropertiesShadow::permeability () const
     {
-        return (shadowed & PERMEABILITY) ? perm_ : prototype.permeability ();
+        return (shadowed_ & PERMEABILITY) ? perm_ : prototype_.permeability ();
     }
 
     inline const double* IncompPropertiesShadow::viscosity () const
     {
-        return (shadowed & VISCOSITY) ? visc_ : prototype.viscosity ();
+        return (shadowed_ & VISCOSITY) ? visc_ : prototype_.viscosity ();
     }
 
     inline const double* IncompPropertiesShadow::density () const
     {
-        return (shadowed & DENSITY) ? dens_ : prototype.density ();
+        return (shadowed_ & DENSITY) ? dens_ : prototype_.density ();
     }
 
     inline const double* IncompPropertiesShadow::surfaceDensity () const
     {
-        return (shadowed & SURFACE_DENSITY) ? surf_ : prototype.surfaceDensity ();
+        return (shadowed_ & SURFACE_DENSITY) ? surf_ : prototype_.surfaceDensity ();
     }
 
     /**
@@ -105,35 +105,35 @@ namespace Opm
     inline IncompPropertiesShadow& IncompPropertiesShadow::usePorosity (const double* poro)
     {
         this->poro_ = poro;
-        shadowed |= POROSITY;
+        shadowed_ |= POROSITY;
         return *this;
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::usePermeability (const double* perm)
     {
         this->perm_ = perm;
-        shadowed |= PERMEABILITY;
+        shadowed_ |= PERMEABILITY;
         return *this;
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::useViscosity (const double* visc)
     {
         this->visc_ = visc;
-        shadowed |= VISCOSITY;
+        shadowed_ |= VISCOSITY;
         return *this;
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::useDensity (const double* dens)
     {
         this->dens_ = dens;
-        shadowed |= DENSITY;
+        shadowed_ |= DENSITY;
         return *this;
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::useSurfaceDensity (const double* surf)
     {
         this->surf_ = surf;
-        shadowed |= SURFACE_DENSITY;
+        shadowed_ |= SURFACE_DENSITY;
         return *this;
     }
 
@@ -143,32 +143,32 @@ namespace Opm
      */
     inline IncompPropertiesShadow& IncompPropertiesShadow::usePorosity (const IncompPropertiesInterface& other)
     {
-        assert (prototype.numCells() == other.numCells());
+        assert (prototype_.numCells() == other.numCells());
         return usePorosity (other.porosity());
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::usePermeability (const IncompPropertiesInterface& other)
     {
-        assert (prototype.numCells() == other.numCells());
-        assert (prototype.numDimensions() == other.numDimensions());
+        assert (prototype_.numCells() == other.numCells());
+        assert (prototype_.numDimensions() == other.numDimensions());
         return usePermeability (other.permeability());
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::useViscosity (const IncompPropertiesInterface& other)
     {
-        assert (prototype.numPhases() == other.numPhases());
+        assert (prototype_.numPhases() == other.numPhases());
         return useViscosity (other.viscosity());
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::useDensity (const IncompPropertiesInterface& other)
     {
-        assert (prototype.numPhases() == other.numPhases());
+        assert (prototype_.numPhases() == other.numPhases());
         return useDensity (other.density());
     }
 
     inline IncompPropertiesShadow& IncompPropertiesShadow::useSurfaceDensity (const IncompPropertiesInterface& other)
     {
-        assert (prototype.numPhases() == other.numPhases());
+        assert (prototype_.numPhases() == other.numPhases());
         return useSurfaceDensity (other.surfaceDensity());
     }
 

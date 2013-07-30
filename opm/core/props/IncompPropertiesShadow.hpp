@@ -170,14 +170,14 @@ namespace Opm
          * them from this. This is a kind of prototype inheritance,
          * hence the name of this field.
          */
-        const IncompPropertiesInterface& prototype;
+        const IncompPropertiesInterface& prototype_;
 
         /**
          * Bitfield which tells us which properties that has been
          * shadowed. The others are retrieved from the original
          * interface.
          */
-        int shadowed;
+        int shadowed_;
 
         /**
          * Bits that indicates which fields that has been overridden.
