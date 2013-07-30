@@ -22,7 +22,7 @@
 
 
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <boost/array.hpp>
+#include <array>
 
 namespace Opm
 {
@@ -64,9 +64,9 @@ namespace Opm
         const double* viscosity() const;
 
     private:
-        boost::array<double, 2> surface_density_;
-        boost::array<double, 2> reservoir_density_;
-        boost::array<double, 2> viscosity_;
+        std::array<double, 2> surface_density_;
+        std::array<double, 2> reservoir_density_;
+        std::array<double, 2> viscosity_;
     };
 
 }

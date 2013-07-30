@@ -27,7 +27,7 @@
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <boost/array.hpp>
+#include <array>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -141,10 +141,10 @@ namespace
     } // namespace InjectionControl
 
 
-    boost::array<double, 3> getCubeDim(const UnstructuredGrid& grid, int cell)
+    std::array<double, 3> getCubeDim(const UnstructuredGrid& grid, int cell)
     {
         using namespace std;
-        boost::array<double, 3> cube;
+        std::array<double, 3> cube;
         int num_local_faces = grid.cell_facepos[cell + 1] - grid.cell_facepos[cell];
         vector<double> x(num_local_faces);
         vector<double> y(num_local_faces);
@@ -169,7 +169,7 @@ namespace
     // cell_permeability is the permeability tensor of the given cell.
     // returns the well index of the cell.
     double computeWellIndex(const double radius,
-                            const boost::array<double, 3>& cubical,
+                            const std::array<double, 3>& cubical,
                             const double* cell_permeability,
                             const double skin_factor)
     {
@@ -386,7 +386,7 @@ namespace Opm
                                 radius = 0.5*unit::feet;
                                 MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                             }
-                            boost::array<double, 3> cubical = getCubeDim(grid, cell);
+                            std::array<double, 3> cubical = getCubeDim(grid, cell);
                             const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
                             pd.well_index = computeWellIndex(radius, cubical, cell_perm,
                                                              compdat.compdat[kw].skin_factor_);
