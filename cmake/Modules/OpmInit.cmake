@@ -30,6 +30,7 @@ function (OpmInitProjVars)
   OpmGetDuneModuleDirective ("Module" project "${DUNE_MODULE}")
   OpmGetDuneModuleDirective ("Description" description "${DUNE_MODULE}")
   OpmGetDuneModuleDirective ("Version" version "${DUNE_MODULE}")
+  OpmGetDuneModuleDirective ("Label" label "${DUNE_MODULE}")
 
   # parse the version number
   set (verno_regex "^([0-9]*)\\.([0-9]*).*\$")
@@ -42,6 +43,7 @@ function (OpmInitProjVars)
   set (${project}_DESCRIPTION "${description}" PARENT_SCOPE)
   set (${project}_VERSION_MAJOR "${major}" PARENT_SCOPE)
   set (${project}_VERSION_MINOR "${minor}" PARENT_SCOPE)  
+  set (${project}_LABEL "${label}" PARENT_SCOPE)
 endfunction ()
 
 macro (OpmInitDirVars)
