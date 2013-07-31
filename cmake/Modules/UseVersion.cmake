@@ -23,19 +23,29 @@ else ()
 	find_package (Git)
   endif ()
 
-  add_custom_target (update-version ALL
-	COMMAND ${CMAKE_COMMAND}
-	-DCMAKE_HOME_DIRECTORY=${CMAKE_HOME_DIRECTORY}
-	-DGIT_EXECUTABLE=${GIT_EXECUTABLE}
-	-DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
-	-DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR}
-	-DPROJECT_LABEL=${${project}_LABEL}
-	-P ${PROJECT_SOURCE_DIR}/cmake/Scripts/WriteVerSHA.cmake
-	COMMENT "Updating version information"
-	)
+  # if git is *still* not found means it is not present on the
+  # system, so there is "no" way we can update the SHA. notice
+  # that this is a slightly different version of the label than
+  # above.
+  if (NOT GIT_FOUND)
+	file (WRITE "${PROJECT_BINARY_DIR}/project-version.h"
+	  "#define PROJECT_VERSION \"${${project}_LABEL}\"\n"
+	  )
+  else ()
+	add_custom_target (update-version ALL
+	  COMMAND ${CMAKE_COMMAND}
+	  -DCMAKE_HOME_DIRECTORY=${CMAKE_HOME_DIRECTORY}
+	  -DGIT_EXECUTABLE=${GIT_EXECUTABLE}
+	  -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+	  -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR}
+	  -DPROJECT_LABEL=${${project}_LABEL}
+	  -P ${PROJECT_SOURCE_DIR}/cmake/Scripts/WriteVerSHA.cmake
+	  COMMENT "Updating version information"
+	  )
 
-  # the target above gets built every time thanks to the "ALL" modifier,
-  # but it must also be done before the main library so it can pick up
-  # any changes it does.
-  add_dependencies (${${project}_TARGET} update-version)
+	# the target above gets built every time thanks to the "ALL" modifier,
+	# but it must also be done before the main library so it can pick up
+	# any changes it does.
+	add_dependencies (${${project}_TARGET} update-version)
+  endif ()
 endif ()
