@@ -174,7 +174,10 @@ opm_cmake_config (${project})
 include (OpmSatellites)
 
 # example programs are found in the tutorials/ and examples/ directory
-opm_compile_satellites (${project} examples "" "")
+option (BUILD_EXAMPLES "Build the examples/ tree" ON)
+if (BUILD_EXAMPLES)
+	opm_compile_satellites (${project} examples "" "")
+endif (BUILD_EXAMPLES)
 
 # infrastructure for testing
 enable_testing ()
