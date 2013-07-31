@@ -196,8 +196,10 @@ if (COMMAND tests_hook)
 endif (COMMAND tests_hook)
 
 # make datafiles necessary for tests available in output directory
-opm_data (tests datafiles "${tests_DIR}")
-opm_compile_satellites (${project} tests "" "${tests_REGEXP}")
+if (BUILD_TESTING)
+	opm_data (tests datafiles "${tests_DIR}")
+	opm_compile_satellites (${project} tests "" "${tests_REGEXP}")
+endif (BUILD_TESTING)
 
 # use this target to run all tests
 add_custom_target (check
