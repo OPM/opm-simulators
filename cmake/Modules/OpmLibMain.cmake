@@ -230,3 +230,6 @@ configure_file (
 	"${CMAKE_CURRENT_BINARY_DIR}/dunemod.tmp"
 	COPYONLY
 	)
+
+# make sure updated version information is available in the source code
+include (UseVersion)
