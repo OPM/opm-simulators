@@ -20,6 +20,8 @@ Optional Features:
   --enable-debug          build a non-optimized version of the library
                           [default=no]
   --enable-lto            use whole program optimization [default=no]
+  --disable-tests         do not compile and enable unit tests [default=yes]
+  --disable-examples      do not compile example programs [default=yes]
   --disable-pch           do not use precompiled headers (if buggy compiler)
   --disable-silent-rules  print every compilation statement as executed
   --enable-system-debug   put .debug files in global GDB debug dir
@@ -106,6 +108,10 @@ silent_rules=
 debug_loc=
 #use_lto=" -DWHOLE_PROG_OPTIM=OFF"
 use_lto=
+#use_tests=" -DBUILD_TESTING=ON"
+use_tests=
+#use_samples=" -DBUILD_EXAMPLES=ON"
+use_samples=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -251,6 +257,14 @@ for OPT in "$@"; do
               use_mpi=" -DUSE_MPI=OFF"
               pkgname=""
               ;;
+            tests)
+              use_tests=" -DBUILD_TESTING=OFF"
+              pkgname=""
+              ;;
+            examples)
+              use_samples=" -DBUILD_EXAMPLES=OFF"
+              pkgname=""
+              ;;
             agmg |\
             ert  |\
             superlu)
@@ -303,6 +317,14 @@ for OPT in "$@"; do
               use_lto=" -DWHOLE_PROG_OPTIM=ON"
               shared=""
               ;;
+            tests)
+              use_tests=" -DBUILD_TESTING=ON"
+              pkgname=""
+              ;;
+            examples)
+              use_samples=" -DBUILD_EXAMPLES=ON"
+              pkgname=""
+              ;;
             # this flag is just for compatibility with the deprecation
             # flag in DUNE, so we can build without warnings
             fieldvector-size-is-method)
@@ -351,7 +373,7 @@ for a in "${VARS[@]}"; do
 done
 
 # pass everything on to CMake
-CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto} ${FEATURES}"
+CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_tests}${use_samples} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
