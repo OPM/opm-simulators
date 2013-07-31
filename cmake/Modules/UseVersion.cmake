@@ -23,3 +23,8 @@ add_custom_target (update-version ALL
   -P ${PROJECT_SOURCE_DIR}/cmake/Scripts/WriteVerSHA.cmake
   COMMENT "Updating version information"
   )
+
+# the target above gets built every time thanks to the "ALL" modifier,
+# but it must also be done before the main library so it can pick up
+# any changes it does.
+add_dependencies (${${project}_TARGET} update-version)
