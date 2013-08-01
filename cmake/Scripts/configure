@@ -19,6 +19,7 @@ Optional Features:
                           of the options shared and static may be built.
   --enable-debug          build a non-optimized version of the library
                           [default=no]
+  --disable-runpath       do not use RUNPATH in installed library [default=yes]
   --enable-lto            use whole program optimization [default=no]
   --disable-tests         do not compile and enable unit tests [default=yes]
   --disable-examples      do not compile example programs [default=yes]
@@ -108,6 +109,8 @@ silent_rules=
 debug_loc=
 #use_lto=" -DWHOLE_PROG_OPTIM=OFF"
 use_lto=
+#use_runpath=" -DUSE_RUNPATH=OFF"
+use_runpath=
 #use_tests=" -DBUILD_TESTING=ON"
 use_tests=
 #use_samples=" -DBUILD_EXAMPLES=ON"
@@ -235,6 +238,10 @@ for OPT in "$@"; do
               pch_use=" -DPRECOMPILE_HEADERS:BOOL=OFF"
               pkgname=""
               ;;
+            runpath)
+              use_runpath=" -DUSE_RUNPATH=OFF"
+              pkgname=""
+              ;;
             silent-rules)
               silent_rules=" -DCMAKE_VERBOSE_MAKEFILE=ON"
               pkgname=""
@@ -313,6 +320,10 @@ for OPT in "$@"; do
               pch_use=" -DPRECOMPILE_HEADERS:BOOL=ON"
               shared=""
               ;;
+            runpath)
+              use_runpath=" -DUSE_RUNPATH=ON"
+              shared=""
+              ;;              
             lto)
               use_lto=" -DWHOLE_PROG_OPTIM=ON"
               shared=""
@@ -373,7 +384,7 @@ for a in "${VARS[@]}"; do
 done
 
 # pass everything on to CMake
-CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_tests}${use_samples} ${FEATURES}"
+CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
