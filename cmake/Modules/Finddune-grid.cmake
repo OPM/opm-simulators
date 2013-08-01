@@ -19,7 +19,7 @@ find_opm_package (
   # TODO: we should probe for all the HAVE_* values listed below;
   # however, we don't actually use them in our implementation, so
   # we just include them to forward here in case anyone else does
-  "CXX11Features;
+  "CXX11Features REQUIRED;
   dune-common REQUIRED;
   dune-geometry REQUIRED
   "

@@ -16,7 +16,7 @@ find_opm_package (
   "dune-common"
 
   # dependencies
-  "CXX11Features;
+  "CXX11Features REQUIRED;
   BLAS REQUIRED;
   LAPACK REQUIRED;
   MPI
