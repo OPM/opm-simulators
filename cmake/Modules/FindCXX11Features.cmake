@@ -326,9 +326,12 @@ if (NOT HAVE_TUPLE)
 endif()
 
 if(CXX_FEATURES_MISSING)
-  message(FATAL_ERROR
-    "Your C++ compiler does not support the minimum set of C++-2011 features required. "
-    "Make sure to use a compiler which implements all C++-2011 features provided by GCC 4.4. "
-    "Your compiler does not seem to implement the following features:\n"
-    "${CXX_FEATURES_MISSING}")  
+  set (CXX11FEATURES_FOUND FALSE)
+  if (CXX11Features_FIND_REQUIRED)
+	message(FATAL_ERROR
+      "Your C++ compiler does not support the minimum set of C++-2011 features required. "
+      "Make sure to use a compiler which implements all C++-2011 features provided by GCC 4.4. "
+      "Your compiler does not seem to implement the following features:\n"
+      "${CXX_FEATURES_MISSING}")
+  endif()
 endif()
