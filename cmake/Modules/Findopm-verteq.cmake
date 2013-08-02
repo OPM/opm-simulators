@@ -11,16 +11,15 @@
 # This code is licensed under The GNU General Public License v3.0
 
 # use the generic find routine
+include (opm-verteq-prereqs)
 include (OpmPackage)
 find_opm_package (
   # module name
   "opm-verteq"
 
   # dependencies
-  "CXX11Features;
-  Boost 1.39.0
-    COMPONENTS system unit_test_framework REQUIRED;
-  "
+  "${opm-verteq_DEPS}"
+
   # header to search for
   "opm/verteq/verteq.hpp"
 
