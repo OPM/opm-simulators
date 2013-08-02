@@ -60,3 +60,7 @@ int main (void) {
   SUPERLU_POST_2005_VERSION
   ")
 #debug_find_vars ("dune-istl")
+
+# make version number available in config.h
+include (UseDuneVer)
+find_dune_version ("dune" "istl")
