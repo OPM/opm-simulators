@@ -53,3 +53,7 @@ int main (void) {
   ")
 
 #debug_find_vars ("dune-grid")
+
+# make version number available in config.h
+include (UseDuneVer)
+find_dune_version ("dune" "grid")
