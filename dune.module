@@ -1,4 +1,5 @@
 Module: opm-autodiff
+Description: Utilities for automatic differentiation and simulators based on AD
 Version: 0.1
 Maintainer: atgeirr@sintef.no
 Depends: opm-core
