@@ -49,3 +49,42 @@ else ()
 	add_dependencies (${${project}_TARGET} update-version)
   endif ()
 endif ()
+
+# safety precaution: check that we don't have version number mismatch.
+
+# first get the name of the module (e.g. "core")
+set (_module_regexp "([^-]+)-(.*)")
+string (REGEX REPLACE "${_module_regexp}" "\\1" _suite_name "${project}")
+string (REGEX REPLACE "${_module_regexp}" "\\2" _module_name "${project}")
+
+# if we have a version number it must be in this file, e.g. opm/core/version.h
+set (_rel_ver_h "${${project}_DIR}/${_module_name}/version.h")
+set (_version_h "${PROJECT_SOURCE_DIR}/${_rel_ver_h}")
+
+# not all modules have version files, so only check if they do
+if (EXISTS "${_version_h}")
+  # uppercase versions which is used in the file
+  string (TOUPPER "${_suite_name}" _suite_upper)
+  string (TOUPPER "${_module_name}" _module_upper)
+
+  # scan the files for version define for major version
+  set (_major_regexp "#define[ ]+${_suite_upper}_${_module_upper}_VERSION_MAJOR[ ]+([0-9]*)")
+  file (STRINGS "${_version_h}" _version_h_major REGEX "${_major_regexp}")
+  string (REGEX REPLACE "${_major_regexp}" "\\1" _version_h_major "${_version_h_major}")
+
+  # exactly the same, but minor version (making a macro is more lines...)
+  set (_minor_regexp "#define[ ]+${_suite_upper}_${_module_upper}_VERSION_MINOR[ ]+([0-9]*)")
+  file (STRINGS "${_version_h}" _version_h_minor REGEX "${_minor_regexp}")
+  string (REGEX REPLACE "${_minor_regexp}" "\\1" _version_h_minor "${_version_h_minor}")
+
+  # compare what we got from the file with what we have defined here
+  if (NOT (("${_version_h_major}" EQUAL "${${project}_VERSION_MAJOR}")
+      AND  ("${_version_h_minor}" EQUAL "${${project}_VERSION_MINOR}")))
+	set (_proj_ver "${${project}_VERSION_MAJOR}.${${project}_VERSION_MINOR}")
+	set (_file_ver "${_version_h_major}.${_version_h_minor}")
+	message (AUTHOR_WARNING
+	  "Version in build system (dune.module) is \"${_proj_ver}\", "
+	  "but version in source (${_rel_ver_h}) is \"${_file_ver}\""
+	  )
+  endif ()
+endif ()
