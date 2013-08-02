@@ -179,6 +179,11 @@ if (BUILD_EXAMPLES)
 	opm_compile_satellites (${project} examples "" "")
 endif (BUILD_EXAMPLES)
 
+# attic are programs which are not quite abandoned yet; however, they
+# are not actively maintained, so they should not be a part of the
+# default compile
+opm_compile_satellites (${project} attic EXCLUDE_FROM_ALL "")
+
 # infrastructure for testing
 enable_testing ()
 include (CTest)

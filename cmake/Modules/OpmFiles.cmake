@@ -65,6 +65,9 @@ macro (opm_sources opm)
   foreach (_file IN LISTS PROGRAM_SOURCE_FILES)
 	list (APPEND examples_SOURCES_DIST ${PROJECT_SOURCE_DIR}/${_file})
   endforeach (_file)
+  foreach (_file IN LISTS ATTIC_FILES)
+	list (APPEND attic_SOURCES ${PROJECT_SOURCE_DIR}/${_file})
+  endforeach (_file)
 
   # identify pre-compile header; if the project is called opm-foobar,
   # then it should be in opm/foobar/opm-foobar-pch.hpp
