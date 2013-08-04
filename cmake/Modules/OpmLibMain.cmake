@@ -129,11 +129,13 @@ include (ConfigVars)
 list (APPEND ${project}_CONFIG_VARS ${${project}_CONFIG_VAR})
 
 # write configuration variables to this file. note that it is a temporary.
+# _CONFIG_IMPL_VARS are defines that are only written to config.h internal
+# to this project; they are not exported to any installed files.
 message (STATUS "Writing config file \"${PROJECT_BINARY_DIR}/config.h\"...")
 set (CONFIG_H "${PROJECT_BINARY_DIR}/config.h.tmp")
 configure_vars (
 	FILE  CXX  ${CONFIG_H}
-	WRITE ${${project}_CONFIG_VARS}
+	WRITE ${${project}_CONFIG_VARS} ${${project}_CONFIG_IMPL_VARS}
 	)
 
 # call this hook to let it setup necessary conditions for Fortran support
