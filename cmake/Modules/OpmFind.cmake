@@ -42,6 +42,7 @@ set (_opm_proj_vars
   INCLUDE_DIRS
   LIBRARY_DIRS
   CONFIG_VARS
+  CONFIG_IMPL_VARS
   )
 
 # ensure that they are at least the empty list after we're done
