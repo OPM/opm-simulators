@@ -242,16 +242,6 @@ namespace AutoDiff
 
         V val_;
         std::vector<M> jac_;
-        
-        template <typename Sclr>
-        friend
-        ForwardBlock<Sclr> operator*(const ForwardBlock<Sclr> &lhs,
-                                     const Sclr &rhs);
-
-        template <typename Sclr>
-        friend
-        ForwardBlock<Sclr> operator*(const Sclr &lhs,
-                                     const ForwardBlock<Sclr> &rhs);
  };
 
 
@@ -351,15 +341,15 @@ namespace AutoDiff
      * @return The product
      */
     template <typename Scalar>
-    ForwardBlock<Scalar> operator*(const ForwardBlock<Scalar> &lhs,
-                                   const Scalar &rhs)
+    ForwardBlock<Scalar> operator*(const ForwardBlock<Scalar>& lhs,
+                                   const Scalar& rhs)
     {
-        std::vector< Eigen::SparseMatrix<Scalar> > jac = lhs.jac_;
+        std::vector< typename ForwardBlock<Scalar>::M > jac;
+        jac.reserve( lhs.numBlocks() );
         for (int block=0; block<lhs.numBlocks(); block++) {
-            jac[block] = lhs.jac_[block] * rhs;
+            jac.emplace_back( lhs.derivative()[block] * rhs );
         }
-        auto val = lhs.val_ * rhs;
-        return ForwardBlock<Scalar>::function(val, jac);
+        return ForwardBlock<Scalar>::function( lhs.value() * rhs, jac );
     }
 
 
@@ -371,8 +361,8 @@ namespace AutoDiff
      * @return The product
      */
     template <typename Scalar>
-    ForwardBlock<Scalar> operator*(const Scalar &lhs,
-                                   const ForwardBlock<Scalar> &rhs)
+    ForwardBlock<Scalar> operator*(const Scalar& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
     {
         return rhs * lhs; // Commutative operation.
     }
