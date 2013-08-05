@@ -242,7 +242,7 @@ namespace AutoDiff
 
         V val_;
         std::vector<M> jac_;
-    };
+ };
 
 
     template <class Ostream, typename Scalar>
@@ -330,6 +330,41 @@ namespace AutoDiff
                                    const typename ForwardBlock<Scalar>::V& rhs)
     {
         return lhs / ForwardBlock<Scalar>::constant(rhs, lhs.blockPattern());
+    }
+
+
+    /**
+     * @brief Operator for multiplication with a scalar on the right-hand side
+     *
+     * @param lhs The left-hand side AD forward block
+     * @param rhs The scalar to multiply with
+     * @return The product
+     */
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator*(const ForwardBlock<Scalar>& lhs,
+                                   const Scalar& rhs)
+    {
+        std::vector< typename ForwardBlock<Scalar>::M > jac;
+        jac.reserve( lhs.numBlocks() );
+        for (int block=0; block<lhs.numBlocks(); block++) {
+            jac.emplace_back( lhs.derivative()[block] * rhs );
+        }
+        return ForwardBlock<Scalar>::function( lhs.value() * rhs, jac );
+    }
+
+
+    /**
+     * @brief Operator for multiplication with a scalar on the left-hand side
+     *
+     * @param lhs The scalar to multiply with
+     * @param rhs The right-hand side AD forward block
+     * @return The product
+     */
+    template <typename Scalar>
+    ForwardBlock<Scalar> operator*(const Scalar& lhs,
+                                   const ForwardBlock<Scalar>& rhs)
+    {
+        return rhs * lhs; // Commutative operation.
     }
 
 
