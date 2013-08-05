@@ -23,6 +23,12 @@
 
 include (AddOptions)
 macro (find_openmp opm)
+  # default is that OpenMP is not considered to be there; if we set this
+  # to a blank definition, it may be added but it cannot be removed if
+  # it propagates to other projects (someone declares it to be part of
+  # _CONFIG_VARS)
+  set (HAVE_OPENMP)
+
   # user code can be conservative by setting USE_OPENMP_DEFAULT
   if (NOT DEFINED USE_OPENMP_DEFAULT)
 	set (USE_OPENMP_DEFAULT ON)
@@ -37,6 +43,7 @@ macro (find_openmp opm)
   if (OPENMP_FOUND)
 	add_options (C ALL_BUILDS "${OpenMP_C_FLAGS}")
 	add_options (CXX ALL_BUILDS "${OpenMP_CXX_FLAGS}")
+	set (HAVE_OPENMP 1)
   endif (OPENMP_FOUND)
 
   # threading library (search for this *after* OpenMP
