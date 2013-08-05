@@ -37,6 +37,10 @@ include (${project}-prereqs)
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)
 
+macro (config_hook)
+#	opm_need_version_of ("dune-common")
+endmacro (config_hook)
+
 macro (prereqs_hook)
 endmacro (prereqs_hook)
 
