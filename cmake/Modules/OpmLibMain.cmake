@@ -121,6 +121,20 @@ if (COMMAND sources_hook)
 	sources_hook ()
 endif (COMMAND sources_hook)
 
+# convenience macro to add version of another suite, e.g. dune-common
+macro (opm_need_version_of what)
+	string (TOUPPER "${what}" _WHAT)
+	string (REPLACE "-" "_" _WHAT "${_WHAT}")
+	list (APPEND ${project}_CONFIG_IMPL_VARS
+		${_WHAT}_VERSION_MAJOR ${_WHAT}_VERSION_MINOR ${_WHAT}_VERSION_REVISION
+		)
+endmacro (opm_need_version_of suite module)
+
+# use this hook to add version macros before we write to config.h
+if (COMMAND config_hook)
+	config_hook ()
+endif (COMMAND config_hook)
+
 # create configuration header which describes available features
 # necessary to compile this library. singular version is the names that
 # is required by this project alone, plural version transitively
