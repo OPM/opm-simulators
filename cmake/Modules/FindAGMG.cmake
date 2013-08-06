@@ -23,13 +23,23 @@ find_file (AGMG_SOURCES
   NO_DEFAULT_PATH
   )
 
+# USE_MPI is an option that must be declared in the program
+# if this is enabled, then we use the parallel version of MUMPS
+# in package "libmumps-dev"; otherwise use serial version in
+# "libmumps-seq-dev"
+if (USE_MPI)
+  set (_seq "")
+else ()
+  set (_seq "_seq")
+endif ()
+
 # AGMG is dependent on having the MUMPS library present
 find_path (MUMPS_INCLUDE_DIR
   dmumps_struc.h
   PATH_SUFFIXES include
   )
 find_library (MUMPS_LIBRARY
-  NAMES dmumps_seq
+  NAMES dmumps${_seq}
   DOC "MUltifrontal Massive Parallel sparse direct Solver"
   )
 
