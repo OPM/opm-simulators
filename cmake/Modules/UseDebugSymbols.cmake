@@ -10,9 +10,11 @@
 # This code is licensed under The GNU General Public License v3.0
 
 include (AddOptions)
+include (UseCompVer)
+is_compiler_gcc_compatible ()
 
 # only debugging using the GNU toolchain is supported for now
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CXX_COMPAT_GCC)
   # default debug level, if not specified by the user
   set_default_option (_dbg_flag "-ggdb3" "(^|\ )-g")
 
@@ -37,13 +39,13 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   else (OBJCOPY)
 	message (WARNING "Looking for strip utility - not found")
   endif (OBJCOPY)
-endif (CMAKE_COMPILER_IS_GNUCXX)
+endif ()
 
 # command to separate the debug information from the executable into
 # its own file; this must be called for each target; optionally takes
 # the name of a variable to receive the list of .debug files
 function (strip_debug_symbols targets)
-  if (CMAKE_COMPILER_IS_GNUCXX AND OBJCOPY)
+  if (CXX_COMPAT_GCC AND OBJCOPY)
 	foreach (target IN LISTS targets)
 	  # libraries must retain the symbols in order to link to them, but
 	  # everything can be stripped in an executable
@@ -97,6 +99,6 @@ function (strip_debug_symbols targets)
 	if (ARGV1)
 	  set (${ARGV1} ${_debug_files} PARENT_SCOPE)
 	endif (ARGV1)
-  endif (CMAKE_COMPILER_IS_GNUCXX AND OBJCOPY)
+  endif ()
 endfunction (strip_debug_symbols targets)
 

@@ -76,3 +76,33 @@ function (linker_info)
   get_ld_version (version)
   message (STATUS "Linker: ${version}")
 endfunction (linker_info)
+
+# sets CXX_COMPAT_GCC if we have either GCC or Clang
+macro (is_compiler_gcc_compatible)
+  # is the C++ compiler clang++?
+  string (TOUPPER "${CMAKE_CXX_COMPILER_ID}" _comp_id)
+  if (_comp_id MATCHES "CLANG")
+	set (CMAKE_COMPILER_IS_CLANGXX TRUE)
+  else ()
+	set (CMAKE_COMPILER_IS_CLANGXX FALSE)
+  endif ()
+  # is the C++ compiler g++ or clang++?
+  if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
+	set (CXX_COMPAT_GCC TRUE)
+  else ()
+	set (CXX_COMPAT_GCC FALSE)
+  endif ()
+  # is the C compiler clang?
+  string (TOUPPER "${CMAKE_C_COMPILER_ID}" _comp_id)
+  if (_comp_id MATCHES "CLANG")
+	set (CMAKE_COMPILER_IS_CLANG TRUE)
+  else ()
+	set (CMAKE_COMPILER_IS_CLANG FALSE)
+  endif ()
+  # is the C compiler gcc or clang?
+  if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
+	set (C_COMPAT_GCC TRUE)
+  else ()
+	set (C_COMPAT_GCC FALSE)
+  endif ()
+endmacro (is_compiler_gcc_compatible)
