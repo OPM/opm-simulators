@@ -23,6 +23,16 @@ find_file (AGMG_SOURCES
   NO_DEFAULT_PATH
   )
 
+# AGMG is dependent on having the MUMPS library present
+find_path (MUMPS_INCLUDE_DIR
+  dmumps_struc.h
+  PATH_SUFFIXES include
+  )
+find_library (MUMPS_LIBRARY
+  NAMES dmumps_seq
+  DOC "MUltifrontal Massive Parallel sparse direct Solver"
+  )
+
 # make sure that we can compile Fortran code
 if (AGMG_SOURCES)
   enable_language (Fortran)
@@ -32,7 +42,7 @@ endif (AGMG_SOURCES)
 if (AGMG_SOURCES)
   set (HAVE_AGMG 1 CACHE INT "Is AGMG present?")
 else (AGMG_SOURCES)
-  set (HAVE_AGMG "" CACHE INT "Is AGMG present?")
+  unset (HAVE_AGMG CACHE)
 endif (AGMG_SOURCES)
 
 # handle REQUIRED and QUIET standard options
@@ -40,5 +50,14 @@ include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (AGMG
   DEFAULT_MSG
   AGMG_SOURCES
+  MUMPS_INCLUDE_DIR
+  MUMPS_LIBRARY
   CMAKE_Fortran_COMPILER_SUPPORTS_F90
   )
+
+# add our own compatibility routine to link with system MUMPS
+if (AGMG_SOURCES)
+  list (APPEND AGMG_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Templates/dagmg_mumps.f90")
+  list (APPEND AGMG_INCLUDE_DIRS "${MUMPS_INCLUDE_DIR}")
+  list (APPEND AGMG_LIBRARIES "${MUMPS_LIBRARY}")
+endif ()
