@@ -36,6 +36,7 @@ include (Duplicates)
 
 # list of suffixes for all the project variables
 set (_opm_proj_vars
+  SOURCES
   LINKER_FLAGS
   LIBRARIES
   DEFINITIONS
