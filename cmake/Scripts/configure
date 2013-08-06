@@ -30,6 +30,7 @@ Optional Features:
   --enable-parallel       process in parallel using MPI [default=no]
   --enable-openmp         activate experimental support for OpenMP
   --disable-option-checking  ignore unrecognized --enable/--with options
+  --enable-ninja          use Ninja build generator [default=no]
 
 Optional Packages:
   --with-boost=PATH       use Boost library from a specified location
@@ -115,6 +116,8 @@ use_runpath=
 use_tests=
 #use_samples=" -DBUILD_EXAMPLES=ON"
 use_samples=
+#use_ninja="-G\"Unix Makefiles\" "
+use_ninja=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -272,6 +275,11 @@ for OPT in "$@"; do
               use_samples=" -DBUILD_EXAMPLES=OFF"
               pkgname=""
               ;;
+            ninja)
+              # just for symmetry with the --enable-ninja option
+              use_ninja=""
+              pkgname=""
+              ;;
             agmg |\
             ert  |\
             superlu)
@@ -336,6 +344,10 @@ for OPT in "$@"; do
               use_samples=" -DBUILD_EXAMPLES=ON"
               pkgname=""
               ;;
+            ninja)
+              use_ninja="-GNinja "
+              pkgname=""
+              ;;
             # this flag is just for compatibility with the deprecation
             # flag in DUNE, so we can build without warnings
             fieldvector-size-is-method)
@@ -384,7 +396,7 @@ for a in "${VARS[@]}"; do
 done
 
 # pass everything on to CMake
-CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" \"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples} ${FEATURES}"
+CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
