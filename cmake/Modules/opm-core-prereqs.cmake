@@ -28,6 +28,8 @@ set (opm-core_DEPS
 	"SuiteSparse COMPONENTS umfpack"
 	# solver
 	"SuperLU"
+	# Algebraic Multigrid
+	"AGMG"
 	# xml processing (for config parsing)
 	"TinyXML"
 	# Ensembles-based Reservoir Tools (ERT)
