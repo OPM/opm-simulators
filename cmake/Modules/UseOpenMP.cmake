@@ -22,6 +22,9 @@
 #	remove_dup_deps (opm-core)
 
 include (AddOptions)
+include (UseCompVer)
+is_compiler_gcc_compatible ()
+
 macro (find_openmp opm)
   # default is that OpenMP is not considered to be there; if we set this
   # to a blank definition, it may be added but it cannot be removed if
@@ -58,10 +61,10 @@ macro (find_openmp opm)
 
 	# if we don't have OpenMP support, then don't show warnings that these
 	# pragmas are unknown
-	if (CMAKE_COMPILER_IS_GNUCXX)
+	if (CXX_COMPAT_GCC)
 	  add_options (ALL_LANGUAGES ALL_BUILDS "-Wno-unknown-pragmas")
 	elseif (MSVC)
 	  add_options (ALL_LANGUAGES ALL_BUILDS "-wd4068")
-	endif(CMAKE_COMPILER_IS_GNUCXX)
+	endif()
   endif (USE_OPENMP)
 endmacro (find_openmp opm)
