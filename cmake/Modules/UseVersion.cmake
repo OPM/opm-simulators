@@ -46,7 +46,9 @@ else ()
 	# the target above gets built every time thanks to the "ALL" modifier,
 	# but it must also be done before the main library so it can pick up
 	# any changes it does.
-	add_dependencies (${${project}_TARGET} update-version)
+	if (${project}_TARGET)
+	  add_dependencies (${${project}_TARGET} update-version)
+	endif ()
   endif ()
 endif ()
 
