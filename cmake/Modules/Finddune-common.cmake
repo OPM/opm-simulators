@@ -43,7 +43,10 @@ int main (void) {
 }
 "
   # config variables
-  "HAVE_ARRAY;
+  "HAS_ATTRIBUTE_UNUSED;
+  HAS_ATTRIBUTE_DEPRECATED;
+  HAS_ATTRIBUTE_DEPRECATED_MSG;
+  HAVE_ARRAY;
   HAVE_BOOST_MAKE_SHARED_HPP;
   HAVE_BOOST_SHARED_PTR_HPP;
   HAVE_GMP;
@@ -51,8 +54,9 @@ int main (void) {
   HAVE_MPI;
   HAVE_NULLPTR;
   HAVE_STATIC_ASSERT;
-  HAVE_TR1_TUPLE;
+  HAVE_SHARED_PTR;
   HAVE_TYPE_TRAITS;
+  HAVE_TR1_TUPLE;
   HAVE_TUPLE
   ")
 #debug_find_vars ("dune-common")
