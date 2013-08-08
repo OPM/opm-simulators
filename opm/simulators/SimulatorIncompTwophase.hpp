@@ -20,7 +20,7 @@
 #ifndef OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
 #define OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <vector>
@@ -120,7 +120,7 @@ namespace Opm
     private:
         struct Impl;
         // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
-        boost::shared_ptr<Impl> pimpl_;
+        std::shared_ptr<Impl> pimpl_;
 
         // implementation which is not templated, and can be in library
         void connect_timestep_impl (boost::function0<void> hook);
