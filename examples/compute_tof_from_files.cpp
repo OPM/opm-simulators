@@ -46,7 +46,7 @@
 #include <opm/core/tof/TofReorder.hpp>
 #include <opm/core/tof/TofDiscGalReorder.hpp>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 #include <boost/filesystem.hpp>
 
 #include <algorithm>
@@ -142,7 +142,7 @@ main(int argc, char** argv)
     bool use_dg = param.getDefault("use_dg", false);
     bool use_multidim_upwind = false;
     // Need to initialize dg solver here, since it uses parameters now.
-    boost::scoped_ptr<Opm::TofDiscGalReorder> dg_solver;
+    std::unique_ptr<Opm::TofDiscGalReorder> dg_solver;
     if (use_dg) {
         dg_solver.reset(new Opm::TofDiscGalReorder(grid, param));
     } else {
