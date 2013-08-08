@@ -20,6 +20,7 @@
 #include "config.h"
 #include <opm/core/wells/WellsGroup.hpp>
 #include <cmath>
+#include <memory>
 #include <opm/core/wells.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
@@ -401,7 +402,7 @@ namespace Opm
         return true;
     }
 
-    void WellsGroup::addChild(boost::shared_ptr<WellsGroupInterface> child)
+    void WellsGroup::addChild(std::shared_ptr<WellsGroupInterface> child)
     {
         children_.push_back(child);
     }
@@ -1041,12 +1042,12 @@ namespace Opm
         }
     } // anonymous namespace
 
-    boost::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
+    std::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
                                                                const EclipseGridParser& deck)
     {
         PhaseUsage phase_usage = phaseUsageFromDeck(deck);
 
-        boost::shared_ptr<WellsGroupInterface> return_value;
+        std::shared_ptr<WellsGroupInterface> return_value;
         // First we need to determine whether it's a group or just a well:
         bool isWell = false;
         if (deck.hasField("WELSPECS")) {

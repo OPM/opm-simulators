@@ -21,7 +21,7 @@
 #define OPM_TOFDISCGALREORDER_HEADER_INCLUDED
 
 #include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <vector>
 #include <map>
 #include <ostream>
@@ -128,7 +128,7 @@ namespace Opm
 
         // Data members
         const UnstructuredGrid& grid_;
-        boost::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;
+        std::shared_ptr<VelocityInterpolationInterface> velocity_interpolation_;
         bool use_cvi_;
         bool use_limiter_;
         double limiter_relative_flux_threshold_;
@@ -139,7 +139,7 @@ namespace Opm
         const double* darcyflux_;   // one flux per grid face
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
-        boost::shared_ptr<DGBasisInterface> basis_func_;
+        std::shared_ptr<DGBasisInterface> basis_func_;
         double* tof_coeff_;
         // For tracers.
         double* tracer_coeff_;

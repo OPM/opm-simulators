@@ -32,7 +32,7 @@
 
 #include <iostream>
 #include <vector>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 BOOST_AUTO_TEST_CASE(Construction)
 {
@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(Construction)
     const int nwells  = 2;
     const int nperfs  = 2;
 
-    boost::shared_ptr<Wells> W(create_wells(nphases, nwells, nperfs),
+    std::shared_ptr<Wells> W(create_wells(nphases, nwells, nperfs),
                                 destroy_wells);
 
     if (W) {
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(Controls)
     const int nwells  = 1;
     const int nperfs  = 2;
 
-    boost::shared_ptr<Wells> W(create_wells(nphases, nwells, nperfs),
+    std::shared_ptr<Wells> W(create_wells(nphases, nwells, nperfs),
                                destroy_wells);
 
     if (W) {
@@ -130,9 +130,9 @@ BOOST_AUTO_TEST_CASE(Copy)
     const int nwells  = 2;
     const int nperfs  = 2;
 
-    boost::shared_ptr<Wells> W1(create_wells(nphases, nwells, nperfs),
+    std::shared_ptr<Wells> W1(create_wells(nphases, nwells, nperfs),
                                 destroy_wells);
-    boost::shared_ptr<Wells> W2;
+    std::shared_ptr<Wells> W2;
 
     if (W1) {
         int          cells[] = { 0, 9 };
