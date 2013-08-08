@@ -4,6 +4,7 @@
 # Sets the follwing variable:
 #
 # HAVE_SHARED_PTR                  True if std::shared_ptr is available
+# HAVE_UNIQUE_PTR                  True if std::unique_ptr is available
 # HAVE_NULLPTR                     True if nullptr is available
 # HAVE_ARRAY                       True if header <array> and fill() are available
 # HAVE_ATTRIBUTE_ALWAYS_INLINE     True if attribute always inline is supported
@@ -54,6 +55,18 @@ CHECK_CXX_SOURCE_COMPILES("
       return 0;
     }
 "  HAVE_SHARED_PTR
+)
+
+# nullptr
+CHECK_CXX_SOURCE_COMPILES("
+    #include <memory>
+
+    int main(void)
+    {
+      std::unique_ptr<int> foo(new int(123));
+      return 0;
+    }
+"  HAVE_UNIQUE_PTR
 )
 
 # nullptr
@@ -312,6 +325,10 @@ set(CXX_FEATURES_MISSING "")
 if (NOT HAVE_SHARED_PTR)
   set(CXX_FEATURES_MISSING
       "${CXX_FEATURES_MISSING} - Shared pointers (the std::shared_ptr class)\n")
+endif()
+if (NOT HAVE_UNIQUE_PTR)
+  set(CXX_FEATURES_MISSING
+      "${CXX_FEATURES_MISSING} - Unique pointers (the std::unique_ptr class)\n")
 endif()
 if (NOT HAVE_ARRAY)
   set(CXX_FEATURES_MISSING
