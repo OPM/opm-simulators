@@ -90,7 +90,7 @@ namespace Opm
 
     private:
         class Impl;
-        // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
+        // Using shared_ptr instead of unique_ptr since unique_ptr requires complete type for Impl.
         std::shared_ptr<Impl> pimpl_;
     };
 

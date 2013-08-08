@@ -119,7 +119,7 @@ namespace Opm
 
     private:
         struct Impl;
-        // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
+        // Using shared_ptr instead of unique_ptr since unique_ptr requires complete type for Impl.
         std::shared_ptr<Impl> pimpl_;
 
         // implementation which is not templated, and can be in library

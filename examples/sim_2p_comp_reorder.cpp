@@ -44,7 +44,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/SimulatorCompressibleTwophase.hpp>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 #include <boost/filesystem.hpp>
 
 #include <algorithm>
@@ -79,10 +79,10 @@ main(int argc, char** argv)
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    boost::scoped_ptr<EclipseGridParser> deck;
-    boost::scoped_ptr<GridManager> grid;
-    boost::scoped_ptr<BlackoilPropertiesInterface> props;
-    boost::scoped_ptr<RockCompressibility> rock_comp;
+    std::unique_ptr<EclipseGridParser> deck;
+    std::unique_ptr<GridManager> grid;
+    std::unique_ptr<BlackoilPropertiesInterface> props;
+    std::unique_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
