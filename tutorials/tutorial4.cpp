@@ -264,8 +264,8 @@ int main ()
     ///          what the interface expects. The first argument is the (unique) name of the group.
     /// \snippet tutorial4.cpp injection specification
     /// \internal[injection specification]
-    boost::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", well_group_prod_spec, InjectionSpecification(),
-                                                                        phase_usage));
+    std::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", well_group_prod_spec, InjectionSpecification(),
+                                                                   phase_usage));
     /// \internal[injection specification]
     /// \endinternal
 
@@ -289,8 +289,8 @@ int main ()
         well_name << "well" << i;
         ProductionSpecification production_specification;
         production_specification.control_mode_ = ProductionSpecification::GRUP;
-        boost::shared_ptr<WellsGroupInterface> well_leaf_node(new WellNode(well_name.str(), production_specification, InjectionSpecification(),
-                                                                              phase_usage));
+        std::shared_ptr<WellsGroupInterface> well_leaf_node(new WellNode(well_name.str(), production_specification, InjectionSpecification(),
+                                                                         phase_usage));
         well_collection.addChild(well_leaf_node, "group");
 
     }
