@@ -11,11 +11,22 @@
 # _DEBUG                Debug information extracted from library
 
 macro (opm_dist_clean opm)
+  # which generator have we been using
+  string (TOUPPER "${CMAKE_GENERATOR}" _gen)
+  if (_gen MATCHES "UNIX MAKEFILES")
+	set (_gen_is_makefiles TRUE)
+	set (_gen_is_ninja FALSE)
+  elseif (_gen MATCHES "NINJA")
+	set (_gen_is_makefiles FALSE)
+	set (_gen_is_ninja TRUE)
+  else ()
+	set (_gen_is_makefiles FALSE)
+	set (_gen_is_ninja FALSE)
+  endif ()
 
   set (DISTCLEAN_FILES
 	CMakeCache.txt
 	cmake_install.cmake
-	Makefile
 	config.h
 	config.h.tmp
 	${${opm}_NAME}-config.cmake
@@ -35,16 +46,31 @@ macro (opm_dist_clean opm)
 	install_manifest.txt
 	${${opm}_STYLESHEET_COPIED}
 	${tests_INPUT_FILES}
+	project-version.h
+	project-version.tmp
 	)
+  if (_gen_is_makefiles)
+	list (APPEND DISTCLEAN_FILES
+	  Makefile)
+  endif ()
+  if (_gen_is_ninja)
+	list (APPEND DISTCLEAN_FILES
+	  build.ninja
+	  rules.ninja
+	  )
+  endif ()
+
   # only remove these files if they were actually copied
   if (NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 	list (APPEND DISTCLEAN_FILES
 	  dune.module
+	  dunemod.tmp
 	  )
   endif (NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   # script to remove empty directories (can't believe this isn't included!)
   set (rmdir "${PROJECT_SOURCE_DIR}/cmake/Scripts/RemoveEmptyDir.cmake")
   add_custom_target (distclean
+	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR} -- clean
 	COMMAND ${CMAKE_COMMAND} -E remove -f ${DISTCLEAN_FILES}
 	COMMAND ${CMAKE_COMMAND} -E remove_directory CMakeFiles/
 	COMMAND ${CMAKE_COMMAND} -E remove_directory Testing/

@@ -11,15 +11,15 @@
 # This code is licensed under The GNU General Public License v3.0
 
 # use the generic find routine
+include (opm-material-prereqs)
 include (OpmPackage)
 find_opm_package (
   # module name
   "opm-material"
 
   # dependencies
-  "C99;
-  CXX11Features
-  "
+  "${opm-material_DEPS}"
+
   # header to search for
   "opm/material/constants.hh"
 
@@ -37,8 +37,7 @@ int main (void) {
 }
 "
   # config variables
-  "HAVE_MPI;
-  HAVE_VALGRIND
-  ")
+  "${opm-material_CONFIG_VAR}"
+  )
 include (UseDynamicBoost)
 #debug_find_vars ("opm-material")

@@ -16,7 +16,7 @@ find_opm_package (
   "dune-common"
 
   # dependencies
-  "CXX11Features;
+  "CXX11Features REQUIRED;
   BLAS REQUIRED;
   LAPACK REQUIRED;
   MPI
@@ -56,3 +56,7 @@ int main (void) {
   HAVE_TUPLE
   ")
 #debug_find_vars ("dune-common")
+
+# make version number available in config.h
+include (UseDuneVer)
+find_dune_version ("dune" "common")

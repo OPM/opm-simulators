@@ -89,11 +89,11 @@ function (configure_vars obj syntax filename verb)
 		# integer variables (specifically 0 and 1) are written as they are,
 		# whereas everything else (including version numbers, which could
 		# be interpreted as floats) are quoted as strings
-		if (${_var} MATCHES "[0-9]+")
+		if (${_var} MATCHES "^[0-9]+$")
 		  set (_quoted "${${_var}}")
-		else (${_var} MATCHES "[0-9]+")
+		else (${_var} MATCHES "^[0-9]+$")
 		  set (_quoted "\"${${_var}}\"")
-		endif (${_var} MATCHES "[0-9]+")
+		endif (${_var} MATCHES "^[0-9]+$")
 
 		# write to file using the correct syntax
 		if ("${syntax}" STREQUAL "CMAKE")

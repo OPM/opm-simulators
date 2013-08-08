@@ -38,7 +38,13 @@ macro (opm_compile opm)
   # pre-compile common headers; this is setup *after* the library to pick
   # up extra options set there
   if (PRECOMPILE_HEADERS)
-	get_target_property (_type ${${opm}_TARGET} TYPE)
+	# if we have no library, then use the static setting as this will
+	# build the same way as any test programs (no -fPIC option)
+	if (${opm}_TARGET)
+	  get_target_property (_type ${${opm}_TARGET} TYPE)
+	else ()
+	  set (_type "STATIC")
+	endif ()
 	precompile_header (CXX ${_type}
 	  HEADER "${${opm}_PRECOMP_CXX_HEADER}"
 	  TARGET ${opm}_CXX_pch

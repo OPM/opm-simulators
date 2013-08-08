@@ -262,7 +262,7 @@ macro (find_opm_package module deps header lib defs prog conf)
   endif ("${lib}" STREQUAL "")
   # if the search is going to fail, then write these variables to
   # the console as well as a diagnostics
-  if (NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE})
+  if ((NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE}))
 	  AND (${module}_FIND_REQUIRED OR NOT ${module}_FIND_QUIETLY))
 	if (DEFINED ${module}_DIR)
 	  message ("${module}_DIR = ${${module}_DIR}")
@@ -271,7 +271,7 @@ macro (find_opm_package module deps header lib defs prog conf)
 	elseif (DEFINED ${MODULE}_ROOT)
 	  message ("${MODULE}_ROOT = ${${MODULE}_ROOT}")
 	endif (DEFINED ${module}_DIR)
-  endif (NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE})
+  endif ((NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE}))
 	AND (${module}_FIND_REQUIRED OR NOT ${module}_FIND_QUIETLY))
   find_package_handle_standard_args (
 	${module}

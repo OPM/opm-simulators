@@ -19,7 +19,7 @@ find_opm_package (
   # TODO: we should probe for all the HAVE_* values listed below;
   # however, we don't actually use them in our implementation, so
   # we just include them to forward here in case anyone else does
-  "CXX11Features;
+  "CXX11Features REQUIRED;
   dune-common REQUIRED
   "
   # header to search for
@@ -45,3 +45,7 @@ int main (void) {
   ")
 
 #debug_find_vars ("dune-geometry")
+
+# make version number available in config.h
+include (UseDuneVer)
+find_dune_version ("dune" "geometry")

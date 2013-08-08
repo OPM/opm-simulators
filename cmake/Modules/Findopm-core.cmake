@@ -11,24 +11,15 @@
 # This code is licensed under The GNU General Public License v3.0
 
 # use the generic find routine
+include (opm-core-prereqs)
 include (OpmPackage)
 find_opm_package (
   # module name
   "opm-core"
 
   # dependencies
-  "C99;
-  CXX11Features;
-  Boost 1.39.0
-    COMPONENTS date_time filesystem system unit_test_framework signals REQUIRED;
-  BLAS REQUIRED;
-  LAPACK REQUIRED;
-  SuiteSparse COMPONENTS umfpack;
-  SuperLU;
-  TinyXML;
-  ERT;
-  dune-istl
-  "
+  "${opm-core_DEPS}"
+  
   # header to search for
   "opm/core/grid.h"
 
@@ -48,13 +39,7 @@ int main (void) {
 }
 "
   # config variables
-  "HAVE_AGMG;
-  HAVE_DUNE_ISTL;
-  HAVE_DYNAMIC_BOOST_TEST;
-  HAVE_ERT;
-  HAVE_SUITESPARSE_UMFPACK_H;
-  HAVE_NULLPTR;
-  HAVE_STATIC_ASSERT
-  ")
+  "${opm-core_CONFIG_VAR}"
+  )
 include (UseDynamicBoost)
 #debug_find_vars ("opm-core")
