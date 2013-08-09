@@ -31,11 +31,6 @@
 #include <opm/core/linalg/LinearSolverIstl.hpp>
 #endif
 
-#if HAVE_AGMG
-#include <opm/core/linalg/LinearSolverAGMG.hpp>
-#endif
-
-
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <string>
@@ -72,12 +67,6 @@ namespace Opm
         else if (ls == "istl") {
 #if HAVE_DUNE_ISTL
             solver_.reset(new LinearSolverIstl(param));
-#endif
-        }
-
-        else if (ls == "agmg") {
-#if HAVE_AGMG
-            solver_.reset(new LinearSolverAGMG(param));
 #endif
         }
 
