@@ -3,7 +3,6 @@
 
 # defines that must be present in config.h for our headers
 set (opm-core_CONFIG_VAR
-	HAVE_AGMG
 	HAVE_DUNE_ISTL
 	HAVE_DYNAMIC_BOOST_TEST
 	HAVE_ERT
@@ -28,8 +27,6 @@ set (opm-core_DEPS
 	"SuiteSparse COMPONENTS umfpack"
 	# solver
 	"SuperLU"
-	# Algebraic Multigrid
-	"AGMG"
 	# xml processing (for config parsing)
 	"TinyXML"
 	# Ensembles-based Reservoir Tools (ERT)

@@ -39,10 +39,6 @@ Optional Packages:
   --with-opm=PATH         specify parent of all OPM modules not specified
   --with-opm-MODULE=PATH  use given OPM module from a specified location
   --with-superlu=PATH     user defined path to SuperLU library
-  --with-agmg=PATH        Include DOUBLE PRECISION version Notay's of AGMG
-                          Algebraic Multigrid solver from specified source
-                          location. Note: this option requires a complete,
-                          working Fortran 90 environment.
   --with-umfpack=PATH     use UMFPACK/SuiteSparse from a specified location
   --with-ert=PATH         Use ERT libraries
   --with-tinyxml=PATH     use TinyXML library from a specified location
@@ -187,7 +183,6 @@ for OPT in "$@"; do
             mpi-prefix)
               rootvar="_MPI_PREFIX_PATH"
               ;;
-            agmg        |\
             ert         |\
             boost       |\
             superlu     |\
@@ -280,7 +275,6 @@ for OPT in "$@"; do
               use_ninja=""
               pkgname=""
               ;;
-            agmg |\
             ert  |\
             superlu)
               pkgname="${pkgname^^}"
