@@ -3,6 +3,7 @@
 #
 # Sets the follwing variable:
 #
+# HAVE_TYPE_TRAITS                 True if the <type_traits> header is available and implements sufficient functionality
 # HAVE_SHARED_PTR                  True if std::shared_ptr is available
 # HAVE_UNIQUE_PTR                  True if std::unique_ptr is available
 # HAVE_NULLPTR                     True if nullptr is available
@@ -44,6 +45,22 @@ endif(CXX_FLAG_CXX11)
 
 # perform tests
 include(CheckCXXSourceCompiles)
+
+# std::is_convertible, std::is_base_of
+CHECK_CXX_SOURCE_COMPILES("
+#include <type_traits>
+
+class Base {};
+class Derived : public Base {};
+
+int main()
+{
+    bool foo = std::is_convertible<int, double>::value;
+    bool bar = std::is_base_of<Base, Derived>::value;
+    return 0;
+}
+"  HAVE_TYPE_TRAITS
+)
 
 # nullptr
 CHECK_CXX_SOURCE_COMPILES("
@@ -322,6 +339,10 @@ endforeach(_HEADER tuple tr1/tuple tr1/type_traits)
 # superset of those provided by GCC 4.4. This makes the test fail on
 # all GCC compilers before 4.4.
 set(CXX_FEATURES_MISSING "")
+if (NOT HAVE_TYPE_TRAITS)
+  set(CXX_FEATURES_MISSING
+      "${CXX_FEATURES_MISSING} - Sufficiently conformant type traits (defined by the 'type_traits' header file)\n")
+endif()
 if (NOT HAVE_SHARED_PTR)
   set(CXX_FEATURES_MISSING
       "${CXX_FEATURES_MISSING} - Shared pointers (the std::shared_ptr class)\n")
