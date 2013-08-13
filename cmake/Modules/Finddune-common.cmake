@@ -19,6 +19,7 @@ find_opm_package (
   "CXX11Features REQUIRED;
   BLAS REQUIRED;
   LAPACK REQUIRED;
+  CxaDemangle;
   MPI
   "
   # header to search for
@@ -57,7 +58,8 @@ int main (void) {
   HAVE_SHARED_PTR;
   HAVE_TYPE_TRAITS;
   HAVE_TR1_TUPLE;
-  HAVE_TUPLE
+  HAVE_TUPLE;
+  HAVE_CXA_DEMANGLE
   ")
 #debug_find_vars ("dune-common")
 
