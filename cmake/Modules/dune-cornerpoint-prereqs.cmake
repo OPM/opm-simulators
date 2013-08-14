@@ -4,6 +4,9 @@
 # defines that must be present in config.h for our headers
 set (dune-cornerpoint_CONFIG_VAR
 	HAVE_DYNAMIC_BOOST_TEST
+	DUNE_GRID_VERSION_MAJOR
+	DUNE_GRID_VERSION_MINOR
+	DUNE_GRID_VERSION_REVISION
 	)
 
 # dependencies
