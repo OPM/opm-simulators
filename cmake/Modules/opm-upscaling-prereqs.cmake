@@ -3,7 +3,6 @@
 
 # defines that must be present in config.h for our headers
 set (opm-upscaling_CONFIG_VAR
-	HAVE_LAPACK
 	HAVE_SUPERLU
 	)
 
