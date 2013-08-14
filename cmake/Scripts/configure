@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# where is the source tree located
+# where is the source tree located by default relative to here
 srcdir=$(dirname $(dirname $(dirname "$0")))
 
 # display help text
@@ -141,6 +141,11 @@ for OPT in "$@"; do
       OPTARG=${OPT#--}
       # OPTARG now contains everything after double dashes
       case "${OPTARG}" in
+        src-dir=*)
+          # allow the user to use these build macros for another
+          # project (so source-dir is not relative to us)
+          srcdir=${OPTARG#*=}
+          ;;
         prefix=*)
           # remove prefix consisting of everything up to equal sign
           prefix=${OPTARG#*=}
