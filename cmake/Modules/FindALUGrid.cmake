@@ -79,16 +79,17 @@ if (NOT ALUGRID_INCLUDE_DIR)
 endif()
 mark_as_advanced(ALUGRID_INCLUDE_DIR)
 
-find_library(ALUGRID_LIBRARIES alugrid 
+find_library(ALUGRID_LIBRARY alugrid
   PATHS "${ALUGRID_ROOT}" 
   PATH_SUFFIXES lib lib32 lib64 
   DOC "ALUGrid library"
   NO_DEFAULT_PATH)
-if (NOT ALUGRID_LIBRARIES)
+if (NOT ALUGRID_LIBRARY)
   message(STATUS "Could not find ALUGrid usable library")
   _opm_set_alugrid(0)
   return()  
 endif()
+set(ALUGRID_LIBRARIES ${ALUGRID_LIBRARY} ${METIS_LIBRARIES})
 mark_as_advanced(ALUGRID_LIBRARIES)
 
 
