@@ -68,7 +68,7 @@ macro (opm_dist_clean opm)
 	  )
   endif (NOT PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   # script to remove empty directories (can't believe this isn't included!)
-  set (rmdir "${PROJECT_SOURCE_DIR}/cmake/Scripts/RemoveEmptyDir.cmake")
+  set (rmdir "${OPM_MACROS_ROOT}/cmake/Scripts/RemoveEmptyDir.cmake")
   add_custom_target (distclean
 	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR} -- clean
 	COMMAND ${CMAKE_COMMAND} -E remove -f ${DISTCLEAN_FILES}

@@ -70,7 +70,7 @@ function (opm_cmake_config name)
   # assume that the template is located in cmake/Templates (cannot use
   # the current directory since this is in a function and the directory
   # at runtime not at definition will be used
-  set (template_dir "${PROJECT_SOURCE_DIR}/cmake/Templates")
+  set (template_dir "${OPM_MACROS_ROOT}/cmake/Templates")
 
   # write configuration file to locate library
   configure_cmake_file (${name} "config" "")

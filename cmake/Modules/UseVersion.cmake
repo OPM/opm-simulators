@@ -39,7 +39,7 @@ else ()
 	  -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
 	  -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR}
 	  -DPROJECT_LABEL=${${project}_LABEL}
-	  -P ${PROJECT_SOURCE_DIR}/cmake/Scripts/WriteVerSHA.cmake
+	  -P ${OPM_MACROS_ROOT}/cmake/Scripts/WriteVerSHA.cmake
 	  COMMENT "Updating version information"
 	  )
 

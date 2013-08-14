@@ -13,7 +13,7 @@
 
 macro (opm_doc opm doxy_dir)
   # combine the template with local customization
-  file (READ ${PROJECT_SOURCE_DIR}/cmake/Templates/Doxyfile _doxy_templ)
+  file (READ ${OPM_MACROS_ROOT}/cmake/Templates/Doxyfile _doxy_templ)
   string (REPLACE ";" "\\;" _doxy_templ "${_doxy_templ}")
   if (EXISTS ${PROJECT_SOURCE_DIR}/${doxy_dir}/Doxylocal)
 	file (READ ${PROJECT_SOURCE_DIR}/${doxy_dir}/Doxylocal _doxy_local)
