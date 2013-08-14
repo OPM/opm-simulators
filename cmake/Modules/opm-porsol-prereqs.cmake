@@ -3,7 +3,6 @@
 
 # defines that must be present in config.h for our headers
 set (opm-porsol_CONFIG_VAR
-	HAVE_DYNAMIC_BOOST_TEST
 	HAVE_VALGRIND
 	)
 
