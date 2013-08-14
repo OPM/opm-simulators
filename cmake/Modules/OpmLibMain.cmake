@@ -145,11 +145,16 @@ list (APPEND ${project}_CONFIG_VARS ${${project}_CONFIG_VAR})
 # write configuration variables to this file. note that it is a temporary.
 # _CONFIG_IMPL_VARS are defines that are only written to config.h internal
 # to this project; they are not exported to any installed files.
+# TESTING_CONFIG_VARS is what's required by the unit tests, and is therefore
+# added in an ad-hoc manner to avoid putting dependencies to it in the module
+# requirement file. (it should be added if there is .h code that needs it)
 message (STATUS "Writing config file \"${PROJECT_BINARY_DIR}/config.h\"...")
 set (CONFIG_H "${PROJECT_BINARY_DIR}/config.h.tmp")
 configure_vars (
 	FILE  CXX  ${CONFIG_H}
-	WRITE ${${project}_CONFIG_VARS} ${${project}_CONFIG_IMPL_VARS}
+	WRITE ${${project}_CONFIG_VARS}
+	      ${${project}_CONFIG_IMPL_VARS}
+	      ${TESTING_CONFIG_VARS}
 	)
 
 # call this hook to let it setup necessary conditions for Fortran support

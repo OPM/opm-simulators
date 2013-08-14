@@ -3,7 +3,6 @@
 
 # defines that must be present in config.h for our headers
 set (opm-autodiff_CONFIG_VAR
-	HAVE_DYNAMIC_BOOST_TEST
 	)
 
 # dependencies

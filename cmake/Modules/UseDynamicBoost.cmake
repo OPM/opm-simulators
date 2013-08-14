@@ -31,3 +31,6 @@ endif (${Boost_UNIT_TEST_FRAMEWORK_FOUND})
 set (HAVE_DYNAMIC_BOOST_TEST "${HAVE_DYNAMIC_BOOST_TEST}"
   CACHE BOOL "Whether Boost::Test is dynamically linked or not"
   )
+
+# include in config.h
+list (APPEND TESTING_CONFIG_VARS "HAVE_DYNAMIC_BOOST_TEST")

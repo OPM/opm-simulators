@@ -4,7 +4,6 @@
 # defines that must be present in config.h for our headers
 set (opm-core_CONFIG_VAR
 	HAVE_DUNE_ISTL
-	HAVE_DYNAMIC_BOOST_TEST
 	HAVE_ERT
 	HAVE_SUITESPARSE_UMFPACK_H
 	HAVE_NULLPTR
