@@ -6,6 +6,7 @@
 #
 # runTest.sh REFERENCE_RESULT_FILE TEST_RESULT_FILE TEST_BINARY TEST_ARGS
 #
+MY_DIR="$(dirname $0)"
 
 function usage() {
     echo "Usage:"
@@ -18,9 +19,9 @@ function validateResults() {
     OUTPUT_FILE="$1"
     SIM_NAME="$2"
 
-    for REFERENCE_RESULT in referencesolutions/$SIM_NAME*; do
+    for REFERENCE_RESULT in ${MY_DIR}/../test/referencesolutions/$SIM_NAME*; do
         echo "Comparing with \"$REFERENCE_RESULT\"... "
-        if python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
+        if python ${MY_DIR}/fuzzycomparevtu.py "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
             # SUCCESS!!!!!!
             echo "Result file '$OUTPUT_FILE' and reference '$REFERENCE_RESULT' are identical" 
             return 0
