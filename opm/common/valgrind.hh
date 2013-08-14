@@ -23,6 +23,8 @@
 #ifndef OPM_VALGRIND_HH
 #define OPM_VALGRIND_HH
 
+#include <dune/common/unused.hh>
+
 #if ! HAVE_VALGRIND && ! defined(DOXYGEN)
 namespace Valgrind
 {
