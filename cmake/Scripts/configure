@@ -33,6 +33,8 @@ Optional Features:
   --enable-ninja          use Ninja build generator [default=no]
 
 Optional Packages:
+  --with-alugrid=PATH     use the ALUGrid library from a specified location
+  --with-metis=PATH       use the METIS graph partitioning library from a specified location
   --with-boost=PATH       use Boost library from a specified location
   --with-dune=PATH        specify parent of all DUNE modules not specified
   --with-dune-MODULE=PATH use given DUNE module from a specified location
@@ -183,8 +185,10 @@ for OPT in "$@"; do
             mpi-prefix)
               rootvar="_MPI_PREFIX_PATH"
               ;;
-            ert         |\
+            alugrid     |\
             boost       |\
+            ert         |\
+            metis       |\
             superlu     |\
             SuiteSparse |\
             TinyXML     |\
