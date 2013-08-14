@@ -179,6 +179,9 @@ opm_compile (${project})
 # installation target: copy the library together with debug and
 # configuration files to system directories
 include (OpmInstall)
+if (COMMAND install_hook)
+	install_hook ()
+endif (COMMAND install_hook)
 opm_install (${project})
 message (STATUS "This build defaults to installing in ${CMAKE_INSTALL_PREFIX}")
 
