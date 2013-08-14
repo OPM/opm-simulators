@@ -213,6 +213,6 @@ include (DuneCompat)
 include (LibtoolArchives)
 configure_la (${project} ${${project}_TARGET} ${project}_LIBTOOL_ARCHIVE)
 
-### Clean in-source builds ###
+### clean in-source builds ###
 include (OpmDistClean)
 opm_dist_clean (${project})
