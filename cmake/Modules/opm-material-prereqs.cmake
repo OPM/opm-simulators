@@ -14,6 +14,6 @@ set (opm-material_DEPS
 	# compile with C++0x/11 support if available
 	"CXX11Features REQUIRED"
 	# DUNE dependency
-	"dune-common"
-	"dune-istl"
+	"dune-common REQUIRED"
+	"dune-istl REQUIRED"
 	)
