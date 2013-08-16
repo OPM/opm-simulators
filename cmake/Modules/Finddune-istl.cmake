@@ -10,20 +10,13 @@
 # Copyright (C) 2012 Uni Research AS
 # This code is licensed under The GNU General Public License v3.0
 
-# dune-common is only required if dune-istl is; the "required-ness" is
-# not transitive as far as CMake is concerned (i.e. if an optional package
-# requests a package to be required, the build will fail if it's not found)
-if (dune-istl_FIND_REQUIRED)
-  set (_require_dune_common "REQUIRED")
-endif (dune-istl_FIND_REQUIRED)
-
 include (OpmPackage)
 find_opm_package (
   # module name
   "dune-istl"
 
   # required dependencies
-  "dune-common ${_require_dune_common};
+  "dune-common REQUIRED;
   SuperLU
   "
   # header to search for
