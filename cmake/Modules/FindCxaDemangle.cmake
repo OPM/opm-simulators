@@ -15,3 +15,9 @@ int main(void){
     int status;
     char *demangled = abi::__cxa_demangle( foo, 0, 0, &status );
 }" HAVE_CXA_DEMANGLE)
+
+include (FindPackageHandleStandardArgs)
+# prevent useless message from being displayed
+set (FIND_PACKAGE_MESSAGE_DETAILS_CxaDemangle "[1][v()]"
+  CACHE INTERNAL "Details about finding CxaDemangle")
+find_package_handle_standard_args (CxaDemangle DEFAULT_MSG HAVE_CXA_DEMANGLE)
