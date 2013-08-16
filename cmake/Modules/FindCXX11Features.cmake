@@ -389,4 +389,6 @@ if(CXX_FEATURES_MISSING)
       "Your compiler does not seem to implement the following features:\n"
       "${CXX_FEATURES_MISSING}")
   endif()
+else ()
+  set (CXX11FEATURES_FOUND TRUE)
 endif()
