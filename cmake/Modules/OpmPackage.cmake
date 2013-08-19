@@ -217,7 +217,7 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  string (REPLACE "-" "_" _NAME_ONLY "${_NAME_ONLY}")
 	  # check manually if it was found if REQUIRED; otherwise poison the
 	  # dependency list which is checked later (so that it will fail)
-	  if (("${_${module}_args}" MATCHES "REQUIRED") AND NOT ${_NAME_ONLY}_FOUND)
+	  if (("${_${module}_args}" MATCHES "REQUIRED") AND NOT (${_name_only}_FOUND OR ${_NAME_ONLY}_FOUND))
 		list (APPEND ${module}_ALL_PREREQS "${_name_only}-NOTFOUND")
 	  endif ()
 	else ()
@@ -290,6 +290,9 @@ macro (find_opm_package module deps header lib defs prog conf)
 	endif (DEFINED ${module}_DIR)
   endif ((NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE}))
 	AND (_${module}_required OR NOT _${module}_quiet))
+  if ("${${module}_ALL_PREREQS}" MATCHES "-NOTFOUND")
+	message (STATUS "${module} prereqs: ${${module}_ALL_PREREQS}")
+  endif ()
   find_package_handle_standard_args (
 	${module}
 	DEFAULT_MSG
