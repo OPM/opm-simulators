@@ -19,8 +19,6 @@ macro(_opm_set_alugrid val)
   endif()
 endmacro()
 
-find_package(METIS)
-
 if(ALUGRID_ROOT)
   find_path(ALUGRID_PKGCONFIG_DIR alugrid.pc PATHS ${ALUGRID_ROOT}
     PATH_SUFFIXES lib/pkgconfig/ alugrid/lib/pkgconfig
@@ -89,9 +87,8 @@ if (NOT ALUGRID_LIBRARY)
   _opm_set_alugrid(0)
   return()  
 endif()
-set(ALUGRID_LIBRARIES ${ALUGRID_LIBRARY} ${METIS_LIBRARIES})
+set(ALUGRID_LIBRARIES ${ALUGRID_LIBRARY})
 mark_as_advanced(ALUGRID_LIBRARIES)
-
 
 set(ALUGRID_INCLUDE_DIRS
   ${ALUGRID_INCLUDE_DIR}
@@ -116,26 +113,35 @@ else()
 endif()
 
 if(ALUGRID_PARALLEL_FOUND AND MPI_FOUND)
-  # check for parallel ALUGrid
-  find_path(ALUGRID_PARALLEL_INCLUDE_PATH "alumetis.hh"
-    PATHS ${ALUGRID_INCLUDE_DIR} 
-    PATH_SUFFIXES "parallel"
-    NO_DEFAULT_PATH)
+  # must link with METIS if we are going to use parallel ALUGrid
+  find_package(METIS)
+  if (METIS_FOUND)
+	list(APPEND ALUGRID_LIBRARIES ${METIS_LIBRARIES})
 
-  if(ALUGRID_PARALLEL_INCLUDE_PATH)
-    list(APPEND ALUGRID_INCLUDE_DIRS ${ALUGRID_PARALLEL_INCLUDE_PATH})
-    set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${ALUGRID_INCLUDE_DIRS})
-    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${ALUGRID_LIBRARIES})
-    #set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -DSOME_MORE_DEF)
-    check_include_file_cxx(alugrid_parallel.h ALUGRID_PARALLEL_FOUND)
-    unset(ALUGRID_PARALLEL_INCLUDE_PATH CACHE)
+	# check for parallel ALUGrid
+	find_path(ALUGRID_PARALLEL_INCLUDE_PATH "alumetis.hh"
+      PATHS ${ALUGRID_INCLUDE_DIR} 
+      PATH_SUFFIXES "parallel"
+      NO_DEFAULT_PATH)
+
+	if(ALUGRID_PARALLEL_INCLUDE_PATH)
+      list(APPEND ALUGRID_INCLUDE_DIRS ${ALUGRID_PARALLEL_INCLUDE_PATH})
+      set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${ALUGRID_INCLUDE_DIRS})
+      set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${ALUGRID_LIBRARIES})
+      #set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -DSOME_MORE_DEF)
+      check_include_file_cxx(alugrid_parallel.h ALUGRID_PARALLEL_FOUND)
+      unset(ALUGRID_PARALLEL_INCLUDE_PATH CACHE)
     
-    if(NOT ALUGRID_PARALLEL_FOUND)
-      message(STATUS "alumetis.hh not found  in ${ALUGRID_PARALLEL_INCLUDE_PATH}")
-      set(ALUGRID_PARALLEL_FOUND ${ALUGRID_PARALLEL_FOUND} 0)
-    else()
-      set(ALUGRID_PARALLEL_FOUND ${ALUGRID_PARALLEL_FOUND} 1)
-    endif()
+      if(NOT ALUGRID_PARALLEL_FOUND)
+		message(STATUS "alumetis.hh not found  in ${ALUGRID_PARALLEL_INCLUDE_PATH}")
+		set(ALUGRID_PARALLEL_FOUND ${ALUGRID_PARALLEL_FOUND} 0)
+      else()
+		set(ALUGRID_PARALLEL_FOUND ${ALUGRID_PARALLEL_FOUND} 1)
+      endif()
+	else()
+	  message (STATUS "METIS not found, parallel ALUGrid disabled")
+	  set (ALUGRID_PARALLEL_FOUND ${ALUGRID_PARALLEL_FOUND} 0)
+	endif()
   else()
     message(STATUS "alumetis.hh not found (required by parallel alugrid).")
     set(ALUGRID_PARALLEL_FOUND ${ALUGRID_PARALLEL_FOUND} 0)
@@ -145,10 +151,3 @@ endif()
 if(ALUGRID_SERIAL_FOUND)
   _opm_set_alugrid(1)
 endif(ALUGRID_SERIAL_FOUND)
-
-if(ALUGRID_FOUND AND ALUGRID_PARALLEL_FOUND AND NOT METIS_LIBRARIES)
-  message(STATUS "Metis library not found but needed for linking with ALUGrid.")
-  
-  _opm_set_alugrid(0)
-  return()
-endif()
