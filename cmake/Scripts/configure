@@ -192,6 +192,7 @@ for OPT in "$@"; do
               ;;
             alugrid     |\
             boost       |\
+            eigen3      |\
             ert         |\
             metis       |\
             superlu     |\
