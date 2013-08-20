@@ -18,9 +18,7 @@
 */
 
 
-#if HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
