@@ -336,14 +336,8 @@ function (config_cmd_line varname defs)
   foreach (_var IN LISTS ${defs})
 	# only generate an entry if the define was actually set
 	if ((DEFINED ${_var}) AND (NOT "${${_var}}" STREQUAL ""))
-	  # numbers are not quoted, strings are
-	  if (${_var} MATCHES "[0-9]+")
-		set (_quoted "${${_var}}")
-	  else (${_var} MATCHES "[0-9]+")
-		set (_quoted "\"${${_var}}\"")
-	  endif (${_var} MATCHES "[0-9]+")
 	  # add command-line option to define this variable
-	  list (APPEND _cmdline "-D${_var}=${_quoted}")
+	  list (APPEND _cmdline "-D${_var}=${${_var}}")
 	endif ((DEFINED ${_var}) AND (NOT "${${_var}}" STREQUAL ""))
   endforeach (_var)
   # return the resulting command-line options for defining vars
