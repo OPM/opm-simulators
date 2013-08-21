@@ -39,6 +39,16 @@ function (define_fc_func verb file)
   # the interaction -- don't load the Fortran compiler just to write
   # this macro (which apparently nobody uses then)
   if (needed)
+	# if this option is enabled, we skip detecting the Fortran externals
+	# using a real compiler (which may not be the same that compiled the
+	# library) and just write a macro that uses a single underscore (which
+	# is the assumption that FindLAPACK operates on anyway)
+	option (USE_UNDERSCORING "Assume that Fortran routines have underscore suffix" OFF)
+	if (USE_UNDERSCORING)
+	  message (STATUS "Assuming Fortran externals have underscore suffix")
+	  set (_str "#define FC_FUNC(name,NAME) name##_\n")
+	else (USE_UNDERSCORING)
+
 	# enable languages needed
 	if (NOT CMAKE_C_COMPILER_LOADED)
 	  enable_language (C)
@@ -64,6 +74,8 @@ function (define_fc_func verb file)
 
 	# massage it to look like the one AC_FC_WRAPPERS provide
 	string (REPLACE "FortranCInterface_GLOBAL" "FC_FUNC" _str ${_str})
+
+	endif (USE_UNDERSCORING)
 
 	# write this definition to the end of our own configuration file
 	file (${verb} ${file}

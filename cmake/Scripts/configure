@@ -30,7 +30,9 @@ Optional Features:
   --enable-parallel       process in parallel using MPI [default=no]
   --enable-openmp         activate experimental support for OpenMP
   --disable-option-checking  ignore unrecognized --enable/--with options
+  --enable-underscoring   assume Fortran routines have _ suffix [default=no]
   --enable-ninja          use Ninja build generator [default=no]
+                          (automatically implies --enable-underscoring)
 
 Optional Packages:
   --with-alugrid=PATH     use the ALUGrid library from a specified location
@@ -116,6 +118,8 @@ use_tests=
 use_samples=
 #use_ninja="-G\"Unix Makefiles\" "
 use_ninja=
+#use_underscoring=" -DUSE_UNDERSCORING=OFF"
+use_underscoring=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -348,7 +352,14 @@ for OPT in "$@"; do
               use_samples=" -DBUILD_EXAMPLES=ON"
               pkgname=""
               ;;
+            underscoring)
+              use_underscoring=" -DUSE_UNDERSCORING=ON"
+              pkgname=""
+              ;;
             ninja)
+              # Ninja doesn't support using the Fortran compiler, so
+              # we'll have to resort to making this assumption
+              use_underscoring=" -DUSE_UNDERSCORING=ON"
               use_ninja="-GNinja "
               pkgname=""
               ;;
@@ -400,7 +411,7 @@ for a in "${VARS[@]}"; do
 done
 
 # pass everything on to CMake
-CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples} ${FEATURES}"
+CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
