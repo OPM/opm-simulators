@@ -75,6 +75,14 @@ function (configure_vars obj syntax filename verb)
 	  set (_prev_verbatim TRUE)
 	  
 	else ("${_var}" MATCHES "^/[/*]")
+
+	  # write a CMake statements that warns if the value has changed
+	  if ("${syntax}" STREQUAL "CMAKE")
+		set (_db "\${") # to avoid parsing problems
+		file (APPEND "${filename}" "if (DEFINED ${_var} AND NOT \"${_db}${_var}}\" STREQUAL \"${${_var}}\")\n")
+		file (APPEND "${filename}" "\tmessage (WARNING \"Incompatible value \\\"${_db}${_var}}\\\" of variable \\\"${_var}\\\"\")\n")
+		file (APPEND "${filename}" "endif ()\n")
+	  endif ()
 	  
 	  # check for empty variable; variables that are explicitly set to false
 	  # is not included in this clause
