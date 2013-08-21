@@ -6,6 +6,7 @@
 # QUADMATH_LIBRARIES
 #
 # perform tests
+include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
 include(CMakePushCheckState)
 
