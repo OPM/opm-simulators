@@ -129,18 +129,24 @@ macro (find_and_append_package_to prefix name)
 	unset (${name}_DIR CACHE)
   endif ((NOT (_${name}_exempted EQUAL -1)) AND (DEFINED ${name}_DIR))
 
-  # using config mode is better than using module (aka. find) mode
-  # because then the package has already done all its probes and
-  # stored them in the config file for us
-  if (NOT ${NAME}_FOUND)
-	if (${name}_DIR)
-	  message (STATUS "Finding package ${name} using config mode")
-	  find_package (${name} ${ARGN} NO_MODULE PATHS ${${name}_DIR} NO_DEFAULT_PATH)
-	else (${name}_DIR)
-	  message (STATUS "Finding package ${name} using module mode")
-	  find_package (${name} ${ARGN})
-	endif (${name}_DIR)
-  endif (NOT ${NAME}_FOUND)
+  # if we're told not to look for the package, pretend it was never found
+  if (CMAKE_DISABLE_FIND_PACKAGE_${name})
+	set (${name}_FOUND FALSE)
+	set (${NAME}_FOUND FALSE)
+  else ()
+	# using config mode is better than using module (aka. find) mode
+	# because then the package has already done all its probes and
+	# stored them in the config file for us
+	if (NOT (${name}_FOUND OR ${NAME}_FOUND))
+	  if (${name}_DIR)
+		message (STATUS "Finding package ${name} using config mode")
+		find_package (${name} ${ARGN} NO_MODULE PATHS ${${name}_DIR} NO_DEFAULT_PATH)
+	  else (${name}_DIR)
+		message (STATUS "Finding package ${name} using module mode")
+		find_package (${name} ${ARGN})
+	  endif (${name}_DIR)
+	endif (NOT (${name}_FOUND OR ${NAME}_FOUND))
+  endif (CMAKE_DISABLE_FIND_PACKAGE_${name})
 
   # the variable "NAME" may be replaced during find_package (as this is
   # now a macro, and not a function anymore), so we must reinitialize
