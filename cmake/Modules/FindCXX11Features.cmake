@@ -74,6 +74,13 @@ CHECK_CXX_SOURCE_COMPILES("
 "  HAVE_SHARED_PTR
 )
 
+# this is required by dune-common to avoid linker errors. "fun"!
+if (HAVE_SHARED_PTR)
+  set(HAVE_MAKE_SHARED 1)
+  set(SHARED_PTR_HEADER "<memory>")
+  set(SHARED_PTR_NAMESPACE "std")
+endif()
+
 # nullptr
 CHECK_CXX_SOURCE_COMPILES("
     #include <memory>
