@@ -136,6 +136,11 @@ namespace Opm
         return pimpl_->timestep_completed_;
     }
 
+    // empty default implementation, but provided in module; it is dangerous ta have
+    // this inlined in clients from the header, because then it can't be updated!
+    void SimulatorIncompTwophase::sync () {
+    }
+
     static void reportVolumes(std::ostream &os, double satvol[2], double tot_porevol_init,
                               double tot_injected[2], double tot_produced[2],
                               double injected[2], double produced[2],

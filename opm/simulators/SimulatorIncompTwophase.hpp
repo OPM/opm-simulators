@@ -110,7 +110,27 @@ namespace Opm
         /// sim.timestep_completed ().add <Foo, &Foo::bar> (f);
         /// sim.run (...);
         /// \endcode
+        ///
+        /// \note
+        /// Registered callbacks should call the sync() method before
+        /// accessing the state that was passed into the run() method.
+        ///
+        /// \see Opm::SimulatorIncompTwophase::sync
         Event& timestep_completed ();
+
+        /// Notify the simulator that a callback has an interest in reading
+        /// for reporting purposes the contents of the state argument that
+        /// was passed to the run() method. The simulator will then flush
+        /// any internal state which is currently not reflected in it.
+        ///
+        /// \note
+        /// This should only be called from within a notification which has
+        /// been setup with timestep_completed(). Avoid calling this method
+        /// outside of run().
+        ///
+        /// \see Opm::SimulatorIncompTwophase::run,
+        ///      Opm::SimulatorIncompTwophase::timestep_completed
+        void sync ();
 
     private:
         struct Impl;
