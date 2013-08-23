@@ -13,7 +13,7 @@ set (opm-autodiff_DEPS
 	"CXX11Features"
 	# Various runtime library enhancements
 	"Boost 1.39.0
-		COMPONENTS system unit_test_framework REQUIRED"
+		COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
 	# DUNE prerequisites
 	"dune-common REQUIRED;
 	dune-istl REQUIRED;
