@@ -15,13 +15,13 @@ macro (opm_install opm)
 	file (RELATIVE_PATH _rel_dir "${PROJECT_SOURCE_DIR}" "${_dir}")
 	install (
 	  FILES ${_hdr}
-	  DESTINATION include/${_rel_dir}
+	  DESTINATION include${${opm}_VER_DIR}/${_rel_dir}
 	  )
   endforeach (_hdr)
   install (
 	TARGETS ${${opm}_TARGET}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}${${opm}_VER_DIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}${${opm}_VER_DIR}
 	)
   # only /usr/lib/debug seems to be searched for debug info; if we have
   # write access to that directory (package installation), then default
@@ -45,11 +45,11 @@ macro (opm_install opm)
   if (${opm}_LIBRARY_TYPE STREQUAL "SHARED" AND ${opm}_TARGET AND ${opm}_DEBUG)
 	install (
 	  FILES ${PROJECT_BINARY_DIR}/${${opm}_DEBUG}
-	  DESTINATION ${_dbg_prefix}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
+	  DESTINATION ${_dbg_prefix}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${${opm}_VER_DIR}
 	  )
   endif (${opm}_LIBRARY_TYPE STREQUAL "SHARED" AND ${opm}_TARGET AND ${opm}_DEBUG)
   install (
 	FILES ${PROJECT_SOURCE_DIR}/dune.module
-	DESTINATION ${CMAKE_INSTALL_LIBDIR_NOARCH}/dunecontrol/${${opm}_NAME}
+	DESTINATION ${CMAKE_INSTALL_LIBDIR_NOARCH}${${opm}_VER_DIR}/dunecontrol/${${opm}_NAME}
 	)
 endmacro (opm_install opm)

@@ -94,18 +94,18 @@ function (opm_cmake_config name)
   # variables that contains build paths
   string (REPLACE
 	"${PROJECT_SOURCE_DIR}"
-	"${CMAKE_INSTALL_PREFIX}/include"
+	"${CMAKE_INSTALL_PREFIX}/include${${name}_VER_DIR}"
 	${name}_INCLUDE_DIRS
 	"${${name}_INCLUDE_DIRS}"
 	)
   string (REPLACE
 	"${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
-	"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
+	"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${${name}_VER_DIR}"
 	${name}_LIBRARY
 	"${${name}_LIBRARY}"
 	)
   set (CMAKE_LIBRARY_OUTPUT_DIRECTORY
-	"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
+	"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${${name}_VER_DIR}"
 	)
   # create a config mode file which targets the install directory instead
   # of the build directory (using the same input template)
@@ -117,13 +117,13 @@ function (opm_cmake_config name)
   # this file gets copied to the final installation directory
   install (
 	FILES ${PROJECT_BINARY_DIR}/${${name}_NAME}-install.cmake
-	DESTINATION share/cmake/${${name}_NAME}
+	DESTINATION share/cmake${${name}_VER_DIR}/${${name}_NAME}
 	RENAME ${${name}_NAME}-config.cmake
 	)
   # assume that there exists a version file already
   install (
 	FILES ${PROJECT_BINARY_DIR}/${${name}_NAME}-config-version.cmake
-	DESTINATION share/cmake/${${name}_NAME}
+	DESTINATION share/cmake${${name}_VER_DIR}/${${name}_NAME}
 	)
 
   # find-mode .pc file; use this to locate system installation
@@ -132,14 +132,14 @@ function (opm_cmake_config name)
 	${template_dir}/opm-project.pc.in
 	${PROJECT_BINARY_DIR}/${${name}_NAME}-install.pc
 	${CMAKE_INSTALL_PREFIX}
-	${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
-	${CMAKE_INSTALL_PREFIX}/include
+	${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${${name}_VER_DIR}
+	${CMAKE_INSTALL_PREFIX}/include${${name}_VER_DIR}
 	)
 
   # put this in the right system location; assume that we have binaries
   install (
 	FILES ${PROJECT_BINARY_DIR}/${${name}_NAME}-install.pc
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/pkgconfig/
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/pkgconfig${${name}_VER_DIR}/
 	RENAME ${${name}_NAME}.pc
 	)
 endfunction (opm_cmake_config name)
