@@ -28,13 +28,13 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 
 // The chemical species that are used
-#include <ewoms/material/components/simpleh2o.hh>
-#include <ewoms/material/components/lnapl.hh>
+#include <opm/material/components/simpleh2o.hh>
+#include <opm/material/components/lnapl.hh>
 
 // The material laws
-#include <ewoms/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
-#include <ewoms/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
-#include <ewoms/material/fluidmatrixinteractions/mp/2padapter.hh>
+#include <opm/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <opm/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
+#include <opm/material/fluidmatrixinteractions/mp/2padapter.hh>
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/
@@ -63,13 +63,13 @@ SET_TYPE_PROP(TutorialProblemCoupled, GridCreator, Ewoms::CubeGridCreator<TypeTa
 
 // Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
 SET_TYPE_PROP(TutorialProblemCoupled, WettingPhase,   /*@\label{tutorial-coupled:wettingPhase}@*/
-              Ewoms::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                                 Ewoms::SimpleH2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
+              Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+                                 Opm::SimpleH2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
 
 // Set the non-wetting phase
 SET_TYPE_PROP(TutorialProblemCoupled, NonwettingPhase,  /*@\label{tutorial-coupled:nonwettingPhase}@*/
-              Ewoms::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-              Ewoms::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
+              Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+              Opm::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >);  /*@\label{tutorial-coupled:2p-system-end}@*/
 
 // Set the material law
 SET_PROP(TutorialProblemCoupled, MaterialLaw)
@@ -78,10 +78,10 @@ private:
     // Retrieve the C++ type used to represent scalar values
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     // Select the base material law to be used
-    typedef RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
+    typedef Opm::RegularizedBrooksCorey<Scalar> RawMaterialLaw;     /*@\label{tutorial-coupled:rawlaw}@*/
     // Converts absolute saturations into effective ones before
     // passing it to the base material law
-    typedef EffToAbsLaw<RawMaterialLaw> TwoPMaterialLaw;   /*@\label{tutorial-coupled:eff2abs}@*/
+    typedef Opm::EffToAbsLaw<RawMaterialLaw> TwoPMaterialLaw;   /*@\label{tutorial-coupled:eff2abs}@*/
 
     // Retrieve the index of the wetting phase
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
@@ -89,7 +89,7 @@ private:
 
 public:
     // Convert two-phase material law into a general M-phase one.
-    typedef TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+    typedef Opm::TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
 };
 
 // Disable gravity
@@ -200,7 +200,7 @@ public:
             // Free-flow conditions on left boundary
             const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
-            ImmiscibleFluidState<Scalar, FluidSystem> fs;
+            Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             Scalar Sw = 1.0;
             fs.setSaturation(wPhaseIdx, Sw);
             fs.setSaturation(nPhaseIdx, 1.0 - Sw);
@@ -240,7 +240,7 @@ public:
     void initial(PrimaryVariables &values,
                  const Context &context, int spaceIdx, int timeIdx) const
     {
-        ImmiscibleFluidState<Scalar, FluidSystem> fs;
+        Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
 
         // the domain is initially fully saturated by LNAPL
         Scalar Sw = 0.0;
