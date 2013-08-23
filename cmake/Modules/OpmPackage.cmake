@@ -169,6 +169,16 @@ macro (find_opm_package module deps header lib defs prog conf)
 	set (_guess_hints_bin)
   endif (SIBLING_SEARCH)
 
+  # if an include directory is specified directly (e.g. OPM_CORE_INCLUDE_DIR=
+  # /usr/include/opm-2013.03) then this overrides everything else. Notice that
+  # this variable uses the fully capitalized version of the name.
+  if (${MODULE}_INCLUDE_DIR)
+	set (_guess "${${MODULE}_INCLUDE_DIR}")
+	set (_no_system_incl "NO_DEFAULT_PATH")
+  else ()
+	set (_no_system_incl "${_no_system}")
+  endif ()
+
   # search for this include and library file to get the installation
   # directory of the package; hints are searched before the system locations,
   # paths are searched afterwards
@@ -177,7 +187,7 @@ macro (find_opm_package module deps header lib defs prog conf)
 	PATHS ${_guess}
 	HINTS ${PkgConf_${module}_INCLUDE_DIRS} ${_guess_hints}
 	PATH_SUFFIXES "include"
-	${_no_system}
+	${_no_system_incl}
 	)
 
   # some modules are all in headers
@@ -185,12 +195,23 @@ macro (find_opm_package module deps header lib defs prog conf)
 	if (CMAKE_SIZEOF_VOID_P)
 	  math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
 	endif (CMAKE_SIZEOF_VOID_P)
+
+	# again, we may directly override the location of the library alone by
+	# specifying e.g. OPM_CORE_LIB_DIR. notice that this is a *directory*
+	# and not the name of the library
+	if (${MODULE}_LIB_DIR)
+	  set (_guess_bin "${${MODULE}_LIB_DIR}")
+	  set (_no_system_lib "NO_DEFAULT_PATH")
+	else ()
+	  set (_no_system_lib "${_no_system}")
+	endif ()
+
 	find_library (${module}_LIBRARY
 	  NAMES "${lib}"
 	  PATHS ${_guess_bin}
 	  HINTS ${PkgConf_${module}_LIBRARY_DIRS} ${_guess_hints_bin}
 	  PATH_SUFFIXES "lib" "lib/.libs" ".libs" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "build-cmake/lib"
-	  ${_no_system}
+	  ${_no_system_lib}
 	  )
   else (NOT "${lib}" STREQUAL "")
 	set (${module}_LIBRARY "")
