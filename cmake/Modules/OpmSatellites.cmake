@@ -101,7 +101,7 @@ macro (opm_compile_satellites opm satellite excl_all test_regexp)
 	list (FIND ${satellite}_SOURCES_DIST "${_sat_FILE}" _is_util)
 	if (NOT (_is_util EQUAL -1))
 	  install (TARGETS ${_sat_NAME} RUNTIME
-		DESTINATION bin/
+		DESTINATION bin${${opm}_VER_DIR}/
 		)
 	endif (NOT (_is_util EQUAL -1))
   endforeach (_sat_FILE)
