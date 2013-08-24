@@ -5,6 +5,9 @@ function (system_info)
   if (CMAKE_SYSTEM MATCHES "Linux")
 	distro_name (DISTRO_NAME)
 	message (STATUS "Linux distribution: ${DISTRO_NAME}")
+  elseif (CMAKE_SYSTEM MATCHES "Darwin")
+	sw_vers (OS_VERSION)
+	message (STATUS "${OS_VERSION}")
   else (CMAKE_SYSTEM MATCHES "Linux")
 	message (STATUS "Operating system: ${CMAKE_SYSTEM}")
   endif (CMAKE_SYSTEM MATCHES "Linux")
@@ -12,6 +15,24 @@ function (system_info)
   target_architecture (TARGET_CPU)
   message (STATUS "Target architecture: ${TARGET_CPU}")
 endfunction (system_info)
+
+function (sw_vers varname)
+  # query operating system for information
+  exec_program (sw_vers OUTPUT_VARIABLE _vers)
+  # split multi-line into various fields
+  string (REPLACE "\n" ";" _vers "${_vers}")
+  string (REPLACE ":" ";" _vers "${_vers}")
+  # get the various fields
+  list (GET _vers 1 _prod_name)
+  list (GET _vers 3 _prod_vers)
+  list (GET _vers 5 _prod_build)
+  # remove extraneous whitespace
+  string (STRIP "${_prod_name}" _prod_name)
+  string (STRIP "${_prod_vers}" _prod_vers)
+  string (STRIP "${_prod_build}" _prod_build)
+  # assemble result variable
+  set (${varname} "${_prod_name} version: ${_prod_vers} (${_prod_build})" PARENT_SCOPE)
+endfunction (sw_vers varname)
 
 # probe various system files that may be found
 function (distro_name varname)
