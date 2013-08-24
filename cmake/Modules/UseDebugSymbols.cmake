@@ -71,28 +71,32 @@ function (strip_debug_symbols targets)
 	  # again)
 	  get_target_property (_full ${target} LOCATION)
 	  get_filename_component (_dir ${_full} PATH)
-	  get_filename_component (_name ${_full} NAME)
+	  if (NOT (("${_dir}" STREQUAL "") OR ("${_dir}" MATCHES ".*/$")))
+		set (_dir "${_dir}/")
+	  endif (NOT (("${_dir}" STREQUAL "") OR ("${_dir}" MATCHES ".*/$")))
+	  get_filename_component (_name ${_full} NAME_WE)
+	  get_filename_component (_ext ${_full} EXT)
 	  # only libraries have soversion property attached
 	  get_target_property (_target_soversion ${target} SOVERSION)
 	  get_target_property (_target_version ${target} VERSION)
 	  if (_target_soversion)
-		set (_target_file "${_full}.${_target_version}")
-		set (_target_file_name "${_name}.${_target_version}")
+		set (_target_file_name "${_name}${_ext}.${_target_version}")
 	  else (_target_soversion)
-		set (_target_file "${_full}")
-		set (_target_file_name "${_name}")
+		set (_target_file_name "${_name}${_ext}")
 	  endif (_target_soversion)
+	  set (_target_file "${_dir}${_target_file_name}")
 	  # do without generator expressions (which doesn't work everywhere)
+	  set (_debug_ext ".debug")
 	  add_custom_command (TARGET ${target}
 		POST_BUILD
 		WORKING_DIRECTORY ${_dir}
-		COMMAND ${OBJCOPY} ARGS --only-keep-debug ${_target_file} ${_target_file}.debug
+		COMMAND ${OBJCOPY} ARGS --only-keep-debug ${_target_file} ${_target_file}${_debug_ext}
 		COMMAND ${OBJCOPY} ARGS ${_strip_args} ${_target_file}
-		COMMAND ${OBJCOPY} ARGS --add-gnu-debuglink=${_target_file_name}.debug ${_target_file}
+		COMMAND ${OBJCOPY} ARGS --add-gnu-debuglink=${_target_file_name}${_debug_ext} ${_target_file}
 		VERBATIM
 		)
 	  # add this .debug file to the list
-	  file (RELATIVE_PATH _this_debug_file "${PROJECT_BINARY_DIR}" "${_target_file}.debug")
+	  file (RELATIVE_PATH _this_debug_file "${PROJECT_BINARY_DIR}" "${_target_file}${_debug_ext}")
 	  set (_debug_files ${_debug_files} ${_this_debug_file})
 	endforeach (target)
 	# if optional debug list was requested, then copy to output parameter
