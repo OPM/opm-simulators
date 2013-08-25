@@ -43,6 +43,26 @@ else()
   endif(CXX_FLAG_CXX0X)
 endif(CXX_FLAG_CXX11)
 
+# if we are building with an Apple toolchain in MacOS X,
+# we cannot use the old GCC 4.2 fork, but must use the
+# new runtime library
+set (CXX_STDLIB_FLAGS)
+string (TOUPPER "${CMAKE_CXX_COMPILER_ID}" _comp_id)
+if (APPLE AND (_comp_id MATCHES "CLANG"))
+  CHECK_CXX_ACCEPTS_FLAG ("-stdlib=libc++" CXX_FLAG_STDLIB_LIBCXX)
+  if (CXX_FLAG_STDLIB_LIBCXX)
+	add_options (CXX ALL_BUILDS "-stdlib=libc++")
+	set (CXX_STDLIB_FLAGS "-stdlib=libc++")
+  endif (CXX_FLAG_STDLIB_LIBCXX)
+endif (APPLE AND (_comp_id MATCHES "CLANG"))
+
+# to format the command-line options pretty, we have an optional space
+if (CXX_STD0X_FLAGS AND CXX_STDLIB_FLAGS)
+  set (CXX_SPACE " ")
+else (CXX_STD0X_FLAGS AND CXX_STDLIB_FLAGS)
+  set (CXX_SPACE)
+endif (CXX_STD0X_FLAGS AND CXX_STDLIB_FLAGS)
+
 # perform tests
 include(CheckCXXSourceCompiles)
 
