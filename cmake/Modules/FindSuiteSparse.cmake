@@ -265,12 +265,6 @@ if (SuiteSparse_LIBRARIES)
   list (REVERSE SuiteSparse_LIBRARIES)
 endif (SuiteSparse_LIBRARIES)
 
-# on MacOS X the libraries are in a framework directory and an option must be
-# added on the compile line to relate headers to that directory
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  list (APPEND SuiteSparse_DEFINITIONS "-framework Accelerate")
-endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  
 # print a message to indicate status of this package
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (SuiteSparse
