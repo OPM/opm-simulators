@@ -1,6 +1,13 @@
 # -*- mode: cmake; tab-width: 2; indent-tabs-mode: t; truncate-lines: t; compile-command: "cmake -Wdev" -*-
 # vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
 
+# features that may be used by some packages (Fortran wrappers
+# for instance), and this set options for, but which is included
+# conditionally and thus does not exist in other packages
+set (FEATURE_VARS
+	USE_UNDERSCORING
+	)
+
 # emulate the with-xxx feature of autotools to not give warnings
 # if we specify the directories of packages that are known to the
 # family but not necessarily used
@@ -45,3 +52,7 @@ foreach (family IN ITEMS ${KNOWN_FAMILIES})
 		endforeach (var)
 	endforeach (package)
 endforeach (family)
+
+foreach (feature IN ITEMS ${FEATURE_VARS})
+	set (_dummy ${${feature}})
+endforeach (feature)
