@@ -37,7 +37,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <suitesparse/umfpack.h>
+#include <umfpack.h>
 
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/linalg/call_umfpack.h>
