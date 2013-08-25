@@ -139,6 +139,11 @@ if [ "${CMAKE_COMMAND}" = "" ]; then
   fi
 fi
 
+# helper routine
+uppercase () {
+  echo "$@" | tr [a-z-] [A-Z_]
+}
+
 for OPT in "$@"; do
   case "$OPT" in
     --*)
@@ -207,7 +212,7 @@ for OPT in "$@"; do
             dune        |\
             dune-*      |\
             zlib)
-              rootvar="${pkgname^^}_ROOT"
+              rootvar="$(uppercase ${pkgname})_ROOT"
               rootvar="${rootvar/-/_}"
               ;;
             *)
@@ -225,15 +230,6 @@ for OPT in "$@"; do
           pkgname=$OPTARG
           pkgname=${pkgname#disable-}
           pkgname=${pkgname#without-}
-          # special aliases
-          case "${pkgname}" in
-            umfpack)
-              pkgname="SuiteSparse"
-              ;;
-            tinyxml)
-              pkgname="TinyXML"
-              ;;
-          esac
           # casing is of course different
           case "${pkgname}" in
             option-checking)
@@ -291,13 +287,19 @@ for OPT in "$@"; do
               ;;
             ert  |\
             superlu)
-              pkgname="${pkgname^^}"
+              pkgname="$(uppercase ${pkgname})"
               ;;
             openmp)
               pkgname="OpenMP"
               ;;
             gxx11check)
               pkgname="CXX11Features"
+              ;;
+            umfpack)
+              pkgname="SuiteSparse"
+              ;;
+            tinyxml)
+              pkgname="TinyXML"
               ;;
             *)
               invalid_opt --disable-${pkgname}
