@@ -4,7 +4,7 @@ using namespace std;
 using namespace Opm;
 
 Event&
-EventSource::add (std::function <void ()> handler) {
+EventSource::add (const std::function<void ()>& handler) {
     // add handler to the back of the queue
     handlers_.push_back (handler);
 

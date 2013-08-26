@@ -27,7 +27,7 @@ struct Event {
     /// \note
     /// If a handler is added more than once, it will also be called
     /// more than once.
-    virtual Event& add (std::function <void ()> handler) = 0;
+    virtual Event& add (const std::function <void ()>& handler) = 0;
 
     /// Convenience routine to add a member function of a class as
     /// an event handler.
@@ -83,7 +83,7 @@ struct Event {
 /// \endcode
 class EventSource : public Event {
 public:
-    virtual Event& add (std::function <void ()> handler);
+    virtual Event& add (const std::function <void ()>& handler);
     virtual void signal ();
 protected:
     /// List of actual handlers that will be called
