@@ -17,6 +17,7 @@ set (ewoms_DEPS
 	"dune-geometry REQUIRED"
 	"dune-grid REQUIRED"
 	"dune-istl REQUIRED"
+	"opm-material REQUIRED"
 	# valgrind client requests
 	"Valgrind"
 	# quadruple precision floating point calculations
