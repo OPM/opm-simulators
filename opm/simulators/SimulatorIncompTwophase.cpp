@@ -36,6 +36,7 @@
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/Event.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
 
@@ -48,9 +49,6 @@
 #include <opm/core/transport/implicit/TransportSolverTwophaseImplicit.hpp>
 #include <boost/filesystem.hpp>
 #include <memory>
-#include <boost/lexical_cast.hpp>
-#include <boost/function.hpp>
-#include <boost/signal.hpp>
 
 #include <numeric>
 #include <fstream>
@@ -103,7 +101,7 @@ namespace Opm
         std::vector<int> allcells_;
 
         // list of hooks that are notified when a timestep completes
-        boost::signal0 <void> timestep_completed;
+        EventSource timestep_completed_;
     };
 
 
@@ -134,8 +132,8 @@ namespace Opm
     }
 
     // connect the hook to the signal in the implementation class
-    void SimulatorIncompTwophase::connect_timestep_impl (boost::function0 <void> hook) {
-        pimpl_->timestep_completed.connect (hook);
+    Event& SimulatorIncompTwophase::timestep_completed () {
+        return pimpl_->timestep_completed_;
     }
 
     static void reportVolumes(std::ostream &os, double satvol[2], double tot_porevol_init,
@@ -600,7 +598,7 @@ namespace Opm
 
             // notify all clients that we are done with the timestep
             callback_timer.start ();
-            timestep_completed ();
+            timestep_completed_.signal ();
             callback_timer.stop ();
             time_in_callbacks += callback_timer.secsSinceStart ();
         }

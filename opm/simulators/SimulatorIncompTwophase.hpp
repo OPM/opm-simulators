@@ -21,8 +21,6 @@
 #define OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
 
 #include <memory>
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -40,6 +38,7 @@ namespace Opm
     class TwophaseState;
     class WellState;
     struct SimulatorReport;
+    class Event;
 
     /// Class collecting all necessary components for a two-phase simulation.
     class SimulatorIncompTwophase
@@ -90,19 +89,16 @@ namespace Opm
                             TwophaseState& state,
                             WellState& well_state);
 
-        /// Register a callback for notifications about completed timestep.
-        /// The specified method of the object is called when the simulator
-        /// has completed a timestep and the state objects are (possibly)
-        /// changed.
+        /// Event that is signaled every time the simulator has completed a
+        /// a timestep.
+        ///
+        /// Register a callback with this event to do processing at the end
+        /// of every timestep, for instance to do reporting.
+        ///
+        /// \note
         /// If you want to know the current timestep, the callback must
         /// also monitor the timer object which was passed to run().
-        /// \tparam T        Type of the callback object.
-        /// \tparam callback Address of a member function of T which will
-        ///                  be invoked when a timestep completes.
-        /// \param[in] t     Object which will receive notifications. The
-        ///                  lifetime of the object must span over the
-        ///                  duration of the simulation, and it is your
-        ///                  responsibility to ensure that.
+        ///
         /// \example
         /// \code{.cpp}
         /// struct Foo {
@@ -111,23 +107,17 @@ namespace Opm
         ///
         /// SimulatorIncompTwophase sim (...);
         /// Foo f;
-        /// sim.connect_timestep <Foo, &Foo::bar> (f);
+        /// sim.timestep_completed ().add <Foo, &Foo::bar> (f);
         /// sim.run (...);
         /// \endcode
-        template <typename T, void (T::*callback)()>
-        void connect_timestep (T& t);
+        Event& timestep_completed ();
 
     private:
         struct Impl;
         // Using shared_ptr instead of unique_ptr since unique_ptr requires complete type for Impl.
         std::shared_ptr<Impl> pimpl_;
-
-        // implementation which is not templated, and can be in library
-        void connect_timestep_impl (boost::function0<void> hook);
     };
 
 } // namespace Opm
-
-#include "SimulatorIncompTwophase_impl.hpp"
 
 #endif // OPM_SIMULATORINCOMPTWOPHASE_HEADER_INCLUDED
