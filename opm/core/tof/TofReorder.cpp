@@ -80,6 +80,8 @@ namespace Opm
         if (use_multidim_upwind_) {
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
+            face_part_tof_.resize(grid_.face_nodepos[grid_.number_of_faces]);
+            std::fill(face_part_tof_.begin(), face_part_tof_.end(), 0.0);
         }
         num_tracers_ = 0;
         num_multicell_ = 0;
@@ -148,6 +150,8 @@ namespace Opm
         if (use_multidim_upwind_) {
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
+            face_part_tof_.resize(grid_.face_nodepos[grid_.number_of_faces]);
+            std::fill(face_part_tof_.begin(), face_part_tof_.end(), 0.0);
             OPM_THROW(std::runtime_error, "Multidimensional upwind not yet implemented for tracer.");
         }
         num_multicell_ = 0;
@@ -362,9 +366,15 @@ namespace Opm
         const double flux_face = std::fabs(darcyflux_[face]);
         face_term = 0.0;
         cell_term_factor = 0.0;
+        int num_contrib = 0;
         for (int ii = 0; ii < num_adj; ++ii) {
             const int f = adj_faces_[ii];
             const double influx_f = (grid_.face_cells[2*f] == upwind_cell) ? -darcyflux_[f] : darcyflux_[f];
+            if (influx_f <= 0.0) {
+                // We have no contribution from face f, it is an outflow face.
+                continue;
+            }
+            ASSERT(influx_f > 0.0);
             const double omega_star = influx_f/flux_face;
             // SPU
             // const double omega = 0.0;
@@ -372,11 +382,18 @@ namespace Opm
             // const double omega = omega_star > 0.0 ? std::min(omega_star, 1.0) :  0.0;
             // SMU
             const double omega = omega_star > 0.0 ? omega_star/(1.0 + omega_star) : 0.0;
-            face_term += omega*face_tof_[f];
-            cell_term_factor += (1.0 - omega);
+            const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
+            const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
+            for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
+                if (face_part_tof_[*f_iter] > 0.0) {
+                    face_term += omega * face_part_tof_[*f_iter];
+                    cell_term_factor += (1.0 - omega);
+                    ++num_contrib;
+                }
+            }
         }
-        face_term /= double(num_adj);
-        cell_term_factor /= double(num_adj);
+        face_term /= double(num_contrib);
+        cell_term_factor /= double(num_contrib);
     }
 
 
