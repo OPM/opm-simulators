@@ -161,13 +161,13 @@ foreach (module IN LISTS SuiteSparse_MODULES)
   find_path (${MODULE}_INCLUDE_DIR
 	NAMES ${module}.h
 	PATHS ${SuiteSparse_SEARCH_PATH}
-	PATH_SUFFIXES "include" "include/suitesparse" "include/ufsparse"
+	PATH_SUFFIXES "include" "include/suitesparse" "include/ufsparse" "${MODULE}/Include"
 	${_no_default_path}
 	)
   find_library (${MODULE}_LIBRARY
 	NAMES ${module}
 	PATHS ${SuiteSparse_SEARCH_PATH}
-	PATH_SUFFIXES "lib/.libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
+	PATH_SUFFIXES "lib/.libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse" "${MODULE}/Lib"
 	${_no_default_path}
 	)
   # start out by including the module itself; other dependencies will be added later
