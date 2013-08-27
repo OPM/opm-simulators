@@ -199,8 +199,8 @@ if (NOT (ERT_INCLUDE_DIR MATCHES "-NOTFOUND" OR ERT_LIBRARIES MATCHES "-NOTFOUND
   check_c_source_compiles (
 	"#include <ert/ecl/ecl_util.h>
 int main (void) {
-  int sz;
-  sz = ecl_util_get_sizeof_ctype (ECL_INT_TYPE);
+  bool ok;
+  ok = ecl_util_fmt_file (\"foo.bar\", &ok);
   return 0;
 }" HAVE_ERT)
   cmake_pop_check_state ()
