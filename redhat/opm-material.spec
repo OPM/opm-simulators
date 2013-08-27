@@ -37,6 +37,7 @@ This package contains the documentation files for opm-material
 %prep
 %setup -q
 
+# consider using -DUSE_VERSIONED_DIR=ON if backporting
 %build
 cmake28 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF
 make
