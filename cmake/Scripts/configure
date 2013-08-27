@@ -97,6 +97,15 @@ invalid_opt () {
 
 # default values
 prefix=/usr/local
+#c_compiler=" -DCMAKE_C_COMPILER=cc"
+c_compiler=
+c_opts=
+#cxx_compiler=" -DCMAKE_CXX_COMPILER=c++"
+cxx_compiler=
+cxx_opts=
+#fort_compiler=" -DCMAKE_Fortran_COMPILER=fc"
+fort_compiler=
+fort_opts=
 #buildtype=" -DCMAKE_BUILD_TYPE=Debug"
 buildtype=
 #pch_use=" -DPRECOMPILE_HEADERS:BOOL=ON"
@@ -405,15 +414,49 @@ done
 # remove all arguments processed by getopts
 shift $((OPTIND-1))
 
-# remove Autotools-specific variables. notice the usage of a quoted
-# array: each element will be returned even with spaces.
+# notice the usage of a quoted array: each element will be returned
+# even with spaces.
 for a in "${VARS[@]}"; do
-  a="${a/ACLOCAL_*=*/}"
-  [ -n "$a" ] && ENVVARS="$ENVVARS \"${a/\"/\\\"}\""
+  case "$a" in
+    ACLOCAL_*=*)
+      # remove Autotools-specific variables. 
+      ;;
+    CC=*)
+      # special processing for compiler options
+      a=${a#CC=}
+      c_compiler=" -DCMAKE_C_COMPILER=\"${a/\"/\\\"}\""
+      ;;
+    CXX=*)
+      a=${a#CXX=}
+      cxx_compiler=" -DCMAKE_CXX_COMPILER=\"${a/\"/\\\"}\""
+      ;;
+    CFLAGS=*)
+      a=${a#CFLAGS=}
+      c_opts=" -DCMAKE_C_FLAGS=\"${a/\"/\\\"}\""
+      ;;
+    CXXFLAGS=*)
+      a=${a#CXXFLAGS=}
+      cxx_opts=" -DCMAKE_CXX_FLAGS=\"${a/\"/\\\"}\""
+      ;;
+    FC=*)
+      a=${a#FC=}
+      fort_compiler=" -DCMAKE_Fortran_COMPILER=\"${a/\"/\\\"}\""
+      ;;
+    FFLAGS=*)
+      a=${a#FFLAGS=}
+      fort_opts=" -DCMAKE_Fortran_FLAGS=\"${a/\"/\\\"}\""
+      ;;
+    *)
+      ENVVARS="$ENVVARS \"${a/\"/\\\"}\""
+      ;;
+  esac
 done
 
+# only wrap in env command if any variable were actually passed
+[ -n "${ENVVARS}" ] && ENVVARS="env ${ENVVARS} "
+
 # pass everything on to CMake
-CMDLINE="env ${ENVVARS} ${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring} ${FEATURES}"
+CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
