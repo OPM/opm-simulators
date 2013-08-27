@@ -50,6 +50,6 @@ macro (opm_install opm)
   endif (${opm}_LIBRARY_TYPE STREQUAL "SHARED" AND ${opm}_TARGET AND ${opm}_DEBUG)
   install (
 	FILES ${PROJECT_SOURCE_DIR}/dune.module
-	DESTINATION ${CMAKE_INSTALL_LIBDIR_NOARCH}${${opm}_VER_DIR}/dunecontrol/${${opm}_NAME}
+	DESTINATION lib${${opm}_VER_DIR}/dunecontrol/${${opm}_NAME}
 	)
 endmacro (opm_install opm)
