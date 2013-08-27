@@ -62,7 +62,17 @@ function (find_dune_version suite module)
 	  # remove multi-arch part of the library path to get parent
 	  get_filename_component (_lib_path "${_lib_path}" PATH)
 	endif ()
-	set (_dune_mod "${_lib_path}${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	get_filename_component (_immediate "${_lib_path}" NAME)	
+	if (("${_immediate}" STREQUAL "${CMAKE_INSTALL_LIBDIR}")
+		OR ("${_immediate}" STREQUAL "lib"))
+	  # remove library part of the path; this also undo the suffix
+	  # we added if we used the library as a standin
+	  get_filename_component (_lib_path "${_lib_path}" PATH)
+	endif ()
+	# from this point on, _lib_path does not contain an architecture-
+	# specific component anymore; dune.module is always put in straight
+	# noarch lib/ since it does not contain any paths to binaries
+	set (_dune_mod "${_lib_path}/lib${_multilib}/dunecontrol/${suite}-${module}/dune.module")
 	if (NOT EXISTS "${_dune_mod}")
 	  # use the name itself as a flag for whether it was found or not
 	  set (_dune_mod "")
@@ -71,8 +81,14 @@ function (find_dune_version suite module)
 
   # if it is not available, it may make havoc having empty defines in the source
   # code later, so we bail out early
-  if (${suite}-${module}_FIND_REQUIRED AND NOT _dune_mod)
-	message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module}")
+  if (_dune_mod)
+	message (STATUS "Version of ${suite}-${module} from ${_dune_mod}")
+  else ()
+	if (${suite}-${module}_FIND_REQUIRED)
+	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module}")
+	else ()
+	  return ()
+	endif ()
   endif ()
 
   # parse the file for the Version: field
