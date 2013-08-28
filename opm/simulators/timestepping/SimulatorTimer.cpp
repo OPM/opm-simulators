@@ -75,7 +75,7 @@ namespace Opm
         if (current_step_ < 0 || current_step_ > int(timesteps_.size())) {
             // Note that we do allow current_step_ == timesteps_.size(),
             // that is the done() state.
-            THROW("Trying to set invalid step number: " << step);
+            OPM_THROW(std::runtime_error, "Trying to set invalid step number: " << step);
         }
         current_step_ = step;
         current_time_ = std::accumulate(timesteps_.begin(), timesteps_.begin() + step, 0.0);
