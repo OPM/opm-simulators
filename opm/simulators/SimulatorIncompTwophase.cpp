@@ -188,12 +188,12 @@ namespace Opm
             create_directories(fpath);
         }
         catch (...) {
-            THROW("Creating directories failed: " << fpath);
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         if (!vtkfile) {
-            THROW("Failed to open " << vtkfilename.str());
+            OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
         }
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
@@ -216,12 +216,12 @@ namespace Opm
             create_directories(fpath);
         }
         catch (...) {
-            THROW("Creating directories failed: " << fpath);
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
         std::ofstream file(fname.str().c_str());
         if (!file) {
-            THROW("Failed to open " << fname.str());
+            OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
         }
         std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
     }
@@ -247,12 +247,12 @@ namespace Opm
                 create_directories(fpath);
             }
             catch (...) {
-                THROW("Creating directories failed: " << fpath);
+                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
             }
             fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
             std::ofstream file(fname.str().c_str());
             if (!file) {
-                THROW("Failed to open " << fname.str());
+                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
             }
             file.precision(15);
             const std::vector<double>& d = *(it->second);
@@ -268,7 +268,7 @@ namespace Opm
         std::string fname = output_dir  + "/watercut.txt";
         std::ofstream os(fname.c_str());
         if (!os) {
-            THROW("Failed to open " << fname);
+            OPM_THROW(std::runtime_error, "Failed to open " << fname);
         }
         watercut.write(os);
     }
@@ -281,7 +281,7 @@ namespace Opm
         std::string fname = output_dir  + "/wellreport.txt";
         std::ofstream os(fname.c_str());
         if (!os) {
-            THROW("Failed to open " << fname);
+            OPM_THROW(std::runtime_error, "Failed to open " << fname);
         }
         wellreport.write(os);
     }
@@ -353,10 +353,10 @@ namespace Opm
 
         } else {
             if (rock_comp_props && rock_comp_props->isActive()) {
-                THROW("The implicit pressure solver cannot handle rock compressibility.");
+                OPM_THROW(std::runtime_error, "The implicit pressure solver cannot handle rock compressibility.");
             }
             if (use_segregation_split_) {
-                THROW("The implicit pressure solver is not set up to use segregation splitting.");
+                OPM_THROW(std::runtime_error, "The implicit pressure solver is not set up to use segregation splitting.");
             }
             std::vector<double> porevol;
             computePorevolume(grid, props.porosity(), porevol);
@@ -379,7 +379,7 @@ namespace Opm
                 create_directories(fpath);
             }
             catch (...) {
-                THROW("Creating directories failed: " << fpath);
+                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
             }
             output_interval_ = param.getDefault("output_interval", 1);
         }
@@ -527,7 +527,7 @@ namespace Opm
                     well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
                     ++well_control_iteration;
                     if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
-                        THROW("Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
+                        OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
                     }
                     if (!well_control_passed) {
                         std::cout << "Well controls not passed, solving again." << std::endl;
