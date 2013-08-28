@@ -651,7 +651,7 @@ namespace Opm
             limiter = 0.0;
             basis_func_->addConstant(min_upstream_tof - tof_c, tof + num_basis*cell);
         }
-        ASSERT(limiter >= 0.0);
+        assert(limiter >= 0.0);
 
         // Actually do the limiting (if applicable).
         if (limiter < 1.0) {
@@ -674,7 +674,7 @@ namespace Opm
         // any limiting applied to its upstream cells.
         const std::vector<int>& seq = ReorderSolverInterface::sequence();
         const int nc = seq.size();
-        ASSERT(nc == grid_.number_of_cells);
+        assert(nc == grid_.number_of_cells);
         for (int i = 0; i < nc; ++i) {
             const int cell = seq[i];
             applyLimiter(cell, tof_coeff_);

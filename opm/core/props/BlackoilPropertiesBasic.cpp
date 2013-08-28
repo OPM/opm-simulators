@@ -128,7 +128,7 @@ namespace Opm
                                          double* dAdp) const
     {
         const int np = numPhases();
-        ASSERT(np <= 2);
+        assert(np <= 2);
         double B[2]; // Must be enough since component classes do not handle more than 2.
         pvt_.B(1, 0, 0, B);
         // Compute A matrix

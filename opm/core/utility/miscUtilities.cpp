@@ -273,7 +273,7 @@ namespace Opm
         const std::vector<int>::size_type nc = cells.size();
         const std::size_t                 np = props.numPhases();
 
-        ASSERT (s.size() == nc * np);
+        assert(s.size() == nc * np);
 
         std::vector<double>(nc * np, 0.0).swap(pmobc );
         double*                                dpmobc = 0;
@@ -382,7 +382,7 @@ namespace Opm
                                       << perf_rate/Opm::unit::day << " m^3/day." << std::endl;
                             perf_rate = 0.0;
                         } else {
-                            ASSERT(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
+                            assert(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
                             perf_rate *= comp_frac[0];
                         }
                     }
@@ -555,7 +555,7 @@ namespace Opm
     {
         const int np = wells.number_of_phases;
         const int nw = wells.number_of_wells;
-        ASSERT(int(flow_rates_per_well_cell.size()) == wells.well_connpos[nw]);
+        assert(int(flow_rates_per_well_cell.size()) == wells.well_connpos[nw]);
         phase_flow_per_well.resize(nw * np);
         for (int wix = 0; wix < nw; ++wix) {
             for (int phase = 0; phase < np; ++phase) {
@@ -598,7 +598,7 @@ namespace Opm
                           const std::vector<double>& well_perfrates)
     {
         int nw = well_bhp.size();
-        ASSERT(nw == wells.number_of_wells);
+        assert(nw == wells.number_of_wells);
         int np = props.numPhases();
         const int max_np = 3;
         if (np > max_np) {
@@ -657,7 +657,7 @@ namespace Opm
     {
         // TODO: refactor, since this is almost identical to the other push().
         int nw = well_bhp.size();
-        ASSERT(nw == wells.number_of_wells);
+        assert(nw == wells.number_of_wells);
         int np = props.numPhases();
         const int max_np = 3;
         if (np > max_np) {

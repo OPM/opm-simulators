@@ -182,9 +182,9 @@ namespace Opm
                 ix       /=      dims[dim];
             }
 
-            ASSERT2 (ix == 0,
-                     "Lexicographic index is not consistent "
-                     "with grid dimensions.");
+            // Make sure that lexicographic index is consistent with
+            // grid dimensions.
+            assert(ix == 0);
 	}
 
 
@@ -202,12 +202,12 @@ namespace Opm
 		OPM_THROW(std::runtime_error, "Faces not tagged - cannot extract " << sideString(side) << " faces.");
 	    }
 
-            ASSERT2 (grid.dimensions <= 3,
-                     "Grid must have three dimensions or less.");
+            // make sure that grid has three dimensions or less.
+            assert(grid.dimensions <= 3);
 
-            ASSERT2 (side < 2 * grid.dimensions,
-                     "Boundary condition side not consistent with "
-                     "number of physical grid dimensions.");
+            // Make sure boundary condition side is consistent with
+            // number of physical grid dimensions.
+            assert(side < 2 * grid.dimensions);
 
 	    // Get all boundary faces with the correct tag and with
 	    // min/max i/j/k (depending on side).

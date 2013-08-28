@@ -415,7 +415,7 @@ namespace Opm
         const int nc = grid_.number_of_cells;
         const int nf = grid_.number_of_faces;
         const int np = props_.numPhases();
-        ASSERT(np == 2);
+        assert(np == 2);
         const int dim = grid_.dimensions;
         density_.resize(nc*np);
         props_.density(grid_.number_of_cells, &A_[0], &density_[0]);

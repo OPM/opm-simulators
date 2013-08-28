@@ -159,7 +159,7 @@ namespace Opm
                                           double* kr,
                                           double* dkrds) const
     {
-        ASSERT (cells != 0);
+        assert(cells != 0);
 
         const int np = phase_usage_.num_phases;
         if (dkrds) {
@@ -203,7 +203,7 @@ namespace Opm
                                            double* pc,
                                            double* dpcds) const
     {
-        ASSERT (cells != 0);
+        assert(cells != 0);
 
         const int np = phase_usage_.num_phases;
         if (dpcds) {
@@ -233,7 +233,7 @@ namespace Opm
                                            double* smin,
                                            double* smax) const
     {
-        ASSERT (cells != 0);
+        assert(cells != 0);
 
         const int np = phase_usage_.num_phases;
         for (int i = 0; i < n; ++i) {

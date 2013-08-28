@@ -186,14 +186,14 @@ namespace Opm
         linsolver_.solve(h_->A, h_->b, h_->x);
 
         // Obtain solution.
-        ASSERT(int(state.pressure().size()) == grid_.number_of_cells);
-        ASSERT(int(state.faceflux().size()) == grid_.number_of_faces);
+        assert(int(state.pressure().size()) == grid_.number_of_cells);
+        assert(int(state.faceflux().size()) == grid_.number_of_faces);
         ifs_tpfa_solution soln = { NULL, NULL, NULL, NULL };
         soln.cell_press = &state.pressure()[0];
         soln.face_flux  = &state.faceflux()[0];
         if (wells_ != NULL) {
-            ASSERT(int(well_state.bhp().size()) == wells_->number_of_wells);
-            ASSERT(int(well_state.perfRates().size()) == wells_->well_connpos[ wells_->number_of_wells ]);
+            assert(int(well_state.bhp().size()) == wells_->number_of_wells);
+            assert(int(well_state.perfRates().size()) == wells_->well_connpos[ wells_->number_of_wells ]);
             soln.well_flux = &well_state.perfRates()[0];
             soln.well_press = &well_state.bhp()[0];
         }
@@ -473,8 +473,8 @@ namespace Opm
 
 
         // Make sure h_->x contains the direct solution vector.
-        ASSERT(int(state.pressure().size()) == grid_.number_of_cells);
-        ASSERT(int(state.faceflux().size()) == grid_.number_of_faces);
+        assert(int(state.pressure().size()) == grid_.number_of_cells);
+        assert(int(state.faceflux().size()) == grid_.number_of_faces);
         std::copy(state.pressure().begin(), state.pressure().end(), h_->x);
         std::copy(well_state.bhp().begin(), well_state.bhp().end(), h_->x + grid_.number_of_cells);
 
@@ -483,8 +483,8 @@ namespace Opm
         soln.cell_press = &state.pressure()[0];
         soln.face_flux  = &state.faceflux()[0];
         if (wells_ != NULL) {
-            ASSERT(int(well_state.bhp().size()) == wells_->number_of_wells);
-            ASSERT(int(well_state.perfRates().size()) == wells_->well_connpos[ wells_->number_of_wells ]);
+            assert(int(well_state.bhp().size()) == wells_->number_of_wells);
+            assert(int(well_state.perfRates().size()) == wells_->well_connpos[ wells_->number_of_wells ]);
             soln.well_flux = &well_state.perfRates()[0];
             soln.well_press = &well_state.bhp()[0];
         }

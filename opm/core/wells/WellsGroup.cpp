@@ -788,7 +788,7 @@ namespace Opm
             return;
         }
         if (wells_->type[self_index_] != INJECTOR) {
-            ASSERT(target == 0.0);
+            assert(target == 0.0);
             return;
         }
 
@@ -865,7 +865,7 @@ namespace Opm
             return;
         }
         if (wells_->type[self_index_] != PRODUCER) {
-            ASSERT(target == 0.0);
+            assert(target == 0.0);
             return;
         }
         // We're a producer, so we need to negate the input

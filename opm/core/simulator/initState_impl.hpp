@@ -154,7 +154,7 @@ namespace Opm
             Density(const BlackoilPropertiesInterface& props) : props_(props) {}
             double operator()(const double pressure, const int phase)
             {
-                ASSERT(props_.numPhases() == 2);
+                assert(props_.numPhases() == 2);
                 const double surfvol[2][2] = { { 1.0, 0.0 },
                                                { 0.0, 1.0 } };
                 // We do not handle multi-region PVT/EQUIL at this point.
@@ -183,7 +183,7 @@ namespace Opm
                                      const double datum_p,
                                      State& state)
         {
-            ASSERT(props.numPhases() == 2);
+            assert(props.numPhases() == 2);
 
             // Obtain max and min z for which we will need to compute p.
             const int num_cells = grid.number_of_cells;

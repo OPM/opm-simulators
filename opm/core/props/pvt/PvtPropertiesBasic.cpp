@@ -98,7 +98,7 @@ namespace Opm
             pu.phase_pos[BlackoilPhases::Liquid] = 1;
             pu.phase_pos[BlackoilPhases::Vapour] = 1; // Unused.
         } else {
-            ASSERT(pu.num_phases == 3);
+            assert(pu.num_phases == 3);
             pu.phase_used[BlackoilPhases::Aqua] = true;
             pu.phase_used[BlackoilPhases::Liquid] = true;
             pu.phase_used[BlackoilPhases::Vapour] = true;

@@ -406,7 +406,7 @@ namespace Opm
 
         // Set up reference depths that were defaulted. Count perfs.
         int num_perfs = 0;
-        ASSERT(grid.dimensions == 3);
+        assert(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
             if (well_data[w].reference_bhp_depth < 0.0) {
@@ -493,7 +493,7 @@ namespace Opm
                 for (int wix = 0; wix < num_wells; ++wix) {
                     if (well_names[wix].compare(0,len, name) == 0) { //equal
                         well_found = true;
-                        ASSERT(well_data[wix].type == w_->type[wix]);
+                        assert(well_data[wix].type == w_->type[wix]);
                         if (well_data[wix].type != INJECTOR) {
                             OPM_THROW(std::runtime_error, "Found WCONINJE entry for a non-injector well: " << well_names[wix]);
                         }
@@ -604,7 +604,7 @@ namespace Opm
                 for (int wix = 0; wix < num_wells; ++wix) {
                     if (well_names[wix].compare(0,len, name) == 0) { //equal
                         well_found = true;
-                        ASSERT(well_data[wix].type == w_->type[wix]);
+                        assert(well_data[wix].type == w_->type[wix]);
                         if (well_data[wix].type != PRODUCER) {
                             OPM_THROW(std::runtime_error, "Found WCONPROD entry for a non-producer well: " << well_names[wix]);
                         }
@@ -758,13 +758,13 @@ namespace Opm
                     if (cur_ctrl >= 0) {
                         cur_ctrl = ~cur_ctrl;
                     }
-                    ASSERT(w_->ctrls[index]->current < 0);
+                    assert(w_->ctrls[index]->current < 0);
                 } else if (line.openshutflag_ == "OPEN") {
                     int& cur_ctrl = w_->ctrls[index]->current;
                     if (cur_ctrl < 0) {
                         cur_ctrl = ~cur_ctrl;
                     }
-                    ASSERT(w_->ctrls[index]->current >= 0);
+                    assert(w_->ctrls[index]->current >= 0);
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
                 }
@@ -797,7 +797,7 @@ namespace Opm
                 std::string name = lines[i].well_;
                 const int wix = well_names_to_index[name];
                 WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
-                ASSERT(wellnode.name() == name);
+                assert(wellnode.name() == name);
                 if (well_data[wix].type == PRODUCER) {
                     wellnode.prodSpec().guide_rate_ = lines[i].guide_rate_;
                     if (lines[i].phase_ == "OIL") {

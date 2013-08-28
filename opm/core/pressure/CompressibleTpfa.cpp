@@ -488,7 +488,7 @@ namespace Opm
                     // only inject pure fluids.
                     props_.matrix(1, &perf_p, comp_frac, &c, wpA, NULL);
                     props_.viscosity(1, &perf_p, comp_frac, &c, &mu[0], NULL);
-                    ASSERT(std::fabs(std::accumulate(comp_frac, comp_frac + np, 0.0) - 1.0) < 1e-6);
+                    assert(std::fabs(std::accumulate(comp_frac, comp_frac + np, 0.0) - 1.0) < 1e-6);
                     props_.relperm  (1, comp_frac, &c, wpM , NULL);
                     for (int phase = 0; phase < np; ++phase) {
                         wpM[phase] /= mu[phase];

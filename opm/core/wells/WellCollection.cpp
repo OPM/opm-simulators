@@ -106,7 +106,7 @@ namespace Opm
         if (parent == NULL) {
             OPM_THROW(std::runtime_error, "Parent with name = " << parent_name << " not found.");
         }
-        ASSERT(!parent->isLeafNode());
+        assert(!parent->isLeafNode());
         static_cast<WellsGroup*>(parent)->addChild(child_node);
         if (child_node->isLeafNode()) {
             leaf_nodes_.push_back(static_cast<WellNode*>(child_node.get()));

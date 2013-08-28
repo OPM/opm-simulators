@@ -200,7 +200,7 @@ namespace Opm
         const int nc = props.numCells();
         const int np = props.numPhases();
 
-        ASSERT (int(s.size()) == nc * np);
+        assert(int(s.size()) == nc * np);
 
         std::vector<double> mu(nc*np);
         props.viscosity(nc, &p[0], &z[0], &cells[0], &mu[0], 0);
@@ -318,7 +318,7 @@ namespace Opm
                                       << perf_rate/Opm::unit::day << " m^3/day." << std::endl;
                             perf_rate = 0.0;
                         } else {
-                            ASSERT(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
+                            assert(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
                             perf_rate *= comp_frac[0]; // Water reservoir volume rate.
                             props.matrix(1, &well_state.perfPress()[perf], comp_frac, &perf_cell, &A[0], 0);
                             perf_rate *= A[0];         // Water surface volume rate.

@@ -331,7 +331,7 @@ namespace Opm
         // Identify the adjacent faces of the upwind cell.
         const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
         const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[face + 1];
-        ASSERT(face_nodes_end - face_nodes_beg == 2 || grid_.dimensions != 2);
+        assert(face_nodes_end - face_nodes_beg == 2 || grid_.dimensions != 2);
         adj_faces_.clear();
         for (int hf = grid_.cell_facepos[upwind_cell]; hf < grid_.cell_facepos[upwind_cell + 1]; ++hf) {
             const int f = grid_.cell_faces[hf];
@@ -358,7 +358,7 @@ namespace Opm
         const int num_adj = adj_faces_.size();
         // The assertion below only holds if the grid is edge-conformal.
         // No longer testing, since method no longer requires it.
-        // ASSERT(num_adj == face_nodes_end - face_nodes_beg);
+        // assert(num_adj == face_nodes_end - face_nodes_beg);
         const double flux_face = std::fabs(darcyflux_[face]);
         face_term = 0.0;
         cell_term_factor = 0.0;

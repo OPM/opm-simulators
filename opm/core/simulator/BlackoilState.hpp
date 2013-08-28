@@ -65,7 +65,7 @@ namespace Opm
                 return;
             }
             const int n = cells.size();
-            ASSERT(n > 0);
+            assert(n > 0);
             std::vector<double> smin(num_phases_*n);
             std::vector<double> smax(num_phases_*n);
             props.satRange(n, &cells[0], &smin[0], &smax[0]);
