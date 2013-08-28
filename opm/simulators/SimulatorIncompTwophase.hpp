@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <vector>
+#include <iostream>
 
 struct UnstructuredGrid;
 struct Wells;

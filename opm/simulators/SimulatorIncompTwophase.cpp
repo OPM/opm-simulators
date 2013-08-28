@@ -50,6 +50,7 @@
 #include <boost/filesystem.hpp>
 #include <memory>
 
+#include <iostream>
 #include <numeric>
 #include <fstream>
 
