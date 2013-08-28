@@ -45,3 +45,7 @@ int main (void) {
   ")
 
 #debug_find_vars ("dune-geometry")
+
+# make version number available in config.h
+include (UseDuneVer)
+find_dune_version ("dune" "geometry")

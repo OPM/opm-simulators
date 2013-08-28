@@ -26,7 +26,6 @@
 #   ${module}_LIBRARIES       Directory of shared object files
 #   ${module}_DEFINITIONS     Defines that must be set to compile
 #   ${module}_CONFIG_VARS     List of defines that should be in config.h
-#	${module}_QUIET           Verbosity of last find of this module
 #   HAVE_${MODULE}            Binary value to use in config.h
 #
 # Note: Arguments should be quoted, otherwise a list will spill into the
@@ -52,17 +51,27 @@ macro (append_found src dst)
 endmacro (append_found src dst)
 
 macro (find_opm_package module deps header lib defs prog conf)
-  # variables to pass on to other packages
-  if (FIND_QUIETLY)
-	set (${module}_QUIET "QUIET")
-  else (FIND_QUIETLY)
-	set (${module}_QUIET "")
-  endif (FIND_QUIETLY)
+  # in addition to accepting mod-ule_ROOT, we also accept the somewhat
+  # more idiomatic MOD_ULE_ROOT variant
+  string (TOUPPER "${module}" MODULE_UPPER)
+  string (REPLACE "-" "_" MODULE "${MODULE_UPPER}")
 
   # if someone else has included this test, don't do it again
-  if (${${module}_FOUND})
+  if (${${MODULE}_FOUND})
 	return ()
-  endif (${${module}_FOUND})
+  endif (${${MODULE}_FOUND})
+
+  # variables to pass on to other packages
+  if (${module}_FIND_QUIETLY)
+	set (_${module}_quiet "QUIET")
+  else (${module}_FIND_QUIETLY)
+	set (_${module}_quiet "")
+  endif (${module}_FIND_QUIETLY)
+  if (${module}_FIND_REQUIRED)
+	set (_${module}_required "REQUIRED")
+  else (${module}_FIND_REQUIRED)
+	set (_${module}_required "")
+  endif (${module}_FIND_REQUIRED)
 
   # see if there is a pkg-config entry for this package, and use those
   # settings as a starting point
@@ -72,11 +81,6 @@ macro (find_opm_package module deps header lib defs prog conf)
   # these variables have non-standard names in FindPkgConfig (sic)
   set (${module}_DEFINITIONS ${PkgConf_${module}_CFLAGS_OTHER})
   set (${module}_LINKER_FLAG ${PkgConf_${module}_LDFLAGS_OTHER})
-
-  # in addition to accepting mod-ule_ROOT, we also accept the somewhat
-  # more idiomatic MOD_ULE_ROOT variant
-  string (TOUPPER ${module} MODULE_UPPER)
-  string (REPLACE "-" "_" MODULE ${MODULE_UPPER})
 
   # if the user hasn't specified any location, and it isn't found
   # in standard system locations either, then start to wander
@@ -165,6 +169,16 @@ macro (find_opm_package module deps header lib defs prog conf)
 	set (_guess_hints_bin)
   endif (SIBLING_SEARCH)
 
+  # if an include directory is specified directly (e.g. OPM_CORE_INCLUDE_DIR=
+  # /usr/include/opm-2013.03) then this overrides everything else. Notice that
+  # this variable uses the fully capitalized version of the name.
+  if (${MODULE}_INCLUDE_DIR)
+	set (_guess "${${MODULE}_INCLUDE_DIR}")
+	set (_no_system_incl "NO_DEFAULT_PATH")
+  else ()
+	set (_no_system_incl "${_no_system}")
+  endif ()
+
   # search for this include and library file to get the installation
   # directory of the package; hints are searched before the system locations,
   # paths are searched afterwards
@@ -173,7 +187,7 @@ macro (find_opm_package module deps header lib defs prog conf)
 	PATHS ${_guess}
 	HINTS ${PkgConf_${module}_INCLUDE_DIRS} ${_guess_hints}
 	PATH_SUFFIXES "include"
-	${_no_system}
+	${_no_system_incl}
 	)
 
   # some modules are all in headers
@@ -181,12 +195,23 @@ macro (find_opm_package module deps header lib defs prog conf)
 	if (CMAKE_SIZEOF_VOID_P)
 	  math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
 	endif (CMAKE_SIZEOF_VOID_P)
+
+	# again, we may directly override the location of the library alone by
+	# specifying e.g. OPM_CORE_LIB_DIR. notice that this is a *directory*
+	# and not the name of the library
+	if (${MODULE}_LIB_DIR)
+	  set (_guess_bin "${${MODULE}_LIB_DIR}")
+	  set (_no_system_lib "NO_DEFAULT_PATH")
+	else ()
+	  set (_no_system_lib "${_no_system}")
+	endif ()
+
 	find_library (${module}_LIBRARY
 	  NAMES "${lib}"
 	  PATHS ${_guess_bin}
 	  HINTS ${PkgConf_${module}_LIBRARY_DIRS} ${_guess_hints_bin}
 	  PATH_SUFFIXES "lib" "lib/.libs" ".libs" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "build-cmake/lib"
-	  ${_no_system}
+	  ${_no_system_lib}
 	  )
   else (NOT "${lib}" STREQUAL "")
 	set (${module}_LIBRARY "")
@@ -196,24 +221,37 @@ macro (find_opm_package module deps header lib defs prog conf)
   # list of necessities to build with the software
   set (${module}_INCLUDE_DIRS "${${module}_INCLUDE_DIR}")
   set (${module}_LIBRARIES "${${module}_LIBRARY}")
-  set (_deps)
+  # period because it should be something that evaluates to true
+  # in find_package_handle_standard_args
+  set (${module}_ALL_PREREQS ".")
   foreach (_dep IN ITEMS ${deps})
-	separate_arguments (_args UNIX_COMMAND ${_dep})
-	if (_args)
-	  find_and_append_package_to (${module} ${_args} ${${module}_QUIET})
-	  list (GET _args 0 _name_only)
-	  list (APPEND _deps ${_name_only})
-	else (_args)
+	separate_arguments (_${module}_args UNIX_COMMAND ${_dep})
+	if (_${module}_args)
+	  # keep REQUIRED in the arguments only if we were required ourself
+	  # "required-ness" is not transitive as far as CMake is concerned
+	  # (i.e. if an optional package requests a package to be required,
+	  # the build will fail if it's not found)
+	  string (REPLACE "REQUIRED" "${_${module}_required}" _args_req "${_${module}_args}")
+	  find_and_append_package_to (${module} ${_args_req} ${_${module}_quiet})
+	  list (GET _${module}_args 0 _name_only)
+	  string (TOUPPER "${_name_only}" _NAME_ONLY)
+	  string (REPLACE "-" "_" _NAME_ONLY "${_NAME_ONLY}")
+	  # check manually if it was found if REQUIRED; otherwise poison the
+	  # dependency list which is checked later (so that it will fail)
+	  if (("${_${module}_args}" MATCHES "REQUIRED") AND NOT (${_name_only}_FOUND OR ${_NAME_ONLY}_FOUND))
+		list (APPEND ${module}_ALL_PREREQS "${_name_only}-NOTFOUND")
+	  endif ()
+	else ()
 	  message (WARNING "Empty dependency in find module for ${module} (check for trailing semi-colon)")
-	endif (_args)
+	endif ()
   endforeach (_dep)
 
   # since find_and_append_package_to is a macro, this variable have
   # probably been overwritten (due to its common name); it is now
   # this module's last dependency instead of the name of the module
   # itself, so it must be restored
-  string (TOUPPER ${module} MODULE_UPPER)
-  string (REPLACE "-" "_" MODULE ${MODULE_UPPER})
+  string (TOUPPER "${module}" MODULE_UPPER)
+  string (REPLACE "-" "_" MODULE "${MODULE_UPPER}")
 
   # compile with this option to avoid avalanche of warnings
   set (${module}_DEFINITIONS "${${module}_DEFINITIONS}")
@@ -262,8 +300,8 @@ macro (find_opm_package module deps header lib defs prog conf)
   endif ("${lib}" STREQUAL "")
   # if the search is going to fail, then write these variables to
   # the console as well as a diagnostics
-  if (NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE})
-	  AND (${module}_FIND_REQUIRED OR NOT ${module}_FIND_QUIETLY))
+  if ((NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE}))
+	  AND (_${module}_required OR NOT _${module}_quiet))
 	if (DEFINED ${module}_DIR)
 	  message ("${module}_DIR = ${${module}_DIR}")
 	elseif (DEFINED ${module}_ROOT)
@@ -271,12 +309,15 @@ macro (find_opm_package module deps header lib defs prog conf)
 	elseif (DEFINED ${MODULE}_ROOT)
 	  message ("${MODULE}_ROOT = ${${MODULE}_ROOT}")
 	endif (DEFINED ${module}_DIR)
-  endif (NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE})
-	AND (${module}_FIND_REQUIRED OR NOT ${module}_FIND_QUIETLY))
+  endif ((NOT (${module}_INCLUDE_DIR ${_and_lib_var} AND HAVE_${MODULE}))
+	AND (_${module}_required OR NOT _${module}_quiet))
+  if ("${${module}_ALL_PREREQS}" MATCHES "-NOTFOUND")
+	message (STATUS "${module} prereqs: ${${module}_ALL_PREREQS}")
+  endif ()
   find_package_handle_standard_args (
 	${module}
 	DEFAULT_MSG
-	${module}_INCLUDE_DIR ${_lib_var} HAVE_${MODULE}
+	${module}_INCLUDE_DIR ${_lib_var} HAVE_${MODULE} ${module}_ALL_PREREQS
 	)
 
   # allow the user to override these from user interface
@@ -286,6 +327,7 @@ macro (find_opm_package module deps header lib defs prog conf)
   # some genius that coded the FindPackageHandleStandardArgs figured out
   # that the module name should be in uppercase (?!)
   set (${module}_FOUND "${${MODULE_UPPER}_FOUND}")
+  set (${MODULE}_FOUND "${${MODULE_UPPER}_FOUND}")
 
   # print everything out if we're asked to
   if (${module}_DEBUG)
@@ -301,7 +343,6 @@ function (debug_find_vars module)
   message (STATUS "${module}_DEFINITIONS  = ${${module}_DEFINITIONS}")
   message (STATUS "${module}_CONFIG_VARS  = ${${module}_CONFIG_VARS}")
   message (STATUS "${module}_LINKER_FLAGS = ${${module}_LINKER_FLAGS}")
-  message (STATUS "${module}_QUIET        = ${${module}_QUIET}")
   string (TOUPPER ${module} MODULE)
   string (REPLACE "-" "_" MODULE ${MODULE})  
   message (STATUS "HAVE_${MODULE}         = ${HAVE_${MODULE}}")
@@ -316,14 +357,8 @@ function (config_cmd_line varname defs)
   foreach (_var IN LISTS ${defs})
 	# only generate an entry if the define was actually set
 	if ((DEFINED ${_var}) AND (NOT "${${_var}}" STREQUAL ""))
-	  # numbers are not quoted, strings are
-	  if (${_var} MATCHES "[0-9]+")
-		set (_quoted "${${_var}}")
-	  else (${_var} MATCHES "[0-9]+")
-		set (_quoted "\"${${_var}}\"")
-	  endif (${_var} MATCHES "[0-9]+")
 	  # add command-line option to define this variable
-	  list (APPEND _cmdline "-D${_var}=${_quoted}")
+	  list (APPEND _cmdline "-D${_var}=${${_var}}")
 	endif ((DEFINED ${_var}) AND (NOT "${${_var}}" STREQUAL ""))
   endforeach (_var)
   # return the resulting command-line options for defining vars

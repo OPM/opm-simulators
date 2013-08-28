@@ -21,7 +21,9 @@ find_opm_package (
   # we just include them to forward here in case anyone else does
   "CXX11Features REQUIRED;
   dune-common REQUIRED;
-  dune-geometry REQUIRED
+  dune-geometry REQUIRED;
+  MPI;
+  ALUGrid
   "
   # header to search for
   "dune/grid/onedgrid.hh"
@@ -53,3 +55,7 @@ int main (void) {
   ")
 
 #debug_find_vars ("dune-grid")
+
+# make version number available in config.h
+include (UseDuneVer)
+find_dune_version ("dune" "grid")

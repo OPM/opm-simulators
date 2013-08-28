@@ -108,10 +108,11 @@ if (ERT_INCLUDE_DIR MATCHES "-NOTFOUND" OR ERT_LIBRARIES MATCHES "-NOTFOUND")
 	DEFAULT_MSG
 	ERT_INCLUDE_DIR ERT_LIBRARY
 	)
-  # write unsuccessful result to the cache, as the check_c_source_compiles
-  # would do if it failed
+  # clear the cache so the find probe is attempted again if files becomes
+  # available (only upon a unsuccessful *compile* should we disable further
+  # probing)
   set (HAVE_ERT)
-  set (HAVE_ERT "${HAVE_ERT}" CACHE INTERNAL "Did an ERT sample program compile?")
+  unset (HAVE_ERT CACHE)
   return ()
 endif (ERT_INCLUDE_DIR MATCHES "-NOTFOUND" OR ERT_LIBRARIES MATCHES "-NOTFOUND")
 
@@ -198,16 +199,17 @@ if (NOT (ERT_INCLUDE_DIR MATCHES "-NOTFOUND" OR ERT_LIBRARIES MATCHES "-NOTFOUND
   check_c_source_compiles (
 	"#include <ert/ecl/ecl_util.h>
 int main (void) {
-  int sz;
-  sz = ecl_util_get_sizeof_ctype (ECL_INT_TYPE);
+  bool ok;
+  ok = ecl_util_fmt_file (\"foo.bar\", &ok);
   return 0;
 }" HAVE_ERT)
   cmake_pop_check_state ()
 else (NOT (ERT_INCLUDE_DIR MATCHES "-NOTFOUND" OR ERT_LIBRARIES MATCHES "-NOTFOUND"))
-  # write unsuccessful result to the cache, as the check_c_source_compiles
-  # would do if it failed
+  # clear the cache so the find probe is attempted again if files becomes
+  # available (only upon a unsuccessful *compile* should we disable further
+  # probing)
   set (HAVE_ERT)
-  set (HAVE_ERT "${HAVE_ERT}" CACHE INTERNAL "Did an ERT sample program compile?")
+  unset (HAVE_ERT CACHE)
 endif (NOT (ERT_INCLUDE_DIR MATCHES "-NOTFOUND" OR ERT_LIBRARIES MATCHES "-NOTFOUND"))
 
 # if the test program didn't compile, but was required to do so, bail

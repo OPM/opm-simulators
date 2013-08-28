@@ -28,7 +28,7 @@
 #	                name is also used as name of the target that builds
 #	                all these files.
 #
-#	excl_all        EXCLUDE_ALL if these targets should not be built by
+#	excl_all        EXCLUDE_FROM_ALL if these targets should not be built by
 #	                default, otherwise empty string.
 #
 #	test_regexp     Regular expression which picks the name of a test
@@ -41,11 +41,11 @@
 macro (opm_compile_satellites opm satellite excl_all test_regexp)
   # if we are going to build the tests always, then make sure that
   # the datafiles are present too
-  if (NOT (${excl_all} MATCHES "EXCLUDE_ALL"))
+  if (NOT (${excl_all} MATCHES "EXCLUDE_FROM_ALL"))
 	set (_incl_all "ALL")
-  else (NOT (${excl_all} MATCHES "EXCLUDE_ALL"))
+  else (NOT (${excl_all} MATCHES "EXCLUDE_FROM_ALL"))
 	set (_incl_all "")
-  endif (NOT (${excl_all} MATCHES "EXCLUDE_ALL"))
+  endif (NOT (${excl_all} MATCHES "EXCLUDE_FROM_ALL"))
 
   # if a set of datafiles has been setup, pull those in
   add_custom_target (${satellite} ${_incl_all})
@@ -101,7 +101,7 @@ macro (opm_compile_satellites opm satellite excl_all test_regexp)
 	list (FIND ${satellite}_SOURCES_DIST "${_sat_FILE}" _is_util)
 	if (NOT (_is_util EQUAL -1))
 	  install (TARGETS ${_sat_NAME} RUNTIME
-		DESTINATION bin/
+		DESTINATION bin${${opm}_VER_DIR}/
 		)
 	endif (NOT (_is_util EQUAL -1))
   endforeach (_sat_FILE)

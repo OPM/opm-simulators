@@ -22,7 +22,16 @@
 #	remove_dup_deps (opm-core)
 
 include (AddOptions)
+include (UseCompVer)
+is_compiler_gcc_compatible ()
+
 macro (find_openmp opm)
+  # default is that OpenMP is not considered to be there; if we set this
+  # to a blank definition, it may be added but it cannot be removed if
+  # it propagates to other projects (someone declares it to be part of
+  # _CONFIG_VARS)
+  set (HAVE_OPENMP)
+
   # user code can be conservative by setting USE_OPENMP_DEFAULT
   if (NOT DEFINED USE_OPENMP_DEFAULT)
 	set (USE_OPENMP_DEFAULT ON)
@@ -37,6 +46,7 @@ macro (find_openmp opm)
   if (OPENMP_FOUND)
 	add_options (C ALL_BUILDS "${OpenMP_C_FLAGS}")
 	add_options (CXX ALL_BUILDS "${OpenMP_CXX_FLAGS}")
+	set (HAVE_OPENMP 1)
   endif (OPENMP_FOUND)
 
   # threading library (search for this *after* OpenMP
@@ -51,10 +61,10 @@ macro (find_openmp opm)
 
 	# if we don't have OpenMP support, then don't show warnings that these
 	# pragmas are unknown
-	if (CMAKE_COMPILER_IS_GNUCXX)
+	if (CXX_COMPAT_GCC)
 	  add_options (ALL_LANGUAGES ALL_BUILDS "-Wno-unknown-pragmas")
 	elseif (MSVC)
 	  add_options (ALL_LANGUAGES ALL_BUILDS "-wd4068")
-	endif(CMAKE_COMPILER_IS_GNUCXX)
+	endif()
   endif (USE_OPENMP)
 endmacro (find_openmp opm)

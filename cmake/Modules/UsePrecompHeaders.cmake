@@ -34,6 +34,7 @@
 
 # get compiler version
 include (UseCompVer)
+is_compiler_gcc_compatible ()
 
 # reconstruct the compiler command line; this does NOT include the
 # DEFINE_SYMBOL that is added for shared libraries. type is the TYPE
@@ -103,10 +104,23 @@ function (precompile_header
 	return ()
   endif (NOT header)
   
-  # only support precompiled headers if the compiler is gcc >= 3.4
-  get_gcc_version (${language} GCC_VERSION)
-  if (GCC_VERSION)
-	if (GCC_VERSION VERSION_EQUAL 3.4 OR GCC_VERSION VERSION_GREATER 3.4)
+  # only support precompiled headers if the compiler is gcc >= 3.4 or clang
+  if (CXX_COMPAT_GCC)
+	if (CMAKE_COMPILER_IS_GNUCXX)
+	  # genuine GCC; must test version
+	  get_gcc_version (${language} GCC_VERSION)
+	  if (GCC_VERSION VERSION_EQUAL 3.4 OR GCC_VERSION VERSION_GREATER 3.4)
+		set (_do_pch TRUE)
+	  else ()
+		set (_do_pch FALSE)
+	  endif ()
+	elseif (CMAKE_COMPILER_IS_CLANGXX)
+	  # any Clang version that is new enough to compile us can do this
+	  set (_do_pch TRUE)
+	else ()
+	  set (_do_pch FALSE)
+	endif ()
+	if (_do_pch)
 	  # command-line used to compile modules in this kind of target
 	  compiler_cmdline (${language} ${type} _cmd _args)
 
@@ -150,8 +164,8 @@ function (precompile_header
 	  # these flags need to be added to the target
 	  set (${target} "${_pch_file}" PARENT_SCOPE)
 	  set (${flags_name} "-Winvalid-pch -include ${_pch_dir}/${header}" PARENT_SCOPE)
-	endif (GCC_VERSION VERSION_EQUAL 3.4 OR GCC_VERSION VERSION_GREATER 3.4)
-  endif (GCC_VERSION)
+	endif ()
+  endif ()
   
 endfunction (precompile_header
   language type header tgt_kw target flgs_kw flags_name)

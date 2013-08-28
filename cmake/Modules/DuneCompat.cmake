@@ -17,7 +17,7 @@ if (CMAKE_GENERATOR MATCHES "Unix Makefiles")
   # amazingly, nothing depends on the generated Makefile, so this can be
   # run whenever in the build without trigging a compile of e.g. config.h
   add_custom_target (dune-compat ALL
-	COMMAND ${CMAKE_COMMAND} -DCMAKE_HOME_DIRECTORY=${CMAKE_HOME_DIRECTORY} -P ${PROJECT_SOURCE_DIR}/cmake/Scripts/DuneCompat2.cmake
+	COMMAND ${CMAKE_COMMAND} -DCMAKE_HOME_DIRECTORY=${CMAKE_HOME_DIRECTORY} -P ${OPM_MACROS_ROOT}/cmake/Scripts/DuneCompat2.cmake
 	COMMENT "Patching Makefile to be DUNE compatible"
 	)
 endif (CMAKE_GENERATOR MATCHES "Unix Makefiles")
