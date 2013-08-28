@@ -81,9 +81,7 @@ function (find_dune_version suite module)
 
   # if it is not available, it may make havoc having empty defines in the source
   # code later, so we bail out early
-  if (_dune_mod)
-	message (STATUS "Version of ${suite}-${module} from ${_dune_mod}")
-  else ()
+  if (NOT _dune_mod)
 	if (${suite}-${module}_FIND_REQUIRED)
 	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module}")
 	else ()
@@ -117,4 +115,7 @@ function (find_dune_version suite module)
 	set (${_SUITE}_${_MODULE}_VERSION_MINOR "${_minor}" PARENT_SCOPE)
 	set (${_SUITE}_${_MODULE}_VERSION_REVISION "${_revision}" PARENT_SCOPE)
   endif ()
+
+  # print the version number we detected in the configuration log
+  message (STATUS "Version ${_major}.${_minor}.${_revision} of ${suite}-${module} from ${_dune_mod}")  
 endfunction (find_dune_version suite module)
