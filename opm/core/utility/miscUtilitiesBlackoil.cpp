@@ -61,11 +61,11 @@ namespace Opm
     {
         const int num_cells = transport_src.size();
         if (props.numCells() != num_cells) {
-            THROW("Size of transport_src vector does not match number of cells in props.");
+            OPM_THROW(std::runtime_error, "Size of transport_src vector does not match number of cells in props.");
         }
         const int np = props.numPhases();
         if (int(state.saturation().size()) != num_cells*np) {
-            THROW("Sizes of state vectors do not match number of cells.");
+            OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
         }
         const std::vector<double>& press = state.pressure();
         const std::vector<double>& s = state.saturation();
@@ -301,7 +301,7 @@ namespace Opm
             const int nw = wells->number_of_wells;
             const int np = wells->number_of_phases;
             if (np != 2) {
-                THROW("computeTransportSource() requires a 2 phase case.");
+                OPM_THROW(std::runtime_error, "computeTransportSource() requires a 2 phase case.");
             }
             std::vector<double> A(np*np);
             for (int w = 0; w < nw; ++w) {

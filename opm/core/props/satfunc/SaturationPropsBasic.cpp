@@ -112,7 +112,7 @@ namespace Opm
     {
         int num_phases = param.getDefault("num_phases", 2);
         if (num_phases > 2 || num_phases < 1) {
-            THROW("SaturationPropsBasic::init() illegal num_phases: " << num_phases);
+            OPM_THROW(std::runtime_error, "SaturationPropsBasic::init() illegal num_phases: " << num_phases);
         }
         num_phases_ = num_phases;
         //std::string rpf = param.getDefault("relperm_func", std::string("Unset"));
@@ -120,14 +120,14 @@ namespace Opm
         if (rpf == "Constant") {
             relperm_func_ = Constant;
             if(num_phases!=1){
-                THROW("Constant relperm with more than one phase???");
+                OPM_THROW(std::runtime_error, "Constant relperm with more than one phase???");
             }
         } else if (rpf == "Linear") {
             relperm_func_ = Linear;
         } else if (rpf == "Quadratic") {
             relperm_func_ = Quadratic;
         } else {
-            THROW("SaturationPropsBasic::init() illegal relperm_func: " << rpf);
+            OPM_THROW(std::runtime_error, "SaturationPropsBasic::init() illegal relperm_func: " << rpf);
         }
     }
 
@@ -174,7 +174,7 @@ namespace Opm
                 break;
             }
         default:
-            THROW("SaturationPropsBasic::relperm() unhandled relperm func type: " << relperm_func_);
+            OPM_THROW(std::runtime_error, "SaturationPropsBasic::relperm() unhandled relperm func type: " << relperm_func_);
         }
     }
 

@@ -90,7 +90,7 @@ main(int argc, char** argv)
         std::istream_iterator<double> end;
         porevol.assign(beg, end); // Now contains poro.
         if (int(porevol.size()) != grid.number_of_cells) {
-            THROW("Size of porosity field differs from number of cells.");
+            OPM_THROW(std::runtime_error, "Size of porosity field differs from number of cells.");
         }
         for (int i = 0; i < grid.number_of_cells; ++i) {
             porevol[i] *= grid.cell_volumes[i];
@@ -105,7 +105,7 @@ main(int argc, char** argv)
         std::istream_iterator<double> end;
         flux.assign(beg, end);
         if (int(flux.size()) != grid.number_of_faces) {
-            THROW("Size of flux field differs from number of faces.");
+            OPM_THROW(std::runtime_error, "Size of flux field differs from number of faces.");
         }
     }
 
@@ -117,7 +117,7 @@ main(int argc, char** argv)
         std::istream_iterator<double> end;
         src.assign(beg, end);
         if (int(src.size()) != grid.number_of_cells) {
-            THROW("Size of source term field differs from number of cells.");
+            OPM_THROW(std::runtime_error, "Size of source term field differs from number of cells.");
         }
     }
 
@@ -161,7 +161,7 @@ main(int argc, char** argv)
             create_directories(fpath);
         }
         catch (...) {
-            THROW("Creating directories failed: " << fpath);
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         param.writeParam(output_dir + "/simulation.param");
     }

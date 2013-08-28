@@ -179,7 +179,7 @@ namespace Opm
         UnstructuredGrid* gg = const_cast<UnstructuredGrid*>(&grid_);
         int ok = ifs_tpfa_assemble(gg, &forces_, &trans_[0], &gpress_omegaweighted_[0], h_);
         if (!ok) {
-            THROW("Failed assembling pressure system.");
+            OPM_THROW(std::runtime_error, "Failed assembling pressure system.");
         }
 
         // Solve.
@@ -269,7 +269,7 @@ namespace Opm
         }
 
         if ((iter == maxiter_) && (res_norm > residual_tol_) && (inc_norm > change_tol_)) {
-            THROW("IncompTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
+            OPM_THROW(std::runtime_error, "IncompTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
         }
 
         std::cout << "Solved pressure in " << iter << " iterations." << std::endl;
@@ -287,7 +287,7 @@ namespace Opm
     void IncompTpfa::computeStaticData()
     {
         if (wells_ && (wells_->number_of_phases != props_.numPhases())) {
-            THROW("Inconsistent number of phases specified (wells vs. props): "
+            OPM_THROW(std::runtime_error, "Inconsistent number of phases specified (wells vs. props): "
                   << wells_->number_of_phases << " != " << props_.numPhases());
         }
         const int num_dofs = grid_.number_of_cells + (wells_ ? wells_->number_of_wells : 0);
@@ -406,7 +406,7 @@ namespace Opm
                                                        &porevol_[0], &rock_comp_[0], dt, pressures,
                                                        &initial_porevol_[0], h_);
         if (!ok) {
-            THROW("Failed assembling pressure system.");
+            OPM_THROW(std::runtime_error, "Failed assembling pressure system.");
         }
     }
 

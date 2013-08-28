@@ -313,7 +313,7 @@ namespace Opm
     {
         const int num_phases = props.numPhases();
         if (num_phases != 2) {
-            THROW("initStateTwophaseBasic(): currently handling only two-phase scenarios.");
+            OPM_THROW(std::runtime_error, "initStateTwophaseBasic(): currently handling only two-phase scenarios.");
         }
         state.init(grid, num_phases);
         const int num_cells = props.numCells();
@@ -409,7 +409,7 @@ namespace Opm
         // TODO: Refactor to exploit similarity with IncompProp* case.
         const int num_phases = props.numPhases();
         if (num_phases != 2) {
-            THROW("initStateTwophaseBasic(): currently handling only two-phase scenarios.");
+            OPM_THROW(std::runtime_error, "initStateTwophaseBasic(): currently handling only two-phase scenarios.");
         }
         state.init(grid, num_phases);
         const int num_cells = props.numCells();
@@ -475,21 +475,21 @@ namespace Opm
         const int num_phases = props.numPhases();
         const PhaseUsage pu = phaseUsageFromDeck(deck);
         if (num_phases != pu.num_phases) {
-            THROW("initStateFromDeck():  user specified property object with " << num_phases << " phases, "
+            OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
         }
         state.init(grid, num_phases);
         if (deck.hasField("EQUIL")) {
             if (num_phases != 2) {
-                THROW("initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
+                OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
             }
             if (pu.phase_used[BlackoilPhases::Vapour]) {
-                THROW("initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
+                OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
             }
             // Set saturations depending on oil-water contact.
             const EQUIL& equil= deck.getEQUIL();
             if (equil.equil.size() != 1) {
-                THROW("initStateFromDeck(): No region support yet.");
+                OPM_THROW(std::runtime_error, "initStateFromDeck(): No region support yet.");
             }
             const double woc = equil.equil[0].water_oil_contact_depth_;
             initWaterOilContact(grid, props, woc, WaterBelow, state);
@@ -507,7 +507,7 @@ namespace Opm
                 if (!pu.phase_used[BlackoilPhases::Aqua]) {
                     // oil-gas: we require SGAS
                     if (!deck.hasField("SGAS")) {
-                        THROW("initStateFromDeck(): missing SGAS keyword in 2-phase init");
+                        OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS keyword in 2-phase init");
                     }
                     const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
@@ -521,7 +521,7 @@ namespace Opm
                 } else {
                     // water-oil or water-gas: we require SWAT
                     if (!deck.hasField("SWAT")) {
-                        THROW("initStateFromDeck(): missing SWAT keyword in 2-phase init");
+                        OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SWAT keyword in 2-phase init");
                     }
                     const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
                     const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
@@ -536,7 +536,7 @@ namespace Opm
             } else if (num_phases == 3) {
                 const bool has_swat_sgas = deck.hasField("SWAT") && deck.hasField("SGAS");
                 if (!has_swat_sgas) {
-                    THROW("initStateFromDeck(): missing SGAS or SWAT keyword in 3-phase init.");
+                    OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS or SWAT keyword in 3-phase init.");
                 }
                 const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                 const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
@@ -551,10 +551,10 @@ namespace Opm
                     p[c] = p_deck[c_deck];
                  }
             } else {
-                THROW("initStateFromDeck(): init with SWAT etc. only available with 2 or 3 phases.");
+                OPM_THROW(std::runtime_error, "initStateFromDeck(): init with SWAT etc. only available with 2 or 3 phases.");
             }
         } else {
-            THROW("initStateFromDeck(): we must either have EQUIL, or PRESSURE and SWAT/SOIL/SGAS.");
+            OPM_THROW(std::runtime_error, "initStateFromDeck(): we must either have EQUIL, or PRESSURE and SWAT/SOIL/SGAS.");
         }
 
         // Finally, init face pressures.
@@ -619,7 +619,7 @@ namespace Opm
                 state.gasoilratio()[c] = rs_deck[c_deck];
             }
         } else {
-            THROW("Temporarily, we require the RS field.");
+            OPM_THROW(std::runtime_error, "Temporarily, we require the RS field.");
         }
     }
 

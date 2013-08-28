@@ -46,7 +46,7 @@ namespace Opm
 #elif HAVE_DUNE_ISTL
         solver_.reset(new LinearSolverIstl);
 #else
-        THROW("No linear solver available, you must have UMFPACK or dune-istl installed to use LinearSolverFactory.");
+        OPM_THROW(std::runtime_error, "No linear solver available, you must have UMFPACK or dune-istl installed to use LinearSolverFactory.");
 #endif
     }
 
@@ -71,11 +71,11 @@ namespace Opm
         }
 
         else {
-            THROW("Linear solver " << ls << " is unknown.");
+            OPM_THROW(std::runtime_error, "Linear solver " << ls << " is unknown.");
         }
 
         if (! solver_) {
-            THROW("Linear solver " << ls << " is not enabled in "
+            OPM_THROW(std::runtime_error, "Linear solver " << ls << " is not enabled in "
                   "this configuration.");
         }
     }

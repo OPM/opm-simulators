@@ -63,10 +63,10 @@ namespace Opm
           degree_(degree_arg)
     {
         if (grid_.dimensions > 3) {
-            THROW("Grid dimension must be 1, 2 or 3.");
+            OPM_THROW(std::runtime_error, "Grid dimension must be 1, 2 or 3.");
         }
         if (degree_ > 1 || degree_ < 0) {
-            THROW("Degree must be 0 or 1.");
+            OPM_THROW(std::runtime_error, "Degree must be 0 or 1.");
         }
     }
 
@@ -86,7 +86,7 @@ namespace Opm
         case 3:
             return (degree_ + 3)*(degree_ + 2)*(degree_ + 1)/6;
         default:
-            THROW("Dimensions must be 1, 2 or 3.");
+            OPM_THROW(std::runtime_error, "Dimensions must be 1, 2 or 3.");
         }
     }
 
@@ -121,7 +121,7 @@ namespace Opm
             f_x[0] = 1;
             break;
         default:
-            THROW("Maximum degree is 1 for now.");
+            OPM_THROW(std::runtime_error, "Maximum degree is 1 for now.");
         }
     }
 
@@ -194,10 +194,10 @@ namespace Opm
           degree_(degree_arg)
     {
         if (grid_.dimensions > 3) {
-            THROW("Grid dimension must be 1, 2 or 3.");
+            OPM_THROW(std::runtime_error, "Grid dimension must be 1, 2 or 3.");
         }
         if (degree_ > 1 || degree_ < 0) {
-            THROW("Degree must be 0 or 1.");
+            OPM_THROW(std::runtime_error, "Degree must be 0 or 1.");
         }
     }
 
@@ -217,7 +217,7 @@ namespace Opm
         case 3:
             return (degree_ + 1)*(degree_ + 1)*(degree_ + 1);
         default:
-            THROW("Dimensions must be 1, 2 or 3.");
+            OPM_THROW(std::runtime_error, "Dimensions must be 1, 2 or 3.");
         }
     }
 
@@ -258,7 +258,7 @@ namespace Opm
             }
             break;
         default:
-            THROW("Maximum degree is 1 for now.");
+            OPM_THROW(std::runtime_error, "Maximum degree is 1 for now.");
         }
     }
 
@@ -294,7 +294,7 @@ namespace Opm
                 }
                 break;
             default:
-                THROW("Maximum degree is 1 for now.");
+                OPM_THROW(std::runtime_error, "Maximum degree is 1 for now.");
             }
     }
 

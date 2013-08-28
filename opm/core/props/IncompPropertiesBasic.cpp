@@ -40,7 +40,7 @@ namespace Opm
         pvt_.init(param);
         satprops_.init(param);
         if (pvt_.numPhases() != satprops_.numPhases()) {
-            THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
+            OPM_THROW(std::runtime_error, "IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
         }
         viscosity_.resize(pvt_.numPhases());
@@ -60,7 +60,7 @@ namespace Opm
         pvt_.init(num_phases, rho, mu);
         satprops_.init(num_phases, relpermfunc);
         if (pvt_.numPhases() != satprops_.numPhases()) {
-            THROW("IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
+            OPM_THROW(std::runtime_error, "IncompPropertiesBasic::IncompPropertiesBasic() - Inconsistent number of phases in pvt data ("
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
         }
         viscosity_.resize(pvt_.numPhases());

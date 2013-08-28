@@ -38,7 +38,7 @@ namespace Opm
         ptr->init(deck, grid, 200);
 
         if (pvt_.numPhases() != satprops_->numPhases()) {
-            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+            OPM_THROW(std::runtime_error, "BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
         }
     }
@@ -59,7 +59,7 @@ namespace Opm
         const int sat_samples = param.getDefault("sat_tab_size", 200);
         std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
         if (deck.hasField("ENDSCALE") && threephase_model != "simple") {
-            THROW("Sorry, end point scaling currently available for the 'simple' model only.");
+            OPM_THROW(std::runtime_error, "Sorry, end point scaling currently available for the 'simple' model only.");
         }
         if (sat_samples > 1) {
             if (threephase_model == "stone2") {
@@ -78,7 +78,7 @@ namespace Opm
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
             } else {
-                THROW("Unknown threephase_model: " << threephase_model);
+                OPM_THROW(std::runtime_error, "Unknown threephase_model: " << threephase_model);
             }
         } else {
             if (threephase_model == "stone2") {
@@ -97,12 +97,12 @@ namespace Opm
                 satprops_.reset(ptr);
                 ptr->init(deck, grid, sat_samples);
             } else {
-                THROW("Unknown threephase_model: " << threephase_model);
+                OPM_THROW(std::runtime_error, "Unknown threephase_model: " << threephase_model);
             }
         }
 
         if (pvt_.numPhases() != satprops_->numPhases()) {
-            THROW("BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+            OPM_THROW(std::runtime_error, "BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
         }
     }
@@ -168,7 +168,7 @@ namespace Opm
                                                double* dmudp) const
     {
         if (dmudp) {
-            THROW("BlackoilPropertiesFromDeck::viscosity()  --  derivatives of viscosity not yet implemented.");
+            OPM_THROW(std::runtime_error, "BlackoilPropertiesFromDeck::viscosity()  --  derivatives of viscosity not yet implemented.");
         } else {
             pvt_.mu(n, p, z, mu);
         }

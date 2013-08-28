@@ -71,7 +71,7 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            THROW("Sources do not sum to zero: " << cum_src);
+            OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
         }
 #endif
         tof.resize(grid_.number_of_cells);
@@ -121,7 +121,7 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            THROW("Sources do not sum to zero: " << cum_src);
+            OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
         }
 #endif
         tof.resize(grid_.number_of_cells);
@@ -148,7 +148,7 @@ namespace Opm
         if (use_multidim_upwind_) {
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
-            THROW("Multidimensional upwind not yet implemented for tracer.");
+            OPM_THROW(std::runtime_error, "Multidimensional upwind not yet implemented for tracer.");
         }
         num_multicell_ = 0;
         max_size_multicell_ = 0;

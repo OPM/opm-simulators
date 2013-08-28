@@ -67,7 +67,7 @@ namespace Opm
 #endif
     {
         if (props.numPhases() != 2) {
-            THROW("Property object must have 2 phases");
+            OPM_THROW(std::runtime_error, "Property object must have 2 phases");
         }
         visc_ = props.viscosity();
         int num_cells = props.numCells();
@@ -409,7 +409,7 @@ namespace Opm
 
         // Done with iterations, check if we succeeded.
         if (update_count > 0) {
-            THROW("In solveMultiCell(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
                   << num_iters << " iterations. Remaining update count = " << update_count);
         }
         std::cout << "Solved " << num_cells << " cell multicell problem in "
@@ -445,7 +445,7 @@ namespace Opm
             //        << "    in cell " << max_change_cell << std::endl;
         } while (max_s_change > tol && ++num_iters < max_iters);
         if (max_s_change > tol) {
-            THROW("In solveMultiCell(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
                   << num_iters << " iterations. Delta s = " << max_s_change);
         }
         std::cout << "Solved " << num_cells << " cell multicell problem in "
@@ -629,7 +629,7 @@ namespace Opm
         } while (max_s_change > tol_ && ++num_iters < maxit_);
 
         if (max_s_change > tol_) {
-            THROW("In solveGravityColumn(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveGravityColumn(), we did not converge after "
                   << num_iters << " iterations. Delta s = " << max_s_change);
         }
         return num_iters + 1;

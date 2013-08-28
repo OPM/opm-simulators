@@ -52,7 +52,7 @@ namespace Opm
         // Extract input data.
         // Oil phase should be active.
         if (!phase_usage_.phase_used[Liquid]) {
-            THROW("SaturationPropsFromDeck::init()   --  oil phase must be active.");
+            OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  oil phase must be active.");
         }
 
         // Obtain SATNUM, if it exists, and create cell_to_func_.
@@ -77,19 +77,19 @@ namespace Opm
             const SWOF::table_t& swof_table = deck.getSWOF().swof_;
             num_tables = swof_table.size();
             if (num_tables < satfuncs_expected) {
-                THROW("Found " << num_tables << " SWOF tables, SATNUM specifies at least " << satfuncs_expected);
+                OPM_THROW(std::runtime_error, "Found " << num_tables << " SWOF tables, SATNUM specifies at least " << satfuncs_expected);
             }
         }
         if (phase_usage_.phase_used[Vapour]) {
             const SGOF::table_t& sgof_table = deck.getSGOF().sgof_;
             int num_sgof_tables = sgof_table.size();
             if (num_sgof_tables < satfuncs_expected) {
-                THROW("Found " << num_tables << " SGOF tables, SATNUM specifies at least " << satfuncs_expected);
+                OPM_THROW(std::runtime_error, "Found " << num_tables << " SGOF tables, SATNUM specifies at least " << satfuncs_expected);
             }
             if (num_tables == Uninitialized) {
                 num_tables = num_sgof_tables;
             } else if (num_tables != num_sgof_tables) {
-                THROW("Inconsistent number of tables in SWOF and SGOF.");
+                OPM_THROW(std::runtime_error, "Inconsistent number of tables in SWOF and SGOF.");
             }
         }
 
@@ -104,13 +104,13 @@ namespace Opm
         do_3pt_ = false;
         if (deck.hasField("ENDSCALE")) {
             if (!phase_usage_.phase_used[Aqua] || !phase_usage_.phase_used[Liquid] || phase_usage_.phase_used[Vapour]) {
-                THROW("Currently endpoint-scaling limited to oil-water systems without gas.");
+                OPM_THROW(std::runtime_error, "Currently endpoint-scaling limited to oil-water systems without gas.");
             }
             if (deck.getENDSCALE().dir_switch_ != std::string("NODIR")) {
-                THROW("SaturationPropsFromDeck::init()   --  ENDSCALE: Currently only 'NODIR' accepted.");
+                OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  ENDSCALE: Currently only 'NODIR' accepted.");
             }
             if (deck.getENDSCALE().revers_switch_ != std::string("REVERS")) {
-                THROW("SaturationPropsFromDeck::init()   --  ENDSCALE: Currently only 'REVERS' accepted.");
+                OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  ENDSCALE: Currently only 'REVERS' accepted.");
             }
             if (deck.hasField("SCALECRS")) {
                 if (deck.getSCALECRS().scalecrs_ == std::string("YES")) {
@@ -299,7 +299,7 @@ namespace Opm
                         scaleparam[i] = funcForCell(i).sowcr_;
                 }
             }else {
-                THROW(" -- unknown keyword: '" << keyword << "'");
+                OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
                 table = deck.getENPTVD().table_;
@@ -334,7 +334,7 @@ namespace Opm
                         scaleparam[i] = funcForCell(i).krorw_;
                 }
             } else {
-                THROW(" -- unknown keyword: '" << keyword << "'");
+                OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
                 table = deck.getENKRVD().table_;
@@ -449,7 +449,7 @@ namespace Opm
 
        // Evaluation of relperms
        if (dkrds) {
-           THROW("Relperm derivatives not yet available in combination with end point scaling ...");
+           OPM_THROW(std::runtime_error, "Relperm derivatives not yet available in combination with end point scaling ...");
            funcForCell(cell).evalKrDeriv(ss, kr, dkrds);
        } else {
            // Assume: sw_cr -> krw=0     sw_max -> krw=<max water relperm>

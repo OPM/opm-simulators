@@ -34,7 +34,7 @@ namespace Opm
         pvt_.init(deck);
         satprops_.init(deck, grid, 200);
         if (pvt_.numPhases() != satprops_.numPhases()) {
-            THROW("IncompPropertiesFromDeck::IncompPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
+            OPM_THROW(std::runtime_error, "IncompPropertiesFromDeck::IncompPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
         }
     }

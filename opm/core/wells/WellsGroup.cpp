@@ -144,7 +144,7 @@ namespace Opm
                 return tot_rate;
             }
         default:
-            THROW("No rate associated with production control mode" << mode);
+            OPM_THROW(std::runtime_error, "No rate associated with production control mode" << mode);
         }
     }
 
@@ -162,7 +162,7 @@ namespace Opm
             rates = res_rates;
             break;
         default:
-            THROW("No rate associated with injection control mode" << mode);
+            OPM_THROW(std::runtime_error, "No rate associated with injection control mode" << mode);
         }
         double tot_rate = 0.0;
         for (int phase = 0; phase < phaseUsage().num_phases; ++phase) {
@@ -191,10 +191,10 @@ namespace Opm
             target = prodSpec().liquid_max_rate_;
             break;
         case ProductionSpecification::GRUP:
-            THROW("Can't query target production rate for GRUP control keyword");
+            OPM_THROW(std::runtime_error, "Can't query target production rate for GRUP control keyword");
             break;
         default:
-            THROW("Unsupported control mode to query target " << mode);
+            OPM_THROW(std::runtime_error, "Unsupported control mode to query target " << mode);
             break;
         }
 
@@ -212,10 +212,10 @@ namespace Opm
             target = injSpec().reservoir_flow_max_rate_;
             break;
         case InjectionSpecification::GRUP:
-            THROW("Can't query target production rate for GRUP control keyword");
+            OPM_THROW(std::runtime_error, "Can't query target production rate for GRUP control keyword");
             break;
         default:
-            THROW("Unsupported control mode to query target " << mode);
+            OPM_THROW(std::runtime_error, "Unsupported control mode to query target " << mode);
             break;
         }
 
@@ -449,7 +449,7 @@ namespace Opm
         {
             const double my_guide_rate = productionGuideRate(true);
             if (my_guide_rate == 0) {
-                THROW("Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
+                OPM_THROW(std::runtime_error, "Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
             }
             for (size_t i = 0; i < children_.size(); ++i ) {
                 // Apply for all children.
@@ -470,7 +470,7 @@ namespace Opm
             }
             break;
         default:
-            THROW("Unhandled group production control type " << prod_mode);
+            OPM_THROW(std::runtime_error, "Unhandled group production control type " << prod_mode);
         }
     }
 
@@ -505,7 +505,7 @@ namespace Opm
             }
             return;
         default:
-            THROW("Unhandled group injection control mode " << inj_mode);
+            OPM_THROW(std::runtime_error, "Unhandled group injection control mode " << inj_mode);
         }
     }
 
@@ -802,7 +802,7 @@ namespace Opm
             wct = RESERVOIR_RATE;
             break;
         default:
-            THROW("Group injection control mode not handled: " << control_mode);
+            OPM_THROW(std::runtime_error, "Group injection control mode not handled: " << control_mode);
         }
 
         if (group_control_index_ < 0) {
@@ -879,21 +879,21 @@ namespace Opm
         case ProductionSpecification::ORAT:
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Liquid]) {
-                THROW("Oil phase not active and ORAT control specified.");
+                OPM_THROW(std::runtime_error, "Oil phase not active and ORAT control specified.");
             }
             distr[phase_pos[BlackoilPhases::Liquid]] = 1.0;
             break;
         case ProductionSpecification::WRAT:
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Aqua]) {
-                THROW("Water phase not active and WRAT control specified.");
+                OPM_THROW(std::runtime_error, "Water phase not active and WRAT control specified.");
             }
             distr[phase_pos[BlackoilPhases::Aqua]] = 1.0;
             break;
         case ProductionSpecification::GRAT:
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Vapour]) {
-                THROW("Gas phase not active and GRAT control specified.");
+                OPM_THROW(std::runtime_error, "Gas phase not active and GRAT control specified.");
             }
             distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
             break;
@@ -901,10 +901,10 @@ namespace Opm
             std::cout << "applying rate" << std::endl;
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Liquid]) {
-                THROW("Oil phase not active and LRAT control specified.");
+                OPM_THROW(std::runtime_error, "Oil phase not active and LRAT control specified.");
             }
             if (!phase_used[BlackoilPhases::Aqua]) {
-                THROW("Water phase not active and LRAT control specified.");
+                OPM_THROW(std::runtime_error, "Water phase not active and LRAT control specified.");
             }
             distr[phase_pos[BlackoilPhases::Liquid]] = 1.0;
             distr[phase_pos[BlackoilPhases::Aqua]] = 1.0;
@@ -914,7 +914,7 @@ namespace Opm
             wct = RESERVOIR_RATE;
             break;
         default:
-            THROW("Group production control mode not handled: " << control_mode);
+            OPM_THROW(std::runtime_error, "Group production control mode not handled: " << control_mode);
         }
 
         if (group_control_index_ < 0) {
@@ -980,7 +980,7 @@ namespace Opm
             if (type[0] == 'G') {
                 return InjectionSpecification::GAS;
             }
-            THROW("Unknown type " << type << ", could not convert to SurfaceComponent");
+            OPM_THROW(std::runtime_error, "Unknown type " << type << ", could not convert to SurfaceComponent");
         }
 
 
@@ -1000,7 +1000,7 @@ namespace Opm
             HANDLE_ICM(VREP);
             HANDLE_ICM(GRUP);
             HANDLE_ICM(FLD);
-            THROW("Unknown type " << type << ", could not convert to InjectionSpecification::ControlMode.");
+            OPM_THROW(std::runtime_error, "Unknown type " << type << ", could not convert to InjectionSpecification::ControlMode.");
         }
 #undef HANDLE_ICM
 
@@ -1023,7 +1023,7 @@ namespace Opm
             HANDLE_PCM(THP);
             HANDLE_PCM(GRUP);
             HANDLE_PCM(FLD);
-            THROW("Unknown type " << type << ", could not convert to ProductionSpecification::ControlMode.");
+            OPM_THROW(std::runtime_error, "Unknown type " << type << ", could not convert to ProductionSpecification::ControlMode.");
         }
 #undef HANDLE_PCM
 
@@ -1040,7 +1040,7 @@ namespace Opm
             }
 
 
-            THROW("Unknown type " << type << ", could not convert to ControlMode.");
+            OPM_THROW(std::runtime_error, "Unknown type " << type << ", could not convert to ControlMode.");
         }
     } // anonymous namespace
 

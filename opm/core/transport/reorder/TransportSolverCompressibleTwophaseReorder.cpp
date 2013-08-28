@@ -63,7 +63,7 @@ namespace Opm
           ja_downw_(grid.number_of_faces, -1)
     {
         if (props.numPhases() != 2) {
-            THROW("Property object must have 2 phases");
+            OPM_THROW(std::runtime_error, "Property object must have 2 phases");
         }
         int np = props.numPhases();
         int num_cells = props.numCells();
@@ -100,7 +100,7 @@ namespace Opm
 
         // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {
-            THROW("TransportModelCompressibleTwophase requires a property object without miscibility.");
+            OPM_THROW(std::runtime_error, "TransportModelCompressibleTwophase requires a property object without miscibility.");
         }
 
         std::vector<int> seq(grid_.number_of_cells);
@@ -296,7 +296,7 @@ namespace Opm
 
         // Done with iterations, check if we succeeded.
         if (update_count > 0) {
-            THROW("In solveMultiCell(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
                   << num_iters << " iterations. Remaining update count = " << update_count);
         }
         std::cout << "Solved " << num_cells << " cell multicell problem in "
@@ -498,7 +498,7 @@ namespace Opm
         } while (max_s_change > tol_ && ++num_iters < maxit_);
 
         if (max_s_change > tol_) {
-            THROW("In solveGravityColumn(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveGravityColumn(), we did not converge after "
                   << num_iters << " iterations. Delta s = " << max_s_change);
         }
         return num_iters + 1;

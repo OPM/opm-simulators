@@ -70,7 +70,7 @@ namespace Opm
             } else if (limiter_method_str == "MinUpwindAverage") {
                 limiter_method_ = MinUpwindAverage;
             } else {
-                THROW("Unknown limiter method: " << limiter_method_str);
+                OPM_THROW(std::runtime_error, "Unknown limiter method: " << limiter_method_str);
             }
             const std::string limiter_usage_str = param.getDefault<std::string>("limiter_usage", "DuringComputations");
             if (limiter_usage_str == "DuringComputations") {
@@ -80,7 +80,7 @@ namespace Opm
             } else if (limiter_usage_str == "AsSimultaneousPostProcess") {
                 limiter_usage_ = AsSimultaneousPostProcess;
             } else {
-                THROW("Unknown limiter usage spec: " << limiter_usage_str);
+                OPM_THROW(std::runtime_error, "Unknown limiter usage spec: " << limiter_usage_str);
             }
         }
         // A note about the use_cvi_ member variable:
@@ -112,7 +112,7 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            // THROW("Sources do not sum to zero: " << cum_src);
+            // OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
             MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
@@ -144,7 +144,7 @@ namespace Opm
             // Do nothing.
             break;
         default:
-            THROW("Unknown limiter usage choice: " << limiter_usage_);
+            OPM_THROW(std::runtime_error, "Unknown limiter usage choice: " << limiter_usage_);
         }
         if (num_multicell_ > 0) {
             std::cout << num_multicell_ << " multicell blocks with max size "
@@ -190,7 +190,7 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            // THROW("Sources do not sum to zero: " << cum_src);
+            // OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
             MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
@@ -240,7 +240,7 @@ namespace Opm
             // Do nothing.
             break;
         default:
-            THROW("Unknown limiter usage choice: " << limiter_usage_);
+            OPM_THROW(std::runtime_error, "Unknown limiter usage choice: " << limiter_usage_);
         }
         if (num_multicell_ > 0) {
             std::cout << num_multicell_ << " multicell blocks with max size "
@@ -467,7 +467,7 @@ namespace Opm
             for (int row = 0; row < n; ++row) {
                 std::cerr << "    " << orig_rhs_[row] << '\n';
             }
-            THROW("Lapack error: " << info << " encountered in cell " << cell);
+            OPM_THROW(std::runtime_error, "Lapack error: " << info << " encountered in cell " << cell);
         }
 
         // The solution ends up in rhs_, so we must copy it.
@@ -571,7 +571,7 @@ namespace Opm
             applyMinUpwindLimiter(cell, false, tof);
             break;
         default:
-            THROW("Limiter type not implemented: " << limiter_method_);
+            OPM_THROW(std::runtime_error, "Limiter type not implemented: " << limiter_method_);
         }
     }
 
@@ -581,7 +581,7 @@ namespace Opm
     void TofDiscGalReorder::applyMinUpwindLimiter(const int cell, const bool face_min, double* tof)
     {
         if (basis_func_->degree() != 1) {
-            THROW("This limiter only makes sense for our DG1 implementation.");
+            OPM_THROW(std::runtime_error, "This limiter only makes sense for our DG1 implementation.");
         }
 
         // Limiter principles:

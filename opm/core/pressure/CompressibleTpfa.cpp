@@ -83,7 +83,7 @@ namespace Opm
           singular_(false)
     {
         if (wells_ && (wells_->number_of_phases != props.numPhases())) {
-            THROW("Inconsistent number of phases specified (wells vs. props): "
+            OPM_THROW(std::runtime_error, "Inconsistent number of phases specified (wells vs. props): "
                   << wells_->number_of_phases << " != " << props.numPhases());
         }
         const int num_dofs = grid.number_of_cells + (wells ? wells->number_of_wells : 0);
@@ -179,7 +179,7 @@ namespace Opm
         }
 
         if ((iter == maxiter_) && (res_norm > residual_tol_) && (inc_norm > change_tol_)) {
-            THROW("CompressibleTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
+            OPM_THROW(std::runtime_error, "CompressibleTpfa::solve() failed to converge in " << maxiter_ << " iterations.");
         }
 
         std::cout << "Solved pressure in " << iter << " iterations." << std::endl;

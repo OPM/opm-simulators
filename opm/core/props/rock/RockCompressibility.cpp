@@ -45,7 +45,7 @@ namespace Opm
         if (deck.hasField("ROCKTAB")) {
             const table_t& rt = deck.getROCKTAB().rocktab_;
             if (rt.size() != 1) {
-                THROW("Can only handle a single region in ROCKTAB.");
+                OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
             }
             const int n = rt[0][0].size();
             p_.resize(n);

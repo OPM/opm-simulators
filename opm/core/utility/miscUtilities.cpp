@@ -106,7 +106,7 @@ namespace Opm
         const int num_cells = pv.size();
         const int np = s.size()/pv.size();
         if (int(s.size()) != num_cells*np) {
-            THROW("Sizes of s and pv vectors do not match.");
+            OPM_THROW(std::runtime_error, "Sizes of s and pv vectors do not match.");
         }
         std::fill(sat_vol, sat_vol + np, 0.0);
         for (int c = 0; c < num_cells; ++c) {
@@ -131,7 +131,7 @@ namespace Opm
         const int num_cells = pv.size();
         const int np = s.size()/pv.size();
         if (int(s.size()) != num_cells*np) {
-            THROW("Sizes of s and pv vectors do not match.");
+            OPM_THROW(std::runtime_error, "Sizes of s and pv vectors do not match.");
         }
         double tot_pv = 0.0;
         // Note that we abuse the output array to accumulate the
@@ -172,7 +172,7 @@ namespace Opm
         const int num_cells = src.size();
         const int np = s.size()/src.size();
         if (int(s.size()) != num_cells*np) {
-            THROW("Sizes of s and src vectors do not match.");
+            OPM_THROW(std::runtime_error, "Sizes of s and src vectors do not match.");
         }
         std::fill(injected, injected + np, 0.0);
         std::fill(produced, produced + np, 0.0);
@@ -366,7 +366,7 @@ namespace Opm
             const int nw = wells->number_of_wells;
             const int np = wells->number_of_phases;
             if (np != 2) {
-                THROW("computeTransportSource() requires a 2 phase case.");
+                OPM_THROW(std::runtime_error, "computeTransportSource() requires a 2 phase case.");
             }
             for (int w = 0; w < nw; ++w) {
                 const double* comp_frac = wells->comp_frac + np*w;
@@ -453,7 +453,7 @@ namespace Opm
     {
         const int np = wells.number_of_phases;
         if (np != 2) {
-            THROW("wellsToSrc() requires a 2 phase case.");
+            OPM_THROW(std::runtime_error, "wellsToSrc() requires a 2 phase case.");
         }
         src.resize(num_cells);
         for (int w = 0; w < wells.number_of_wells; ++w) {
@@ -462,14 +462,14 @@ namespace Opm
                 MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
             }
             if (wells.ctrls[w]->type[cur] != RESERVOIR_RATE) {
-                THROW("In wellsToSrc(): well is something other than RESERVOIR_RATE.");
+                OPM_THROW(std::runtime_error, "In wellsToSrc(): well is something other than RESERVOIR_RATE.");
             }
             if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
-                THROW("In wellsToSrc(): well has multiple perforations.");
+                OPM_THROW(std::runtime_error, "In wellsToSrc(): well has multiple perforations.");
             }
             for (int p = 0; p < np; ++p) {
                 if (wells.ctrls[w]->distr[np*cur + p] != 1.0) {
-                    THROW("In wellsToSrc(): well not controlled on total rate.");
+                    OPM_THROW(std::runtime_error, "In wellsToSrc(): well not controlled on total rate.");
                 }
             }
             double flow = wells.ctrls[w]->target[cur];
@@ -602,7 +602,7 @@ namespace Opm
         int np = props.numPhases();
         const int max_np = 3;
         if (np > max_np) {
-            THROW("WellReport for now assumes #phases <= " << max_np);
+            OPM_THROW(std::runtime_error, "WellReport for now assumes #phases <= " << max_np);
         }
         const double* visc = props.viscosity();
         std::vector<double> data_now;
@@ -661,7 +661,7 @@ namespace Opm
         int np = props.numPhases();
         const int max_np = 3;
         if (np > max_np) {
-            THROW("WellReport for now assumes #phases <= " << max_np);
+            OPM_THROW(std::runtime_error, "WellReport for now assumes #phases <= " << max_np);
         }
         std::vector<double> data_now;
         data_now.reserve(1 + 3*nw);

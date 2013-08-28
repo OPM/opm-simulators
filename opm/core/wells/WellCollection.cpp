@@ -53,7 +53,7 @@ namespace Opm
 
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
-            THROW("Trying to add child to group named " << parent_name << ", but it's not a group.");
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << parent_name << ", but it's not a group.");
         }
         parent_as_group->addChild(child);
 
@@ -104,7 +104,7 @@ namespace Opm
     {
         WellsGroupInterface* parent = findNode(parent_name);
         if (parent == NULL) {
-            THROW("Parent with name = " << parent_name << " not found.");
+            OPM_THROW(std::runtime_error, "Parent with name = " << parent_name << " not found.");
         }
         ASSERT(!parent->isLeafNode());
         static_cast<WellsGroup*>(parent)->addChild(child_node);
