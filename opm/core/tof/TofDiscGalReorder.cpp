@@ -28,9 +28,11 @@
 #include <opm/core/utility/VelocityInterpolation.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/blas_lapack.h>
+
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <iostream>
 
 namespace Opm
 {

@@ -40,6 +40,7 @@
 #include <dune/istl/paamg/kamg.hh>
 
 #include <stdexcept>
+#include <iostream>
 
 
 namespace Opm

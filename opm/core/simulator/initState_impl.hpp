@@ -30,6 +30,8 @@
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <iostream>
 #include <cmath>
 
 namespace Opm

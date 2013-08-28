@@ -26,6 +26,7 @@
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <iostream>
 #include <algorithm>
 #include <functional>
 #include <cmath>

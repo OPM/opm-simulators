@@ -19,10 +19,12 @@
 
 #include "config.h"
 #include <opm/core/wells/WellsGroup.hpp>
-#include <cmath>
-#include <memory>
 #include <opm/core/wells.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <cmath>
+#include <memory>
+#include <iostream>
 
 namespace Opm
 {

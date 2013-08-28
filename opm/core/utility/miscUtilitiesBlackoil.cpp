@@ -27,6 +27,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <iostream>
 #include <algorithm>
 #include <functional>
 #include <cmath>

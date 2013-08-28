@@ -28,6 +28,7 @@
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
+#include <iostream>
 #include <fstream>
 #include <iterator>
 #include <numeric>

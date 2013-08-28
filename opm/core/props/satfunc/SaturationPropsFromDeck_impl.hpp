@@ -26,6 +26,8 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/grid.h>
 
+#include <iostream>
+
 namespace Opm
 {
 

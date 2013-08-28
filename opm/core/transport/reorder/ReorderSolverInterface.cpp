@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <cassert>
+#include <iostream>
 
 
 void Opm::ReorderSolverInterface::reorderAndTransport(const UnstructuredGrid& grid, const double* darcyflux)

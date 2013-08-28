@@ -33,6 +33,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/wells.h>
+#include <iostream>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>

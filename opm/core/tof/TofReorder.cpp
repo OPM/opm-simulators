@@ -22,9 +22,11 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/SparseTable.hpp>
+
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <iostream>
 
 namespace Opm
 {
