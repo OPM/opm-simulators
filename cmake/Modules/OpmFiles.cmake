@@ -26,23 +26,29 @@ macro (opm_sources opm)
 	"^([^/]*)_test$"
 	)
 
-  # start out with defined, empty lists which will be specified externally
-  set (MAIN_SOURCE_FILES)
-  set (EXAMPLE_SOURCE_FILES)
-  set (TEST_SOURCE_FILES)
-  set (TEST_DATA_FILES)
-  set (PUBLIC_HEADER_FILES)
-  set (PROGRAM_SOURCE_FILES)
-
-  # read the list of components from this file; it should set the above
-  # lists (which are generic names)
-  include (${PROJECT_SOURCE_DIR}/CMakeLists_files.cmake)
+  # these are the lists that must be defined in CMakeLists_files
+  # - MAIN_SOURCE_FILES
+  # - EXAMPLE_SOURCE_FILES
+  # - TEST_SOURCE_FILES
+  # - TEST_DATA_FILES
+  # - PUBLIC_HEADER_FILES
+  # - PROGRAM_SOURCE_FILES
 
   # rename from "friendly" names to ones that fit the "almost-structural"
   # scheme used in the .cmake modules, converting them to absolute file
   # names in the process
   foreach (_file IN LISTS MAIN_SOURCE_FILES)
 	list (APPEND ${opm}_SOURCES ${PROJECT_SOURCE_DIR}/${_file})
+	# further classify into language if some other modules need to add props
+	if (_file MATCHES ".*\\.[cC][a-zA-Z]*$")
+	  if (_file MATCHES ".*\\.c$")
+		list (APPEND ${opm}_C_SOURCES ${PROJECT_SOURCE_DIR}/${_file})
+	  else (_file MATCHES ".*\\.c$")
+		list (APPEND ${opm}_CXX_SOURCES ${PROJECT_SOURCE_DIR}/${_file})
+	  endif (_file MATCHES ".*\\.c$")
+	elseif (_file MATCHES ".*\\.[fF][a-zA-Z]*$")
+	  list (APPEND ${opm}_Fortran_SOURCES ${PROJECT_SOURCE_DIR}/${_file})
+	endif (_file MATCHES ".*\\.[cC][a-zA-Z]*$")
   endforeach (_file)
   foreach (_file IN LISTS PUBLIC_HEADER_FILES)
 	list (APPEND ${opm}_HEADERS ${PROJECT_SOURCE_DIR}/${_file})
@@ -58,6 +64,9 @@ macro (opm_sources opm)
   endforeach (_file)
   foreach (_file IN LISTS PROGRAM_SOURCE_FILES)
 	list (APPEND examples_SOURCES_DIST ${PROJECT_SOURCE_DIR}/${_file})
+  endforeach (_file)
+  foreach (_file IN LISTS ATTIC_FILES)
+	list (APPEND attic_SOURCES ${PROJECT_SOURCE_DIR}/${_file})
   endforeach (_file)
 
   # identify pre-compile header; if the project is called opm-foobar,

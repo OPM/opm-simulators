@@ -1,8 +1,25 @@
 # - Default settings for the build
 
 include (UseCompVer)
+is_compiler_gcc_compatible ()
+include(TestCXXAcceptsFlag)
 
 macro (opm_defaults opm)
+  # if we are installing a development version (default when checking out of
+  # VCS), then remember which directories were used when configuring. package
+  # distribution should disable this option.
+  option (USE_RUNPATH "Embed original dependency paths in installed library" ON)
+  if (USE_RUNPATH)
+	if (CXX_COMPAT_GCC)
+	  check_cxx_accepts_flag ("-Wl,--enable-new-dtags" HAVE_RUNPATH)
+	  if (HAVE_RUNPATH)
+		list (APPEND ${opm}_LINKER_FLAGS "-Wl,--enable-new-dtags")
+	  endif (HAVE_RUNPATH)
+	endif ()
+	# set this to avoid CMake stripping it off again
+	set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  endif (USE_RUNPATH)
+
   # build release by default
   if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE "Release")
@@ -22,12 +39,7 @@ macro (opm_defaults opm)
   # precompile standard headers to speed up compilation
   # unfortunately, this functionality is buggy and tends to segfault at
   # least up to version 4.7.2, so it should be disabled by default there
-  get_gcc_version (CXX GCC_VERSION)
-  if (GCC_VERSION VERSION_LESS "4.7.2")
-	set (_precomp_def OFF)
-  else (GCC_VERSION VERSION_LESS "4.7.2")
-	set (_precomp_def ON)
-  endif (GCC_VERSION VERSION_LESS "4.7.2")
+  set (_precomp_def OFF)
   option (PRECOMPILE_HEADERS "Precompile common headers for speed." ${_precomp_def})
   mark_as_advanced (PRECOMPILE_HEADERS)
   if (NOT PRECOMPILE_HEADERS)

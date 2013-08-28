@@ -75,6 +75,14 @@ function (configure_vars obj syntax filename verb)
 	  set (_prev_verbatim TRUE)
 	  
 	else ("${_var}" MATCHES "^/[/*]")
+
+	  # write a CMake statements that warns if the value has changed
+	  if ("${syntax}" STREQUAL "CMAKE")
+		set (_db "\${") # to avoid parsing problems
+		file (APPEND "${filename}" "if (DEFINED ${_var} AND NOT \"${_db}${_var}}\" STREQUAL \"${${_var}}\")\n")
+		file (APPEND "${filename}" "\tmessage (WARNING \"Incompatible value \\\"${_db}${_var}}\\\" of variable \\\"${_var}\\\"\")\n")
+		file (APPEND "${filename}" "endif ()\n")
+	  endif ()
 	  
 	  # check for empty variable; variables that are explicitly set to false
 	  # is not included in this clause
@@ -85,21 +93,15 @@ function (configure_vars obj syntax filename verb)
 		  file (APPEND "${filename}" "/* #undef ${_var} */\n")
 		endif ("${syntax}" STREQUAL "CMAKE")
 	  else ((NOT DEFINED ${_var}) OR ("${${_var}}" STREQUAL ""))
-		
-		# integer variables (specifically 0 and 1) are written as they are,
-		# whereas everything else (including version numbers, which could
-		# be interpreted as floats) are quoted as strings
-		if (${_var} MATCHES "[0-9]+")
-		  set (_quoted "${${_var}}")
-		else (${_var} MATCHES "[0-9]+")
-		  set (_quoted "\"${${_var}}\"")
-		endif (${_var} MATCHES "[0-9]+")
-
 		# write to file using the correct syntax
 		if ("${syntax}" STREQUAL "CMAKE")
-		  file (APPEND "${filename}" "set (${_var} ${_quoted})\n")
+		  # escape backslash and double quote characters
+		  string (REPLACE "\\" "\\\\" _quoted "${${_var}}")
+		  string (REPLACE "\"" "\\\"" _quoted "${_quoted}")
+
+		  file (APPEND "${filename}" "set (${_var} \"${_quoted}\")\n")
 		else ("${syntax}" STREQUAL "CMAKE")
-		  file (APPEND "${filename}" "#define ${_var} ${_quoted}\n")
+		  file (APPEND "${filename}" "#define ${_var} ${${_var}}\n")
 		endif ("${syntax}" STREQUAL "CMAKE")
 		
 	  endif ((NOT DEFINED ${_var}) OR ("${${_var}}" STREQUAL ""))

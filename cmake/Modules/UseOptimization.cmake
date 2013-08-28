@@ -2,6 +2,8 @@
 
 include(TestCXXAcceptsFlag)
 include (AddOptions)
+include (UseCompVer)
+is_compiler_gcc_compatible ()
 
 # mapping from profile name (in CMAKE_BUILD_TYPE) to variable part
 set (_prof_DEBUG "Debug")
@@ -11,12 +13,13 @@ set (_prof_RELEASE "Release;RelWithDebInfo;MinSizeRel")
 # otherwise, turn them on. indicate to the code what we have done
 # so it can turn on assertions etc.
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CXX_COMPAT_GCC)
   # extra flags passed for optimization
   set (_opt_flags "")
 
   # link-time (a.k.a. global) optimizations
-  option (WHOLE_PROG_OPTIM "Whole program optimization (lto)" ON)
+  # disabled due to widespread bugs in the linker plugin
+  option (WHOLE_PROG_OPTIM "Whole program optimization (lto)" OFF)
   if (WHOLE_PROG_OPTIM)
 	check_cxx_accepts_flag ("-flto" HAVE_LINK_OPTS)
 	if (HAVE_LINK_OPTS)
@@ -43,7 +46,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   # use these options for release builds - full optimization
   add_options (ALL_LANGUAGES "${_prof_RELEASE}" ${_opt_rel} "-DNDEBUG" ${_opt_flags})
 
-else (CMAKE_COMPILER_IS_GNUCXX)
+else ()
   # default information from system
   foreach (lang IN ITEMS C CXX Fortran)
 	if (lang STREQUAL "Fortran")
@@ -58,4 +61,4 @@ else (CMAKE_COMPILER_IS_GNUCXX)
 	  endif (NOT CMAKE_${lang}_FLAGS_${profile})
 	endforeach (profile)
   endforeach (lang)
-endif (CMAKE_COMPILER_IS_GNUCXX)
+endif ()

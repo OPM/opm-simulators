@@ -141,7 +141,7 @@ function (configure_la name target)
   # assume that we are in cmake/Modules, and that the template have been
   # put in cmake/Templates. we cannot use CMAKE_CURRENT_LIST_DIR because
   # this is in a function, and we cannot know who's calling us
-  set (templ_dir "${PROJECT_SOURCE_DIR}/cmake/Templates")
+  set (templ_dir "${OPM_MACROS_ROOT}/cmake/Templates")
 
   
   # only write an .la if libtool is found; otherwise we have no use
