@@ -406,7 +406,7 @@ int main ()
             well_conditions_met = well_collection.conditionsMet(well_state.bhp(), well_resflowrates_phase, well_surflowrates_phase);
             ++well_iter;
             if (!well_conditions_met && well_iter == max_well_iterations) {
-                THROW("Conditions not met within " << max_well_iterations<< " iterations.");
+                OPM_THROW(std::runtime_error, "Conditions not met within " << max_well_iterations<< " iterations.");
             }
         }
         /// \internal[check well conditions]
