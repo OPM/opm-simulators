@@ -168,6 +168,7 @@ if (NOT EIGEN3_FOUND)
 
 	include_directories(${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
 	add_dependencies(opmautodiff Eigen3)
+	install(DIRECTORY ${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3 DESTINATION include)
 endif (NOT EIGEN3_FOUND)
 
 
