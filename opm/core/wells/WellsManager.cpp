@@ -249,7 +249,7 @@ namespace Opm
         keywords.push_back("COMPDAT");
 //      keywords.push_back("WELTARG");
         if (!deck.hasFields(keywords)) {
-            MESSAGE("Missing well keywords in deck, initializing no wells.");
+            OPM_MESSAGE("Missing well keywords in deck, initializing no wells.");
             return;
         }
         if (!(deck.hasField("WCONINJE") || deck.hasField("WCONPROD")) ) {
@@ -385,7 +385,7 @@ namespace Opm
                             double radius = 0.5*compdat.compdat[kw].diameter_;
                             if (radius <= 0.0) {
                                 radius = 0.5*unit::feet;
-                                MESSAGE("**** Warning: Well bore internal radius set to " << radius);
+                                OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                             }
                             std::array<double, 3> cubical = getCubeDim(grid, cell);
                             const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];

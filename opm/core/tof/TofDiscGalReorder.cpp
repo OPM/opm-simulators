@@ -113,7 +113,7 @@ namespace Opm
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
             // OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
-            MESSAGE("Warning: sources do not sum to zero: " << cum_src);
+            OPM_MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
         const int num_basis = basis_func_->numBasisFunc();
@@ -191,7 +191,7 @@ namespace Opm
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
             // OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
-            MESSAGE("Warning: sources do not sum to zero: " << cum_src);
+            OPM_MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
         const int num_basis = basis_func_->numBasisFunc();

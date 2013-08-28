@@ -459,7 +459,7 @@ namespace Opm
         for (int w = 0; w < wells.number_of_wells; ++w) {
             const int cur = wells.ctrls[w]->current;
             if (wells.ctrls[w]->num != 1) {
-                MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
+                OPM_MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
             }
             if (wells.ctrls[w]->type[cur] != RESERVOIR_RATE) {
                 OPM_THROW(std::runtime_error, "In wellsToSrc(): well is something other than RESERVOIR_RATE.");
