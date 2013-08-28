@@ -161,13 +161,13 @@ foreach (module IN LISTS SuiteSparse_MODULES)
   find_path (${MODULE}_INCLUDE_DIR
 	NAMES ${module}.h
 	PATHS ${SuiteSparse_SEARCH_PATH}
-	PATH_SUFFIXES "include" "include/suitesparse" "include/ufsparse"
+	PATH_SUFFIXES "include" "include/suitesparse" "include/ufsparse" "${MODULE}/Include"
 	${_no_default_path}
 	)
   find_library (${MODULE}_LIBRARY
 	NAMES ${module}
 	PATHS ${SuiteSparse_SEARCH_PATH}
-	PATH_SUFFIXES "lib/.libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
+	PATH_SUFFIXES "lib/.libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse" "${MODULE}/Lib"
 	${_no_default_path}
 	)
   # start out by including the module itself; other dependencies will be added later
@@ -265,12 +265,6 @@ if (SuiteSparse_LIBRARIES)
   list (REVERSE SuiteSparse_LIBRARIES)
 endif (SuiteSparse_LIBRARIES)
 
-# on MacOS X the libraries are in a framework directory and an option must be
-# added on the compile line to relate headers to that directory
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  list (APPEND SuiteSparse_DEFINITIONS "-framework Accelerate")
-endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  
 # print a message to indicate status of this package
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (SuiteSparse

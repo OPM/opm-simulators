@@ -17,17 +17,17 @@
 # include special
 if (CMAKE_VERSION VERSION_LESS "2.8.3")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.3")
-	list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/compat-2.8.3")
+	list (APPEND CMAKE_MODULE_PATH "${OPM_MACROS_ROOT}/cmake/Modules/compat-2.8.3")
 endif (CMAKE_VERSION VERSION_LESS "2.8.3")
 
 if (CMAKE_VERSION VERSION_LESS "2.8.5")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.5")
-	list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/compat-2.8.5")
+	list (APPEND CMAKE_MODULE_PATH "${OPM_MACROS_ROOT}/cmake/Modules/compat-2.8.5")
 endif (CMAKE_VERSION VERSION_LESS "2.8.5")	
 
 if (CMAKE_VERSION VERSION_LESS "2.8.7")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.7")
-	list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/compat-2.8.7")
+	list (APPEND CMAKE_MODULE_PATH "${OPM_MACROS_ROOT}/cmake/Modules/compat-2.8.7")
 endif (CMAKE_VERSION VERSION_LESS "2.8.7")
 
 # don't write default flags into the cache, preserve that for user set values
@@ -145,11 +145,16 @@ list (APPEND ${project}_CONFIG_VARS ${${project}_CONFIG_VAR})
 # write configuration variables to this file. note that it is a temporary.
 # _CONFIG_IMPL_VARS are defines that are only written to config.h internal
 # to this project; they are not exported to any installed files.
+# TESTING_CONFIG_VARS is what's required by the unit tests, and is therefore
+# added in an ad-hoc manner to avoid putting dependencies to it in the module
+# requirement file. (it should be added if there is .h code that needs it)
 message (STATUS "Writing config file \"${PROJECT_BINARY_DIR}/config.h\"...")
 set (CONFIG_H "${PROJECT_BINARY_DIR}/config.h.tmp")
 configure_vars (
 	FILE  CXX  ${CONFIG_H}
-	WRITE ${${project}_CONFIG_VARS} ${${project}_CONFIG_IMPL_VARS}
+	WRITE ${${project}_CONFIG_VARS}
+	      ${${project}_CONFIG_IMPL_VARS}
+	      ${TESTING_CONFIG_VARS}
 	)
 
 # call this hook to let it setup necessary conditions for Fortran support
@@ -179,6 +184,9 @@ opm_compile (${project})
 # installation target: copy the library together with debug and
 # configuration files to system directories
 include (OpmInstall)
+if (COMMAND install_hook)
+	install_hook ()
+endif (COMMAND install_hook)
 opm_install (${project})
 message (STATUS "This build defaults to installing in ${CMAKE_INSTALL_PREFIX}")
 

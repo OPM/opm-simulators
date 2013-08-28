@@ -3,8 +3,6 @@
 
 # defines that must be present in config.h for our headers
 set (opm-polymer_CONFIG_VAR
-	HAVE_DYNAMIC_BOOST_TEST
-	HAVE_ERT
 	)
 
 # dependencies

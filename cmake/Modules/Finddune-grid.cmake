@@ -21,7 +21,9 @@ find_opm_package (
   # we just include them to forward here in case anyone else does
   "CXX11Features REQUIRED;
   dune-common REQUIRED;
-  dune-geometry REQUIRED
+  dune-geometry REQUIRED;
+  MPI;
+  ALUGrid
   "
   # header to search for
   "dune/grid/onedgrid.hh"

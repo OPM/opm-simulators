@@ -3,13 +3,8 @@
 
 # defines that must be present in config.h for our headers
 set (opm-core_CONFIG_VAR
-	HAVE_AGMG
-	HAVE_DUNE_ISTL
-	HAVE_DYNAMIC_BOOST_TEST
 	HAVE_ERT
 	HAVE_SUITESPARSE_UMFPACK_H
-	HAVE_NULLPTR
-	HAVE_STATIC_ASSERT
 	)
 
 # dependencies
@@ -20,7 +15,7 @@ set (opm-core_DEPS
 	"CXX11Features REQUIRED"
 	# various runtime library enhancements
 	"Boost 1.39.0
-		COMPONENTS date_time filesystem system unit_test_framework signals REQUIRED"
+		COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
 	# matrix library
 	"BLAS REQUIRED"
 	"LAPACK REQUIRED"

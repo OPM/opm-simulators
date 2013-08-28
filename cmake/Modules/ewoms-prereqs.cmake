@@ -2,18 +2,24 @@
 # vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
 
 # defines that must be present in config.h for our headers
-set (opm-material_CONFIG_VAR
-	HAVE_MPI
+set (ewoms_CONFIG_VAR
+	HAVE_QUAD
 	HAVE_VALGRIND
 	)
 
 # dependencies
-set (opm-material_DEPS
-	# compile with C99 support if available
-	"C99"
+set (ewoms_DEPS
 	# compile with C++0x/11 support if available
 	"CXX11Features REQUIRED"
-	# DUNE dependency
+	# DUNE prerequisites
 	"dune-common REQUIRED"
+	"dune-localfunctions REQUIRED"
+	"dune-geometry REQUIRED"
+	"dune-grid REQUIRED"
 	"dune-istl REQUIRED"
+	"opm-material REQUIRED"
+	# valgrind client requests
+	"Valgrind"
+	# quadruple precision floating point calculations
+	"Quadmath"
 	)

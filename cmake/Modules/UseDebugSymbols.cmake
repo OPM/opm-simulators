@@ -29,10 +29,20 @@ if (CXX_COMPAT_GCC)
   # extracting the debug info is done by a separate utility in the GNU
   # toolchain. check that this is actually installed.
   message (STATUS "Looking for strip utility")
-  find_program (OBJCOPY
-	objcopy
-	${CYGWIN_INSTALL_PATH}/bin /usr/bin /usr/local/bin
-	)
+  if (APPLE)
+	# MacOS X has a duo of utilities; we need both
+	find_program (OBJCOPY strip)
+	find_program (DSYMUTIL dsymutil)
+	mark_as_advanced (DSYMUTIL)
+	if (NOT DSYMUTIL)
+	  set (OBJCOPY dsymutil-NOTFOUND)
+	endif (NOT DSYMUTIL)
+  else (APPLE)
+	find_program (OBJCOPY
+	  objcopy
+	  ${CYGWIN_INSTALL_PATH}/bin /usr/bin /usr/local/bin
+	  )
+  endif (APPLE)
   mark_as_advanced (OBJCOPY)
   if (OBJCOPY)
 	message (STATUS "Looking for strip utility - found")
@@ -71,28 +81,48 @@ function (strip_debug_symbols targets)
 	  # again)
 	  get_target_property (_full ${target} LOCATION)
 	  get_filename_component (_dir ${_full} PATH)
-	  get_filename_component (_name ${_full} NAME)
+	  if (NOT (("${_dir}" STREQUAL "") OR ("${_dir}" MATCHES ".*/$")))
+		set (_dir "${_dir}/")
+	  endif (NOT (("${_dir}" STREQUAL "") OR ("${_dir}" MATCHES ".*/$")))
+	  get_filename_component (_name ${_full} NAME_WE)
+	  get_filename_component (_ext ${_full} EXT)
 	  # only libraries have soversion property attached
 	  get_target_property (_target_soversion ${target} SOVERSION)
 	  get_target_property (_target_version ${target} VERSION)
 	  if (_target_soversion)
-		set (_target_file "${_full}.${_target_version}")
-		set (_target_file_name "${_name}.${_target_version}")
+		# MacOS X puts the version number before the extension
+		if (APPLE)
+		  set (_target_file_name "${_name}.${_target_version}${_ext}")
+		else (APPLE)
+		  set (_target_file_name "${_name}${_ext}.${_target_version}")
+		endif (APPLE)
 	  else (_target_soversion)
-		set (_target_file "${_full}")
-		set (_target_file_name "${_name}")
+		set (_target_file_name "${_name}${_ext}")
 	  endif (_target_soversion)
+	  set (_target_file "${_dir}${_target_file_name}")
 	  # do without generator expressions (which doesn't work everywhere)
-	  add_custom_command (TARGET ${target}
-		POST_BUILD
-		WORKING_DIRECTORY ${_dir}
-		COMMAND ${OBJCOPY} ARGS --only-keep-debug ${_target_file} ${_target_file}.debug
-		COMMAND ${OBJCOPY} ARGS ${_strip_args} ${_target_file}
-		COMMAND ${OBJCOPY} ARGS --add-gnu-debuglink=${_target_file_name}.debug ${_target_file}
-		VERBATIM
-		)
+	  if (APPLE)
+		set (_debug_ext ".dSYM")
+		add_custom_command (TARGET ${target}
+		  POST_BUILD
+		  WORKING_DIRECTORY ${_dir}
+		  COMMAND ${DSYMUTIL} ARGS --flat --out=${_target_file}${_debug_ext} ${_target_file}
+		  COMMAND ${OBJCOPY} ARGS -S ${_target_file}
+		  VERBATIM
+		  )
+	  else (APPLE)
+		set (_debug_ext ".debug")
+		add_custom_command (TARGET ${target}
+		  POST_BUILD
+		  WORKING_DIRECTORY ${_dir}
+		  COMMAND ${OBJCOPY} ARGS --only-keep-debug ${_target_file} ${_target_file}${_debug_ext}
+		  COMMAND ${OBJCOPY} ARGS ${_strip_args} ${_target_file}
+		  COMMAND ${OBJCOPY} ARGS --add-gnu-debuglink=${_target_file_name}${_debug_ext} ${_target_file}
+		  VERBATIM
+		  )
+	  endif (APPLE)
 	  # add this .debug file to the list
-	  file (RELATIVE_PATH _this_debug_file "${PROJECT_BINARY_DIR}" "${_target_file}.debug")
+	  file (RELATIVE_PATH _this_debug_file "${PROJECT_BINARY_DIR}" "${_target_file}${_debug_ext}")
 	  set (_debug_files ${_debug_files} ${_this_debug_file})
 	endforeach (target)
 	# if optional debug list was requested, then copy to output parameter
