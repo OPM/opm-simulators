@@ -129,6 +129,10 @@ use_samples=
 use_ninja=
 #use_underscoring=" -DUSE_UNDERSCORING=OFF"
 use_underscoring=
+# boost_root=""
+boost_root=
+boost_libdir=
+boost_opts=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -208,8 +212,16 @@ for OPT in "$@"; do
             mpi-prefix)
               rootvar="_MPI_PREFIX_PATH"
               ;;
+            boost)
+              # special handling of this package, see further below
+              boost_root="${pkgloc}"
+              rootvar=""
+              ;;
+            boost-libdir)
+              boost_libdir="${pkgloc}"
+              rootvar=""
+              ;;
             alugrid     |\
-            boost       |\
             eigen3      |\
             ert         |\
             metis       |\
@@ -414,6 +426,24 @@ done
 # remove all arguments processed by getopts
 shift $((OPTIND-1))
 
+# special handling of Boost: if --with-boost-libdir has been used,
+# then the --with-boost turns into specifying the header directory
+# and not the search root. this mirrors the functionality in the
+# Autotools ax_boost_base.m4. necessary because FindBoost in CMake
+# uses two different variables if you want to specify them separately
+if [ -n "${boost_libdir}" ]; then
+    boost_opts=" -DBOOST_LIBRARYDIR=\"${boost_libdir}\""
+    if [ -n "${boost_root}" ]; then
+        boost_opts="${boost_opts} -DBOOST_INCLUDEDIR=\"${boost_root}\""
+    fi
+else
+    if [ -n "${boost_root}" ]; then
+        boost_opts=" -DBOOST_ROOT=\"${boost_root}\""
+    else
+        boost_opts=""
+    fi
+fi
+
 # notice the usage of a quoted array: each element will be returned
 # even with spaces.
 for a in "${VARS[@]}"; do
@@ -456,7 +486,7 @@ done
 [ -n "${ENVVARS}" ] && ENVVARS="env ${ENVVARS} "
 
 # pass everything on to CMake
-CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts} ${FEATURES}"
+CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
