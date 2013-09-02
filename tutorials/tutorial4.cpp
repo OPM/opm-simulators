@@ -52,6 +52,7 @@
 /// \snippet tutorial4.cpp main
 /// \internal[main]
 int main ()
+try
 {
     /// \internal[main]
     /// \endinternal
@@ -436,6 +437,11 @@ int main ()
 
     destroy_wells(wells);
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+
 /// \internal[write output]
 /// \endinternal
 

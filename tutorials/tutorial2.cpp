@@ -50,6 +50,7 @@
 ///
 
 int main()
+try
 {
 
     /// \page tutorial2
@@ -194,6 +195,10 @@ int main()
     Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
     /// \internal [write output]
     /// \endinternal
+}
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
 }
 
 /// \page tutorial2

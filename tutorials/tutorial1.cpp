@@ -45,6 +45,7 @@
 // ----------------- Main program -----------------
 
 int main()
+try
 {
     /// \page tutorial1
     /// We set the number of blocks in each direction.
@@ -101,6 +102,10 @@ int main()
     Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
     /// \internal [write vtk]
     /// \endinternal
+}
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
 }
 
 /// \page tutorial1
