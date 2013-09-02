@@ -65,17 +65,49 @@ if (NOT EIGEN3_INCLUDE_DIR)
   # other version to be swapped in to substitute; if not specified, then
   # go search usual locations
   if (EIGEN3_ROOT)
+	# if we are given the path to a "build" tree (meaning somewhere Eigen3
+	# has been configured), then use the eigen3.pc file to figure out the
+	# name of the *real* root directory
+	if (EXISTS "${EIGEN3_ROOT}/CMakeCache.txt")
+	  # get the cache entry that tells use the source tree location
+	  set (_regex "Eigen_SOURCE_DIR:STATIC=\(.*\)")
+	  file (STRINGS
+		"${EIGEN3_ROOT}/CMakeCache.txt"
+		EIGEN3_SOURCE_TREE
+		REGEX "${_regex}"
+		)
+	  # trim away the key definition, be left with the value
+	  if (EIGEN3_SOURCE_TREE)
+		string (REGEX REPLACE
+		  "${_regex}"
+		  "\\1"
+		  EIGEN3_SOURCE_TREE
+		  "${EIGEN3_SOURCE_TREE}"
+		  )
+	  # if something doesn't look as expected, abort and search in _ROOT
+	  else ()
+		set (EIGEN3_SOURCE_TREE "${EIGEN3_ROOT}")
+	  endif ()
+	else ()
+	  set (EIGEN3_SOURCE_TREE "${EIGEN3_ROOT}")
+	endif ()
+
 	find_path (EIGEN3_INCLUDE_DIR
 	  NAMES signature_of_eigen3_matrix_library
-	  PATHS ${EIGEN3_ROOT}
+	  PATHS ${EIGEN3_SOURCE_TREE}
 	  PATH_SUFFIXES eigen3 include/eigen3 eigen include/eigen
 	  NO_DEFAULT_PATH
 	  )
   else (EIGEN3_ROOT)
-    find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
-      PATHS
-      ${CMAKE_INSTALL_PREFIX}/include
-      ${KDE4_INCLUDE_DIR}
+	# assume that if there is a sibling directory to our project which
+	# is called eigen3, there is a newer version located there, or that
+	# it may have been checked out next to the build directory
+	find_path(EIGEN3_INCLUDE_DIR
+	  NAMES signature_of_eigen3_matrix_library
+	  HINTS ${CMAKE_SOURCE_DIR}/../
+	        ${PROJECT_SOURCE_DIR}/../
+	        ${CMAKE_INSTALL_PREFIX}/include
+	        ${KDE4_INCLUDE_DIR}
       PATH_SUFFIXES eigen3 eigen
     )
   endif (EIGEN3_ROOT)
