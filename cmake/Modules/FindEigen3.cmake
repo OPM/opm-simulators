@@ -99,10 +99,15 @@ if (NOT EIGEN3_INCLUDE_DIR)
 	  NO_DEFAULT_PATH
 	  )
   else (EIGEN3_ROOT)
-    find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
-      PATHS
-      ${CMAKE_INSTALL_PREFIX}/include
-      ${KDE4_INCLUDE_DIR}
+	# assume that if there is a sibling directory to our project which
+	# is called eigen3, there is a newer version located there, or that
+	# it may have been checked out next to the build directory
+	find_path(EIGEN3_INCLUDE_DIR
+	  NAMES signature_of_eigen3_matrix_library
+	  HINTS ${CMAKE_SOURCE_DIR}/../
+	        ${PROJECT_SOURCE_DIR}/../
+	        ${CMAKE_INSTALL_PREFIX}/include
+	        ${KDE4_INCLUDE_DIR}
       PATH_SUFFIXES eigen3 eigen
     )
   endif (EIGEN3_ROOT)
