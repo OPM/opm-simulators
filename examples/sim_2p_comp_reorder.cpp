@@ -70,6 +70,7 @@ namespace
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
+try
 {
     using namespace Opm;
 
@@ -281,4 +282,8 @@ main(int argc, char** argv)
         rep.reportParam(tot_os);
     }
 
+}
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
 }
