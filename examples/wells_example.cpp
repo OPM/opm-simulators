@@ -20,8 +20,8 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 int main(int argc, char** argv)
+try
 {
-
     using namespace Opm::parameter;
     using namespace Opm;
     ParameterGroup parameters(argc, argv, false);
@@ -130,4 +130,7 @@ int main(int argc, char** argv)
 #endif
     return 0;
 }
-
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
