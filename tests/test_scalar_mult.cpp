@@ -63,3 +63,5 @@ BOOST_AUTO_TEST_CASE(ScalarMultiplication)
     BOOST_CHECK_EQUAL( x3.value().cwiseNotEqual( y3.value() ).count(), 0 );
 }
 
+
+

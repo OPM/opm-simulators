@@ -31,6 +31,7 @@ BOOST_AUTO_TEST_CASE(Initialisation)
 }
 
 
+
 BOOST_AUTO_TEST_CASE(Addition)
 {
     typedef AutoDiff::Forward<double> AdFW;

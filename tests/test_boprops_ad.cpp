@@ -83,6 +83,7 @@ BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
 }
 
 
+
 BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 {
     Opm::BlackoilPropsAd boprops_ad(props);

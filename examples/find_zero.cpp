@@ -92,6 +92,7 @@ public:
 
 
 int main()
+try
 {
     int iter = 0;
     const double atol = 1.0e-13;
@@ -102,3 +103,8 @@ int main()
               << "   using " << iter << " iterations." << '\n';
     std::cout << " f(x) = " << Func()(soln) << '\n';
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+

@@ -72,6 +72,7 @@ namespace
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
+try
 {
     using namespace Opm;
 
@@ -302,3 +303,8 @@ main(int argc, char** argv)
     }
 
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+
