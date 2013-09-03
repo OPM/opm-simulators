@@ -817,7 +817,7 @@ namespace Opm
 
 
         if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
-            MESSAGE("Newton for single cell did not work in cell number " << cell);
+            OPM_MESSAGE("Newton for single cell did not work in cell number " << cell);
             solveSingleCellBracketing(cell);
         } else {
             scToc(x, x_c);
@@ -963,7 +963,7 @@ namespace Opm
         }
 
         if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
-            MESSAGE("Newton for single cell did not work in cell number " << cell);
+            OPM_MESSAGE("Newton for single cell did not work in cell number " << cell);
             solveSingleCellBracketing(cell);
         } else {
             concentration_[cell] = x[1];

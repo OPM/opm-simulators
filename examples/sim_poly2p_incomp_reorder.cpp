@@ -278,7 +278,7 @@ try
         const bool use_wpolymer = deck->hasField("WPOLYMER");
         if (use_wpolymer) {
             if (param.has("poly_start_days")) {
-                MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
+                OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
                         "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
             }
         }
