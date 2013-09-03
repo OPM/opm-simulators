@@ -37,6 +37,8 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <fstream>
+#include <iostream>
+
 
 struct SetupSimple {
     SetupSimple()

@@ -41,6 +41,7 @@
 #include <opm/core/wells.h>
 
 #include <algorithm>
+#include <iostream>
 
 
 

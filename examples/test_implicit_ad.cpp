@@ -40,9 +40,11 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
 
-#include <algorithm>
-
 #include <boost/shared_ptr.hpp>
+
+#include <algorithm>
+#include <iostream>
+
 
 namespace {
     boost::shared_ptr<Wells>

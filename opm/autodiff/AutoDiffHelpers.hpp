@@ -24,6 +24,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
+#include <iostream>
+
 // -------------------- class HelperOps --------------------
 
 /// Contains vectors and sparse matrices that represent subsets or

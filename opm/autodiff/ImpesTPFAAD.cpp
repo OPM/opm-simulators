@@ -26,6 +26,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/wells.h>
 
+#include <iostream>
 #include <iomanip>
 
 
