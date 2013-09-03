@@ -100,7 +100,7 @@ namespace {
         const int nperf = wells.well_connpos[nw];
         const int dim = grid.dimensions;
         V wdp = V::Zero(nperf,1);
-        ASSERT(wdp.size() == rho.size());
+        assert(wdp.size() == rho.size());
 
         // Main loop, iterate over all perforations,
         // using the following formula:
@@ -165,7 +165,7 @@ namespace Opm {
         computeExplicitData(dt, state, well_state);
         // Compute relperms once and for all (since saturations are explicit).
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
-        ASSERT(np == 2);
+        assert(np == 2);
         kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
         // Compute relperms for wells. This must be revisited for crossflow.
         const int nw = wells_.number_of_wells;
@@ -235,7 +235,7 @@ namespace Opm {
 
         // Compute relperms.
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
-        ASSERT(np == 2);
+        assert(np == 2);
         kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
 
         // Compute relperms for wells. This must be revisited for crossflow.
@@ -256,7 +256,7 @@ namespace Opm {
         if (g) {
             // Guard against gravity in anything but last dimension.
             for (int dd = 0; dd < dim - 1; ++dd) {
-                ASSERT(g[dd] == 0.0);
+                assert(g[dd] == 0.0);
             }
         }
         V cell_rho_total = V::Zero(nc,1);

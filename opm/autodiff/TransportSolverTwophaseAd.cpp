@@ -186,7 +186,7 @@ namespace Opm
         typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DynArr;
         const V z = Eigen::Map<DynArr>(grid_.cell_centroids, nc, grid_.dimensions).rightCols<1>();
         const V ndz = (ops_.ngrad * z.matrix()).array();
-        ASSERT(num_internal == ndp.size());
+        assert(num_internal == ndp.size());
         const double* density = props_.density();
         const V dhw = ndp - ndz*(gravity_*density[0]);
         const V dho = ndp - ndz*(gravity_*density[1]);
@@ -228,7 +228,7 @@ namespace Opm
 
             // Solve linear system.
             Eigen::SparseMatrix<double, Eigen::RowMajor> smatr = transport_residual.derivative()[0];
-            ASSERT(smatr.isCompressed());
+            assert(smatr.isCompressed());
             V ds(nc);
             LinearSolverInterface::LinearSolverReport rep
                 = linsolver_.solve(nc, smatr.nonZeros(),

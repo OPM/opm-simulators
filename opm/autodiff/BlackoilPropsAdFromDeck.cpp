@@ -198,7 +198,7 @@ namespace Opm
             THROW("Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.size() == n);
+        assert(pw.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
@@ -222,7 +222,7 @@ namespace Opm
             THROW("Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
@@ -243,7 +243,7 @@ namespace Opm
             THROW("Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.size() == n);
+        assert(pg.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
@@ -265,7 +265,7 @@ namespace Opm
             THROW("Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.size() == n);
+        assert(pw.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
@@ -295,7 +295,7 @@ namespace Opm
             THROW("Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
@@ -324,7 +324,7 @@ namespace Opm
             THROW("Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.value().size() == n);
+        assert(pg.value().size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
@@ -371,7 +371,7 @@ namespace Opm
             THROW("Cannot call bWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.size() == n);
+        assert(pw.size() == n);
 
         V b(n);
         V dbdp(n);
@@ -397,7 +397,7 @@ namespace Opm
             THROW("Cannot call bOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
 
         V b(n);
         V dbdp(n);
@@ -420,7 +420,7 @@ namespace Opm
             THROW("Cannot call bGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.size() == n);
+        assert(pg.size() == n);
 
         V b(n);
         V dbdp(n);
@@ -444,7 +444,7 @@ namespace Opm
             THROW("Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.size() == n);
+        assert(pw.size() == n);
 
         V b(n);
         V dbdp(n);
@@ -476,7 +476,7 @@ namespace Opm
             THROW("Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
 
         V b(n);
         V dbdp(n);
@@ -506,7 +506,7 @@ namespace Opm
             THROW("Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.size() == n);
+        assert(pg.size() == n);
 
         V b(n);
         V dbdp(n);
@@ -540,7 +540,7 @@ namespace Opm
             THROW("Cannot call rsMax(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
         props_[Oil]->rbub(n, po.data(), rbub.data(), drbubdp.data());
@@ -558,7 +558,7 @@ namespace Opm
             THROW("Cannot call rsMax(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
         props_[Oil]->rbub(n, po.value().data(), rbub.data(), drbubdp.data());
@@ -589,15 +589,15 @@ namespace Opm
         const int np = numPhases();
         Block s_all(n, np);
         if (phase_usage_.phase_used[Water]) {
-            ASSERT(sw.size() == n);
+            assert(sw.size() == n);
             s_all.col(phase_usage_.phase_pos[Water]) = sw;
         }
         if (phase_usage_.phase_used[Oil]) {
-            ASSERT(so.size() == n);
+            assert(so.size() == n);
             s_all.col(phase_usage_.phase_pos[Oil]) = so;
         }
         if (phase_usage_.phase_used[Gas]) {
-            ASSERT(sg.size() == n);
+            assert(sg.size() == n);
             s_all.col(phase_usage_.phase_pos[Gas]) = sg;
         }
         Block kr(n, np);
@@ -630,17 +630,17 @@ namespace Opm
         const int np = numPhases();
         Block s_all(n, np);
         if (phase_usage_.phase_used[Water]) {
-            ASSERT(sw.value().size() == n);
+            assert(sw.value().size() == n);
             s_all.col(phase_usage_.phase_pos[Water]) = sw.value();
         }
         if (phase_usage_.phase_used[Oil]) {
-            ASSERT(so.value().size() == n);
+            assert(so.value().size() == n);
             s_all.col(phase_usage_.phase_pos[Oil]) = so.value();
         } else {
             THROW("BlackoilPropsAdFromDeck::relperm() assumes oil phase is active.");
         }
         if (phase_usage_.phase_used[Gas]) {
-            ASSERT(sg.value().size() == n);
+            assert(sg.value().size() == n);
             s_all.col(phase_usage_.phase_pos[Gas]) = sg.value();
         }
         Block kr(n, np);
