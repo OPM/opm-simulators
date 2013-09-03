@@ -230,7 +230,7 @@ try
         create_directories(fpath);
       }
       catch (...) {
-        THROW("Creating directories failed: " << fpath);
+        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
       }
       param.writeParam(output_dir + "/simulation.param");
     }
@@ -291,7 +291,7 @@ try
                 simtimer.init(*deck);
             } else {
                 if (epoch != 0) {
-                    THROW("No TSTEP in deck for epoch " << epoch);
+                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
                 }
                 simtimer.init(param);
             }
@@ -308,7 +308,7 @@ try
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
-                    THROW("Cannot control polymer injection via WPOLYMER without wells.");
+                    OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
                 polymer_inflow.reset(new PolymerInflowFromDeck(*deck, *wells.c_wells(), props->numCells()));
             } else {

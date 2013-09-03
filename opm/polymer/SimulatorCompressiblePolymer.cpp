@@ -213,7 +213,7 @@ namespace Opm
                 create_directories(fpath);
             }
             catch (...) {
-                THROW("Creating directories failed: " << fpath);
+                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
             }
             output_interval_ = param.getDefault("output_interval", 1);
         }
@@ -230,7 +230,7 @@ namespace Opm
         } else if (method_string == "Newton") {
             method = Opm::TransportSolverTwophaseCompressiblePolymer::Newton;
         } else {
-            THROW("Unknown method: " << method_string);
+            OPM_THROW(std::runtime_error, "Unknown method: " << method_string);
         }
         tsolver_.setPreferredMethod(method);
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
@@ -367,7 +367,7 @@ namespace Opm
                     well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
                     ++well_control_iteration;
                     if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
-                        THROW("Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
+                        OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
                     }
                     if (!well_control_passed) {
                         std::cout << "Well controls not passed, solving again." << std::endl;
@@ -539,12 +539,12 @@ namespace Opm
                 create_directories(fpath);
             }
             catch (...) {
-                THROW("Creating directories failed: " << fpath);
+                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
             }
             vtkfilename << "/output-" << std::setw(5) << std::setfill('0') << step << ".vtu";
             std::ofstream vtkfile(vtkfilename.str().c_str());
             if (!vtkfile) {
-                THROW("Failed to open " << vtkfilename.str());
+                OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
             }
             Opm::DataMap dm;
             dm["saturation"] = &state.saturation();
@@ -582,12 +582,12 @@ namespace Opm
                     create_directories(fpath);
                 }
                 catch (...) {
-                    THROW("Creating directories failed: " << fpath);
+                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
                 }
                 fname << "/" << std::setw(5) << std::setfill('0') << step << ".txt";
                 std::ofstream file(fname.str().c_str());
                 if (!file) {
-                    THROW("Failed to open " << fname.str());
+                    OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
                 }
                 const std::vector<double>& d = *(it->second);
                 std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
@@ -601,7 +601,7 @@ namespace Opm
             std::string fname = output_dir  + "/watercut.txt";
             std::ofstream os(fname.c_str());
             if (!os) {
-                THROW("Failed to open " << fname);
+                OPM_THROW(std::runtime_error, "Failed to open " << fname);
             }
             watercut.write(os);
         }
@@ -614,7 +614,7 @@ namespace Opm
             std::string fname = output_dir  + "/wellreport.txt";
             std::ofstream os(fname.c_str());
             if (!os) {
-                THROW("Failed to open " << fname);
+                OPM_THROW(std::runtime_error, "Failed to open " << fname);
             }
             wellreport.write(os);
         }

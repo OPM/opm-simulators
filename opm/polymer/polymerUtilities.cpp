@@ -110,7 +110,7 @@ namespace Opm
 	int num_cells = cells.size();
 	int num_phases = props.numPhases();
         if (num_phases != 2) {
-            THROW("computeFractionalFlow() assumes 2 phases.");
+            OPM_THROW(std::runtime_error, "computeFractionalFlow() assumes 2 phases.");
         }
 	fractional_flows.resize(num_cells*num_phases);
 	assert(int(s.size()) == num_cells*num_phases);
@@ -150,7 +150,7 @@ namespace Opm
 	int num_cells = cells.size();
 	int num_phases = props.numPhases();
         if (num_phases != 2) {
-            THROW("computeFractionalFlow() assumes 2 phases.");
+            OPM_THROW(std::runtime_error, "computeFractionalFlow() assumes 2 phases.");
         }
 	fractional_flows.resize(num_cells*num_phases);
 	assert(int(s.size()) == num_cells*num_phases);
@@ -201,11 +201,11 @@ namespace Opm
 
         const int num_cells = transport_src.size();
         if (props.numCells() != num_cells) {
-            THROW("Size of transport_src vector does not match number of cells in props.");
+            OPM_THROW(std::runtime_error, "Size of transport_src vector does not match number of cells in props.");
         }
         const int np = props.numPhases();
         if (int(state.saturation().size()) != num_cells*np) {
-            THROW("Sizes of state vectors do not match number of cells.");
+            OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
         }
         const std::vector<double>& s = state.saturation();
         const std::vector<double>& c = state.concentration();
@@ -269,11 +269,11 @@ namespace Opm
     {
         const int num_cells = transport_src.size();
         if (props.numCells() != num_cells) {
-            THROW("Size of transport_src vector does not match number of cells in props.");
+            OPM_THROW(std::runtime_error, "Size of transport_src vector does not match number of cells in props.");
         }
         const int np = props.numPhases();
         if (int(state.saturation().size()) != num_cells*np) {
-            THROW("Sizes of state vectors do not match number of cells.");
+            OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
         }
         const std::vector<double>& press = state.pressure();
         const std::vector<double>& s = state.saturation();
@@ -344,7 +344,7 @@ namespace Opm
 	const int num_cells = pv.size();
 	const int np = s.size()/pv.size();
 	if (int(s.size()) != num_cells*np) {
-	    THROW("Sizes of s and pv vectors do not match.");
+	    OPM_THROW(std::runtime_error, "Sizes of s and pv vectors do not match.");
 	}
         double polymass = 0.0;
 	for (int cell = 0; cell < num_cells; ++cell) {

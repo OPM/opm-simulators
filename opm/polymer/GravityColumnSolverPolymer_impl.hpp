@@ -217,7 +217,7 @@ namespace Opm
 	    ++iter;
 	}
 	if (max_delta >= tol_) {
-	    THROW("Failed to converge!");
+	    OPM_THROW(std::runtime_error, "Failed to converge!");
 	}
 	// Finalize.
 	// fmodel_.finishIteration(); //
@@ -328,7 +328,7 @@ namespace Opm
             std::cerr << "Failed column cells: ";
             std::copy(column_cells.begin(), column_cells.end(), std::ostream_iterator<int>(std::cerr, " "));
             std::cerr << "\n";
-	    THROW("Lapack reported error in dgtsv: " << info);
+	    OPM_THROW(std::runtime_error, "Lapack reported error in dgtsv: " << info);
 	}
 	for (int ci = 0; ci < col_size; ++ci) {
 	    sol_vec[2*column_cells[ci] + 0] = -rhs[2*ci + 0];

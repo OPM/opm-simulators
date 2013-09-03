@@ -85,7 +85,7 @@ namespace Opm
                 }
             }
             if (wix == wells.number_of_wells) {
-                THROW("Could not find a match for well " << wpl[i].well_ << " from WPOLYMER.");
+                OPM_THROW(std::runtime_error, "Could not find a match for well " << wpl[i].well_ << " from WPOLYMER.");
             }
             for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
                 const int perf_cell = wells.well_cells[j];

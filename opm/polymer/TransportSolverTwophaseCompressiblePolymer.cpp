@@ -185,7 +185,7 @@ namespace Opm
         const int np = props.numPhases();
         const int num_cells = grid.number_of_cells;
         if (props.numPhases() != 2) {
-            THROW("Property object must have 2 phases");
+            OPM_THROW(std::runtime_error, "Property object must have 2 phases");
         }
         visc_.resize(np*num_cells);
         A_.resize(np*np*num_cells);
@@ -243,7 +243,7 @@ namespace Opm
 
         // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {
-            THROW("TransportCompressibleSolverTwophaseCompressibleTwophase requires a property object without miscibility.");
+            OPM_THROW(std::runtime_error, "TransportCompressibleSolverTwophaseCompressibleTwophase requires a property object without miscibility.");
         }
         std::vector<int> seq(grid_.number_of_cells);
         std::vector<int> comp(grid_.number_of_cells + 1);
@@ -635,7 +635,7 @@ namespace Opm
             solveSingleCellGradient(cell);
             break;
         default:
-            THROW("Unknown method " << method_);
+            OPM_THROW(std::runtime_error, "Unknown method " << method_);
         }
     }
 
@@ -1021,11 +1021,11 @@ namespace Opm
             //        << "    in cell " << max_change_cell << std::endl;
         } while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
         if (max_s_change > tol_) {
-            THROW("In solveMultiCell(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
                   << num_iters << " iterations. Delta s = " << max_s_change);
         }
         if (max_c_change > tol_) {
-            THROW("In solveMultiCell(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
                   << num_iters << " iterations. Delta c = " << max_c_change);
         }
         // std::cout << "Solved " << num_cells << " cell multicell problem in "
@@ -1356,7 +1356,7 @@ namespace Opm
         } while (max_sc_change > tol_ && ++num_iters < maxit_);
 
         if (max_sc_change > tol_) {
-            THROW("In solveGravityColumn(), we did not converge after "
+            OPM_THROW(std::runtime_error, "In solveGravityColumn(), we did not converge after "
                   << num_iters << " iterations. Delta s = " << max_sc_change);
         }
         return num_iters + 1;
@@ -1501,7 +1501,7 @@ namespace
         } else if (t1_exists) {
             t_out_ = t1;
         } else {
-            THROW("Direction illegal: is a zero vector.");
+            OPM_THROW(std::runtime_error, "Direction illegal: is a zero vector.");
         }
         x_out_[0] = x_[0] + t_out_*direction_[0];
         x_out_[1] = x_[1] + t_out_*direction_[1];
