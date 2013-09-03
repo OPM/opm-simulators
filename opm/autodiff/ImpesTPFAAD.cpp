@@ -209,7 +209,7 @@ namespace Opm {
         }
 
         if (resTooLarge) {
-            THROW("Failed to compute converged pressure solution");
+            OPM_THROW(std::runtime_error, "Failed to compute converged pressure solution");
         }
         else {
             computeFluxes(state, well_state);
@@ -382,7 +382,7 @@ namespace Opm {
                     rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
                 }
             } else {
-                THROW("Can only handle BHP and SURFACE_RATE type controls.");
+                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
@@ -419,7 +419,7 @@ namespace Opm {
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual_.value().data(), dx.data());
         if (!rep.converged) {
-            THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            OPM_THROW(std::runtime_error, "ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
         const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V dp = subset(dx, Span(nc));
@@ -533,7 +533,7 @@ namespace Opm {
         case Gas:
             return fluid_.muGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -553,7 +553,7 @@ namespace Opm {
         case Gas:
             return fluid_.muGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -573,7 +573,7 @@ namespace Opm {
         case Gas:
             return fluid_.bGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -593,7 +593,7 @@ namespace Opm {
         case Gas:
             return fluid_.bGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 

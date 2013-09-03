@@ -258,7 +258,7 @@ namespace Opm {
 
         if (resTooLarge) {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
-            // THROW("Failed to compute converged solution in " << it << " iterations.");
+            // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
     }
 
@@ -737,7 +737,7 @@ namespace Opm {
                     rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
                 }
             } else {
-                THROW("Can only handle BHP and SURFACE_RATE type controls.");
+                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
@@ -774,7 +774,7 @@ namespace Opm {
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
         if (!rep.converged) {
-            THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            OPM_THROW(std::runtime_error, "ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
         return dx;
     }
@@ -1059,7 +1059,7 @@ namespace Opm {
         case Gas:
             return fluid_.muGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -1082,7 +1082,7 @@ namespace Opm {
         case Gas:
             return fluid_.bGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 

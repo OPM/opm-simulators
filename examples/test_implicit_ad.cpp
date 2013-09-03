@@ -65,7 +65,7 @@ namespace {
         double oildistr[2] = { 0.0, 1.0 };
         ok = ok && append_well_controls(SURFACE_RATE, 1e-3, oildistr, 1, wells.get());
         if (!ok) {
-            THROW("Something went wrong with well init.");
+            OPM_THROW(std::runtime_error, "Something went wrong with well init.");
         }
         set_current_control(0, 0, wells.get());
         set_current_control(1, 0, wells.get());

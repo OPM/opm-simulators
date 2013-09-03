@@ -60,7 +60,7 @@ namespace Opm
             gravity_ = gravity[grid_.dimensions - 1];
             for (int dd = 0; dd < grid_.dimensions - 1; ++dd) {
                 if (gravity[dd] != 0.0) {
-                    THROW("TransportSolverTwophaseAd: can only handle gravity aligned with last dimension");
+                    OPM_THROW(std::runtime_error, "TransportSolverTwophaseAd: can only handle gravity aligned with last dimension");
                 }
             }
             V htrans(grid.cell_facepos[grid.number_of_cells]);
@@ -235,7 +235,7 @@ namespace Opm
                                    smatr.outerIndexPtr(), smatr.innerIndexPtr(), smatr.valuePtr(),
                                    transport_residual.value().data(), ds.data());
             if (!rep.converged) {
-                THROW("Linear solver convergence error in TransportSolverTwophaseAd::solve()");
+                OPM_THROW(std::runtime_error, "Linear solver convergence error in TransportSolverTwophaseAd::solve()");
             }
 
             // Update (possible clamp) sw1.

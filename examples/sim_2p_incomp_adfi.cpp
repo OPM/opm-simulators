@@ -87,7 +87,7 @@ try
         const std::string transport_solver_type
             = param.getDefault<std::string>("transport_solver_type", "ad");
         if (transport_solver_type == "implicit") {
-            THROW("Cannot use implicit transport solver without UMFPACK. "
+            OPM_THROW(std::runtime_error, "Cannot use implicit transport solver without UMFPACK. "
                   "Either reconfigure opm-core with SuiteSparse/UMFPACK support and recompile, "
                   "or use the reordering solver (transport_solver_type=reorder).");
         }
@@ -196,7 +196,7 @@ try
             create_directories(fpath);
         }
         catch (...) {
-            THROW("Creating directories failed: " << fpath);
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         std::string filename = output_dir + "/epoch_timing.param";
         epoch_os.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
@@ -249,7 +249,7 @@ try
                 simtimer.init(*deck);
             } else {
                 if (epoch != 0) {
-                    THROW("No TSTEP in deck for epoch " << epoch);
+                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
                 }
                 simtimer.init(param);
             }
