@@ -77,6 +77,7 @@ int main()
 {
     bool foo = std::is_convertible<int, double>::value;
     bool bar = std::is_base_of<Base, Derived>::value;
+    bool foobar = std::is_integral<double>::value;
     return 0;
 }
 "  HAVE_TYPE_TRAITS
