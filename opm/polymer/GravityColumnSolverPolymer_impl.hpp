@@ -286,7 +286,7 @@ namespace Opm
                         hm[bmc(2*ci + 1, 2*(ci - 1) + 0)] += dFd2[2];
                         hm[bmc(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[3];
 		    } else {
-			ASSERT(c1 == next_cell || c2 == next_cell);
+			assert(c1 == next_cell || c2 == next_cell);
                         hm[bmc(2*ci + 0, 2*(ci + 1) + 0)] += dFd2[0];
                         hm[bmc(2*ci + 0, 2*(ci + 1) + 1)] += dFd2[1];
                         hm[bmc(2*ci + 1, 2*(ci + 1) + 0)] += dFd2[2];

@@ -75,7 +75,7 @@ namespace Opm
 	int num_phases = props.numPhases();
 	totmob.resize(num_cells);
 	omega.resize(num_cells);
-	ASSERT(int(s.size()) == num_cells*num_phases);
+	assert(int(s.size()) == num_cells*num_phases);
 	std::vector<double> kr(num_cells*num_phases);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
 	const double* visc = props.viscosity();
@@ -113,7 +113,7 @@ namespace Opm
             THROW("computeFractionalFlow() assumes 2 phases.");
         }
 	fractional_flows.resize(num_cells*num_phases);
-	ASSERT(int(s.size()) == num_cells*num_phases);
+	assert(int(s.size()) == num_cells*num_phases);
 	std::vector<double> kr(num_cells*num_phases);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
 	const double* visc = props.viscosity();
@@ -153,7 +153,7 @@ namespace Opm
             THROW("computeFractionalFlow() assumes 2 phases.");
         }
 	fractional_flows.resize(num_cells*num_phases);
-	ASSERT(int(s.size()) == num_cells*num_phases);
+	assert(int(s.size()) == num_cells*num_phases);
 	std::vector<double> kr(num_cells*num_phases);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
 	std::vector<double> mu(num_cells*num_phases);
