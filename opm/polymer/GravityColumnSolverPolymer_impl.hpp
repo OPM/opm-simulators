@@ -40,6 +40,7 @@
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iterator>
+#include <iostream>
 
 namespace Opm
 {

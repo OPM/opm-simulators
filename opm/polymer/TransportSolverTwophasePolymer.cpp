@@ -24,9 +24,10 @@
 #include <opm/core/utility/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <cmath>
 #include <list>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <iostream>
 // Choose error policy for scalar solves here.
 typedef Opm::RegulaFalsi<Opm::WarnAndContinueOnError> RootFinder;
 

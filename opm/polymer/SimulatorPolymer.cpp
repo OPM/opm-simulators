@@ -58,6 +58,7 @@
 
 #include <numeric>
 #include <fstream>
+#include <iostream>
 
 #ifdef HAVE_ERT
 #include <opm/core/io/eclipse/writeECLData.hpp>

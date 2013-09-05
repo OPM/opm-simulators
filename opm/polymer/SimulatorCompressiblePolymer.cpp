@@ -58,6 +58,7 @@
 
 #include <numeric>
 #include <fstream>
+#include <iostream>
 
 
 namespace Opm
