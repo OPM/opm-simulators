@@ -145,7 +145,7 @@ VARS=()
 
 # command that launches cmake; look for 2.8 if available
 if [ "${CMAKE_COMMAND}" = "" ]; then
-  if which cmake28 >/dev/null 2>&1; then
+  if test -n "$(command -v cmake28)"; then
     CMAKE_COMMAND=cmake28
   else
     CMAKE_COMMAND=cmake
