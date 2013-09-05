@@ -37,6 +37,8 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <fstream>
+#include <iostream>
+
 
 struct SetupSimple {
     SetupSimple()
@@ -81,6 +83,7 @@ BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
 {
     Opm::BlackoilPropsAd boprops_ad(props);
 }
+
 
 
 BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)

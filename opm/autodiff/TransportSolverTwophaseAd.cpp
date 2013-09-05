@@ -60,7 +60,7 @@ namespace Opm
             gravity_ = gravity[grid_.dimensions - 1];
             for (int dd = 0; dd < grid_.dimensions - 1; ++dd) {
                 if (gravity[dd] != 0.0) {
-                    THROW("TransportSolverTwophaseAd: can only handle gravity aligned with last dimension");
+                    OPM_THROW(std::runtime_error, "TransportSolverTwophaseAd: can only handle gravity aligned with last dimension");
                 }
             }
             V htrans(grid.cell_facepos[grid.number_of_cells]);
@@ -186,7 +186,7 @@ namespace Opm
         typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DynArr;
         const V z = Eigen::Map<DynArr>(grid_.cell_centroids, nc, grid_.dimensions).rightCols<1>();
         const V ndz = (ops_.ngrad * z.matrix()).array();
-        ASSERT(num_internal == ndp.size());
+        assert(num_internal == ndp.size());
         const double* density = props_.density();
         const V dhw = ndp - ndz*(gravity_*density[0]);
         const V dho = ndp - ndz*(gravity_*density[1]);
@@ -228,14 +228,14 @@ namespace Opm
 
             // Solve linear system.
             Eigen::SparseMatrix<double, Eigen::RowMajor> smatr = transport_residual.derivative()[0];
-            ASSERT(smatr.isCompressed());
+            assert(smatr.isCompressed());
             V ds(nc);
             LinearSolverInterface::LinearSolverReport rep
                 = linsolver_.solve(nc, smatr.nonZeros(),
                                    smatr.outerIndexPtr(), smatr.innerIndexPtr(), smatr.valuePtr(),
                                    transport_residual.value().data(), ds.data());
             if (!rep.converged) {
-                THROW("Linear solver convergence error in TransportSolverTwophaseAd::solve()");
+                OPM_THROW(std::runtime_error, "Linear solver convergence error in TransportSolverTwophaseAd::solve()");
             }
 
             // Update (possible clamp) sw1.

@@ -32,7 +32,7 @@
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
-
+#include <iostream>
 
 BOOST_AUTO_TEST_CASE(ScalarMultiplication)
 {
@@ -62,4 +62,6 @@ BOOST_AUTO_TEST_CASE(ScalarMultiplication)
     const ADB y3 = 3.14 * x;
     BOOST_CHECK_EQUAL( x3.value().cwiseNotEqual( y3.value() ).count(), 0 );
 }
+
+
 

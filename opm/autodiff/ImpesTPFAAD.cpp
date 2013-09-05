@@ -26,6 +26,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/wells.h>
 
+#include <iostream>
 #include <iomanip>
 
 
@@ -100,7 +101,7 @@ namespace {
         const int nperf = wells.well_connpos[nw];
         const int dim = grid.dimensions;
         V wdp = V::Zero(nperf,1);
-        ASSERT(wdp.size() == rho.size());
+        assert(wdp.size() == rho.size());
 
         // Main loop, iterate over all perforations,
         // using the following formula:
@@ -165,7 +166,7 @@ namespace Opm {
         computeExplicitData(dt, state, well_state);
         // Compute relperms once and for all (since saturations are explicit).
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
-        ASSERT(np == 2);
+        assert(np == 2);
         kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
         // Compute relperms for wells. This must be revisited for crossflow.
         const int nw = wells_.number_of_wells;
@@ -209,7 +210,7 @@ namespace Opm {
         }
 
         if (resTooLarge) {
-            THROW("Failed to compute converged pressure solution");
+            OPM_THROW(std::runtime_error, "Failed to compute converged pressure solution");
         }
         else {
             computeFluxes(state, well_state);
@@ -235,7 +236,7 @@ namespace Opm {
 
         // Compute relperms.
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
-        ASSERT(np == 2);
+        assert(np == 2);
         kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
 
         // Compute relperms for wells. This must be revisited for crossflow.
@@ -256,7 +257,7 @@ namespace Opm {
         if (g) {
             // Guard against gravity in anything but last dimension.
             for (int dd = 0; dd < dim - 1; ++dd) {
-                ASSERT(g[dd] == 0.0);
+                assert(g[dd] == 0.0);
             }
         }
         V cell_rho_total = V::Zero(nc,1);
@@ -382,7 +383,7 @@ namespace Opm {
                     rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
                 }
             } else {
-                THROW("Can only handle BHP and SURFACE_RATE type controls.");
+                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
@@ -419,7 +420,7 @@ namespace Opm {
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual_.value().data(), dx.data());
         if (!rep.converged) {
-            THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            OPM_THROW(std::runtime_error, "ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
         const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V dp = subset(dx, Span(nc));
@@ -533,7 +534,7 @@ namespace Opm {
         case Gas:
             return fluid_.muGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -553,7 +554,7 @@ namespace Opm {
         case Gas:
             return fluid_.muGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -573,7 +574,7 @@ namespace Opm {
         case Gas:
             return fluid_.bGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -593,7 +594,7 @@ namespace Opm {
         case Gas:
             return fluid_.bGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 

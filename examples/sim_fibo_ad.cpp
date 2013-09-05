@@ -74,6 +74,7 @@ namespace
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
+try
 {
     using namespace Opm;
 
@@ -192,7 +193,7 @@ main(int argc, char** argv)
             create_directories(fpath);
         }
         catch (...) {
-            THROW("Creating directories failed: " << fpath);
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         std::string filename = output_dir + "/epoch_timing.param";
         epoch_os.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
@@ -245,7 +246,7 @@ main(int argc, char** argv)
                 simtimer.init(*deck);
             } else {
                 if (epoch != 0) {
-                    THROW("No TSTEP in deck for epoch " << epoch);
+                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
                 }
                 simtimer.init(param);
             }
@@ -299,3 +300,8 @@ main(int argc, char** argv)
     }
 
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+

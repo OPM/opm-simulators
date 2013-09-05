@@ -109,6 +109,7 @@ fluxFunc(const std::vector<ADB>& m)
 
 
 int main()
+try
 {
     typedef AutoDiff::ForwardBlock<double> ADB;
     typedef ADB::V V;
@@ -296,3 +297,8 @@ int main()
               << "function s1 = solution\n"
               << "s1 = [\n" << sw1 << "\n];\n";
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+

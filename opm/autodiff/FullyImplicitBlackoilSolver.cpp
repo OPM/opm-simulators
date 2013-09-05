@@ -34,6 +34,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <iostream>
 #include <iomanip>
 
 #define DUMP(foo)                                                       \
@@ -123,7 +124,7 @@ namespace {
         const int nperf = wells.well_connpos[nw];
         const int dim = grid.dimensions;
         V wdp = V::Zero(nperf,1);
-        ASSERT(wdp.size() == rho.size());
+        assert(wdp.size() == rho.size());
 
         // Main loop, iterate over all perforations,
         // using the following formula:
@@ -258,7 +259,7 @@ namespace Opm {
 
         if (resTooLarge) {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
-            // THROW("Failed to compute converged solution in " << it << " iterations.");
+            // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
     }
 
@@ -339,7 +340,7 @@ namespace Opm {
         //    well bottom-hole pressure
         // Note that oil is assumed to always be present, but is never
         // a primary variable.
-        ASSERT(active_[ Oil ]);
+        assert(active_[ Oil ]);
         std::vector<int> bpat(np, nc);
         const bool gasandoil = (active_[ Oil ] && active_[ Gas ]);
         if (gasandoil) {
@@ -432,7 +433,7 @@ namespace Opm {
         const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
         const Opm::PhaseUsage pu = fluid_.phaseUsage();
         // We do not handle a Water/Gas situation correctly, guard against it.
-        ASSERT (active_[ Oil]);
+        assert (active_[ Oil]);
         if (active_[ Water ]) {
             const V sw = s.col(pu.phase_pos[ Water ]);
             vars0.push_back(sw);
@@ -507,7 +508,7 @@ namespace Opm {
         // Bhp.
         state.bhp = vars[ nextvar++ ];
 
-        ASSERT(nextvar == int(vars.size()));
+        assert(nextvar == int(vars.size()));
 
         return state;
     }
@@ -643,7 +644,7 @@ namespace Opm {
         if (g) {
             // Guard against gravity in anything but last dimension.
             for (int dd = 0; dd < dim - 1; ++dd) {
-                ASSERT(g[dd] == 0.0);
+                assert(g[dd] == 0.0);
             }
         }
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
@@ -655,7 +656,7 @@ namespace Opm {
             }
         }
         ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
-        ASSERT(np == wells_.number_of_phases);
+        assert(np == wells_.number_of_phases);
         const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
         for (int phase = 0; phase < 3; ++phase) {
             if (active_[phase]) {
@@ -737,7 +738,7 @@ namespace Opm {
                     rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
                 }
             } else {
-                THROW("Can only handle BHP and SURFACE_RATE type controls.");
+                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
@@ -774,7 +775,7 @@ namespace Opm {
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
         if (!rep.converged) {
-            THROW("ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            OPM_THROW(std::runtime_error, "ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
         return dx;
     }
@@ -801,7 +802,7 @@ namespace Opm {
         const int nc = grid_.number_of_cells;
         const int nw = wells_.number_of_wells;
         const V null;
-        ASSERT(null.size() == 0);
+        assert(null.size() == 0);
         const V zero = V::Zero(nc);
         const V one = V::Constant(nc, 1.0);
 
@@ -818,7 +819,7 @@ namespace Opm {
         varstart += dqs.size();
         const V dbhp = subset(dx, Span(nw, 1, varstart));
         varstart += dbhp.size();
-        ASSERT(varstart == dx.size());
+        assert(varstart == dx.size());
 
         // Pressure update.
         const double dpmaxrel = 0.8;
@@ -1059,7 +1060,7 @@ namespace Opm {
         case Gas:
             return fluid_.muGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
@@ -1082,7 +1083,7 @@ namespace Opm {
         case Gas:
             return fluid_.bGas(p, cells);
         default:
-            THROW("Unknown phase index " << phase);
+            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
     }
 
