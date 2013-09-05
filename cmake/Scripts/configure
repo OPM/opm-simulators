@@ -453,11 +453,11 @@ for a in "${VARS[@]}"; do
       ;;
     CC=*)
       # special processing for compiler options
-      a=`which ${a#CC=}`
+      a=$(command -v ${a#CC=})
       c_compiler=" -DCMAKE_C_COMPILER=\"${a/\"/\\\"}\""
       ;;
     CXX=*)
-      a=`which ${a#CXX=}`
+      a=$(command -v ${a#CXX=})
       cxx_compiler=" -DCMAKE_CXX_COMPILER=\"${a/\"/\\\"}\""
       ;;
     CFLAGS=*)
@@ -469,7 +469,7 @@ for a in "${VARS[@]}"; do
       cxx_opts=" -DCMAKE_CXX_FLAGS=\"${a/\"/\\\"}\""
       ;;
     FC=*)
-      a=`which ${a#FC=}`
+      a=$(command -v  ${a#FC=})
       fort_compiler=" -DCMAKE_Fortran_COMPILER=\"${a/\"/\\\"}\""
       ;;
     FFLAGS=*)
