@@ -107,10 +107,10 @@ namespace Opm
                              const Cells& cells) const
     {
         if (!pu_.phase_used[Water]) {
-            THROW("Cannot call muWat(): water phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.size() == n);
+        assert(pw.size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block mu(n, np);
@@ -128,10 +128,10 @@ namespace Opm
                              const Cells& cells) const
     {
         if (!pu_.phase_used[Oil]) {
-            THROW("Cannot call muOil(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         if (pu_.phase_used[Gas]) {
@@ -153,10 +153,10 @@ namespace Opm
                              const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
-            THROW("Cannot call muGas(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.size() == n);
+        assert(pg.size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block mu(n, np);
@@ -175,10 +175,10 @@ namespace Opm
         return ADB::constant(muWat(pw.value(), cells), pw.blockPattern());
 #else
         if (!pu_.phase_used[Water]) {
-            THROW("Cannot call muWat(): water phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.value().size() == n);
+        assert(pw.value().size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block mu(n, np);
@@ -207,10 +207,10 @@ namespace Opm
         return ADB::constant(muOil(po.value(), rs.value(), cells), po.blockPattern());
 #else
         if (!pu_.phase_used[Oil]) {
-            THROW("Cannot call muOil(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.value().size() == n);
+        assert(po.value().size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         if (pu_.phase_used[Gas]) {
@@ -246,10 +246,10 @@ namespace Opm
         return ADB::constant(muGas(pg.value(), cells), pg.blockPattern());
 #else
         if (!pu_.phase_used[Gas]) {
-            THROW("Cannot call muGas(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.value().size() == n);
+        assert(pg.value().size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block mu(n, np);
@@ -291,10 +291,10 @@ namespace Opm
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Water]) {
-            THROW("Cannot call bWat(): water phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call bWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.size() == n);
+        assert(pw.size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
@@ -313,10 +313,10 @@ namespace Opm
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Oil]) {
-            THROW("Cannot call bOil(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call bOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.size() == n);
+        assert(po.size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         if (pu_.phase_used[Gas]) {
@@ -339,10 +339,10 @@ namespace Opm
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
-            THROW("Cannot call bGas(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call bGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.size() == n);
+        assert(pg.size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
@@ -359,10 +359,10 @@ namespace Opm
                               const Cells& cells) const
     {
         if (!pu_.phase_used[Water]) {
-            THROW("Cannot call muWat(): water phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pw.value().size() == n);
+        assert(pw.value().size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
@@ -389,10 +389,10 @@ namespace Opm
                               const Cells& cells) const
     {
         if (!pu_.phase_used[Oil]) {
-            THROW("Cannot call muOil(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
-        ASSERT(po.value().size() == n);
+        assert(po.value().size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         if (pu_.phase_used[Gas]) {
@@ -426,10 +426,10 @@ namespace Opm
                               const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
-            THROW("Cannot call muGas(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
-        ASSERT(pg.value().size() == n);
+        assert(pg.value().size() == n);
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
@@ -456,7 +456,7 @@ namespace Opm
     V BlackoilPropsAd::rsMax(const V& po,
                              const Cells& cells) const
     {
-        THROW("Method rsMax() not implemented.");
+        OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
     }
 
     /// Bubble point curve for Rs as function of oil pressure.
@@ -466,7 +466,7 @@ namespace Opm
     ADB BlackoilPropsAd::rsMax(const ADB& po,
                                const Cells& cells) const
     {
-        THROW("Method rsMax() not implemented.");
+        OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
     }
 
     // ------ Relative permeability ------
@@ -487,15 +487,15 @@ namespace Opm
         const int np = props_.numPhases();
         Block s_all(n, np);
         if (pu_.phase_used[Water]) {
-            ASSERT(sw.size() == n);
+            assert(sw.size() == n);
             s_all.col(pu_.phase_pos[Water]) = sw;
         }
         if (pu_.phase_used[Oil]) {
-            ASSERT(so.size() == n);
+            assert(so.size() == n);
             s_all.col(pu_.phase_pos[Oil]) = so;
         }
         if (pu_.phase_used[Gas]) {
-            ASSERT(sg.size() == n);
+            assert(sg.size() == n);
             s_all.col(pu_.phase_pos[Gas]) = sg;
         }
         Block kr(n, np);
@@ -528,17 +528,17 @@ namespace Opm
         const int np = props_.numPhases();
         Block s_all(n, np);
         if (pu_.phase_used[Water]) {
-            ASSERT(sw.value().size() == n);
+            assert(sw.value().size() == n);
             s_all.col(pu_.phase_pos[Water]) = sw.value();
         }
         if (pu_.phase_used[Oil]) {
-            ASSERT(so.value().size() == n);
+            assert(so.value().size() == n);
             s_all.col(pu_.phase_pos[Oil]) = so.value();
         } else {
-            THROW("BlackoilPropsAd::relperm() assumes oil phase is active.");
+            OPM_THROW(std::runtime_error, "BlackoilPropsAd::relperm() assumes oil phase is active.");
         }
         if (pu_.phase_used[Gas]) {
-            ASSERT(sg.value().size() == n);
+            assert(sg.value().size() == n);
             s_all.col(pu_.phase_pos[Gas]) = sg.value();
         }
         Block kr(n, np);

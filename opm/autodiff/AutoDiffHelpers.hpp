@@ -24,6 +24,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
+#include <iostream>
+
 // -------------------- class HelperOps --------------------
 
 /// Contains vectors and sparse matrices that represent subsets or
@@ -473,7 +475,7 @@ public:
     }
     int operator[](const int i) const
     {
-        ASSERT(i >= 0 && i < num_);
+        assert(i >= 0 && i < num_);
         return start_ + i*stride_;
     }
     int size() const
@@ -503,17 +505,17 @@ public:
         }
         bool operator<(const SpanIterator& rhs) const
         {
-            ASSERT(span_ == rhs.span_);
+            assert(span_ == rhs.span_);
             return index_ < rhs.index_;
         }
         bool operator==(const SpanIterator& rhs) const
         {
-            ASSERT(span_ == rhs.span_);
+            assert(span_ == rhs.span_);
             return index_ == rhs.index_;
         }
         bool operator!=(const SpanIterator& rhs) const
         {
-            ASSERT(span_ == rhs.span_);
+            assert(span_ == rhs.span_);
             return index_ != rhs.index_;
         }
         int operator*()

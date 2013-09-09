@@ -193,6 +193,7 @@ BOOST_AUTO_TEST_CASE(Addition)
 #include <iostream>
 
 int main()
+try
 {
     typedef AutoDiff::ForwardBlock<double> ADB;
     std::vector<int> blocksizes = { 3, 1, 2 };
@@ -232,5 +233,9 @@ int main()
     m.insert(0,1) = 3;
     m.insert(1,1) = 1;
     std::cout << m*sqx;
+}
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
 }
 #endif

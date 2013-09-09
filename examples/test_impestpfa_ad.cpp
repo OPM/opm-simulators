@@ -41,12 +41,14 @@
 #include <opm/core/wells.h>
 
 #include <algorithm>
+#include <iostream>
 
 
 
 
 int
 main(int argc, char* argv[])
+try
 {
     const Opm::parameter::ParameterGroup param(argc, argv, false);
     const Opm::GridManager               gm(5, 5);
@@ -73,7 +75,7 @@ main(int argc, char* argv[])
     double oildistr[2] = { 0.0, 1.0 };
     ok = ok && append_well_controls(SURFACE_RATE, 1e-3, oildistr, 1, wells);
     if (!ok) {
-        THROW("Something went wrong with well init.");
+        OPM_THROW(std::runtime_error, "Something went wrong with well init.");
     }
     set_current_control(0, 0, wells);
     set_current_control(1, 0, wells);
@@ -103,3 +105,8 @@ main(int argc, char* argv[])
 
     return 0;
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+

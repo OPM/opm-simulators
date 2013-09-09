@@ -8,8 +8,10 @@
 
 #include <opm/autodiff/AutoDiff.hpp>
 
-#include <cmath>
 #include <boost/test/unit_test.hpp>
+
+#include <cmath>
+#include <iostream>
 
 BOOST_AUTO_TEST_CASE(Initialisation)
 {
@@ -29,6 +31,7 @@ BOOST_AUTO_TEST_CASE(Initialisation)
     BOOST_CHECK_EQUAL(a.val(), b.val());
     BOOST_CHECK_EQUAL(a.der(), b.der());
 }
+
 
 
 BOOST_AUTO_TEST_CASE(Addition)

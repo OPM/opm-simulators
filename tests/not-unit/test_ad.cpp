@@ -41,6 +41,7 @@
 
 int
 main()
+try
 {
     typedef AutoDiff::Forward<double> AdFW;
 
@@ -69,3 +70,8 @@ main()
     std::cout << "a - 1: " << (a - 1) << '\n';
     std::cout << "a - b: " << (a - b) << '\n';
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+
