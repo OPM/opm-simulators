@@ -60,6 +60,7 @@
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
+try
 {
     using namespace Opm;
 
@@ -167,7 +168,7 @@ main(int argc, char** argv)
     } else if (method_string == "NewtonSimpleC") {
         method = Opm::TransportSolverTwophasePolymer::NewtonSimpleC;
     } else {
-        THROW("Unknown method: " << method_string);
+        OPM_THROW(std::runtime_error, "Unknown method: " << method_string);
     }
     Opm::TransportSolverTwophasePolymer reorder_model(*grid->c_grid(), *props, poly_props,
                                              method, nl_tolerance, nl_maxiter);
@@ -203,7 +204,7 @@ main(int argc, char** argv)
         }
     }
     if (face01 == -1) {
-        THROW("Could not find face adjacent to cells [0 1]");
+        OPM_THROW(std::runtime_error, "Could not find face adjacent to cells [0 1]");
     }
     state.faceflux()[face01] = src[0];
     for (int sats = 0; sats < num_sats; ++sats) {
@@ -247,3 +248,8 @@ main(int argc, char** argv)
         }
     }
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+

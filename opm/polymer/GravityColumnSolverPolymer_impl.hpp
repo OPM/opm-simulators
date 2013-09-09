@@ -40,6 +40,7 @@
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iterator>
+#include <iostream>
 
 namespace Opm
 {
@@ -217,7 +218,7 @@ namespace Opm
 	    ++iter;
 	}
 	if (max_delta >= tol_) {
-	    THROW("Failed to converge!");
+	    OPM_THROW(std::runtime_error, "Failed to converge!");
 	}
 	// Finalize.
 	// fmodel_.finishIteration(); //
@@ -286,7 +287,7 @@ namespace Opm
                         hm[bmc(2*ci + 1, 2*(ci - 1) + 0)] += dFd2[2];
                         hm[bmc(2*ci + 1, 2*(ci - 1) + 1)] += dFd2[3];
 		    } else {
-			ASSERT(c1 == next_cell || c2 == next_cell);
+			assert(c1 == next_cell || c2 == next_cell);
                         hm[bmc(2*ci + 0, 2*(ci + 1) + 0)] += dFd2[0];
                         hm[bmc(2*ci + 0, 2*(ci + 1) + 1)] += dFd2[1];
                         hm[bmc(2*ci + 1, 2*(ci + 1) + 0)] += dFd2[2];
@@ -328,7 +329,7 @@ namespace Opm
             std::cerr << "Failed column cells: ";
             std::copy(column_cells.begin(), column_cells.end(), std::ostream_iterator<int>(std::cerr, " "));
             std::cerr << "\n";
-	    THROW("Lapack reported error in dgtsv: " << info);
+	    OPM_THROW(std::runtime_error, "Lapack reported error in dgtsv: " << info);
 	}
 	for (int ci = 0; ci < col_size; ++ci) {
 	    sol_vec[2*column_cells[ci] + 0] = -rhs[2*ci + 0];

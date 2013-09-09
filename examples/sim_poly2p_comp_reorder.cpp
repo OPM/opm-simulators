@@ -73,6 +73,7 @@ namespace
 // ----------------- Main program -----------------
 int
 main(int argc, char** argv)
+try
 {
     using namespace Opm;
 
@@ -225,7 +226,7 @@ main(int argc, char** argv)
         create_directories(fpath);
       }
       catch (...) {
-        THROW("Creating directories failed: " << fpath);
+        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
       }
       param.writeParam(output_dir + "/simulation.param");
     }
@@ -273,7 +274,7 @@ main(int argc, char** argv)
         const bool use_wpolymer = deck->hasField("WPOLYMER");
         if (use_wpolymer) {
             if (param.has("poly_start_days")) {
-                MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
+                OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
                         "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
             }
         }
@@ -286,7 +287,7 @@ main(int argc, char** argv)
                 simtimer.init(*deck);
             } else {
                 if (epoch != 0) {
-                    THROW("No TSTEP in deck for epoch " << epoch);
+                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
                 }
                 simtimer.init(param);
             }
@@ -303,7 +304,7 @@ main(int argc, char** argv)
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
-                    THROW("Cannot control polymer injection via WPOLYMER without wells.");
+                    OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
                 polymer_inflow.reset(new PolymerInflowFromDeck(*deck, *wells.c_wells(), props->numCells()));
             } else {
@@ -345,3 +346,8 @@ main(int argc, char** argv)
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     rep.report(std::cout);
 }
+catch (const std::exception &e) {
+    std::cerr << "Program threw an exception: " << e.what() << "\n";
+    throw;
+}
+
