@@ -26,7 +26,7 @@
 #include <vector>
 #include <list>
 
-class UnstructuredGrid;
+struct UnstructuredGrid;
 
 namespace Opm
 {
