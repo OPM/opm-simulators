@@ -145,7 +145,7 @@ VARS=()
 
 # command that launches cmake; look for 2.8 if available
 if [ "${CMAKE_COMMAND}" = "" ]; then
-  if test -n "$(command -v cmake28)"; then
+  if [ -x "$(command -v cmake28)" ]; then
     CMAKE_COMMAND=cmake28
   else
     CMAKE_COMMAND=cmake
@@ -453,11 +453,13 @@ for a in "${VARS[@]}"; do
       ;;
     CC=*)
       # special processing for compiler options
-      a=$(command -v ${a#CC=})
+      a=${a#CC=}
+      [ -x "$(command -v $a)" ] && a=$(command -v "$a")
       c_compiler=" -DCMAKE_C_COMPILER=\"${a/\"/\\\"}\""
       ;;
     CXX=*)
-      a=$(command -v ${a#CXX=})
+      a=${a#CXX=}
+      [ -x "$(command -v $a)" ] && a=$(command -v "$a")
       cxx_compiler=" -DCMAKE_CXX_COMPILER=\"${a/\"/\\\"}\""
       ;;
     CFLAGS=*)
@@ -469,7 +471,8 @@ for a in "${VARS[@]}"; do
       cxx_opts=" -DCMAKE_CXX_FLAGS=\"${a/\"/\\\"}\""
       ;;
     FC=*)
-      a=$(command -v  ${a#FC=})
+      a=${a#FC=}
+      [ -x "$(command -v $a)" ] && a=$(command -v "$a")
       fort_compiler=" -DCMAKE_Fortran_COMPILER=\"${a/\"/\\\"}\""
       ;;
     FFLAGS=*)
