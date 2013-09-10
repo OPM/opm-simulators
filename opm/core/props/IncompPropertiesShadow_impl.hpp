@@ -4,6 +4,8 @@
 #error Do not include IncompPropertiesShadow_impl.hpp directly!
 #endif /* OPM_INCOMPPROPERTIESSHADOW_HEADER_INCLUDED */
 
+#include <opm/core/utility/ErrorMacros.hpp>
+
 namespace Opm
 {
     /**
