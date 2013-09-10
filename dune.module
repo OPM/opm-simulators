@@ -2,15 +2,12 @@
 # Dune module information file: This file gets parsed by dunecontrol
 # and by the CMake build scripts.
 ################################
-#Name of the module
 Module: opm-material
 Description: This module contains the thermodynamic framework used by OPM
-Version: 0.1
+Version: 2.0
 Label: 2013.03
 Url: http://opm-project.org
-Maintainer: opm@opm-project.org
-MaintainerName: The Open Porous Media Initiative
-
-# the material laws need the tri-diagonal matrix from dune-istl. 
+Maintainer: and@poware.org
+MaintainerName: The Open Porous Media Initiative; Andreas Lauser
 # TODO: add this kind of code to a new module (e.g., 'opm-common')
 Depends: dune-common dune-istl
