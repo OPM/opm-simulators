@@ -28,13 +28,13 @@
 #list (APPEND MAIN_SOURCE_FILES)
 
 # originally generated with the command:
-# find tests -name '*.cc' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
+# find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
-	tests/material/pengrobinson/test_pengrobinson.cc
-	tests/material/ncpflash/test_ncpflash.cc
-	tests/material/tabulation/test_tabulation.cc
-	tests/material/fluidsystems/test_fluidsystems.cc
-	tests/material/immiscibleflash/test_immiscibleflash.cc
+	tests/material/pengrobinson/test_pengrobinson.cpp
+	tests/material/ncpflash/test_ncpflash.cpp
+	tests/material/tabulation/test_tabulation.cpp
+	tests/material/fluidsystems/test_fluidsystems.cpp
+	tests/material/immiscibleflash/test_immiscibleflash.cpp
 	)
 
 # originally generated with the command:
