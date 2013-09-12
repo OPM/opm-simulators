@@ -87,10 +87,10 @@ if (NOT $ENV{SuiteSparse_DIR} STREQUAL "")
   set (SuiteSparse_SEARCH_PATH "$ENV{SuiteSparse_DIR}")
   set (_no_default_path "NO_DEFAULT_PATH")
 endif (NOT $ENV{SuiteSparse_DIR} STREQUAL "")
-if (${SuiteSparse_DIR})
+if (SuiteSparse_DIR)
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_DIR}")
   set (_no_default_path "NO_DEFAULT_PATH")
-endif (${SuiteSparse_DIR})
+endif (SuiteSparse_DIR)
 # CMake uses _DIR suffix as default for config-mode files; it is unlikely
 # that we are building SuiteSparse ourselves; use _ROOT suffix to specify
 # location to pre-canned binaries
@@ -98,10 +98,10 @@ if (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
   set (SuiteSparse_SEARCH_PATH "$ENV{SuiteSparse_ROOT}")
   set (_no_default_path "NO_DEFAULT_PATH")
 endif (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
-if (${SuiteSparse_ROOT})
+if (SuiteSparse_ROOT)
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_ROOT}")
   set (_no_default_path "NO_DEFAULT_PATH")
-endif (${SuiteSparse_ROOT})
+endif (SuiteSparse_ROOT)
 
 # transitive closure of dependencies; after this SuiteSparse_MODULES is the
 # full list of modules that must be found to satisfy the user's link demands
