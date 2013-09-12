@@ -96,6 +96,10 @@ endif (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
 if (SuiteSparse_ROOT)
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_ROOT}")
 endif (SuiteSparse_ROOT)
+# most commonly, we use the uppercase version of this variable
+if (SUITESPARSE_ROOT)
+  set (SuiteSparse_SEARCH_PATH "${SUITESPARSE_ROOT}")
+endif (SUITESPARSE_ROOT)
 
 # if we have specified a search path, then confine ourselves to that
 if (SuiteSparse_SEARCH_PATH)
