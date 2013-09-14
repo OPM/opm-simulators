@@ -9,5 +9,4 @@ Label: 2013.03
 Url: http://opm-project.org
 Maintainer: and@poware.org
 MaintainerName: The Open Porous Media Initiative; Andreas Lauser
-# TODO: add this kind of code to a new module (e.g., 'opm-common')
-Depends: dune-common dune-istl
+Depends: dune-common dune-istl opm-core
