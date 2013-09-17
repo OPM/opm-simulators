@@ -41,6 +41,11 @@ function (find_dune_version suite module)
 
   # some modules does not have a library, use the directory of the
   # header files to find what would be the library dir.
+  # note that when we refer to a build tree, then the libraries always
+  # go into lib/, but we don't care about that because in that case,
+  # dune.module isn't in the lib/ directory anyway but must be retrieved
+  # from the source. hence, we only have to worry about the library
+  # directory of a system installation here.
   if (NOT ${suite}-${module}_LIBRARY)
 	# this suffix is gotten from UseMultiArch.cmake
 	set (_lib_path "${_inc_path}/${CMAKE_INSTALL_LIBDIR}")
@@ -72,7 +77,7 @@ function (find_dune_version suite module)
 	# from this point on, _lib_path does not contain an architecture-
 	# specific component anymore; dune.module is always put in straight
 	# noarch lib/ since it does not contain any paths to binaries
-	set (_dune_mod "${_lib_path}/lib${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_multilib}/dunecontrol/${suite}-${module}/dune.module")
 	if (NOT EXISTS "${_dune_mod}")
 	  # use the name itself as a flag for whether it was found or not
 	  set (_dune_mod "")
