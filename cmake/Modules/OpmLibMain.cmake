@@ -269,3 +269,6 @@ configure_file (
 
 # make sure updated version information is available in the source code
 include (UseVersion)
+
+# update the cache for next run
+write_back_options ()
