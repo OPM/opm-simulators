@@ -8,17 +8,20 @@
 # Note that it will override the results of GNUInstallDirs if included after
 # that module.
 
-# Fedora uses lib64/ for 64-bit systems, Debian uses lib/x86_64-linux-gnu;
-# Fedora put module files in lib64/ too, but Debian uses lib/ for that
+# default if we need to put something in the library directory for a
+# component that is *not* multiarch-aware
+set (LIBDIR_MULTIARCH_UNAWARE "lib")
+
+# Fedora uses lib64/ for 64-bit systems, Debian uses lib/x86_64-linux-gnu
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   # Debian or Ubuntu?
   if (EXISTS "/etc/debian_version")
 	set (_libdir_def "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
-	set (_libdir_noarch "lib")
   else (EXISTS "/etc/debian_version")
 	# 64-bit system?
 	if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	  set (_libdir_def "lib64")
+	  set (LIBDIR_MULTIARCH_UNAWARE "${_libdir_def}")
 	else (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	  set (_libdir_def "lib")
 	endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
