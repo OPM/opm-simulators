@@ -78,8 +78,20 @@ function (set_default_option lang varname flag regex)
   endif ()
 endfunction (set_default_option)
 
-# note: this must be called before project()
+# clear default options as a proxy for not using any default options
+# at all. there is one *huge* problem with this: CMake runs the platform
+# initialization before executing any line at all in the project and
+# there seems to be no way to disable that behaviour, so we cannot really
+# distinguish between a platform default and something that the user has
+# passed on the command line. the best thing we can do is to all user-
+# defined setting if they are something other than the platform default.
 macro (no_default_options)
-  # prevent the platform probe to set options
-  set (CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
+  foreach (lang IN ITEMS C CXX Fortran)
+	foreach (build IN ITEMS DEBUG RELEASE MINSIZEREL RELWITHDEBINFO)
+	  if ("${CMAKE_${lang}_FLAGS_${build}}" STREQUAL "${CMAKE_${lang}_FLAGS_${build}_INIT}")
+		# for some strange reason we cannot clear this flag, only set it to empty
+		set (CMAKE_${lang}_FLAGS_${build} "")
+	  endif ()
+	endforeach (build)
+  endforeach (lang)
 endmacro (no_default_options)
