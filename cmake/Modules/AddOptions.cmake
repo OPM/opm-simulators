@@ -61,18 +61,21 @@ function (add_options langs builds)
 endfunction (add_options lang build)
 
 # set varname to flag unless user has specified something that matches regex
-function (set_default_option varname flag regex)
-  if (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+function (set_default_option lang varname flag regex)
+  # lang is either C, CXX or Fortran
+  if ("${lang}" STREQUAL "Fortran")
+	set (letter "F")
+  else ()
+	set (letter "${lang}")
+  endif ()
+  string (TOUPPER "${CMAKE_BUILD_TYPE}" _build)
+  if ((NOT ("$ENV{${letter}FLAGS}" MATCHES "${regex}"))
+	  AND (NOT ("${CMAKE_${lang}_FLAGS}" MATCHES "${regex}"))
+	  AND (NOT ("${CMAKE_${lang}_FLAGS_${_build}}" MATCHES "${regex}")))
 	set (${varname} ${flag} PARENT_SCOPE)
-  else (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+  else ()
 	set (${varname} PARENT_SCOPE)
-  endif (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
-	AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
-	AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+  endif ()
 endfunction (set_default_option)
 
 # note: this must be called before project()
