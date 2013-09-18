@@ -56,6 +56,7 @@ function (find_dune_version suite module)
   # if we have a source tree, dune.module is available there
   set (_dune_mod "${_inc_path}/dune.module")
   if (NOT EXISTS "${_dune_mod}")
+	set (_last_dune_mod_src "${_dune_mod}")
 	set (_dune_mod "")
   endif ()
 
@@ -80,6 +81,7 @@ function (find_dune_version suite module)
 	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_multilib}/dunecontrol/${suite}-${module}/dune.module")
 	if (NOT EXISTS "${_dune_mod}")
 	  # use the name itself as a flag for whether it was found or not
+	  set (_last_dune_mod_bld "${_dune_mod}")
 	  set (_dune_mod "")
 	endif ()
   endif ()
@@ -87,8 +89,8 @@ function (find_dune_version suite module)
   # if it is not available, it may make havoc having empty defines in the source
   # code later, so we bail out early
   if (NOT _dune_mod)
-	if (${suite}-${module}_FIND_REQUIRED)
-	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module}")
+	if (${suite}-${module}_FOUND)
+	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module} (looking for either \"${_last_dune_mod_src}\" or \"${_last_dune_mod_bld}\")")
 	else ()
 	  return ()
 	endif ()
