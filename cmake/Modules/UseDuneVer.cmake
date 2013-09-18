@@ -64,13 +64,19 @@ function (find_dune_version suite module)
 	# look for the build tree; if we found the library, then the
 	# dune.module file should be in a sub-directory  
 	get_filename_component (_immediate "${_lib_path}" NAME)
+	if ("${_immediate}" STREQUAL ".libs")
+	  # remove autotools internal path
+	  get_filename_component (_lib_path "${_lib_path}" PATH)
+	endif ()
+	get_filename_component (_immediate "${_lib_path}" NAME)
 	if ("${_immediate}" STREQUAL "${CMAKE_LIBRARY_ARCHITECTURE}")
 	  # remove multi-arch part of the library path to get parent
 	  get_filename_component (_lib_path "${_lib_path}" PATH)
 	endif ()
 	get_filename_component (_immediate "${_lib_path}" NAME)	
 	if (("${_immediate}" STREQUAL "${CMAKE_INSTALL_LIBDIR}")
-		OR ("${_immediate}" STREQUAL "lib"))
+		OR ("${_immediate}" STREQUAL "lib")
+		OR ("${_immediate}" STREQUAL "${LIBDIR_MULTIARCH_UNAWARE}"))
 	  # remove library part of the path; this also undo the suffix
 	  # we added if we used the library as a standin
 	  get_filename_component (_lib_path "${_lib_path}" PATH)
