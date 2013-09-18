@@ -37,6 +37,11 @@ function (add_options langs builds)
 	  else (NOT ("${build}" STREQUAL "ALL_BUILDS"))
 		set (_bld "")
 	  endif (NOT ("${build}" STREQUAL "ALL_BUILDS"))
+	  # if we want everything in the "global" flag, then simply
+	  # ignore the build type here and go add everything to that one
+	  if (CMAKE_NOT_USING_CONFIG_FLAGS)
+		set (_bld "")
+	  endif ()
 	  foreach (_opt IN LISTS ARGN)
 		set (_var "CMAKE_${lang}_FLAGS${_bld}")
 		#message (STATUS "Adding \"${_opt}\" to \${${_var}}")
