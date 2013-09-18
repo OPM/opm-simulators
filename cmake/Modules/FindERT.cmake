@@ -180,6 +180,10 @@ if (UNIX)
 	NAMES "m"
 	)
   list (APPEND ERT_LIBRARIES ${MATH_LIBRARY})
+  find_library (DL_LIBRARY
+	NAMES "dl"
+	)
+  list (APPEND ERT_LIBRARIES ${DL_LIBRARY})
 endif (UNIX)
 
 # since OpenMP often implies pthreads, we need to tidy up
