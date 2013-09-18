@@ -39,12 +39,19 @@ struct HelperOps
     typedef Eigen::Array<int, Eigen::Dynamic, 1> IFaces;
     IFaces internal_faces;
 
-    /// Extract for each face the difference of its adjacent cells'values.
+    /// Extract for each internal face the difference of its adjacent cells'values (first - second).
     M ngrad;
+    /// Extract for each face the difference of its adjacent cells'values (second - first).
+    M grad;
     /// Extract for each face the average of its adjacent cells' values.
     M caver;
-    /// Extract for each cell the sum of its adjacent faces' (signed) values.
+    /// Extract for each cell the sum of its adjacent interior faces' (signed) values.
     M div;
+    /// Extract for each face the difference of its adjacent cells'values (first - second).
+    /// For boundary faces, one of the entries per row (corresponding to the outside) is zero.
+    M fullngrad;
+    /// Extract for each cell the sum of all its adjacent faces' (signed) values.
+    M fulldiv;
 
     /// Constructs all helper vectors and matrices.
     HelperOps(const UnstructuredGrid& grid)
@@ -89,7 +96,21 @@ struct HelperOps
         }
         ngrad.setFromTriplets(ngrad_tri.begin(), ngrad_tri.end());
         caver.setFromTriplets(caver_tri.begin(), caver_tri.end());
+        grad = -ngrad;
         div = ngrad.transpose();
+        std::vector<Tri> fullngrad_tri;
+        fullngrad_tri.reserve(2*nf);
+        for (int i = 0; i < nf; ++i) {
+            if (nb(i,0) >= 0) {
+                fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
+            }
+            if (nb(i,1) >= 0) {
+                fullngrad_tri.emplace_back(i, nb(i,1), -1.0);
+            }
+        }
+        fullngrad.resize(nf, nc);
+        fullngrad.setFromTriplets(fullngrad_tri.begin(), fullngrad_tri.end());
+        fulldiv = fullngrad.transpose();
     }
 };
 
