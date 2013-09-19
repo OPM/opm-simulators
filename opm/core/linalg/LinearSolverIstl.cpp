@@ -249,13 +249,16 @@ namespace Opm
 
     template<typename C>
     void setUpCriterion(C& criterion, double linsolver_prolongate_factor,
-                        int verbosity)
+                        int verbosity, std::size_t linsolver_smooth_steps)
     {
         criterion.setDebugLevel(verbosity);
 #if ANISOTROPIC_3D
         criterion.setDefaultValuesAnisotropic(3, 2);
 #endif
         criterion.setProlongationDampingFactor(linsolver_prolongate_factor);
+        criterion.setNoPreSmoothSteps(linsolver_smooth_steps);
+        criterion.setNoPostSmoothSteps(linsolver_smooth_steps);
+        criterion.setGamma(1); // V-cycle; this is the default
     }
 
     LinearSolverInterface::LinearSolverReport
@@ -288,9 +291,9 @@ namespace Opm
         Criterion criterion;
         Precond::SmootherArgs smootherArgs;
         Operator opA(A);
-        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity);
-        Precond precond(opA, criterion, smootherArgs, 1, linsolver_smooth_steps,
-                        linsolver_smooth_steps);
+        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity,
+                       linsolver_smooth_steps);
+        Precond precond(opA, criterion, smootherArgs);
 
         // Construct linear solver.
         Dune::CGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
@@ -339,9 +342,9 @@ namespace Opm
         Operator opA(A);
         Precond::SmootherArgs smootherArgs;
         Criterion criterion;
-        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity);
-        Precond precond(opA, criterion, smootherArgs, 1, linsolver_smooth_steps,
-                        linsolver_smooth_steps);
+        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity,
+                       linsolver_smooth_steps);
+        Precond precond(opA, criterion, smootherArgs);
 
         // Construct linear solver.
         Dune::GeneralizedPCGSolver<Vector> linsolve(opA, precond, tolerance, maxit, verbosity);
