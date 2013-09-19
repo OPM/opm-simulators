@@ -545,8 +545,8 @@ namespace Opm {
             const int po = pu.phase_pos[ Oil ];
             const int pg = pu.phase_pos[ Gas ];
 
-            rq_[pg].accum[aix] += pv_mult * state.rs * rq_[po].accum[aix];
-            // DUMP(rq_[pg].accum[aix]);
+            rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
+            //DUMP(rq_[pg].accum[aix]);
         }
     }
 
