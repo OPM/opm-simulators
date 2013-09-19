@@ -1003,10 +1003,19 @@ namespace Opm {
         rq_[ actph ].mob = tr_mult * kr[ phase ] / mu;
 
         const ADB rho   = fluidDensity(phase, state.pressure, state.rs, cells_);
-        const ADB gflux = grav_ * rho;
 
         ADB& head = rq_[ actph ].head;
-        head      = transi*(ops_.ngrad * state.pressure) + gflux;
+
+        // compute gravity potensial using the face average as in eclipse and MRST
+        const ADB rhoavg = ops_.caver * rho;
+        const V vz = geo_.z();
+        std::vector<int> blocksizes = rhoavg.blockPattern();
+        ADB z = ADB::constant(vz,blocksizes);
+
+        const ADB dp = ops_.ngrad * state.pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * z));
+
+        head = transi*dp;
+        //head      = transi*(ops_.ngrad * state.pressure) + gflux;
 
         UpwindSelector<double> upwind(grid_, ops_, head.value());
 
