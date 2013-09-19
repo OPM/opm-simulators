@@ -202,7 +202,35 @@ namespace Opm
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
     }
+    static void outputWellStateMatlab(const Opm::WellState& well_state,
+                                  const int step,
+                                  const std::string& output_dir)
+    {
+        Opm::DataMap dm;
+        dm["bhp"] = &well_state.bhp();
+        dm["wellrates"] = &well_state.wellRates();
 
+        // Write data (not grid) in Matlab format
+        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+            std::ostringstream fname;
+            fname << output_dir << "/" << it->first;
+            boost::filesystem::path fpath = fname.str();
+            try {
+                create_directories(fpath);
+            }
+            catch (...) {
+                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
+            }
+            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+            std::ofstream file(fname.str().c_str());
+            if (!file) {
+                OPM_THROW(std::runtime_error,"Failed to open " << fname.str());
+            }
+            file.precision(15);
+            const std::vector<double>& d = *(it->second);
+            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
+        }
+    }
 
 #if 0
     static void outputWaterCut(const Opm::Watercut& watercut,
@@ -342,6 +370,8 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+
             }
 
             SimulatorReport sreport;
@@ -456,6 +486,7 @@ namespace Opm
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+            outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 #if 0
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
