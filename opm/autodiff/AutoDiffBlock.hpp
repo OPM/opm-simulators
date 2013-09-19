@@ -28,15 +28,66 @@
 namespace Opm
 {
 
+    /// A class for forward-mode automatic differentiation with vector
+    /// values and sparse jacobian matrices.
+    ///
+    /// The class contains a (column) vector of values and multiple
+    /// sparse matrices representing its derivatives. Each such matrix
+    /// has a number of rows equal to the number of rows in the value
+    /// vector, and a number of columns equal to the number of
+    /// variables we want to compute the derivatives with respect
+    /// to. The reason to have multiple such jacobians instead of just
+    /// one is to allow simpler grouping of variables, making it
+    /// easier to implement various preconditioning schemes. Only
+    /// basic arithmetic operators are implemented for this class,
+    /// reflecting our needs so far.
+    ///
+    /// The class is built on the Eigen library, using an Eigen array
+    /// type to contain the values and Eigen sparse matrices for the
+    /// jacobians. The overloaded operators are intended to behave in
+    /// a similar way to Eigen arrays, meaning that the '*' operator
+    /// is elementwise multiplication. The only exception is
+    /// multiplication with a sparse matrix from the left, which is
+    /// treated as an Eigen matrix operation.
+    ///
+    /// There are no public constructors, instead we use the Named
+    /// Constructor pattern. In general, one needs to know which
+    /// variables one wants to compute the derivatives with respect to
+    /// before constructing an AutoDiffBlock. Some of the constructors
+    /// require you to pass a block pattern. This should be a vector
+    /// containing the number of columns you want for each jacobian
+    /// matrix.
+    ///
+    /// For example: you want the derivatives with respect to three
+    /// different variables p, r and s. Assuming that there are 10
+    /// elements in p, and 20 in each of r and s, the block pattern is
+    /// { 10, 20, 20 }. When creating the variables p, r and s in your
+    /// program you have two options:
+    ///    a) Use the variable() constructor three times, passing the
+    ///       index (0 for p, 1 for r and 2 for s), initial value of
+    ///       each variable and the block pattern.
+    ///    b) Use the variables() constructor passing only the initial
+    ///       values of each variable. The block pattern will be
+    ///       inferred from the size of the initial value vectors.
+    ///       This is usually the simplest option if you have multiple
+    ///       variables. Note that this constructor returns a vector
+    ///       of all three variables, so you need to use index access
+    ///       (operator[]) to get the individual variables (that is p,
+    ///       r and s).
+    /// After this, the r variable for example will have a size() of
+    /// 20 and three jacobian matrices. The first is a 20 by 10 zero
+    /// matrix, the second is a 20 by 20 identity matrix, and the
+    /// third is a 20 by 20 zero matrix.
     template <typename Scalar>
     class AutoDiffBlock
     {
     public:
-        /// Underlying types for scalar vectors and jacobians.
+        /// Underlying type for values.
         typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> V;
+        /// Underlying type for jacobians.
         typedef Eigen::SparseMatrix<Scalar> M;
 
-        /// Named constructor pattern used here.
+        /// Construct an empty AutoDiffBlock.
         static AutoDiffBlock null()
         {
             V val;
@@ -44,6 +95,9 @@ namespace Opm
             return AutoDiffBlock(val, jac);
         }
 
+        /// Create an AutoDiffBlock representing a constant.
+        /// \param[in] val         values 
+        /// \param[in] blocksizes  block pattern
         static AutoDiffBlock constant(const V& val, const std::vector<int>& blocksizes)
         {
             std::vector<M> jac;
@@ -57,6 +111,13 @@ namespace Opm
             return AutoDiffBlock(val, jac);
         }
 
+        /// Create an AutoDiffBlock representing a single variable block.
+        /// \param[in] index       index of the variable you are constructing
+        /// \param[in] val         values 
+        /// \param[in] blocksizes  block pattern
+        /// The resulting object will have size() equal to block_pattern[index].
+        /// Its jacobians will all be zero, except for derivative()[index], which
+        /// will be an identity matrix.
         static AutoDiffBlock variable(const int index, const V& val, const std::vector<int>& blocksizes)
         {
             std::vector<M> jac;
@@ -76,13 +137,16 @@ namespace Opm
             return AutoDiffBlock(val, jac);
         }
 
+        /// Create an AutoDiffBlock by directly specifying values and jacobians.
+        /// \param[in] val         values 
+        /// \param[in] jac         vector of jacobians
         static AutoDiffBlock function(const V& val, const std::vector<M>& jac)
         {
             return AutoDiffBlock(val, jac);
         }
 
-        /// Construct a set of primary variables,
-        /// each initialized to a given vector.
+        /// Construct a set of primary variables, each initialized to
+        /// a given vector.
         static std::vector<AutoDiffBlock> variables(const std::vector<V>& initial_values)
         {
             const int num_vars = initial_values.size();
@@ -97,7 +161,7 @@ namespace Opm
             return vars;
         }
 
-        /// Operator +=
+        /// Elementwise operator +=
         AutoDiffBlock& operator+=(const AutoDiffBlock& rhs)
         {
             assert (numBlocks()    == rhs.numBlocks());
@@ -115,7 +179,7 @@ namespace Opm
             return *this;
         }
 
-        /// Operator +
+        /// Elementwise operator +
         AutoDiffBlock operator+(const AutoDiffBlock& rhs) const
         {
             std::vector<M> jac = jac_;
@@ -129,7 +193,7 @@ namespace Opm
             return function(val_ + rhs.val_, jac);
         }
 
-        /// Operator -
+        /// Elementwise operator -
         AutoDiffBlock operator-(const AutoDiffBlock& rhs) const
         {
             std::vector<M> jac = jac_;
@@ -143,7 +207,7 @@ namespace Opm
             return function(val_ - rhs.val_, jac);
         }
 
-        /// Operator *
+        /// Elementwise operator *
         AutoDiffBlock operator*(const AutoDiffBlock& rhs) const
         {
             int num_blocks = numBlocks();
@@ -160,7 +224,7 @@ namespace Opm
             return function(val_ * rhs.val_, jac);
         }
 
-        /// Operator /
+        /// Elementwise operator /
         AutoDiffBlock operator/(const AutoDiffBlock& rhs) const
         {
             int num_blocks = numBlocks();
@@ -177,6 +241,7 @@ namespace Opm
             }
             return function(val_ / rhs.val_, jac);
         }
+
         /// I/O.
         template <class Ostream>
         Ostream&
@@ -213,13 +278,13 @@ namespace Opm
             return bp;
         }
 
-        /// Function value
+        /// Function value.
         const V& value() const
         {
             return val_;
         }
 
-        /// Function derivatives
+        /// Function derivatives.
         const std::vector<M>& derivative() const
         {
             return jac_;
@@ -244,6 +309,9 @@ namespace Opm
     };
 
 
+    // ---------  Free functions and operators for AutoDiffBlock  ---------
+
+    /// Stream output.
     template <class Ostream, typename Scalar>
     Ostream&
     operator<<(Ostream& os, const AutoDiffBlock<Scalar>& fw)
@@ -268,6 +336,7 @@ namespace Opm
     }
 
 
+    /// Elementwise multiplication with constant on the left.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator*(const typename AutoDiffBlock<Scalar>::V& lhs,
                                     const AutoDiffBlock<Scalar>& rhs)
@@ -276,6 +345,7 @@ namespace Opm
     }
 
 
+    /// Elementwise multiplication with constant on the right.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator*(const AutoDiffBlock<Scalar>& lhs,
                                     const typename AutoDiffBlock<Scalar>::V& rhs)
@@ -284,6 +354,7 @@ namespace Opm
     }
 
 
+    /// Elementwise addition with constant on the left.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator+(const typename AutoDiffBlock<Scalar>::V& lhs,
                                     const AutoDiffBlock<Scalar>& rhs)
@@ -292,6 +363,7 @@ namespace Opm
     }
 
 
+    /// Elementwise addition with constant on the right.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator+(const AutoDiffBlock<Scalar>& lhs,
                                     const typename AutoDiffBlock<Scalar>::V& rhs)
@@ -300,6 +372,7 @@ namespace Opm
     }
 
 
+    /// Elementwise subtraction with constant on the left.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator-(const typename AutoDiffBlock<Scalar>::V& lhs,
                                     const AutoDiffBlock<Scalar>& rhs)
@@ -308,6 +381,7 @@ namespace Opm
     }
 
 
+    /// Elementwise subtraction with constant on the right.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator-(const AutoDiffBlock<Scalar>& lhs,
                                     const typename AutoDiffBlock<Scalar>::V& rhs)
@@ -316,6 +390,7 @@ namespace Opm
     }
 
 
+    /// Elementwise division with constant on the left.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator/(const typename AutoDiffBlock<Scalar>::V& lhs,
                                     const AutoDiffBlock<Scalar>& rhs)
@@ -324,6 +399,7 @@ namespace Opm
     }
 
 
+    /// Elementwise division with constant on the right.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator/(const AutoDiffBlock<Scalar>& lhs,
                                     const typename AutoDiffBlock<Scalar>::V& rhs)
