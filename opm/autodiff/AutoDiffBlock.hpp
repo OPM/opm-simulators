@@ -45,8 +45,8 @@ namespace Opm
     /// The class is built on the Eigen library, using an Eigen array
     /// type to contain the values and Eigen sparse matrices for the
     /// jacobians. The overloaded operators are intended to behave in
-    /// a similar way to Eigen arrays, meaning that the '*' operator
-    /// is elementwise multiplication. The only exception is
+    /// a similar way to Eigen arrays, meaning for example that the *
+    /// operator is elementwise multiplication. The only exception is
     /// multiplication with a sparse matrix from the left, which is
     /// treated as an Eigen matrix operation.
     ///
@@ -63,10 +63,10 @@ namespace Opm
     /// elements in p, and 20 in each of r and s, the block pattern is
     /// { 10, 20, 20 }. When creating the variables p, r and s in your
     /// program you have two options:
-    ///    a) Use the variable() constructor three times, passing the
+    ///     - Use the variable() constructor three times, passing the
     ///       index (0 for p, 1 for r and 2 for s), initial value of
     ///       each variable and the block pattern.
-    ///    b) Use the variables() constructor passing only the initial
+    ///     - Use the variables() constructor passing only the initial
     ///       values of each variable. The block pattern will be
     ///       inferred from the size of the initial value vectors.
     ///       This is usually the simplest option if you have multiple
@@ -74,6 +74,7 @@ namespace Opm
     ///       of all three variables, so you need to use index access
     ///       (operator[]) to get the individual variables (that is p,
     ///       r and s).
+    ///
     /// After this, the r variable for example will have a size() of
     /// 20 and three jacobian matrices. The first is a 20 by 10 zero
     /// matrix, the second is a 20 by 20 identity matrix, and the
