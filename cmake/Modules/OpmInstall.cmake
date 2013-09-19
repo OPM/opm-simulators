@@ -8,6 +8,7 @@
 # _TARGET           CMake target which builds the library
 # _LIBRARY_TYPE     Static or shared library
 # _DEBUG            File containing debug symbols
+include (UseMultiArch)
 
 macro (opm_install opm)
   foreach (_hdr IN LISTS ${opm}_HEADERS)
@@ -48,8 +49,10 @@ macro (opm_install opm)
 	  DESTINATION ${_dbg_prefix}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${${opm}_VER_DIR}
 	  )
   endif (${opm}_LIBRARY_TYPE STREQUAL "SHARED" AND ${opm}_TARGET AND ${opm}_DEBUG)
+  # note that the DUNE parts that looks for dune.module is currently (2013-09) not
+  # multiarch-aware and will thus put in lib64/ on RHEL and lib/ on Debian
   install (
 	FILES ${PROJECT_SOURCE_DIR}/dune.module
-	DESTINATION lib${${opm}_VER_DIR}/dunecontrol/${${opm}_NAME}
+	DESTINATION ${LIBDIR_MULTIARCH_UNAWARE}${${opm}_VER_DIR}/dunecontrol/${${opm}_NAME}
 	)
 endmacro (opm_install opm)
