@@ -39,7 +39,7 @@ namespace Opm
     class TwophaseState;
     class WellState;
     struct SimulatorReport;
-    class Event;
+    struct Event;
 
     /// Class collecting all necessary components for a two-phase simulation.
     class SimulatorIncompTwophase
