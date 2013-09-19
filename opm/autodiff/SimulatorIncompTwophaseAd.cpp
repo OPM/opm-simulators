@@ -22,7 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/autodiff/SimulatorIncompTwophaseAdfi.hpp>
+#include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -60,7 +60,7 @@
 namespace Opm
 {
 
-    class SimulatorIncompTwophaseAdfi::Impl
+    class SimulatorIncompTwophaseAd::Impl
     {
     public:
         Impl(const parameter::ParameterGroup& param,
@@ -109,7 +109,7 @@ namespace Opm
 
 
 
-    SimulatorIncompTwophaseAdfi::SimulatorIncompTwophaseAdfi(const parameter::ParameterGroup& param,
+    SimulatorIncompTwophaseAd::SimulatorIncompTwophaseAd(const parameter::ParameterGroup& param,
                                                      const UnstructuredGrid& grid,
                                                      const IncompPropertiesInterface& props,
                                                      const RockCompressibility* rock_comp_props,
@@ -126,7 +126,7 @@ namespace Opm
 
 
 
-    SimulatorReport SimulatorIncompTwophaseAdfi::run(SimulatorTimer& timer,
+    SimulatorReport SimulatorIncompTwophaseAd::run(SimulatorTimer& timer,
                                                  TwophaseState& state,
                                                  WellState& well_state)
     {
@@ -310,7 +310,7 @@ namespace Opm
 
 
 
-    SimulatorIncompTwophaseAdfi::Impl::Impl(const parameter::ParameterGroup& param,
+    SimulatorIncompTwophaseAd::Impl::Impl(const parameter::ParameterGroup& param,
                                         const UnstructuredGrid& grid,
                                         const IncompPropertiesInterface& props,
                                         const RockCompressibility* rock_comp_props,
@@ -409,7 +409,7 @@ namespace Opm
 
 
 
-    SimulatorReport SimulatorIncompTwophaseAdfi::Impl::run(SimulatorTimer& timer,
+    SimulatorReport SimulatorIncompTwophaseAd::Impl::run(SimulatorTimer& timer,
                                                        TwophaseState& state,
                                                        WellState& well_state)
     {

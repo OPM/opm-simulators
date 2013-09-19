@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORINCOMPTWOPHASEADFI_HEADER_INCLUDED
-#define OPM_SIMULATORINCOMPTWOPHASEADFI_HEADER_INCLUDED
+#ifndef OPM_SIMULATORINCOMPTWOPHASEAD_HEADER_INCLUDED
+#define OPM_SIMULATORINCOMPTWOPHASEAD_HEADER_INCLUDED
 
 #include <boost/shared_ptr.hpp>
 #include <vector>
@@ -40,7 +40,7 @@ namespace Opm
     struct SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
-    class SimulatorIncompTwophaseAdfi
+    class SimulatorIncompTwophaseAd
     {
     public:
         /// Initialise from parameters and objects to observe.
@@ -67,14 +67,14 @@ namespace Opm
         /// \param[in] bcs           boundary conditions, treat as all noflow if null
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
-       SimulatorIncompTwophaseAdfi(const parameter::ParameterGroup& param,
-                                   const UnstructuredGrid& grid,
-                                   const IncompPropertiesInterface& props,
-                                   const RockCompressibility* rock_comp_props,
-                                   WellsManager& wells_manager,
-                                   const std::vector<double>& src,
-                                   const FlowBoundaryConditions* bcs,
-                                   LinearSolverInterface& linsolver,
+        SimulatorIncompTwophaseAd(const parameter::ParameterGroup& param,
+                                  const UnstructuredGrid& grid,
+                                  const IncompPropertiesInterface& props,
+                                  const RockCompressibility* rock_comp_props,
+                                  WellsManager& wells_manager,
+                                  const std::vector<double>& src,
+                                  const FlowBoundaryConditions* bcs,
+                                  LinearSolverInterface& linsolver,
                                    const double* gravity);
 
         /// Run the simulation.
@@ -96,4 +96,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_SIMULATORINCOMPTWOPHASEADFI_HEADER_INCLUDED
+#endif // OPM_SIMULATORINCOMPTWOPHASEAD_HEADER_INCLUDED

@@ -44,7 +44,7 @@
 
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/autodiff/SimulatorIncompTwophaseAdfi.hpp>
+#include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
@@ -216,15 +216,15 @@ try
     if (!use_deck) {
         // Simple simulation without a deck.
         WellsManager wells; // no wells.
-        SimulatorIncompTwophaseAdfi simulator(param,
-                                          *grid->c_grid(),
-                                          *props,
-                                          rock_comp->isActive() ? rock_comp.get() : 0,
-                                          wells,
-                                          src,
-                                          bcs.c_bcs(),
-                                          linsolver,
-                                          grav);
+        SimulatorIncompTwophaseAd simulator(param,
+                                            *grid->c_grid(),
+                                            *props,
+                                            rock_comp->isActive() ? rock_comp.get() : 0,
+                                            wells,
+                                            src,
+                                            bcs.c_bcs(),
+                                            linsolver,
+                                            grav);
         SimulatorTimer simtimer;
         simtimer.init(param);
         warnIfUnusedParams(param);
@@ -271,15 +271,15 @@ try
             }
 
             // Create and run simulator.
-            SimulatorIncompTwophaseAdfi simulator(param,
-                                              *grid->c_grid(),
-                                              *props,
-                                              rock_comp->isActive() ? rock_comp.get() : 0,
-                                              wells,
-                                              src,
-                                              bcs.c_bcs(),
-                                              linsolver,
-                                              grav);
+            SimulatorIncompTwophaseAd simulator(param,
+                                                *grid->c_grid(),
+                                                *props,
+                                                rock_comp->isActive() ? rock_comp.get() : 0,
+                                                wells,
+                                                src,
+                                                bcs.c_bcs(),
+                                                linsolver,
+                                                grav);
             if (epoch == 0) {
                 warnIfUnusedParams(param);
             }
