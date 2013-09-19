@@ -183,7 +183,7 @@ namespace Opm {
         well_kr_ = fluid_.relperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
 
         const double atol  = 1.0e-10;
-        const double rtol  = 5.0e-8;
+        const double rtol  = 5.0e-6;
         const int    maxit = 15;
 
         assemble(dt, state, well_state);

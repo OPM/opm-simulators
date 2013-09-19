@@ -70,7 +70,6 @@ namespace Opm
              const BlackoilPropertiesInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
-             const std::vector<double>& src,
              const FlowBoundaryConditions* bcs,
              LinearSolverInterface& linsolver,
              const double* gravity);
@@ -99,7 +98,6 @@ namespace Opm
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
-        const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
         const double* gravity_;
         // Solvers
@@ -121,12 +119,11 @@ namespace Opm
                                                      const BlackoilPropertiesInterface& props,
                                                      const RockCompressibility* rock_comp_props,
                                                      WellsManager& wells_manager,
-                                                     const std::vector<double>& src,
                                                      const FlowBoundaryConditions* bcs,
                                                      LinearSolverInterface& linsolver,
                                                      const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, src, bcs, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, bcs, linsolver, gravity));
     }
 
 
@@ -235,13 +232,12 @@ namespace Opm
 
 
 
-    // \TODO: make CompressibleTpfa take src and bcs.
+    // \TODO: make CompressibleTpfa take bcs.
     SimulatorCompressibleAd::Impl::Impl(const parameter::ParameterGroup& param,
                                         const UnstructuredGrid& grid,
                                         const BlackoilPropertiesInterface& props,
                                         const RockCompressibility* rock_comp_props,
                                         WellsManager& wells_manager,
-                                        const std::vector<double>& src,
                                         const FlowBoundaryConditions* bcs,
                                         LinearSolverInterface& linsolver,
                                         const double* gravity)
@@ -250,7 +246,6 @@ namespace Opm
           rock_comp_props_(rock_comp_props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
-          src_(src),
           bcs_(bcs),
           gravity_(gravity),
           fluid_(props_),
