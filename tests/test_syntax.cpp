@@ -15,7 +15,7 @@
 
 BOOST_AUTO_TEST_CASE(Initialisation)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(Initialisation)
 
 BOOST_AUTO_TEST_CASE(Addition)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(Addition)
 
 BOOST_AUTO_TEST_CASE(Subtraction)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(Subtraction)
 
 BOOST_AUTO_TEST_CASE(Multiplication)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(Multiplication)
 
 BOOST_AUTO_TEST_CASE(Division)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(Division)
 
 BOOST_AUTO_TEST_CASE(Polynomial)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(Polynomial)
 
 BOOST_AUTO_TEST_CASE(Cosine)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE(Cosine)
 
 BOOST_AUTO_TEST_CASE(SquareRoot)
 {
-    typedef AutoDiff::Forward<double> AdFW;
+    typedef Opm::AutoDiff<double> AdFW;
 
     const double atol = 1.0e-14;
 
