@@ -111,7 +111,7 @@ fluxFunc(const std::vector<ADB>& m)
 int main()
 try
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef Opm::AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
 
@@ -148,11 +148,11 @@ try
     std::cerr << "Opm core " << clock.secsSinceLast() << std::endl;
 
     // Define neighbourhood-derived operator matrices.
-    const HelperOps ops(grid);
+    const Opm::HelperOps ops(grid);
     const int num_internal = ops.internal_faces.size();
     std::cerr << "Topology matrices " << clock.secsSinceLast() << std::endl;
 
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef Opm::AutoDiffBlock<double> ADB;
     typedef ADB::V V;
 
     // q
@@ -248,7 +248,7 @@ try
     V sw1 = 0.5*V::Ones(nc,1);
     const V ndp = (ops.ngrad * p1.matrix()).array();
     const V dflux = mobtransf * ndp;
-    const UpwindSelector<double> upwind(grid, ops, dflux);
+    const Opm::UpwindSelector<double> upwind(grid, ops, dflux);
     const V pv = Eigen::Map<const V>(props.porosity(), nc, 1)
         * Eigen::Map<const V>(grid.cell_volumes, nc, 1);
     const double dt = 0.0005;

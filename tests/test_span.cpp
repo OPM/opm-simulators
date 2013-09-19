@@ -32,6 +32,8 @@
 
 #include <iostream>
 
+using namespace Opm;
+
 BOOST_AUTO_TEST_CASE(OneArgConstr)
 {
     const int num = 4;

@@ -58,8 +58,6 @@ try
     const Opm::BlackoilPropertiesBasic   oldprops(param, 2, nc);
     const Opm::BlackoilPropsAd           props(oldprops);
 
-    typedef AutoDiff::ForwardBlock<double>      ADB;
-
     Wells* wells = create_wells(2, 2, 5);
     const double inj_frac[] = { 1.0, 0.0 };
     const double prod_frac[] = { 0.0, 0.0 };
