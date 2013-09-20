@@ -84,11 +84,22 @@ function (find_dune_version suite module)
 	# from this point on, _lib_path does not contain an architecture-
 	# specific component anymore; dune.module is always put in straight
 	# noarch lib/ since it does not contain any paths to binaries
-	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	set (_suffix "${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_suffix}")
 	if (NOT EXISTS "${_dune_mod}")
-	  # use the name itself as a flag for whether it was found or not
 	  set (_last_dune_mod_bld "${_dune_mod}")
-	  set (_dune_mod "")
+	  # one more try, if we have a private install, then it doesn't use
+	  # e.g. lib64 but always lib (!)
+	  if ("${LIBDIR_MULTIARCH_UNAWARE}" STREQUAL "lib")
+		set (_dune_mod "")
+	  else ()
+		set (_dune_mod "${_lib_path}/lib${_suffix}")
+		if (NOT EXISTS "${_dune_mod}")
+		  set (_last_dune_mod_pri "${_dune_mod}")
+		  # use the name itself as a flag for whether it was found or not
+		  set (_dune_mod "")
+		endif ()
+	  endif ()
 	endif ()
   endif ()
 
@@ -96,7 +107,14 @@ function (find_dune_version suite module)
   # code later, so we bail out early
   if (NOT _dune_mod)
 	if (${suite}-${module}_FOUND)
-	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module} (looking for either \"${_last_dune_mod_src}\" or \"${_last_dune_mod_bld}\")")
+	  set (_searched_paths "\"${_last_dune_mod_src}\"")
+	  if (NOT ("${_last_dune_mod_bld}" STREQUAL ""))
+		set (_searched_paths "either ${_searched_paths} or \"${_last_dune_mod_bld}\"")
+	  endif ()
+	  if (NOT ("${_last_dune_mod_pri}" STREQUAL ""))
+		set (_searched_paths "${_searched_paths} or \"${_last_dune_mod_pri}\"")
+	  endif ()
+	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module} (looking for ${_searched_paths})")
 	else ()
 	  return ()
 	endif ()
