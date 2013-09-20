@@ -25,10 +25,10 @@
 #ifndef OPM_COMPONENT_HH
 #define OPM_COMPONENT_HH
 
-#include <dune/common/stdstreams.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 /*!
  * \ingroup Components
@@ -57,61 +57,61 @@ public:
      */
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
-    {   Dune::dwarn << "No init routine defined - make sure that this is not necessary!" << std::endl; }
+    { }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
     static bool gasIsCompressible()
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasIsCompressible()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasIsCompressible()"); }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
     static bool gasIsIdeal()
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasIsIdeal()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasIsIdeal()"); }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
     static bool liquidIsCompressible()
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidIsCompressible()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidIsCompressible()"); }
 
     /*!
      * \brief A human readable name for the component.
      */
     static const char *name()
-    { DUNE_THROW(Dune::NotImplemented, "Component::name()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::name()"); }
 
     /*!
      * \brief The molar mass in \f$\mathrm{[kg]}\f$ of the component.
      */
     static Scalar molarMass()
-    { DUNE_THROW(Dune::NotImplemented, "Component::molarMass()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::molarMass()"); }
 
     /*!
      * \brief Returns the critical temperature in \f$\mathrm{[K]}\f$ of the component.
      */
     static Scalar criticalTemperature()
-    { DUNE_THROW(Dune::NotImplemented, "Component::criticalTemperature()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::criticalTemperature()"); }
 
     /*!
      * \brief Returns the critical pressure in \f$\mathrm{[Pa]}\f$ of the component.
      */
     static Scalar criticalPressure()
-    { DUNE_THROW(Dune::NotImplemented, "Component::criticalPressure()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::criticalPressure()"); }
 
     /*!
      * \brief Returns the temperature in \f$\mathrm{[K]}\f$ at the component's triple point.
      */
     static Scalar tripleTemperature()
-    { DUNE_THROW(Dune::NotImplemented, "Component::tripleTemperature()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::tripleTemperature()"); }
 
     /*!
      * \brief Returns the pressure in \f$\mathrm{[Pa]}\f$ at the component's triple point.
      */
     static Scalar triplePressure()
-    { DUNE_THROW(Dune::NotImplemented, "Component::triplePressure()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::triplePressure()"); }
 
     /*!
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of the component at a given
@@ -120,7 +120,7 @@ public:
      * \param T temperature of the component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
-    { DUNE_THROW(Dune::NotImplemented, "Component::vaporPressure()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::vaporPressure()"); }
 
     /*!
      * \brief The density in \f$\mathrm{[kg/m^3]}\f$ of the component at a given pressure in \f$\mathrm{[Pa]}\f$ and temperature in \f$\mathrm{[K]}\f$.
@@ -129,7 +129,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasDensity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasDensity()"); }
 
     /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of the liquid component at a given pressure in \f$\mathrm{[Pa]}\f$ and temperature in \f$\mathrm{[K]}\f$.
@@ -138,7 +138,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidDensity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidDensity()"); }
 
     /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of the pure component in gas.
@@ -147,7 +147,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasEnthalpy()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasEnthalpy()"); }
 
     /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of the pure component in liquid.
@@ -156,7 +156,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidEnthalpy()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidEnthalpy()"); }
 
     /*!
      * \brief Specific internal energy \f$\mathrm{[J/kg]}\f$ of the pure component in gas.
@@ -165,7 +165,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasInternalEnergy()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasInternalEnergy()"); }
 
     /*!
      * \brief Specific internal energy \f$\mathrm{[J/kg]}\f$ of pure the pure component in liquid.
@@ -174,7 +174,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidInternalEnergy()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidInternalEnergy()"); }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of the pure component at a given pressure in \f$\mathrm{[Pa]}\f$ and
@@ -184,7 +184,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar gasViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasViscosity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasViscosity()"); }
 
     /*!
      * \brief The dynamic liquid viscosity \f$\mathrm{[Pa*s]}\f$ of the pure component.
@@ -193,31 +193,31 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidViscosity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidViscosity()"); }
 
     /*!
      * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a gas.
      */
     static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasThermalConductivity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasThermalConductivity()"); }
 
     /*!
      * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a liquid.
      */
     static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidThermalConductivity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidThermalConductivity()"); }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg] as a gas.
      */
     static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::gasHeatCapacity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::gasHeatCapacity()"); }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg] as a liquid.
      */
     static Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented, "Component::liquidHeatCapacity()"); }
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidHeatCapacity()"); }
 };
 
 } // end namepace

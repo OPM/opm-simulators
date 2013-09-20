@@ -24,9 +24,11 @@
 #ifndef OPM_AIR_HH
 #define OPM_AIR_HH
 
-#include <dune/common/exceptions.hh>
 #include <opm/material/components/component.hh>
 #include <opm/material/idealgas.hh>
+
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm {
 
@@ -156,8 +158,8 @@ public:
         Scalar r;
         if(temperature < 273.15 || temperature > 660.)
         {
-            DUNE_THROW(Dune::NotImplemented,
-                "ConstrelAir: Temperature out of range at ");
+            OPM_THROW(MaterialLawProblem,
+                      "ConstrelAir: Temperature out of range at ");
         }
         r = 1.496*1.E-6*std::pow(temperature,1.5)/(temperature+120.);
         return (r);

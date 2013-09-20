@@ -168,7 +168,7 @@ public:
         case nPhaseIdx: return "n";
         case gPhaseIdx: return "g";;
         };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
     }
 
     //! \copydoc BaseFluidSystem::componentName
@@ -179,7 +179,7 @@ public:
         case airIdx: return Air::name();
         case NAPLIdx: return NAPL::name();
         };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+        OPM_THROW(std::logic_error, "Invalid component index " << compIdx);
     }
 
     //! \copydoc BaseFluidSystem::molarMass
@@ -193,7 +193,7 @@ public:
             : (compIdx == NAPLIdx)
             ? NAPL::molarMass()
             : -1e10;
-        //DUNE_THROW(Dune::InvalidStateException, "Invalid component index " << compIdx);
+        //OPM_THROW(std::logic_error, "Invalid component index " << compIdx);
     }
 
     //! \copydoc BaseFluidSystem::density
@@ -335,7 +335,7 @@ public:
 
             if (compIdx==NAPLIdx) return (1 - xgw)/(xga/diffAW + xgc/diffWC);
             else if (compIdx==H2OIdx) return (1 - xgc)/(xgw/diffWC + xga/diffAC);
-            else if (compIdx==airIdx) DUNE_THROW(Dune::InvalidStateException,
+            else if (compIdx==airIdx) OPM_THROW(std::logic_error,
                                                  "Diffusivity of air in the gas phase "
                                                  "is constraint by sum of diffusive fluxes = 0 !\n");
         }
@@ -356,13 +356,13 @@ public:
                 diffCont = (1.- xwc)/(xww/diffWCl + xwa/diffACl);
                 return diffCont;
             case H2OIdx:
-                DUNE_THROW(Dune::InvalidStateException,
+                OPM_THROW(std::logic_error,
                            "Diffusivity of water in the water phase "
                            "is constraint by sum of diffusive fluxes = 0 !\n");
             };
         }
         else if (phaseIdx==nPhaseIdx) {
-            DUNE_THROW(Dune::InvalidStateException,
+            OPM_THROW(std::logic_error,
                        "Diffusion coefficients of "
                        "substances in liquid phase are undefined!\n");
         }
@@ -441,7 +441,7 @@ public:
 
             return result;
         }
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
     }
 
     //! \copydoc BaseFluidSystem::thermalConductivity

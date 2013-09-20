@@ -31,7 +31,8 @@
 #include <cassert>
 #include <iostream>
 
-#include <opm/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
 {
@@ -109,7 +110,7 @@ public:
             Scalar temperature = iT * (tempMax_ - tempMin_)/(nTemp_ - 1) + tempMin_;
 
             try { vaporPressure_[iT] = RawComponent::vaporPressure(temperature); }
-            catch (Dune::NotImplemented) { vaporPressure_[iT] = NaN; }
+            catch (std::exception) { vaporPressure_[iT] = NaN; }
             catch (NumericalProblem e) { vaporPressure_[iT] = NaN; };
 
             Scalar pgMax = maxGasPressure_(iT);
@@ -122,23 +123,23 @@ public:
                 unsigned i = iT + iP*nTemp_;
 
                 try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
-                catch (Dune::NotImplemented) { gasEnthalpy_[i] = NaN; }
+                catch (std::exception) { gasEnthalpy_[i] = NaN; }
                 catch (NumericalProblem) { gasEnthalpy_[i] = NaN; };
 
                 try { gasHeatCapacity_[i] = RawComponent::gasHeatCapacity(temperature, pressure); }
-                catch (Dune::NotImplemented) { gasHeatCapacity_[i] = NaN; }
+                catch (std::exception) { gasHeatCapacity_[i] = NaN; }
                 catch (NumericalProblem) { gasHeatCapacity_[i] = NaN; };
 
                 try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
-                catch (Dune::NotImplemented) { gasDensity_[i] = NaN; }
+                catch (std::exception) { gasDensity_[i] = NaN; }
                 catch (NumericalProblem) { gasDensity_[i] = NaN; };
 
                 try { gasViscosity_[i] = RawComponent::gasViscosity(temperature, pressure); }
-                catch (Dune::NotImplemented) { gasViscosity_[i] = NaN; }
+                catch (std::exception) { gasViscosity_[i] = NaN; }
                 catch (NumericalProblem) { gasViscosity_[i] = NaN; };
 
                 try { gasThermalConductivity_[i] = RawComponent::gasThermalConductivity(temperature, pressure); }
-                catch (Dune::NotImplemented) { gasThermalConductivity_[i] = NaN; }
+                catch (std::exception) { gasThermalConductivity_[i] = NaN; }
                 catch (NumericalProblem) { gasThermalConductivity_[i] = NaN; };
             };
 
@@ -150,23 +151,23 @@ public:
                 unsigned i = iT + iP*nTemp_;
 
                 try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
-                catch (Dune::NotImplemented) { liquidEnthalpy_[i] = NaN; }
+                catch (std::exception) { liquidEnthalpy_[i] = NaN; }
                 catch (NumericalProblem) { liquidEnthalpy_[i] = NaN; };
 
                 try { liquidHeatCapacity_[i] = RawComponent::liquidHeatCapacity(temperature, pressure); }
-                catch (Dune::NotImplemented) { liquidHeatCapacity_[i] = NaN; }
+                catch (std::exception) { liquidHeatCapacity_[i] = NaN; }
                 catch (NumericalProblem) { liquidHeatCapacity_[i] = NaN; };
 
                 try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
-                catch (Dune::NotImplemented) { liquidDensity_[i] = NaN; }
+                catch (std::exception) { liquidDensity_[i] = NaN; }
                 catch (NumericalProblem) { liquidDensity_[i] = NaN; };
 
                 try { liquidViscosity_[i] = RawComponent::liquidViscosity(temperature, pressure); }
-                catch (Dune::NotImplemented) { liquidViscosity_[i] = NaN; }
+                catch (std::exception) { liquidViscosity_[i] = NaN; }
                 catch (NumericalProblem) { liquidViscosity_[i] = NaN; };
 
                 try { liquidThermalConductivity_[i] = RawComponent::liquidThermalConductivity(temperature, pressure); }
-                catch (Dune::NotImplemented) { liquidThermalConductivity_[i] = NaN; }
+                catch (std::exception) { liquidThermalConductivity_[i] = NaN; }
                 catch (NumericalProblem) { liquidThermalConductivity_[i] = NaN; };
             }
         }
@@ -595,13 +596,13 @@ private:
 
 #if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
-            DUNE_THROW(NumericalProblem, "Temperature out of range: "
+            OPM_THROW(NumericalProblem, "Temperature out of range: "
                        << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
         if(!(0 <= alphaP1 && alphaP1 <= 1.0))
-            DUNE_THROW(NumericalProblem, "First liquid pressure out of range: "
+            OPM_THROW(NumericalProblem, "First liquid pressure out of range: "
                        << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T)) << ", " << maxLiquidPressure_(tempIdx_(T)) << "]");
         if(!(0 <= alphaP2 && alphaP2 <= 1.0))
-            DUNE_THROW(NumericalProblem, "Second liquid pressure out of range: "
+            OPM_THROW(NumericalProblem, "Second liquid pressure out of range: "
                        << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T) + 1) << ", " << maxLiquidPressure_(tempIdx_(T) + 1) << "]");
 #endif
 
@@ -633,13 +634,13 @@ private:
 
 #if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
-            DUNE_THROW(NumericalProblem, "Temperature out of range: "
+            OPM_THROW(NumericalProblem, "Temperature out of range: "
                        << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
         if(!(0 <= alphaP1 && alphaP1 <= 1.0))
-            DUNE_THROW(NumericalProblem, "First gas pressure out of range: "
+            OPM_THROW(NumericalProblem, "First gas pressure out of range: "
                        << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T)) << ", " << maxGasPressure_(tempIdx_(T)) << "]");
         if(!(0 <= alphaP2 && alphaP2 <= 1.0))
-            DUNE_THROW(NumericalProblem, "Second gas pressure out of range: "
+            OPM_THROW(NumericalProblem, "Second gas pressure out of range: "
                        << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T) + 1) << ", " << maxGasPressure_(tempIdx_(T) + 1) << "]");
 #endif
 

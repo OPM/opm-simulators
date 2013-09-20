@@ -33,8 +33,6 @@
 #include <opm/material/components/n2.hh>
 #include <opm/material/components/tabulatedcomponent.hh>
 
-#include <dune/common/exceptions.hh>
-
 #include <limits>
 #include <cassert>
 

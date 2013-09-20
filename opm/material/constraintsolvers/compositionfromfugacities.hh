@@ -26,8 +26,9 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <opm/common/exceptions.hh>
-#include <opm/common/valgrind.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/material/valgrind.hh>
 
 #include <limits>
 
@@ -165,12 +166,12 @@ public:
             }
         }
 
-        DUNE_THROW(NumericalProblem,
-                   "Calculating the " << FluidSystem::phaseName(phaseIdx)
-                   << "Phase composition failed. Initial {x} = {"
-                   << xInit
-                   << "}, {fug_t} = {" << targetFug << "}, p = " << fluidState.pressure(phaseIdx)
-                   << ", T = " << fluidState.temperature(phaseIdx));
+        OPM_THROW(Opm::NumericalProblem,
+                  "Calculating the " << FluidSystem::phaseName(phaseIdx)
+                  << "Phase composition failed. Initial {x} = {"
+                  << xInit
+                  << "}, {fug_t} = {" << targetFug << "}, p = " << fluidState.pressure(phaseIdx)
+                  << ", T = " << fluidState.temperature(phaseIdx));
     }
 
 

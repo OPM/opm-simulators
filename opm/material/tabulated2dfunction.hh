@@ -24,7 +24,8 @@
 #ifndef OPM_TABULATED_2D_FUNCTION_HH
 #define OPM_TABULATED_2D_FUNCTION_HH
 
-#include <opm/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 #include <assert.h>
 
@@ -110,7 +111,7 @@ public:
 #ifndef NDEBUG
         if (!applies(x,y))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Attempt to get tabulated value for ("
                        << x << ", " << y
                        << ") on a table of extend "

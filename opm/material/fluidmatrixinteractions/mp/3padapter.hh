@@ -20,12 +20,12 @@
  * \file
  * \copydoc Opm::ThreePAdapter
  */
-#ifndef OPM_MP_3P_ADAPTER_HH
-#define OPM_MP_3P_ADAPTER_HH
+#ifndef OPM_3P_ADAPTER_HPP
+#define OPM_3P_ADAPTER_HPP
 
-#include <dune/common/exceptions.hh>
-
-#include <opm/common/valgrind.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/material/valgrind.hh>
 
 #include <algorithm>
 
@@ -80,7 +80,7 @@ public:
     static void saturations(ContainerT &values,
                             const Params &params,
                             const FluidState &fluidState)
-    {  DUNE_THROW(Dune::NotImplemented, "Inverse capillary pressure curves"); }
+    {  OPM_THROW(std::runtime_error, "Not implemented: Inverse capillary pressure curves"); }
 
     /*!
      * \brief The relative permeability of all phases.

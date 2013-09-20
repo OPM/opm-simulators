@@ -43,9 +43,7 @@ public:
      */
     template <class Scalar>
     static Scalar henry(Scalar temperature)
-    { DUNE_THROW(Dune::NotImplemented,
-                 "Henry coefficient of air in mesitylene");
-    }
+    { OPM_THROW(std::runtime_error, "Not implemented: Henry coefficient of air in mesitylene"); }
 
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for air and mesitylene.
@@ -96,8 +94,7 @@ public:
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented,
-                 "Binary liquid diffusion coefficients of air and mesitylene");
+    { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of air and mesitylene");
     }
 };
 

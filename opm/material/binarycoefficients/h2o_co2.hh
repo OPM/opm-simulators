@@ -87,10 +87,7 @@ public:
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
-    {
-        DUNE_THROW(Dune::NotImplemented,
-                   "Binary liquid diffusion coefficients of CO2 and CH4");
-    }
+    { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of CO2 and CH4"); }
 };
 
 }

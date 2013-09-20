@@ -41,7 +41,8 @@
 #include <opm/material/fluidstates/nonequilibriumfluidstate.hh>
 #include <opm/material/fluidstates/immisciblefluidstate.hh>
 
-#include <dune/common/classname.hh>
+#include <opm/core/utility/Unused.hpp>
+#include <opm/core/utility/ClassName.hpp>
 
 #include <iostream>
 #include <string>
@@ -91,7 +92,7 @@ public:
     {
         assert(allowTemperature_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::temperature(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::temperature(phaseIdx);
         return 1e100;
     }
 
@@ -99,7 +100,7 @@ public:
     {
         assert(allowPressure_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::pressure(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::pressure(phaseIdx);
         return 1e100;
     }
 
@@ -107,7 +108,7 @@ public:
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::moleFraction(phaseIdx, compIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::moleFraction(phaseIdx, compIdx);
         return 1e100;
     }
 
@@ -115,7 +116,7 @@ public:
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::massFraction(phaseIdx, compIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::massFraction(phaseIdx, compIdx);
         return 1e100;
     }
 
@@ -123,7 +124,7 @@ public:
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::averageMolarMass(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::averageMolarMass(phaseIdx);
         return 1e100;
     }
 
@@ -131,7 +132,7 @@ public:
     {
         assert(allowDensity_ && allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::molarity(phaseIdx, compIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::molarity(phaseIdx, compIdx);
         return 1e100;
     }
 
@@ -139,7 +140,7 @@ public:
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::molarDensity(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::molarDensity(phaseIdx);
         return 1e100;
     }
 
@@ -147,7 +148,7 @@ public:
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::molarVolume(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::molarVolume(phaseIdx);
         return 1e100;
     }
 
@@ -155,49 +156,49 @@ public:
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::density(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::density(phaseIdx);
         return 1e100;
     }
 
     Scalar saturation(int phaseIdx) const
     {
         assert(false);
-        DUNE_UNUSED Scalar tmp =  BaseFluidState::saturation(phaseIdx);
+        OPM_UNUSED Scalar tmp =  BaseFluidState::saturation(phaseIdx);
         return 1e100;
     }
 
     Scalar fugacity(int phaseIdx, int compIdx) const
     {
         assert(false);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::fugacity(phaseIdx, compIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::fugacity(phaseIdx, compIdx);
         return 1e100;
     }
 
     Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
     {
         assert(false);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
         return 1e100;
     }
 
     Scalar enthalpy(int phaseIdx) const
     {
         assert(false);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::enthalpy(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::enthalpy(phaseIdx);
         return 1e100;
     }
 
     Scalar internalEnergy(int phaseIdx) const
     {
         assert(false);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::internalEnergy(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::internalEnergy(phaseIdx);
         return 1e100;
     }
 
     Scalar viscosity(int phaseIdx) const
     {
         assert(false);
-        DUNE_UNUSED Scalar tmp = BaseFluidState::viscosity(phaseIdx);
+        OPM_UNUSED Scalar tmp = BaseFluidState::viscosity(phaseIdx);
         return 1e100;
     }
 
@@ -222,7 +223,7 @@ void checkFluidState(const BaseFluidState &fs)
 
     // make sure the fluid state provides all mandatory methods
     while (false) {
-        Scalar DUNE_UNUSED val;
+        Scalar OPM_UNUSED val;
 
         val = fs.temperature(/*phaseIdx=*/0);
         val = fs.pressure(/*phaseIdx=*/0);
@@ -248,7 +249,7 @@ void checkFluidState(const BaseFluidState &fs)
 template <class Scalar, class FluidSystem>
 void checkFluidSystem()
 {
-    std::cout << "Testing fluid system '" << Dune::className<FluidSystem>() << "'\n";
+    std::cout << "Testing fluid system '" << Opm::className<FluidSystem>() << "'\n";
 
     // make sure the fluid system provides the number of phases and
     // the number of components
@@ -282,7 +283,7 @@ void checkFluidSystem()
 
     // some value to make sure the return values of the fluid system
     // are convertible to scalars
-    Scalar DUNE_UNUSED val;
+    Scalar OPM_UNUSED val;
 
     // actually check the fluid system API
     try { FluidSystem::init(); } catch (...) {};
@@ -311,15 +312,15 @@ void checkFluidSystem()
 
     // test for phaseName(), isLiquid() and isIdealGas()
     for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-        std::string DUNE_UNUSED name = FluidSystem::phaseName(phaseIdx);
-        bool DUNE_UNUSED bVal = FluidSystem::isLiquid(phaseIdx);
+        std::string OPM_UNUSED name = FluidSystem::phaseName(phaseIdx);
+        bool OPM_UNUSED bVal = FluidSystem::isLiquid(phaseIdx);
         bVal = FluidSystem::isIdealGas(phaseIdx);
     }
 
     // test for componentName()
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
         val = FluidSystem::molarMass(compIdx);
-        std::string DUNE_UNUSED name = FluidSystem::componentName(compIdx);
+        std::string OPM_UNUSED name = FluidSystem::componentName(compIdx);
     }
 
     std::cout << "----------------------------------\n";

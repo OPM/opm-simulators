@@ -28,7 +28,7 @@
 
 #include "modularfluidstate.hh"
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 #include <algorithm>
 
 namespace Opm {

@@ -23,12 +23,13 @@
 #ifndef OPM_FULLERMETHOD_HH
 #define OPM_FULLERMETHOD_HH
 
-#include <opm/common/math.hh>
+#include <opm/core/utility/Average.hpp>
 
-namespace Opm
-{
-namespace BinaryCoeff
-{
+#include <cmath>
+
+namespace Opm {
+namespace BinaryCoeff {
+
 /*!
  * \ingroup Binarycoefficients
  * \brief Estimate binary diffusion coefficents \f$\mathrm{[m^2/s]}\f$ in gases according to
@@ -53,7 +54,7 @@ inline Scalar fullerMethod(const Scalar *M, // molar masses [g/mol]
                            const Scalar pressure) // [Pa]
 {
     // "effective" molar mass in [g/m^3]
-    Scalar Mab = harmonicMean(M[0], M[1]);
+    Scalar Mab = Opm::utils::harmonicAverage(M[0], M[1]);
 
     // Fuller's method
     Scalar tmp = std::pow(SigmaNu[0], 1./3) + std::pow(SigmaNu[1], 1./3);

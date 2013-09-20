@@ -24,9 +24,10 @@
 #ifndef OPM_FLUID_STATE_ENTHALPY_MODULES_HH
 #define OPM_FLUID_STATE_ENTHALPY_MODULES_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 #include <algorithm>
 
@@ -99,7 +100,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not store the
- *        enthalpies but throws Dune::InvalidState instead.
+ *        enthalpies but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,
@@ -114,13 +115,13 @@ public:
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
     Scalar internalEnergy(int phaseIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Internal energy is not provided by this fluid state"); }
+    { OPM_THROW(std::logic_error, "Internal energy is not provided by this fluid state"); }
 
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
     Scalar enthalpy(int phaseIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Enthalpy is not provided by this fluid state"); }
+    { OPM_THROW(std::logic_error, "Enthalpy is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

@@ -24,9 +24,10 @@
 #ifndef OPM_FLUID_STATE_PRESSURE_MODULES_HH
 #define OPM_FLUID_STATE_PRESSURE_MODULES_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 #include <algorithm>
 
@@ -91,7 +92,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
- *        pressures but throws Dune::InvalidState instead.
+ *        pressures but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,
@@ -106,7 +107,7 @@ public:
      * \brief The pressure of a fluid phase [Pa]
      */
     Scalar pressure(int phaseIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Pressure is not provided by this fluid state"); }
+    { OPM_THROW(std::logic_error, "Pressure is not provided by this fluid state"); }
 
 
     /*!

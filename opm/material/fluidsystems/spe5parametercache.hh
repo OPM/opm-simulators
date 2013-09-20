@@ -110,7 +110,7 @@ public:
         case oPhaseIdx: return oilPhaseParams_.a();
         case gPhaseIdx: return gasPhaseParams_.a();
         default:
-            DUNE_THROW(Dune::InvalidStateException,
+            OPM_THROW(std::logic_error,
                        "The a() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -128,7 +128,7 @@ public:
         case oPhaseIdx: return oilPhaseParams_.b();
         case gPhaseIdx: return gasPhaseParams_.b();
         default:
-            DUNE_THROW(Dune::InvalidStateException,
+            OPM_THROW(std::logic_error,
                        "The b() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -149,7 +149,7 @@ public:
         case oPhaseIdx: return oilPhaseParams_.pureParams(compIdx).a();
         case gPhaseIdx: return gasPhaseParams_.pureParams(compIdx).a();
         default:
-            DUNE_THROW(Dune::InvalidStateException,
+            OPM_THROW(std::logic_error,
                        "The a() parameter is only defined for "
                        "oil and gas phases");
         };
@@ -169,7 +169,7 @@ public:
         case oPhaseIdx: return oilPhaseParams_.pureParams(compIdx).b();
         case gPhaseIdx: return gasPhaseParams_.pureParams(compIdx).b();
         default:
-            DUNE_THROW(Dune::InvalidStateException,
+            OPM_THROW(std::logic_error,
                        "The b() parameter is only defined for "
                        "oil and gas phases");
         };

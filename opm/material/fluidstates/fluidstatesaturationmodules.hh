@@ -24,9 +24,10 @@
 #ifndef OPM_FLUID_STATE_SATURATION_MODULES_HH
 #define OPM_FLUID_STATE_SATURATION_MODULES_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 #include <algorithm>
 
@@ -90,7 +91,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
- *        saturations but throws Dune::InvalidState instead.
+ *        saturations but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,
@@ -105,7 +106,7 @@ public:
      * \brief The saturation of a fluid phase [-]
      */
     Scalar saturation(int phaseIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Saturation is not provided by this fluid state"); }
+    { OPM_THROW(std::runtime_error, "Saturation is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

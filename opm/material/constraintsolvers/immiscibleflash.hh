@@ -23,8 +23,9 @@
 #ifndef OPM_IMMISCIBLE_FLASH_HH
 #define OPM_IMMISCIBLE_FLASH_HH
 
-#include <opm/common/exceptions.hh>
-#include <opm/common/valgrind.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/material/valgrind.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -214,10 +215,10 @@ public:
         std::cout << "\n";
         */
 
-        DUNE_THROW(NumericalProblem,
-                   "Flash calculation failed."
-                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
-                   << fluidState.temperature(/*phaseIdx=*/0));
+        OPM_THROW(Opm::NumericalProblem,
+                  "Flash calculation failed."
+                  " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
+                  << fluidState.temperature(/*phaseIdx=*/0));
     }
 
 

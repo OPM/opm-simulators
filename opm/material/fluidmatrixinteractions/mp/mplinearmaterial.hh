@@ -25,9 +25,10 @@
 
 #include "mplinearmaterialparams.hh"
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 #include <algorithm>
 
@@ -93,7 +94,7 @@ public:
                             const Params &params,
                             const FluidState &state)
     {
-        DUNE_THROW(Dune::NotImplemented, "MpLinearMaterial::saturations()");
+        OPM_THROW(std::runtime_error, "Not implemented: MpLinearMaterial::saturations()");
     }
 
     /*!

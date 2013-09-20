@@ -26,13 +26,6 @@
 
 #include "checkfluidsystem.hh"
 
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-#include <dune/common/parallel/mpihelper.hh>
-#else
-#include <dune/common/mpihelper.hh>
-#endif
-
 // include all fluid systems in opm-material
 #include <opm/material/fluidsystems/1pfluidsystem.hh>
 #include <opm/material/fluidsystems/2pimmisciblefluidsystem.hh>
@@ -54,7 +47,7 @@
 
 // include the tables for CO2 which are delivered with opm-material by
 // default
-#include <opm/common/statictabulated2dfunction.hh>
+#include <opm/material/statictabulated2dfunction.hh>
 namespace Opm {
 namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
@@ -68,9 +61,6 @@ int main(int argc, char **argv)
 
     typedef Opm::LiquidPhase<Scalar, H2O> Liquid;
     typedef Opm::GasPhase<Scalar, N2> Gas;
-
-    // initialize MPI, finalize is done automatically on exit
-    Dune::MPIHelper::instance(argc, argv);
 
     // check all fluid states
     {
