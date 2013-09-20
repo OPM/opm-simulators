@@ -385,11 +385,12 @@ namespace Opm
         // Construct preconditioner.
         Operator opA(A);
         Criterion criterion;
-        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity);
+        const int smooth_steps = 1;
+        setUpCriterion(criterion, linsolver_prolongate_factor, verbosity, smooth_steps);
         Dune::Amg::Parameters parms;
         parms.setDebugLevel(verbosity);
-        parms.setNoPreSmoothSteps(1);
-        parms.setNoPostSmoothSteps(1);
+        parms.setNoPreSmoothSteps(smooth_steps);
+        parms.setNoPostSmoothSteps(smooth_steps);
         parms.setProlongationDampingFactor(linsolver_prolongate_factor);
         Precond precond(opA, criterion, parms);
 
