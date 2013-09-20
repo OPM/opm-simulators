@@ -27,6 +27,11 @@
 namespace Opm
 {
 
+    /// Class containing static geological properties that can be
+    /// derived from grid and petrophysical properties:
+    ///   - pore volume
+    ///   - transmissibilities
+    ///   - gravity potentials
     class DerivedGeology
     {
     public:
