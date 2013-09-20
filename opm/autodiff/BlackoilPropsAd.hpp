@@ -29,9 +29,17 @@ namespace Opm
 
     class BlackoilPropertiesInterface;
 
-    /// This class is intended to present a fluid interface for
-    /// three-phase black-oil that is easy to use with the AD-using
-    /// simulators.
+    /// This class implements the AD-adapted fluid interface for
+    /// three-phase black-oil.
+    ///
+    /// It is implemented by wrapping a BlackoilPropertiesInterface
+    /// object (the interface class defined in opm-core) and calling
+    /// its methods. This approach works well for most methods, but
+    /// the rsMax() method cannot be implemented by such a wrapping,
+    /// without access to the underlying pvt objects. Therefore we
+    /// cannot use this class with any case that involves
+    /// miscibility. A rethinking of fluid interfaces is probably
+    /// necessary.
     ///
     /// Most methods are available in two overloaded versions, one
     /// taking a constant vector and returning the same, and one
