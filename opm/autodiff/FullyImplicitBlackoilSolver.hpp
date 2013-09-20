@@ -36,10 +36,27 @@ namespace Opm {
     class WellState;
 
 
-    /// A fully implicit TPFA-based solver for the black-oil problem.
+    /// A fully implicit solver for the black-oil problem.
+    ///
+    /// The simulator is capable of handling three-phase problems
+    /// where gas can be dissolved in oil (but not vice versa). It
+    /// uses an industry-standard TPFA discretization with per-phase
+    /// upwind weighting of mobilities.
+    ///
+    /// It uses automatic differentiation via the class AutoDiffBlock
+    /// to simplify assembly of the jacobian matrix.
     class FullyImplicitBlackoilSolver
     {
     public:
+        /// Construct a solver. It will retain references to the
+        /// arguments of this functions, and they are expected to
+        /// remain in scope for the lifetime of the solver.
+        /// \param[in] grid             grid data structure
+        /// \param[in] fluid            fluid properties
+        /// \param[in] geo              rock properties
+        /// \param[in] rock_comp_props  if non-null, rock compressibility properties
+        /// \param[in] wells            well structure
+        /// \param[in] linsolver        linear solver
         FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
@@ -53,6 +70,9 @@ namespace Opm {
         ///   state.saturation()
         ///   state.gasoilratio()
         ///   wstate.bhp()
+        /// \param[in] dt        time step size
+        /// \param[in] state     reservoir state
+        /// \param[in] wstate    well state
         void
         step(const double   dt    ,
              BlackoilState& state ,
