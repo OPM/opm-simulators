@@ -35,9 +35,9 @@ namespace Opm
 
     class SinglePvtInterface;
 
-    /// This class is intended to present a fluid interface for
-    /// three-phase black-oil that is easy to use with the AD-using
-    /// simulators.
+    /// This class implements the AD-adapted fluid interface for
+    /// three-phase black-oil. It requires an input deck from which it
+    /// reads all relevant property data.
     ///
     /// Most methods are available in two overloaded versions, one
     /// taking a constant vector and returning the same, and one
