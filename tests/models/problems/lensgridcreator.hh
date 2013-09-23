@@ -24,7 +24,7 @@
 #define EWOMS_LENS_GRID_CREATOR_HH
 
 #include <ewoms/parallel/mpihelper.hh>
-#include <ewoms/common/propertysystem.hh>
+#include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
 #if HAVE_UG
@@ -43,12 +43,13 @@ namespace Ewoms {
 
 template <class TypeTag>
 class LensProblem;
+}
 
 //////////
 // Specify the properties for the lens problem
 //////////
+namespace Opm {
 namespace Properties {
-
 // declare the properties required by the for the lens grid creator
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
@@ -63,7 +64,9 @@ NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *
@@ -91,16 +94,16 @@ public:
      */
     static void registerParameters()
     {
-        REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements, "The number of global refinements of the grid executed after it was loaded");
-        REGISTER_PARAM(TypeTag, Scalar, DomainSizeX, "The size of the domain in x direction");
-        REGISTER_PARAM(TypeTag, int, CellsX, "The number of intervalls in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements, "The number of global refinements of the grid executed after it was loaded");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX, "The size of the domain in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, int, CellsX, "The number of intervalls in x direction");
         if (dim > 1) {
-            REGISTER_PARAM(TypeTag, Scalar, DomainSizeY, "The size of the domain in y direction");
-            REGISTER_PARAM(TypeTag, int, CellsY, "The number of intervalls in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY, "The size of the domain in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsY, "The number of intervalls in y direction");
         }
         if (dim > 2) {
-            REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ, "The size of the domain in z direction");
-            REGISTER_PARAM(TypeTag, int, CellsZ, "The number of intervalls in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ, "The size of the domain in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsZ, "The number of intervalls in z direction");
         }
     }
 
@@ -114,14 +117,14 @@ public:
         Dune::FieldVector<Scalar, dim> lowerLeft;
 
         lowerLeft = 0.0;
-        upperRight[0] = GET_PARAM(TypeTag, Scalar, DomainSizeX);
-        upperRight[1] = GET_PARAM(TypeTag, Scalar, DomainSizeY);
+        upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
+        upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
 
-        cellRes[0] = GET_PARAM(TypeTag, int, CellsX);
-        cellRes[1] = GET_PARAM(TypeTag, int, CellsY);
+        cellRes[0] = EWOMS_GET_PARAM(TypeTag, int, CellsX);
+        cellRes[1] = EWOMS_GET_PARAM(TypeTag, int, CellsY);
         if (dim == 3) {
-            upperRight[2] = GET_PARAM(TypeTag, Scalar, DomainSizeZ);
-            cellRes[2] = GET_PARAM(TypeTag, int, CellsZ);
+            upperRight[2] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeZ);
+            cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
         Dune::GridFactory<Grid> factory;
@@ -255,7 +258,7 @@ public:
 
         grid_ = factory.createGrid();
 
-        unsigned numRefinements = GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        unsigned numRefinements = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
         grid_->globalRefine(numRefinements);
     }
 
@@ -305,16 +308,16 @@ public:
      */
     static void registerParameters()
     {
-        REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements, "The number of global refinements of the grid executed after it was loaded");
-        REGISTER_PARAM(TypeTag, Scalar, DomainSizeX, "The size of the domain in x direction");
-        REGISTER_PARAM(TypeTag, int, CellsX, "The number of intervalls in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements, "The number of global refinements of the grid executed after it was loaded");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX, "The size of the domain in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, int, CellsX, "The number of intervalls in x direction");
         if (dim > 1) {
-            REGISTER_PARAM(TypeTag, Scalar, DomainSizeY, "The size of the domain in y direction");
-            REGISTER_PARAM(TypeTag, int, CellsY, "The number of intervalls in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY, "The size of the domain in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsY, "The number of intervalls in y direction");
         }
         if (dim > 2) {
-            REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ, "The size of the domain in z direction");
-            REGISTER_PARAM(TypeTag, int, CellsZ, "The number of intervalls in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ, "The size of the domain in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsZ, "The number of intervalls in z direction");
         }
     }
 
@@ -330,17 +333,17 @@ public:
         grid_ = 0;
 
         lowerLeft[1] = 0.0;
-        upperRight[0] = GET_PARAM(TypeTag, Scalar, DomainSizeX);
-        upperRight[1] = GET_PARAM(TypeTag, Scalar, DomainSizeY);
+        upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
+        upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
 
-        cellRes[0] = GET_PARAM(TypeTag, int, CellsX);
-        cellRes[1] = GET_PARAM(TypeTag, int, CellsY);
+        cellRes[0] = EWOMS_GET_PARAM(TypeTag, int, CellsX);
+        cellRes[1] = EWOMS_GET_PARAM(TypeTag, int, CellsY);
         if (dim == 3) {
-            upperRight[2] = GET_PARAM(TypeTag, Scalar, DomainSizeZ);
-            cellRes[2] = GET_PARAM(TypeTag, int, CellsZ);
+            upperRight[2] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeZ);
+            cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
-        unsigned numRefinements = GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        unsigned numRefinements = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
 
         grid_ = new Dune::YaspGrid<LENS_DIM>(
 #ifdef HAVE_MPI

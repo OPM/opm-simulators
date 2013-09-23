@@ -42,7 +42,9 @@ namespace Ewoms {
 
 template <class TypeTag>
 class DiffusionProblem;
+}
 
+namespace Opm {
 //////////
 // Specify the properties for the powerInjection problem
 //////////
@@ -54,7 +56,7 @@ NEW_TYPE_TAG(DiffusionBaseProblem);
 SET_TYPE_PROP(DiffusionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
 // set the GridCreator property
-SET_TYPE_PROP(DiffusionBaseProblem, GridCreator, CubeGridCreator<TypeTag>);
+SET_TYPE_PROP(DiffusionBaseProblem, GridCreator, Ewoms::CubeGridCreator<TypeTag>);
 
 // Set the problem property
 SET_TYPE_PROP(DiffusionBaseProblem, Problem, Ewoms::DiffusionProblem<TypeTag>);
@@ -101,7 +103,9 @@ SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  * \brief 1D problem which is driven by molecular diffusion.

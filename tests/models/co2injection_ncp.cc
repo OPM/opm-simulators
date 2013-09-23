@@ -28,10 +28,11 @@
 #include <ewoms/models/ncp/ncpmodel.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionNcpProblem, INHERITS_FROM(VcfvNcp, Co2InjectionBaseProblem));
-} }
+}
+}
 
 int main(int argc, char** argv)
 {

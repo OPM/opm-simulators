@@ -38,10 +38,11 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class ReservoirProblem;
+}
 
+namespace Opm {
 namespace Properties {
 
 NEW_TYPE_TAG(ReservoirBaseProblem);
@@ -101,7 +102,9 @@ SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 10);
 // The default DGF file to load
 SET_STRING_PROP(ReservoirBaseProblem, GridFile, "grids/reservoir.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *
@@ -174,9 +177,9 @@ public:
     {
         eps_ = 1e-6;
 
-        temperature_ = GET_PARAM(TypeTag, Scalar, Temperature);
-        maxDepth_ = GET_PARAM(TypeTag, Scalar, MaxDepth);
-        name_ = GET_PARAM(TypeTag, std::string, SimulationName);
+        temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
+        maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
+        name_ = EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
 
         FluidSystem::initBegin();
         std::vector<std::pair<Scalar, Scalar> > Bg = {
@@ -292,9 +295,9 @@ public:
     {
         ParentType::registerParameters();
 
-        REGISTER_PARAM(TypeTag, Scalar, Temperature, "The temperature [K] in the reservoir");
-        REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
-        REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature, "The temperature [K] in the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
     }
 
     /*!

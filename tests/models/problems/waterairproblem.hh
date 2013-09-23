@@ -47,12 +47,12 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class WaterAirProblem;
+}
 
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(WaterAirBaseProblem);
 
 // Set the grid type
@@ -120,8 +120,9 @@ SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./grids/waterair.dgf");
 }
+}
 
-
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  * \brief Non-isothermal gas injection problem where a air

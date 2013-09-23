@@ -44,13 +44,12 @@
 #include <dune/common/fvector.hh>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class NavierStokesTestProblem;
+}
 
-// Specify the properties for the stokes problem
-namespace Properties
-{
+namespace Opm {
+namespace Properties {
 NEW_TYPE_TAG(NavierStokesTestProblem, INHERITS_FROM(VcfvNavierStokes));
 
 // Set the grid type
@@ -88,7 +87,9 @@ SET_SCALAR_PROP(NavierStokesTestProblem, InitialTimeStepSize, 1e-3);
 // Default grid file to load
 SET_STRING_PROP(NavierStokesTestProblem, GridFile, "grids/test_navierstokes.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvStokesModel
  * \ingroup VcfvTestProblems

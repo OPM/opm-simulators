@@ -27,10 +27,11 @@
 #include <ewoms/models/ncp/ncpmodel.hh>
 #include "problems/diffusionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(VcfvNcp, DiffusionBaseProblem));
-} }
+}
+}
 
 int main(int argc, char** argv)
 {

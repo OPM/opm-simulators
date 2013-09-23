@@ -56,7 +56,9 @@ class Co2InjectionProblem;
 namespace Co2Injection {
 #include <opm/material/components/co2tables.inc>
 }
+}
 
+namespace Opm {
 namespace Properties {
 
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
@@ -154,7 +156,9 @@ SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "grids/co2injection.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *
@@ -230,17 +234,17 @@ public:
     {
         eps_ = 1e-6;
 
-        temperatureLow_ = GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
-        temperatureHigh_ = GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
-        nTemperature_ = GET_PARAM(TypeTag, int, FluidSystemNumTemperature);
+        temperatureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
+        temperatureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
+        nTemperature_ = EWOMS_GET_PARAM(TypeTag, int, FluidSystemNumTemperature);
 
-        nPressure_ = GET_PARAM(TypeTag, int, FluidSystemNumPressure);
-        pressureLow_ = GET_PARAM(TypeTag, Scalar, FluidSystemPressureLow);
-        pressureHigh_ = GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
+        nPressure_ = EWOMS_GET_PARAM(TypeTag, int, FluidSystemNumPressure);
+        pressureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureLow);
+        pressureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
 
-        maxDepth_ = GET_PARAM(TypeTag, Scalar, MaxDepth);
-        temperature_ = GET_PARAM(TypeTag, Scalar, Temperature);
-        name_ = GET_PARAM(TypeTag, std::string, SimulationName);
+        maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
+        temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
+        name_ = EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
 
         // initialize the tables of the fluid system
         //FluidSystem::init();
@@ -286,17 +290,17 @@ public:
     {
         ParentType::registerParameters();
 
-        REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow, "The lower temperature [K] for tabulation of the fluid system");
-        REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh, "The upper temperature [K] for tabulation of the fluid system");
-        REGISTER_PARAM(TypeTag, int, FluidSystemNumTemperature, "The number of intervals between the lower and upper temperature");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow, "The lower temperature [K] for tabulation of the fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh, "The upper temperature [K] for tabulation of the fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumTemperature, "The number of intervals between the lower and upper temperature");
 
-        REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureLow, "The lower pressure [Pa] for tabulation of the fluid system");
-        REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureHigh, "The upper pressure [Pa] for tabulation of the fluid system");
-        REGISTER_PARAM(TypeTag, int, FluidSystemNumPressure, "The number of intervals between the lower and upper pressure");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureLow, "The lower pressure [Pa] for tabulation of the fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureHigh, "The upper pressure [Pa] for tabulation of the fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumPressure, "The number of intervals between the lower and upper pressure");
 
-        REGISTER_PARAM(TypeTag, Scalar, Temperature, "The temperature [K] in the reservoir");
-        REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
-        REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature, "The temperature [K] in the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
     }
 
 

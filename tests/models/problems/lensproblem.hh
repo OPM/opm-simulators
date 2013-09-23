@@ -49,12 +49,10 @@ namespace Ewoms {
 
 template <class TypeTag>
 class LensProblem;
+}
 
-//////////
-// Specify the properties for the lens problem
-//////////
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(LensBaseProblem);
 
 // declare the properties specific for the lens problem
@@ -66,7 +64,7 @@ NEW_PROP_TAG(LensUpperRightY);
 NEW_PROP_TAG(LensUpperRightZ);
 
 // set the GridCreator property
-SET_TYPE_PROP(LensBaseProblem, GridCreator, LensGridCreator<TypeTag>);
+SET_TYPE_PROP(LensBaseProblem, GridCreator, Ewoms::LensGridCreator<TypeTag>);
 
 // Retrieve the grid type from the grid creator
 SET_TYPE_PROP(LensBaseProblem, Grid, typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
@@ -150,7 +148,9 @@ SET_SCALAR_PROP(LensBaseProblem, EndTime, 30e3);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *
@@ -227,14 +227,14 @@ public:
         FluidSystem::init();
 
         temperature_ = 273.15 + 20; // -> 20°C
-        lensLowerLeft_[0] = GET_PARAM(TypeTag, Scalar, LensLowerLeftX);
-        lensLowerLeft_[1] = GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
-        lensUpperRight_[0] = GET_PARAM(TypeTag, Scalar, LensUpperRightX);
-        lensUpperRight_[1] = GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+        lensLowerLeft_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftX);
+        lensLowerLeft_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
+        lensUpperRight_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightX);
+        lensUpperRight_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
 
         if (dimWorld == 3) {
-            lensLowerLeft_[2] = GET_PARAM(TypeTag, Scalar, LensLowerLeftZ);
-            lensUpperRight_[2] = GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
+            lensLowerLeft_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftZ);
+            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
         }
 
         // parameters for the Van Genuchten law
@@ -260,14 +260,14 @@ public:
     {
         ParentType::registerParameters();
 
-        REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX, "The x-coordinate of the lens' lower-left corner [m].");
-        REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY, "The y-coordinate of the lens' lower-left corner [m].");
-        REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX, "The x-coordinate of the lens' upper-right corner [m].");
-        REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY, "The y-coordinate of the lens' upper-right corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX, "The x-coordinate of the lens' lower-left corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY, "The y-coordinate of the lens' lower-left corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX, "The x-coordinate of the lens' upper-right corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY, "The y-coordinate of the lens' upper-right corner [m].");
 
         if (dimWorld == 3) {
-            REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ, "The z-coordinate of the lens' lower-left corner [m].");
-            REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ, "The z-coordinate of the lens' upper-right corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ, "The z-coordinate of the lens' lower-left corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ, "The z-coordinate of the lens' upper-right corner [m].");
         }
     };
 

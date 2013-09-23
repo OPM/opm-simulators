@@ -27,7 +27,7 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/waterairproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(WaterAirProblem, INHERITS_FROM(VcfvPvs, WaterAirBaseProblem));
 

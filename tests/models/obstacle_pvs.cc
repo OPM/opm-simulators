@@ -28,7 +28,7 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/obstacleproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(VcfvPvs, ObstacleBaseProblem));
 

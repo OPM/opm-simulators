@@ -28,7 +28,7 @@
 
 #include "problems/obstacleproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(VcfvNcp, ObstacleBaseProblem));
 }}

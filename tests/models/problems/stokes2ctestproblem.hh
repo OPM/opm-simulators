@@ -31,15 +31,15 @@
 #include <dune/common/fvector.hh>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class Stokes2cTestProblem;
+}
 
+namespace Opm {
 //////////
 // Specify the properties for the stokes2c problem
 //////////
 namespace Properties {
-
 NEW_TYPE_TAG(Stokes2cTestProblem, INHERITS_FROM(VcfvStokes));
 
 // Set the grid type
@@ -73,7 +73,9 @@ SET_SCALAR_PROP(Stokes2cTestProblem, InitialTimeStepSize, 0.1);
 // Default grid file to load
 SET_STRING_PROP(Stokes2cTestProblem, GridFile, "grids/test_stokes2c.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvStokes2cModel
  * \ingroup VcfvTestProblems

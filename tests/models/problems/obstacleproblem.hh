@@ -49,12 +49,12 @@
 #include <iostream>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class ObstacleProblem;
+}
 
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(ObstacleBaseProblem);
 
 // Set the grid type
@@ -113,8 +113,9 @@ SET_SCALAR_PROP(ObstacleBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./grids/obstacle_24x16.dgf");
 }
+}
 
-
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *

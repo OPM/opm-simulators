@@ -33,7 +33,7 @@
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionFlashProblem, INHERITS_FROM(VcfvFlash, Co2InjectionBaseProblem));
 
@@ -55,7 +55,6 @@ SET_TYPE_PROP(Co2InjectionFlashProblem, Scalar, quad);
 #else
 SET_SCALAR_PROP(Co2InjectionFlashProblem, NewtonRelativeTolerance, 1e-5);
 #endif
-
 }
 }
 

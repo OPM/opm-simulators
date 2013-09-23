@@ -44,11 +44,12 @@
 #include <dune/common/fmatrix.hh>
 
 namespace Ewoms {
-
 // forward declaration of the problem class
 template <class TypeTag>
 class TutorialProblemCoupled;
+}
 
+namespace Opm {
 namespace Properties {
 // Create a new type tag for the problem
 NEW_TYPE_TAG(TutorialProblemCoupled, INHERITS_FROM(VcfvImmiscibleTwoPhase)); /*@\label{tutorial-coupled:create-type-tag}@*/
@@ -111,7 +112,9 @@ SET_INT_PROP(TutorialProblemCoupled, CellsX, 100);
 SET_INT_PROP(TutorialProblemCoupled, CellsY, 1);
 SET_INT_PROP(TutorialProblemCoupled, CellsZ, 1); /*@\label{tutorial-coupled:default-params-end}@*/
 } // namespace Properties
+}
 
+namespace Ewoms {
 //! Tutorial problem using the fully-implicit immiscible model.
 template <class TypeTag>
 class TutorialProblemCoupled
