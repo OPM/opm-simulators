@@ -1,0 +1,16 @@
+DGF
+Interval
+0 0   % first corner 
+1.0 1.0 % second corner
+18 18 % 120 30   % 24 cells in x and 16 in y direction
+# 
+#GridParameter
+#overlap 0 
+#periodic 
+#closure green
+#copies none
+#heapsize 500
+BOUNDARYDOMAIN
+default 1    % all boundaries have id 1
+#BOUNDARYDOMAIN
+# unitcube.dgf 
