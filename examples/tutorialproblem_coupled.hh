@@ -28,13 +28,13 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 
 // The chemical species that are used
-#include <opm/material/components/simpleh2o.hh>
-#include <opm/material/components/lnapl.hh>
+#include <opm/material/components/SimpleH2O.hpp>
+#include <opm/material/components/Lnapl.hpp>
 
 // The material laws
-#include <opm/material/fluidmatrixinteractions/2p/regularizedbrookscorey.hh> /*@\label{tutorial-coupled:rawLawInclude}@*/
-#include <opm/material/fluidmatrixinteractions/2p/efftoabslaw.hh>
-#include <opm/material/fluidmatrixinteractions/mp/2padapter.hh>
+#include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/
