@@ -25,14 +25,14 @@
 
 #include "vcfvvtkoutputmodule.hh"
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
 #include <dune/common/fvector.hh>
 
 #include <cstdio>
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 // create new type tag for the VTK multi-phase output
 NEW_TYPE_TAG(VtkBlackOil);
@@ -49,7 +49,9 @@ SET_BOOL_PROP(VtkBlackOil, VtkWriteGasFormationVolumeFactor, false);
 SET_BOOL_PROP(VtkBlackOil, VtkWriteOilFormationVolumeFactor, false);
 SET_BOOL_PROP(VtkBlackOil, VtkWriteOilSaturationPressure, false);
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvVtk
  *
@@ -84,10 +86,10 @@ public:
      */
     static void registerParameters()
     {
-        REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationFactor, "Include the gas formation factor in the VTK output files");
-        REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor, "Include the gas formation volume factor in the VTK output files");
-        REGISTER_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor, "Include the oil formation volume factor in the VTK output files");
-        REGISTER_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure, "Include the saturation pressure of oil in the VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationFactor, "Include the gas formation factor in the VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor, "Include the gas formation volume factor in the VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor, "Include the oil formation volume factor in the VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure, "Include the saturation pressure of oil in the VTK output files");
     }
 
     /*!
@@ -134,23 +136,22 @@ public:
 
 private:
     static bool gasFormationFactorOutput_()
-    { return GET_PARAM(TypeTag, bool, VtkWriteGasFormationFactor); }
+    { return EWOMS_GET_PARAM(TypeTag, bool, VtkWriteGasFormationFactor); }
 
     static bool gasFormationVolumeFactorOutput_()
-    { return GET_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor); }
+    { return EWOMS_GET_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor); }
 
     static bool oilFormationVolumeFactorOutput_()
-    { return GET_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor); }
+    { return EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor); }
 
     static bool oilSaturationPressureOutput_()
-    { return GET_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure); }
+    { return EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure); }
 
     ScalarBuffer gasFormationFactor_;
     ScalarBuffer gasFormationVolumeFactor_;
     ScalarBuffer oilFormationVolumeFactor_;
     ScalarBuffer oilSaturationPressure_;
 };
-
 }
 
 #endif
