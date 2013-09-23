@@ -23,7 +23,7 @@
  */
 #include "config.h" /*@\label{tutorial-coupled:include-begin}@*/
 #include <ewoms/common/start.hh> /*@\label{tutorial-coupled:include-end}@*/
-#include "tutorialproblem_coupled.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/
+#include "tutorial1problem.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/
 
 int main(int argc, char** argv)
 {

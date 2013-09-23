@@ -21,8 +21,8 @@
  *
  * \copydoc Ewoms::TutorialProblemCoupled
  */
-#ifndef EWOMS_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
-#define EWOMS_TUTORIAL_PROBLEM_COUPLED_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
+#ifndef EWOMS_TUTORIAL1_PROBLEM_HH    // guardian macro /*@\label{tutorial-coupled:guardian1}@*/
+#define EWOMS_TUTORIAL1_PROBLEM_HH    // guardian macro /*@\label{tutorial-coupled:guardian2}@*/
 
 // The numerical model
 #include <ewoms/models/immiscible/immisciblemodel.hh>
