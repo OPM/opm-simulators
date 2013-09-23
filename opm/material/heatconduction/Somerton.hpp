@@ -111,7 +111,7 @@ protected:
         static const Scalar sqrtXMin = std::sqrt(xMin);
         static const Scalar fPrimeXMin = 1.0/(2*std::sqrt(xMin));
         static const Scalar fPrime0 = 2*fPrimeXMin;
-        typedef Opm::Spline<Scalar, 2> Spline;
+        typedef Opm::Spline<Scalar> Spline;
         static const Spline sqrtRegSpline(0, xMin, // x0, x1
                                           0, sqrtXMin, // y0, y1
                                           fPrime0, fPrimeXMin); // m0, m1
