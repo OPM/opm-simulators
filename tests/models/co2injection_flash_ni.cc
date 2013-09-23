@@ -30,7 +30,7 @@
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionFlashNIProblem, INHERITS_FROM(VcfvFlash, Co2InjectionBaseProblem));
 

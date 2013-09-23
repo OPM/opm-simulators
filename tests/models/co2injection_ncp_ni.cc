@@ -28,7 +28,7 @@
 #include <ewoms/models/ncp/ncpmodel.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionNcpNIProblem, INHERITS_FROM(VcfvNcp, Co2InjectionBaseProblem));
 SET_BOOL_PROP(Co2InjectionNcpNIProblem, EnableEnergy, true);

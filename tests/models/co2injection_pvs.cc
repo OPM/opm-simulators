@@ -27,7 +27,7 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionPvsProblem, INHERITS_FROM(VcfvPvs, Co2InjectionBaseProblem));
 } }

@@ -44,10 +44,11 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class CuvetteProblem;
+}
 
+namespace Opm {
 namespace Properties {
 
 // create a new type tag for the cuvette steam injection problem
@@ -118,8 +119,9 @@ SET_SCALAR_PROP(CuvetteBaseProblem, InitialTimeStepSize, 1);
 // The default DGF file to load
 SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./grids/cuvette_11x4.dgf");
 }
+}
 
-
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *

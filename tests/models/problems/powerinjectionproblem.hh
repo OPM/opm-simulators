@@ -44,22 +44,19 @@
 #include <iostream>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class PowerInjectionProblem;
+}
 
-//////////
-// Specify the properties for the powerInjection problem
-//////////
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(PowerInjectionBaseProblem);
 
 // Set the grid implementation to be used
 SET_TYPE_PROP(PowerInjectionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
 // set the GridCreator property
-SET_TYPE_PROP(PowerInjectionBaseProblem, GridCreator, CubeGridCreator<TypeTag>);
+SET_TYPE_PROP(PowerInjectionBaseProblem, GridCreator, Ewoms::CubeGridCreator<TypeTag>);
 
 // Set the problem property
 SET_TYPE_PROP(PowerInjectionBaseProblem, Problem, Ewoms::PowerInjectionProblem<TypeTag>);
@@ -121,7 +118,9 @@ SET_SCALAR_PROP(PowerInjectionBaseProblem, EndTime, 100);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  * \brief 1D Problem with very fast injection of gas on the left.

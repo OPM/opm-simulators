@@ -27,7 +27,7 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/outflowproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(OutflowProblem, INHERITS_FROM(VcfvPvs, OutflowBaseProblem));
 

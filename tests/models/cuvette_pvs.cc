@@ -27,14 +27,14 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/cuvetteproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(CuvetteProblem, INHERITS_FROM(VcfvPvs, CuvetteBaseProblem));
-}}
+}
+}
 
 int main(int argc, char** argv)
 {
     typedef TTAG(CuvetteProblem) ProblemTypeTag;
-//    typedef TTAG(ColumnProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }

@@ -27,7 +27,7 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionImmiscibleProblem, INHERITS_FROM(VcfvImmiscible, Co2InjectionBaseProblem));
 } }

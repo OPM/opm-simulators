@@ -46,10 +46,11 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class FingerProblem;
+}
 
+namespace Opm {
 //////////
 // Specify the properties for the finger problem
 //////////
@@ -57,7 +58,7 @@ namespace Properties {
 NEW_TYPE_TAG(FingerBaseProblem);
 
 // set the GridCreator property
-SET_TYPE_PROP(FingerBaseProblem, GridCreator, FingerGridCreator<TypeTag>);
+SET_TYPE_PROP(FingerBaseProblem, GridCreator, Ewoms::FingerGridCreator<TypeTag>);
 
 // Retrieve the grid type from the grid creator
 SET_TYPE_PROP(FingerBaseProblem, Grid, typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
@@ -139,7 +140,9 @@ SET_SCALAR_PROP(FingerBaseProblem, EndTime, 1e3);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *
@@ -233,7 +236,7 @@ public:
     {
         ParentType::registerParameters();
 
-        REGISTER_PARAM(TypeTag, Scalar, InitialWaterSaturation, "The initial saturation in the domain [] of the wetting phase");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, InitialWaterSaturation, "The initial saturation in the domain [] of the wetting phase");
     }
 
     /*!
@@ -452,7 +455,7 @@ private:
         auto &fs = initialFluidState_;
         fs.setPressure(wPhaseIdx, /*pressure=*/1e5);
 
-        Scalar Sw = GET_PARAM(TypeTag, Scalar, InitialWaterSaturation);
+        Scalar Sw = EWOMS_GET_PARAM(TypeTag, Scalar, InitialWaterSaturation);
         fs.setSaturation(wPhaseIdx, Sw);
         fs.setSaturation(nPhaseIdx, 1 - Sw);
 

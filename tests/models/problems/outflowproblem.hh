@@ -34,12 +34,12 @@
 #include <dune/common/fmatrix.hh>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class OutflowProblem;
+}
 
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(OutflowBaseProblem);
 
 // Set the grid type
@@ -71,10 +71,10 @@ SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(OutflowBaseProblem, GridFile, "./grids/outflow.dgf");
-
+}
 }
 
-
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *

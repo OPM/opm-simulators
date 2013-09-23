@@ -27,7 +27,7 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/fingerproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(FingerProblem, INHERITS_FROM(VcfvImmiscibleTwoPhase, FingerBaseProblem));
 }}

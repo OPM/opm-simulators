@@ -39,15 +39,12 @@
 #include <dune/common/fmatrix.hh>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class RichardsLensProblem;
+}
 
-//////////
-// Specify the properties for the lens problem
-//////////
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(RichardsLensProblem, VcfvRichards);
 
 // Use 2d YaspGrid
@@ -115,7 +112,9 @@ SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./grids/richardslens_24x16.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *

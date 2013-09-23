@@ -40,12 +40,12 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class GroundWaterProblem;
+}
 
-namespace Properties
-{
+namespace Opm {
+namespace Properties {
 NEW_TYPE_TAG(GroundWaterBaseProblem);
 
 NEW_PROP_TAG(LensLowerLeftX);
@@ -95,9 +95,10 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./grids/groundwater_2d.dgf");
-
+}
 }
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  *
@@ -150,20 +151,20 @@ public:
     {
         eps_ = 1.0e-3;
 
-        lensLowerLeft_[0] = GET_PARAM(TypeTag, Scalar, LensLowerLeftX);
+        lensLowerLeft_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftX);
         if (dim > 1)
-            lensLowerLeft_[1] = GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
+            lensLowerLeft_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
         if (dim > 2)
-            lensLowerLeft_[2] = GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
+            lensLowerLeft_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
 
-        lensUpperRight_[0] = GET_PARAM(TypeTag, Scalar, LensUpperRightX);
+        lensUpperRight_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightX);
         if (dim > 1)
-            lensUpperRight_[1] = GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
         if (dim > 2)
-            lensUpperRight_[2] = GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
 
-        intrinsicPerm_ = this->toDimMatrix_(GET_PARAM(TypeTag, Scalar, Permeability));
-        intrinsicPermLens_ = this->toDimMatrix_(GET_PARAM(TypeTag, Scalar, PermeabilityLens));
+        intrinsicPerm_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, Permeability));
+        intrinsicPermLens_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, PermeabilityLens));
     }
 
     /*!
@@ -173,21 +174,21 @@ public:
     {
         ParentType::registerParameters();
 
-        REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX, "The x-coordinate of the lens' lower-left corner [m].");
-        REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX, "The x-coordinate of the lens' upper-right corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX, "The x-coordinate of the lens' lower-left corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX, "The x-coordinate of the lens' upper-right corner [m].");
 
         if (dimWorld > 1) {
-            REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY, "The y-coordinate of the lens' lower-left corner [m].");
-            REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY, "The y-coordinate of the lens' upper-right corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY, "The y-coordinate of the lens' lower-left corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY, "The y-coordinate of the lens' upper-right corner [m].");
         }
 
         if (dimWorld > 2) {
-            REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ, "The z-coordinate of the lens' lower-left corner [m].");
-            REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ, "The z-coordinate of the lens' upper-right corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ, "The z-coordinate of the lens' lower-left corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ, "The z-coordinate of the lens' upper-right corner [m].");
         }
 
-        REGISTER_PARAM(TypeTag, Scalar, Permeability, "The intrinsic permeability [m^2] of the ambient material.");
-        REGISTER_PARAM(TypeTag, Scalar, PermeabilityLens, "The intrinsic permeability [m^2] of the lens.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Permeability, "The intrinsic permeability [m^2] of the ambient material.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PermeabilityLens, "The intrinsic permeability [m^2] of the lens.");
     }
 
     /*!

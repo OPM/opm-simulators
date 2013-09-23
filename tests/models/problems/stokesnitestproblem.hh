@@ -30,24 +30,20 @@
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 #include <dune/common/fvector.hh>
 
-namespace Ewoms
-{
-
+namespace Ewoms {
 template <class TypeTag>
 class StokesNITestProblem;
+}
 
-//////////
-// Specify the properties for the stokes problem
-//////////
-namespace Properties
-{
+namespace Opm {
+namespace Properties {
 NEW_TYPE_TAG(StokesNITestProblem, INHERITS_FROM(VcfvStokes));
 
 // Set the grid type
 SET_TYPE_PROP(StokesNITestProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(StokesNITestProblem, Problem, StokesNITestProblem<TypeTag>);
+SET_TYPE_PROP(StokesNITestProblem, Problem, Ewoms::StokesNITestProblem<TypeTag>);
 
 //! Select the fluid system
 SET_TYPE_PROP(StokesNITestProblem,
@@ -77,7 +73,9 @@ SET_SCALAR_PROP(StokesNITestProblem, InitialTimeStepSize, 0.1);
 // Default grid file to load
 SET_STRING_PROP(StokesNITestProblem, GridFile, "grids/test_stokes2cni.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvStokesNIModel
  * \ingroup VcfvTestProblems

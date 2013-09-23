@@ -28,7 +28,7 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/lensproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(LensProblem, INHERITS_FROM(VcfvImmiscibleTwoPhase, LensBaseProblem));
 }}

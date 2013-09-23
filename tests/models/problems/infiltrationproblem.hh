@@ -44,12 +44,12 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class InfiltrationProblem;
+}
 
+namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(InfiltrationBaseProblem);
 
 // Set the grid type
@@ -116,7 +116,9 @@ SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
 // The default DGF file to load
 SET_STRING_PROP(InfiltrationBaseProblem, GridFile, "./grids/infiltration_50x3.dgf");
 }
+}
 
+namespace Ewoms {
 /*!
  * \ingroup VcfvTestProblems
  * \brief Isothermal NAPL infiltration problem where LNAPL

@@ -28,12 +28,13 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionImmiscibleNIProblem, INHERITS_FROM(VcfvImmiscible, Co2InjectionBaseProblem));
 
 SET_BOOL_PROP(Co2InjectionImmiscibleNIProblem, EnableEnergy, true);
-} }
+}
+}
 
 ////////////////////////
 // the main function
