@@ -26,25 +26,35 @@
 
 #include <iostream>
 
+namespace Opm
+{
+
 // -------------------- class HelperOps --------------------
 
 /// Contains vectors and sparse matrices that represent subsets or
 /// operations on (AD or regular) vectors of data.
 struct HelperOps
 {
-    typedef AutoDiff::ForwardBlock<double>::M M;
-    typedef AutoDiff::ForwardBlock<double>::V V;
+    typedef AutoDiffBlock<double>::M M;
+    typedef AutoDiffBlock<double>::V V;
 
     /// A list of internal faces.
     typedef Eigen::Array<int, Eigen::Dynamic, 1> IFaces;
     IFaces internal_faces;
 
-    /// Extract for each face the difference of its adjacent cells'values.
+    /// Extract for each internal face the difference of its adjacent cells' values (first - second).
     M ngrad;
+    /// Extract for each face the difference of its adjacent cells' values (second - first).
+    M grad;
     /// Extract for each face the average of its adjacent cells' values.
     M caver;
-    /// Extract for each cell the sum of its adjacent faces' (signed) values.
+    /// Extract for each cell the sum of its adjacent interior faces' (signed) values.
     M div;
+    /// Extract for each face the difference of its adjacent cells' values (first - second).
+    /// For boundary faces, one of the entries per row (corresponding to the outside) is zero.
+    M fullngrad;
+    /// Extract for each cell the sum of all its adjacent faces' (signed) values.
+    M fulldiv;
 
     /// Constructs all helper vectors and matrices.
     HelperOps(const UnstructuredGrid& grid)
@@ -89,7 +99,21 @@ struct HelperOps
         }
         ngrad.setFromTriplets(ngrad_tri.begin(), ngrad_tri.end());
         caver.setFromTriplets(caver_tri.begin(), caver_tri.end());
+        grad = -ngrad;
         div = ngrad.transpose();
+        std::vector<Tri> fullngrad_tri;
+        fullngrad_tri.reserve(2*nf);
+        for (int i = 0; i < nf; ++i) {
+            if (nb(i,0) >= 0) {
+                fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
+            }
+            if (nb(i,1) >= 0) {
+                fullngrad_tri.emplace_back(i, nb(i,1), -1.0);
+            }
+        }
+        fullngrad.resize(nf, nc);
+        fullngrad.setFromTriplets(fullngrad_tri.begin(), fullngrad_tri.end());
+        fulldiv = fullngrad.transpose();
     }
 };
 
@@ -181,7 +205,7 @@ namespace {
     template <typename Scalar>
     class UpwindSelector {
     public:
-        typedef AutoDiff::ForwardBlock<Scalar> ADB;
+        typedef AutoDiffBlock<Scalar> ADB;
 
         UpwindSelector(const UnstructuredGrid& g,
                        const HelperOps&        h,
@@ -276,11 +300,11 @@ namespace {
 
 /// Returns x(indices).
 template <typename Scalar, class IntVec>
-AutoDiff::ForwardBlock<Scalar>
-subset(const AutoDiff::ForwardBlock<Scalar>& x,
+AutoDiffBlock<Scalar>
+subset(const AutoDiffBlock<Scalar>& x,
        const IntVec& indices)
 {
-    return ::constructSubsetSparseMatrix<Scalar>(x.value().size(), indices) * x;
+    return constructSubsetSparseMatrix<Scalar>(x.value().size(), indices) * x;
 }
 
 
@@ -291,19 +315,19 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1>
 subset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
        const IntVec& indices)
 {
-    return (::constructSubsetSparseMatrix<Scalar>(x.size(), indices) * x.matrix()).array();
+    return (constructSubsetSparseMatrix<Scalar>(x.size(), indices) * x.matrix()).array();
 }
 
 
 
 /// Returns v where v(indices) == x, v(!indices) == 0 and v.size() == n.
 template <typename Scalar, class IntVec>
-AutoDiff::ForwardBlock<Scalar>
-superset(const AutoDiff::ForwardBlock<Scalar>& x,
+AutoDiffBlock<Scalar>
+superset(const AutoDiffBlock<Scalar>& x,
          const IntVec& indices,
          const int n)
 {
-    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x;
+    return constructSupersetSparseMatrix<Scalar>(n, indices) * x;
 }
 
 
@@ -315,7 +339,7 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
          const IntVec& indices,
          const int n)
 {
-    return ::constructSupersetSparseMatrix<Scalar>(n, indices) * x.matrix();
+    return constructSupersetSparseMatrix<Scalar>(n, indices) * x.matrix();
 }
 
 
@@ -324,10 +348,10 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
 /// elements of d on the diagonal.
 /// Need to mark this as inline since it is defined in a header and not a template.
 inline
-AutoDiff::ForwardBlock<double>::M
-spdiag(const AutoDiff::ForwardBlock<double>::V& d)
+AutoDiffBlock<double>::M
+spdiag(const AutoDiffBlock<double>::V& d)
 {
-    typedef AutoDiff::ForwardBlock<double>::M M;
+    typedef AutoDiffBlock<double>::M M;
 
     const int n = d.size();
     M mat(n, n);
@@ -346,7 +370,7 @@ spdiag(const AutoDiff::ForwardBlock<double>::V& d)
     template <typename Scalar>
     class Selector {
     public:
-        typedef AutoDiff::ForwardBlock<Scalar> ADB;
+        typedef AutoDiffBlock<Scalar> ADB;
 
         Selector(const typename ADB::V& selection_basis)
         {
@@ -400,10 +424,10 @@ spdiag(const AutoDiff::ForwardBlock<double>::V& d)
 
 /// Returns the input expression, but with all Jacobians collapsed to one.
 inline
-AutoDiff::ForwardBlock<double>
-collapseJacs(const AutoDiff::ForwardBlock<double>& x)
+AutoDiffBlock<double>
+collapseJacs(const AutoDiffBlock<double>& x)
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
     const int nb = x.numBlocks();
     typedef Eigen::Triplet<double> Tri;
     int nnz = 0;
@@ -436,9 +460,9 @@ collapseJacs(const AutoDiff::ForwardBlock<double>& x)
 
 /// Returns the vertical concatenation [ x; y ] of the inputs.
 inline
-AutoDiff::ForwardBlock<double>
-vertcat(const AutoDiff::ForwardBlock<double>& x,
-        const AutoDiff::ForwardBlock<double>& y)
+AutoDiffBlock<double>
+vertcat(const AutoDiffBlock<double>& x,
+        const AutoDiffBlock<double>& y)
 {
     const int nx = x.size();
     const int ny = y.size();
@@ -563,5 +587,8 @@ inline Eigen::ArrayXd sign (const Eigen::ArrayXd& x)
     }
     return retval;
 }
+
+
+} // namespace Opm
 
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED

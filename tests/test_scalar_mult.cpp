@@ -34,9 +34,11 @@
 
 #include <iostream>
 
+using namespace Opm;
+
 BOOST_AUTO_TEST_CASE(ScalarMultiplication)
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
     std::vector<int> blocksizes = { 3, 1, 2 };
 
     ADB::V vx(3);

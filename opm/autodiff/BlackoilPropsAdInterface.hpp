@@ -64,7 +64,7 @@ namespace Opm
         //      Fluid interface   //
         ////////////////////////////
 
-        typedef AutoDiff::ForwardBlock<double> ADB;
+        typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
         typedef std::vector<int> Cells;

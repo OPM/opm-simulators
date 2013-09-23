@@ -45,7 +45,6 @@
 #include <opm/core/simulator/WellState.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/BlackoilPropsAd.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -78,12 +77,16 @@ try
 {
     using namespace Opm;
 
-    std::cout << "\n================    Test program for weakly compressible two-phase flow     ===============\n\n";
+    std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
     parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
+    if (!use_deck) {
+        OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
+                  "Specify the deck with deck_filename=deckname.data (for example).");
+    }
     boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
@@ -93,82 +96,39 @@ try
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
-    if (use_deck) {
-        std::string deck_filename = param.get<std::string>("deck_filename");
-        deck.reset(new EclipseGridParser(deck_filename));
-        // Grid init
-        grid.reset(new GridManager(*deck));
-        // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
-        new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
-        // check_well_controls = param.getDefault("check_well_controls", false);
-        // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
-        // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(*deck));
-        // Gravity.
-        gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
-        // Init state variables (saturation and pressure).
-        if (param.has("init_saturation")) {
-            initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-            initBlackoilSurfvol(*grid->c_grid(), *props, state);
-            enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
-            const PhaseUsage pu = props->phaseUsage();
-            if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
-                const int np = props->numPhases();
-                const int nc = grid->c_grid()->number_of_cells;
-                for (int c = 0; c < nc; ++c) {
-                    state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
-                        / state.surfacevol()[c*np + pu.phase_pos[Oil]];
-                }
-            }
-        } else {
-            initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
-        }
-    } else {
-        // Grid init.
-        const int nx = param.getDefault("nx", 100);
-        const int ny = param.getDefault("ny", 100);
-        const int nz = param.getDefault("nz", 1);
-        const double dx = param.getDefault("dx", 1.0);
-        const double dy = param.getDefault("dy", 1.0);
-        const double dz = param.getDefault("dz", 1.0);
-        grid.reset(new GridManager(nx, ny, nz, dx, dy, dz));
-        // Rock and fluid init.
-        props.reset(new BlackoilPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        new_props.reset(new BlackoilPropsAd(*props));
-        // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(param));
-        // Gravity.
-        gravity[2] = param.getDefault("gravity", 0.0);
-        // Init state variables (saturation and pressure).
+    std::string deck_filename = param.get<std::string>("deck_filename");
+    deck.reset(new EclipseGridParser(deck_filename));
+    // Grid init
+    grid.reset(new GridManager(*deck));
+    // Rock and fluid init
+    props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
+    // check_well_controls = param.getDefault("check_well_controls", false);
+    // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
+    // Rock compressibility.
+    rock_comp.reset(new RockCompressibility(*deck));
+    // Gravity.
+    gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+    // Init state variables (saturation and pressure).
+    if (param.has("init_saturation")) {
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
+        const PhaseUsage pu = props->phaseUsage();
+        if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+            const int np = props->numPhases();
+            const int nc = grid->c_grid()->number_of_cells;
+            for (int c = 0; c < nc; ++c) {
+                state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
+                    / state.surfacevol()[c*np + pu.phase_pos[Oil]];
+            }
+        }
+    } else {
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
-
-    // Initialising src
-    int num_cells = grid->c_grid()->number_of_cells;
-    std::vector<double> src(num_cells, 0.0);
-    if (use_deck) {
-        // Do nothing, wells will be the driving force, not source terms.
-    } else {
-        // Compute pore volumes, in order to enable specifying injection rate
-        // terms of total pore volume.
-        std::vector<double> porevol;
-        if (rock_comp->isActive()) {
-            computePorevolume(*grid->c_grid(), props->porosity(), *rock_comp, state.pressure(), porevol);
-        } else {
-            computePorevolume(*grid->c_grid(), props->porosity(), porevol);
-        }
-        const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-        const double default_injection = use_gravity ? 0.0 : 0.1;
-        const double flow_per_sec = param.getDefault<double>("injected_porevolumes_per_day", default_injection)
-            *tot_porevol_init/unit::day;
-        src[0] = flow_per_sec;
-        src[num_cells - 1] = -flow_per_sec;
-    }
 
     // Boundary conditions.
     FlowBCManager bcs;
@@ -207,87 +167,66 @@ try
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << "                        (number of epochs: "
-              << (use_deck ? deck->numberOfEpochs() : 1) << ")\n\n" << std::flush;
+              << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
 
     SimulatorReport rep;
-    if (!use_deck) {
-        // Simple simulation without a deck.
-        WellsManager wells; // no wells.
+    // With a deck, we may have more epochs etc.
+    WellState well_state;
+    int step = 0;
+    SimulatorTimer simtimer;
+    // Use timer for last epoch to obtain total time.
+    deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
+    simtimer.init(*deck);
+    const double total_time = simtimer.totalTime();
+    for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
+        // Set epoch index.
+        deck->setCurrentEpoch(epoch);
+
+        // Update the timer.
+        if (deck->hasField("TSTEP")) {
+            simtimer.init(*deck);
+        } else {
+            if (epoch != 0) {
+                OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
+            }
+            simtimer.init(param);
+        }
+        simtimer.setCurrentStepNum(step);
+        simtimer.setTotalTime(total_time);
+
+        // Report on start of epoch.
+        std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
+                  << "\n                  (number of steps: "
+                  << simtimer.numSteps() - step << ")\n\n" << std::flush;
+
+        // Create new wells, well_state
+        WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+        // @@@ HACK: we should really make a new well state and
+        // properly transfer old well state to it every epoch,
+        // since number of wells may change etc.
+        if (epoch == 0) {
+            well_state.init(wells.c_wells(), state);
+        }
+
+        // Create and run simulator.
         SimulatorFullyImplicitBlackoil simulator(param,
                                                  *grid->c_grid(),
                                                  *new_props,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
-                                                 src,
                                                  bcs.c_bcs(),
                                                  linsolver,
                                                  grav);
-        SimulatorTimer simtimer;
-        simtimer.init(param);
-        warnIfUnusedParams(param);
-        WellState well_state;
-        well_state.init(0, state);
-        rep = simulator.run(simtimer, state, well_state);
-    } else {
-        // With a deck, we may have more epochs etc.
-        WellState well_state;
-        int step = 0;
-        SimulatorTimer simtimer;
-        // Use timer for last epoch to obtain total time.
-        deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
-        simtimer.init(*deck);
-        const double total_time = simtimer.totalTime();
-        for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
-            // Set epoch index.
-            deck->setCurrentEpoch(epoch);
-
-            // Update the timer.
-            if (deck->hasField("TSTEP")) {
-                simtimer.init(*deck);
-            } else {
-                if (epoch != 0) {
-                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
-                }
-                simtimer.init(param);
-            }
-            simtimer.setCurrentStepNum(step);
-            simtimer.setTotalTime(total_time);
-
-            // Report on start of epoch.
-            std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
-                      << "\n                  (number of steps: "
-                      << simtimer.numSteps() - step << ")\n\n" << std::flush;
-
-            // Create new wells, well_state
-            WellsManager wells(*deck, *grid->c_grid(), props->permeability());
-            // @@@ HACK: we should really make a new well state and
-            // properly transfer old well state to it every epoch,
-            // since number of wells may change etc.
-            if (epoch == 0) {
-                well_state.init(wells.c_wells(), state);
-            }
-
-            // Create and run simulator.
-            SimulatorFullyImplicitBlackoil simulator(param,
-                                                     *grid->c_grid(),
-                                                     *new_props,
-                                                     rock_comp->isActive() ? rock_comp.get() : 0,
-                                                     wells,
-                                                     src,
-                                                     bcs.c_bcs(),
-                                                     linsolver,
-                                                     grav);
-            if (epoch == 0) {
-                warnIfUnusedParams(param);
-            }
-            SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
-            if (output) {
-                epoch_rep.reportParam(epoch_os);
-            }
-            // Update total timing report and remember step number.
-            rep += epoch_rep;
-            step = simtimer.currentStepNum();
+        if (epoch == 0) {
+            warnIfUnusedParams(param);
         }
+        SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
+        if (output) {
+            epoch_rep.reportParam(epoch_os);
+        }
+        // Update total timing report and remember step number.
+        rep += epoch_rep;
+        step = simtimer.currentStepNum();
     }
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";

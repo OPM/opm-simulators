@@ -80,7 +80,7 @@ public:
     {
         double x = initial_guess;
         iterations_used = 0;
-        typedef AutoDiff::Forward<double> AD;
+        typedef Opm::AutoDiff<double> AD;
         while (std::abs(f(x)) > tolerance && ++iterations_used < max_iter) {
             AD xfad = AD::variable(x);
             AD rfad = f(xfad);

@@ -32,6 +32,8 @@
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
+using namespace Opm;
+
 namespace {
     template <typename Scalar>
     bool
@@ -73,7 +75,7 @@ namespace {
 
 BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
 
     std::vector<int> blocksizes = { 3, 1, 2 };
 
@@ -92,7 +94,7 @@ BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 
 BOOST_AUTO_TEST_CASE(VariableInitialisation)
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
 
     std::vector<int> blocksizes = { 3, 1, 2 };
 
@@ -119,7 +121,7 @@ BOOST_AUTO_TEST_CASE(VariableInitialisation)
 
 BOOST_AUTO_TEST_CASE(FunctionInitialisation)
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
 
     std::vector<int>            blocksizes = { 3, 1, 2 };
     std::vector<int>::size_type num_blocks = blocksizes.size();
@@ -150,7 +152,7 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
 
 BOOST_AUTO_TEST_CASE(Addition)
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
     std::vector<int> blocksizes = { 3, 1, 2 };
 
     ADB::V va(3);
@@ -195,7 +197,7 @@ BOOST_AUTO_TEST_CASE(Addition)
 int main()
 try
 {
-    typedef AutoDiff::ForwardBlock<double> ADB;
+    typedef AutoDiffBlock<double> ADB;
     std::vector<int> blocksizes = { 3, 1, 2 };
     int num_blocks = blocksizes.size();
     ADB::V v1(3);

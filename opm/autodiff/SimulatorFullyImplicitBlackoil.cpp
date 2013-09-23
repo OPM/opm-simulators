@@ -70,7 +70,6 @@ namespace Opm
              const BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
-             const std::vector<double>& src,
              const FlowBoundaryConditions* bcs,
              LinearSolverInterface& linsolver,
              const double* gravity);
@@ -99,7 +98,6 @@ namespace Opm
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
-        const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
         const double* gravity_;
         // Solvers
@@ -117,12 +115,11 @@ namespace Opm
                                                                    const BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
-                                                                   const std::vector<double>& src,
                                                                    const FlowBoundaryConditions* bcs,
                                                                    LinearSolverInterface& linsolver,
                                                                    const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, src, bcs, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, bcs, linsolver, gravity));
     }
 
 
@@ -231,13 +228,12 @@ namespace Opm
 #endif
 
 
-    // \TODO: make CompressibleTpfa take src and bcs.
+    // \TODO: Treat bcs properly.
     SimulatorFullyImplicitBlackoil::Impl::Impl(const parameter::ParameterGroup& param,
                                                const UnstructuredGrid& grid,
                                                const BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
-                                               const std::vector<double>& src,
                                                const FlowBoundaryConditions* bcs,
                                                LinearSolverInterface& linsolver,
                                                const double* gravity)
@@ -246,7 +242,6 @@ namespace Opm
           rock_comp_props_(rock_comp_props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
-          src_(src),
           bcs_(bcs),
           gravity_(gravity),
           geo_(grid_, props_, gravity_),
@@ -256,6 +251,10 @@ namespace Opm
                                param.getDefault("nl_pressure_maxiter", 10),
                                gravity,  */
     {
+        // Intercept usage of bcs, since we do not handle it.
+        if (bcs) {
+            OPM_THROW(std::runtime_error, "SimulatorFullyImplicitBlackoil cannot handle boundary conditions other than no-flow. Not implemented yet.");
+        }
         // For output.
         output_ = param.getDefault("output", true);
         if (output_) {
