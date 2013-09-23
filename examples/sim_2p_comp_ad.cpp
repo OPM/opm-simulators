@@ -155,7 +155,7 @@ try
         simple_wells = create_wells(2, 2, 2);
         const double inj_frac[2] = { 1.0, 0.0 };
         const int inj_cell = 0;
-        const double WI = 1e-8;
+        const double WI = 1e-8; // This is a completely made-up number.
         const double all_fluids[2] = { 1.0, 1.0 };
         int ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Injector", simple_wells);
         ok = ok && append_well_controls(SURFACE_RATE, 0.01*flow_per_sec, all_fluids, 0, simple_wells);

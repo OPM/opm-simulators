@@ -42,15 +42,15 @@ struct HelperOps
     typedef Eigen::Array<int, Eigen::Dynamic, 1> IFaces;
     IFaces internal_faces;
 
-    /// Extract for each internal face the difference of its adjacent cells'values (first - second).
+    /// Extract for each internal face the difference of its adjacent cells' values (first - second).
     M ngrad;
-    /// Extract for each face the difference of its adjacent cells'values (second - first).
+    /// Extract for each face the difference of its adjacent cells' values (second - first).
     M grad;
     /// Extract for each face the average of its adjacent cells' values.
     M caver;
     /// Extract for each cell the sum of its adjacent interior faces' (signed) values.
     M div;
-    /// Extract for each face the difference of its adjacent cells'values (first - second).
+    /// Extract for each face the difference of its adjacent cells' values (first - second).
     /// For boundary faces, one of the entries per row (corresponding to the outside) is zero.
     M fullngrad;
     /// Extract for each cell the sum of all its adjacent faces' (signed) values.

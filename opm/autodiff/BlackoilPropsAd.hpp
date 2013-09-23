@@ -34,12 +34,11 @@ namespace Opm
     ///
     /// It is implemented by wrapping a BlackoilPropertiesInterface
     /// object (the interface class defined in opm-core) and calling
-    /// its methods. This approach works well for most methods, but
-    /// the rsMax() method cannot be implemented by such a wrapping,
-    /// without access to the underlying pvt objects. Therefore we
-    /// cannot use this class with any case that involves
-    /// miscibility. A rethinking of fluid interfaces is probably
-    /// necessary.
+    /// its methods. This class does not implement rsMax() because the
+    /// required information is not available when wrapping a
+    /// BlackoilPropertiesInterface. Consequently, class
+    /// BlackoilPropsAd cannot be used to simulate problems involving
+    /// miscibility.
     ///
     /// Most methods are available in two overloaded versions, one
     /// taking a constant vector and returning the same, and one

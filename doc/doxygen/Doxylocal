@@ -9,7 +9,8 @@
 INPUT                 += @abs_top_srcdir@/opm/
 
 # see e.g. dune-grid for the examples of mainpage and modules
-# INPUT                 += @abs_top_srcdir@/doc/doxygen/mainpage #                          @srcdir@/modules
+# INPUT                 += @abs_top_srcdir@/doc/doxygen/mainpage
+#                          @srcdir@/modules
 
 # The EXCLUDE tag can be used to specify files and/or directories that should
 # excluded from the INPUT source files. This way you can easily exclude a

@@ -32,15 +32,15 @@ namespace Opm
     /// values and sparse jacobian matrices.
     ///
     /// The class contains a (column) vector of values and multiple
-    /// sparse matrices representing its derivatives. Each such matrix
-    /// has a number of rows equal to the number of rows in the value
-    /// vector, and a number of columns equal to the number of
-    /// variables we want to compute the derivatives with respect
-    /// to. The reason to have multiple such jacobians instead of just
-    /// one is to allow simpler grouping of variables, making it
-    /// easier to implement various preconditioning schemes. Only
-    /// basic arithmetic operators are implemented for this class,
-    /// reflecting our needs so far.
+    /// sparse matrices representing its partial derivatives. Each
+    /// such matrix has a number of rows equal to the number of rows
+    /// in the value vector, and a number of columns equal to the
+    /// number of discrete variables we want to compute the
+    /// derivatives with respect to. The reason to have multiple such
+    /// jacobians instead of just one is to allow simpler grouping of
+    /// variables, making it easier to implement various
+    /// preconditioning schemes. Only basic arithmetic operators are
+    /// implemented for this class, reflecting our needs so far.
     ///
     /// The class is built on the Eigen library, using an Eigen array
     /// type to contain the values and Eigen sparse matrices for the

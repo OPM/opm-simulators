@@ -27,7 +27,7 @@
 namespace Opm
 {
 
-    /// Class containing static geological properties that can be
+    /// Class containing static geological properties that are
     /// derived from grid and petrophysical properties:
     ///   - pore volume
     ///   - transmissibilities
