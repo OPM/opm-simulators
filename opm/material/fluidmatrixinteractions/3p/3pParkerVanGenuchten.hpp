@@ -52,7 +52,7 @@ public:
      */
     static Scalar pC(const Params &params, Scalar Sw)
     {
-        OPM_THROW(Dune::NotImplemented, "Capillary pressures for three phases is not so simple! Use pCGN, pCNW, and pcGW");
+        OPM_THROW(std::logic_error, "Not implemented: Capillary pressures for three phases is not so simple! Use pCGN, pCNW, and pcGW");
     }
 
     static Scalar pCGW(const Params &params, Scalar Sw)
@@ -208,7 +208,7 @@ public:
      */
     static Scalar Sw(const Params &params, Scalar pC)
     {
-        OPM_THROW(Dune::NotImplemented, "Sw(pc) for three phases not implemented! Do it yourself!");
+        OPM_THROW(std::logic_error, "Not implemented: Sw(pc) for three phases not implemented! Do it yourself!");
     }
 
     /*!
@@ -218,7 +218,7 @@ public:
      */
     static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        OPM_THROW(Dune::NotImplemented, "dpC/dSw for three phases not implemented! Do it yourself!");
+        OPM_THROW(std::logic_error, "Not implemented: dpC/dSw for three phases not implemented! Do it yourself!");
     }
 
     /*!
@@ -227,7 +227,7 @@ public:
      */
     static Scalar dSw_dpC(const Params &params, Scalar pC)
     {
-        OPM_THROW(Dune::NotImplemented, "dSw/dpC for three phases not implemented! Do it yourself!");
+        OPM_THROW(std::logic_error, "Not implemented: dSw/dpC for three phases not implemented! Do it yourself!");
     }
 
     /*!
