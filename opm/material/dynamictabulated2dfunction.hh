@@ -24,8 +24,9 @@
 #ifndef OPM_DYNAMIC_TABULATED_2D_FUNCTION_HH
 #define OPM_DYNAMIC_TABULATED_2D_FUNCTION_HH
 
-#include <opm/common/exceptions.hh>
-#include <opm/common/tabulated2dfunction.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/tabulated2dfunction.hh>
 
 #include <vector>
 

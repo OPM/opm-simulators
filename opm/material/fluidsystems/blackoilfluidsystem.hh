@@ -23,8 +23,9 @@
 #ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HH
 #define OPM_BLACK_OIL_FLUID_SYSTEM_HH
 
-#include <opm/common/exceptions.hh>
-#include <opm/common/spline.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Spline.hpp>
 
 #include <opm/material/idealgas.hh>
 #include <opm/material/constants.hh>
@@ -47,7 +48,7 @@ template <class Scalar>
 class BlackOil
     : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
-    typedef Opm::Spline<Scalar, -1> Spline;
+    typedef Opm::Spline<Scalar> Spline;
     typedef std::vector<std::pair<Scalar, Scalar> > SplineSamplingPoints;
 
 public:
@@ -72,7 +73,7 @@ public:
      * \copydoc BaseFluidSystem::init
      *
      * \attention For this fluid system, this method just throws a
-     *            <tt>Dune::InvalidStateException</tt> as there is no
+     *            <tt>std::logic_error</tt> as there is no
      *            way to generically calculate the required black oil
      *            parameters. Instead of this method, use
      * \code
@@ -83,7 +84,7 @@ public:
      */
     static void init()
     {
-        DUNE_THROW(Dune::InvalidStateException, "No generic init() method for this fluid system. The black-oil fluid system must be initialized with:\n"
+        OPM_THROW(std::logic_error, "No generic init() method for this fluid system. The black-oil fluid system must be initialized with:\n"
                    << "    FluidSystem::initBegin()\n"
                    << "    // set black oil parameters\n"
                    << "    FluidSystem::initEnd()\n");
@@ -399,7 +400,7 @@ public:
         }
         }
 
-        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
+        OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
@@ -419,7 +420,7 @@ public:
         case oPhaseIdx: return fugCoefficientInOil(compIdx, p);
         }
 
-        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase or component index");
+        OPM_THROW(std::logic_error, "Unhandled phase or component index");
     }
 
     //! \copydoc BaseFluidSystem::viscosity
@@ -438,7 +439,7 @@ public:
         case gPhaseIdx: return gasViscosity_(p);
         }
 
-        DUNE_THROW(Dune::InvalidStateException, "Unhandled phase index " << phaseIdx);
+        OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
     }
 
     /*!
@@ -593,7 +594,7 @@ public:
                 return pSat;
         }
 
-        DUNE_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^g = " << X_oG);
+        OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^g = " << X_oG);
     }
 
 

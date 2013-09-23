@@ -31,9 +31,6 @@
 #include <opm/material/fluidsystems/gasphase.hh>
 #include <opm/material/fluidstates/immisciblefluidstate.hh>
 
-#include <dune/common/exceptions.hh>
-
-
 #include "basefluidsystem.hh"
 #include "nullparametercache.hh"
 

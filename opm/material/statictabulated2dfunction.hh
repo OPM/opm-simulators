@@ -24,8 +24,9 @@
 #ifndef OPM_STATIC_TABULATED_2D_FUNCTION_HH
 #define OPM_STATIC_TABULATED_2D_FUNCTION_HH
 
-#include <opm/common/exceptions.hh>
-#include <opm/common/tabulated2dfunction.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/tabulated2dfunction.hh>
 
 #include <assert.h>
 
@@ -92,7 +93,7 @@ public:
 #if !defined NDEBUG
         if (i < 0 || i >= Traits::numX ||
             j < 0 || j >= Traits::numY) {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Attempt to access element ("
                        << i << ", " << j
                        << ") on a " << Traits::name << " table of size ("

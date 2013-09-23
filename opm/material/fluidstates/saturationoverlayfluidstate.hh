@@ -23,7 +23,7 @@
 #ifndef OPM_SATURATION_OVERLAY_FLUID_STATE_HH
 #define OPM_SATURATION_OVERLAY_FLUID_STATE_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
 #include <array>
 

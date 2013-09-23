@@ -27,7 +27,7 @@
 
 #include <dune/common/fvector.hh>
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
 namespace Opm {
 /*!
@@ -128,7 +128,7 @@ public:
             return Sgr_;
             break;
         };
-        DUNE_THROW(Dune::InvalidStateException, "Invalid phase index " << phaseIdx);
+        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
     }
 
     /*!

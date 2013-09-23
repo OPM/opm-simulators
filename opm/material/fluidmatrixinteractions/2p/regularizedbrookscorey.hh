@@ -27,7 +27,7 @@
 #include "brookscorey.hh"
 #include "regularizedbrookscoreyparams.hh"
 
-#include <opm/common/spline.hh>
+#include <opm/core/utility/Spline.hpp>
 
 namespace Opm {
 /*!

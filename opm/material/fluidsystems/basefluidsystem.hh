@@ -25,9 +25,10 @@
 
 #include "nullparametercache.hh"
 
-#include <opm/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
-#include <dune/common/classname.hh>
+#include <opm/core/utility/ClassName.hpp>
 
 namespace Opm {
 
@@ -62,8 +63,8 @@ public:
      */
     static char *phaseName(int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a phaseName() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a phaseName() method!");
     }
 
     /*!
@@ -73,8 +74,8 @@ public:
      */
     static bool isLiquid(int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isLiquid() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isLiquid() method!");
     }
 
     /*!
@@ -93,8 +94,8 @@ public:
      */
     static bool isIdealMixture(int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isIdealMixture() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealMixture() method!");
     }
 
     /*!
@@ -108,8 +109,8 @@ public:
      */
     static bool isCompressible(int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isCompressible() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isCompressible() method!");
     }
 
     /*!
@@ -120,8 +121,8 @@ public:
      */
     static bool isIdealGas(int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a isIdealGas() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealGas() method!");
     }
 
     /*!
@@ -131,8 +132,8 @@ public:
      */
     static const char *componentName(int compIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a componentName() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a componentName() method!");
     }
 
     /*!
@@ -142,8 +143,8 @@ public:
      */
     static Scalar molarMass(int compIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a molarMass() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a molarMass() method!");
     }
 
     /*!
@@ -163,8 +164,8 @@ public:
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented,
-                   "The fluid system '" << Dune::className<Implementation>() << "' does not provide a density() method!");
+        OPM_THROW(std::runtime_error,
+                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a density() method!");
     }
 
     /*!
@@ -187,7 +188,7 @@ public:
                                       int phaseIdx,
                                       int compIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a fugacityCoefficient() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a fugacityCoefficient() method!");
     }
 
     /*!
@@ -201,7 +202,7 @@ public:
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a viscosity() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a viscosity() method!");
     }
 
     /*!
@@ -227,7 +228,7 @@ public:
                                        int phaseIdx,
                                        int compIdx)
     {
-         DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
+         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
     }
 
     /*!
@@ -242,7 +243,7 @@ public:
                            const ParameterCache &paramCache,
                            int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide an enthalpy() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide an enthalpy() method!");
     }
 
     /*!
@@ -256,7 +257,7 @@ public:
                                       const ParameterCache &paramCache,
                                       int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a thermalConductivity() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a thermalConductivity() method!");
     }
 
     /*!
@@ -270,7 +271,7 @@ public:
                                const ParameterCache &paramCache,
                                int phaseIdx)
     {
-        DUNE_THROW(Dune::NotImplemented, "The fluid system '" << Dune::className<Implementation>() << "'  does not provide a heatCapacity() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a heatCapacity() method!");
     }
 };
 

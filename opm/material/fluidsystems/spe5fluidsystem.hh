@@ -26,7 +26,7 @@
 #include "basefluidsystem.hh"
 #include "spe5parametercache.hh"
 
-#include <opm/common/spline.hh>
+#include <opm/core/utility/Spline.hpp>
 #include <opm/material/constants.hh>
 #include <opm/material/eos/pengrobinsonmixture.hh>
 
@@ -424,7 +424,7 @@ protected:
         case C10Idx: return 1e10;
         case C15Idx: return 1e10;
         case C20Idx: return 1e10;
-        default: DUNE_THROW(Dune::InvalidStateException, "Unknown component index " << compIdx);
+        default: OPM_THROW(std::logic_error, "Unknown component index " << compIdx);
         }
     }
 };

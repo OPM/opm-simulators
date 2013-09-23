@@ -265,7 +265,7 @@ public:
      */
     static Scalar liquidPressure(Scalar temperature, Scalar density)
     {
-        DUNE_THROW(Dune::InvalidStateException,
+        OPM_THROW(std::logic_error,
                    "The liquid pressure is undefined for incompressible fluids");
     }
 

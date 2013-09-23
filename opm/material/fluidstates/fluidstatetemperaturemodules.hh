@@ -24,9 +24,10 @@
 #ifndef OPM_FLUID_STATE_TEMPERATURE_MODULES_HH
 #define OPM_FLUID_STATE_TEMPERATURE_MODULES_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -149,7 +150,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
- *        temperatures but throws Dune::InvalidState instead.
+ *        temperatures but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,
@@ -164,7 +165,7 @@ public:
      * \brief The temperature of a fluid phase [-]
      */
     Scalar temperature(int phaseIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Temperature is not provided by this fluid state"); }
+    { OPM_THROW(std::runtime_error, "Temperature is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

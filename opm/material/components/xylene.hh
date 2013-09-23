@@ -73,17 +73,13 @@ public:
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at xylene's triple point.
      */
     static const Scalar tripleTemperature()
-    {
-        DUNE_THROW(Dune::NotImplemented, "tripleTemperature for xylene");
-    }
+    { OPM_THROW(std::runtime_error, "Not implemented: tripleTemperature for xylene"); }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at xylene's triple point.
      */
     static const Scalar triplePressure()
-    {
-        DUNE_THROW(Dune::NotImplemented, "triplePressure for xylene");
-    }
+    { OPM_THROW(std::runtime_error, "Not implemented: triplePressure for xylene"); }
 
     /*!
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of pure xylene

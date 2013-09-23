@@ -24,7 +24,8 @@
 #ifndef OPM_CO2_HH
 #define OPM_CO2_HH
 
-#include <opm/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/material/components/component.hh>
 #include <opm/material/constants.hh>
 #include <opm/material/idealgas.hh>
@@ -163,8 +164,8 @@ public:
 #ifndef NDEBUG
         if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
         {
-            Dune::dwarn << "The tables used for the CO2 exhibit subcritical as well as critical values: "
-                        << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
+            std::cout << "The tables used for the CO2 exhibit subcritical as well as critical values: "
+                      << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
             warningPrinted=true;
         }
 #endif
@@ -192,8 +193,8 @@ public:
 #ifndef NDEBUG
         if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
         {
-            Dune::dwarn << "The tables used for the CO2 exhibit subcritical as well as critical values: "
-                        << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
+            std::cout << "The tables used for the CO2 exhibit subcritical as well as critical values: "
+                      << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
             warningPrinted=true;
         }
 #endif

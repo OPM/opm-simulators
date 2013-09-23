@@ -28,8 +28,9 @@
 #include <cassert>
 
 #include <opm/material/idealgas.hh>
-#include <opm/common/exceptions.hh>
-#include <opm/common/valgrind.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/valgrind.hh>
 
 #include "component.hh"
 
@@ -172,7 +173,7 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Enthalpy of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -222,7 +223,7 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Enthalpy of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -263,7 +264,7 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Heat capacity of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -299,7 +300,7 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "heat Capacity of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -332,7 +333,7 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Internal Energy of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -388,7 +389,7 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Internal Energy of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -462,7 +463,7 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Heat capacity of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -495,7 +496,7 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Heat capacity of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -541,7 +542,7 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Density of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -662,7 +663,7 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Density of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -761,7 +762,7 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Viscosity of steam is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
@@ -785,7 +786,7 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Viscosity of water is only implemented for temperatures below 623.15K and "
                        "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         };
@@ -818,7 +819,7 @@ public:
             || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
             || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Liquid thermal conductivity of H2O for "
                        << "T="<<temperature<<" p="<<pressure
                        << " is not implemented");
@@ -852,7 +853,7 @@ public:
             || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
             || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
         {
-            DUNE_THROW(NumericalProblem,
+            OPM_THROW(NumericalProblem,
                        "Gas thermal conductivity of H2O for "
                        " T="<<temperature<<" p="<<pressure
                        << " is not implemented");

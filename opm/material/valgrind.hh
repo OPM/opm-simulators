@@ -23,7 +23,7 @@
 #ifndef OPM_VALGRIND_HH
 #define OPM_VALGRIND_HH
 
-#include <dune/common/unused.hh>
+#include <opm/core/utility/Unused.hpp>
 
 #if ! HAVE_VALGRIND && ! defined(DOXYGEN)
 namespace Valgrind
@@ -150,7 +150,7 @@ template <class T>
 inline void SetUndefined(const T &value)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto DUNE_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(&value, sizeof(T));
+    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(&value, sizeof(T));
 #endif
 }
 
@@ -176,7 +176,7 @@ template <class T>
 inline void SetUndefined(const T *value, int size)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto DUNE_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(value, size*sizeof(T));
+    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(value, size*sizeof(T));
 #endif
 }
 
@@ -200,7 +200,7 @@ template <class T>
 inline void SetDefined(const T &value)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto DUNE_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(&value, sizeof(T));
+    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(&value, sizeof(T));
 #endif
 }
 
@@ -226,7 +226,7 @@ template <class T>
 inline void SetDefined(const T *value, int n)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto DUNE_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(value, n*sizeof(T));
+    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(value, n*sizeof(T));
 #endif
 }
 
@@ -250,7 +250,7 @@ template <class T>
 inline void SetNoAccess(const T &value)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto DUNE_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(&value, sizeof(T));
+    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(&value, sizeof(T));
 #endif
 }
 
@@ -276,7 +276,7 @@ template <class T>
 inline void SetNoAccess(const T *value, int size)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto DUNE_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(value, size*sizeof(T));
+    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(value, size*sizeof(T));
 #endif
 }
 

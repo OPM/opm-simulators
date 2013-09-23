@@ -26,11 +26,10 @@
 
 #include <opm/material/fluidstates/temperatureoverlayfluidstate.hh>
 #include <opm/material/idealgas.hh>
-#include <opm/common/exceptions.hh>
-#include <opm/common/math.hh>
-#include <opm/common/dynamictabulated2dfunction.hh>
+#include <opm/material/dynamictabulated2dfunction.hh>
 
-#include <dune/common/unused.hh>
+#include <opm/core/utility/Unused.hpp>
+#include <opm/core/utility/PolynomialUtils.hpp>
 
 #include <csignal>
 
@@ -113,7 +112,7 @@ public:
         // Newton-Raphson method
         for (int i = 0; i < 5; ++i) {
             // calculate the molar densities
-            DUNE_UNUSED int numSol = molarVolumes(Vm, params, T, pVap);
+            OPM_UNUSED int numSol = molarVolumes(Vm, params, T, pVap);
             assert(numSol == 3);
 
             Scalar f = fugacityDifference_(params, T, pVap, Vm[0], Vm[2]);
@@ -338,7 +337,7 @@ protected:
             // epsilon was added to the temperature. (this is case
             // rarely happens, though)
             const Scalar eps = - 1e-11;
-            bool DUNE_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
+            bool OPM_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
             assert(hasExtrema);
             assert(std::isfinite(maxVm));
             Scalar fStar = maxVm - minVm;
@@ -370,7 +369,7 @@ protected:
                         Vcrit = (maxVm + minVm)/2;
                         return;
                     }
-                    DUNE_THROW(NumericalProblem,
+                    OPM_THROW(NumericalProblem,
                                "Could not determine the critical point for a=" << a << ", b=" << b);
                 }
 

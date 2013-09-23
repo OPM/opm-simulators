@@ -24,9 +24,10 @@
 #ifndef OPM_FLUID_STATE_FUGACITY_MODULES_HH
 #define OPM_FLUID_STATE_FUGACITY_MODULES_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -173,7 +174,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not store the
- *        fugacitys but throws Dune::InvalidState instead.
+ *        fugacitys but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,
@@ -188,13 +189,13 @@ public:
      * \brief The fugacity coefficient of a component in a phase []
      */
     Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Fugacity coefficients are not provided by this fluid state"); }
+    { OPM_THROW(std::logic_error, "Fugacity coefficients are not provided by this fluid state"); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
     Scalar fugacity(int phaseIdx, int compIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Fugacities coefficients are not provided by this fluid state"); }
+    { OPM_THROW(std::logic_error, "Fugacities coefficients are not provided by this fluid state"); }
 
     /*!
      * \brief Make sure that all attributes are defined.

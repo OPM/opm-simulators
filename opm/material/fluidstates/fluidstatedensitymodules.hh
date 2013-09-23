@@ -24,9 +24,10 @@
 #ifndef OPM_FLUID_STATE_DENSITY_MODULES_HH
 #define OPM_FLUID_STATE_DENSITY_MODULES_HH
 
-#include <opm/common/valgrind.hh>
+#include <opm/material/valgrind.hh>
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 #include <algorithm>
 
@@ -105,7 +106,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
- *        densitys but throws Dune::InvalidState instead.
+ *        densitys but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,
@@ -120,7 +121,7 @@ public:
      * \brief The density of a fluid phase [kg/m^3]
      */
     Scalar density(int phaseIdx) const
-    { DUNE_THROW(Dune::InvalidStateException, "Density is not provided by this fluid state"); }
+    { OPM_THROW(std::logic_error, "Density is not provided by this fluid state"); }
 
 
     /*!

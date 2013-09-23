@@ -23,17 +23,18 @@
 #ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HH
 #define OPM_DUMMY_HEATCONDUCTION_LAW_HH
 
-#include <dune/common/exceptions.hh>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
 {
 /*!
  * \ingroup material
  *
- * \brief Implements a dumm law for heat conduction to which isothermal models
- *        can fall back to
+ * \brief Implements a dummy law for heat conduction to which isothermal models
+ *        can fall back to.
  *
- * If any method of this law is called, it throws an excetion
+ * If any method of this law is called, it throws std::logic_error.
  */
 template <class ScalarT>
 class DummyHeatConductionLaw
@@ -52,7 +53,7 @@ public:
     static Scalar heatConductivity(const Params &params,
                                    const FluidState &fluidState)
     {
-        DUNE_THROW(Dune::InvalidStateException,
+        OPM_THROW(std::logic_error,
                    "No heat conduction law specified!");
     }
 };

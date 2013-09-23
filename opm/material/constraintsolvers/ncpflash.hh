@@ -26,9 +26,10 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <opm/common/exceptions.hh>
-#include <opm/common/valgrind.hh>
-#include <opm/common/math.hh>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/Average.hpp>
+#include <opm/material/valgrind.hh>
 
 #include <limits>
 #include <iostream>
@@ -145,8 +146,8 @@ public:
 
         if (tolerance <= 0.0) {
             tolerance = std::min(1e-10,
-                                 Opm::geometricMean(Scalar(1.0),
-                                                      std::numeric_limits<Scalar>::epsilon()));
+                                 Opm::utils::geometricAverage(Scalar(1.0),
+                                                              std::numeric_limits<Scalar>::epsilon()));
         }
 
         /////////////////////////
@@ -242,10 +243,10 @@ public:
         std::cout << "\n";
         */
 
-        DUNE_THROW(NumericalProblem,
-                   "Flash calculation failed."
-                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
-                   << fluidState.temperature(/*phaseIdx=*/0));
+        OPM_THROW(NumericalProblem,
+                  "Flash calculation failed."
+                  " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
+                  << fluidState.temperature(/*phaseIdx=*/0));
     }
 
 

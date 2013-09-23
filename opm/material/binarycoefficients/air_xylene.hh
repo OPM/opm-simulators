@@ -43,9 +43,7 @@ public:
      */
     template <class Scalar>
     static Scalar henry(Scalar temperature)
-    { DUNE_THROW(Dune::NotImplemented,
-                 "Henry coefficient of air in xylene");
-    }
+    { OPM_THROW(std::runtime_error, "Not implemented: Henry coefficient of air in xylene"); }
 
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for air and xylene.
@@ -96,8 +94,7 @@ public:
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
-    { DUNE_THROW(Dune::NotImplemented,
-                 "Binary liquid diffusion coefficients of air and xylene");
+    { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of air and xylene");
     }
 };
 
