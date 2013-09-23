@@ -58,12 +58,12 @@ The solved equations are the mass balances of water and oil:
 \subsection{The main source file}
 
 Listing \ref{tutorial-coupled:mainfile} shows the main file
-\texttt{tutorial/tutorial\_coupled.cc} for the tutorial problem using
+\texttt{tutorial/tutorial1.cc} for the tutorial problem using
 a fully-implicit model that assumes immiscibility. This file has to be
 compiled and executed in order to solve the problem described above.
 
-\begin{lst}[File tutorial/tutorial\_coupled.cc]\label{tutorial-coupled:mainfile} \mbox{}
-  \lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=25, firstnumber=25]{../../tutorial/tutorial_coupled.cc}
+\begin{lst}[File tutorial/tutorial1.cc]\label{tutorial-coupled:mainfile} \mbox{}
+  \lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=25, firstnumber=25]{../../tutorial/tutorial1.cc}
 \end{lst}
 
 In \eWoms, this file is usually quite short, as most of the work for
@@ -96,8 +96,8 @@ When solving a problem using \eWoms, the most important file is the
 so-called \textit{problem file} as shown in
 listing~\ref{tutorial-coupled:problemfile}.
 
-\begin{lst}[File tutorial/tutorialproblem\_coupled.hh]\label{tutorial-coupled:problemfile} \mbox{}
-\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=25, firstnumber=25]{../../tutorial/tutorialproblem_coupled.hh}
+\begin{lst}[File tutorial/tutorial1problem1.hh]\label{tutorial-coupled:problemfile} \mbox{}
+\lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=25, firstnumber=25]{../../tutorial/tutorial1problem.hh}
 \end{lst}
 
 This file specifies everything that is related to the physical
@@ -276,7 +276,7 @@ even not at all.
 
 \item \textbf{Running the Program} \\
   To get an impression what the results should look like, you can first run the original version of 
-the fully-implicit tutorial problem by typing  \texttt{./tutorial\_coupled}. 
+the fully-implicit tutorial problem by typing  \texttt{./tutorial1}. 
 Note, that the time-step size is automatically adapted during the simulation. 
 For visualizing the results using the program \texttt{paraview}, please refer to section \ref{quick-start-guide}.
 
@@ -291,14 +291,15 @@ For visualizing the results using the program \texttt{paraview}, please refer to
   command line parameters to the simulation when you run it.
 
   If you chose to change the problem file, re-compile the simulation
-  by typing \texttt{make tutorial\_coupled}.  Note, that you do not
-  have to recompile the program if you use command line parameters. In
-  both cases, don't forget run the simulation before re-inspecting the
-  results using \texttt{paraview}.
+  by typing \texttt{make tutorial1} in the toplevel directory of your
+  \eWoms build directory.  Note, that you do not have to recompile the
+  program if you use command line parameters. In both cases, don't
+  forget run the simulation before re-inspecting the results using
+  \texttt{paraview}.
   
 \item \textbf{Boundary Conditions} \\
   Change the boundary conditions in the problem file
-  \texttt{tutorialproblem\_coupled.hh} so that water enters from the
+  \texttt{tutorial1problem.hh} so that water enters from the
   bottom and oil is extracted from the top boundary. The right and the
   left boundary should be closed for both, water and oil. 
 
@@ -306,7 +307,7 @@ For visualizing the results using the program \texttt{paraview}, please refer to
   fluxes of the conserved quantities into the direction of the outer
   normal per area. This means a mass flux into the domain is negative,
   a flux out of the domain is always positive. Re-compile the
-  simulation by typing \texttt{make tutorial\_coupled} and re-run it
+  simulation by typing \texttt{make tutorial1} and re-run it
   as explained above.
 
 \item \textbf{Changing the Shape of the Discrete Elements} \\
@@ -451,25 +452,24 @@ is a convenient way to get a rough feeling of the time-step sizes.
 \subsubsection{Exercise 2}
 
 For this exercise, first create a new problem file analogous to the
-file \texttt{tutorialproblem\_coupled.hh} (e.g. with the name
-\texttt{ex2\_tutorialproblem\_coupled.hh} and new spatial parameters
-just like \texttt{tutorialspatialparams\_coupled.hh}. The new problem
-file needs to be included in the file \texttt{tutorial\_coupled.cc}.
+file \texttt{tutorial1problem.hh} (e.g. with the name
+\texttt{ex2\_tutorial1problem.hh}. The new problem
+file needs to be included in the file \texttt{tutorial1.cc}.
 
 The new file should contain definitions of new classes with names that
 relate to the file name, such as
 \texttt{Ex2TutorialProblemCoupled}. Make sure that you also adjust the
 guardian macros in lines \ref{tutorial-coupled:guardian1} and
 \ref{tutorial-coupled:guardian1} in the header files (e.g. change
-\mbox{\texttt{EWOMS\_TUTORIALPROBLEM\_COUPLED\_HH}} to
-\mbox{\texttt{EWOMS\_EX2\_TUTORIALPROBLEM\_COUPLED\_HH}}). Include the
-new problem file in \texttt{tutorial\_coupled.cc}.  Besides adjusting
+\mbox{\texttt{EWOMS\_TUTORIAL1PROBLEM\_HH}} to
+\mbox{\texttt{EWOMS\_EX2\_TUTORIAL1PROBLEM\_HH}}). Include the
+new problem file in \texttt{tutorial1.cc}.  Besides adjusting
 the guardian macros, the new problem file should define and use a new
 type tag for the problem as well as a new problem class
 e.g. \mbox{\texttt{Ex2TutorialProblemCoupled}}. The type tag for the
 problem should be adjusted, too. For this, modify line
 \ref{tutorial-coupled:set-type-tag} in the problem file and the adapt
-the \texttt{main} function in the file \texttt{tutorial\_coupled.cc}.
+the \texttt{main} function in the file \texttt{tutorial1.cc}.
 
 After this, change the domain parameters so that they match the domain
 described by figure \ref{tutorial-coupled:ex2_Domain}. Adapt the
