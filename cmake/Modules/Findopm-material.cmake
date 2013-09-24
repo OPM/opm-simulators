@@ -21,7 +21,7 @@ find_opm_package (
   "${opm-material_DEPS}"
 
   # header to search for
-  "opm/material/constants.hh"
+  "opm/material/Constants.hpp"
 
   # library to search for
   ""
@@ -30,7 +30,7 @@ find_opm_package (
   ""
 
   # test program
-"#include <opm/material/constants.hh>
+"#include <opm/material/Constants.hpp>
 int main (void) {
   double c = Opm::Constants<double>::c;
   return 0;  
