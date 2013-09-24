@@ -70,7 +70,7 @@ REPORTING ISSUES
 
 Issues can be reported in the Git issue tracker online at:
 
-    http://github.com/OPM/opm-autodiff/issues
+    https://github.com/OPM/opm-autodiff/issues
 
 To help diagnose build errors, please provide a link to a build log together
 with the issue description.
@@ -78,7 +78,7 @@ with the issue description.
 You can capture such a log from the build using the `script' utility, e.g.:
 
     LOGFILE=$(date +%Y%m%d-%H%M-)build.log ;
-	cmake -E cmake_echo_color --cyan --bold "Log file: $LOGFILE" ;
+    cmake -E cmake_echo_color --cyan --bold "Log file: $LOGFILE" ;
     script -q $LOGFILE -c 'cmake ../opm-core -DCMAKE_BUILD_TYPE=Debug' &&
     script -q $LOGFILE -a -c 'ionice nice make -j 4 -l 3' ||
     cat CMakeCache.txt CMakeFiles/CMake*.log >> $LOGFILE
