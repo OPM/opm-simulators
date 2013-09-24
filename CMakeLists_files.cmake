@@ -32,7 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorCompressibleAd.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.cpp
-	opm/autodiff/SimulatorIncompTwophaseAdfi.cpp
+	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
 	)
@@ -57,7 +57,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/sim_fibo_ad.cpp
 	examples/sim_2p_comp_ad.cpp
-	examples/sim_2p_incomp_adfi.cpp
+	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
 	examples/test_impestpfa_ad.cpp
 	examples/test_implicit_ad.cpp
@@ -66,7 +66,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 # programs listed here will not only be compiled, but also marked for
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
-	examples/sim_2p_incomp_adfi.cpp
+	examples/sim_2p_incomp_ad.cpp
 	examples/sim_fibo_ad.cpp
 	)
 
@@ -84,6 +84,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/FullyImplicitBlackoilSolver.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
-	opm/autodiff/SimulatorIncompTwophaseAdfi.hpp
+	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	)

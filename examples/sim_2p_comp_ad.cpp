@@ -81,6 +81,11 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
+    if (!use_deck) {
+        // This check should be removed when and if this simulator is verified and works without decks.
+        // The current code for the non-deck case fails for unknown reasons.
+        OPM_THROW(std::runtime_error, "This simulator cannot run without a deck with wells. Use deck_filename to specify deck.");
+    }
     boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
@@ -132,12 +137,9 @@ try
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
-    // Initialising src
-    int num_cells = grid->c_grid()->number_of_cells;
-    std::vector<double> src(num_cells, 0.0);
-    if (use_deck) {
-        // Do nothing, wells will be the driving force, not source terms.
-    } else {
+    // Initialising wells if not from deck.
+    Wells* simple_wells = 0;
+    if (!use_deck) {
         // Compute pore volumes, in order to enable specifying injection rate
         // terms of total pore volume.
         std::vector<double> porevol;
@@ -150,8 +152,21 @@ try
         const double default_injection = use_gravity ? 0.0 : 0.1;
         const double flow_per_sec = param.getDefault<double>("injected_porevolumes_per_day", default_injection)
             *tot_porevol_init/unit::day;
-        src[0] = flow_per_sec;
-        src[num_cells - 1] = -flow_per_sec;
+        simple_wells = create_wells(2, 2, 2);
+        const double inj_frac[2] = { 1.0, 0.0 };
+        const int inj_cell = 0;
+        const double WI = 1e-8; // This is a completely made-up number.
+        const double all_fluids[2] = { 1.0, 1.0 };
+        int ok = add_well(INJECTOR, 0.0, 1, inj_frac, &inj_cell, &WI, "Injector", simple_wells);
+        ok = ok && append_well_controls(SURFACE_RATE, 0.01*flow_per_sec, all_fluids, 0, simple_wells);
+        const int prod_cell = grid->c_grid()->number_of_cells - 1;
+        ok = ok && add_well(PRODUCER, 0.0, 1, NULL, &prod_cell, &WI, "Producer", simple_wells);
+        ok = ok && append_well_controls(SURFACE_RATE, -0.01*flow_per_sec, all_fluids, 1, simple_wells);
+        if (!ok) {
+            OPM_THROW(std::runtime_error, "Simple well init failed.");
+        }
+        simple_wells->ctrls[0]->current = 0;
+        simple_wells->ctrls[1]->current = 0;
     }
 
     // Boundary conditions.
@@ -196,13 +211,12 @@ try
     SimulatorReport rep;
     if (!use_deck) {
         // Simple simulation without a deck.
-        WellsManager wells; // no wells.
+        WellsManager wells(simple_wells);
         SimulatorCompressibleAd simulator(param,
                                           *grid->c_grid(),
                                           *props,
                                           rock_comp->isActive() ? rock_comp.get() : 0,
                                           wells,
-                                          src,
                                           bcs.c_bcs(),
                                           linsolver,
                                           grav);
@@ -210,7 +224,7 @@ try
         simtimer.init(param);
         warnIfUnusedParams(param);
         WellState well_state;
-        well_state.init(0, state);
+        well_state.init(simple_wells, state);
         rep = simulator.run(simtimer, state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
@@ -257,7 +271,6 @@ try
                                               *props,
                                               rock_comp->isActive() ? rock_comp.get() : 0,
                                               wells,
-                                              src,
                                               bcs.c_bcs(),
                                               linsolver,
                                               grav);

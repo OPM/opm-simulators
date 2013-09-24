@@ -68,7 +68,7 @@ namespace Opm
                            TwophaseState& state);
 
     private:
-        typedef AutoDiff::ForwardBlock<double> ADB;
+        typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
 

@@ -29,9 +29,10 @@
 #include <iostream>
 #include <iomanip>
 
+namespace Opm {
 
 // Repeated from inside ImpesTPFAAD for convenience.
-typedef AutoDiff::ForwardBlock<double> ADB;
+typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
 
@@ -48,7 +49,7 @@ namespace {
     }
 
     template <class GeoProps>
-    AutoDiff::ForwardBlock<double>::M
+    AutoDiffBlock<double>::M
     gravityOperator(const UnstructuredGrid& grid,
                     const HelperOps&        ops ,
                     const GeoProps&         geo )
@@ -65,8 +66,8 @@ namespace {
             }
         }
 
-        typedef AutoDiff::ForwardBlock<double>::V V;
-        typedef AutoDiff::ForwardBlock<double>::M M;
+        typedef AutoDiffBlock<double>::V V;
+        typedef AutoDiffBlock<double>::M M;
 
         const V& gpot  = geo.gravityPotential();
         const V& trans = geo.transmissibility();
@@ -122,7 +123,6 @@ namespace {
 
 } // anonymous namespace
 
-namespace Opm {
 
 
 
@@ -183,7 +183,7 @@ namespace Opm {
         well_kr_ = fluid_.relperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
 
         const double atol  = 1.0e-10;
-        const double rtol  = 5.0e-8;
+        const double rtol  = 5.0e-6;
         const int    maxit = 15;
 
         assemble(dt, state, well_state);

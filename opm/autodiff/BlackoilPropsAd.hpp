@@ -29,9 +29,16 @@ namespace Opm
 
     class BlackoilPropertiesInterface;
 
-    /// This class is intended to present a fluid interface for
-    /// three-phase black-oil that is easy to use with the AD-using
-    /// simulators.
+    /// This class implements the AD-adapted fluid interface for
+    /// three-phase black-oil.
+    ///
+    /// It is implemented by wrapping a BlackoilPropertiesInterface
+    /// object (the interface class defined in opm-core) and calling
+    /// its methods. This class does not implement rsMax() because the
+    /// required information is not available when wrapping a
+    /// BlackoilPropertiesInterface. Consequently, class
+    /// BlackoilPropsAd cannot be used to simulate problems involving
+    /// miscibility.
     ///
     /// Most methods are available in two overloaded versions, one
     /// taking a constant vector and returning the same, and one
@@ -67,7 +74,7 @@ namespace Opm
         //      Fluid interface   //
         ////////////////////////////
 
-        typedef AutoDiff::ForwardBlock<double> ADB;
+        typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef std::vector<int> Cells;
 

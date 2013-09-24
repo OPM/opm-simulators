@@ -63,7 +63,7 @@ namespace Opm {
         ImpesTPFAAD& operator=(const ImpesTPFAAD& rhs);
 
         // Types
-        typedef AutoDiff::ForwardBlock<double> ADB;
+        typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
         typedef Eigen::Array<double,

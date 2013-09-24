@@ -1,0 +1,26 @@
+# This file contains local changes to the doxygen configuration
+# please us '+=' to add file/directories to the lists
+
+# The INPUT tag can be used to specify the files and/or directories that contain
+# documented source files. You may enter file names like "myfile.cpp" or
+# directories like "/usr/src/myproject". Separate the files or directories
+# with spaces.
+
+INPUT                 += @abs_top_srcdir@/opm/
+
+# see e.g. dune-grid for the examples of mainpage and modules
+# INPUT                 += @abs_top_srcdir@/doc/doxygen/mainpage
+#                          @srcdir@/modules
+
+# The EXCLUDE tag can be used to specify files and/or directories that should
+# excluded from the INPUT source files. This way you can easily exclude a
+# subdirectory from a directory tree whose root is specified with the INPUT tag.
+
+# EXCLUDE               += @abs_top_srcdir@/tests/
+
+# The EXAMPLE_PATH tag can be used to specify one or more files or
+# directories that contain example code fragments that are included (see
+# the \include command).
+
+# EXAMPLE_PATH          += @abs_top_srcdir@/examples/
+

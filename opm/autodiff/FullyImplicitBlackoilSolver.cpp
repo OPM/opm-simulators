@@ -37,6 +37,7 @@
 #include <iostream>
 #include <iomanip>
 
+// A debugging utility.
 #define DUMP(foo)                                                       \
     do {                                                                \
         std::cout << "==========================================\n"     \
@@ -44,7 +45,11 @@
                   << collapseJacs(foo) << std::endl;                    \
     } while (0)
 
-typedef AutoDiff::ForwardBlock<double> ADB;
+
+
+namespace Opm {
+
+typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
 typedef Eigen::Array<double,
@@ -69,7 +74,7 @@ namespace {
 
 
     template <class GeoProps>
-    AutoDiff::ForwardBlock<double>::M
+    AutoDiffBlock<double>::M
     gravityOperator(const UnstructuredGrid& grid,
                     const HelperOps&        ops ,
                     const GeoProps&         geo )
@@ -86,8 +91,8 @@ namespace {
             }
         }
 
-        typedef AutoDiff::ForwardBlock<double>::V V;
-        typedef AutoDiff::ForwardBlock<double>::M M;
+        typedef AutoDiffBlock<double>::V V;
+        typedef AutoDiffBlock<double>::M M;
 
         const V& gpot  = geo.gravityPotential();
         const V& trans = geo.transmissibility();
@@ -181,8 +186,6 @@ namespace {
 } // Anonymous namespace
 
 
-
-namespace Opm {
 
 
     FullyImplicitBlackoilSolver::
