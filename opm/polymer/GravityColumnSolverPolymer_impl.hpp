@@ -41,6 +41,8 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iterator>
 #include <iostream>
+#include <cmath>
+#include <algorithm>
 
 namespace Opm
 {
