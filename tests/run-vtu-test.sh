@@ -19,7 +19,7 @@ function validateResults() {
     OUTPUT_FILE="$1"
     SIM_NAME="$2"
 
-    for REFERENCE_RESULT in ${MY_DIR}/../test/referencesolutions/$SIM_NAME*; do
+    for REFERENCE_RESULT in ${MY_DIR}/../tests/referencesolutions/$SIM_NAME*; do
         echo "Comparing with \"$REFERENCE_RESULT\"... "
         if python ${MY_DIR}/fuzzycomparevtu.py "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
             # SUCCESS!!!!!!
