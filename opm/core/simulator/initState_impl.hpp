@@ -610,16 +610,15 @@ namespace Opm
     /// computation of A.
     template <class Props, class State>
     void initBlackoilSurfvol(const UnstructuredGrid& grid,
-                             const Props& props,
-                             const EclipseGridParser& deck,
+                             const BlackoilPropertiesInterface& props,
                              State& state)
     {
-        const std::vector<double>& rs = deck.getFloatingPointValue("RS");
+        const std::vector<double>& rs = state.gasoilratio();
 
         //make input for computation of the A matrix
         state.surfacevol() = state.saturation();
-        const PhaseUsage pu = phaseUsageFromDeck(deck);
-        //const int phase_used = props;
+        //const PhaseUsage pu = phaseUsageFromDeck(deck);
+        const PhaseUsage pu = props.phaseUsage();
 
         const int np = props.numPhases();
         const int nc = grid.number_of_cells;
@@ -726,7 +725,6 @@ namespace Opm
                                    State& state)
     {
         initStateFromDeck(grid, props, deck, gravity, state);
-        initBlackoilSurfvol(grid, props, deck, state);
         if (deck.hasField("RS")) {
             const std::vector<double>& rs_deck = deck.getFloatingPointValue("RS");
             const int num_cells = grid.number_of_cells;
@@ -734,6 +732,7 @@ namespace Opm
                 int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
                 state.gasoilratio()[c] = rs_deck[c_deck];
             }
+            initBlackoilSurfvol(grid, props, state);
         } else {
             OPM_THROW(std::runtime_error, "Temporarily, we require the RS field.");
         }
