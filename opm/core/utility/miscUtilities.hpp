@@ -238,6 +238,8 @@ namespace Opm
                                       std::vector<double>& phase_flow_per_well);
 
 
+
+
     /// A simple flow reporting utility, encapsulating the watercut curves.
     ///
     /// Typically call push() after every timestep to build up report,
@@ -249,15 +251,19 @@ namespace Opm
     {
     public:
         /// Add a report point.
-        /// \param time      current time in the simulation
-        /// \param fraction  current water cut
-        /// \param produced  current total cumulative production
+        /// \param[in] time      current time in the simulation
+        /// \param[in] fraction  current water cut
+        /// \param[in] produced  current total cumulative production
         void push(double time, double fraction, double produced);
         /// Write report to a stream.
+        /// \param[in, out] os   output stream
         void write(std::ostream& os) const;
     private:
         std::vector<double> data_;
     };
+
+
+
 
     /// Well reporting utility.
     ///
@@ -276,6 +282,12 @@ namespace Opm
     {
     public:
         /// Add a report point.
+        /// \param[in] props           fluid and rock properties
+        /// \param[in] wells           well configuration
+        /// \param[in] saturation      saturations by cell and phase
+        /// \param[in] time            current simulation time
+        /// \param[in] well_bhp        bhp values of each well
+        /// \param[in] well_perfrates  total flow at each well perforation
         void push(const IncompPropertiesInterface& props,
                   const Wells& wells,
                   const std::vector<double>& saturation,
@@ -283,6 +295,14 @@ namespace Opm
                   const std::vector<double>& well_bhp,
                   const std::vector<double>& well_perfrates);
         /// Add a report point (compressible fluids).
+        /// \param[in] props           fluid and rock properties
+        /// \param[in] wells           well configuration
+        /// \param[in] p               pressure by cell
+        /// \param[in] z               surface volumes by cell and component
+        /// \param[in] s               saturations by cell and phase
+        /// \param[in] time            current simulation time
+        /// \param[in] well_bhp        bhp values of each well
+        /// \param[in] well_perfrates  total flow at each well perforation
         void push(const BlackoilPropertiesInterface& props,
                   const Wells& wells,
                   const std::vector<double>& p,
@@ -292,6 +312,7 @@ namespace Opm
                   const std::vector<double>& well_bhp,
                   const std::vector<double>& well_perfrates);
         /// Write report to a stream.
+        /// \param[in, out] os   output stream
         void write(std::ostream& os) const;
     private:
         std::vector<std::vector<double> > data_;
