@@ -84,11 +84,11 @@ namespace Opm
             }
         }
 
-        const Vector& poreVolume()       const { return pvol_ ; }
-        const Vector& transmissibility() const { return trans_; }
-        const Vector& gravityPotential() const { return gpot_ ; }
-        const Vector& z()                const  {return z_;}
-        const double* gravity()          const { return gravity_; }
+        const Vector& poreVolume()       const { return pvol_   ;}
+        const Vector& transmissibility() const { return trans_  ;}
+        const Vector& gravityPotential() const { return gpot_   ;}
+        const Vector& z()                const { return z_      ;}
+        const double* gravity()          const { return gravity_;}
 
     private:
         Vector pvol_ ;

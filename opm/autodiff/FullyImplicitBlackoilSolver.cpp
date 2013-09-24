@@ -1008,11 +1008,8 @@ namespace Opm {
 
         // compute gravity potensial using the face average as in eclipse and MRST
         const ADB rhoavg = ops_.caver * rho;
-        const V vz = geo_.z();
-        std::vector<int> blocksizes = rhoavg.blockPattern();
-        ADB z = ADB::constant(vz,blocksizes);
 
-        const ADB dp = ops_.ngrad * state.pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * z));
+        const ADB dp = ops_.ngrad * state.pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
 
         head = transi*dp;
         //head      = transi*(ops_.ngrad * state.pressure) + gflux;
