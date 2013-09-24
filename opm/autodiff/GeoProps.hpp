@@ -46,6 +46,7 @@ namespace Opm
             : pvol_ (grid.number_of_cells)
             , trans_(grid.number_of_faces)
             , gpot_ (Vector::Zero(grid.cell_facepos[ grid.number_of_cells ], 1))
+            , z_(grid.number_of_cells)
         {
             // Pore volume
             const typename Vector::Index nc = grid.number_of_cells;
@@ -58,6 +59,12 @@ namespace Opm
             UnstructuredGrid* ug = const_cast<UnstructuredGrid*>(& grid);
             tpfa_htrans_compute(ug, props.permeability(), htrans.data());
             tpfa_trans_compute (ug, htrans.data()     , trans_.data());
+
+            // Compute z coordinates
+            for (int c = 0; c<nc; ++c){
+                z_[c] = grid.cell_centroids[c*3 + 2];
+            }
+
 
             // Gravity potential
             std::fill(gravity_, gravity_ + 3, 0.0);
@@ -82,15 +89,17 @@ namespace Opm
             }
         }
 
-        const Vector& poreVolume()       const { return pvol_ ; }
-        const Vector& transmissibility() const { return trans_; }
-        const Vector& gravityPotential() const { return gpot_ ; }
-        const double* gravity()          const { return gravity_; }
+        const Vector& poreVolume()       const { return pvol_   ;}
+        const Vector& transmissibility() const { return trans_  ;}
+        const Vector& gravityPotential() const { return gpot_   ;}
+        const Vector& z()                const { return z_      ;}
+        const double* gravity()          const { return gravity_;}
 
     private:
         Vector pvol_ ;
         Vector trans_;
         Vector gpot_ ;
+        Vector z_;
         double gravity_[3]; // Size 3 even if grid is 2-dim.
     };
 }

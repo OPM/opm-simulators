@@ -1006,10 +1006,16 @@ namespace {
         rq_[ actph ].mob = tr_mult * kr[ phase ] / mu;
 
         const ADB rho   = fluidDensity(phase, state.pressure, state.rs, cells_);
-        const ADB gflux = grav_ * rho;
 
         ADB& head = rq_[ actph ].head;
-        head      = transi*(ops_.ngrad * state.pressure) + gflux;
+
+        // compute gravity potensial using the face average as in eclipse and MRST
+        const ADB rhoavg = ops_.caver * rho;
+
+        const ADB dp = ops_.ngrad * state.pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+
+        head = transi*dp;
+        //head      = transi*(ops_.ngrad * state.pressure) + gflux;
 
         UpwindSelector<double> upwind(grid_, ops_, head.value());
 
