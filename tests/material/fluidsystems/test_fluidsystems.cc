@@ -53,6 +53,29 @@ namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
 } }
 
+// include the MPI header if available
+#if HAVE_MPI
+#include <mpi.h>
+#endif // HAVE_MPI
+
+class MyMpiHelper
+{
+public:
+    MyMpiHelper(int &argc, char **&argv)
+    {
+#if HAVE_MPI
+        MPI_Init(&argc, &argv);
+#endif // HAVE_MPI
+    };
+
+    ~MyMpiHelper()
+    {
+#if HAVE_MPI
+        MPI_Finalize();
+#endif // HAVE_MPI
+    };
+};
+
 int main(int argc, char **argv)
 {
     typedef double Scalar;
@@ -61,6 +84,8 @@ int main(int argc, char **argv)
 
     typedef Opm::LiquidPhase<Scalar, H2O> Liquid;
     typedef Opm::GasPhase<Scalar, N2> Gas;
+
+    MyMpiHelper mpiHelper(argc, argv);
 
     // check all fluid states
     {
