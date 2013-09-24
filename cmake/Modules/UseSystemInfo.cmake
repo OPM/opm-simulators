@@ -39,6 +39,7 @@ function (distro_name varname)
   file (GLOB has_os_release /etc/os-release)
   file (GLOB has_lsb_release /etc/lsb-release)
   file (GLOB has_sys_release /etc/system-release)
+  file (GLOB has_redhat_release /etc/redhat-release)
   set (_descr)
   # start with /etc/os-release,
   # see <http://0pointer.de/blog/projects/os-release.html>
@@ -52,6 +53,8 @@ function (distro_name varname)
   if (NOT _descr)
 	if (NOT has_sys_release STREQUAL "")
 	  file (READ /etc/system-release _descr)
+	elseif (NOT has_redhat_release STREQUAL "")
+	  file (READ /etc/redhat-release _descr)
 	else (NOT has_sys_release STREQUAL "")
 	  # no yet known release file found
 	  set (_descr "unknown")

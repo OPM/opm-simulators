@@ -41,6 +41,11 @@ function (find_dune_version suite module)
 
   # some modules does not have a library, use the directory of the
   # header files to find what would be the library dir.
+  # note that when we refer to a build tree, then the libraries always
+  # go into lib/, but we don't care about that because in that case,
+  # dune.module isn't in the lib/ directory anyway but must be retrieved
+  # from the source. hence, we only have to worry about the library
+  # directory of a system installation here.
   if (NOT ${suite}-${module}_LIBRARY)
 	# this suffix is gotten from UseMultiArch.cmake
 	set (_lib_path "${_inc_path}/${CMAKE_INSTALL_LIBDIR}")
@@ -51,6 +56,7 @@ function (find_dune_version suite module)
   # if we have a source tree, dune.module is available there
   set (_dune_mod "${_inc_path}/dune.module")
   if (NOT EXISTS "${_dune_mod}")
+	set (_last_dune_mod_src "${_dune_mod}")
 	set (_dune_mod "")
   endif ()
 
@@ -58,13 +64,19 @@ function (find_dune_version suite module)
 	# look for the build tree; if we found the library, then the
 	# dune.module file should be in a sub-directory  
 	get_filename_component (_immediate "${_lib_path}" NAME)
+	if ("${_immediate}" STREQUAL ".libs")
+	  # remove autotools internal path
+	  get_filename_component (_lib_path "${_lib_path}" PATH)
+	endif ()
+	get_filename_component (_immediate "${_lib_path}" NAME)
 	if ("${_immediate}" STREQUAL "${CMAKE_LIBRARY_ARCHITECTURE}")
 	  # remove multi-arch part of the library path to get parent
 	  get_filename_component (_lib_path "${_lib_path}" PATH)
 	endif ()
 	get_filename_component (_immediate "${_lib_path}" NAME)	
 	if (("${_immediate}" STREQUAL "${CMAKE_INSTALL_LIBDIR}")
-		OR ("${_immediate}" STREQUAL "lib"))
+		OR ("${_immediate}" STREQUAL "lib")
+		OR ("${_immediate}" STREQUAL "${LIBDIR_MULTIARCH_UNAWARE}"))
 	  # remove library part of the path; this also undo the suffix
 	  # we added if we used the library as a standin
 	  get_filename_component (_lib_path "${_lib_path}" PATH)
@@ -72,18 +84,37 @@ function (find_dune_version suite module)
 	# from this point on, _lib_path does not contain an architecture-
 	# specific component anymore; dune.module is always put in straight
 	# noarch lib/ since it does not contain any paths to binaries
-	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	set (_suffix "${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_suffix}")
 	if (NOT EXISTS "${_dune_mod}")
-	  # use the name itself as a flag for whether it was found or not
-	  set (_dune_mod "")
+	  set (_last_dune_mod_bld "${_dune_mod}")
+	  # one more try, if we have a private install, then it doesn't use
+	  # e.g. lib64 but always lib (!)
+	  if ("${LIBDIR_MULTIARCH_UNAWARE}" STREQUAL "lib")
+		set (_dune_mod "")
+	  else ()
+		set (_dune_mod "${_lib_path}/lib${_suffix}")
+		if (NOT EXISTS "${_dune_mod}")
+		  set (_last_dune_mod_pri "${_dune_mod}")
+		  # use the name itself as a flag for whether it was found or not
+		  set (_dune_mod "")
+		endif ()
+	  endif ()
 	endif ()
   endif ()
 
   # if it is not available, it may make havoc having empty defines in the source
   # code later, so we bail out early
   if (NOT _dune_mod)
-	if (${suite}-${module}_FIND_REQUIRED)
-	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module}")
+	if (${suite}-${module}_FOUND)
+	  set (_searched_paths "\"${_last_dune_mod_src}\"")
+	  if (NOT ("${_last_dune_mod_bld}" STREQUAL ""))
+		set (_searched_paths "either ${_searched_paths} or \"${_last_dune_mod_bld}\"")
+	  endif ()
+	  if (NOT ("${_last_dune_mod_pri}" STREQUAL ""))
+		set (_searched_paths "${_searched_paths} or \"${_last_dune_mod_pri}\"")
+	  endif ()
+	  message (FATAL_ERROR "Failed to locate dune.module for ${suite}-${module} (looking for ${_searched_paths})")
 	else ()
 	  return ()
 	endif ()

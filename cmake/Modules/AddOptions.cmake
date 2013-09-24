@@ -37,6 +37,11 @@ function (add_options langs builds)
 	  else (NOT ("${build}" STREQUAL "ALL_BUILDS"))
 		set (_bld "")
 	  endif (NOT ("${build}" STREQUAL "ALL_BUILDS"))
+	  # if we want everything in the "global" flag, then simply
+	  # ignore the build type here and go add everything to that one
+	  if (CMAKE_NOT_USING_CONFIG_FLAGS)
+		set (_bld "")
+	  endif ()
 	  foreach (_opt IN LISTS ARGN)
 		set (_var "CMAKE_${lang}_FLAGS${_bld}")
 		#message (STATUS "Adding \"${_opt}\" to \${${_var}}")
@@ -61,22 +66,37 @@ function (add_options langs builds)
 endfunction (add_options lang build)
 
 # set varname to flag unless user has specified something that matches regex
-function (set_default_option varname flag regex)
-  if (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+function (set_default_option lang varname flag regex)
+  # lang is either C, CXX or Fortran
+  if ("${lang}" STREQUAL "Fortran")
+	set (letter "F")
+  else ()
+	set (letter "${lang}")
+  endif ()
+  string (TOUPPER "${CMAKE_BUILD_TYPE}" _build)
+  if ((NOT ("$ENV{${letter}FLAGS}" MATCHES "${regex}"))
+	  AND (NOT ("${CMAKE_${lang}_FLAGS}" MATCHES "${regex}"))
+	  AND (NOT ("${CMAKE_${lang}_FLAGS_${_build}}" MATCHES "${regex}")))
 	set (${varname} ${flag} PARENT_SCOPE)
-  else (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
-	  AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+  else ()
 	set (${varname} PARENT_SCOPE)
-  endif (NOT "$ENV{CXXFLAGS}" MATCHES "${regex}"
-	AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "${regex}"
-	AND NOT "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}" MATCHES "${regex}")
+  endif ()
 endfunction (set_default_option)
 
-# note: this must be called before project()
+# clear default options as a proxy for not using any default options
+# at all. there is one *huge* problem with this: CMake runs the platform
+# initialization before executing any line at all in the project and
+# there seems to be no way to disable that behaviour, so we cannot really
+# distinguish between a platform default and something that the user has
+# passed on the command line. the best thing we can do is to all user-
+# defined setting if they are something other than the platform default.
 macro (no_default_options)
-  # prevent the platform probe to set options
-  set (CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
+  foreach (lang IN ITEMS C CXX Fortran)
+	foreach (build IN ITEMS DEBUG RELEASE MINSIZEREL RELWITHDEBINFO)
+	  if ("${CMAKE_${lang}_FLAGS_${build}}" STREQUAL "${CMAKE_${lang}_FLAGS_${build}_INIT}")
+		# for some strange reason we cannot clear this flag, only set it to empty
+		set (CMAKE_${lang}_FLAGS_${build} "")
+	  endif ()
+	endforeach (build)
+  endforeach (lang)
 endmacro (no_default_options)

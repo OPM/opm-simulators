@@ -72,36 +72,39 @@ endif (NOT LAPACK_FOUND)
 find_library (MATH_LIBRARY NAMES "m")
 set (SuiteSparse_EXTRA_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${MATH_LIBRARY})
 
-# search paths for the library outside of standard system paths. these are the
-# paths in which the package managers on various distros put the files
-list (APPEND SuiteSparse_SEARCH_PATH "/usr")              # Linux
-list (APPEND SuiteSparse_SEARCH_PATH "/opt/local")        # MacOS X
-
 # if we don't get any further clues about where to look, then start
 # roaming around the system
 set (_no_default_path "")
+
+# search system directories by default
+set (SuiteSparse_SEARCH_PATH)
 
 # pick up paths from the environment if specified there; these replace the
 # pre-defined paths so that we don't accidentially pick up old stuff
 if (NOT $ENV{SuiteSparse_DIR} STREQUAL "")
   set (SuiteSparse_SEARCH_PATH "$ENV{SuiteSparse_DIR}")
-  set (_no_default_path "NO_DEFAULT_PATH")
 endif (NOT $ENV{SuiteSparse_DIR} STREQUAL "")
-if (${SuiteSparse_DIR})
+if (SuiteSparse_DIR)
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_DIR}")
-  set (_no_default_path "NO_DEFAULT_PATH")
-endif (${SuiteSparse_DIR})
+endif (SuiteSparse_DIR)
 # CMake uses _DIR suffix as default for config-mode files; it is unlikely
 # that we are building SuiteSparse ourselves; use _ROOT suffix to specify
 # location to pre-canned binaries
 if (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
   set (SuiteSparse_SEARCH_PATH "$ENV{SuiteSparse_ROOT}")
-  set (_no_default_path "NO_DEFAULT_PATH")
 endif (NOT $ENV{SuiteSparse_ROOT} STREQUAL "")
-if (${SuiteSparse_ROOT})
+if (SuiteSparse_ROOT)
   set (SuiteSparse_SEARCH_PATH "${SuiteSparse_ROOT}")
+endif (SuiteSparse_ROOT)
+# most commonly, we use the uppercase version of this variable
+if (SUITESPARSE_ROOT)
+  set (SuiteSparse_SEARCH_PATH "${SUITESPARSE_ROOT}")
+endif (SUITESPARSE_ROOT)
+
+# if we have specified a search path, then confine ourselves to that
+if (SuiteSparse_SEARCH_PATH)
   set (_no_default_path "NO_DEFAULT_PATH")
-endif (${SuiteSparse_ROOT})
+endif (SuiteSparse_SEARCH_PATH)
 
 # transitive closure of dependencies; after this SuiteSparse_MODULES is the
 # full list of modules that must be found to satisfy the user's link demands

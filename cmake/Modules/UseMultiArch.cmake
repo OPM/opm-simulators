@@ -17,7 +17,6 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   # Debian or Ubuntu?
   if (EXISTS "/etc/debian_version")
 	set (_libdir_def "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
-	set (_libdir_noarch "lib")
   else (EXISTS "/etc/debian_version")
 	# 64-bit system?
 	if (CMAKE_SIZEOF_VOID_P EQUAL 8)

@@ -17,5 +17,4 @@ set (opm-material_DEPS
 	"opm-core REQUIRED"
 	# DUNE dependency
 	"dune-common REQUIRED"
-	"dune-istl REQUIRED"
 	)
