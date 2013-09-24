@@ -39,9 +39,10 @@ namespace Opm
 
     namespace
     {
-
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
+#endif /* __clang__ */
         // Find the cells that are below and above a depth.
         // TODO: add 'anitialiasing', obtaining a more precise split
         //       by f. ex. subdividing cells cut by the split depths.
@@ -63,7 +64,9 @@ namespace Opm
                 }
             }
         }
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif /* __clang__ */
 
         enum WaterInit { WaterBelow, WaterAbove };
 
