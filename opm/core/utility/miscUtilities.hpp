@@ -238,17 +238,40 @@ namespace Opm
                                       std::vector<double>& phase_flow_per_well);
 
 
-    /// Encapsulates the watercut curves.
+    /// A simple flow reporting utility, encapsulating the watercut curves.
+    ///
+    /// Typically call push() after every timestep to build up report,
+    /// then call write() to write report as a matrix with times in the
+    /// first columns, water cut in the second column and cumulative
+    /// production in the last column. Units used will be the same as
+    /// is passed in, no conversion is done.
     class Watercut
     {
     public:
+        /// Add a report point.
+        /// \param time      current time in the simulation
+        /// \param fraction  current water cut
+        /// \param produced  current total cumulative production
         void push(double time, double fraction, double produced);
+        /// Write report to a stream.
         void write(std::ostream& os) const;
     private:
         std::vector<double> data_;
     };
 
     /// Well reporting utility.
+    ///
+    /// This class will store, for each call to push(), the following:
+    ///  - the time parameter that was passed to push()
+    ///  - for each well:
+    ///    - bottom hole pressure in bars
+    ///    - the well total rate in cubic meters per day
+    ///    - the water cut (water rate / total rate)
+    ///
+    /// The method write() will write these data to a stream, as a
+    /// matrix with time in the first column, bhp, rate and watercut
+    /// of the first well in the second through fourth columns and so
+    /// on.
     class WellReport
     {
     public:
