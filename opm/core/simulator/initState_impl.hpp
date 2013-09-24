@@ -569,6 +569,8 @@ namespace Opm
 
 
     /// Initialize surface volume from pressure and saturation by z = As.
+    /// Here  saturation is used as an intial guess for z in the
+    /// computation of A.
     template <class Props, class State>
     void initBlackoilSurfvol(const UnstructuredGrid& grid,
                              const Props& props,
@@ -603,6 +605,117 @@ namespace Opm
         }
     }
 
+    /// Initialize surface volume from pressure and saturation by z = As.
+    /// Here the RS factor is used to compute an intial z for the
+    /// computation of A.
+    template <class Props, class State>
+    void initBlackoilSurfvol(const UnstructuredGrid& grid,
+                             const Props& props,
+                             const EclipseGridParser& deck,
+                             State& state)
+    {
+        const std::vector<double>& rs = deck.getFloatingPointValue("RS");
+
+        //make input for computation of the A matrix
+        state.surfacevol() = state.saturation();
+        const PhaseUsage pu = phaseUsageFromDeck(deck);
+        //const int phase_used = props;
+
+        const int np = props.numPhases();
+        const int nc = grid.number_of_cells;
+        std::vector<double> allA_a(nc*np*np);
+        std::vector<double> allA_l(nc*np*np);
+        std::vector<double> allA_v(nc*np*np);
+
+        std::vector<int> allcells(nc);
+        std::vector<double> z_init(nc*np);
+        std::fill(z_init.begin(),z_init.end(),0.0);
+
+        for (int c = 0; c < nc; ++c) {
+            allcells[c] = c;
+        }
+
+
+        double z_tmp;
+
+        // Water phase
+        if(pu.phase_used[BlackoilPhases::Aqua])
+           for (int c = 0; c <  nc ; ++c){
+               for (int p = 0; p < np ; ++p){
+                   if (p == BlackoilPhases::Aqua)
+                       z_tmp = 1;
+                   else
+                       z_tmp = 0;
+
+                   z_init[c*np + p] = z_tmp;
+               }
+           }
+        props.matrix(nc, &state.pressure()[0], &z_init[0], &allcells[0], &allA_a[0], 0);
+
+        // Liquid phase
+        if(pu.phase_used[BlackoilPhases::Liquid]){
+            for (int c = 0; c <  nc ; ++c){
+                for (int p = 0; p < np ; ++p){
+                     if(p == BlackoilPhases::Vapour){
+                         if(state.saturation()[np*c + p] > 0)
+                             z_tmp = 1e10;
+                         else
+                             z_tmp = rs[c];
+                     }
+                     else if(p == BlackoilPhases::Liquid)
+                         z_tmp = 1;
+                     else
+                         z_tmp = 0;
+
+                     z_init[c*np + p] = z_tmp;
+
+                }
+            }
+        }
+        props.matrix(nc, &state.pressure()[0], &z_init[0], &allcells[0], &allA_l[0], 0);
+
+        if(pu.phase_used[BlackoilPhases::Vapour]){
+            for (int c = 0; c <  nc ; ++c){
+                for (int p = 0; p < np ; ++p){
+                     if(p == BlackoilPhases::Liquid){
+                         if(state.saturation()[np*c + p] > 0)
+                             z_tmp = 1e10;
+                         else
+                             z_tmp = rs[c];
+                     }
+                     else if(p == BlackoilPhases::Vapour)
+                         z_tmp = 1;
+                     else
+                         z_tmp = 0;
+
+                     z_init[c*np + p] = z_tmp;
+
+                }
+            }
+        }
+        props.matrix(nc, &state.pressure()[0], &z_init[0], &allcells[0], &allA_v[0], 0);
+
+        for (int c = 0; c < nc; ++c) {
+            // Using z = As
+            double* z = &state.surfacevol()[c*np];
+            const double* s = &state.saturation()[c*np];
+            const double* A_a = &allA_a[c*np*np];
+            const double* A_l = &allA_l[c*np*np];
+            const double* A_v = &allA_v[c*np*np];
+
+            for (int row = 0; row < np; ++row) { z[row] = 0.0; }
+
+            for (int col = 0; col < np; ++col) {
+                z[0] += A_a[0 + np*col]*s[col];
+                z[1] += A_l[1 + np*col]*s[col];
+                z[2] += A_v[2 + np*col]*s[col];
+
+            }
+            z[2] += z[1]*rs[c];
+
+        }
+    }
+
 
     /// Initialize a blackoil state from input deck.
     template <class Props, class State>
@@ -613,7 +726,7 @@ namespace Opm
                                    State& state)
     {
         initStateFromDeck(grid, props, deck, gravity, state);
-        initBlackoilSurfvol(grid, props, state);
+        initBlackoilSurfvol(grid, props, deck, state);
         if (deck.hasField("RS")) {
             const std::vector<double>& rs_deck = deck.getFloatingPointValue("RS");
             const int num_cells = grid.number_of_cells;
