@@ -72,7 +72,7 @@ function (find_dune_version suite module)
 	# from this point on, _lib_path does not contain an architecture-
 	# specific component anymore; dune.module is always put in straight
 	# noarch lib/ since it does not contain any paths to binaries
-	set (_dune_mod "${_lib_path}/${LIBDIR_MULTIARCH_UNAWARE}${_multilib}/dunecontrol/${suite}-${module}/dune.module")
+	set (_dune_mod "${_lib_path}/lib${_multilib}/dunecontrol/${suite}-${module}/dune.module")
 	if (NOT EXISTS "${_dune_mod}")
 	  # use the name itself as a flag for whether it was found or not
 	  set (_dune_mod "")
