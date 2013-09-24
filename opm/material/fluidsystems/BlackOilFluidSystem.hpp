@@ -129,7 +129,7 @@ public:
         // undersaturated oil
         //SplineSamplingPoints tmp(samplePoints.begin(), --samplePoints.end());
         SplineSamplingPoints tmp(samplePoints.begin(), samplePoints.end());
-        gasFormationFactorSpline_.setContainerOfTuples(tmp);
+        gasFormationFactorSpline_.setContainerOfTuples(tmp, /*type=*/Spline::Monotonic);
     }
 
     /*!
@@ -139,7 +139,7 @@ public:
      */
     static void setOilFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
     {
-        oilFormationVolumeFactorSpline_.setContainerOfTuples(samplePoints);
+        oilFormationVolumeFactorSpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
         assert(oilFormationVolumeFactorSpline_.monotonic());
     }
 
@@ -165,7 +165,7 @@ public:
      */
     static void setOilViscosity(const SplineSamplingPoints &samplePoints)
     {
-        oilViscositySpline_.setContainerOfTuples(samplePoints);
+        oilViscositySpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
         assert(oilViscositySpline_.monotonic());
     }
 
@@ -195,7 +195,7 @@ public:
      */
     static void setGasViscosity(const SplineSamplingPoints &samplePoints)
     {
-        gasViscositySpline_.setContainerOfTuples(samplePoints);
+        gasViscositySpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
         assert(gasViscositySpline_.monotonic());
     }
 
@@ -252,7 +252,7 @@ public:
             std::pair<Scalar, Scalar> val(X_oG, pSat);
             pSatSamplePoints.push_back(val);;
         };
-        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints);
+        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
 
 #if 0
         {
@@ -289,7 +289,7 @@ public:
     //! \copydoc BaseFluidSystem::isLiquid
     static bool isLiquid(const int phaseIdx)
     {
-        // assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gPhaseIdx;
     }
 
