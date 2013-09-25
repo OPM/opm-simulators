@@ -379,12 +379,21 @@ assemble_well_contrib(int                   nc ,
                 break;
 
             case RESERVOIR_RATE:
-                for (p = 0; p < np; p++) {
-                    if (ctrls->distr[np * ctrls->current + p] != 1.0) {
-                        *ok = 0;
-                        break;
+                if (W->type[w] == PRODUCER) {
+                    /* Ensure minimal consistency.  A PRODUCER should
+                     * specify a phase distribution of all ones in the
+                     * case of RESV controls. */
+                    for (p = 0; p < np; p++) {
+                        if (ctrls->distr[np * ctrls->current + p] != 1.0) {
+                            *ok = 0;
+                            break;
+                        }
                     }
+                } else {
+                    /* Ignore phase distribution for non-PRODUCERs */
+                    *ok = 1;
                 }
+
                 if (*ok) {
                     assemble_rate_well(nc, w, W, mt, wdp, h);
                 }
