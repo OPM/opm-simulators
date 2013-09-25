@@ -364,7 +364,7 @@ assemble_well_contrib(int                   nc ,
 
         if (ctrls->current < 0) {
 
-            /* Threat this well as a shut well, isolated from the domain. */
+            /* Treat this well as a shut well, isolated from the domain. */
 
             assemble_shut_well(nc, w, W, mt, h);
 
