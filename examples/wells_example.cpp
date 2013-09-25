@@ -36,14 +36,14 @@ try
     // Setup grid
     GridManager grid(parser);
 
-    // Finally handle the wells
-    WellsManager wells(parser, *grid.c_grid(), NULL);
-
-    double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
+    // Define rock and fluid properties
     IncompPropertiesFromDeck incomp_properties(parser, *grid.c_grid());
-
     RockCompressibility rock_comp(parser);
 
+    // Finally handle the wells
+    WellsManager wells(parser, *grid.c_grid(), incomp_properties.permeability());
+
+    double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     Opm::LinearSolverFactory linsolver(parameters);
     double nl_pressure_residual_tolerance = 1e-8;
     double nl_pressure_change_tolerance = 0.0;
