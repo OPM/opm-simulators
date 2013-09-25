@@ -22,6 +22,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/core/simulator/SimulatorIncompTwophase.hpp>
+#include <opm/core/utility/NullStream.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -76,6 +77,7 @@ namespace Opm
 
         // Data.
         // Parameters for output.
+        std::ostream* log_;
         bool output_;
         bool output_vtk_;
         std::string output_dir_;
@@ -147,7 +149,7 @@ namespace Opm
                               double injected[2], double produced[2],
                               double init_satvol[2])
     {
-        std::cout.precision(5);
+        os.precision(5);
         const int width = 18;
         os << "\nVolume balance report (all numbers relative to total pore volume).\n";
         os << "    Saturated volumes:     "
@@ -369,6 +371,7 @@ namespace Opm
         }
 
         // For output.
+        log_ = param.getDefault("quiet", false) ? &Opm::null_stream : &std::cout;
         output_ = param.getDefault("output", true);
         if (output_) {
             output_vtk_ = param.getDefault("output_vtk", true);
@@ -433,8 +436,8 @@ namespace Opm
         double tot_injected[2] = { 0.0 };
         double tot_produced[2] = { 0.0 };
         Opm::computeSaturatedVol(porevol, state.saturation(), init_satvol);
-        std::cout << "\nInitial saturations are    " << init_satvol[0]/tot_porevol_init
-                  << "    " << init_satvol[1]/tot_porevol_init << std::endl;
+        *log_ << "\nInitial saturations are    " << init_satvol[0]/tot_porevol_init
+              << "    " << init_satvol[1]/tot_porevol_init << std::endl;
         Opm::Watercut watercut;
         watercut.push(0.0, 0.0, 0.0);
         Opm::WellReport wellreport;
@@ -452,7 +455,7 @@ namespace Opm
         for (; !timer.done(); ++timer) {
             // Report timestep and (optionally) write state to disk.
             step_timer.start();
-            timer.report(std::cout);
+            timer.report(*log_);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
@@ -512,7 +515,7 @@ namespace Opm
                 // Stop timer and report.
                 pressure_timer.stop();
                 double pt = pressure_timer.secsSinceStart();
-                std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
+                *log_ << "Pressure solver took:  " << pt << " seconds." << std::endl;
                 ptime += pt;
                 sreport.pressure_time = pt;
 
@@ -522,7 +525,7 @@ namespace Opm
                                                       well_state.perfRates(),
                                                       fractional_flows,
                                                       well_resflows_phase);
-                    std::cout << "Checking well conditions." << std::endl;
+                    *log_ << "Checking well conditions." << std::endl;
                     // For testing we set surface := reservoir
                     well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
                     ++well_control_iteration;
@@ -530,9 +533,9 @@ namespace Opm
                         OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
                     }
                     if (!well_control_passed) {
-                        std::cout << "Well controls not passed, solving again." << std::endl;
+                        *log_ << "Well controls not passed, solving again." << std::endl;
                     } else {
-                        std::cout << "Well conditions met." << std::endl;
+                        *log_ << "Well conditions met." << std::endl;
                     }
                 }
             } while (!well_control_passed);
@@ -552,7 +555,7 @@ namespace Opm
             double stepsize = timer.currentStepLength();
             if (num_transport_substeps_ != 1) {
                 stepsize /= double(num_transport_substeps_);
-                std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
+                *log_ << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
             }
             double injected[2] = { 0.0 };
             double produced[2] = { 0.0 };
@@ -585,7 +588,7 @@ namespace Opm
             transport_timer.stop();
             double tt = transport_timer.secsSinceStart();
             sreport.transport_time = tt;
-            std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
+            *log_ << "Transport solver took: " << tt << " seconds." << std::endl;
             ttime += tt;
             // Report volume balances.
             Opm::computeSaturatedVol(porevol, state.saturation(), satvol);
@@ -593,7 +596,7 @@ namespace Opm
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
             tot_produced[1] += produced[1];
-            reportVolumes(std::cout,satvol, tot_porevol_init,
+            reportVolumes(*log_, satvol, tot_porevol_init,
                           tot_injected, tot_produced,
                           injected, produced,
                           init_satvol);
