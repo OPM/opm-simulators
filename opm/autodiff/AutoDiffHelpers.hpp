@@ -62,7 +62,6 @@ struct HelperOps
         const int nc = grid.number_of_cells;
         const int nf = grid.number_of_faces;
         // Define some neighbourhood-derived helper arrays.
-        typedef Eigen::Array<int, Eigen::Dynamic, 1> OneColInt;
         typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
         typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
         typedef Eigen::Array<bool, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColBool;
