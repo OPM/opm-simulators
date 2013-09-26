@@ -53,5 +53,8 @@ list (APPEND PROGRAM_SOURCE_FILES)
 
 # for OPM-material we do not list all headers explicitly. instead we
 # glob through the source tree...
-file(GLOB_RECURSE TMP RELATIVE "${CMAKE_SOURCE_DIR}" "opm/*.hh")
+file(GLOB_RECURSE TMP RELATIVE "${CMAKE_SOURCE_DIR}" "opm/*.hpp")
+list (APPEND PUBLIC_HEADER_FILES ${TMP})
+
+file(GLOB_RECURSE TMP RELATIVE "${CMAKE_SOURCE_DIR}" "opm/*.inc")
 list (APPEND PUBLIC_HEADER_FILES ${TMP})
