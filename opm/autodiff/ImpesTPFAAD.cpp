@@ -226,6 +226,10 @@ namespace {
                                      const BlackoilState& state,
                                      const WellState& well_state)
     {
+        // Suppress warnings about "unused parameters".
+        static_cast<void>(dt);
+        static_cast<void>(well_state);
+
         const int nc = grid_.number_of_cells;
         const int np = state.numPhases();
         const int nw = wells_.number_of_wells;
