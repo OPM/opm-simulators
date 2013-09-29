@@ -456,6 +456,10 @@ namespace Opm
     V BlackoilPropsAd::rsMax(const V& po,
                              const Cells& cells) const
     {
+        // Suppress warning about "unused parameters".
+        static_cast<void>(po);
+        static_cast<void>(cells);
+
         OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
     }
 
@@ -466,6 +470,10 @@ namespace Opm
     ADB BlackoilPropsAd::rsMax(const ADB& po,
                                const Cells& cells) const
     {
+        // Suppress warning about "unused parameters".
+        static_cast<void>(po);
+        static_cast<void>(cells);
+
         OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
     }
 
