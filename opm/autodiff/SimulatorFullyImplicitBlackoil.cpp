@@ -280,7 +280,7 @@ namespace Opm
                                gravity,  */
     {
         // Intercept usage of bcs, since we do not handle it.
-        if (bcs) {
+        if (bcs->nbc != 0) {
             OPM_THROW(std::runtime_error, "SimulatorFullyImplicitBlackoil cannot handle boundary conditions other than no-flow. Not implemented yet.");
         }
         // For output.
