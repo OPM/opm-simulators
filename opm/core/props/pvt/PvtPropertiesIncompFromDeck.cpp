@@ -37,7 +37,6 @@ namespace Opm
 
     void PvtPropertiesIncompFromDeck::init(const EclipseGridParser& deck)
     {
-        typedef std::vector<std::vector<std::vector<double> > > table_t;
         // If we need multiple regions, this class and the SinglePvt* classes must change.
         int region_number = 0;
 
