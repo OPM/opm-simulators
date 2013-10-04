@@ -145,15 +145,17 @@ namespace Opm
         explicit Residual(const TransportSolverTwophaseReorder& tmodel, int cell_index)
             : tm(tmodel)
         {
+            // Initialize [in|out]flux to include effect of transport source terms.
             cell    = cell_index;
             s0      = tm.saturation_[cell];
             double src_flux       = -tm.source_[cell];
             bool src_is_inflow = src_flux < 0.0;
             influx  =  src_is_inflow ? src_flux : 0.0;
             outflux = !src_is_inflow ? src_flux : 0.0;
-            comp_term = tm.source_[cell];   // Note: this assumes that all source flux is water.
             dtpv    = tm.dt_/tm.porevolume_[cell];
 
+            // Compute fluxes over interior edges. Boundary flow is supposed to be
+            // included in the transport source term, along with well sources.
             for (int i = tm.grid_.cell_facepos[cell]; i < tm.grid_.cell_facepos[cell+1]; ++i) {
                 int f = tm.grid_.cell_faces[i];
                 double flux;
@@ -173,13 +175,13 @@ namespace Opm
                     } else {
                         outflux += flux;
                     }
-                    comp_term -= flux;
                 }
             }
+
         }
         double operator()(double s) const
         {
-            return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx + s*comp_term);
+            return s - s0 + dtpv*(outflux*tm.fracFlow(s, cell) + influx);
         }
     };
 
