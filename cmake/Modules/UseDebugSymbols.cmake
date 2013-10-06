@@ -106,7 +106,7 @@ function (strip_debug_symbols targets)
 		add_custom_command (TARGET ${target}
 		  POST_BUILD
 		  WORKING_DIRECTORY ${_dir}
-		  COMMAND ${DSYMUTIL} ARGS --flat --out=${_target_file}${_debug_ext} ${_target_file}
+		  COMMAND ${DSYMUTIL} ARGS --out=${_target_file}${_debug_ext} ${_target_file}
 		  COMMAND ${OBJCOPY} ARGS -S ${_target_file}
 		  VERBATIM
 		  )

@@ -21,7 +21,7 @@ find_opm_package (
   "${ewoms_DEPS}"
   
   # header to search for
-  "ewoms/common/start.h"
+  "ewoms/common/start.hh"
 
   # library to search for
   ""

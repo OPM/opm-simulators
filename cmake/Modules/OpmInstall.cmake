@@ -44,8 +44,14 @@ macro (opm_install opm)
   # static libraries don't have their debug info stripped, so there is
   # only a separate file when we are building shared objects
   if (${opm}_LIBRARY_TYPE STREQUAL "SHARED" AND ${opm}_TARGET AND ${opm}_DEBUG)
+	# on MacOS X, debug files are actually bundles (directories)
+	if (APPLE)
+	  set (_dbg_type DIRECTORY)
+	else ()
+	  set (_dbg_type FILES)
+	endif ()
 	install (
-	  FILES ${PROJECT_BINARY_DIR}/${${opm}_DEBUG}
+	  ${_dbg_type} ${PROJECT_BINARY_DIR}/${${opm}_DEBUG}
 	  DESTINATION ${_dbg_prefix}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${${opm}_VER_DIR}
 	  )
   endif (${opm}_LIBRARY_TYPE STREQUAL "SHARED" AND ${opm}_TARGET AND ${opm}_DEBUG)
