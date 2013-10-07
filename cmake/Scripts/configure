@@ -181,7 +181,7 @@ for OPT in "$@"; do
           pkgname=${OPTARG%=*}
           pkgname=${pkgname#with-}
           # get the location of the package; everyhing after equal sign
-          pkgloc=${OPTARG#*=}
+          test -n "${OPTARG#with-${pkgname}}" && pkgloc=${OPTARG#*=} || pkgloc=""
           # the parameter to this option is an executable program, so
           # skip the directory test in that case
           if [ "${pkgname}" = "cmake" ]; then
@@ -210,7 +210,10 @@ for OPT in "$@"; do
               ;;
             mpi         |\
             mpi-prefix)
-              rootvar="_MPI_PREFIX_PATH"
+              # specifying path implies use of package
+              use_mpi=" -DUSE_MPI=ON"
+              # only set prefix if specified, i.e. setting doubles as flag
+              test -n "${pkgloc}" && rootvar="_MPI_PREFIX_PATH" || rootvar=""
               ;;
             boost)
               # special handling of this package, see further below
@@ -347,7 +350,7 @@ for OPT in "$@"; do
               ;;
             mpi  | \
             parallel)
-              use_openmp=" -DUSE_MPI=ON"
+              use_mpi=" -DUSE_MPI=ON"
               # special flag; don't set shared/static
               shared=""
               ;;
