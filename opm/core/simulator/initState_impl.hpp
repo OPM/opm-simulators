@@ -616,6 +616,10 @@ namespace Opm
                              const BlackoilPropertiesInterface& props,
                              State& state)
     {
+        if (props.numPhases() != 3) {
+            OPM_THROW(std::runtime_error, "initBlackoilSurfvol() can for now only be used with 3 phases.");
+        }
+
         const std::vector<double>& rs = state.gasoilratio();
 
         //make input for computation of the A matrix
