@@ -617,7 +617,7 @@ namespace Opm
                              State& state)
     {
         if (props.numPhases() != 3) {
-            OPM_THROW(std::runtime_error, "initBlackoilSurfvol() can for now only be used with 3 phases.");
+            OPM_THROW(std::runtime_error, "initBlackoilSurfvol() is only supported in three-phase simulations.");
         }
 
         const std::vector<double>& rs = state.gasoilratio();
