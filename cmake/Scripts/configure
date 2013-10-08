@@ -49,6 +49,8 @@ Optional Packages:
                           (Note: if not found, then a bundled library will
                            be used)
   --with-cmake=PROGRAM    use this program instead of \`cmake' to configure
+  --with-buildname=TEXT   description passed to the CDash configuration
+  --with-site=TEXT        site passed to the CDash configuration
 
 Some influential environment variables:
   CC          C compiler command
@@ -133,6 +135,9 @@ use_underscoring=
 boost_root=
 boost_libdir=
 boost_opts=
+# configuration that is passed on to CTest/CDash
+buildname=
+site=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -183,11 +188,23 @@ for OPT in "$@"; do
           # get the location of the package; everyhing after equal sign
           test -n "${OPTARG#with-${pkgname}}" && pkgloc=${OPTARG#*=} || pkgloc=""
           # the parameter to this option is an executable program, so
-          # skip the directory test in that case
-          if [ "${pkgname}" = "cmake" ]; then
-            CMAKE_COMMAND="${pkgloc}"
-            break
-          fi
+          # skip the directory test in that case. if we match any of
+          # these special options, then stop further processing (the
+          # argument is not a directory anyway)
+          case "${pkgname}" in
+            cmake)
+              CMAKE_COMMAND="${pkgloc}"
+              continue
+              ;;
+            buildname)
+              buildname=" -DBUILDNAME=\"${pkgloc}\""
+              continue
+              ;;
+            site)
+              site=" -DSITE=\"${pkgloc}\""
+              continue
+              ;;
+          esac
           # tilde expansion; quote safely before running eval on it
           eval pkgloc=$(printf "%q" "${pkgloc}")
           # expand to full path since CMake changes to source directory (!)
@@ -492,7 +509,7 @@ done
 [ -n "${ENVVARS}" ] && ENVVARS="env ${ENVVARS} "
 
 # pass everything on to CMake
-CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts} ${FEATURES}"
+CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
 echo --- calling CMake ---
 echo ${CMDLINE}
 eval exec ${CMDLINE}
