@@ -21,6 +21,13 @@
 #   SuiteSparse_DEFINITIONS      Defines that must be passed to the compiler
 #   SuiteSparse_LINKER_FLAGS     Options that must be passed when linking
 #
+# The following options can be set to configure the module:
+#
+#   SUITESPARSE_USE_STATIC       Link with a static library, even if a
+#                                dynamic library is also present. Note that
+#                                setting this to OFF does not ensure that a
+#                                shared library will be used.
+#
 # See <http://www.cise.ufl.edu/research/sparse/SuiteSparse>.
 
 # Copyright (C) 2012 Uni Research AS
@@ -139,11 +146,23 @@ if (CMAKE_SIZEOF_VOID_P)
   math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
 endif (CMAKE_SIZEOF_VOID_P)
 
+# if we are told to link SuiteSparse statically, add these parts
+# to the name so we always match only that particular type of lib
+option (SUITESPARSE_USE_STATIC "Link SuiteSparse statically" OFF)
+mark_as_advanced (SUITESPARSE_USE_STATIC)
+if (SUITESPARSE_USE_STATIC)
+  set (_pref_ "${CMAKE_STATIC_LIBRARY_PREFIX}")
+  set (_suff_ "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else (SUITESPARSE_USE_STATIC)
+  set (_pref_ "")
+  set (_suff_ "")
+endif (SUITESPARSE_USE_STATIC)
+
 # if SuiteSparse >= 4.0 we must also link with libsuitesparseconfig
 # assume that this is the case if we find the library; otherwise just
 # ignore it (older versions don't have a file named like this)
 find_library (config_LIBRARY
-  NAMES suitesparseconfig
+  NAMES "${_pref_}suitesparseconfig${_suff_}"
   PATHS ${SuiteSparse_SEARCH_PATH}
   PATH_SUFFIXES ".libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse"
   ${_no_default_path}
@@ -167,8 +186,9 @@ foreach (module IN LISTS SuiteSparse_MODULES)
 	PATH_SUFFIXES "include" "include/suitesparse" "include/ufsparse" "${MODULE}/Include"
 	${_no_default_path}
 	)
+
   find_library (${MODULE}_LIBRARY
-	NAMES ${module}
+	NAMES "${_pref_}${module}${_suff_}"
 	PATHS ${SuiteSparse_SEARCH_PATH}
 	PATH_SUFFIXES "lib/.libs" "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib/ufsparse" "${MODULE}/Lib"
 	${_no_default_path}
