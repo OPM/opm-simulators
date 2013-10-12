@@ -4,7 +4,7 @@
 ################################
 Module: opm-material
 Description: This module contains the thermodynamic framework used by OPM
-Version: 2.0
+Version: 3.0
 Label: 2013.03
 Url: http://opm-project.org
 Maintainer: and@poware.org
