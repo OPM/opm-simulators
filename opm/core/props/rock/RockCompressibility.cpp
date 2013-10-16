@@ -50,6 +50,7 @@ namespace Opm
             const int n = rt[0][0].size();
             p_.resize(n);
             poromult_.resize(n);
+            transmult_.resize(n);
             for (int i = 0; i < n; ++i) {
                 p_[i] = rt[0][0][i];
                 poromult_[i] = rt[0][1][i];
