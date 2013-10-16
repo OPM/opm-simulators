@@ -1661,3 +1661,45 @@ GENERATE_LEGEND        = YES
 # the various graphs.
 
 DOT_CLEANUP            = YES
+
+# If the FULL_PATH_NAMES tag is set to YES then the STRIP_FROM_PATH tag
+# can be used to strip a user-defined part of the path. Stripping is
+# only done if one of the specified strings matches the left-hand part of
+# the path. The tag can be used to show relative paths in the file list.
+# If left blank the directory from which doxygen is run is used as the
+# path to strip.
+
+STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@
+
+# The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute)
+# base path where the generated documentation will be put.
+# If a relative path is entered, it will be relative to the location
+# where doxygen was started. If left blank the current directory will be used.
+
+OUTPUT_DIRECTORY       = @PROJECT_BINARY_DIR@/@doxy_dir@
+
+# The LAYOUT_FILE tag can be used to specify a layout file which will be parsed
+# by doxygen. The layout file controls the global structure of the generated
+# output files in an output format independent way. The create the layout file
+# that represents doxygen's defaults, run doxygen with the -l option.
+# You can optionally specify a file name after the option, if omitted
+# DoxygenLayout.xml will be used as the name of the layout file.
+
+LAYOUT_FILE            = @OPM_MACROS_ROOT@/cmake/Templates/DoxygenLayout.xml
+
+# The HTML_EXTRA_STYLESHEET tag can be used to specify an additional
+# user-defined cascading style sheet that is included after the standard
+# style sheets created by doxygen. Using this option one can overrule
+# certain style aspects. This is preferred over using HTML_STYLESHEET
+# since it does not replace the standard style sheet and is therefor more
+# robust against future updates. Doxygen will copy the style sheet file to
+# the output directory.
+
+HTML_EXTRA_STYLESHEET  = @OPM_MACROS_ROOT@/cmake/Templates/style.css
+
+# The INPUT tag can be used to specify the files and/or directories that contain
+# documented source files. You may enter file names like "myfile.cpp" or
+# directories like "/usr/src/myproject". Separate the files or directories
+# with spaces. (This setting is usually overridden in Doxylocal)
+
+INPUT                  = @PROJECT_SOURCE_DIR@/@src_DIR@
