@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(Cosine)
 
     const double atol = 1.0e-14;
 
-    const AdFW x = AdFW::variable(3.14159265358979323846264338327950288);
+    const AdFW x = AdFW::variable(3.14159265358979323846264338327950288/3.0);
 
     const AdFW f = std::cos(x);
     BOOST_CHECK_CLOSE(f.val(),   std::cos(x.val()), atol);
