@@ -136,10 +136,17 @@ function (opm_cmake_config name)
 	${CMAKE_INSTALL_PREFIX}/include${${name}_VER_DIR}
 	)
 
-  # put this in the right system location; assume that we have binaries
+  # put this in the right system location; if we have binaries then it
+  # should go in the arch-specific lib/ directory, otherwise use the
+  # common/noarch lib/ directory (these targets come from UseMultiArch)
+  if (${name}_TARGET)
+	set (_pkg_dir ${CMAKE_INSTALL_LIBDIR})
+  else ()
+	set (_pkg_dir ${LIBDIR_MULTIARCH_UNAWARE})
+  endif ()
   install (
 	FILES ${PROJECT_BINARY_DIR}/${${name}_NAME}-install.pc
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/pkgconfig${${name}_VER_DIR}/
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/${_pkg_dir}/pkgconfig${${name}_VER_DIR}/
 	RENAME ${${name}_NAME}.pc
 	)
 endfunction (opm_cmake_config name)
