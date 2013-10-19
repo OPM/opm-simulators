@@ -23,6 +23,7 @@
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 #include <vector>
+#include <cmath>
 #include <cassert>
 
 namespace Opm
@@ -234,7 +235,10 @@ namespace Opm
             typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
             D D1 = val_.matrix().asDiagonal();
             D D2 = rhs.val_.matrix().asDiagonal();
-            D D3 = std::pow(rhs.val_, -2).matrix().asDiagonal();
+            D D3;
+            D3.diagonal().resize(rhs.val_.size());
+            for (int i = 0; i < rhs.val_.size(); ++i)
+                D3.diagonal()[i] = std::pow(rhs.val_[i], -2);
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -449,3 +453,4 @@ namespace Opm
 
 
 #endif // OPM_AUTODIFFBLOCK_HEADER_INCLUDED
+
