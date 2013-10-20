@@ -234,7 +234,7 @@ namespace Opm
             typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
             D D1 = val_.matrix().asDiagonal();
             D D2 = rhs.val_.matrix().asDiagonal();
-            D D3 = std::pow(rhs.val_, -2).matrix().asDiagonal();
+            D D3 = (1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal();
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
