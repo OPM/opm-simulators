@@ -206,13 +206,30 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  set (_no_system_lib "${_no_system}")
 	endif ()
 
-	find_library (${module}_LIBRARY
-	  NAMES "${lib}"
-	  PATHS ${_guess_bin}
-	  HINTS ${PkgConf_${module}_LIBRARY_DIRS} ${_guess_hints_bin}
-	  PATH_SUFFIXES "lib" "lib/.libs" ".libs" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "build-cmake/lib"
-	  ${_no_system_lib}
-	  )
+	# if there is more than one library, then look for all of them, putting
+	# them in variables with the name of the library appended. however, the
+	# first entry is assumed to be the "primary" library and will be named
+	# like the module. thus, with a lib entry of "foo;bar", the first library
+	# is called ${module}_LIBRARY and the second ${module}_LIBRARY_bar
+	foreach (_lib IN ITEMS ${lib})
+	  # don't include any suffix if it is the first one
+	  if ("${lib}" MATCHES "^${_lib}")
+		set (_which)
+	  else ()
+		set (_which "_${_lib}")
+	  endif ()
+	  find_library (${module}_LIBRARY${_which}
+		NAMES "${_lib}"
+		PATHS ${_guess_bin}
+		HINTS ${PkgConf_${module}_LIBRARY_DIRS} ${_guess_hints_bin}
+		PATH_SUFFIXES "lib" "lib/.libs" ".libs" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "build-cmake/lib"
+		${_no_system_lib}		
+		)
+	  # debug info if we didn't find the desired library
+	  if (NOT ${module}_LIBRARY${_which})
+		message (STATUS "Failed to find library \"${_lib}\" for module ${module}")
+	  endif ()
+	endforeach (_lib)
   else (NOT "${lib}" STREQUAL "")
 	set (${module}_LIBRARY "")
   endif (NOT "${lib}" STREQUAL "")
@@ -220,7 +237,13 @@ macro (find_opm_package module deps header lib defs prog conf)
   # add dependencies so that our result variables are complete
   # list of necessities to build with the software
   set (${module}_INCLUDE_DIRS "${${module}_INCLUDE_DIR}")
-  set (${module}_LIBRARIES "${${module}_LIBRARY}")
+  foreach (_lib IN ITEMS ${lib})
+	if ("${lib}" MATCHES "^${_lib}")
+	  set (${module}_LIBRARIES "${${module}_LIBRARY}")
+	else ()
+	  list (APPEND ${module}_LIBRARIES "${${module}_LIBRARY_${_lib}}")
+	endif ()
+  endforeach (_lib)
   # period because it should be something that evaluates to true
   # in find_package_handle_standard_args
   set (${module}_ALL_PREREQS ".")
@@ -295,8 +318,15 @@ macro (find_opm_package module deps header lib defs prog conf)
 	set (_lib_var "")
 	set (_and_lib_var)
   else ("${lib}" STREQUAL "")
-	set (_lib_var "${module}_LIBRARY")
-	set (_and_lib_var AND ${_lib_var})
+	foreach (_lib IN ITEMS ${lib})
+	  if ("${lib}" MATCHES "^${_lib}")
+		set (_lib_var "${module}_LIBRARY")
+		set (_and_lib_var AND ${_lib_var})
+	  else ()
+		list (APPEND _lib_var "${module}_LIBRARY_${_lib}")
+		set (_and_lib_var ${_and_lib_var} AND "${module}_LIBRARY_${_lib}")
+	  endif ()
+	endforeach (_lib)
   endif ("${lib}" STREQUAL "")
   # if the search is going to fail, then write these variables to
   # the console as well as a diagnostics
