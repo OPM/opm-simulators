@@ -63,7 +63,6 @@ namespace Opm
         /// \param[in] props         fluid and rock properties
         /// \param[in] rock_comp_props     if non-null, rock compressibility properties
         /// \param[in] well_manager  well manager
-        /// \param[in] bcs           boundary conditions, treat as all noflow if null
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
        SimulatorCompressibleAd(const parameter::ParameterGroup& param,
@@ -71,7 +70,6 @@ namespace Opm
                                const BlackoilPropertiesInterface& props,
                                const RockCompressibility* rock_comp_props,
                                WellsManager& wells_manager,
-                               const FlowBoundaryConditions* bcs,
                                LinearSolverInterface& linsolver,
                                const double* gravity);
 

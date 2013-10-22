@@ -130,14 +130,6 @@ try
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
-    // Boundary conditions.
-    FlowBCManager bcs;
-    if (param.getDefault("use_pside", false)) {
-        int pside = param.get<int>("pside");
-        double pside_pressure = param.get<double>("pside_pressure");
-        bcs.pressureSide(*grid->c_grid(), FlowBCManager::Side(pside), pside_pressure);
-    }
-
     // Linear solver.
     LinearSolverFactory linsolver(param);
 
@@ -214,7 +206,6 @@ try
                                                  *new_props,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
-                                                 bcs.c_bcs(),
                                                  linsolver,
                                                  grav);
         if (epoch == 0) {
