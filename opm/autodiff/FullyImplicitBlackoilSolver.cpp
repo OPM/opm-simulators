@@ -778,7 +778,9 @@ namespace {
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
         if (!rep.converged) {
-            OPM_THROW(std::runtime_error, "ImpesTPFAAD::solve(): Linear solver convergence failure.");
+            OPM_THROW(std::runtime_error,
+                      "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
+                      "Linear solver convergence failure.");
         }
         return dx;
     }
