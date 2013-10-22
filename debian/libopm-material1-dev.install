@@ -1,4 +1,4 @@
 usr/include/*
 usr/lib/dunecontrol/*
-usr/lib/*/pkgconfig/*
+usr/lib/pkgconfig/*
 usr/share/cmake/*
