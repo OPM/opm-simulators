@@ -98,6 +98,16 @@ namespace Opm
 
         /// Create an AutoDiffBlock representing a constant.
         /// \param[in] val         values 
+        static AutoDiffBlock constant(const V& val)
+        {
+            return AutoDiffBlock(val);
+        }
+
+        /// Create an AutoDiffBlock representing a constant.
+        /// This variant allows to specify the block sizes used
+        /// for the Jacobian even though the Jacobian matrices
+        /// themselves will be zero.
+        /// \param[in] val         values 
         /// \param[in] blocksizes  block pattern
         static AutoDiffBlock constant(const V& val, const std::vector<int>& blocksizes)
         {
@@ -165,14 +175,18 @@ namespace Opm
         /// Elementwise operator +=
         AutoDiffBlock& operator+=(const AutoDiffBlock& rhs)
         {
-            assert (numBlocks()    == rhs.numBlocks());
-            assert (value().size() == rhs.value().size());
+            if (jac_.empty()) {
+                jac_ = rhs.jac_;
+            } else if (!rhs.jac_.empty()) {
+                assert (numBlocks()    == rhs.numBlocks());
+                assert (value().size() == rhs.value().size());
 
-            const int num_blocks = numBlocks();
-            for (int block = 0; block < num_blocks; ++block) {
-                assert(jac_[block].rows() == rhs.jac_[block].rows());
-                assert(jac_[block].cols() == rhs.jac_[block].cols());
-                jac_[block] += rhs.jac_[block];
+                const int num_blocks = numBlocks();
+                for (int block = 0; block < num_blocks; ++block) {
+                    assert(jac_[block].rows() == rhs.jac_[block].rows());
+                    assert(jac_[block].cols() == rhs.jac_[block].cols());
+                    jac_[block] += rhs.jac_[block];
+                }
             }
 
             val_ += rhs.val_;
@@ -183,6 +197,12 @@ namespace Opm
         /// Elementwise operator +
         AutoDiffBlock operator+(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty()) {
+                return val_ + rhs;
+            }
+        if (rhs.jac_.empty()) {
+                return *this - rhs.val_;
+            }
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
             int num_blocks = numBlocks();
@@ -197,6 +217,12 @@ namespace Opm
         /// Elementwise operator -
         AutoDiffBlock operator-(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty()) {
+                return val_ - rhs;
+            }
+            if (rhs.jac_.empty()) {
+                return *this - rhs.val_;
+            }
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
             int num_blocks = numBlocks();
@@ -211,6 +237,12 @@ namespace Opm
         /// Elementwise operator *
         AutoDiffBlock operator*(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty()) {
+                return val_ * rhs;
+            }
+            if (rhs.jac_.empty()) {
+                return *this * rhs.val_;
+            }
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
             assert(numBlocks() == rhs.numBlocks());
@@ -228,6 +260,12 @@ namespace Opm
         /// Elementwise operator /
         AutoDiffBlock operator/(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty()) {
+                return val_ / rhs;
+            }
+            if (rhs.jac_.empty()) {
+                return *this / rhs.val_;
+            }
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
             assert(numBlocks() == rhs.numBlocks());
@@ -292,6 +330,11 @@ namespace Opm
         }
 
     private:
+        AutoDiffBlock(const V& val)
+        : val_(val)
+        {
+        }
+
         AutoDiffBlock(const V& val,
                       const std::vector<M>& jac)
             : val_(val), jac_(jac)
