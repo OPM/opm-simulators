@@ -200,7 +200,7 @@ namespace Opm
             if (jac_.empty()) {
                 return val_ + rhs;
             }
-        if (rhs.jac_.empty()) {
+            if (rhs.jac_.empty()) {
                 return *this - rhs.val_;
             }
             std::vector<M> jac = jac_;
