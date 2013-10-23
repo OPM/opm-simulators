@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE(SquareRoot)
 {
     typedef Opm::AutoDiff<double> AdFW;
 
-    const double atol = 1.0e-14;
+    const double atol = 1.0e-13;
 
     const AdFW x = AdFW::variable(1.234e-5);
 
