@@ -104,8 +104,8 @@ namespace Opm
         }
 
         /// Create an AutoDiffBlock representing a constant.
-        /// This variant allows to specify the block sizes used
-        /// for the Jacobian even though the Jacobian matrices
+        /// This variant requires specifying the block sizes used
+        /// for the Jacobians even though the Jacobian matrices
         /// themselves will be zero.
         /// \param[in] val         values 
         /// \param[in] blocksizes  block pattern
@@ -201,7 +201,7 @@ namespace Opm
                 return val_ + rhs;
             }
             if (rhs.jac_.empty()) {
-                return *this - rhs.val_;
+                return *this + rhs.val_;
             }
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
