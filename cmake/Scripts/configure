@@ -424,6 +424,8 @@ for OPT in "$@"; do
           esac
           test -n "${shared}" && \
           FEATURES="${FEATURES} -DBUILD_SHARED_LIBS:BOOL=${shared}"
+          # once we have added this, reset so we don't add again for next opt
+          shared=""
           ;;
         *)
           # remove everything *after* the equal sign
