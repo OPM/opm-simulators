@@ -197,6 +197,9 @@ namespace Opm
         /// Elementwise operator +
         AutoDiffBlock operator+(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty() && rhs.jac_.empty()) {
+                return constant(val_ + rhs.val_);
+            }
             if (jac_.empty()) {
                 return val_ + rhs;
             }
@@ -217,6 +220,9 @@ namespace Opm
         /// Elementwise operator -
         AutoDiffBlock operator-(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty() && rhs.jac_.empty()) {
+                return constant(val_ - rhs.val_);
+            }
             if (jac_.empty()) {
                 return val_ - rhs;
             }
@@ -237,6 +243,9 @@ namespace Opm
         /// Elementwise operator *
         AutoDiffBlock operator*(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty() && rhs.jac_.empty()) {
+                return constant(val_ * rhs.val_);
+            }
             if (jac_.empty()) {
                 return val_ * rhs;
             }
@@ -260,6 +269,9 @@ namespace Opm
         /// Elementwise operator /
         AutoDiffBlock operator/(const AutoDiffBlock& rhs) const
         {
+            if (jac_.empty() && rhs.jac_.empty()) {
+                return constant(val_ / rhs.val_);
+            }
             if (jac_.empty()) {
                 return val_ / rhs;
             }
