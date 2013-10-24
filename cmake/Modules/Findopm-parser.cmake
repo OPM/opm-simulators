@@ -5,9 +5,9 @@
 #
 # If found, it sets these variables:
 #
-#       HAVE_OPM_PARSER              Defined if a test program compiled
-#       OPM_PARSER_INCLUDE_DIRS      Header file directories
-#       OPM_PARSER_LIBRARIES         Archives and shared objects
+#	HAVE_OPM_PARSER              Defined if a test program compiled
+#	OPM_PARSER_INCLUDE_DIRS      Header file directories
+#	OPM_PARSER_LIBRARIES         Archives and shared objects
 
 include (FindPackageHandleStandardArgs)
 
@@ -18,23 +18,41 @@ else ()
   set (OPM_PARSER_QUIET "")
 endif ()
 
+# use lowercase versions of the variables if those are set
+if (opm-parser_ROOT)
+  set (OPM_PARSER_ROOT ${opm-parser_ROOT})
+endif ()
+if (opm_ROOT)
+  set (OPM_ROOT ${opm_ROOT})
+endif ()
+
 # inherit "suite" root if not specifically set for this library
 if ((NOT OPM_PARSER_ROOT) AND OPM_ROOT)
   set (OPM_PARSER_ROOT "${OPM_ROOT}/opm-parser")
 endif ()
 
 # if a root is specified, then don't search in system directories
+# or in relative directories to this one
 if (OPM_PARSER_ROOT)
   set (_no_default_path "NO_DEFAULT_PATH")
+  set (_opm_parser_source "")
+  set (_opm_parser_build "")
 else ()
   set (_no_default_path "")
+  set (_opm_parser_source
+    "${PROJECT_SOURCE_DIR}/../opm-parser")
+  set (_opm_parser_build
+    "${PROJECT_BINARY_DIR}/../opm-parser"
+    "${PROJECT_BINARY_DIR}/../opm-parser-build"
+    "${PROJECT_BINARY_DIR}/../../opm-parser/build"
+    "${PROJECT_BINARY_DIR}/../../opm-parser/cmake-build")
 endif ()
 
 # use this header as signature
 find_path (OPM_PARSER_INCLUDE_DIR
   NAMES "opm/parser/eclipse/Parser/Parser.hpp"
   HINTS "${OPM_PARSER_ROOT}"
-  PATHS "../opm-parser"
+  PATHS ${_opm_parser_source}
   PATH_SUFFIXES "include"
   DOC "Path to OPM parser header files"
   ${_no_default_path} )
@@ -49,10 +67,7 @@ endif (CMAKE_SIZEOF_VOID_P)
 find_library (OPM_PARSER_LIBRARY
   NAMES "Parser"
   HINTS "${OPM_PARSER_ROOT}"
-  PATHS "${PROJECT_BINARY_DIR}/../opm-parser"
-        "${PROJECT_BINARY_DIR}/../opm-parser-build"
-        "${PROJECT_BINARY_DIR}/../../opm-parser/build"
-        "${PROJECT_BINARY_DIR}/../../opm-parser/cmake-build"
+  PATHS ${_opm_parser_build}
   PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
                 "opm/parser/eclipse"
   DOC "Path to OPM parser library archive/shared object files"
@@ -61,10 +76,7 @@ find_library (OPM_PARSER_LIBRARY
 find_library (OPM_JSON_LIBRARY
   NAMES "opm-json"
   HINTS "${OPM_PARSER_ROOT}"
-  PATHS "${PROJECT_BINARY_DIR}/../opm-parser"
-        "${PROJECT_BINARY_DIR}/../opm-parser-build"
-        "${PROJECT_BINARY_DIR}/../../opm-parser/build"
-        "${PROJECT_BINARY_DIR}/../../opm-parser/cmake-build"
+  PATHS ${_opm_parser_build}
   PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
                 "opm/json"
   DOC "Path to OPM JSON library archive/shared object files"
@@ -78,7 +90,7 @@ endif ()
 # get the prerequisite Boost libraries
 if (NOT Boost_FOUND)
   find_package(Boost 1.44.0
-        COMPONENTS filesystem date_time system unit_test_framework REQUIRED ${OPM_PARSER_QUIET})
+	COMPONENTS filesystem date_time system unit_test_framework REQUIRED ${OPM_PARSER_QUIET})
 endif ()
 
 # setup list of all required libraries to link with opm-parser. notice that
@@ -95,7 +107,7 @@ set (OPM_PARSER_LIBRARIES
 # see if we can compile a minimum example
 # CMake logical test doesn't handle lists (sic)
 if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
-          OR OPM_PARSER_LIBRARIES MATCHES "-NOTFOUND"))
+	  OR OPM_PARSER_LIBRARIES MATCHES "-NOTFOUND"))
   include (CMakePushCheckState)
   include (CheckCSourceCompiles)
   cmake_push_check_state ()
@@ -120,8 +132,10 @@ endif ()
 
 # if the test program didn't compile, but was required to do so, bail
 # out now and display an error; otherwise limp on
+set (OPM_PARSER_FIND_REQUIRED ${opm-parser_FIND_REQUIRED})
+set (OPM_PARSER_FIND_QUIETLY ${opm-parser_FIND_QUIETLY})
 find_package_handle_standard_args (OPM_PARSER
   DEFAULT_MSG
-  OPM_PARSER_INCLUDE_DIR OPM_PARSER_LIBRARIES HAVE_OPM_PARSER
+  OPM_PARSER_INCLUDE_DIRS OPM_PARSER_LIBRARIES HAVE_OPM_PARSER
   )
 set (opm-parser_FOUND ${OPM_PARSER_FOUND})
