@@ -266,8 +266,16 @@ void testQuadrature()
 {
     std::cout << "testing SCV quadrature...\n";
 
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+    std::bitset<dim> isPeriodic(false);
+    std::array<int, dim> cellRes;
+#else
+    Dune::FieldVector<bool, dim> isPeriodic(false);
+    Dune::FieldVector<int, dim> cellRes;
+#endif
+    std::fill(cellRes.begin(), cellRes.end(), 10);
+
     GlobalPosition upperRight(1.0);
-    Dune::FieldVector<int, dim> cellRes(10);
 
     typedef Dune::YaspGrid<dim> Grid;
     typedef Grid::LeafGridView GridView;
@@ -277,7 +285,7 @@ void testQuadrature()
 #endif
         upperRight, // upper right
         cellRes, // number of cells
-        Dune::FieldVector<bool, dim>(false), // periodic
+        isPeriodic,
         0); // overlap
 
     // compute approximate integral

@@ -33,6 +33,7 @@
 #include <dune/grid/yaspgrid.hh>
 #endif
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
 #include <vector>
 
@@ -326,7 +327,14 @@ public:
      */
     static void makeGrid()
     {
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        std::bitset<LENS_DIM> isPeriodic(false);
+        std::array<int, LENS_DIM> cellRes;
+#else
+        Dune::FieldVector<bool, LENS_DIM> isPeriodic(false);
         Dune::FieldVector<int, LENS_DIM> cellRes;
+#endif
+
         Dune::FieldVector<Scalar, LENS_DIM> upperRight;
         Dune::FieldVector<Scalar, LENS_DIM> lowerLeft;
 
@@ -351,7 +359,7 @@ public:
 #endif
             /*upperRightCorner=*/upperRight,
             /*numCells=*/cellRes,
-            /*isPeriodic=*/Dune::FieldVector<bool,LENS_DIM>(false),
+            isPeriodic,
             /*overlap=*/1);
         grid_->globalRefine(numRefinements);
     }
