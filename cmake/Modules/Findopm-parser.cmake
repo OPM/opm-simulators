@@ -57,6 +57,25 @@ find_path (OPM_PARSER_INCLUDE_DIR
   DOC "Path to OPM parser header files"
   ${_no_default_path} )
 
+# backup: if we didn't find any headers there, but a CMakeCache.txt,
+# then it is probably a build directory; read the CMake cache of
+# opm-parser to figure out where the source directory is
+if ((NOT OPM_PARSER_INCLUDE_DIR) AND
+	(OPM_PARSER_ROOT AND (EXISTS "${OPM_PARSER_ROOT}/CMakeCache.txt")))
+  set (_regex "^OPMParser_SOURCE_DIR:STATIC=\(.*\)$")
+  file (STRINGS
+	"${OPM_PARSER_ROOT}/CMakeCache.txt"
+	_cache_entry
+	REGEX "${_regex}")
+  string(REGEX REPLACE "${_regex}" "\\1"
+	OPM_PARSER_INCLUDE_DIR
+	"${_cache_entry}")
+  if (OPM_PARSER_INCLUDE_DIR)
+	set (OPM_PARSER_INCLUDE_DIR "${OPM_PARSER_INCLUDE_DIR}"
+	  CACHE PATH "Path to OPM parser header files" FORCE)
+  endif ()
+endif ()
+
 # find out the size of a pointer. this is required to only search for
 # libraries in the directories relevant for the architecture
 if (CMAKE_SIZEOF_VOID_P)

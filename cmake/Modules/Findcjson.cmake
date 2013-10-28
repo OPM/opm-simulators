@@ -6,6 +6,10 @@
 
 include (FindPackageHandleStandardArgs)
 
+if ((NOT CJSON_ROOT) AND OPM_PARSER_ROOT)
+  set( CJSON_ROOT ${OPM_PARSER_ROOT}) 
+endif()
+
 if (CJSON_ROOT)
   set (_no_default_path "NO_DEFAULT_PATH")
 else (CJSON_ROOT)
