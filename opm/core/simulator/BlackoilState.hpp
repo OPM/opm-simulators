@@ -19,6 +19,7 @@
 
 #ifndef OPM_BLACKOILSTATE_HEADER_INCLUDED
 #define OPM_BLACKOILSTATE_HEADER_INCLUDED
+#include <math.h>
 
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
@@ -82,6 +83,22 @@ namespace Opm
             return num_phases_;
         }
 
+
+
+        bool equals(const BlackoilState& other, double epsilon = 1e-8) const {
+            bool equal = (num_phases_ == other.num_phases_);
+
+            equal = equal && (vectorApproxEqual( pressure() , other.pressure() , epsilon));
+            equal = equal && (vectorApproxEqual( facepressure() , other.facepressure() , epsilon));
+            equal = equal && (vectorApproxEqual( faceflux() , other.faceflux() , epsilon));
+            equal = equal && (vectorApproxEqual( surfacevol() , other.surfacevol() , epsilon));
+            equal = equal && (vectorApproxEqual( saturation() , other.saturation() , epsilon));
+            equal = equal && (vectorApproxEqual( gasoilratio() , other.gasoilratio() , epsilon));
+
+            return equal;
+        }
+
+
         std::vector<double>& pressure    () { return press_ ; }
         std::vector<double>& facepressure() { return fpress_; }
         std::vector<double>& faceflux    () { return flux_  ; }
@@ -104,6 +121,19 @@ namespace Opm
         std::vector<double> surfvol_;
         std::vector<double> sat_   ;
         std::vector<double> gor_   ;
+
+
+        static bool vectorApproxEqual(const std::vector<double>& v1, const std::vector<double>& v2 , double epsilon) {
+            if (v1.size() != v2.size())
+                return false;
+            
+            for (size_t i = 0; i < v1.size(); i++)
+                if (fabs(v1[i] - v2[i]) > epsilon * (fabs(v1[i]) + fabs(v2[i])))
+                    return false;
+            
+            return true;
+        }
+
     };
 
 } // namespace Opm
