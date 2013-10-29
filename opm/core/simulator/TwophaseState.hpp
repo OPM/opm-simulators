@@ -20,77 +20,26 @@
 #ifndef OPM_TWOPHASESTATE_HEADER_INCLUDED
 #define OPM_TWOPHASESTATE_HEADER_INCLUDED
 
-#include <opm/core/grid.h>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
-#include <vector>
+#include <opm/core/simulator/SimulatorState.hpp>
 
 namespace Opm
 {
 
     /// Simulator state for a two-phase simulator.
-    class TwophaseState
+    class TwophaseState : public SimulatorState
     {
     public:
-
-        void init(const UnstructuredGrid& g, int num_phases)
-        {
-            num_phases_ = num_phases;
-            press_.resize(g.number_of_cells, 0.0);
-            fpress_.resize(g.number_of_faces, 0.0);
-            flux_.resize(g.number_of_faces, 0.0);
-            sat_.resize(num_phases_ * g.number_of_cells, 0.0);
-            for (int cell = 0; cell < g.number_of_cells; ++cell) {
-                // Defaulting the second saturation to 1.0.
-                // This will usually be oil in a water-oil case,
-                // gas in an oil-gas case.
-                // For proper initialization, one should not rely on this,
-                // but use available phase information instead.
-                sat_[num_phases_*cell + 1] = 1.0;
-            }
-        }
-
-        enum ExtremalSat { MinSat, MaxSat };
-
         void setFirstSat(const std::vector<int>& cells,
                          const Opm::IncompPropertiesInterface& props,
-                         ExtremalSat es)
-        {
-            const int n = cells.size();
-            std::vector<double> smin(num_phases_*n);
-            std::vector<double> smax(num_phases_*n);
-            props.satRange(n, &cells[0], &smin[0], &smax[0]);
-            const double* svals = (es == MinSat) ? &smin[0] : &smax[0];
-            for (int ci = 0; ci < n; ++ci) {
-                const int cell = cells[ci];
-                sat_[num_phases_*cell] = svals[num_phases_*ci];
-                sat_[num_phases_*cell + 1] = 1.0 - sat_[num_phases_*cell];
-            }
-        }
+                         ExtremalSat es);
 
-        int numPhases() const
-        {
-            return num_phases_;
-        }
-
-        std::vector<double>& pressure    () { return press_ ; }
-        std::vector<double>& facepressure() { return fpress_; }
-        std::vector<double>& faceflux    () { return flux_  ; }
-        std::vector<double>& saturation  () { return sat_   ; }
-
-        const std::vector<double>& pressure    () const { return press_ ; }
-        const std::vector<double>& facepressure() const { return fpress_; }
-        const std::vector<double>& faceflux    () const { return flux_  ; }
-        const std::vector<double>& saturation  () const { return sat_   ; }
-
-    private:
-        int num_phases_;
-        std::vector<double> press_ ;
-        std::vector<double> fpress_;
-        std::vector<double> flux_  ;
-        std::vector<double> sat_   ;
+        virtual bool equals (const SimulatorState& other,
+                             double epsilon = 1e-8) const;
     };
 
 } // namespace Opm
 
+#include "TwophaseState_impl.hpp"
 
 #endif // OPM_TWOPHASESTATE_HEADER_INCLUDED
