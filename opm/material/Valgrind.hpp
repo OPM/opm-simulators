@@ -28,8 +28,8 @@
 #if ! HAVE_VALGRIND && ! defined(DOXYGEN)
 namespace Valgrind
 {
-bool boolBlubb(bool value) { return value; }
-void voidBlubb() { }
+inline bool boolBlubb(bool value) { return value; }
+inline void voidBlubb() { }
 
 #define SetUndefined(t) voidBlubb()
 #define SetDefined(t) voidBlubb()
