@@ -45,10 +45,13 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_span.cpp
 	tests/test_syntax.cpp
 	tests/test_scalar_mult.cpp
+    tests/integration_tests/SPE1_sim_fibo_ad_test.cpp
 	)
 
 list (APPEND TEST_DATA_FILES
 	tests/fluid.data
+    tests/SPE1_opm.DATA
+    tests/spe1.xml
 	)
 
 # originally generated with the command:

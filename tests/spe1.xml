@@ -1,0 +1,10 @@
+<?xml version = '1.0' encoding = 'ISO-8859-1'?>
+
+<ParameterGroup name="root">
+  <Parameter name="deck_filename" type="file" value="SPE1_opm.DATA"/>
+  <Parameter name="output_dir" type="string" value="spe1/spe1_output"/>
+  <Parameter name="linsolver" type="string" value="umfpack"/>
+  <Parameter name="linsolver_type" type="int" value="2"/>
+  <Parameter name="pvt_tab_size" type="int" value="0"/>
+  <Parameter name="sat_tab_size" type="int" value="0"/>
+</ParameterGroup>
