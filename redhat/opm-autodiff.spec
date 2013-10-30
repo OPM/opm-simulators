@@ -2,7 +2,7 @@
 # spec file for package opm-autodiff
 #
 
-%define tag rc4
+%define tag final
 
 Name:           opm-autodiff
 Version:        2013.10
