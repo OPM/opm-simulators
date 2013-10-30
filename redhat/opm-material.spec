@@ -2,14 +2,16 @@
 # spec file for package opm-material
 #
 
+%define tag rc3
+
 Name:           opm-material
-Version:        2013.09
+Version:        2013.10
 Release:        0
 Summary:        Open Porous Media - thermodynamic framework library
 License:        GPL-3.0
 Group:          Development/Libraries/C and C++
 Url:            http://www.opm-project.org/
-Source0:        %{name}-%{version}.tar.gz
+Source0:        https://github.com/OPM/%{name}/archive/release/%{version}/%{tag}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  blas-devel gcc-c++ gcc-gfortran lapack-devel dune-common-devel
 BuildRequires:  boost-devel git suitesparse-devel cmake28 doxygen bc
 BuildRequires:  tinyxml-devel dune-istl-devel
@@ -35,7 +37,7 @@ BuildArch:	noarch
 This package contains the documentation files for opm-material
 
 %prep
-%setup -q
+%setup -q -n %{name}-release-%{version}-%{tag}
 
 # consider using -DUSE_VERSIONED_DIR=ON if backporting
 %build
