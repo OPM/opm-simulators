@@ -36,8 +36,8 @@
 
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 
-#include <opm/material/fluidmatrixinteractions/mp/MpLinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedLinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>

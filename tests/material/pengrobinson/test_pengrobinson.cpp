@@ -28,7 +28,7 @@
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/Spe5FluidSystem.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
 
 template <class FluidSystem, class FluidState>
 void guessInitial(FluidState &fluidState,
