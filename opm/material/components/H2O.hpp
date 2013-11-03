@@ -810,22 +810,6 @@ public:
      */
     static Scalar liquidThermalConductivity(Scalar temperature,  Scalar pressure)
     {
-#ifndef NDEBUG
-        // Thermal conductivity of water is empirically fit.
-        // Evaluating that fitting-function outside the area of
-        // validity does not make sense.
-        if ((pressure > 400e6 && ((273.15  < temperature) || (temperature > 398.15)) )
-            || (pressure <= 200e6 && ((398.15 < temperature) || (temperature > 523.15)) )
-            || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
-            || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
-        {
-            OPM_THROW(NumericalProblem,
-                       "Liquid thermal conductivity of H2O for "
-                       << "T="<<temperature<<" p="<<pressure
-                       << " is not implemented");
-        }
-#endif
-
         Scalar rho = liquidDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);
     }
@@ -845,21 +829,6 @@ public:
      */
     static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
     {
-#ifndef NDEBUG
-        // Thermal conductivity of water is empirically fit.
-        // Evaluating that fitting-function outside the area of validity does not make sense.
-        if ((pressure > 400e6 && ((273.15  < temperature) || (temperature > 398.15)) )
-            || (pressure <= 200e6 && ((398.15 < temperature) || (temperature > 523.15)) )
-            || (pressure <= 150e6 && ((523.15 < temperature) || (temperature > 673.15)) )
-            || (pressure <= 100e6 && ((673.15 < temperature) || (temperature > 1073.15)) ) )
-        {
-            OPM_THROW(NumericalProblem,
-                       "Gas thermal conductivity of H2O for "
-                       " T="<<temperature<<" p="<<pressure
-                       << " is not implemented");
-        }
-#endif
-
         Scalar rho = gasDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);
     }
