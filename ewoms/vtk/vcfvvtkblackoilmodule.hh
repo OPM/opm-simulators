@@ -98,7 +98,7 @@ public:
      */
     void allocBuffers(VtkMultiWriter &writer)
     {
-        if (gasFormationFactorOutput_()) this->resizeScalarBuffer_(gasFormationFactor_);
+        if (gasDissolutionFactorOutput_()) this->resizeScalarBuffer_(gasDissolutionFactor_);
         if (gasFormationVolumeFactorOutput_()) this->resizeScalarBuffer_(gasFormationVolumeFactor_);
         if (oilFormationVolumeFactorOutput_()) this->resizeScalarBuffer_(oilFormationVolumeFactor_);
         if (oilSaturationPressureOutput_()) this->resizeScalarBuffer_(oilSaturationPressure_);
@@ -116,7 +116,7 @@ public:
             Scalar po = fs.pressure(oPhaseIdx);
             Scalar X_oG = fs.massFraction(oPhaseIdx, gCompIdx);
 
-            if (gasFormationFactorOutput_()) gasFormationFactor_[I] = FluidSystem::gasFormationFactor(po);
+            if (gasDissolutionFactorOutput_()) gasDissolutionFactor_[I] = FluidSystem::gasDissolutionFactor(po);
             if (gasFormationVolumeFactorOutput_()) gasFormationVolumeFactor_[I] = FluidSystem::gasFormationVolumeFactor(po);
             if (oilFormationVolumeFactorOutput_()) oilFormationVolumeFactor_[I] = FluidSystem::oilFormationVolumeFactor(po);
             if (oilSaturationPressureOutput_()) oilSaturationPressure_[I] = FluidSystem::oilSaturationPressure(X_oG);
@@ -128,14 +128,14 @@ public:
      */
     void commitBuffers(VtkMultiWriter &writer)
     {
-        if (gasFormationFactorOutput_()) this->commitScalarBuffer_(writer, "R_s", gasFormationFactor_);
+        if (gasDissolutionFactorOutput_()) this->commitScalarBuffer_(writer, "R_s", gasDissolutionFactor_);
         if (gasFormationVolumeFactorOutput_()) this->commitScalarBuffer_(writer, "B_g", gasFormationVolumeFactor_);
         if (oilFormationVolumeFactorOutput_()) this->commitScalarBuffer_(writer, "B_o", oilFormationVolumeFactor_);
         if (oilSaturationPressureOutput_()) this->commitScalarBuffer_(writer, "pressure_sat,o", oilSaturationPressure_);
     }
 
 private:
-    static bool gasFormationFactorOutput_()
+    static bool gasDissolutionFactorOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, VtkWriteGasFormationFactor); }
 
     static bool gasFormationVolumeFactorOutput_()
@@ -147,7 +147,7 @@ private:
     static bool oilSaturationPressureOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure); }
 
-    ScalarBuffer gasFormationFactor_;
+    ScalarBuffer gasDissolutionFactor_;
     ScalarBuffer gasFormationVolumeFactor_;
     ScalarBuffer oilFormationVolumeFactor_;
     ScalarBuffer oilSaturationPressure_;
