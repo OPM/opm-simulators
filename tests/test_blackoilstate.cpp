@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 
 BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 
-    const string filename = "testBlackoilState.DATA";
+    const string filename = "testBlackoilState1.DATA";
     const EclipseGridParser deck (filename);
 
     GridManager gridManager(deck);
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 
 BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
 
-    const string filename = "testBlackoilState.DATA";
+    const string filename = "testBlackoilState1.DATA";
     const EclipseGridParser deck (filename);
 
     GridManager gridManager(deck);

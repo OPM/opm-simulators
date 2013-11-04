@@ -19,12 +19,12 @@
 
 #ifndef OPM_BLACKOILSTATE_HEADER_INCLUDED
 #define OPM_BLACKOILSTATE_HEADER_INCLUDED
-#include <math.h>
 
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <vector>
+#include <cmath>
 
 namespace Opm
 {
@@ -128,7 +128,7 @@ namespace Opm
                 return false;
             
             for (size_t i = 0; i < v1.size(); i++)
-                if (fabs(v1[i] - v2[i]) > epsilon * (fabs(v1[i]) + fabs(v2[i])))
+                if (std::abs(v1[i] - v2[i]) > epsilon * (std::abs(v1[i]) + std::abs(v2[i])))
                     return false;
             
             return true;
