@@ -30,7 +30,7 @@
 #include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/ParkerLenhard.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
 
 #include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
