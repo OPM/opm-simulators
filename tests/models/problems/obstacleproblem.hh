@@ -33,8 +33,8 @@
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedLinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/MpLinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 
 #include <dune/grid/io/file/dgfparser/dgfug.hh>

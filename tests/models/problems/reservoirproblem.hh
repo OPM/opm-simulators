@@ -26,7 +26,7 @@
 
 #include <ewoms/models/blackoil/blackoilproperties.hh>
 
-#include <opm/material/fluidmatrixinteractions/mp/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>

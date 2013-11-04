@@ -34,7 +34,7 @@
 // The material laws
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp> /*@\label{tutorial-coupled:rawLawInclude}@*/
 #include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/

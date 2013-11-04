@@ -32,7 +32,7 @@
 #include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 

@@ -27,7 +27,7 @@
 #include <ewoms/models/ncp/ncpproperties.hh>
 #include <ewoms/io/cubegridcreator.hh>
 
-#include <opm/material/fluidmatrixinteractions/mp/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>

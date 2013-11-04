@@ -31,7 +31,7 @@
 #include <opm/material/fluidmatrixinteractions/2p/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/mp/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
 
 #include <dune/grid/io/file/dgfparser.hh>
 
