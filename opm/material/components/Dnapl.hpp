@@ -134,6 +134,6 @@ public:
     { return 0.3; }
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

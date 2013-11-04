@@ -61,7 +61,7 @@ inline Scalar fullerMethod(const Scalar *M, // molar masses [g/mol]
     return 1e-4 * (143.0*std::pow(temperature, 1.75))/(pressure*std::sqrt(Mab)*tmp*tmp);
 }
 
-} // end namepace BinaryCoeff
-} // end namespace Opm
+} // namespace BinaryCoeff
+} // namespace Opm
 
 #endif

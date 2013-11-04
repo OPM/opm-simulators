@@ -330,6 +330,6 @@ protected:
     GasPhaseParams gasPhaseParams_;
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

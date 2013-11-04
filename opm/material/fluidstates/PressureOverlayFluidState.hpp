@@ -205,6 +205,6 @@ protected:
     std::array<Scalar, numPhases> pressure_;
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

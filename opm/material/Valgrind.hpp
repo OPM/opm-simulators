@@ -36,7 +36,7 @@ inline void voidBlubb() { }
 #define CheckDefined(t) boolBlubb(true)
 #define SetNoAccess(t) voidBlubb()
 #define IsRunning() boolBlubb(false)
-}
+} // namespace Valgrind
 
 #else
 
@@ -280,7 +280,7 @@ inline void SetNoAccess(const T *value, int size)
 #endif
 }
 
-}
+} // namespace Valgrind
 
 #endif
 

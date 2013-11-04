@@ -204,6 +204,6 @@ protected:
     std::array<Scalar, numPhases> saturation_;
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

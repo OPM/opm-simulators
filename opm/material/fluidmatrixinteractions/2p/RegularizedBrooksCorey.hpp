@@ -259,6 +259,6 @@ public:
         return BrooksCorey::krn(params, Sw);
     }
 };
-}
+} // namespace Opm
 
 #endif

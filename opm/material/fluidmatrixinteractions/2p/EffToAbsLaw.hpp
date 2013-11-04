@@ -242,6 +242,6 @@ private:
     static Scalar dSw_dSwe_(const Params &params)
     { return 1 - params.Swr() - params.Snr(); }
 };
-}
+} // namespace Opm
 
 #endif

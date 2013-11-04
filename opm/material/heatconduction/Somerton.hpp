@@ -124,6 +124,6 @@ protected:
             return sqrtRegSpline.eval(x);
     }
 };
-}
+} // namespace Opm
 
 #endif

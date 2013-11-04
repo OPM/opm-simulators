@@ -323,6 +323,6 @@ protected:
 
 };
 
-} // end namespace
+} // namespace Opm
 
 #endif

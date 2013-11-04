@@ -177,6 +177,6 @@ private:
     { return *static_cast<Implementation*>(this); }
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

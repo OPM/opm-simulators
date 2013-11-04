@@ -74,6 +74,6 @@ class NonEquilibriumFluidState<Scalar, FluidSystem, false>
 {
 };
 
-} // end namespace
+} // namespace Opm
 
 #endif

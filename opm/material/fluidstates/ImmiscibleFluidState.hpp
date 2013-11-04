@@ -72,6 +72,6 @@ class ImmiscibleFluidState<Scalar, FluidSystem, false>
                                FluidStateNullEnthalpyModule<Scalar, FluidSystem, ImmiscibleFluidState<Scalar, FluidSystem, false> > >
 {
 };
-} // end namespace
+} // namespace Opm
 
 #endif

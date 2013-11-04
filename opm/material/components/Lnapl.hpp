@@ -70,6 +70,6 @@ public:
     { return 8e-3; };
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

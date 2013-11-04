@@ -296,6 +296,6 @@ public:
 template <class Scalar>
 const Scalar SimpleH2O<Scalar>::R = Opm::Constants<Scalar>::R / 18e-3;
 
-} // end namepace
+} // namespace Opm
 
 #endif

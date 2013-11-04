@@ -158,6 +158,6 @@ private:
     Scalar yMin_;
     Scalar yMax_;
 };
-}
+} // namespace Opm
 
 #endif

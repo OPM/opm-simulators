@@ -380,7 +380,7 @@ protected:
         };
         return result;
     }
-};
+}; // namespace Opm
 
 } // end namespace Opm
 

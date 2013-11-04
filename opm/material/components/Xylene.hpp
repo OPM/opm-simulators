@@ -321,6 +321,6 @@ public:
     }
 };
 
-} // end namespace
+} // namespace Opm
 
 #endif

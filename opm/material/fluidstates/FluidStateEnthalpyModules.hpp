@@ -143,6 +143,6 @@ public:
     { }
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

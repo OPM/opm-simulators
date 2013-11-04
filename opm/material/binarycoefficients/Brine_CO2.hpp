@@ -385,7 +385,7 @@ private:
 
 };
 
-} // end namepace BinaryCoeff
-} // end namespace Opm
+} // namespace BinaryCoeff
+} // namespace Opm
 
 #endif

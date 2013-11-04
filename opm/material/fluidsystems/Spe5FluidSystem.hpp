@@ -433,7 +433,7 @@ protected:
 template <class Scalar>
 const Scalar Spe5<Scalar>::R = Opm::Constants<Scalar>::R;
 
-} // end namepace
-} // end namepace
+} // namespace FluidSystems
+} // namespace Opm
 
 #endif

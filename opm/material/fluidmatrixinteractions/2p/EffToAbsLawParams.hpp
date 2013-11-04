@@ -71,6 +71,6 @@ private:
     Scalar Snr_;
 };
 
-}
+} // namespace Opm
 
 #endif

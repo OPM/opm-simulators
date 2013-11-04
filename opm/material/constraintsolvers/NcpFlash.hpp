@@ -702,6 +702,6 @@ protected:
     }
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

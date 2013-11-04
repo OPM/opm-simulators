@@ -81,6 +81,6 @@ public:
         values[nPhaseIdx] = TwoPLaw::krn(params, fluidState.saturation(wPhaseIdx));
     }
 };
-}
+} // namespace Opm
 
 #endif

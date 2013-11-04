@@ -167,6 +167,6 @@ public:
         return std::max(std::min(Sne,1.0),0.0);
     }
 };
-}
+} // namespace Opm
 
 #endif

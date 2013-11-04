@@ -573,7 +573,7 @@ private:
     }
 };
 
-} // end namepace
-} // end namepace
+} // namespace FluidSystems
+} // namespace Opm
 
 #endif

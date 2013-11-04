@@ -421,7 +421,7 @@ private:
     }
 
 };
-} // end namespace FluidSystems
-} // end namespace Opm
+} // namespace FluidSystems
+} // namespace Opm
 
 #endif

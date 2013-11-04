@@ -105,6 +105,6 @@ public:
     static Scalar heatCapacity(Scalar temperature, Scalar pressure)
     { return Component::liquidHeatCapacity(temperature, pressure); }
 };
-} // namespace
+} // namespace Opm
 
 #endif

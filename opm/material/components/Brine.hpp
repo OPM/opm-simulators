@@ -329,6 +329,6 @@ public:
 template <class Scalar, class H2O>
 Scalar Brine<Scalar, H2O>::salinity = 0.1; // also needs to be adapted in CO2 solubility table!
 
-} // end namepace
+} // namespace Opm
 
 #endif

@@ -79,6 +79,6 @@ inline Scalar henryIAPWS(Scalar E,
     // derivative of the partial pressure.
     return std::exp(exponent)*H2O::vaporPressure(temperature);
 }
-}
+} // namespace Opm
 
 #endif // OPM_HENRY_IAPWS_HH

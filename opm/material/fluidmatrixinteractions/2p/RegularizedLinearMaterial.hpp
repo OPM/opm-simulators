@@ -192,6 +192,6 @@ private:
         return lowS/2 + m*(S - lowS);
     }
 };
-}
+} // namespace Opm
 
 #endif

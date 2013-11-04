@@ -67,6 +67,6 @@ public:
 template <class Scalar>
 const Scalar IdealGas<Scalar>::R = Opm::Constants<Scalar>::R;
 
-} // end namepace
+} // namespace Opm
 
 #endif

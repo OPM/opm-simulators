@@ -85,6 +85,6 @@ template <class Scalar>
 const Scalar Constants<Scalar>::h = 6.62606896e-34;
 template <class Scalar>
 const Scalar Constants<Scalar>::hRed = h / (2 * M_PI);
-}
+} // namespace Opm
 
 #endif

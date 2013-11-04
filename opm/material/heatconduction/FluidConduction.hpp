@@ -59,6 +59,6 @@ public:
         return FluidSystem::thermalConductivity(fluidState, paramCache, phaseIdx);
     }
 };
-}
+} // namespace Opm
 
 #endif

@@ -99,6 +99,6 @@ public:
         values[gPhaseIdx] = ThreePLaw::krg(params, Sw, Sn, Sg);
     }
 };
-}
+} // namespace Opm
 
 #endif

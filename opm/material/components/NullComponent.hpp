@@ -40,6 +40,6 @@ class NullComponent : public Component<Scalar, NullComponent<Scalar> >
 {
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

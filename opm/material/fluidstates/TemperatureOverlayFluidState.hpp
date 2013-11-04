@@ -206,6 +206,6 @@ protected:
     Scalar temperature_;
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

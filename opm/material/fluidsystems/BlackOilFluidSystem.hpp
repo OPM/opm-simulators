@@ -762,7 +762,7 @@ BlackOil<Scalar>::waterCompressibilityScalar_;
 template <class Scalar>
 Scalar
 BlackOil<Scalar>::waterViscosityScalar_;
-} // end namepace
-} // end namepace
+} // namespace FluidSystems
+} // namespace Opm
 
 #endif

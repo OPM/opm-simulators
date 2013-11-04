@@ -275,6 +275,6 @@ public:
     }
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

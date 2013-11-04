@@ -90,7 +90,7 @@ public:
     { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of CO2 and CH4"); }
 };
 
-}
-} // end namepace
+} // namespace BinaryCoeff
+} // namespace Opm
 
 #endif

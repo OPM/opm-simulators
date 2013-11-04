@@ -84,6 +84,6 @@ protected:
     Scalar b_;
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

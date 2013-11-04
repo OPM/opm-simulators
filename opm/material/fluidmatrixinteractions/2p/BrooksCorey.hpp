@@ -201,6 +201,6 @@ public:
     }
 
 };
-}
+} // namespace Opm
 
 #endif // BROOKS_COREY_HH

@@ -475,7 +475,7 @@ public:
         return 0.0143964;
     }
 };
-} // end namespace FluidSystems
-} // end namespace Opm
+} // namespace FluidSystems
+} // namespace Opm
 
 #endif

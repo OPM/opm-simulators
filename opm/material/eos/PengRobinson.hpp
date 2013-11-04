@@ -538,6 +538,6 @@ template <class Scalar>
 DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
 */
 
-} // end namepace
+} // namespace Opm
 
 #endif

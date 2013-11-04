@@ -239,6 +239,6 @@ private:
 template <class Scalar, class FluidSystem, int phaseIdx, bool useSpe5Relations>
 const Scalar PengRobinsonParamsMixture<Scalar, FluidSystem, phaseIdx, useSpe5Relations>::R = Opm::Constants<Scalar>::R;
 
-} // end namepace
+} // namespace Opm
 
 #endif

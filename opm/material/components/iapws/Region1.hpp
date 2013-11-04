@@ -344,7 +344,7 @@ private:
 
 };
 
-} // end namepace IAPWS
-} // end namepace Dune
+} // namespace IAPWS
+} // namespace Opm
 
 #endif

@@ -220,6 +220,6 @@ public:
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidHeatCapacity()"); }
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

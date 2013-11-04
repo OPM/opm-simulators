@@ -176,6 +176,6 @@ public:
     { return 1.0; }
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

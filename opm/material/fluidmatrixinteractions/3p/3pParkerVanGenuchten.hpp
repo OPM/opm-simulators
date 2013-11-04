@@ -375,6 +375,6 @@ public:
       return params.rhoBulk() * params.KdNAPL();
    }
 };
-}
+} // namespace Opm
 
 #endif

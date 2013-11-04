@@ -293,6 +293,6 @@ public:
     { return 0.024572; }
 };
 
-} // end namepace
+} // namespace Opm
 
 #endif

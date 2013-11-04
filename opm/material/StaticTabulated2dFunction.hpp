@@ -104,6 +104,6 @@ public:
         return Traits::vals[i][j];
     }
 };
-}
+} // namespace Opm
 
 #endif

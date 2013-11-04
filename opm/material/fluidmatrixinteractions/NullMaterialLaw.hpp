@@ -86,6 +86,6 @@ public:
         }
     }
 };
-}
+} // namespace Opm
 
 #endif

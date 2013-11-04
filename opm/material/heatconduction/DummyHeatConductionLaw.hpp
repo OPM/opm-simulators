@@ -57,6 +57,6 @@ public:
                    "No heat conduction law specified!");
     }
 };
-}
+} // namespace Opm
 
 #endif

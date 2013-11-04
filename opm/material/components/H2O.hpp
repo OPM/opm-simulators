@@ -935,6 +935,6 @@ private:
 
 template <class Scalar>
 const Scalar H2O<Scalar>::Rs = Common::Rs;
-} // end namepace
+} // namespace Opm
 
 #endif

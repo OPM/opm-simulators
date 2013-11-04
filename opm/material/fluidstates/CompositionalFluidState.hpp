@@ -73,6 +73,6 @@ class CompositionalFluidState<Scalar, FluidSystem, false>
 {
 };
 
-} // end namespace Opm
+} // namespace Opm
 
 #endif

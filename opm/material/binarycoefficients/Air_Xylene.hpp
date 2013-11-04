@@ -98,7 +98,7 @@ public:
     }
 };
 
-}
-} // end namepace
+} // namespace BinaryCoeff
+} // namespace Opm
 
 #endif

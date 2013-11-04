@@ -139,6 +139,6 @@ private:
     const Implementation &asImp_() const
     { return *static_cast<const Implementation*>(this); }
 };
-}
+} // namespace Opm
 
 #endif

@@ -310,8 +310,8 @@ public:
     }
 };
 
-} // end namepace FluidSystems
+} // namespace FluidSystems
 
-} // end namepace
+} // namespace Opm
 
 #endif
