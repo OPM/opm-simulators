@@ -139,8 +139,8 @@ SET_SCALAR_PROP(FingerBaseProblem, EndTime, 1e3);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -480,6 +480,6 @@ private:
     Scalar eps_;
 };
 
-} //end namespace
+} // namespace Ewoms
 
 #endif

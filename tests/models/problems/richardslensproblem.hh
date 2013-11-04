@@ -111,8 +111,8 @@ SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./grids/richardslens_24x16.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -387,6 +387,6 @@ private:
     Scalar eps_;
     Scalar pnRef_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

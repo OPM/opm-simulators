@@ -119,8 +119,8 @@ SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
 SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./grids/waterair.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -533,6 +533,6 @@ private:
     Scalar maxDepth_;
     Scalar eps_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

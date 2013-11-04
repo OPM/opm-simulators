@@ -117,8 +117,8 @@ SET_SCALAR_PROP(PowerInjectionBaseProblem, EndTime, 100);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -370,6 +370,6 @@ private:
     Scalar eps_;
 };
 
-} //end namespace
+} // namespace Ewoms
 
 #endif

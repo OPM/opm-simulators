@@ -112,8 +112,8 @@ SET_SCALAR_PROP(ObstacleBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
 SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./grids/obstacle_24x16.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -540,6 +540,6 @@ private:
     Scalar temperature_;
     Scalar eps_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

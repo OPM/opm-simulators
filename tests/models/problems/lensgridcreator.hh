@@ -44,7 +44,7 @@ namespace Ewoms {
 
 template <class TypeTag>
 class LensProblem;
-}
+} // namespace Ewoms
 
 //////////
 // Specify the properties for the lens problem
@@ -64,8 +64,8 @@ NEW_PROP_TAG(CellsY);
 NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -395,6 +395,6 @@ Dune::YaspGrid<LENS_DIM> *LensGridCreator<TypeTag>::grid_;
 
 #endif // HAVE_UG
 
-}
+} // namespace Ewoms
 
 #endif

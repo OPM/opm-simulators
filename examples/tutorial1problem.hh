@@ -112,7 +112,7 @@ SET_INT_PROP(TutorialProblemCoupled, CellsX, 100);
 SET_INT_PROP(TutorialProblemCoupled, CellsY, 1);
 SET_INT_PROP(TutorialProblemCoupled, CellsZ, 1); /*@\label{tutorial-coupled:default-params-end}@*/
 } // namespace Properties
-}
+} // namespace Opm
 
 namespace Ewoms {
 //! Tutorial problem using the fully-implicit immiscible model.

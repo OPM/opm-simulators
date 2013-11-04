@@ -95,8 +95,8 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./grids/groundwater_2d.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -316,6 +316,6 @@ private:
 
     Scalar eps_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

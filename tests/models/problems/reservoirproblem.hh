@@ -101,8 +101,8 @@ SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 10);
 
 // The default DGF file to load
 SET_STRING_PROP(ReservoirBaseProblem, GridFile, "grids/reservoir.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -596,6 +596,6 @@ private:
 
     std::string name_ ;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

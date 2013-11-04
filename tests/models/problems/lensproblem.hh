@@ -147,8 +147,8 @@ SET_SCALAR_PROP(LensBaseProblem, EndTime, 30e3);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -527,6 +527,6 @@ private:
     Scalar eps_;
 };
 
-} //end namespace
+} // namespace Ewoms
 
 #endif

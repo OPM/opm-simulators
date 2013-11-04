@@ -137,8 +137,8 @@ SET_SCALAR_PROP(FractureProblem, EndTime, 1e6);
 
 // Set the default value for the initial time step size
 SET_SCALAR_PROP(FractureProblem, InitialTimeStepSize, 100);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -570,6 +570,6 @@ private:
     Scalar temperature_;
     Scalar eps_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif // EWOMS_FRACTURE_PROBLEM_HH

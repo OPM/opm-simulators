@@ -102,8 +102,8 @@ SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -320,6 +320,6 @@ private:
     Scalar temperature_;
 };
 
-} //end namespace
+} // namespace Ewoms
 
 #endif
