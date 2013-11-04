@@ -249,7 +249,7 @@ public:
         };
         FluidSystem::setGasFormationVolumeFactor(Bg);
         FluidSystem::setOilFormationVolumeFactor(Bo);
-        FluidSystem::setGasFormationFactor(Rs);
+        FluidSystem::setGasDissolutionFactor(Rs);
         FluidSystem::setOilViscosity(muo);
         FluidSystem::setGasViscosity(mug);
         FluidSystem::setWaterViscosity(9.6e-4);
@@ -545,7 +545,7 @@ private:
         // system.
         Scalar pSat = pReservoir_; // the saturation pressure of the oil
         Scalar Bo = FluidSystem::oilFormationVolumeFactor(pSat);
-        Scalar Rs = FluidSystem::gasFormationFactor(pSat);
+        Scalar Rs = FluidSystem::gasDissolutionFactor(pSat);
         Scalar rhoo = FluidSystem::surfaceDensity(oPhaseIdx)/Bo;
         Scalar rhogref = FluidSystem::surfaceDensity(gPhaseIdx);
 
