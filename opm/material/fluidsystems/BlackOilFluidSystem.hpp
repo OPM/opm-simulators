@@ -119,17 +119,17 @@ public:
     }
 
     /*!
-     * \brief Initialize the spline for the gas formation volume factor
+     * \brief Initialize the spline for the gas dissolution factor \f$R_s\f$
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
-    static void setGasFormationFactor(const SplineSamplingPoints &samplePoints)
+    static void setGasDissolutionFactor(const SplineSamplingPoints &samplePoints)
     {
         // we discard the last sample point because that is for
         // undersaturated oil
         //SplineSamplingPoints tmp(samplePoints.begin(), --samplePoints.end());
         SplineSamplingPoints tmp(samplePoints.begin(), samplePoints.end());
-        gasFormationFactorSpline_.setContainerOfTuples(tmp, /*type=*/Spline::Monotonic);
+        gasDissolutionFactorSpline_.setContainerOfTuples(tmp, /*type=*/Spline::Monotonic);
     }
 
     /*!
@@ -238,15 +238,15 @@ public:
 
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
-        int n = gasFormationFactorSpline_.numSamples()*5;
+        int n = gasDissolutionFactorSpline_.numSamples()*5;
         int delta =
-            (gasFormationFactorSpline_.xMax() - gasFormationFactorSpline_.xMin())
+            (gasDissolutionFactorSpline_.xMax() - gasDissolutionFactorSpline_.xMin())
             /(n + 1);
 
         SplineSamplingPoints pSatSamplePoints;
         Scalar X_oG = 0;
         for (int i=0; i <= n && X_oG < 0.7; ++ i) {
-            Scalar pSat = i*delta + gasFormationFactorSpline_.xMin();
+            Scalar pSat = i*delta + gasDissolutionFactorSpline_.xMin();
             X_oG = saturatedOilGasMassFraction(pSat);
 
             std::pair<Scalar, Scalar> val(X_oG, pSat);
@@ -356,13 +356,13 @@ public:
             Scalar pSat = oilSaturationPressure(fluidState.massFraction(oPhaseIdx, gCompIdx));
 
             // retrieve the gas formation factor and the oil formation volume factor
-            Scalar Rs = gasFormationFactorSpline_.eval(pSat, /*extrapolate=*/true);
+            Scalar Rs = gasDissolutionFactorSpline_.eval(pSat, /*extrapolate=*/true);
             Scalar Bo = oilFormationVolumeFactor(pSat);
 
             // retrieve the derivatives of the oil formation volume
             // factor and the gas formation factor regarding pressure
             Scalar dBo_dp = oilFormationVolumeFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
-            Scalar dRs_dp = gasFormationFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
+            Scalar dRs_dp = gasDissolutionFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
 
             // define the derivatives of oil regarding oil component
             // mass fraction and pressure
@@ -481,9 +481,9 @@ public:
      *
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar gasFormationFactor(Scalar pressure)
+    static Scalar gasDissolutionFactor(Scalar pressure)
     {
-        return gasFormationFactorSpline_.eval(pressure,
+        return gasDissolutionFactorSpline_.eval(pressure,
                                               /*extrapolate=*/true);
     }
 
@@ -613,7 +613,7 @@ public:
         // in the oil phase. This is equivalent to the gas formation
         // factor [m^3/m^3] at current pressure times the gas density
         // [kg/m^3] at standard pressure
-        Scalar rho_oG = gasFormationFactor(pressure) * rho_gRef;
+        Scalar rho_oG = gasDissolutionFactor(pressure) * rho_gRef;
 
         // with these quantities it is pretty easy to calculate to the
         // composition of the oil phase in terms of mass fractions
@@ -696,7 +696,7 @@ private:
     static Spline oilFormationVolumeFactorSpline_;
     static Spline oilViscositySpline_;
 
-    static Spline gasFormationFactorSpline_;
+    static Spline gasDissolutionFactorSpline_;
     static Spline gasFormationVolumeFactorSpline_;
     static Spline saturationPressureSpline_;
 
@@ -722,7 +722,7 @@ BlackOil<Scalar>::oilViscositySpline_;
 
 template <class Scalar>
 typename BlackOil<Scalar>::Spline
-BlackOil<Scalar>::gasFormationFactorSpline_;
+BlackOil<Scalar>::gasDissolutionFactorSpline_;
 
 template <class Scalar>
 typename BlackOil<Scalar>::Spline
