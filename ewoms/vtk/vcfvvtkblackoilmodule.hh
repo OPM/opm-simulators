@@ -48,8 +48,8 @@ SET_BOOL_PROP(VtkBlackOil, VtkWriteGasFormationFactor, false);
 SET_BOOL_PROP(VtkBlackOil, VtkWriteGasFormationVolumeFactor, false);
 SET_BOOL_PROP(VtkBlackOil, VtkWriteOilFormationVolumeFactor, false);
 SET_BOOL_PROP(VtkBlackOil, VtkWriteOilSaturationPressure, false);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -152,6 +152,6 @@ private:
     ScalarBuffer oilFormationVolumeFactor_;
     ScalarBuffer oilSaturationPressure_;
 };
-}
+} // namespace Ewoms
 
 #endif
