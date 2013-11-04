@@ -118,8 +118,8 @@ SET_SCALAR_PROP(CuvetteBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./grids/cuvette_11x4.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -619,6 +619,6 @@ private:
 
     const Scalar eps_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

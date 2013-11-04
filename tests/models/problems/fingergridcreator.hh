@@ -44,7 +44,7 @@ namespace Ewoms {
 
 template <class TypeTag>
 class FingerProblem;
-}
+} // namespace Ewoms
 
 namespace Opm {
 //////////
@@ -65,8 +65,8 @@ NEW_PROP_TAG(CellsY);
 NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -390,6 +390,6 @@ Dune::YaspGrid<FINGER_DIM> *FingerGridCreator<TypeTag>::grid_;
 
 #endif // HAVE_ALUGRDID
 
-}
+} // namespace Ewoms
 
 #endif

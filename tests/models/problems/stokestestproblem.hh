@@ -72,8 +72,8 @@ SET_SCALAR_PROP(StokesTestProblem, InitialTimeStepSize, 10.0);
 
 // Default grid file to load
 SET_STRING_PROP(StokesTestProblem, GridFile, "grids/test_stokes.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -293,6 +293,6 @@ private:
     Scalar eps_;
 };
 
-} //end namespace
+} // namespace Ewoms
 
 #endif

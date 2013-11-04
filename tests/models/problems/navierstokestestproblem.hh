@@ -86,8 +86,8 @@ SET_SCALAR_PROP(NavierStokesTestProblem, InitialTimeStepSize, 1e-3);
 
 // Default grid file to load
 SET_STRING_PROP(NavierStokesTestProblem, GridFile, "grids/test_navierstokes.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -260,6 +260,6 @@ private:
     Scalar eps_;
 };
 
-} //end namespace
+} // namespace Ewoms
 
 #endif

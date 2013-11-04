@@ -56,7 +56,7 @@ class Co2InjectionProblem;
 namespace Co2Injection {
 #include <opm/material/components/co2tables.inc>
 }
-}
+} // namespace Ewoms
 
 namespace Opm {
 namespace Properties {
@@ -155,8 +155,8 @@ SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
 SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "grids/co2injection.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -593,6 +593,6 @@ private:
     Scalar pressureLow_, pressureHigh_;
     Scalar temperatureLow_, temperatureHigh_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

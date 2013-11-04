@@ -72,8 +72,8 @@ SET_SCALAR_PROP(StokesNITestProblem, InitialTimeStepSize, 0.1);
 
 // Default grid file to load
 SET_STRING_PROP(StokesNITestProblem, GridFile, "grids/test_stokes2cni.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -308,6 +308,6 @@ private:
 
     Scalar eps_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif

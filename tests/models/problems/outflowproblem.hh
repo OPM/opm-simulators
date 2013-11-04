@@ -71,8 +71,8 @@ SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(OutflowBaseProblem, GridFile, "./grids/outflow.dgf");
-}
-}
+} // namespace Properties
+} // namespace Opm
 
 namespace Ewoms {
 /*!
@@ -305,6 +305,6 @@ private:
     Scalar porosity_;
     Scalar tortuosity_;
 };
-} //end namespace
+} // namespace Ewoms
 
 #endif
