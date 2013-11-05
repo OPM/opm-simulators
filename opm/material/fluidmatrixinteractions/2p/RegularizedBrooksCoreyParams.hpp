@@ -27,7 +27,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionsparams
+ * \ingroup FluidMatrixInteractions
  *
  * \brief   Parameters that are necessary for the \em regularization of
  *          the Brooks-Corey capillary pressure model.

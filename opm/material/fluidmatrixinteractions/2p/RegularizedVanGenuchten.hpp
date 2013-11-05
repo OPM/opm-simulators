@@ -35,7 +35,7 @@
 namespace Opm {
 
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  * \brief Implementation of the regularized  van Genuchten's
  *        capillary pressure / relative permeability  <-> saturation relation.
  *

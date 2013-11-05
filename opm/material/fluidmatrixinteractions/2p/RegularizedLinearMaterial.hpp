@@ -32,7 +32,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  * \brief Implements a linear saturation-capillary pressure relation
  *
  * The entry pressure is reached at \f$\overline S_w = 1\f$, the maximum

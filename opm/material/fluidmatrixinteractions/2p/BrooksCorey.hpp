@@ -30,7 +30,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  *
  * \brief Implementation of the Brooks-Corey capillary pressure <->
  *        saturation relation.

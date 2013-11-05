@@ -31,7 +31,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionsparams
+ * \ingroup FluidMatrixInteractions
  *
  * \brief Specification of the material params for the three-phase van
  *        Genuchten capillary pressure model.

@@ -31,7 +31,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  * \brief Implementation of the regularized Brooks-Corey capillary
  *        pressure / relative permeability <-> saturation relation.
  *

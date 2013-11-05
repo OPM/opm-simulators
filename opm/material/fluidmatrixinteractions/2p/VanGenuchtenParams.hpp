@@ -25,7 +25,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionsparams
+ * \ingroup FluidMatrixInteractions
  *
  * \brief Specification of the material parameters for the van
  *        Genuchten constitutive relations.

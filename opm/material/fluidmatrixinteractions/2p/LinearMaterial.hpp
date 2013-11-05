@@ -30,7 +30,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  *
  * \brief Linear capillary pressure and relative permeability <->
  *        saturation relations

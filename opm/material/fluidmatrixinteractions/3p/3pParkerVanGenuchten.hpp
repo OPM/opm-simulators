@@ -31,7 +31,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  *
  * \brief Implementation of van Genuchten's capillary pressure <->
  *        saturation relation.

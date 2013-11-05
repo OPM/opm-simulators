@@ -27,7 +27,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionslaws
+ * \ingroup FluidMatrixInteractions
  * \brief Provides an adapter class to use two-phase material laws
  *        with the generic M-phase API.
  */

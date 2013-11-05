@@ -26,7 +26,7 @@
 
 namespace Opm {
 /*!
- * \ingroup fluidmatrixinteractionsparams
+ * \ingroup FluidMatrixInteractions
  *
  * \brief Reference implementation of the parameter object for the
  *        linear material law.
