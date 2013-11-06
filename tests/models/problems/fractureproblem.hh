@@ -27,11 +27,12 @@
 #include <ewoms/parallel/mpihelper.hh>
 #include <dune/grid/alugrid.hh>
 
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
@@ -92,20 +93,20 @@ public:
 SET_PROP(FractureProblem, MaterialLaw)
 {
 private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+
     // define the material law which is parameterized by effective
     // saturations
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::RegularizedBrooksCorey<Scalar> EffectiveLaw;
-    //typedef RegularizedVanGenuchten<Scalar> EffectiveLaw;
-    //typedef LinearMaterial<Scalar> EffectiveLaw;
-    //typedef EffToAbsLaw<EffectiveLaw> TwoPMaterialLaw;
-
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    typedef Opm::EffToAbsLaw<EffectiveLaw> TwoPMaterialLaw;
+    typedef Opm::RegularizedBrooksCorey<Traits> EffectiveLaw;
+    //typedef RegularizedVanGenuchten<Traits> EffectiveLaw;
+    //typedef LinearMaterial<Traits> EffectiveLaw;
 
 public:
-    typedef Opm::TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
 };
 
 // Enable the energy equation
@@ -211,10 +212,10 @@ public:
         eps_ = 3e-6;
         temperature_ = 273.15 + 20; // -> 20°C
 
-        matrixMaterialParams_.setSwr(0.0);
-        matrixMaterialParams_.setSnr(0.0);
-        fractureMaterialParams_.setSwr(0.0);
-        fractureMaterialParams_.setSnr(0.0);
+        matrixMaterialParams_.setResidualSaturation(wPhaseIdx, 0.0);
+        matrixMaterialParams_.setResidualSaturation(nPhaseIdx, 0.0);
+        fractureMaterialParams_.setResidualSaturation(wPhaseIdx, 0.0);
+        fractureMaterialParams_.setResidualSaturation(nPhaseIdx, 0.0);
 
 #if 0 // linear
         matrixMaterialParams_.setEntryPC(0.0);
@@ -224,10 +225,10 @@ public:
 #endif
 
 #if 1 // Brooks-Corey
-        matrixMaterialParams_.setPe(2000);
+        matrixMaterialParams_.setEntryPressure(2000);
         matrixMaterialParams_.setLambda(2.0);
         matrixMaterialParams_.setThresholdSw(1e-1);
-        fractureMaterialParams_.setPe(1000);
+        fractureMaterialParams_.setEntryPressure(1000);
         fractureMaterialParams_.setLambda(2.0);
         fractureMaterialParams_.setThresholdSw(5e-2);
 #endif
@@ -238,6 +239,9 @@ public:
         fractureMaterialParams_.setVgAlpha(0.0025);
         fractureMaterialParams_.setVgN(4.7);
 #endif
+
+        matrixMaterialParams_.finalize();
+        fractureMaterialParams_.finalize();
 
         matrixK_ = this->toDimMatrix_(1e-15); //m^2
         fractureK_ = this->toDimMatrix_(1e5*1e-15); //m^2

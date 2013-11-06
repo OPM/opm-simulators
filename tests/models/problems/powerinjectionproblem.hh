@@ -24,10 +24,10 @@
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
@@ -83,18 +83,19 @@ public:
 SET_PROP(PowerInjectionBaseProblem, MaterialLaw)
 {
 private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+
     // define the material law which is parameterized by effective
     // saturations
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::RegularizedVanGenuchten<Scalar> EffectiveLaw;
-    // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffectiveLaw> TwoPMaterialLaw;
-
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+    typedef Opm::RegularizedVanGenuchten<Traits> EffectiveLaw;
 
 public:
-    typedef Opm::TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+    // define the material law parameterized by absolute saturations
+    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
 };
 
 // Write out the filter velocities for this problem
@@ -190,6 +191,7 @@ public:
         // alpha and n
         materialParams_.setVgAlpha(0.00045);
         materialParams_.setVgN(7.3);
+        materialParams_.finalize();
 
         K_ = this->toDimMatrix_(5.73e-08); // [m^2]
 

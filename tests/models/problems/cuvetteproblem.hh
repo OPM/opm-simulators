@@ -30,7 +30,7 @@
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
 #include <opm/material/fluidmatrixinteractions/3p/3pParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/3pAdapter.hpp>
-#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 

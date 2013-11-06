@@ -29,12 +29,10 @@
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedLinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 
 #include <dune/grid/io/file/dgfparser/dgfug.hh>
@@ -74,19 +72,18 @@ SET_TYPE_PROP(ObstacleBaseProblem,
 SET_PROP(ObstacleBaseProblem, MaterialLaw)
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum {
-        lPhaseIdx = FluidSystem::lPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx
-    };
     // define the material law
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    //    typedef RegularizedBrooksCorey<Scalar> EffMaterialLaw;
-    typedef Opm::RegularizedLinearMaterial<Scalar> EffMaterialLaw;
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> TwoPMaterialLaw;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx>
+        MaterialTraits;
+
+    typedef Opm::LinearMaterial<MaterialTraits> EffMaterialLaw;
 
 public:
-    typedef Opm::TwoPAdapter<lPhaseIdx, TwoPMaterialLaw> type;
+    typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
 };
 
 // Set the heat conduction law
@@ -210,27 +207,30 @@ public:
         coarsePorosity_ = 0.3;
 
         // residual saturations
-        fineMaterialParams_.setSwr(0.0);
-        fineMaterialParams_.setSnr(0.0);
-        coarseMaterialParams_.setSwr(0.0);
-        coarseMaterialParams_.setSnr(0.0);
+        fineMaterialParams_.setResidualSaturation(lPhaseIdx, 0.0);
+        fineMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(lPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
 
         // parameters for the linear law, i.e. minimum and maximum
         // pressures
-        fineMaterialParams_.setEntryPC(0.0);
-        coarseMaterialParams_.setEntryPC(0.0);
-        fineMaterialParams_.setMaxPC(0.0);
-        coarseMaterialParams_.setMaxPC(0.0);
+        fineMaterialParams_.setPcMinSat(lPhaseIdx,0.0);
+        fineMaterialParams_.setPcMaxSat(lPhaseIdx,0.0);
+        coarseMaterialParams_.setPcMinSat(lPhaseIdx,0.0);
+        coarseMaterialParams_.setPcMaxSat(lPhaseIdx,0.0);
 
         /*
         // entry pressures for Brooks-Corey
-        fineMaterialParams_.setPe(5e3);
-        coarseMaterialParams_.setPe(1e3);
+        fineMaterialParams_.setEntryPressure(5e3);
+        coarseMaterialParams_.setEntryPressure(1e3);
 
         // Brooks-Corey shape parameters
         fineMaterialParams_.setLambda(2);
         coarseMaterialParams_.setLambda(2);
         */
+
+        fineMaterialParams_.finalize();
+        coarseMaterialParams_.finalize();
 
         // parameters for the somerton law of heat conduction
         computeHeatCondParams_(fineHeatCondParams_, finePorosity_);

@@ -26,7 +26,8 @@
 
 #include <ewoms/models/blackoil/blackoilproperties.hh>
 
-#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -69,8 +70,13 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
+    typedef Opm::ThreePhaseMaterialTraits<Scalar,
+                                          /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+                                          /*nonWettingPhaseIdx=*/FluidSystem::oPhaseIdx,
+                                          /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+
 public:
-    typedef Opm::MpLinearMaterial<FluidSystem::numPhases, Scalar> type;
+    typedef Opm::LinearMaterial<Traits> type;
 };
 
 // Write the Newton convergence behavior to disk?
@@ -275,15 +281,14 @@ public:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             fineMaterialParams_.setPcMinSat(phaseIdx, 0.0);
             fineMaterialParams_.setPcMaxSat(phaseIdx, 0.0);
-            fineMaterialParams_.setResidSat(phaseIdx, 0.0);
 
             coarseMaterialParams_.setPcMinSat(phaseIdx, 0.0);
             coarseMaterialParams_.setPcMaxSat(phaseIdx, 0.0);
-            coarseMaterialParams_.setResidSat(phaseIdx, 0.0);
         }
 
-        fineMaterialParams_.setResidSat(oPhaseIdx, 0.01);
-        coarseMaterialParams_.setResidSat(oPhaseIdx, 0.01);
+        // wrap up the initialization of the material law's parameters
+        fineMaterialParams_.finalize();
+        coarseMaterialParams_.finalize();
 
         initFluidState_();
     }
