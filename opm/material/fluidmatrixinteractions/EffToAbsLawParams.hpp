@@ -31,44 +31,58 @@ namespace Opm {
  *        class to convert material laws from effective to absolute
  *        saturations.
  */
-template <class EffLawParamsT>
+template <class EffLawParamsT, int numPhases>
 class EffToAbsLawParams : public EffLawParamsT
 {
     typedef EffLawParamsT EffLawParams;
+    typedef typename EffLawParams::Traits::Scalar Scalar;
+
 public:
-    typedef typename EffLawParams::Scalar Scalar;
+    typedef typename EffLawParams::Traits Traits;
+
 
     EffToAbsLawParams()
         : EffLawParams()
-    { Swr_ = Snr_ = 0; }
+    {
+        sumResidualSaturations_ = 0.0;
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            residualSaturation_[phaseIdx] = 0.0;
+    }
 
     /*!
-     * \brief Return the residual wetting saturation.
+     * \brief Calculate all dependent quantities once the independent
+     *        quantities of the parameter object have been set.
      */
-    Scalar Swr() const
-    { return Swr_; }
+    void finalize()
+    {
+        EffLawParams::finalize();
+    }
 
     /*!
-     * \brief Set the residual wetting saturation.
+     * \brief Return the residual saturation of a phase.
      */
-    void setSwr(Scalar v)
-    { Swr_ = v; }
+    Scalar residualSaturation(int phaseIdx) const
+    { return residualSaturation_[phaseIdx]; }
 
     /*!
-     * \brief Return the residual non-wetting saturation.
+     * \brief Return the sum of the residual saturations.
      */
-    Scalar Snr() const
-    { return Snr_; }
+    Scalar sumResidualSaturations() const
+    { return sumResidualSaturations_; }
 
     /*!
-     * \brief Set the residual non-wetting saturation.
+     * \brief Set the residual saturation of a phase.
      */
-    void setSnr(Scalar v)
-    { Snr_ = v; }
+    void setResidualSaturation(int phaseIdx, Scalar value)
+    {
+        sumResidualSaturations_ -= residualSaturation_[phaseIdx];
+        sumResidualSaturations_ += value;
+        residualSaturation_[phaseIdx] = value;
+    }
 
 private:
-    Scalar Swr_;
-    Scalar Snr_;
+    Scalar residualSaturation_[numPhases];
+    Scalar sumResidualSaturations_;
 };
 
 } // namespace Opm

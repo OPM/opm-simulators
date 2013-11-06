@@ -34,11 +34,13 @@ namespace Opm {
  * parameter automatically calculates the other. I.e. they cannot be
  * set independently.
  */
-template<class ScalarT>
+template<class TraitsT>
 class VanGenuchtenParams
 {
+    typedef typename TraitsT::Scalar Scalar;
+
 public:
-    typedef ScalarT Scalar;
+    typedef TraitsT Traits;
 
     VanGenuchtenParams()
     {}
@@ -48,6 +50,13 @@ public:
         setVgAlpha(vgAlpha);
         setVgN(vgN);
     }
+
+    /*!
+     * \brief Calculate all dependent quantities once the independent
+     *        quantities of the parameter object have been set.
+     */
+    void finalize()
+    { }
 
     /*!
      * \brief Return the \f$\alpha\f$ shape parameter of van Genuchten's

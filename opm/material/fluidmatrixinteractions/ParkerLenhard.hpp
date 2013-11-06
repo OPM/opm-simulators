@@ -25,7 +25,7 @@
 
 #include "ParkerLenhardParams.hpp"
 
-#include <opm/material/fluidmatrixinteractions/2p/VanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/VanGenuchten.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -58,13 +58,13 @@ public:
                                     this, // next
                                     -1, // loop number
                                     Swr, // Sw
-                                    1e12, // pC
+                                    1e12, // pcwn
                                     Swr, // SwMic
                                     Swr); // SwMdc
         next_ = NULL;
 
         Sw_ = 1.0;
-        pC_ = 0.0;
+        pcwn_ = 0.0;
         SwMic_ = 1.0;
         SwMdc_ = 1.0;
     }
@@ -74,7 +74,7 @@ protected:
                     PLScanningCurve *next,
                     int loopN,
                     Scalar Sw,
-                    Scalar pC,
+                    Scalar pcwn,
                     Scalar SwMic,
                     Scalar SwMdc)
     {
@@ -82,7 +82,7 @@ protected:
         next_ = next;
         loopNum_ = loopN;
         Sw_ = Sw;
-        pC_ = pC;
+        pcwn_ = pcwn;
         SwMic_ = SwMic;
         SwMdc_ = SwMdc;
     }
@@ -124,7 +124,7 @@ public:
      * deleted and thus forgotten.
      */
     void setNext(Scalar Sw,
-                 Scalar pC,
+                 Scalar pcwn,
                  Scalar SwMic,
                  Scalar SwMdc)
     {
@@ -136,7 +136,7 @@ public:
                                     NULL, // next
                                     loopNum() + 1,
                                     Sw,
-                                    pC,
+                                    pcwn,
                                     SwMic,
                                     SwMdc);
     }
@@ -195,8 +195,8 @@ public:
     /*!
      * \brief Capillary pressure at the last reversal point.
      */
-    Scalar pC() const
-    { return pC_; }
+    Scalar pcwn() const
+    { return pcwn_; }
 
     /*!
      * \brief Apparent saturation of the last reversal point on
@@ -219,7 +219,7 @@ private:
     int loopNum_;
 
     Scalar Sw_;
-    Scalar pC_;
+    Scalar pcwn_;
 
     Scalar SwMdc_;
     Scalar SwMic_;
@@ -231,12 +231,47 @@ private:
  *        p_c-Sw hysteresis model. This class adheres to the twophase
  *        capillary pressure API.
  */
-template <class ScalarT, class ParamsT = ParkerLenhardParams<ScalarT> >
-class ParkerLenhard
+template <class TraitsT, class ParamsT = ParkerLenhardParams<TraitsT> >
+class ParkerLenhard : public TraitsT
 {
 public:
+    typedef TraitsT Traits;
     typedef ParamsT Params;
-    typedef typename Params::Scalar Scalar;
+    typedef typename Traits::Scalar Scalar;
+
+    //! The number of fluid phases
+    static const int numPhases = Traits::numPhases;
+    static_assert(numPhases == 2,
+                  "The Parker-Lenhard capillary pressure law only "
+                  "applies to the case of two fluid phases");
+
+    //! Specify whether this material law implements the two-phase
+    //! convenience API
+    static const bool implementsTwoPhaseApi = true;
+
+    //! Specify whether this material law implements the two-phase
+    //! convenience API which only depends on the phase saturations
+    static const bool implementsTwoPhaseSatApi = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are saturation dependent
+    static const bool isSaturationDependent = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the absolute pressure
+    static const bool isPressureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are temperature dependent
+    static const bool isTemperatureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the phase composition
+    static const bool isCompositionDependent = false;
+
+    static_assert(Traits::numPhases == 2,
+                  "The number of fluid phases must be two if you want to use "
+                  "this material law!");
 
 private:
     typedef typename ParamsT::VanGenuchten VanGenuchten;
@@ -260,8 +295,11 @@ public:
      * \brief Set the current absolute saturation for the
      *        current timestep
      */
-    static void update(Params &params, Scalar Sw)
+    template <class FluidState>
+    static void update(Params &params, const FluidState &fs)
     {
+        Scalar Sw = fs.saturation(Traits::wPhaseIdx);
+
         if (Sw > 1 - 1e-5) {
             // if the absolute saturation is almost 1,
             // it means that we're back to the beginning
@@ -276,9 +314,9 @@ public:
         // calculate the apparent saturation on the MIC and MDC
         // which yield the same capillary pressure as the
         // Sw at the current scanning curve
-        Scalar pc = pC(params, Sw);
-        Scalar Sw_mic = VanGenuchten::Sw(params.micParams(), pc);
-        Scalar Sw_mdc = VanGenuchten::Sw(params.mdcParams(), pc);
+        Scalar pc = pcwn(params, fs);
+        Scalar Sw_mic = VanGenuchten::twoPhaseSatSw(params.micParams(), pc);
+        Scalar Sw_mdc = VanGenuchten::twoPhaseSatSw(params.mdcParams(), pc);
 
         curve->setNext(Sw, pc, Sw_mic, Sw_mdc);
         if (!curve->next())
@@ -294,10 +332,44 @@ public:
     }
 
     /*!
-     * \brief Returns the capillary pressure dependend on
-     *        the absolute__ saturation of the wetting phase.
+     * \brief Returns the capillary pressure dependening on
+     *        the phase saturations.
      */
-    static Scalar pC(const Params &params, Scalar Sw)
+    template <class Container, class FluidState>
+    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    {
+        values[Traits::wPhaseIdx] = 0.0; // reference phase
+        values[Traits::nPhaseIdx] = pcwn(params, fs);
+    }
+
+    /*!
+     * \brief Returns the capillary pressure dependening on
+     *        the phase saturations.
+     */
+    template <class Container, class FluidState>
+    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::saturations()"); }
+
+    /*!
+     * \brief Returns the relative permeabilities of the phases
+     *        dependening on the phase saturations.
+     */
+    template <class Container, class FluidState>
+    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    {
+        values[Traits::wPhaseIdx] = krw(params, fs);
+        values[Traits::nPhaseIdx] = krn(params, fs);
+    }
+
+    /*!
+     * \brief Returns the capillary pressure dependend on
+     *        the phase saturations.
+     */
+    template <class FluidState>
+    static Scalar pcwn(const Params &params, const FluidState &fs)
+    { return twoPhaseSatPcwn(params, fs.saturation(Traits::wPhaseIdx)); }
+
+    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
     {
         // calculate the current apparent saturation
         ScanningCurve *sc = findScanningCurve_(params, Sw);
@@ -308,7 +380,7 @@ public:
         // if the apparent saturation exceeds the 'legal' limits,
         // we also the underlying material law decide what to do.
         if (Sw_app > 1) {
-            return 0.0; // VanGenuchten::pC(params.mdcParams(), Sw_app);
+            return 0.0; // VanGenuchten::pcwn(params.mdcParams(), Sw_app);
         }
 
         // put the apparent saturation into the main imbibition or
@@ -320,38 +392,68 @@ public:
             Scalar SwMic =
                 pos * (sc->prev()->SwMic() - sc->SwMic()) + sc->SwMic();
 
-            return VanGenuchten::pC(params.micParams(), SwMic);
+            return VanGenuchten::twoPhaseSatPcwn(params.micParams(), SwMic);
         }
         else { // sc->isDrain()
             Scalar SwMdc =
                 pos*(sc->prev()->SwMdc() - sc->SwMdc()) + sc->SwMdc();
 
-            return VanGenuchten::pC(params.mdcParams(), SwMdc);
+            return VanGenuchten::twoPhaseSatPcwn(params.mdcParams(), SwMdc);
         }
     }
+
+    /*!
+     * \brief Calculate the wetting phase saturations depending on
+     *        the phase pressures.
+     */
+    template <class FluidState>
+    static Scalar Sw(const Params &params, const FluidState &fs)
+    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::Sw()"); }
+
+    static Scalar twoPhaseSatSw(const Params &params, Scalar pc)
+    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSw()"); }
+
+    /*!
+     * \brief Calculate the non-wetting phase saturations depending on
+     *        the phase pressures.
+     */
+    template <class FluidState>
+    static Scalar Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw(params, fs); }
+
+    static Scalar twoPhaseSatSn(const Params &params, Scalar pc)
+    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSn()"); }
 
     /*!
      * \brief The relative permeability for the wetting phase of
      *        the medium.
      */
-    static Scalar krw(const Params &params, Scalar Sw)
+    template <class FluidState>
+    static Scalar krw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatKrw(params, fs.saturation(Traits::wPhaseIdx)); }
+
+    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
     {
         // for the effective permeability we only use Land's law and
         // the relative permeability of the main drainage curve.
         Scalar Sw_app = absoluteToApparentSw_(params, Sw);
-        return VanGenuchten::krw(params.mdcParams(), Sw_app);
+        return VanGenuchten::twoPhaseSatKrw(params.mdcParams(), Sw_app);
     }
 
     /*!
      * \brief The relative permeability for the non-wetting phase
      *        of the params.
      */
-    static Scalar krn(const Params &params, Scalar Sw)
+    template <class FluidState>
+    static Scalar krn(const Params &params, const FluidState &fs)
+    { return twoPhaseSatKrn(params, fs.saturation(Traits::wPhaseIdx)); }
+
+    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
     {
         // for the effective permeability we only use Land's law and
         // the relative permeability of the main drainage curve.
         Scalar Sw_app = absoluteToApparentSw_(params, Sw);
-        return VanGenuchten::krn(params.mdcParams(), Sw_app);
+        return VanGenuchten::twoPhaseSatKrn(params.mdcParams(), Sw_app);
     }
 
     /*!

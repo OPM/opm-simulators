@@ -2,7 +2,6 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*****************************************************************************
  *   Copyright (C) 2008-2012 by Andreas Lauser                               *
- *   Copyright (C) 2011 by Holger Class                                      *
  *                                                                           *
  *   This program is free software: you can redistribute it and/or modify    *
  *   it under the terms of the GNU General Public License as published by    *
@@ -19,67 +18,64 @@
  *****************************************************************************/
 /*!
  * \file
- * \copydoc Opm::BrooksCoreyParams
+ * \copydoc Opm::RegularizedBrooksCoreyParams
  */
-#ifndef OPM_BROOKS_COREY_PARAMS_HH
-#define OPM_BROOKS_COREY_PARAMS_HH
+#ifndef OPM_REGULARIZED_BROOKS_COREY_PARAMS_HH
+#define OPM_REGULARIZED_BROOKS_COREY_PARAMS_HH
 
-#include <opm/material/Valgrind.hpp>
+#include "BrooksCoreyParams.hpp"
 
 namespace Opm {
-
 /*!
  * \ingroup FluidMatrixInteractions
  *
- * \brief Specification of the material parameters for the
- *        Brooks-Corey constitutive relations.
- *
- *\see BrooksCorey
+ * \brief   Parameters that are necessary for the \em regularization of
+ *          the Brooks-Corey capillary pressure model.
  */
-template <class ScalarT>
-class BrooksCoreyParams
+template <class TraitsT>
+class RegularizedBrooksCoreyParams : public Opm::BrooksCoreyParams<TraitsT>
 {
+    typedef Opm::BrooksCoreyParams<TraitsT> BrooksCoreyParams;
+    typedef typename TraitsT::Scalar Scalar;
+
 public:
-    typedef ScalarT Scalar;
+    typedef TraitsT Traits;
 
-    BrooksCoreyParams()
+    RegularizedBrooksCoreyParams()
+        : BrooksCoreyParams()
+        , SwThres_(1e-2)
+    { }
+
+    RegularizedBrooksCoreyParams(Scalar entryPressure, Scalar lambda)
+        : BrooksCoreyParams(entryPressure, lambda)
+        , SwThres_(1e-2)
+    { }
+
+    /*!
+     * \brief Calculate all dependent quantities once the independent
+     *        quantities of the parameter object have been set.
+     */
+    void finalize()
     {
-        Valgrind::SetUndefined(*this);
+        BrooksCoreyParams::finalize();
     }
 
-    BrooksCoreyParams(Scalar pe, Scalar lambda)
-        : pe_(pe), lambda_(lambda)
-    {
-    }
+    /*!
+     * \brief Return the threshold saturation below which the capillary pressure
+     *        is regularized.
+     */
+    Scalar thresholdSw() const
+    { return SwThres_; }
 
     /*!
-     * \brief Returns the entry pressure [Pa]
+     * \brief Set the threshold saturation below which the capillary pressure
+     *        is regularized.
      */
-    Scalar pe() const
-    { return pe_; }
-
-    /*!
-     * \brief Set the entry pressure [Pa]
-     */
-    void setPe(Scalar v)
-    { pe_ = v; }
-
-
-    /*!
-     * \brief Returns the lambda shape parameter
-     */
-    Scalar lambda() const
-    { return lambda_; }
-
-    /*!
-     * \brief Set the lambda shape parameter
-     */
-    void setLambda(Scalar v)
-    { lambda_ = v; }
+    void setThresholdSw(Scalar value)
+    { SwThres_ = value; }
 
 private:
-    Scalar pe_;
-    Scalar lambda_;
+    Scalar SwThres_;
 };
 } // namespace Opm
 

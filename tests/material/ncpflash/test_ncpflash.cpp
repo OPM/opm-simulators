@@ -36,12 +36,10 @@
 
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 
-#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedLinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 template <class Scalar, class FluidState>
 void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
@@ -162,9 +160,9 @@ int main()
     enum { H2OIdx = FluidSystem::H2OIdx };
     enum { N2Idx = FluidSystem::N2Idx };
 
-    typedef Opm::RegularizedBrooksCorey<Scalar> EffMaterialLaw;
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> TwoPMaterialLaw;
-    typedef Opm::TwoPAdapter<lPhaseIdx, TwoPMaterialLaw> MaterialLaw;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar, lPhaseIdx, gPhaseIdx> MaterialTraits;
+    typedef Opm::RegularizedBrooksCorey<MaterialTraits> EffMaterialLaw;
+    typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
     typedef MaterialLaw::Params MaterialLawParams;
 
     Scalar T = 273.15 + 25;
@@ -182,10 +180,11 @@ int main()
 
     // set the parameters for the capillary pressure law
     MaterialLawParams matParams;
-    matParams.setSwr(0.0);
-    matParams.setSnr(0.0);
-    matParams.setPe(0);
+    matParams.setResidualSaturation(MaterialLaw::wPhaseIdx, 0.0);
+    matParams.setResidualSaturation(MaterialLaw::nPhaseIdx, 0.0);
+    matParams.setEntryPressure(0);
     matParams.setLambda(2.0);
+    matParams.finalize();
 
     CompositionalFluidState fsRef;
 
@@ -260,12 +259,12 @@ int main()
     ////////////////
     // with capillary pressure
     ////////////////
-
     MaterialLawParams matParams2;
-    matParams2.setSwr(0.0);
-    matParams2.setSnr(0.0);
-    matParams2.setPe(1e3);
+    matParams2.setResidualSaturation(MaterialLaw::wPhaseIdx, 0.0);
+    matParams2.setResidualSaturation(MaterialLaw::nPhaseIdx, 0.0);
+    matParams2.setEntryPressure(1e3);
     matParams2.setLambda(2.0);
+    matParams2.finalize();
 
     // set gas saturation
     fsRef.setSaturation(gPhaseIdx, 0.5);

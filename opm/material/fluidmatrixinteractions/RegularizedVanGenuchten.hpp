@@ -65,14 +65,79 @@ namespace Opm {
  *
  * \see VanGenuchten
  */
-template <class ScalarT, class ParamsT = RegularizedVanGenuchtenParams<ScalarT> >
-class RegularizedVanGenuchten
+template <class TraitsT, class ParamsT = RegularizedVanGenuchtenParams<TraitsT> >
+class RegularizedVanGenuchten : public TraitsT
 {
-    typedef Opm::VanGenuchten<ScalarT, ParamsT> VanGenuchten;
+    typedef Opm::VanGenuchten<TraitsT, ParamsT> VanGenuchten;
 
 public:
+    typedef TraitsT Traits;
     typedef ParamsT Params;
-    typedef typename Params::Scalar Scalar;
+
+    typedef typename Traits::Scalar Scalar;
+
+    //! The number of fluid phases
+    static const int numPhases = Traits::numPhases;
+    static_assert(numPhases == 2,
+                  "The regularized van Genuchten capillary pressure law only "
+                  "applies to the case of two fluid phases");
+
+    //! Specify whether this material law implements the two-phase
+    //! convenience API
+    static const bool implementsTwoPhaseApi = true;
+
+    //! Specify whether this material law implements the two-phase
+    //! convenience API which only depends on the phase saturations
+    static const bool implementsTwoPhaseSatApi = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are saturation dependent
+    static const bool isSaturationDependent = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the absolute pressure
+    static const bool isPressureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are temperature dependent
+    static const bool isTemperatureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the phase composition
+    static const bool isCompositionDependent = false;
+
+    /*!
+     * \brief Calculate the pressure difference of the phases in the
+     *        most generic way.
+     */
+    template <class Container, class FluidState>
+    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    {
+        values[Traits::wPhaseIdx] = 0.0; // reference phase
+        values[Traits::nPhaseIdx] = pcwn(params, fs);
+    }
+
+    /*!
+     * \brief Calculate the saturations of the phases starting from
+     *        their pressure differences.
+     */
+    template <class Container, class FluidState>
+    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    {
+        values[Traits::wPhaseIdx] = Sw(params, fs);
+        values[Traits::nPhaseIdx] = 1 - values[Traits::wPhaseIdx];
+    }
+
+    /*!
+     * \brief Returns the relative permeabilities of the phases
+     *        dependening on the phase saturations.
+     */
+    template <class Container, class FluidState>
+    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    {
+        values[Traits::wPhaseIdx] = krw(params, fs);
+        values[Traits::nPhaseIdx] = krn(params, fs);
+    }
 
     /*!
      * \brief A regularized van Genuchten capillary pressure-saturation
@@ -84,45 +149,47 @@ public:
      *
      *  For not-regularized part:
      *
-         \copydetails VanGenuchten::pC()
+     * \copydetails VanGenuchten::pC()
      */
-    static Scalar pC(const Params &params, Scalar Swe)
+    template <class FluidState>
+    static Scalar pcwn(const Params &params, const FluidState &fs)
+    { return twoPhaseSatPcwn(params, fs.saturation(Traits::wPhaseIdx)); }
+
+    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
-        const Scalar SwThLow = params.pCLowSw();
-        const Scalar SwThHigh = params.pCHighSw();
+        const Scalar SwThLow = params.pcwnLowSw();
+        const Scalar SwThHigh = params.pcwnHighSw();
 
         // make sure that the capillary pressure observes a derivative
         // != 0 for 'illegal' saturations. This is favourable for the
         // newton solver (if the derivative is calculated numerically)
         // in order to get the saturation moving to the right
         // direction if it temporarily is in an 'illegal' range.
-        if (Swe < SwThLow) {
-            return VanGenuchten::pC(params, SwThLow) + mLow_(params)*(Swe - SwThLow);
+        if (Sw < SwThLow) {
+            return params.pcwnLow() + params.pcwnSlopeLow()*(Sw - SwThLow);
         }
-        else if (Swe > SwThHigh)
+        else if (Sw > SwThHigh)
         {
-            Scalar yTh = VanGenuchten::pC(params, SwThHigh);
+            Scalar yTh = params.pcwnHigh();
             Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
 
-            if (Swe < 1.0) {
-                // use spline between threshold Swe and 1.0
-                Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
-                Spline<Scalar> sp(SwThHigh, 1.0, // x0, x1
-                                  yTh, 0, // y0, y1
-                                  mTh, m1); // m0, m1
-                return sp.eval(Swe);
+            if (Sw < 1.0) {
+                // use spline between threshold Sw and 1.0
+                const Spline<Scalar> &sp = params.pcwnHighSpline();
+
+                return sp.eval(Sw);
             }
             else {
-                // straight line for Swe > 1.0
-                return m1*(Swe - 1.0) + 0.0;
+                // straight line for Sw > 1.0
+                return m1*(Sw - 1.0) + 0.0;
             }
         }
 
         // if the effective saturation is in an 'reasonable'
         // range, we use the real van genuchten law...
-        return VanGenuchten::pC(params, Swe);
+        return VanGenuchten::twoPhaseSatPcwn(params, Sw);
     }
 
     /*!
@@ -139,76 +206,96 @@ public:
          \copydetails VanGenuchten::Sw()
      *
      */
-    static Scalar Sw(const Params &params, Scalar pC)
+    template <class FluidState>
+    static Scalar Sw(const Params &params, const FluidState &fs)
+    {
+        Scalar pC = fs.pressure(Traits::nPhaseIdx) - fs.pressure(Traits::wPhaseIdx);
+        return twoPhaseSatSw(params, pC);
+    }
+
+    static Scalar twoPhaseSatSw(const Params &params, Scalar pC)
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
-        const Scalar SwThLow = params.pCLowSw();
-        const Scalar SwThHigh = params.pCHighSw();
+        const Scalar SwThLow = params.pcwnLowSw();
+        const Scalar SwThHigh = params.pcwnHighSw();
 
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of van
         // Genuchten's law
         Scalar Sw;
         if (pC <= 0) {
-            // invert straight line for Swe > 1.0
-            Scalar yTh = VanGenuchten::pC(params, SwThHigh);
-            Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
+            // invert straight line for Sw > 1.0
+            Scalar m1 = params.pcwnSlopeHigh();
             return pC/m1 + 1.0;
         }
         else
-            Sw = VanGenuchten::Sw(params, pC);
+            Sw = VanGenuchten::twoPhaseSatSw(params, pC);
 
         // invert the regularization if necessary
         if (Sw <= SwThLow) {
             // invert the low saturation regularization of pC()
-            Scalar pC_SwLow = VanGenuchten::pC(params, SwThLow);
-            return (pC - pC_SwLow)/mLow_(params) + SwThLow;
+            Scalar pC_SwLow = VanGenuchten::twoPhaseSatPcwn(params, SwThLow);
+            return (pC - pC_SwLow)/params.pcwnSlopeLow() + SwThLow;
         }
-        else if (Sw > SwThHigh)
+        else if (SwThHigh < Sw /* && Sw < 1.0*/)
         {
-            Scalar yTh = VanGenuchten::pC(params, SwThHigh);
-            Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
+            // invert spline between threshold saturation and 1.0
+            const Spline<Scalar>& spline = params.pcwnHighSpline();
 
-            // invert spline between threshold Swe and 1.0
-            Scalar mTh = VanGenuchten::dpC_dSw(params, SwThHigh);
-            Spline<Scalar> sp(SwThHigh, 1.0, // x0, x1
-                              yTh, 0, // m0, m1
-                              mTh, m1); // m0, m1
-            return sp.intersectInterval(SwThHigh, 1.0,
-                                        0, 0, 0, pC);
+            return spline.intersectInterval(/*x0=*/SwThHigh, /*x1=*/1.0,
+                                            /*a=*/0, /*b=*/0, /*c=*/0, /*d=*/pC);
         }
 
         return Sw;
     }
 
     /*!
-    * \brief A regularized version of the partial derivative
-    *        of the \f$p_c(\overline S_w)\f$ w.r.t. effective saturation
-    *        according to van Genuchten.
-    *
-    * regularized part:
-    *    - low saturation:  use the slope of the regularization point (i.e. no kink).
-    *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
-    *
-    *        For not-regularized part:
-    *
-      \copydetails VanGenuchten::dpC_dSw()
-    *
-    */
-    static Scalar dpC_dSw(const Params &params, Scalar Swe)
+     * \brief Calculate the non-wetting phase saturations depending on
+     *        the phase pressures.
+     */
+    template <class FluidState>
+    static Scalar Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw(params, fs); }
+
+    static Scalar twoPhaseSatSn(const Params &params, Scalar pc)
+    { return 1 - twoPhaseSatSw(params, pc); }
+
+    /*!
+     * \brief A regularized version of the partial derivative
+     *        of the \f$p_c(\overline S_w)\f$ w.r.t. effective saturation
+     *        according to van Genuchten.
+     *
+     * regularized part:
+     *    - low saturation:  use the slope of the regularization point (i.e. no kink).
+     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
+     *
+     *        For not-regularized part:
+     *
+     * \copydetails VanGenuchten::dpC_dSw()
+     *
+     */
+    template <class FluidState>
+    static Scalar dpcwn_dSw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatDpcwn_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
+
+    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
     {
         // derivative of the regualarization
-        if (Swe < params.pCLowSw()) {
+        if (Sw < params.pcwnLowSw()) {
             // the slope of the straight line used in pC()
-            return mLow_(params);
+            return params.pcwnSlopeLow();
         }
-        else if (Swe > params.pCHighSw()) {
-            // the slope of the straight line used in pC()
-            return mHigh_(params);
+        else if (params.pcwnHighSw() <= Sw) {
+            if (Sw < 1)
+                return params.pcwnHighSpline().evalDerivative(Sw);
+            else
+                // the slope of the straight line used for the right
+                // side of the capillary pressure function
+                return params.mHigh();
         }
 
-        return VanGenuchten::dpC_dSw(params, Swe);
+        return VanGenuchten::dpcwn_dSw(params, Sw);
     }
 
     /*!
@@ -221,10 +308,13 @@ public:
      *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
      *
      *        For not-regularized part:
-        \copydetails VanGenuchten::dSw_dpC()
+     * \copydetails VanGenuchten::dSw_dpC()
      */
-    static Scalar dSw_dpC(const Params &params, Scalar pC)
+    template <class FluidState>
+    static Scalar dSw_dpC(const Params &params, const FluidState &fs)
     {
+        Scalar pC = fs.pressure(Traits::nPhaseIdx) - fs.pressure(Traits::wPhaseIdx);
+
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of van
         // Genuchten's law
@@ -232,19 +322,22 @@ public:
         if (pC < 0)
             Sw = 1.5; // make sure we regularize below
         else
-            Sw = VanGenuchten::Sw(params, pC);
+            Sw = VanGenuchten::Sw_raw(params, pC);
 
         // derivative of the regularization
-        if (Sw < params.pCLowSw()) {
+        if (Sw < params.pcwnLowSw()) {
             // same as in dpC_dSw() but inverted
-            return 1/mLow_(params);
+            return 1/params.pcwnSlopeLow();
         }
-        if (Sw > params.pCHighSw()) {
+        if (Sw > params.pcwnHighSw()) {
+            if (Sw < 1)
+                return 1/params.pcwnHighSpline().evalDerivative(Sw);
+
             // same as in dpC_dSw() but inverted
-            return 1/mHigh_(params);
+            return 1/params.pcwnSlopHigh();
         }
 
-        return VanGenuchten::dSw_dpC(params, pC);
+        return VanGenuchten::dSw_dpnw(params, fs);
     }
 
     /*!
@@ -261,26 +354,19 @@ public:
      *  For not-regularized part:
         \copydetails VanGenuchten::krw()
      */
-    static Scalar krw(const Params &params, Scalar Swe)
+    template <class FluidState>
+    static Scalar krw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatKrw(params, fs.saturation(Traits::wPhaseIdx)); }
+
+    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
     {
-        // retrieve the high threshold saturation for the
-        // unregularized relative permeability curve of the wetting
-        // phase from the parameters
-        const Scalar SwThHigh = params.krwHighSw();
-
-        if (Swe < 0)
+        // regularize
+        if (Sw < 0)
             return 0;
-        else if (Swe > 1)
+        else if (Sw > 1)
             return 1;
-        else if (Swe > SwThHigh) {
-            typedef Opm::Spline<Scalar> Spline;
-            Spline sp(SwThHigh, 1.0, // x1, x2
-                      VanGenuchten::krw(params, SwThHigh), 1.0, // y1, y2
-                      VanGenuchten::dkrw_dSw(params, SwThHigh), 0); // m1, m2
-            return sp.eval(Swe);
-        }
 
-        return VanGenuchten::krw(params, Swe);
+        return VanGenuchten::twoPhaseSatKrw(params, Sw);
     }
 
     /*!
@@ -297,61 +383,19 @@ public:
          \copydetails VanGenuchten::krn()
      *
      */
-    static Scalar krn(const Params &params, Scalar Swe)
-    {
-        // retrieve the low threshold saturation for the unregularized
-        // relative permeability curve of the non-wetting phase from
-        // the parameters
-        const Scalar SwThLow = params.krnLowSw();
+    template <class FluidState>
+    static Scalar krn(const Params &params, const FluidState &fs)
+    { return twoPhaseSatKrn(params, fs.saturation(Traits::wPhaseIdx)); }
 
-        if (Swe <= 0)
+    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    {
+        // regularize
+        if (Sw <= 0)
             return 1;
-        else if (Swe >= 1)
+        else if (Sw >= 1)
             return 0;
-        else if (Swe < SwThLow) {
-            typedef Opm::Spline<Scalar> Spline;
-            Spline sp(0.0, SwThLow, // x1, x2
-                      1.0, VanGenuchten::krn(params, SwThLow), // y1, y2
-                      0.0, VanGenuchten::dkrn_dSw(params, SwThLow)); // m1, m2
-            return sp.eval(Swe);
-        }
 
-        return VanGenuchten::krn(params, Swe);
-    }
-
-private:
-    // the slope of the straight line used to regularize saturations
-    // below the minimum saturation
-
-    /*!
-     * \brief   The slope of the straight line used to regularize
-     *          saturations below the minimum saturation.
-     *
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     */
-    static Scalar mLow_(const Params &params)
-    {
-        const Scalar SwThLow = params.pCLowSw();
-
-        return VanGenuchten::dpC_dSw(params, SwThLow);
-    }
-
-    /*!
-     * \brief   The slope of the straight line used to regularize
-     *          saturations above the minimum saturation.
-     *
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     */
-    static Scalar mHigh_(const Params &params)
-    {
-        const Scalar SwThHigh = params.pCHighSw();
-
-        Scalar pC_SwHigh = VanGenuchten::pC(params, SwThHigh);
-        return (0 - pC_SwHigh)/(1.0 - SwThHigh);
+        return VanGenuchten::twoPhaseSatKrn(params, Sw);
     }
 };
 

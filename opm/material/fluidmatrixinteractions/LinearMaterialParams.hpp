@@ -18,10 +18,10 @@
  *****************************************************************************/
 /*!
  * \file
- * \copydoc Opm::MpLinearMaterialParams
+ * \copydoc Opm::LinearMaterialParams
  */
-#ifndef MP_LINEAR_MATERIAL_PARAMS_HH
-#define MP_LINEAR_MATERIAL_PARAMS_HH
+#ifndef OPM_LINEAR_MATERIAL_PARAMS_HH
+#define OPM_LINEAR_MATERIAL_PARAMS_HH
 
 namespace Opm {
 
@@ -29,66 +29,69 @@ namespace Opm {
  * \brief Reference implementation of params for the linear M-phase
  *        material material.
  */
-template<int numPhasesV, class ScalarT>
-class MpLinearMaterialParams
+template<class TraitsT>
+class LinearMaterialParams
 {
-public:
-    typedef ScalarT Scalar;
-    enum { numPhases = numPhasesV };
+    enum { numPhases = TraitsT::numPhases };
 
+    typedef typename TraitsT::Scalar Scalar;
+
+public:
+    typedef TraitsT Traits;
 
     /*!
      * \brief The default constructor.
      *
      * We set the capillary pressure to zero, if not specified otherwise.
      */
-    MpLinearMaterialParams()
+    LinearMaterialParams()
     {
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             setPcMinSat(phaseIdx, 0.0);
             setPcMaxSat(phaseIdx, 0.0);
-            setResidSat(phaseIdx, 0.0);
         }
     }
 
     /*!
-     * \brief Return the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=0\f$.
+     * \brief Calculate all dependent quantities once the independent
+     *        quantities of the parameter object have been set.
+     */
+    void finalize()
+    { }
+
+    /*!
+     * \brief Return the relative phase pressure at the minimum saturation of a phase.
+     *
+     * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=0\f$.
      */
     Scalar pcMinSat(int phaseIdx) const
     { return pcMinSat_[phaseIdx]; }
 
     /*!
-     * \brief Set the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=0\f$.
+     * \brief Set the relative phase pressure at the minimum saturation of a phase.
+     *
+     * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=0\f$.
      */
     void setPcMinSat(int phaseIdx, Scalar val)
     { pcMinSat_[phaseIdx] = val; }
 
     /*!
-     * \brief Return the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=1\f$.
+     * \brief Return the relative phase pressure at the maximum saturation of a phase.
+     *
+     * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=1\f$.
      */
     Scalar pcMaxSat(int phaseIdx) const
     { return pcMaxSat_[phaseIdx]; }
 
     /*!
-     * \brief Set the capillary pressure for a phase \f$\alpha\f$ at \f$S_\alpha=1\f$.
+     * \brief Set the relative phase pressure at the maximum saturation of a phase.
+     *
+     * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=1\f$.
      */
     void setPcMaxSat(int phaseIdx, Scalar val)
     { pcMaxSat_[phaseIdx] = val; }
 
-    /*!
-     * \brief Return the residual saturation for a phase \f$\alpha\f$.
-     */
-    Scalar residSat(int phaseIdx) const
-    { return residSat_[phaseIdx]; }
-
-    /*!
-     * \brief Set the residual saturation for a phase \f$\alpha\f$.
-     */
-    void setResidSat(int phaseIdx, Scalar val)
-    { residSat_[phaseIdx] = val; }
-
 private:
-    Scalar residSat_[numPhases];
     Scalar pcMaxSat_[numPhases];
     Scalar pcMinSat_[numPhases];
 };

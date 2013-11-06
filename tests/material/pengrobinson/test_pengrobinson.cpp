@@ -28,7 +28,8 @@
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/Spe5FluidSystem.hpp>
-#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 template <class FluidSystem, class FluidState>
 void guessInitial(FluidState &fluidState,
@@ -70,7 +71,8 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
     };
 
     typedef Opm::NcpFlash<Scalar, FluidSystem> Flash;
-    typedef Opm::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
+    typedef Opm::ThreePhaseMaterialTraits<Scalar, wPhaseIdx, oPhaseIdx, gPhaseIdx> MaterialTraits;
+    typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
 
@@ -82,6 +84,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         matParams.setPcMinSat(phaseIdx, 0.0);
         matParams.setPcMaxSat(phaseIdx, 0.0);
     }
+    matParams.finalize();
 
     // retieve the global volumetric component molarities
     surfaceFluidState.setTemperature(273.15 + 20);
@@ -171,7 +174,8 @@ int main(int argc, char** argv)
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem> FluidState;
 
-    typedef Opm::MpLinearMaterial<numPhases, Scalar> MaterialLaw;
+    typedef Opm::ThreePhaseMaterialTraits<Scalar, wPhaseIdx, oPhaseIdx, gPhaseIdx> MaterialTraits;
+    typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
     typedef MaterialLaw::Params MaterialLawParams;
 
     typedef FluidSystem::ParameterCache ParameterCache;
@@ -192,6 +196,7 @@ int main(int argc, char** argv)
         matParams.setPcMinSat(phaseIdx, 0.0);
         matParams.setPcMaxSat(phaseIdx, 0.0);
     }
+    matParams.finalize();
 
     ////////////
     // Create a fluid state

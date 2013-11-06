@@ -47,27 +47,48 @@ namespace Opm {
  *
  * \see VanGenuchtenParams
  */
-template <class ScalarT,
-          int wPhaseIdxV,
-          int nPhaseIdxV,
-          class ParamsT = VanGenuchtenParams<ScalarT> >
-class VanGenuchten
+template <class TraitsT, class ParamsT = VanGenuchtenParams<TraitsT> >
+class VanGenuchten : public TraitsT
 {
 public:
+    //! The traits class for this material law
+    typedef TraitsT Traits;
+
     //! The type of the parameter objects for this law
     typedef ParamsT Params;
 
     //! The type of the scalar values for this law
-    typedef typename Params::Scalar Scalar;
+    typedef typename Traits::Scalar Scalar;
 
-    //! The number of fluid phases to which this capillary pressure law applies
-    enum { numPhases = 2 };
+    //! The number of fluid phases
+    static const int numPhases = Traits::numPhases;
+    static_assert(numPhases == 2,
+                  "The van Genuchten capillary pressure law only "
+                  "applies to the case of two fluid phases");
 
-    //! The index of the wetting phase
-    enum { wPhaseIdx = wPhaseIdxV };
+    //! Specify whether this material law implements the two-phase
+    //! convenience API
+    static const bool implementsTwoPhaseApi = true;
 
-    //! The index of the non-wetting phase
-    enum { nPhaseIdx = nPhaseIdxV };
+    //! Specify whether this material law implements the two-phase
+    //! convenience API which only depends on the phase saturations
+    static const bool implementsTwoPhaseSatApi = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are saturation dependent
+    static const bool isSaturationDependent = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the absolute pressure
+    static const bool isPressureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are temperature dependent
+    static const bool isTemperatureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the phase composition
+    static const bool isCompositionDependent = false;
 
     /*!
      * \brief The capillary pressure-saturation curves according to van Genuchten.
@@ -88,8 +109,19 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
-        values[wPhaseIdx] = 0.0; // reference phase
-        values[nPhaseIdx] = pcwn(params, fs);
+        values[Traits::wPhaseIdx] = 0.0; // reference phase
+        values[Traits::nPhaseIdx] = pcwn(params, fs);
+    }
+
+    /*!
+     * \brief Calculate the saturations of the phases starting from
+     *        their pressure differences.
+     */
+    template <class Container, class FluidState>
+    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    {
+        values[Traits::wPhaseIdx] = Sw(params, fs);
+        values[Traits::nPhaseIdx] = 1 - values[Traits::wPhaseIdx];
     }
 
     /*!
@@ -105,8 +137,8 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[wPhaseIdx] = krw(params, fs);
-        values[nPhaseIdx] = krn(params, fs);
+        values[Traits::wPhaseIdx] = krw(params, fs);
+        values[Traits::nPhaseIdx] = krn(params, fs);
     }
 
     /*!
@@ -126,10 +158,28 @@ public:
     template <class FluidState>
     static Scalar pcwn(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(wPhaseIdx);
+        Scalar Sw = fs.saturation(Traits::wPhaseIdx);
         assert(0 <= Sw && Sw <= 1);
-        return std::pow(std::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+
+        return twoPhaseSatPcwn(params, Sw);
     }
+
+    /*!
+     * \brief The saturation-capillary pressure curve according to van
+     *        Genuchten using a material law specific API.
+     *
+     * The advantage of this model is that it is simpler to use
+     * because the baggage of the fluid state API does not need to be
+     * carried along. The disavantage of this is, that it is very
+     * specific to the van Genuchten law (i.e., depends only on the
+     * wetting phase saturation, assumes two fluid phases, etc)
+     *
+     * \param params The parameter object expressing the coefficients
+     *               required by the van Genuchten law.
+     * \param Sw The effective wetting phase saturation
+     */
+    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    { return std::pow(std::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha(); }
 
     /*!
      * \brief The saturation-capillary pressure curve according to van Genuchten.
@@ -146,11 +196,27 @@ public:
     template <class FluidState>
     static Scalar Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pC = fs.pressure(nPhaseIdx) - fs.pressure(wPhaseIdx);
+        Scalar pC = fs.pressure(Traits::nPhaseIdx) - fs.pressure(Traits::wPhaseIdx);
+        return twoPhaseSatSw(params, pC);
+    }
+
+    static Scalar twoPhaseSatSw(const Params &params, Scalar pC)
+    {
         assert(pC >= 0);
 
         return std::pow(std::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
+
+    /*!
+     * \brief Calculate the non-wetting phase saturations depending on
+     *        the phase pressures.
+     */
+    template <class FluidState>
+    static Scalar Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw(params, fs); }
+
+    static Scalar twoPhaseSatSn(const Params &params, Scalar pC)
+    { return 1 - twoPhaseSatSw(params, pC); }
 
     /*!
      * \brief The partial derivative of the capillary pressure with
@@ -168,9 +234,10 @@ public:
      */
     template <class FluidState>
     static Scalar dpcwn_dSw(const Params &params, const FluidState &fs)
-    {
-        Scalar Sw = fs.saturation(wPhaseIdx);
+    { return twoPhaseSatDpcwn_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
 
+    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
+    {
         assert(0 < Sw && Sw < 1);
 
         Scalar powSw = std::pow(Sw, -1/params.vgM());
@@ -191,9 +258,10 @@ public:
      */
     template <class FluidState>
     static Scalar krw(const Params &params, const FluidState &fs)
-    {
-        Scalar Sw = fs.saturation(wPhaseIdx);
+    { return twoPhaseSatKrw(params, fs.saturation(Traits::wPhaseIdx)); }
 
+    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
+    {
         assert(0 <= Sw && Sw <= 1);
 
         Scalar r = 1. - std::pow(1 - std::pow(Sw, 1/params.vgM()), params.vgM());
@@ -213,9 +281,10 @@ public:
      */
     template <class FluidState>
     static Scalar dkrw_dSw(const Params &params, const FluidState &fs)
-    {
-        Scalar Sw = fs.saturation(wPhaseIdx);
+    { return twoPhaseSatDkrw_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
 
+    static Scalar twoPhaseSatDkrw_dSw(const Params &params, Scalar Sw)
+    {
         assert(0 <= Sw && Sw <= 1);
 
         const Scalar x = 1 - std::pow(Sw, 1.0/params.vgM());
@@ -233,10 +302,12 @@ public:
      * \param fs The fluid state for which the derivative
      *           ought to be calculated
      */
+    template <class FluidState>
     static Scalar krn(const Params &params, const FluidState &fs)
-    {
-        Scalar Sw = fs.saturation(wPhaseIdx);
+    { return twoPhaseSatKrn(params, fs.saturation(Traits::wPhaseIdx)); }
 
+    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    {
         assert(0 <= Sw && Sw <= 1);
 
         return
@@ -257,9 +328,10 @@ public:
      */
     template <class FluidState>
     static Scalar dkrn_dSw(const Params &params, const FluidState &fs)
-    {
-        Scalar fs = fs.saturation(wPhaseIdx);
+    { return twoPhaseSatDkrn_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
 
+    static Scalar twoPhaseSatDkrn_dSw(const Params &params, Scalar Sw)
+    {
         assert(0 <= Sw && Sw <= 1);
 
         const Scalar x = std::pow(Sw, 1.0/params.vgM());

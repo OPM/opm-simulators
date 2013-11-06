@@ -23,7 +23,7 @@
 #ifndef OPM_PARKER_LENHARD_PARAMS_HH
 #define OPM_PARKER_LENHARD_PARAMS_HH
 
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 
 namespace Opm
 {
@@ -35,12 +35,12 @@ class PLScanningCurve;
  * \brief Default parameter class for the Parker-Lenhard hysteresis
  *        model.
  */
-template <class ScalarT>
+template <class TraitsT>
 class ParkerLenhardParams
 {
 public:
-    typedef ScalarT Scalar;
-    typedef Opm::RegularizedVanGenuchten<Scalar> VanGenuchten;
+    typedef typename TraitsT::Scalar Scalar;
+    typedef Opm::RegularizedVanGenuchten<TraitsT> VanGenuchten;
     typedef typename VanGenuchten::Params VanGenuchtenParams;
     typedef PLScanningCurve<Scalar> ScanningCurve;
 
@@ -61,6 +61,13 @@ public:
 
     ~ParkerLenhardParams()
     { delete mdc_; }
+
+    /*!
+     * \brief Calculate all dependent quantities once the independent
+     *        quantities of the parameter object have been set.
+     */
+    void finalize()
+    { }
 
     /*!
      * \brief Returns the parameters of the main imbibition curve (which uses
