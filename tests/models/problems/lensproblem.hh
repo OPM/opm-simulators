@@ -29,10 +29,10 @@
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 #include <ewoms/linear/parallelamgbackend.hh>
 
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
@@ -94,18 +94,19 @@ public:
 SET_PROP(LensBaseProblem, MaterialLaw)
 {
 private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+
     // define the material law which is parameterized by effective
     // saturations
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::RegularizedVanGenuchten<Scalar> EffectiveLaw;
-    // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffectiveLaw> TwoPMaterialLaw;
-
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+    typedef Opm::RegularizedVanGenuchten<Traits> EffectiveLaw;
 
 public:
-    typedef Opm::TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+    // define the material law parameterized by absolute saturations
+    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
 };
 
 // Use the algebraic multi-grid linear solver for this problem
@@ -243,6 +244,9 @@ public:
         lensMaterialParams_.setVgN(7.3);
         outerMaterialParams_.setVgAlpha(0.0037);
         outerMaterialParams_.setVgN(4.7);
+
+        lensMaterialParams_.finalize();
+        outerMaterialParams_.finalize();
 
         lensK_ = this->toDimMatrix_(9.05e-12);
         outerK_ = this->toDimMatrix_(4.6e-10);

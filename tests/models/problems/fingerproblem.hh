@@ -26,11 +26,11 @@
 
 #include "fingergridcreator.hh"
 
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/ParkerLenhard.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/ParkerLenhard.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 #include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
@@ -51,9 +51,6 @@ class FingerProblem;
 }
 
 namespace Opm {
-//////////
-// Specify the properties for the finger problem
-//////////
 namespace Properties {
 NEW_TYPE_TAG(FingerBaseProblem);
 
@@ -91,15 +88,14 @@ public:
 SET_PROP(FingerBaseProblem, MaterialLaw)
 {
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
 
     // use the parker-lenhard hysteresis law
-    typedef Opm::ParkerLenhard<Scalar> TwoPMaterialLaw;
-    typedef Opm::ParkerLenhard<Scalar> ParkerLenhard;
-
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-
-    typedef Opm::TwoPAdapter<wPhaseIdx, TwoPMaterialLaw> type;
+    typedef Opm::ParkerLenhard<Traits> ParkerLenhard;
+    typedef ParkerLenhard type;
 };
 
 // Enable partial reassembly of the jacobian matrix?
@@ -249,9 +245,11 @@ public:
         // and the main drainage curves.
         micParams_.setVgAlpha(0.0037);
         micParams_.setVgN(4.7);
+        micParams_.finalize();
 
         mdcParams_.setVgAlpha(0.0037);
         mdcParams_.setVgN(4.7);
+        mdcParams_.finalize();
 
         // initialize the material parameter objects of the individual
         // finite volumes
@@ -262,6 +260,7 @@ public:
             materialParams_[i].setMdcParams(&mdcParams_);
             materialParams_[i].setSwr(0.0);
             materialParams_[i].setSnr(0.1);
+            materialParams_[i].finalize();
             ParkerLenhard::reset(materialParams_[i]);
         }
 
@@ -288,8 +287,7 @@ public:
             for (int scvIdx = 0; scvIdx < elemCtx.numScv(); ++scvIdx) {
                 int globalIdx = elemCtx.globalSpaceIndex(scvIdx, /*timeIdx=*/0);
                 const auto &fs = elemCtx.volVars(scvIdx, /*timeIdx=*/0).fluidState();
-                ParkerLenhard::update(materialParams_[globalIdx],
-                                      fs.saturation(wPhaseIdx));
+                ParkerLenhard::update(materialParams_[globalIdx], fs);
             }
         }
     }

@@ -29,10 +29,10 @@
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/RegularizedBrooksCorey.hpp>
-#include <opm/material/fluidmatrixinteractions/2p/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/2pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 
@@ -65,21 +65,20 @@ SET_TYPE_PROP(WaterAirBaseProblem, Problem, Ewoms::WaterAirProblem<TypeTag>);
 SET_PROP(WaterAirBaseProblem, MaterialLaw)
 {
 private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+
     // define the material law which is parameterized by effective
     // saturations
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::RegularizedBrooksCorey<Scalar> EffMaterialLaw;
-
-    // define the material law parameterized by absolute saturations
-    // which uses the two-phase API
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> TwoPMaterialLaw;
-
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { lPhaseIdx = FluidSystem::lPhaseIdx };
+    typedef Opm::RegularizedBrooksCorey<Traits> EffMaterialLaw;
 
 public:
-    // define the type of the generic material law
-    typedef Opm::TwoPAdapter<lPhaseIdx, TwoPMaterialLaw> type;
+    // define the material law parameterized by absolute saturations
+    // which uses the two-phase API
+    typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
 };
 
 // Set the heat conduction law
@@ -228,16 +227,19 @@ public:
         coarsePorosity_ = 0.3;
 
         // residual saturations
-        fineMaterialParams_.setSwr(0.2);
-        fineMaterialParams_.setSnr(0.0);
-        coarseMaterialParams_.setSwr(0.2);
-        coarseMaterialParams_.setSnr(0.0);
+        fineMaterialParams_.setResidualSaturation(lPhaseIdx, 0.2);
+        fineMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(lPhaseIdx, 0.2);
+        coarseMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
 
         // parameters for the Brooks-Corey law
-        fineMaterialParams_.setPe(1e4);
-        coarseMaterialParams_.setPe(1e4);
+        fineMaterialParams_.setEntryPressure(1e4);
+        coarseMaterialParams_.setEntryPressure(1e4);
         fineMaterialParams_.setLambda(2.0);
         coarseMaterialParams_.setLambda(2.0);
+
+        fineMaterialParams_.finalize();
+        coarseMaterialParams_.finalize();
 
         // parameters for the somerton law of heat conduction
         computeHeatCondParams_(fineHeatCondParams_, finePorosity_);

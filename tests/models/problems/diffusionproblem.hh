@@ -27,7 +27,8 @@
 #include <ewoms/models/ncp/ncpproperties.hh>
 #include <ewoms/io/cubegridcreator.hh>
 
-#include <opm/material/fluidmatrixinteractions/MpLinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
@@ -39,15 +40,11 @@
 #include <string>
 
 namespace Ewoms {
-
 template <class TypeTag>
 class DiffusionProblem;
 }
 
 namespace Opm {
-//////////
-// Specify the properties for the powerInjection problem
-//////////
 namespace Properties {
 
 NEW_TYPE_TAG(DiffusionBaseProblem);
@@ -78,8 +75,16 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
+    static_assert(FluidSystem::numPhases == 2,
+                  "A fluid system with two phases is required "
+                  "for this problem!");
+
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+
 public:
-    typedef Opm::MpLinearMaterial<FluidSystem::numPhases, Scalar> type;
+    typedef Opm::LinearMaterial<Traits> type;
 };
 
 // Enable molecular diffusion for this problem
@@ -102,8 +107,8 @@ SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
-} // namespace Properties
-} // namespace Opm
+}} // namespace Opm, Properties
+
 
 namespace Ewoms {
 /*!
@@ -166,6 +171,8 @@ public:
         FluidSystem::init();
 
         temperature_ = 273.15 + 20.0;
+
+        materialParams_.finalize();
 
         K_ = this->toDimMatrix_(1e-12); // [m^2]
 
