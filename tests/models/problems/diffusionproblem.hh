@@ -263,7 +263,6 @@ public:
             values.assignNaive(rightInitialFluidState_);
     }
 
-
     /*!
      * \copydoc VcfvProblem::source
      *

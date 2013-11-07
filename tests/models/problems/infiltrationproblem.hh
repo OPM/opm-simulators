@@ -282,7 +282,6 @@ public:
         return porosity_;
     }
 
-
     /*!
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */

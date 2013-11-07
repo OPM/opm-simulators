@@ -208,7 +208,6 @@ public:
         };
         moleFrac[AirIdx] = 1 - moleFrac[H2OIdx];
 
-
         // parabolic velocity profile
         Scalar y = this->bboxMax()[1] - pos[1];
         Scalar x = pos[0] - this->bboxMin()[0];

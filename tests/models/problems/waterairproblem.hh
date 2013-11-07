@@ -432,7 +432,6 @@ public:
 
     //! \}
 
-
 private:
     bool onLeftBoundary_(const GlobalPosition &pos) const
     { return pos[0] < eps_; }
