@@ -118,7 +118,6 @@ class OutflowProblem
         N2Idx = FluidSystem::N2Idx
     };
 
-
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
 

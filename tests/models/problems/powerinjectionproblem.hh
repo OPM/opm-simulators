@@ -327,7 +327,6 @@ public:
         values.assignNaive(initialFluidState_);
     }
 
-
     /*!
      * \copydoc VcfvProblem::source
      *

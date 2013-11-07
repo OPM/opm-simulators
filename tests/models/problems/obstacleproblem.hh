@@ -440,7 +440,6 @@ private:
         return x < eps_ && y <= 10;
     }
 
-
     void initFluidStates_()
     {
         initFluidState_(inletFluidState_, coarseMaterialParams_, /*isInlet=*/true);

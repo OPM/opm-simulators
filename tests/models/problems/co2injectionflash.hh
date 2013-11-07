@@ -62,7 +62,6 @@ public:
         paramCache.updateAllPressures(fluidState);
     }
 
-
 };
 
 } // namespace Ewoms

@@ -296,7 +296,6 @@ public:
 
     //! \}
 
-
     /*!
      * \name Soil parameters
      */
@@ -385,7 +384,6 @@ public:
         // assign the primary variables
         values.assignNaive(initialFluidState_);
     }
-
 
     /*!
      * \copydoc VcfvProblem::constraints

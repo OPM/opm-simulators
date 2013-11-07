@@ -150,7 +150,6 @@ public:
                        int spaceIdx, int timeIdx) const
     { return 273.15 + 10; } // -> 10 deg C
 
-
     //! \}
 
     /*!
@@ -194,7 +193,6 @@ public:
             values.setNoFlow(context, spaceIdx, timeIdx);
         }
     }
-
 
     //! \}
 

@@ -255,7 +255,6 @@ public:
                           /*pmax=*/pressureHigh_,
                           /*np=*/nPressure_);
 
-
         fineLayerBottom_ = 22.0;
 
         // intrinsic permeabilities
@@ -302,7 +301,6 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
     }
-
 
     /*!
      * \name Problem parameters

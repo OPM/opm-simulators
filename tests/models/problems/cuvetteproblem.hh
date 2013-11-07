@@ -81,14 +81,12 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-
     enum { wPhaseIdx = FluidSystem::wPhaseIdx };
     enum { nPhaseIdx = FluidSystem::nPhaseIdx };
     enum { gPhaseIdx = FluidSystem::gPhaseIdx };
 
     // define the three-phase material law
     typedef Opm::ThreePParkerVanGenuchten<Scalar> ThreePLaw;
-
 
 public:
     // wrap the three-phase law in an adaptor to make use the generic
