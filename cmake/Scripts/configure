@@ -510,6 +510,13 @@ done
 # only wrap in env command if any variable were actually passed
 [ -n "${ENVVARS}" ] && ENVVARS="env ${ENVVARS} "
 
+# delete the previous 'CMakeFiles' directory. this prevents an endless
+# loop if variables that require a full regeneration of the cache are
+# set (most notably 'CXX' and 'CXX_FLAGS').
+# For more details, see http://www.cmake.org/Bug/view.php?id=14119
+echo "--- deleting previous CMake files ---"
+rm -rf CMakeFiles
+
 # pass everything on to CMake
 CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
 echo --- calling CMake ---
