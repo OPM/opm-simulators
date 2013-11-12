@@ -139,6 +139,133 @@ public:
         values[Traits::nPhaseIdx] = krn(params, fs);
     }
 
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given phase saturation.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dSaturation(ContainerT &values,
+                                                const Params &params,
+                                                const FluidState &state,
+                                                int satPhaseIdx)
+    {
+        values[Traits::wPhaseIdx] = 0;
+        values[Traits::nPhaseIdx] = 0;
+        if (satPhaseIdx == Traits::wPhaseIdx)
+            values[Traits::nPhaseIdx] = twoPhaseSatDpcwn_dSw(params, state.saturation(Traits::wPhaseIdx));
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given phase pressure.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dPressure(ContainerT &values,
+                                              const Params &params,
+                                              const FluidState &state,
+                                              int pPhaseIdx)
+    {
+        // -> not pressure dependent
+        for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
+            values[pcPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        temperature.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dTemperature(ContainerT &values,
+                                                 const Params &params,
+                                                 const FluidState &state)
+    {
+        // -> not temperature dependent
+        for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
+            values[pcPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given mole fraction of a component in a phase.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dMoleFraction(ContainerT &values,
+                                                  const Params &params,
+                                                  const FluidState &state,
+                                                  int phaseIdx,
+                                                  int compIdx)
+    {
+        // -> not composition dependent
+        for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
+            values[pcPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given phase saturation.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dSaturation(ContainerT &values,
+                                                    const Params &params,
+                                                    const FluidState &state,
+                                                    int satPhaseIdx)
+    {
+        if (satPhaseIdx == Traits::wPhaseIdx) {
+            values[Traits::wPhaseIdx] = twoPhaseSatDKrw_dSw(params, state.saturation(Traits::wPhaseIdx));
+            values[Traits::nPhaseIdx] = 0;
+        }
+        else {
+            values[Traits::wPhaseIdx] = 0;
+            values[Traits::nPhaseIdx] = - twoPhaseSatDKrn_dSw(params, 1 - state.saturation(Traits::nPhaseIdx));
+        }
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given phase pressure.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dPressure(ContainerT &values,
+                                                  const Params &params,
+                                                  const FluidState &state,
+                                                  int pPhaseIdx)
+    {
+        // -> not pressure dependent
+        for (int krPhaseIdx = 0; krPhaseIdx < numPhases; ++krPhaseIdx)
+            values[krPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        temperature.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dTemperature(ContainerT &values,
+                                                     const Params &params,
+                                                     const FluidState &state)
+    {
+        // -> not temperature dependent
+        for (int krPhaseIdx = 0; krPhaseIdx < numPhases; ++krPhaseIdx)
+            values[krPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given mole fraction of a component in a phase.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dMoleFraction(ContainerT &values,
+                                                      const Params &params,
+                                                      const FluidState &state,
+                                                      int phaseIdx,
+                                                      int compIdx)
+    {
+        // -> not composition dependent
+        for (int krPhaseIdx = 0; krPhaseIdx < numPhases; ++krPhaseIdx)
+            values[krPhaseIdx] = 0.0;
+    }
+
     /*!
      * \brief A regularized van Genuchten capillary pressure-saturation
      *          curve.
@@ -292,10 +419,10 @@ public:
             else
                 // the slope of the straight line used for the right
                 // side of the capillary pressure function
-                return params.mHigh();
+                return params.pcwnSlopeHigh();
         }
 
-        return VanGenuchten::dpcwn_dSw(params, Sw);
+        return VanGenuchten::twoPhaseSatDpcwn_dSw(params, Sw);
     }
 
     /*!
@@ -369,6 +496,14 @@ public:
         return VanGenuchten::twoPhaseSatKrw(params, Sw);
     }
 
+    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
+    {
+        if (Sw <= 0.0 || Sw >= 1.0)
+            return 0.0;
+
+        return VanGenuchten::twoPhaseSatDKrw_dSw(params, Sw);
+    }
+
     /*!
      * \brief   Regularized version of the  relative permeability
      *          for the non-wetting phase of
@@ -385,7 +520,7 @@ public:
      */
     template <class FluidState>
     static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, fs.saturation(Traits::wPhaseIdx)); }
+    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nPhaseIdx)); }
 
     static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
     {
@@ -396,6 +531,14 @@ public:
             return 0;
 
         return VanGenuchten::twoPhaseSatKrn(params, Sw);
+    }
+
+    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
+    {
+        if (Sw <= 0.0 || Sw >= 1.0)
+            return 0.0;
+
+        return VanGenuchten::twoPhaseSatDKrn_dSw(params, Sw);
     }
 };
 

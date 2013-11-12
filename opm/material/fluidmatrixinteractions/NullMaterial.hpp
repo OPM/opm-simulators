@@ -18,39 +18,32 @@
  *****************************************************************************/
 /*!
  * \file
- * \copydoc Opm::LinearMaterial
+ * \copydoc Opm::NullMaterial
  */
-#ifndef OPM_LINEAR_MATERIAL_HH
-#define OPM_LINEAR_MATERIAL_HH
+#ifndef OPM_NULL_MATERIAL_HH
+#define OPM_NULL_MATERIAL_HH
 
-#include "LinearMaterialParams.hpp"
+#include "NullMaterialParams.hpp"
 
-#include <opm/material/Valgrind.hpp>
-
-#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 #include <algorithm>
-#include <type_traits>
 
-namespace Opm {
-
+namespace Opm
+{
 /*!
  * \ingroup material
  *
- * \brief Implements a linear saturation-capillary pressure relation
- *
- * Implements a linear saturation-capillary pressure relation for
- * M-phase fluid systems.
- *
- * \sa LinearMaterialParams
+ * \brief Implements a dummy linear saturation-capillary pressure
+ *        relation which just disables capillary pressure.
  */
-template <class TraitsT, class ParamsT = LinearMaterialParams<TraitsT> >
-class LinearMaterial : public TraitsT
+template <class TraitsT>
+class NullMaterial : public TraitsT
 {
 public:
     typedef TraitsT Traits;
-    typedef ParamsT Params;
+    typedef NullMaterialParams<TraitsT> Params;
     typedef typename Traits::Scalar Scalar;
 
     //! The number of fluid phases
@@ -66,6 +59,9 @@ public:
 
     //! Specify whether the quantities defined by this material law
     //! are saturation dependent
+    //!
+    //! In this law, the relative permeabilities are saturation
+    //! dependent, even if capillary pressure is always zero
     static const bool isSaturationDependent = true;
 
     //! Specify whether the quantities defined by this material law
@@ -81,12 +77,7 @@ public:
     static const bool isCompositionDependent = false;
 
     /*!
-     * \brief The linear capillary pressure-saturation curve.
-     *
-     * This material law is linear:
-     * \f[
-     p_C = (1 - \overline{S}_w) (p_{C,max} - p_{C,entry}) + p_{C,entry}
-     \f]
+     * \brief Returns constant 0 for all phases.
      *
      * \param values Container for the return values
      * \param params Parameters
@@ -97,14 +88,8 @@ public:
                                    const Params &params,
                                    const FluidState &state)
     {
-        for (int phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
-            Scalar S = state.saturation(phaseIdx);
-            Valgrind::CheckDefined(S);
-
-            values[phaseIdx] =
-                S*params.pcMaxSat(phaseIdx) +
-                (1.0 - S)*params.pcMinSat(phaseIdx);
-        }
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            values[phaseIdx] = 0.0;
     }
 
     /*!
@@ -114,9 +99,7 @@ public:
     static void saturations(ContainerT &values,
                             const Params &params,
                             const FluidState &state)
-    {
-        OPM_THROW(std::runtime_error, "Not implemented: LinearMaterial::saturations()");
-    }
+    { OPM_THROW(std::logic_error, "Not defined: NullMaterial::saturations()"); }
 
     /*!
      * \brief The relative permeability of all phases.
@@ -126,14 +109,10 @@ public:
                                        const Params &params,
                                        const FluidState &state)
     {
-        for (int phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
-            Scalar S = state.saturation(phaseIdx);
-            Valgrind::CheckDefined(S);
-
-            values[phaseIdx] = std::max(std::min(S,1.0),0.0);
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            values[phaseIdx] = std::max(std::min(state.saturation(phaseIdx),1.0),0.0);
         }
     }
-
 
     /*!
      * \brief The derivative of all capillary pressures in regard to
@@ -145,10 +124,9 @@ public:
                                                 const FluidState &state,
                                                 int satPhaseIdx)
     {
+        // -> not saturation dependent
         for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
             values[pcPhaseIdx] = 0.0;
-
-        values[satPhaseIdx] = params.pcMaxSat(satPhaseIdx) - params.pcMinSat(satPhaseIdx);
     }
 
     /*!
@@ -265,41 +243,15 @@ public:
     /*!
      * \brief The difference between the pressures of the non-wetting and wetting phase.
      */
-    template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
-    {
-        Scalar S = fs.saturation(Traits::wPhaseIdx);
-        Valgrind::CheckDefined(S);
-
-        Scalar wPhasePressure =
-            S*params.pcMaxSat(Traits::wPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::wPhaseIdx);
-
-        S = fs.saturation(Traits::nPhaseIdx);
-        Valgrind::CheckDefined(S);
-
-        Scalar nPhasePressure =
-            S*params.pcMaxSat(Traits::nPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::nPhaseIdx);
-
-        return nPhasePressure - wPhasePressure;
-    }
-
+    template <class FluidState, class ScalarT = Scalar>
+    static typename std::enable_if<(numPhases > 1), ScalarT>::type
+    pcwn(const Params &params, const FluidState &fs)
+    { return 0; }
 
     template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
+    static typename std::enable_if<numPhases == 2, ScalarT>::type
     twoPhaseSatPcwn(const Params &params, Scalar Sw)
-    {
-        Scalar wPhasePressure =
-            Sw*params.pcMaxSat(Traits::wPhaseIdx) +
-            (1.0 - Sw)*params.pcMinSat(Traits::wPhaseIdx);
-
-        Scalar nPhasePressure =
-            (1.0 - Sw)*params.pcMaxSat(Traits::nPhaseIdx) +
-            Sw*params.pcMinSat(Traits::nPhaseIdx);
-
-        return nPhasePressure - wPhasePressure;
-    }
+    { return 0; }
 
     /*!
      * \brief Calculate wetting phase saturation given that the rest
@@ -307,25 +259,25 @@ public:
      */
     template <class FluidState>
     static Scalar Sw(const Params &params, const FluidState &fs)
-    { OPM_THROW(std::runtime_error, "Not implemented: Sw()"); }
+    { OPM_THROW(std::logic_error, "Not defined: Sw()"); }
 
     template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatSw(const Params &params, Scalar Sw)
-    { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSw()"); }
+    static typename std::enable_if<numPhases == 2, ScalarT>::type
+    twoPhaseSatSw(const Params &params, Scalar pcwn)
+    { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSw()"); }
 
     /*!
-     * \brief Calculate non-wetting liquid phase saturation given that
-     *        the rest of the fluid state has been initialized
+     * \brief Calculate non-wetting phase saturation given that the
+     *        rest of the fluid state has been initialized
      */
     template <class FluidState>
     static Scalar Sn(const Params &params, const FluidState &fs)
-    { OPM_THROW(std::runtime_error, "Not implemented: Sn()"); }
+    { OPM_THROW(std::logic_error, "Not defined: Sn()"); }
 
     template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatSn(const Params &params, Scalar Sw)
-    { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSn()"); }
+    static typename std::enable_if<numPhases == 2, ScalarT>::type
+    twoPhaseSatSn(const Params &params, Scalar pcwn)
+    { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSn()"); }
 
     /*!
      * \brief Calculate gas phase saturation given that the rest of
@@ -334,31 +286,33 @@ public:
      * This method is only available for at least three fluid phases
      */
     template <class FluidState, class ScalarT = Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    static typename std::enable_if< (numPhases > 2), ScalarT>::type
     Sg(const Params &params, const FluidState &fs)
-    { OPM_THROW(std::runtime_error, "Not implemented: Sg()"); }
+    { OPM_THROW(std::logic_error, "Not defined: Sg()"); }
 
     /*!
      * \brief The relative permability of the wetting phase
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
+    template <class FluidState, class ScalarT = Scalar>
+    static typename std::enable_if<(numPhases > 1), ScalarT>::type
+    krw(const Params &params, const FluidState &fs)
     { return std::max(0.0, std::min(1.0, fs.saturation(Traits::wPhaseIdx))); }
 
     template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
+    static typename std::enable_if<numPhases == 2, ScalarT>::type
     twoPhaseSatKrw(const Params &params, Scalar Sw)
     { return std::max(0.0, std::min(1.0, Sw)); }
 
     /*!
      * \brief The relative permability of the liquid non-wetting phase
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
+    template <class FluidState, class ScalarT=Scalar>
+    static typename std::enable_if<(numPhases > 1), ScalarT>::type
+    krn(const Params &params, const FluidState &fs)
     { return std::max(0.0, std::min(1.0, fs.saturation(Traits::nPhaseIdx))); }
 
     template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
+    static typename std::enable_if<numPhases == 2, ScalarT>::type
     twoPhaseSatKrn(const Params &params, Scalar Sw)
     { return std::max(0.0, std::min(1.0, 1 - Sw)); }
 
@@ -368,7 +322,7 @@ public:
      * This method is only available for at least three fluid phases
      */
     template <class FluidState, class ScalarT=Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    static typename std::enable_if< (numPhases > 2), ScalarT>::type
     krg(const Params &params, const FluidState &fs)
     { return std::max(0.0, std::min(1.0, fs.saturation(Traits::gPhaseIdx))); }
 
@@ -380,23 +334,7 @@ public:
     template <class FluidState, class ScalarT=Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
     pcng(const Params &params, const FluidState &fs)
-    {
-        Scalar S = fs.saturation(Traits::nPhaseIdx);
-        Valgrind::CheckDefined(S);
-
-        Scalar nPhasePressure =
-            S*params.pcMaxSat(Traits::nPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::nPhaseIdx);
-
-        S = fs.saturation(Traits::gPhaseIdx);
-        Valgrind::CheckDefined(S);
-
-        Scalar gPhasePressure =
-            S*params.pcMaxSat(Traits::gPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::gPhaseIdx);
-
-        return gPhasePressure - nPhasePressure;
-    }
+    { return 0; }
 };
 } // namespace Opm
 

@@ -31,6 +31,24 @@ namespace Opm {
 /*!
  * \ingroup material
  *
+ * \brief A generic traits class which does not provide any indices.
+ *
+ * This traits class is intended to be used by the NullMaterial
+ */
+template <class ScalarT, int numPhasesV>
+class NullMaterialTraits
+{
+public:
+    //! The type used for scalar floating point values
+    typedef ScalarT Scalar;
+
+    //! The number of fluid phases
+    static const int numPhases = numPhasesV;
+};
+
+/*!
+ * \ingroup material
+ *
  * \brief A generic traits class for two-phase material laws.
  */
 template <class ScalarT, int wettingPhaseIdxV, int nonWettingPhaseIdxV>

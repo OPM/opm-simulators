@@ -153,6 +153,128 @@ public:
     }
 
     /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given phase saturation.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dSaturation(ContainerT &values,
+                                                const Params &params,
+                                                const FluidState &state,
+                                                int satPhaseIdx)
+    {
+        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+
+        OverlayFluidState overlayFs(state);
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            overlayFs.setSaturation(phaseIdx,
+                                    effectiveSaturation(params,
+                                                        state.saturation(phaseIdx),
+                                                        phaseIdx));
+        }
+
+        EffLaw::dCapillaryPressures_dSaturation(values, params, overlayFs, satPhaseIdx);
+
+        // multiply with dS_eff / dS_abs
+        Scalar dSeff_dSabs = dSeff_dSabs_(params, satPhaseIdx);
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            values[phaseIdx] *= dSeff_dSabs;
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given phase pressure.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dPressure(ContainerT &values,
+                                              const Params &params,
+                                              const FluidState &state,
+                                              int pPhaseIdx)
+    { EffLaw::dCapillaryPressures_dPressure(values, params, state, pPhaseIdx); }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        temperature.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dTemperature(ContainerT &values,
+                                                 const Params &params,
+                                                 const FluidState &state)
+    { EffLaw::dCapillaryPressures_dTemperature(values, params, state); }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given mole fraction of a component in a phase.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dMoleFraction(ContainerT &values,
+                                                  const Params &params,
+                                                  const FluidState &state,
+                                                  int phaseIdx,
+                                                  int compIdx)
+    { EffLaw::dCapillaryPressures_dMoleFraction(values, params, state, phaseIdx, compIdx); }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given phase saturation.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dSaturation(ContainerT &values,
+                                                    const Params &params,
+                                                    const FluidState &state,
+                                                    int satPhaseIdx)
+    {
+        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+
+        OverlayFluidState overlayFs(state);
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            overlayFs.setSaturation(phaseIdx,
+                                    effectiveSaturation(params,
+                                                        state.saturation(phaseIdx),
+                                                        phaseIdx));
+        }
+
+        EffLaw::dRelativePermeabilities_dSaturation(values, params, overlayFs, satPhaseIdx);
+
+        // multiply with dS_eff / dS_abs
+        Scalar dSeff_dSabs = dSeff_dSabs_(params, satPhaseIdx);
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            values[phaseIdx] *= dSeff_dSabs;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given phase pressure.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dPressure(ContainerT &values,
+                                                  const Params &params,
+                                                  const FluidState &state,
+                                                  int pPhaseIdx)
+    { EffLaw::dRelativePermeabilities_dPressure(values, params, state, pPhaseIdx); }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        temperature.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dTemperature(ContainerT &values,
+                                                     const Params &params,
+                                                     const FluidState &state)
+    { EffLaw::dRelativePermeabilities_dTemperature(values, params, state); }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given mole fraction of a component in a phase.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dMoleFraction(ContainerT &values,
+                                                      const Params &params,
+                                                      const FluidState &state,
+                                                      int phaseIdx,
+                                                      int compIdx)
+    { EffLaw::dRelativePermeabilities_dMoleFraction(values, params, state, phaseIdx, compIdx); }
+
+    /*!
      * \brief The capillary pressure-saturation curve.
      *
      *
@@ -391,20 +513,6 @@ public:
 
 private:
     /*!
-     * \brief Convert an effective wetting saturation to an absolute one.
-     *
-     * \param Swe       Effective saturation of the non-wetting phase \f$\overline{S}_n\f$.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Absolute saturation of the non-wetting phase.
-     */
-    static Scalar SweToSw_(const Params &params, Scalar Swe)
-    {
-        return Swe*(1 - params.Swr() - params.Snr()) + params.Swr();
-    }
-
-    /*!
      * \brief           Derivative of the effective saturation w.r.t. the absolute saturation.
      *
      * \param params    A container object that is populated with the appropriate coefficients for the respective law.
@@ -412,8 +520,8 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Derivative of the effective saturation w.r.t. the absolute saturation.
      */
-    static Scalar dSwe_dSw_(const Params &params)
-    { return 1.0/(1 - params.Swr() - params.Snr()); }
+    static Scalar dSeff_dSabs_(const Params &params, int phaseIdx)
+    { return 1.0/(1 - params.sumResidualSaturations()); }
 
     /*!
      * \brief           Derivative of the absolute saturation w.r.t. the effective saturation.
@@ -423,8 +531,8 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Derivative of the absolute saturation w.r.t. the effective saturation.
      */
-    static Scalar dSw_dSwe_(const Params &params)
-    { return 1 - params.Swr() - params.Snr(); }
+    static Scalar dSabs_dSeff_(const Params &params, int phaseIdx)
+    { return 1 - params.sumResidualSaturations(); }
 };
 } // namespace Opm
 

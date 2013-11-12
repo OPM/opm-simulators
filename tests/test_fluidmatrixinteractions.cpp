@@ -30,6 +30,7 @@
 #include <opm/material/fluidmatrixinteractions/ParkerLenhard.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/VanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
@@ -121,6 +122,18 @@ void testGenericApi()
         MaterialLaw::capillaryPressures(destValues, paramsConst, fs);
         MaterialLaw::saturations(destValues, paramsConst, fs);
         MaterialLaw::relativePermeabilities(destValues, paramsConst, fs);
+
+        std::array<Scalar, numPhases> dpc;
+        MaterialLaw::dCapillaryPressures_dSaturation(dpc, paramsConst, fs, /*phaseIdx=*/0);
+        MaterialLaw::dCapillaryPressures_dPressure(dpc, paramsConst, fs, /*phaseIdx=*/0);
+        MaterialLaw::dCapillaryPressures_dTemperature(dpc, paramsConst, fs);
+        MaterialLaw::dCapillaryPressures_dMoleFraction(dpc, paramsConst, fs, /*phaseIdx=*/0, /*compIdx=*/0);
+
+        std::array<Scalar, numPhases> dkr;
+        MaterialLaw::dRelativePermeabilities_dSaturation(dkr, paramsConst, fs, /*phaseIdx=*/0);
+        MaterialLaw::dRelativePermeabilities_dPressure(dkr, paramsConst, fs, /*phaseIdx=*/0);
+        MaterialLaw::dRelativePermeabilities_dTemperature(dkr, paramsConst, fs);
+        MaterialLaw::dRelativePermeabilities_dMoleFraction(dkr, paramsConst, fs, /*phaseIdx=*/0, /*compIdx=*/0);
     }
 }
 
@@ -272,6 +285,17 @@ int main(int argc, char **argv)
         //testThreePhaseSatApi<ThreePAbsLaw, ThreePhaseFluidState>();
     }
     {
+        typedef Opm::NullMaterial<TwoPhaseTraits> MaterialLaw;
+        testGenericApi<MaterialLaw, TwoPhaseFluidState>();
+        testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
+        testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
+
+        typedef Opm::NullMaterial<ThreePhaseTraits> ThreePMaterialLaw;
+        testGenericApi<ThreePMaterialLaw, ThreePhaseFluidState>();
+        testThreePhaseApi<ThreePMaterialLaw, ThreePhaseFluidState>();
+        //testThreePhaseSatApi<ThreePMaterialLaw, ThreePhaseFluidState>();
+    }
+    {
         typedef Opm::ParkerLenhard<TwoPhaseTraits> MaterialLaw;
         testGenericApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
@@ -295,7 +319,6 @@ int main(int argc, char **argv)
         testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
     }
-
 
     return 0;
 }

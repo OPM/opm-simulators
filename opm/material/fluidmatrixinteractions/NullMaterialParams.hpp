@@ -18,24 +18,29 @@
  *****************************************************************************/
 /*!
  * \file
- * \copydoc Opm::NullMaterialLawParams
+ * \copydoc Opm::NullMaterialParams
  */
-#ifndef OPM_NULL_MATERIAL_LAW_PARAMS_HH
-#define OPM_NULL_MATERIAL_LAW_PARAMS_HH
+#ifndef OPM_NULL_MATERIAL_PARAMS_HH
+#define OPM_NULL_MATERIAL_PARAMS_HH
 
 namespace Opm {
 /*!
  * \brief Reference implementation of params for the linear M-phase
  *        material material.
  */
-template<int numPhasesV, class ScalarT>
-class NullMaterialLawParams
+template<class TraitsT>
+class NullMaterialParams
 {
 public:
-    typedef ScalarT Scalar;
-    enum { numPhases = numPhasesV };
+    typedef typename TraitsT::Scalar Scalar;
 
-    NullMaterialLawParams()
+    NullMaterialParams()
+    { }
+
+    /*!
+     * \brief Finish the construction of the parameter object.
+     */
+    void finalize()
     { }
 };
 } // namespace Opm
