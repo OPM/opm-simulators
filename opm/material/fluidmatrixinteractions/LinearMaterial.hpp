@@ -266,7 +266,7 @@ public:
      * \brief The difference between the pressures of the non-wetting and wetting phase.
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
+    static Scalar pcnw(const Params &params, const FluidState &fs)
     {
         Scalar S = fs.saturation(Traits::wPhaseIdx);
         Valgrind::CheckDefined(S);
@@ -288,7 +288,7 @@ public:
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    twoPhaseSatPcnw(const Params &params, Scalar Sw)
     {
         Scalar wPhasePressure =
             Sw*params.pcMaxSat(Traits::wPhaseIdx) +
@@ -379,7 +379,7 @@ public:
      */
     template <class FluidState, class ScalarT=Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
-    pcng(const Params &params, const FluidState &fs)
+    pcgn(const Params &params, const FluidState &fs)
     {
         Scalar S = fs.saturation(Traits::nPhaseIdx);
         Valgrind::CheckDefined(S);

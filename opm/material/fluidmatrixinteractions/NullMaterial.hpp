@@ -245,12 +245,12 @@ public:
      */
     template <class FluidState, class ScalarT = Scalar>
     static typename std::enable_if<(numPhases > 1), ScalarT>::type
-    pcwn(const Params &params, const FluidState &fs)
+    pcnw(const Params &params, const FluidState &fs)
     { return 0; }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<numPhases == 2, ScalarT>::type
-    twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    twoPhaseSatPcnw(const Params &params, Scalar Sw)
     { return 0; }
 
     /*!
@@ -263,7 +263,7 @@ public:
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<numPhases == 2, ScalarT>::type
-    twoPhaseSatSw(const Params &params, Scalar pcwn)
+    twoPhaseSatSw(const Params &params, Scalar pcnw)
     { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSw()"); }
 
     /*!
@@ -276,7 +276,7 @@ public:
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<numPhases == 2, ScalarT>::type
-    twoPhaseSatSn(const Params &params, Scalar pcwn)
+    twoPhaseSatSn(const Params &params, Scalar pcnw)
     { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSn()"); }
 
     /*!
@@ -333,7 +333,7 @@ public:
      */
     template <class FluidState, class ScalarT=Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
-    pcng(const Params &params, const FluidState &fs)
+    pcgn(const Params &params, const FluidState &fs)
     { return 0; }
 };
 } // namespace Opm

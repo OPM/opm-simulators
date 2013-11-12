@@ -114,7 +114,7 @@ public:
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
         values[Traits::wPhaseIdx] = 0.0; // reference phase
-        values[Traits::nPhaseIdx] = pcwn(params, fs);
+        values[Traits::nPhaseIdx] = pcnw(params, fs);
     }
 
     /*!
@@ -153,7 +153,7 @@ public:
         values[Traits::wPhaseIdx] = 0;
         values[Traits::nPhaseIdx] = 0;
         if (satPhaseIdx == Traits::wPhaseIdx)
-            values[Traits::nPhaseIdx] = twoPhaseSatDpcwn_dSw(params, state.saturation(Traits::wPhaseIdx));
+            values[Traits::nPhaseIdx] = twoPhaseSatDPcnw_dSw(params, state.saturation(Traits::wPhaseIdx));
     }
 
     /*!
@@ -279,15 +279,15 @@ public:
      * \copydetails VanGenuchten::pC()
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatPcwn(params, fs.saturation(Traits::wPhaseIdx)); }
+    static Scalar pcnw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatPcnw(params, fs.saturation(Traits::wPhaseIdx)); }
 
-    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
-        const Scalar SwThLow = params.pcwnLowSw();
-        const Scalar SwThHigh = params.pcwnHighSw();
+        const Scalar SwThLow = params.pcnwLowSw();
+        const Scalar SwThHigh = params.pcnwHighSw();
 
         // make sure that the capillary pressure observes a derivative
         // != 0 for 'illegal' saturations. This is favourable for the
@@ -295,16 +295,16 @@ public:
         // in order to get the saturation moving to the right
         // direction if it temporarily is in an 'illegal' range.
         if (Sw < SwThLow) {
-            return params.pcwnLow() + params.pcwnSlopeLow()*(Sw - SwThLow);
+            return params.pcnwLow() + params.pcnwSlopeLow()*(Sw - SwThLow);
         }
         else if (Sw > SwThHigh)
         {
-            Scalar yTh = params.pcwnHigh();
+            Scalar yTh = params.pcnwHigh();
             Scalar m1 = (0.0 - yTh)/(1.0 - SwThHigh)*2;
 
             if (Sw < 1.0) {
                 // use spline between threshold Sw and 1.0
-                const Spline<Scalar> &sp = params.pcwnHighSpline();
+                const Spline<Scalar> &sp = params.pcnwHighSpline();
 
                 return sp.eval(Sw);
             }
@@ -316,7 +316,7 @@ public:
 
         // if the effective saturation is in an 'reasonable'
         // range, we use the real van genuchten law...
-        return VanGenuchten::twoPhaseSatPcwn(params, Sw);
+        return VanGenuchten::twoPhaseSatPcnw(params, Sw);
     }
 
     /*!
@@ -344,8 +344,8 @@ public:
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
-        const Scalar SwThLow = params.pcwnLowSw();
-        const Scalar SwThHigh = params.pcwnHighSw();
+        const Scalar SwThLow = params.pcnwLowSw();
+        const Scalar SwThHigh = params.pcnwHighSw();
 
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of van
@@ -353,7 +353,7 @@ public:
         Scalar Sw;
         if (pC <= 0) {
             // invert straight line for Sw > 1.0
-            Scalar m1 = params.pcwnSlopeHigh();
+            Scalar m1 = params.pcnwSlopeHigh();
             return pC/m1 + 1.0;
         }
         else
@@ -362,13 +362,13 @@ public:
         // invert the regularization if necessary
         if (Sw <= SwThLow) {
             // invert the low saturation regularization of pC()
-            Scalar pC_SwLow = VanGenuchten::twoPhaseSatPcwn(params, SwThLow);
-            return (pC - pC_SwLow)/params.pcwnSlopeLow() + SwThLow;
+            Scalar pC_SwLow = VanGenuchten::twoPhaseSatPcnw(params, SwThLow);
+            return (pC - pC_SwLow)/params.pcnwSlopeLow() + SwThLow;
         }
         else if (SwThHigh < Sw /* && Sw < 1.0*/)
         {
             // invert spline between threshold saturation and 1.0
-            const Spline<Scalar>& spline = params.pcwnHighSpline();
+            const Spline<Scalar>& spline = params.pcnwHighSpline();
 
             return spline.intersectInterval(/*x0=*/SwThHigh, /*x1=*/1.0,
                                             /*a=*/0, /*b=*/0, /*c=*/0, /*d=*/pC);
@@ -403,26 +403,26 @@ public:
      *
      */
     template <class FluidState>
-    static Scalar dpcwn_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDpcwn_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
+    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatDPcnw_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
 
-    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
     {
         // derivative of the regualarization
-        if (Sw < params.pcwnLowSw()) {
+        if (Sw < params.pcnwLowSw()) {
             // the slope of the straight line used in pC()
-            return params.pcwnSlopeLow();
+            return params.pcnwSlopeLow();
         }
-        else if (params.pcwnHighSw() <= Sw) {
+        else if (params.pcnwHighSw() <= Sw) {
             if (Sw < 1)
-                return params.pcwnHighSpline().evalDerivative(Sw);
+                return params.pcnwHighSpline().evalDerivative(Sw);
             else
                 // the slope of the straight line used for the right
                 // side of the capillary pressure function
-                return params.pcwnSlopeHigh();
+                return params.pcnwSlopeHigh();
         }
 
-        return VanGenuchten::twoPhaseSatDpcwn_dSw(params, Sw);
+        return VanGenuchten::twoPhaseSatDPcnw_dSw(params, Sw);
     }
 
     /*!
@@ -452,16 +452,16 @@ public:
             Sw = VanGenuchten::Sw_raw(params, pC);
 
         // derivative of the regularization
-        if (Sw < params.pcwnLowSw()) {
+        if (Sw < params.pcnwLowSw()) {
             // same as in dpC_dSw() but inverted
-            return 1/params.pcwnSlopeLow();
+            return 1/params.pcnwSlopeLow();
         }
-        if (Sw > params.pcwnHighSw()) {
+        if (Sw > params.pcnwHighSw()) {
             if (Sw < 1)
-                return 1/params.pcwnHighSpline().evalDerivative(Sw);
+                return 1/params.pcnwHighSpline().evalDerivative(Sw);
 
             // same as in dpC_dSw() but inverted
-            return 1/params.pcwnSlopHigh();
+            return 1/params.pcnwSlopHigh();
         }
 
         return VanGenuchten::dSw_dpnw(params, fs);

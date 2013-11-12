@@ -163,7 +163,7 @@ void testTwoPhaseApi()
         const typename MaterialLaw::Params params;
 
         Scalar v;
-        v = MaterialLaw::pcwn(params, fs);
+        v = MaterialLaw::pcnw(params, fs);
         v = MaterialLaw::Sw(params, fs);
         v = MaterialLaw::Sn(params, fs);
         v = MaterialLaw::krw(params, fs);
@@ -188,7 +188,7 @@ void testTwoPhaseSatApi()
 
         Scalar Sw;
         Scalar v;
-        v = MaterialLaw::twoPhaseSatPcwn(params, Sw);
+        v = MaterialLaw::twoPhaseSatPcnw(params, Sw);
         v = MaterialLaw::twoPhaseSatSw(params, Sw);
         v = MaterialLaw::twoPhaseSatSn(params, Sw);
         v = MaterialLaw::twoPhaseSatKrw(params, Sw);
@@ -216,7 +216,7 @@ void testThreePhaseApi()
         const typename MaterialLaw::Params params;
 
         Scalar v;
-        v = MaterialLaw::pcwn(params, fs);
+        v = MaterialLaw::pcnw(params, fs);
         v = MaterialLaw::Sw(params, fs);
         v = MaterialLaw::Sn(params, fs);
         v = MaterialLaw::krw(params, fs);

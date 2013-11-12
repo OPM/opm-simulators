@@ -290,7 +290,7 @@ public:
      *         Genuchten, linear...)
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
+    static Scalar pcnw(const Params &params, const FluidState &fs)
     {
         typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
 
@@ -306,16 +306,16 @@ public:
                                                         phaseIdx));
         }
 
-        return EffLaw::pcwn(params, overlayFs);
+        return EffLaw::pcnw(params, overlayFs);
     }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
-    twoPhaseSatPcwn(const Params &params, Scalar SwAbs)
+    twoPhaseSatPcnw(const Params &params, Scalar SwAbs)
     {
         Scalar SwEff = effectiveSaturation(params, SwAbs, Traits::wPhaseIdx);
 
-        return EffLaw::twoPhaseSatPcwn(params, SwEff);
+        return EffLaw::twoPhaseSatPcnw(params, SwEff);
     }
 
     /*!

@@ -110,7 +110,7 @@ public:
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
         values[Traits::wPhaseIdx] = 0.0; // reference phase
-        values[Traits::nPhaseIdx] = pcwn(params, fs);
+        values[Traits::nPhaseIdx] = pcnw(params, fs);
     }
 
     /*!
@@ -155,7 +155,7 @@ public:
         values[Traits::wPhaseIdx] = 0;
         values[Traits::nPhaseIdx] = 0;
         if (satPhaseIdx == Traits::wPhaseIdx)
-            values[Traits::nPhaseIdx] = dpcwn_dSw(params, state);
+            values[Traits::nPhaseIdx] = dPcnw_dSw(params, state);
     }
 
     /*!
@@ -283,12 +283,12 @@ public:
      *           ought to be calculated
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
+    static Scalar pcnw(const Params &params, const FluidState &fs)
     {
         Scalar Sw = fs.saturation(Traits::wPhaseIdx);
         assert(0 <= Sw && Sw <= 1);
 
-        return twoPhaseSatPcwn(params, Sw);
+        return twoPhaseSatPcnw(params, Sw);
     }
 
     /*!
@@ -305,7 +305,7 @@ public:
      *               required by the van Genuchten law.
      * \param Sw The effective wetting phase saturation
      */
-    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
     { return std::pow(std::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha(); }
 
     /*!
@@ -360,10 +360,10 @@ public:
      * \param fs The fluid state containing valid saturations
      */
     template <class FluidState>
-    static Scalar dpcwn_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDpcwn_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
+    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatDPcnw_dSw(params, fs.saturation(Traits::wPhaseIdx)); }
 
-    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
     {
         assert(0 < Sw && Sw < 1);
 

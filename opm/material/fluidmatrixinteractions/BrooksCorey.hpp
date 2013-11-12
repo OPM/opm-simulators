@@ -91,7 +91,7 @@ public:
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
         values[Traits::wPhaseIdx] = 0.0; // reference phase
-        values[Traits::nPhaseIdx] = pcwn(params, fs);
+        values[Traits::nPhaseIdx] = pcnw(params, fs);
     }
 
     /*!
@@ -135,7 +135,7 @@ public:
         values[Traits::wPhaseIdx] = 0;
         values[Traits::nPhaseIdx] = 0;
         if (satPhaseIdx == Traits::wPhaseIdx)
-            values[Traits::nPhaseIdx] = dpcwn_dSw(params, state);
+            values[Traits::nPhaseIdx] = dPcnw_dSw(params, state);
     }
 
     /*!
@@ -263,13 +263,13 @@ public:
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
+    static Scalar pcnw(const Params &params, const FluidState &fs)
     {
         Scalar Sw = fs.saturation(Traits::wPhaseIdx);
-        return twoPhaseSatPcwn(params, Sw);
+        return twoPhaseSatPcnw(params, Sw);
     }
 
-    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
     {
         assert(0 <= Sw && Sw <= 1);
 
@@ -329,13 +329,13 @@ public:
      *               (for Brooks-Corey: Entry pressure and shape factor)
     */
     template <class FluidState>
-    static Scalar dpcwn_dSw(const Params &params, const FluidState &fs)
+    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
     {
         Scalar Sw = fs.saturation(Traits::wPhaseIdx);
-        return twoPhaseSatDpcwn_dSw(params, Sw);
+        return twoPhaseSatDPcnw_dSw(params, Sw);
     }
 
-    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
     {
         assert(0 <= Sw && Sw <= 1);
         return - params.entryPressure()/params.lambda() * std::pow(Sw, -1/params.lambda() - 1);
@@ -346,21 +346,21 @@ public:
      *        regard to the capillary pressure according to Brooks and
      *        Corey.
      *
-     * \param pcwn Capillary pressure \f$[Pa]\f$
+     * \param pcnw Capillary pressure \f$[Pa]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     template <class FluidState>
-    static Scalar dSw_dpcwn(const Params &params, const FluidState &fs)
+    static Scalar dSw_dpcnw(const Params &params, const FluidState &fs)
     {
         Scalar Sw = fs.saturation(Traits::wPhaseIdx);
-        return twoPhaseSatDSw_dpcwn(params, Sw);
+        return twoPhaseSatDSw_dpcnw(params, Sw);
     }
 
-    static Scalar twoPhaseSatDSw_dpcwn(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatDSw_dpcnw(const Params &params, Scalar Sw)
     {
-        assert(pcwn > 0); // required for std::pow
-        return -params.lambda()/params.entryPressure() * std::pow(pcwn/params.entryPressure(), - params.lambda() - 1);
+        assert(pcnw > 0); // required for std::pow
+        return -params.lambda()/params.entryPressure() * std::pow(pcnw/params.entryPressure(), - params.lambda() - 1);
     }
 
     /*!

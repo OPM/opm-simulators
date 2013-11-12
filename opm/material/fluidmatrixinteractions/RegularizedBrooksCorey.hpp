@@ -116,7 +116,7 @@ public:
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
         values[Traits::wPhaseIdx] = 0.0; // reference phase
-        values[Traits::nPhaseIdx] = pcwn(params, fs);
+        values[Traits::nPhaseIdx] = pcnw(params, fs);
     }
 
     /*!
@@ -160,7 +160,7 @@ public:
         values[Traits::wPhaseIdx] = 0;
         values[Traits::nPhaseIdx] = 0;
         if (satPhaseIdx == Traits::wPhaseIdx)
-            values[Traits::nPhaseIdx] = twoPhaseSatDpcwn_dSw(params, state.saturation(Traits::wPhaseIdx));
+            values[Traits::nPhaseIdx] = twoPhaseSatDPcnw_dSw(params, state.saturation(Traits::wPhaseIdx));
     }
 
     /*!
@@ -295,13 +295,13 @@ public:
      *   slope of the unregularized Brooks-Corey curve at \f$S_w =
      *   1\f$
      *
-     * \sa BrooksCorey::pcwn
+     * \sa BrooksCorey::pcnw
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatPcwn(params, fs.saturation(Traits::wPhaseIdx)); }
+    static Scalar pcnw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatPcnw(params, fs.saturation(Traits::wPhaseIdx)); }
 
-    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
     {
         const Scalar Sthres = params.thresholdSw();
 
@@ -312,35 +312,35 @@ public:
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
         if (Sw <= Sthres) {
-            Scalar m = BrooksCorey::twoPhaseSatDpcwn_dSw(params, Sthres);
-            Scalar pcwn_SwLow = BrooksCorey::twoPhaseSatPcwn(params, Sthres);
-            return pcwn_SwLow + m*(Sw - Sthres);
+            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sthres);
+            Scalar pcnw_SwLow = BrooksCorey::twoPhaseSatPcnw(params, Sthres);
+            return pcnw_SwLow + m*(Sw - Sthres);
         }
         else if (Sw > 1.0) {
-            Scalar m = BrooksCorey::twoPhaseSatDpcwn_dSw(params, 1.0);
-            Scalar pcwn_SwHigh = params.entryPressure();
-            return pcwn_SwHigh + m*(Sw - 1.0);
+            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, 1.0);
+            Scalar pcnw_SwHigh = params.entryPressure();
+            return pcnw_SwHigh + m*(Sw - 1.0);
         }
 
         // if the effective saturation is in an 'reasonable'
         // range, we use the real Brooks-Corey law...
-        return BrooksCorey::twoPhaseSatPcwn(params, Sw);
+        return BrooksCorey::twoPhaseSatPcnw(params, Sw);
     }
 
     /*!
      * \brief A regularized Brooks-Corey saturation-capillary pressure
      *        curve.
      *
-     * This is the inverse of the pcwn() method.
+     * This is the inverse of the pcnw() method.
      */
     template <class FluidState>
     static Scalar Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pcwn = fs.pressure(Traits::nPhaseIdx) - fs.pressure(Traits::wPhaseIdx);
-        return twoPhaseSatSw(params, pcwn);
+        Scalar pcnw = fs.pressure(Traits::nPhaseIdx) - fs.pressure(Traits::wPhaseIdx);
+        return twoPhaseSatSw(params, pcnw);
     }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pcwn)
+    static Scalar twoPhaseSatSw(const Params &params, Scalar pcnw)
     {
         const Scalar Sthres = params.thresholdSw();
 
@@ -350,8 +350,8 @@ public:
         // smaller than the entry pressure, make sure that we will
         // regularize.
         Scalar Sw = 1.5;
-        if (pcwn >= params.entryPressure())
-            Sw = BrooksCorey::twoPhaseSatSw(params, pcwn);
+        if (pcnw >= params.entryPressure())
+            Sw = BrooksCorey::twoPhaseSatSw(params, pcnw);
 
         // make sure that the capilary pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
@@ -360,18 +360,18 @@ public:
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
         if (Sw <= Sthres) {
-            // invert the low saturation regularization of pcwn()
-            Scalar m = BrooksCorey::twoPhaseSatDpcwn_dSw(params, Sthres);
-            Scalar pcwn_SwLow = BrooksCorey::twoPhaseSatPcwn(params, Sthres);
-            return Sthres + (pcwn - pcwn_SwLow)/m;
+            // invert the low saturation regularization of pcnw()
+            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sthres);
+            Scalar pcnw_SwLow = BrooksCorey::twoPhaseSatPcnw(params, Sthres);
+            return Sthres + (pcnw - pcnw_SwLow)/m;
         }
         else if (Sw > 1.0) {
-            Scalar m = BrooksCorey::twoPhaseSatDpcwn_dSw(params, 1.0);
-            Scalar pcwn_SwHigh = BrooksCorey::twoPhaseSatPcwn(params, 1.0);
-            return 1.0 + (pcwn - pcwn_SwHigh)/m;;
+            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, 1.0);
+            Scalar pcnw_SwHigh = BrooksCorey::twoPhaseSatPcnw(params, 1.0);
+            return 1.0 + (pcnw - pcnw_SwHigh)/m;;
         }
 
-        return BrooksCorey::twoPhaseSatSw(params, pcwn);
+        return BrooksCorey::twoPhaseSatSw(params, pcnw);
     }
 
     /*!
@@ -382,37 +382,37 @@ public:
     static Scalar Sn(const Params &params, const FluidState &fs)
     { return 1 - Sw(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pcwn)
-    { return 1 - twoPhaseSatSw(params, pcwn); }
+    static Scalar twoPhaseSatSn(const Params &params, Scalar pcnw)
+    { return 1 - twoPhaseSatSw(params, pcnw); }
 
     /*!
      * \brief The derivative of the regularized Brooks-Corey capillary
      *        pressure-saturation curve.
      */
-    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
     {
         const Scalar Sthres = params.thresholdSw();
 
         // derivative of the regualarization
         if (Sw <= Sthres) {
-            // calculate the slope of the straight line used in pcwn()
-            Scalar m = BrooksCorey::twoPhaseSatDpcwn_dSw(params, Sthres);
+            // calculate the slope of the straight line used in pcnw()
+            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sthres);
             return m;
         }
         else if (Sw > 1.0) {
-            // calculate the slope of the straight line used in pcwn()
-            Scalar m = BrooksCorey::twoPhaseSatDpcwn_dSw(params, 1.0);
+            // calculate the slope of the straight line used in pcnw()
+            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, 1.0);
             return m;
         }
 
-        return BrooksCorey::twoPhaseSatDpcwn_dSw(params, Sw);
+        return BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sw);
     }
 
     /*!
      * \brief The derivative of the regularized Brooks-Corey
      *        saturation-capillary pressure curve.
      */
-    static Scalar twoPhaseSatDSw_dpcwn(const Params &params, Scalar pcwn)
+    static Scalar twoPhaseSatDSw_dpcnw(const Params &params, Scalar pcnw)
     {
         const Scalar Sthres = params.thresholdSw();
 
@@ -420,23 +420,23 @@ public:
         // saturation in the non-regularized version of the
         // Brooks-Corey law
         Scalar Sw;
-        if (pcwn < params.entryPressure())
+        if (pcnw < params.entryPressure())
             Sw = 1.5; // make sure we regularize (see below)
         else
-            Sw = BrooksCorey::Sw(params, pcwn);
+            Sw = BrooksCorey::Sw(params, pcnw);
 
         // derivative of the regularization
         if (Sw <= Sthres) {
-            // calculate the slope of the straight line used in pcwn()
-            Scalar m = BrooksCorey::dpcwn_dSw(params, Sthres);
+            // calculate the slope of the straight line used in pcnw()
+            Scalar m = BrooksCorey::dPcnw_dSw(params, Sthres);
             return 1/m;
         }
         else if (Sw > 1.0) {
-            // calculate the slope of the straight line used in pcwn()
-            Scalar m = BrooksCorey::dpcwn_dSw(params, 1.0);
+            // calculate the slope of the straight line used in pcnw()
+            Scalar m = BrooksCorey::dPcnw_dSw(params, 1.0);
             return 1/m;
         }
-        return 1.0/BrooksCorey::dpcwn_dSw(params, Sw);
+        return 1.0/BrooksCorey::dPcnw_dSw(params, Sw);
     }
 
     /*!

@@ -58,13 +58,13 @@ public:
                                     this, // next
                                     -1, // loop number
                                     Swr, // Sw
-                                    1e12, // pcwn
+                                    1e12, // pcnw
                                     Swr, // SwMic
                                     Swr); // SwMdc
         next_ = NULL;
 
         Sw_ = 1.0;
-        pcwn_ = 0.0;
+        pcnw_ = 0.0;
         SwMic_ = 1.0;
         SwMdc_ = 1.0;
     }
@@ -74,7 +74,7 @@ protected:
                     PLScanningCurve *next,
                     int loopN,
                     Scalar Sw,
-                    Scalar pcwn,
+                    Scalar pcnw,
                     Scalar SwMic,
                     Scalar SwMdc)
     {
@@ -82,7 +82,7 @@ protected:
         next_ = next;
         loopNum_ = loopN;
         Sw_ = Sw;
-        pcwn_ = pcwn;
+        pcnw_ = pcnw;
         SwMic_ = SwMic;
         SwMdc_ = SwMdc;
     }
@@ -124,7 +124,7 @@ public:
      * deleted and thus forgotten.
      */
     void setNext(Scalar Sw,
-                 Scalar pcwn,
+                 Scalar pcnw,
                  Scalar SwMic,
                  Scalar SwMdc)
     {
@@ -136,7 +136,7 @@ public:
                                     NULL, // next
                                     loopNum() + 1,
                                     Sw,
-                                    pcwn,
+                                    pcnw,
                                     SwMic,
                                     SwMdc);
     }
@@ -195,8 +195,8 @@ public:
     /*!
      * \brief Capillary pressure at the last reversal point.
      */
-    Scalar pcwn() const
-    { return pcwn_; }
+    Scalar pcnw() const
+    { return pcnw_; }
 
     /*!
      * \brief Apparent saturation of the last reversal point on
@@ -219,7 +219,7 @@ private:
     int loopNum_;
 
     Scalar Sw_;
-    Scalar pcwn_;
+    Scalar pcnw_;
 
     Scalar SwMdc_;
     Scalar SwMic_;
@@ -314,7 +314,7 @@ public:
         // calculate the apparent saturation on the MIC and MDC
         // which yield the same capillary pressure as the
         // Sw at the current scanning curve
-        Scalar pc = pcwn(params, fs);
+        Scalar pc = pcnw(params, fs);
         Scalar Sw_mic = VanGenuchten::twoPhaseSatSw(params.micParams(), pc);
         Scalar Sw_mdc = VanGenuchten::twoPhaseSatSw(params.mdcParams(), pc);
 
@@ -339,7 +339,7 @@ public:
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
         values[Traits::wPhaseIdx] = 0.0; // reference phase
-        values[Traits::nPhaseIdx] = pcwn(params, fs);
+        values[Traits::nPhaseIdx] = pcnw(params, fs);
     }
 
     /*!
@@ -374,7 +374,7 @@ public:
         values[Traits::wPhaseIdx] = 0;
         values[Traits::nPhaseIdx] = 0;
         if (satPhaseIdx == Traits::wPhaseIdx)
-            values[Traits::nPhaseIdx] = twoPhaseSatDpcwn_dSw(params, state.saturation(Traits::wPhaseIdx));
+            values[Traits::nPhaseIdx] = twoPhaseSatDPcnw_dSw(params, state.saturation(Traits::wPhaseIdx));
     }
 
     /*!
@@ -492,10 +492,10 @@ public:
      *        the phase saturations.
      */
     template <class FluidState>
-    static Scalar pcwn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatPcwn(params, fs.saturation(Traits::wPhaseIdx)); }
+    static Scalar pcnw(const Params &params, const FluidState &fs)
+    { return twoPhaseSatPcnw(params, fs.saturation(Traits::wPhaseIdx)); }
 
-    static Scalar twoPhaseSatPcwn(const Params &params, Scalar Sw)
+    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
     {
         // calculate the current apparent saturation
         ScanningCurve *sc = findScanningCurve_(params, Sw);
@@ -506,7 +506,7 @@ public:
         // if the apparent saturation exceeds the 'legal' limits,
         // we also the underlying material law decide what to do.
         if (Sw_app > 1) {
-            return 0.0; // VanGenuchten::pcwn(params.mdcParams(), Sw_app);
+            return 0.0; // VanGenuchten::pcnw(params.mdcParams(), Sw_app);
         }
 
         // put the apparent saturation into the main imbibition or
@@ -518,18 +518,18 @@ public:
             Scalar SwMic =
                 pos * (sc->prev()->SwMic() - sc->SwMic()) + sc->SwMic();
 
-            return VanGenuchten::twoPhaseSatPcwn(params.micParams(), SwMic);
+            return VanGenuchten::twoPhaseSatPcnw(params.micParams(), SwMic);
         }
         else { // sc->isDrain()
             Scalar SwMdc =
                 pos*(sc->prev()->SwMdc() - sc->SwMdc()) + sc->SwMdc();
 
-            return VanGenuchten::twoPhaseSatPcwn(params.mdcParams(), SwMdc);
+            return VanGenuchten::twoPhaseSatPcnw(params.mdcParams(), SwMdc);
         }
     }
 
-    static Scalar twoPhaseSatDpcwn_dSw(const Params &params, Scalar Sw)
-    { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatDpcwn_dSw()"); }
+    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
+    { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatDPcnw_dSw()"); }
 
     /*!
      * \brief Calculate the wetting phase saturations depending on

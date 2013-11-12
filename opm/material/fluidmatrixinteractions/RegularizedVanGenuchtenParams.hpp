@@ -46,14 +46,14 @@ public:
     typedef TraitsT Traits;
 
     RegularizedVanGenuchtenParams()
-        : pcwnLowSw_(0.01)
-        , pcwnHighSw_(0.99)
+        : pcnwLowSw_(0.01)
+        , pcnwHighSw_(0.99)
     {}
 
     RegularizedVanGenuchtenParams(Scalar vgAlpha, Scalar vgN)
         : Parent(vgAlpha, vgN)
-        , pcwnLowSw_(0.01)
-        , pcwnHighSw_(0.99)
+        , pcnwLowSw_(0.01)
+        , pcnwHighSw_(0.99)
     {}
 
     /*!
@@ -64,16 +64,16 @@ public:
     {
         Parent::finalize();
 
-        pcwnLow_ = VanGenuchten::twoPhaseSatPcwn(*this, pcwnLowSw_);
-        pcwnSlopeLow_ = VanGenuchten::twoPhaseSatDpcwn_dSw(*this, pcwnLowSw_);
-        pcwnHigh_ = VanGenuchten::twoPhaseSatPcwn(*this, pcwnHighSw_);
-        pcwnSlopeHigh_ = 2*(0.0 - pcwnHigh_)/(1.0 - pcwnHighSw_);
+        pcnwLow_ = VanGenuchten::twoPhaseSatPcnw(*this, pcnwLowSw_);
+        pcnwSlopeLow_ = VanGenuchten::twoPhaseSatDPcnw_dSw(*this, pcnwLowSw_);
+        pcnwHigh_ = VanGenuchten::twoPhaseSatPcnw(*this, pcnwHighSw_);
+        pcnwSlopeHigh_ = 2*(0.0 - pcnwHigh_)/(1.0 - pcnwHighSw_);
 
-        Scalar mThreshold = VanGenuchten::twoPhaseSatDpcwn_dSw(*this, pcwnHighSw_);
+        Scalar mThreshold = VanGenuchten::twoPhaseSatDPcnw_dSw(*this, pcnwHighSw_);
 
-        pcwnHighSpline_.set(pcwnHighSw_, 1.0, // x0, x1
-                            pcwnHigh_, 0, // y0, y1
-                            mThreshold, pcwnSlopeHigh_); // m0, m1
+        pcnwHighSpline_.set(pcnwHighSw_, 1.0, // x0, x1
+                            pcnwHigh_, 0, // y0, y1
+                            mThreshold, pcnwSlopeHigh_); // m0, m1
 
     }
 
@@ -81,15 +81,15 @@ public:
      * \brief Return the threshold saturation below which the
      *        capillary pressure is regularized.
      */
-    Scalar pcwnLowSw() const
-    { return pcwnLowSw_; }
+    Scalar pcnwLowSw() const
+    { return pcnwLowSw_; }
 
     /*!
      * \brief Return the capillary pressure at the low threshold
      *        saturation of the wetting phase.
      */
-    Scalar pcwnLow() const
-    { return pcwnLow_; }
+    Scalar pcnwLow() const
+    { return pcnwLow_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -97,36 +97,36 @@ public:
      *
      * For this case, we extrapolate the curve using a straight line.
      */
-    Scalar pcwnSlopeLow() const
-    { return pcwnSlopeLow_; }
+    Scalar pcnwSlopeLow() const
+    { return pcnwSlopeLow_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
      *        pressure is regularized.
      */
     void setPCLowSw(Scalar value)
-    { pcwnLowSw_ = value; }
+    { pcnwLowSw_ = value; }
 
     /*!
      * \brief Return the threshold saturation below which the
      *        capillary pressure is regularized.
      */
-    Scalar pcwnHighSw() const
-    { return pcwnHighSw_; }
+    Scalar pcnwHighSw() const
+    { return pcnwHighSw_; }
 
     /*!
      * \brief Return the capillary pressure at the high threshold
      *        saturation of the wetting phase.
      */
-    Scalar pcwnHigh() const
-    { return pcwnHigh_; }
+    Scalar pcnwHigh() const
+    { return pcnwHigh_; }
 
     /*!
      * \brief Return the spline curve which ought to be used between
      *        the upper threshold saturation and 1.
      */
-    const Spline<Scalar> &pcwnHighSpline() const
-    { return pcwnHighSpline_; }
+    const Spline<Scalar> &pcnwHighSpline() const
+    { return pcnwHighSpline_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -134,27 +134,27 @@ public:
      *
      * For this case, we extrapolate the curve using a straight line.
      */
-    Scalar pcwnSlopeHigh() const
-    { return pcwnSlopeHigh_; }
+    Scalar pcnwSlopeHigh() const
+    { return pcnwSlopeHigh_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
      *        pressure is regularized.
      */
     void setPCHighSw(Scalar value)
-    { pcwnHighSw_ = value; }
+    { pcnwHighSw_ = value; }
 
 private:
-    Scalar pcwnLowSw_;
-    Scalar pcwnHighSw_;
+    Scalar pcnwLowSw_;
+    Scalar pcnwHighSw_;
 
-    Scalar pcwnLow_;
-    Scalar pcwnHigh_;
+    Scalar pcnwLow_;
+    Scalar pcnwHigh_;
 
-    Scalar pcwnSlopeLow_;
-    Scalar pcwnSlopeHigh_;
+    Scalar pcnwSlopeLow_;
+    Scalar pcnwSlopeHigh_;
 
-    Spline<Scalar> pcwnHighSpline_;
+    Spline<Scalar> pcnwHighSpline_;
 };
 } // namespace Opm
 
