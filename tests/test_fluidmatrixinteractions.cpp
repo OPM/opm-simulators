@@ -162,7 +162,7 @@ void testTwoPhaseApi()
         const FluidState fs;
         const typename MaterialLaw::Params params;
 
-        Scalar v;
+        OPM_UNUSED Scalar v;
         v = MaterialLaw::pcnw(params, fs);
         v = MaterialLaw::Sw(params, fs);
         v = MaterialLaw::Sn(params, fs);
@@ -186,8 +186,8 @@ void testTwoPhaseSatApi()
         // make sure the two-phase specific methods are present
         const typename MaterialLaw::Params params;
 
-        Scalar Sw;
-        Scalar v;
+        Scalar Sw = 0;
+        OPM_UNUSED Scalar v;
         v = MaterialLaw::twoPhaseSatPcnw(params, Sw);
         v = MaterialLaw::twoPhaseSatSw(params, Sw);
         v = MaterialLaw::twoPhaseSatSn(params, Sw);
@@ -215,7 +215,7 @@ void testThreePhaseApi()
         const FluidState fs;
         const typename MaterialLaw::Params params;
 
-        Scalar v;
+        OPM_UNUSED Scalar v;
         v = MaterialLaw::pcnw(params, fs);
         v = MaterialLaw::Sw(params, fs);
         v = MaterialLaw::Sn(params, fs);
