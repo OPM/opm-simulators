@@ -168,6 +168,9 @@ for OPT in "$@"; do
       OPTARG=${OPT#--}
       # OPTARG now contains everything after double dashes
       case "${OPTARG}" in
+        config-cache*)
+          config_cache="1"
+          ;;
         src-dir=*)
           # allow the user to use these build macros for another
           # project (so source-dir is not relative to us)
@@ -514,9 +517,14 @@ done
 # loop if variables that require a full regeneration of the cache are
 # set (most notably 'CXX' and 'CXX_FLAGS').
 # For more details, see http://www.cmake.org/Bug/view.php?id=14119
-echo "--- deleting previous CMake files ---"
-rm -rf CMakeFiles
-rm -f CMakeCache.txt
+if test "$config_cache" = ""; then
+    echo "--- deleting previous CMake files ---"
+    rm -rf CMakeFiles
+    rm -f CMakeCache.txt
+elif test "$c_compiler$c_opts$cxx_compiler$cxx_opts$fort_compiler$fort_opts" != ""; then
+    echo "--- WARNING '--config-cache' option specified but a compiler was set"
+    echo "--- from the command line. This may lead to an infinite loop!"
+fi
 
 # pass everything on to CMake
 CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
