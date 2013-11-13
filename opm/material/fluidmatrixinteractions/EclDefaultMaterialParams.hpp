@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::EclDefaultMaterialParams
  */
-#ifndef OPM_ECL_DEFAULT_MATERIAL_PARAMS_HH
-#define OPM_ECL_DEFAULT_MATERIAL_PARAMS_HH
+#ifndef OPM_ECL_DEFAULT_MATERIAL_PARAMS_HPP
+#define OPM_ECL_DEFAULT_MATERIAL_PARAMS_HPP
 
 #include <type_traits>
 

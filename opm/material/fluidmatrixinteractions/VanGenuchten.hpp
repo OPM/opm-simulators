@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::VanGenuchten
  */
-#ifndef OPM_VAN_GENUCHTEN_HH
-#define OPM_VAN_GENUCHTEN_HH
+#ifndef OPM_VAN_GENUCHTEN_HPP
+#define OPM_VAN_GENUCHTEN_HPP
 
 #include "VanGenuchtenParams.hpp"
 

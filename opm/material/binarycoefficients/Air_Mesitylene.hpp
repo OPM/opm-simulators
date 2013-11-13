@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::Air_Mesitylene
  */
-#ifndef OPM_BINARY_COEFF_AIR_MESITYLENE_HH
-#define OPM_BINARY_COEFF_AIR_MESITYLENE_HH
+#ifndef OPM_BINARY_COEFF_AIR_MESITYLENE_HPP
+#define OPM_BINARY_COEFF_AIR_MESITYLENE_HPP
 
 #include <opm/material/components/Air.hpp>
 #include <opm/material/components/Mesitylene.hpp>

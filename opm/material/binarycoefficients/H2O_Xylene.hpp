@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::H2O_Xylene
  */
-#ifndef OPM_BINARY_COEFF_H2O_XYLENE_HH
-#define OPM_BINARY_COEFF_H2O_XYLENE_HH
+#ifndef OPM_BINARY_COEFF_H2O_XYLENE_HPP
+#define OPM_BINARY_COEFF_H2O_XYLENE_HPP
 
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/Xylene.hpp>

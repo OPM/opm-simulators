@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullMaterial
  */
-#ifndef OPM_NULL_MATERIAL_HH
-#define OPM_NULL_MATERIAL_HH
+#ifndef OPM_NULL_MATERIAL_HPP
+#define OPM_NULL_MATERIAL_HPP
 
 #include "NullMaterialParams.hpp"
 

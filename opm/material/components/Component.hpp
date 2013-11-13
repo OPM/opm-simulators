@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::Component
  */
-#ifndef OPM_COMPONENT_HH
-#define OPM_COMPONENT_HH
+#ifndef OPM_COMPONENT_HPP
+#define OPM_COMPONENT_HPP
 
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>

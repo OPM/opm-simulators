@@ -23,8 +23,8 @@
  *
  * \copydoc Opm::SimpleCO2
  */
-#ifndef OPM_SIMPLE_CO2_HH
-#define OPM_SIMPLE_CO2_HH
+#ifndef OPM_SIMPLE_CO2_HPP
+#define OPM_SIMPLE_CO2_HPP
 
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/components/Component.hpp>

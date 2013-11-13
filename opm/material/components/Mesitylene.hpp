@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::Mesitylene
  */
-#ifndef OPM_MESITYLENE_HH
-#define OPM_MESITYLENE_HH
+#ifndef OPM_MESITYLENE_HPP
+#define OPM_MESITYLENE_HPP
 
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/components/Component.hpp>

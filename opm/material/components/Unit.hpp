@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::Unit
  */
-#ifndef OPM_UNIT_HH
-#define OPM_UNIT_HH
+#ifndef OPM_UNIT_HPP
+#define OPM_UNIT_HPP
 
 #include "Component.hpp"
 

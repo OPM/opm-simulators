@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::DynamicTabulated2DFunction
  */
-#ifndef OPM_DYNAMIC_TABULATED_2D_FUNCTION_HH
-#define OPM_DYNAMIC_TABULATED_2D_FUNCTION_HH
+#ifndef OPM_DYNAMIC_TABULATED_2D_FUNCTION_HPP
+#define OPM_DYNAMIC_TABULATED_2D_FUNCTION_HPP
 
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

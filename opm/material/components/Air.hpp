@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::Air
  */
-#ifndef OPM_AIR_HH
-#define OPM_AIR_HH
+#ifndef OPM_AIR_HPP
+#define OPM_AIR_HPP
 
 #include <opm/material/components/Component.hpp>
 #include <opm/material/IdealGas.hpp>

@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::BinaryCoeff::H2O_CO2
  */
-#ifndef OPM_BINARY_COEFF_H2O_CO2_HH
-#define OPM_BINARY_COEFF_H2O_CO2_HH
+#ifndef OPM_BINARY_COEFF_H2O_CO2_HPP
+#define OPM_BINARY_COEFF_H2O_CO2_HPP
 
 #include <opm/material/binarycoefficients/HenryIapws.hpp>
 #include <opm/material/binarycoefficients/FullerMethod.hpp>

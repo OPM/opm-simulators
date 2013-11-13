@@ -23,8 +23,8 @@
  *
  * \copydoc Opm::TabulatedComponent
  */
-#ifndef OPM_TABULATED_COMPONENT_HH
-#define OPM_TABULATED_COMPONENT_HH
+#ifndef OPM_TABULATED_COMPONENT_HPP
+#define OPM_TABULATED_COMPONENT_HPP
 
 #include <cmath>
 #include <limits>

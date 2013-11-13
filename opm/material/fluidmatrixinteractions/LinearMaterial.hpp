@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::LinearMaterial
  */
-#ifndef OPM_LINEAR_MATERIAL_HH
-#define OPM_LINEAR_MATERIAL_HH
+#ifndef OPM_LINEAR_MATERIAL_HPP
+#define OPM_LINEAR_MATERIAL_HPP
 
 #include "LinearMaterialParams.hpp"
 

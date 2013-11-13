@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::H2O_N2
  */
-#ifndef OPM_BINARY_COEFF_H2O_N2_HH
-#define OPM_BINARY_COEFF_H2O_N2_HH
+#ifndef OPM_BINARY_COEFF_H2O_N2_HPP
+#define OPM_BINARY_COEFF_H2O_N2_HPP
 
 #include "HenryIapws.hpp"
 #include "FullerMethod.hpp"

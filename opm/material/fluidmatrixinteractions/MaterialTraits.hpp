@@ -24,8 +24,8 @@
  * and the fluid-matrix interaction laws. This includes stuff like the
  * index of the wetting and non-wetting phase, etc.
  */
-#ifndef OPM_MATERIAL_TRAITS_HH
-#define OPM_MATERIAL_TRAITS_HH
+#ifndef OPM_MATERIAL_TRAITS_HPP
+#define OPM_MATERIAL_TRAITS_HPP
 
 namespace Opm {
 /*!

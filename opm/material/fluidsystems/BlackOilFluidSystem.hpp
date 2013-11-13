@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::FluidSystems::BlackOil
  */
-#ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HH
-#define OPM_BLACK_OIL_FLUID_SYSTEM_HH
+#ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HPP
+#define OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

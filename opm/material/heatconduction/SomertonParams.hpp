@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::SomertonParams
  */
-#ifndef OPM_SOMERTON_PARAMS_HH
-#define OPM_SOMERTON_PARAMS_HH
+#ifndef OPM_SOMERTON_PARAMS_HPP
+#define OPM_SOMERTON_PARAMS_HPP
 
 #include <cassert>
 

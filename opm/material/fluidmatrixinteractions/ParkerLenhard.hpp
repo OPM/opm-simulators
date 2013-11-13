@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ParkerLenhard
  */
-#ifndef OPM_PARKER_LENHARD_HH
-#define OPM_PARKER_LENHARD_HH
+#ifndef OPM_PARKER_LENHARD_HPP
+#define OPM_PARKER_LENHARD_HPP
 
 #include "ParkerLenhardParams.hpp"
 
@@ -730,4 +730,4 @@ private:
 
 } // namespace Opm
 
-#endif // PARKER_LENHARD_HH
+#endif // PARKER_LENHARD_HPP

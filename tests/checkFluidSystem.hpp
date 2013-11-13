@@ -20,8 +20,8 @@
  * \file
  * \copydoc checkFluidSystem
  */
-#ifndef OPM_CHECK_FLUIDSYSTEM_HH
-#define OPM_CHECK_FLUIDSYSTEM_HH
+#ifndef OPM_CHECK_FLUIDSYSTEM_HPP
+#define OPM_CHECK_FLUIDSYSTEM_HPP
 
 // include all fluid systems in opm-material
 #include <opm/material/fluidsystems/1pFluidSystem.hpp>

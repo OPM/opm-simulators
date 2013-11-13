@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::FluidSystems::TwoPImmiscible
  */
-#ifndef OPM_2P_IMMISCIBLE_FLUID_SYSTEM_HH
-#define OPM_2P_IMMISCIBLE_FLUID_SYSTEM_HH
+#ifndef OPM_2P_IMMISCIBLE_FLUID_SYSTEM_HPP
+#define OPM_2P_IMMISCIBLE_FLUID_SYSTEM_HPP
 
 #include <limits>
 #include <cassert>

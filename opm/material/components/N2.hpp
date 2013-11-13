@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::N2
  */
-#ifndef OPM_N2_HH
-#define OPM_N2_HH
+#ifndef OPM_N2_HPP
+#define OPM_N2_HPP
 
 #include <opm/material/IdealGas.hpp>
 

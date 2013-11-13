@@ -20,8 +20,8 @@
  * \file
  * \brief Some templates to wrap the valgrind macros
  */
-#ifndef OPM_VALGRIND_HH
-#define OPM_VALGRIND_HH
+#ifndef OPM_VALGRIND_HPP
+#define OPM_VALGRIND_HPP
 
 #include <opm/core/utility/Unused.hpp>
 

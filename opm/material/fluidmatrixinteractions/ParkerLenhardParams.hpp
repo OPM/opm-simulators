@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ParkerLenhardParams
  */
-#ifndef OPM_PARKER_LENHARD_PARAMS_HH
-#define OPM_PARKER_LENHARD_PARAMS_HH
+#ifndef OPM_PARKER_LENHARD_PARAMS_HPP
+#define OPM_PARKER_LENHARD_PARAMS_HPP
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 

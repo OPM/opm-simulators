@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::FluidSystems::H2ON2
  */
-#ifndef OPM_H2O_N2_FLUID_SYSTEM_HH
-#define OPM_H2O_N2_FLUID_SYSTEM_HH
+#ifndef OPM_H2O_N2_FLUID_SYSTEM_HPP
+#define OPM_H2O_N2_FLUID_SYSTEM_HPP
 
 #include "BaseFluidSystem.hpp"
 #include "NullParameterCache.hpp"

@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::PengRobinsonParams
  */
-#ifndef OPM_PENG_ROBINSON_PARAMS_HH
-#define OPM_PENG_ROBINSON_PARAMS_HH
+#ifndef OPM_PENG_ROBINSON_PARAMS_HPP
+#define OPM_PENG_ROBINSON_PARAMS_HPP
 
 #include <opm/material/Valgrind.hpp>
 

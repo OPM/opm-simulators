@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::fullerMethod
  */
-#ifndef OPM_FULLERMETHOD_HH
-#define OPM_FULLERMETHOD_HH
+#ifndef OPM_FULLERMETHOD_HPP
+#define OPM_FULLERMETHOD_HPP
 
 #include <opm/core/utility/Average.hpp>
 

@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::Spe5ParameterCache
  */
-#ifndef OPM_SPE5_PARAMETER_CACHE_HH
-#define OPM_SPE5_PARAMETER_CACHE_HH
+#ifndef OPM_SPE5_PARAMETER_CACHE_HPP
+#define OPM_SPE5_PARAMETER_CACHE_HPP
 
 #include <cassert>
 

@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BrooksCorey
  */
-#ifndef OPM_BROOKS_COREY_HH
-#define OPM_BROOKS_COREY_HH
+#ifndef OPM_BROOKS_COREY_HPP
+#define OPM_BROOKS_COREY_HPP
 
 #include "BrooksCoreyParams.hpp"
 
@@ -445,4 +445,4 @@ public:
 };
 } // namespace Opm
 
-#endif // BROOKS_COREY_HH
+#endif // BROOKS_COREY_HPP

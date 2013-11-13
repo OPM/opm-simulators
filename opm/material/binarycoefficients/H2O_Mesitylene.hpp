@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::H2O_Mesitylene
  */
-#ifndef OPM_BINARY_COEFF_H2O_MESITYLENE_HH
-#define OPM_BINARY_COEFF_H2O_MESITYLENE_HH
+#ifndef OPM_BINARY_COEFF_H2O_MESITYLENE_HPP
+#define OPM_BINARY_COEFF_H2O_MESITYLENE_HPP
 
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/Mesitylene.hpp>

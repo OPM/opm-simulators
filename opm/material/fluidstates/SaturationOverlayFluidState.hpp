@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::SaturationOverlayFluidState
  */
-#ifndef OPM_SATURATION_OVERLAY_FLUID_STATE_HH
-#define OPM_SATURATION_OVERLAY_FLUID_STATE_HH
+#ifndef OPM_SATURATION_OVERLAY_FLUID_STATE_HPP
+#define OPM_SATURATION_OVERLAY_FLUID_STATE_HPP
 
 #include <opm/material/Valgrind.hpp>
 

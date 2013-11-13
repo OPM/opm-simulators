@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ComputeFromReferencePhase
  */
-#ifndef OPM_COMPUTE_FROM_REFERENCE_PHASE_HH
-#define OPM_COMPUTE_FROM_REFERENCE_PHASE_HH
+#ifndef OPM_COMPUTE_FROM_REFERENCE_PHASE_HPP
+#define OPM_COMPUTE_FROM_REFERENCE_PHASE_HPP
 
 #include <opm/material/constraintsolvers/CompositionFromFugacities.hpp>
 

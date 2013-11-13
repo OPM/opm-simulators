@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::EclDefaultMaterial
  */
-#ifndef OPM_ECL_DEFAULT_MATERIAL_HH
-#define OPM_ECL_DEFAULT_MATERIAL_HH
+#ifndef OPM_ECL_DEFAULT_MATERIAL_HPP
+#define OPM_ECL_DEFAULT_MATERIAL_HPP
 
 #include "EclDefaultMaterialParams.hpp"
 

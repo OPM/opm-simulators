@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::EffToAbsLaw
  */
-#ifndef OPM_EFF_TO_ABS_LAW_HH
-#define OPM_EFF_TO_ABS_LAW_HH
+#ifndef OPM_EFF_TO_ABS_LAW_HPP
+#define OPM_EFF_TO_ABS_LAW_HPP
 
 #include "EffToAbsLawParams.hpp"
 

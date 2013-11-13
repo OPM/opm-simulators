@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::RegularizedVanGenuchten
  */
-#ifndef OPM_REGULARIZED_VAN_GENUCHTEN_HH
-#define OPM_REGULARIZED_VAN_GENUCHTEN_HH
+#ifndef OPM_REGULARIZED_VAN_GENUCHTEN_HPP
+#define OPM_REGULARIZED_VAN_GENUCHTEN_HPP
 
 #include "VanGenuchten.hpp"
 #include "RegularizedVanGenuchtenParams.hpp"

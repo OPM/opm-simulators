@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::DNAPL
  */
-#ifndef OPM_DNAPL_HH
-#define OPM_DNAPL_HH
+#ifndef OPM_DNAPL_HPP
+#define OPM_DNAPL_HPP
 
 #include <opm/material/IdealGas.hpp>
 #include "Component.hpp"

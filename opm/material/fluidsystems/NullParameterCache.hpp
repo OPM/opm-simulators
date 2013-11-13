@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullParameterCache
  */
-#ifndef OPM_NULL_PARAMETER_CACHE_HH
-#define OPM_NULL_PARAMETER_CACHE_HH
+#ifndef OPM_NULL_PARAMETER_CACHE_HPP
+#define OPM_NULL_PARAMETER_CACHE_HPP
 
 #include "ParameterCacheBase.hpp"
 

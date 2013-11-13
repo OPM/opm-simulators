@@ -21,8 +21,8 @@
  *
  * \brief Modules for the ModularFluidState which represent viscosity.
  */
-#ifndef OPM_FLUID_STATE_VISCOSITY_MODULES_HH
-#define OPM_FLUID_STATE_VISCOSITY_MODULES_HH
+#ifndef OPM_FLUID_STATE_VISCOSITY_MODULES_HPP
+#define OPM_FLUID_STATE_VISCOSITY_MODULES_HPP
 
 #include <opm/material/Valgrind.hpp>
 

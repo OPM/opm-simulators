@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullMaterialParams
  */
-#ifndef OPM_NULL_MATERIAL_PARAMS_HH
-#define OPM_NULL_MATERIAL_PARAMS_HH
+#ifndef OPM_NULL_MATERIAL_PARAMS_HPP
+#define OPM_NULL_MATERIAL_PARAMS_HPP
 
 namespace Opm {
 /*!

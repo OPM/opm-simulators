@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::Constants
  */
-#ifndef OPM_CONSTANTS_HH
-#define OPM_CONSTANTS_HH
+#ifndef OPM_CONSTANTS_HPP
+#define OPM_CONSTANTS_HPP
 
 #include <cmath>
 

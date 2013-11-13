@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::H2O
  */
-#ifndef OPM_H2O_HH
-#define OPM_H2O_HH
+#ifndef OPM_H2O_HPP
+#define OPM_H2O_HPP
 
 #include <cmath>
 #include <cassert>

@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::RegularizedVanGenuchtenParams
  */
-#ifndef OPM_REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
-#define OPM_REGULARIZED_VAN_GENUCHTEN_PARAMS_HH
+#ifndef OPM_REGULARIZED_VAN_GENUCHTEN_PARAMS_HPP
+#define OPM_REGULARIZED_VAN_GENUCHTEN_PARAMS_HPP
 
 #include "VanGenuchtenParams.hpp"
 

@@ -21,8 +21,8 @@
  *
  * \brief Modules for the ModularFluidState which represent temperature.
  */
-#ifndef OPM_FLUID_STATE_TEMPERATURE_MODULES_HH
-#define OPM_FLUID_STATE_TEMPERATURE_MODULES_HH
+#ifndef OPM_FLUID_STATE_TEMPERATURE_MODULES_HPP
+#define OPM_FLUID_STATE_TEMPERATURE_MODULES_HPP
 
 #include <opm/material/Valgrind.hpp>
 

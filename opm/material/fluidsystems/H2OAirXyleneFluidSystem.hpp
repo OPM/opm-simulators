@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::FluidSystems::H2OAirXylene
  */
-#ifndef OPM_H2O_AIR_XYLENE_FLUID_SYSTEM_HH
-#define OPM_H2O_AIR_XYLENE_FLUID_SYSTEM_HH
+#ifndef OPM_H2O_AIR_XYLENE_FLUID_SYSTEM_HPP
+#define OPM_H2O_AIR_XYLENE_FLUID_SYSTEM_HPP
 
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/components/Air.hpp>

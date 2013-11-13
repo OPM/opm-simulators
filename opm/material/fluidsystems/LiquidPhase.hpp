@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::LiquidPhase
  */
-#ifndef OPM_LIQUID_PHASE_HH
-#define OPM_LIQUID_PHASE_HH
+#ifndef OPM_LIQUID_PHASE_HPP
+#define OPM_LIQUID_PHASE_HPP
 
 namespace Opm {
 

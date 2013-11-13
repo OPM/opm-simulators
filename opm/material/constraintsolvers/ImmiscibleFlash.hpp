@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ImmiscibleFlash
  */
-#ifndef OPM_IMMISCIBLE_FLASH_HH
-#define OPM_IMMISCIBLE_FLASH_HH
+#ifndef OPM_IMMISCIBLE_FLASH_HPP
+#define OPM_IMMISCIBLE_FLASH_HPP
 
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>

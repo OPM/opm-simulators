@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::PengRobinsonParamsMixture
  */
-#ifndef OPM_PENG_ROBINSON_PARAMS_MIXTURE_HH
-#define OPM_PENG_ROBINSON_PARAMS_MIXTURE_HH
+#ifndef OPM_PENG_ROBINSON_PARAMS_MIXTURE_HPP
+#define OPM_PENG_ROBINSON_PARAMS_MIXTURE_HPP
 
 #include <algorithm>
 #include <opm/material/Constants.hpp>

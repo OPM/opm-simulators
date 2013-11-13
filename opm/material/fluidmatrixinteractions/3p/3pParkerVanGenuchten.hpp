@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::ThreePParkerVanGenuchten
  */
-#ifndef OPM_3P_PARKER_VAN_GENUCHTEN_HH
-#define OPM_3P_PARKER_VAN_GENUCHTEN_HH
+#ifndef OPM_3P_PARKER_VAN_GENUCHTEN_HPP
+#define OPM_3P_PARKER_VAN_GENUCHTEN_HPP
 
 #include "3pParkerVanGenuchtenParams.hpp"
 

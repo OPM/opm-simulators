@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::Brine
  */
-#ifndef OPM_BRINE_HH
-#define OPM_BRINE_HH
+#ifndef OPM_BRINE_HPP
+#define OPM_BRINE_HPP
 
 #include <opm/material/components/Component.hpp>
 

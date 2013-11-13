@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ParameterCacheBase
  */
-#ifndef OPM_PARAMETER_CACHE_BASE_HH
-#define OPM_PARAMETER_CACHE_BASE_HH
+#ifndef OPM_PARAMETER_CACHE_BASE_HPP
+#define OPM_PARAMETER_CACHE_BASE_HPP
 
 namespace Opm {
 

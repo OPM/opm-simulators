@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::PengRobinson
  */
-#ifndef OPM_PENG_ROBINSON_HH
-#define OPM_PENG_ROBINSON_HH
+#ifndef OPM_PENG_ROBINSON_HPP
+#define OPM_PENG_ROBINSON_HPP
 
 #include <opm/material/fluidstates/TemperatureOverlayFluidState.hpp>
 #include <opm/material/IdealGas.hpp>

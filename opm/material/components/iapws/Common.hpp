@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::IAPWS::Common
  */
-#ifndef OPM_IAPWS_COMMON_HH
-#define OPM_IAPWS_COMMON_HH
+#ifndef OPM_IAPWS_COMMON_HPP
+#define OPM_IAPWS_COMMON_HPP
 
 #include <opm/material/Constants.hpp>
 

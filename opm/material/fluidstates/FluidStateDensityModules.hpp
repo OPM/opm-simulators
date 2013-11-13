@@ -21,8 +21,8 @@
  *
  * \brief Modules for the ModularFluidState which represent density.
  */
-#ifndef OPM_FLUID_STATE_DENSITY_MODULES_HH
-#define OPM_FLUID_STATE_DENSITY_MODULES_HH
+#ifndef OPM_FLUID_STATE_DENSITY_MODULES_HPP
+#define OPM_FLUID_STATE_DENSITY_MODULES_HPP
 
 #include <opm/material/Valgrind.hpp>
 

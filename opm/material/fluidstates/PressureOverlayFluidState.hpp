@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::PressureOverlayFluidState
  */
-#ifndef OPM_PRESSURE_OVERLAY_FLUID_STATE_HH
-#define OPM_PRESSURE_OVERLAY_FLUID_STATE_HH
+#ifndef OPM_PRESSURE_OVERLAY_FLUID_STATE_HPP
+#define OPM_PRESSURE_OVERLAY_FLUID_STATE_HPP
 
 #include <opm/material/Valgrind.hpp>
 

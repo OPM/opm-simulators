@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::DummyHeatConductionLaw
  */
-#ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HH
-#define OPM_DUMMY_HEATCONDUCTION_LAW_HH
+#ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HPP
+#define OPM_DUMMY_HEATCONDUCTION_LAW_HPP
 
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

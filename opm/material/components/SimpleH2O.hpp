@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::SimpleH2O
  */
-#ifndef OPM_SIMPLE_H2O_HH
-#define OPM_SIMPLE_H2O_HH
+#ifndef OPM_SIMPLE_H2O_HPP
+#define OPM_SIMPLE_H2O_HPP
 
 #include <opm/material/IdealGas.hpp>
 

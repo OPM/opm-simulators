@@ -21,8 +21,8 @@
  *
  * \copydoc Opm::CO2
  */
-#ifndef OPM_CO2_HH
-#define OPM_CO2_HH
+#ifndef OPM_CO2_HPP
+#define OPM_CO2_HPP
 
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

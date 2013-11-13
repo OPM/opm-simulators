@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::BinaryCoeff::H2O_Air
  */
-#ifndef OPM_BINARY_COEFF_H2O_AIR_HH
-#define OPM_BINARY_COEFF_H2O_AIR_HH
+#ifndef OPM_BINARY_COEFF_H2O_AIR_HPP
+#define OPM_BINARY_COEFF_H2O_AIR_HPP
 
 #include <cmath>
 

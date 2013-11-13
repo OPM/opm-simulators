@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NullComponent
  */
-#ifndef OPM_NULL_COMPONENT_HH
-#define OPM_NULL_COMPONENT_HH
+#ifndef OPM_NULL_COMPONENT_HPP
+#define OPM_NULL_COMPONENT_HPP
 
 #include "Component.hpp"
 

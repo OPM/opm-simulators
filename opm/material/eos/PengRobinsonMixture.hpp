@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::PengRobinsonMixture
  */
-#ifndef OPM_PENG_ROBINSON_MIXTURE_HH
-#define OPM_PENG_ROBINSON_MIXTURE_HH
+#ifndef OPM_PENG_ROBINSON_MIXTURE_HPP
+#define OPM_PENG_ROBINSON_MIXTURE_HPP
 
 #include "PengRobinson.hpp"
 

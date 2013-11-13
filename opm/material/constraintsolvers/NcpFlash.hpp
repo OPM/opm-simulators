@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::NcpFlash
  */
-#ifndef OPM_NCP_FLASH_HH
-#define OPM_NCP_FLASH_HH
+#ifndef OPM_NCP_FLASH_HPP
+#define OPM_NCP_FLASH_HPP
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>

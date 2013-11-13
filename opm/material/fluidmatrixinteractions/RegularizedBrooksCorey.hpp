@@ -21,8 +21,8 @@
  * \file
  * \copydoc Opm::RegularizedBrooksCorey
  */
-#ifndef REGULARIZED_BROOKS_COREY_HH
-#define REGULARIZED_BROOKS_COREY_HH
+#ifndef REGULARIZED_BROOKS_COREY_HPP
+#define REGULARIZED_BROOKS_COREY_HPP
 
 #include "BrooksCorey.hpp"
 #include "RegularizedBrooksCoreyParams.hpp"

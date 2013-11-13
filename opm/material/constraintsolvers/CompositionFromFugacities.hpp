@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::CompositionFromFugacities
  */
-#ifndef OPM_COMPOSITION_FROM_FUGACITIES_HH
-#define OPM_COMPOSITION_FROM_FUGACITIES_HH
+#ifndef OPM_COMPOSITION_FROM_FUGACITIES_HPP
+#define OPM_COMPOSITION_FROM_FUGACITIES_HPP
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>

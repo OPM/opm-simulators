@@ -22,8 +22,8 @@
  * \file
  * \copydoc Opm::IAPWS::Region2
  */
-#ifndef OPM_IAPWS_REGION2_HH
-#define OPM_IAPWS_REGION2_HH
+#ifndef OPM_IAPWS_REGION2_HPP
+#define OPM_IAPWS_REGION2_HPP
 
 #include <cmath>
 

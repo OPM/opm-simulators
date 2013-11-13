@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::VanGenuchtenParams
  */
-#ifndef VAN_GENUCHTEN_PARAMS_HH
-#define VAN_GENUCHTEN_PARAMS_HH
+#ifndef VAN_GENUCHTEN_PARAMS_HPP
+#define VAN_GENUCHTEN_PARAMS_HPP
 
 namespace Opm {
 /*!

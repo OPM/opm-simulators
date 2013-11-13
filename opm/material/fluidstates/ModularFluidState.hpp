@@ -20,8 +20,8 @@
  * \file
  * \copydoc Opm::ModularFluidState
  */
-#ifndef OPM_MODULAR_FLUID_STATE_HH
-#define OPM_MODULAR_FLUID_STATE_HH
+#ifndef OPM_MODULAR_FLUID_STATE_HPP
+#define OPM_MODULAR_FLUID_STATE_HPP
 
 #include "FluidStatePressureModules.hpp"
 #include "FluidStateTemperatureModules.hpp"
