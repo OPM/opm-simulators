@@ -516,6 +516,7 @@ done
 # For more details, see http://www.cmake.org/Bug/view.php?id=14119
 echo "--- deleting previous CMake files ---"
 rm -rf CMakeFiles
+rm -f CMakeCache.txt
 
 # pass everything on to CMake
 CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
