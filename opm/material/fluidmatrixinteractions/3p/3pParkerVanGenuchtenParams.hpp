@@ -29,6 +29,9 @@
 
 #include <opm/material/Valgrind.hpp>
 
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions

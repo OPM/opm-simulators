@@ -134,7 +134,6 @@ public:
         }
     }
 
-
     /*!
      * \brief The derivative of all capillary pressures in regard to
      *        a given phase saturation.

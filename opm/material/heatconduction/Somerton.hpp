@@ -27,6 +27,8 @@
 
 #include <opm/core/utility/Spline.hpp>
 
+#include <opm/material/Valgrind.hpp>
+
 #include <algorithm>
 
 namespace Opm

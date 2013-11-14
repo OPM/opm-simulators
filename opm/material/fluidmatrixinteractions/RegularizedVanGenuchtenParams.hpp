@@ -23,6 +23,7 @@
 #ifndef OPM_REGULARIZED_VAN_GENUCHTEN_PARAMS_HPP
 #define OPM_REGULARIZED_VAN_GENUCHTEN_PARAMS_HPP
 
+#include "VanGenuchten.hpp"
 #include "VanGenuchtenParams.hpp"
 
 #include <opm/core/utility/Spline.hpp>

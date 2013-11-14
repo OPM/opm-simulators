@@ -28,6 +28,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/material/Constants.hpp>
 #include <opm/material/IdealGas.hpp>
+#include <opm/material/components/Component.hpp>
 
 #include <cmath>
 #include <iostream>
