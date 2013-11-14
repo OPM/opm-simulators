@@ -35,29 +35,23 @@ namespace Opm {
  * Essentially, this class just stores the two parameter objects for
  * the twophase capillary pressure laws.
  */
-template<class GasOilParams, class OilWaterParams>
+template<class Traits, class GasOilParams, class OilWaterParams>
 class EclDefaultMaterialParams
 {
-public:
-    static_assert(GasOilParams::numPhases == 2,
-                  "The number of phases considered by the gas-oil capillary "
-                  "pressure law must be two!")
-    static_assert(OilWaterParams::numPhases == 2,
-                  "The number of phases considered by the oil-water capillary "
-                  "pressure law must be two!")
-    static_assert(std::is_same<typename GasOilParams::Scalar,
-                               typename OilWaterParams::Scalar>::value,
-                  "The two two-phase capillary pressure laws must use the same "
-                  "type of floating point values.");
-
-    typedef typename GasOilParams::Scalar Scalar;
+    typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
-
+public:
     /*!
      * \brief The default constructor.
      */
     EclDefaultMaterialParams()
     { }
+
+    /*!
+     * \brief Finish the initialization of the parameter object.
+     */
+    void finalize()
+    {} // Do nothing: The two two-phase parameter objects need to be finalized themselfs!
 
     /*!
      * \brief The parameter object for the gas-oil twophase law.

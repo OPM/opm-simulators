@@ -25,7 +25,6 @@
 
 #include "EclDefaultMaterialParams.hpp"
 
-#include <opm/material/fluidstates/SaturationOnlyFluidState.hpp>
 #include <opm/material/Valgrind.hpp>
 
 #include <opm/core/utility/Exceptions.hpp>
@@ -48,24 +47,69 @@ namespace Opm {
  * arguments and can be an arbitrary other material laws. (Provided
  * that these only depend on saturation.)
  */
-template <class ScalarT,
-          int wPhaseIdxV,
-          int oPhaseIdxV,
-          int gPhaseIdxV,
-          class WaterOilMaterialLaw,
-          class OilGasMaterialLaw,
-          class ParamsT = EclDefaultMaterialParams<OilGasMaterialLaw::Params,
-                                                   WaterOilMaterialLaw::Params> >
-class EclDefaultMaterial
+template <class TraitsT,
+          class GasOilMaterial,
+          class OilWaterMaterial,
+          class ParamsT = EclDefaultMaterialParams<TraitsT,
+                                                   typename GasOilMaterial::Params,
+                                                   typename OilWaterMaterial::Params> >
+class EclDefaultMaterial : public TraitsT
 {
 public:
-    typedef ParamsT Params;
-    typedef typename Params::Scalar Scalar;
-    enum { numPhases = 3 };
+    static_assert(TraitsT::numPhases == 3,
+                  "The number of phases considered by this capillary pressure "
+                  "law is always three!");
+    static_assert(GasOilMaterial::numPhases == 2,
+                  "The number of phases considered by the gas-oil capillary "
+                  "pressure law must be two!");
+    static_assert(OilWaterMaterial::numPhases == 2,
+                  "The number of phases considered by the oil-water capillary "
+                  "pressure law must be two!");
+    static_assert(std::is_same<typename GasOilMaterial::Scalar,
+                               typename OilWaterMaterial::Scalar>::value,
+                  "The two two-phase capillary pressure laws must use the same "
+                  "type of floating point values.");
 
-    enum { wPhaseIdx = wPhaseIdxV };
-    enum { nPhaseIdx = nPhaseIdxV };
-    enum { gPhaseIdx = gPhaseIdxV };
+    static_assert(GasOilMaterial::implementsTwoPhaseSatApi,
+                  "The gas-oil material law must implement the two-phase saturation "
+                  "only API to for the default Ecl capillary pressure law!");
+    static_assert(OilWaterMaterial::implementsTwoPhaseSatApi,
+                  "The oil-water material law must implement the two-phase saturation "
+                  "only API to for the default Ecl capillary pressure law!");
+
+    typedef TraitsT Traits;
+    typedef ParamsT Params;
+    typedef typename Traits::Scalar Scalar;
+
+    static const int numPhases = 3;
+    static const int wPhaseIdx = Traits::wPhaseIdx;
+    static const int nPhaseIdx = Traits::nPhaseIdx;
+    static const int oPhaseIdx = Traits::nPhaseIdx;
+    static const int gPhaseIdx = Traits::gPhaseIdx;
+
+    //! Specify whether this material law implements the two-phase
+    //! convenience API
+    static const bool implementsTwoPhaseApi = false;
+
+    //! Specify whether this material law implements the two-phase
+    //! convenience API which only depends on the phase saturations
+    static const bool implementsTwoPhaseSatApi = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are saturation dependent
+    static const bool isSaturationDependent = true;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the absolute pressure
+    static const bool isPressureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are temperature dependent
+    static const bool isTemperatureDependent = false;
+
+    //! Specify whether the quantities defined by this material law
+    //! are dependent on the phase composition
+    static const bool isCompositionDependent = false;
 
     /*!
      * \brief Implements the default three phase capillary pressure law
@@ -102,17 +146,10 @@ public:
      */
     template <class FluidState>
     static Scalar pcgn(const Params &params,
-                       const FluidState &state)
+                       const FluidState &fs)
     {
-        typedef SaturationOnlyFluidState<Scalar, /*numPhases=*/2> TwoPhaseFluidState;
-
-        TwoPhaseFluidState twoPhaseFs;
-
-        // calculate the relative permeabilities of water phase.
-        twoPhaseFs.setSaturation(OilGasMaterial::wPhaseIdx, 1 - fluidState.saturation(gPhaseIdx));
-        twoPhaseFs.setSaturation(OilGasMaterial::nPhaseIdx, fluidState.saturation(gPhaseIdx));
-
-        return OilGasMaterialLaw::pcnw(params.gasOilParams(), twoPhaseFs);
+        Scalar Sw = 1 - fs.saturation(gPhaseIdx);
+        return GasOilMaterial::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
     /*!
@@ -126,17 +163,10 @@ public:
      */
     template <class FluidState>
     static Scalar pcnw(const Params &params,
-                       const FluidState &state)
+                       const FluidState &fs)
     {
-        typedef SaturationOnlyFluidState<Scalar, /*numPhases=*/2> TwoPhaseFluidState;
-
-        TwoPhaseFluidState twoPhaseFs;
-
-        // calculate the relative permeabilities of water phase.
-        twoPhaseFs.setSaturation(WaterOilMaterial::wPhaseIdx, fluidState.saturation(wPhaseIdx));
-        twoPhaseFs.setSaturation(WaterOilMaterial::nPhaseIdx, 1 - fluidState.saturation(wPhaseIdx));
-
-        return WaterOilMaterialLaw::pcnw(params.gasOilParams(), twoPhaseFs);
+        Scalar Sw = fs.saturation(wPhaseIdx);
+        return OilWaterMaterial::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
     /*!
@@ -145,9 +175,39 @@ public:
     template <class ContainerT, class FluidState>
     static void saturations(ContainerT &values,
                             const Params &params,
-                            const FluidState &state)
+                            const FluidState &fs)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: Stone1Material::saturations()");
+        OPM_THROW(std::logic_error, "Not implemented: saturations()");
+    }
+
+    /*!
+     * \brief The saturation of the gas phase.
+     */
+    template <class FluidState>
+    static Scalar Sg(const Params &params,
+                      const FluidState &fluidState)
+    {
+        OPM_THROW(std::logic_error, "Not implemented: Sg()");
+    }
+
+    /*!
+     * \brief The saturation of the non-wetting (i.e., oil) phase.
+     */
+    template <class FluidState>
+    static Scalar Sn(const Params &params,
+                     const FluidState &fluidState)
+    {
+        OPM_THROW(std::logic_error, "Not implemented: Sn()");
+    }
+
+    /*!
+     * \brief The saturation of the wetting (i.e., water) phase.
+     */
+    template <class FluidState>
+    static Scalar Sw(const Params &params,
+                      const FluidState &fluidState)
+    {
+        OPM_THROW(std::logic_error, "Not implemented: Sw()");
     }
 
     /*!
@@ -182,15 +242,8 @@ public:
     static Scalar krg(const Params &params,
                       const FluidState &fluidState)
     {
-        typedef SaturationOnlyFluidState<Scalar, /*numPhases=*/2> TwoPhaseFluidState;
-
-        TwoPhaseFluidState twoPhaseFs;
-
-        // calculate the relative permeabilities of water phase.
-        twoPhaseFs.setSaturation(OilGasMaterial::wPhaseIdx, fluidState.saturation(wPhaseIdx));
-        twoPhaseFs.setSaturation(OilGasMaterial::nPhaseIdx, 1 - fluidState.saturation(wPhaseIdx));
-
-        return OilGasMaterial::krw(params.gasOilParams(), twoPhaseFs);
+        Scalar Sw = 1 - fluidState.saturation(gPhaseIdx);
+        return GasOilMaterial::twoPhaseSatKrn(params.oilWaterParams(), Sw);
     }
 
     /*!
@@ -200,15 +253,8 @@ public:
     static Scalar krw(const Params &params,
                       const FluidState &fluidState)
     {
-        typedef SaturationOnlyFluidState<Scalar, /*numPhases=*/2> TwoPhaseFluidState;
-
-        TwoPhaseFluidState twoPhaseFs;
-
-        // first, calculate the relative permeabilities of gas phase.
-        twoPhaseFs.setSaturation(WaterOilMaterial::wPhaseIdx, 1 - fluidState.saturation(gPhaseIdx));
-        twoPhaseFs.setSaturation(WaterOilMaterial::nPhaseIdx, fluidState.saturation(gPhaseIdx));
-
-        return WaterOilMaterial::krn(params.gasOilParams(), twoPhaseFs);
+        Scalar Sw = fluidState.saturation(wPhaseIdx);
+        return OilWaterMaterial::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
     /*!
@@ -218,10 +264,6 @@ public:
     static Scalar krn(const Params &params,
                       const FluidState &fluidState)
     {
-        typedef SaturationOnlyFluidState<Scalar, /*numPhases=*/2> TwoPhaseFluidState;
-
-        TwoPhaseFluidState twoPhaseFs;
-
         Scalar Sw = fluidState.saturation(wPhaseIdx);
         Scalar So = fluidState.saturation(oPhaseIdx);
         Scalar Sg = fluidState.saturation(gPhaseIdx);
@@ -230,22 +272,131 @@ public:
         // probably only relevant if hysteresis is enabled...
         Scalar Swco = 0; // todo!
 
-        // calculate the relative permeabilities of water phase.
-        twoPhaseFs.setSaturation(OilGasMaterial::wPhaseIdx, So  - Swco);
-        twoPhaseFs.setSaturation(OilGasMaterial::nPhaseIdx, 1 - (So - Swco) );
-
-        Scalar krog = OilGasMaterial::krw(params.oilGasParams(), twoPhaseFs);
-
-        // calculate the relative permeabilities of water phase.
-        twoPhaseFs.setSaturation(WaterOilMaterial::wPhaseIdx, 1 - So);
-        twoPhaseFs.setSaturation(WaterOilMaterial::nPhaseIdx, So);
-
-        Scalar krow = WaterOilMaterial::krn(params.oilGasParams(), twoPhaseFs);
+        Scalar krog = GasOilMaterial::twoPhaseSatKrw(params.oilWaterParams(), So - Swco);
+        Scalar krow = OilWaterMaterial::twoPhaseSatKrn(params.oilWaterParams(), 1 - So);
 
         if (Sg + Sw - Swco < 1e-30)
             return 0; // avoid division by zero
         else
             return (So * krog + (Sw - Swco)*krow) / (Sg + Sw - Swco);
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given phase saturation.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dSaturation(ContainerT &values,
+                                                const Params &params,
+                                                const FluidState &state,
+                                                int satPhaseIdx)
+    {
+        OPM_THROW(std::logic_error,
+                  "Not implemented: dCapillaryPressures_dSaturation()");
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given phase pressure.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dPressure(ContainerT &values,
+                                              const Params &params,
+                                              const FluidState &state,
+                                              int pPhaseIdx)
+    {
+        // -> not pressure dependent
+        for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
+            values[pcPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        temperature.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dTemperature(ContainerT &values,
+                                                 const Params &params,
+                                                 const FluidState &state)
+    {
+        // -> not temperature dependent
+        for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
+            values[pcPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all capillary pressures in regard to
+     *        a given mole fraction of a component in a phase.
+     */
+    template <class ContainerT, class FluidState>
+    static void dCapillaryPressures_dMoleFraction(ContainerT &values,
+                                                  const Params &params,
+                                                  const FluidState &state,
+                                                  int phaseIdx,
+                                                  int compIdx)
+    {
+        // -> not composition dependent
+        for (int pcPhaseIdx = 0; pcPhaseIdx < numPhases; ++pcPhaseIdx)
+            values[pcPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given phase saturation.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dSaturation(ContainerT &values,
+                                                    const Params &params,
+                                                    const FluidState &state,
+                                                    int satPhaseIdx)
+    {
+        OPM_THROW(std::logic_error,
+                  "Not implemented: dRelativePermeabilities_dSaturation()");
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given phase pressure.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dPressure(ContainerT &values,
+                                                  const Params &params,
+                                                  const FluidState &state,
+                                                  int pPhaseIdx)
+    {
+        // -> not pressure dependent
+        for (int krPhaseIdx = 0; krPhaseIdx < numPhases; ++krPhaseIdx)
+            values[krPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        temperature.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dTemperature(ContainerT &values,
+                                                     const Params &params,
+                                                     const FluidState &state)
+    {
+        // -> not temperature dependent
+        for (int krPhaseIdx = 0; krPhaseIdx < numPhases; ++krPhaseIdx)
+            values[krPhaseIdx] = 0.0;
+    }
+
+    /*!
+     * \brief The derivative of all relative permeabilities in regard to
+     *        a given mole fraction of a component in a phase.
+     */
+    template <class ContainerT, class FluidState>
+    static void dRelativePermeabilities_dMoleFraction(ContainerT &values,
+                                                      const Params &params,
+                                                      const FluidState &state,
+                                                      int phaseIdx,
+                                                      int compIdx)
+    {
+        // -> not composition dependent
+        for (int krPhaseIdx = 0; krPhaseIdx < numPhases; ++krPhaseIdx)
+            values[krPhaseIdx] = 0.0;
     }
 };
 } // namespace Opm

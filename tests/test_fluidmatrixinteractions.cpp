@@ -34,6 +34,7 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 
 // include the helper classes to construct traits
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -180,6 +181,15 @@ void testTwoPhaseSatApi()
         static_assert(MaterialLaw::implementsTwoPhaseSatApi,
                       "This material law is expected to implement "
                       "the two-phase saturation only API!");
+        static_assert(!MaterialLaw::isPressureDependent,
+                      "Capillary pressure laws which implement the twophase saturation only "
+                      "API cannot be dependent on the absolute phase pressures!");
+        static_assert(!MaterialLaw::isTemperatureDependent,
+                      "Capillary pressure laws which implement the twophase saturation only "
+                      "API cannot be dependent on temperature!");
+        static_assert(!MaterialLaw::isCompositionDependent,
+                      "Capillary pressure laws which implement the twophase saturation only "
+                      "API cannot be dependent on the phase compositions!");
 
         OPM_UNUSED static const int numPhases = MaterialLaw::numPhases;
 
@@ -219,6 +229,7 @@ void testThreePhaseApi()
         v = MaterialLaw::pcnw(params, fs);
         v = MaterialLaw::Sw(params, fs);
         v = MaterialLaw::Sn(params, fs);
+        v = MaterialLaw::Sg(params, fs);
         v = MaterialLaw::krw(params, fs);
         v = MaterialLaw::krn(params, fs);
         v = MaterialLaw::krg(params, fs);
@@ -283,6 +294,15 @@ int main(int argc, char **argv)
         testGenericApi<ThreePAbsLaw, ThreePhaseFluidState>();
         testThreePhaseApi<ThreePAbsLaw, ThreePhaseFluidState>();
         //testThreePhaseSatApi<ThreePAbsLaw, ThreePhaseFluidState>();
+    }
+    {
+        typedef Opm::BrooksCorey<TwoPhaseTraits> TwoPhaseMaterial;
+        typedef Opm::EclDefaultMaterial<ThreePhaseTraits,
+                                        /*GasOilMaterial=*/TwoPhaseMaterial,
+                                        /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
+        testGenericApi<MaterialLaw, ThreePhaseFluidState>();
+        testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
+        //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
     }
     {
         typedef Opm::NullMaterial<TwoPhaseTraits> MaterialLaw;
