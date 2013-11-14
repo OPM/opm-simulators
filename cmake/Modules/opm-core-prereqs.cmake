@@ -25,6 +25,9 @@ set (opm-core_DEPS
 	"SuperLU"
 	# xml processing (for config parsing)
 	"TinyXML"
+        #Parser library
+        "opm-parser REQUIRED"
+        "cJSON REQUIRED"
 	# Ensembles-based Reservoir Tools (ERT)
 	"ERT"
 	# DUNE dependency
