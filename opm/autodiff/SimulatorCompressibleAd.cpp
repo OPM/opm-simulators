@@ -70,7 +70,6 @@ namespace Opm
              const BlackoilPropertiesInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
-             const FlowBoundaryConditions* bcs,
              LinearSolverInterface& linsolver,
              const double* gravity);
 
@@ -98,7 +97,6 @@ namespace Opm
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
-        const FlowBoundaryConditions* bcs_;
         const double* gravity_;
         // Solvers
         BlackoilPropsAd fluid_;
@@ -119,11 +117,10 @@ namespace Opm
                                                      const BlackoilPropertiesInterface& props,
                                                      const RockCompressibility* rock_comp_props,
                                                      WellsManager& wells_manager,
-                                                     const FlowBoundaryConditions* bcs,
                                                      LinearSolverInterface& linsolver,
                                                      const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, bcs, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity));
     }
 
 
@@ -238,7 +235,6 @@ namespace Opm
                                         const BlackoilPropertiesInterface& props,
                                         const RockCompressibility* rock_comp_props,
                                         WellsManager& wells_manager,
-                                        const FlowBoundaryConditions* bcs,
                                         LinearSolverInterface& linsolver,
                                         const double* gravity)
         : grid_(grid),
@@ -246,7 +242,6 @@ namespace Opm
           rock_comp_props_(rock_comp_props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
-          bcs_(bcs),
           gravity_(gravity),
           fluid_(props_),
           geo_(grid_, fluid_, gravity_),
