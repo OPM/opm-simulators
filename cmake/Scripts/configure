@@ -33,6 +33,7 @@ Optional Features:
   --enable-underscoring   assume Fortran routines have _ suffix [default=no]
   --enable-ninja          use Ninja build generator [default=no]
                           (automatically implies --enable-underscoring)
+  --config-cache          Reuse build configuration cache from a previous run
 
 Optional Packages:
   --with-alugrid=PATH     use the ALUGrid library from a specified location
@@ -138,6 +139,8 @@ boost_opts=
 # configuration that is passed on to CTest/CDash
 buildname=
 site=
+# if set, this prevents the previous CMake cache from being deleted
+config_cache=
 
 # default is to warn for unknown options, but this can be disabled
 option_check=yes
@@ -168,7 +171,10 @@ for OPT in "$@"; do
       OPTARG=${OPT#--}
       # OPTARG now contains everything after double dashes
       case "${OPTARG}" in
-        config-cache*)
+        config-cache)
+        cache-file=*)
+          # prevent the previous CMake cache from being deleted. The
+          # second option is only here for Dune/autotools compatibility
           config_cache="1"
           ;;
         src-dir=*)
