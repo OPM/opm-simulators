@@ -49,6 +49,10 @@ public:
         currentSnr_ = 0;
         mdc_ = new ScanningCurve(/*Swr=*/0);
         pisc_ = csc_ = NULL;
+
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
     }
 
     ParkerLenhardParams(const ParkerLenhardParams &p)
@@ -57,6 +61,10 @@ public:
         SwrPc_ = p.SwrPc();
         mdc_ = new ScanningCurve(p.SwrPc());
         pisc_ = csc_ = NULL;
+
+#ifndef NDEBUG
+        finalized_ = p.finalized_;
+#endif
     }
 
     ~ParkerLenhardParams()
@@ -67,14 +75,18 @@ public:
      *        quantities of the parameter object have been set.
      */
     void finalize()
-    { }
+    {
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
+    }
 
     /*!
      * \brief Returns the parameters of the main imbibition curve (which uses
      *        the van Genuchten capillary pressure model).
      */
     const VanGenuchtenParams &micParams() const
-    { return *micParams_; }
+    { assertFinalized_(); return *micParams_; }
 
     /*!
      * \brief Sets the parameters of the main imbibition curve (which uses
@@ -88,7 +100,7 @@ public:
      *        the van Genuchten capillary pressure model).
      */
     const VanGenuchtenParams &mdcParams() const
-    { return *mdcParams_; }
+    { assertFinalized_(); return *mdcParams_; }
 
     /*!
      * \brief Sets the parameters of the main drainage curve (which uses
@@ -101,7 +113,7 @@ public:
      * \brief Returns non-wetting phase residual saturation.
      */
     Scalar Snr() const
-    { return Snr_; }
+    { assertFinalized_(); return Snr_; }
 
     /*!
      * \brief Set the  non-wetting phase residual saturation.
@@ -113,13 +125,13 @@ public:
      * \brief Returns wetting phase residual saturation for the capillary pressure curve.
      */
     Scalar SwrPc() const
-    { return SwrPc_; }
+    { assertFinalized_(); return SwrPc_; }
 
     /*!
      * \brief Returns wetting phase residual saturation for the residual saturation curves.
      */
     Scalar SwrKr() const
-    { return SwrKr_; }
+    { assertFinalized_(); return SwrKr_; }
 
     /*!
      * \brief Set the wetting phase residual saturation for the
@@ -138,7 +150,7 @@ public:
      * \brief Returns the current effective residual saturation.
      */
     Scalar currentSnr() const
-    { return currentSnr_; }
+    { assertFinalized_(); return currentSnr_; }
 
     /*!
      * \brief Set the current effective residual saturation.
@@ -150,7 +162,7 @@ public:
      * \brief Returns the main drainage curve
      */
     ScanningCurve *mdc() const
-    { return mdc_; }
+    { assertFinalized_(); return mdc_; }
 
     /*!
      * \brief Set the main drainage curve.
@@ -162,7 +174,7 @@ public:
      * \brief Returns the primary imbibition scanning curve
      */
     ScanningCurve *pisc() const
-    { return pisc_; }
+    { assertFinalized_(); return pisc_; }
 
     /*!
      * \brief Set the primary imbibition scanning curve.
@@ -174,7 +186,7 @@ public:
      * \brief Returns the current scanning curve
      */
     ScanningCurve *csc() const
-    { return csc_; }
+    { assertFinalized_(); return csc_; }
 
     /*!
      * \brief Set the current scanning curve.
@@ -182,8 +194,17 @@ public:
     void setCsc(ScanningCurve *val)
     { csc_ = val; }
 
-
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     const VanGenuchtenParams *micParams_;
     const VanGenuchtenParams *mdcParams_;
     Scalar SwrPc_;

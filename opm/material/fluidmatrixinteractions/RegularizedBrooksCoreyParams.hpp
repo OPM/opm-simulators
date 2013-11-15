@@ -44,12 +44,16 @@ public:
     RegularizedBrooksCoreyParams()
         : BrooksCoreyParams()
         , SwThres_(1e-2)
-    { }
+    {
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
+    }
 
     RegularizedBrooksCoreyParams(Scalar entryPressure, Scalar lambda)
         : BrooksCoreyParams(entryPressure, lambda)
         , SwThres_(1e-2)
-    { }
+    { finalize(); }
 
     /*!
      * \brief Calculate all dependent quantities once the independent
@@ -58,6 +62,9 @@ public:
     void finalize()
     {
         BrooksCoreyParams::finalize();
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
     }
 
     /*!
@@ -65,7 +72,7 @@ public:
      *        is regularized.
      */
     Scalar thresholdSw() const
-    { return SwThres_; }
+    { assertFinalized_(); return SwThres_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary pressure
@@ -75,6 +82,16 @@ public:
     { SwThres_ = value; }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     Scalar SwThres_;
 };
 } // namespace Opm

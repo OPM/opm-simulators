@@ -25,6 +25,8 @@
 
 #include <type_traits>
 
+#include <cassert>
+
 namespace Opm {
 
 /*!
@@ -45,19 +47,28 @@ public:
      * \brief The default constructor.
      */
     EclDefaultMaterialParams()
-    { }
+    {
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
+    }
 
     /*!
      * \brief Finish the initialization of the parameter object.
      */
     void finalize()
-    {} // Do nothing: The two two-phase parameter objects need to be finalized themselfs!
+    {
+        // Do nothing: The two two-phase parameter objects need to be finalized themselfs!
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
+    }
 
     /*!
      * \brief The parameter object for the gas-oil twophase law.
      */
     const GasOilParams& gasOilParams() const
-    { return gasOilParams_; }
+    { assertFinalized_(); return gasOilParams_; }
 
     /*!
      * \brief Set the parameter object for the gas-oil twophase law.
@@ -69,7 +80,7 @@ public:
      * \brief The parameter object for the oil-water twophase law.
      */
     const OilWaterParams& oilWaterParams() const
-    { return oilWaterParams_; }
+    { assertFinalized_(); return oilWaterParams_; }
 
     /*!
      * \brief The parameter object for the oil-water twophase law.
@@ -78,6 +89,16 @@ public:
     { oilWaterParams_ = val; }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     GasOilParams gasOilParams_;
     OilWaterParams oilWaterParams_;
 };

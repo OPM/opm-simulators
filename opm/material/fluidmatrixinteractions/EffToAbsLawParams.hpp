@@ -44,9 +44,12 @@ public:
     EffToAbsLawParams()
         : EffLawParams()
     {
-        sumResidualSaturations_ = 0.0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             residualSaturation_[phaseIdx] = 0.0;
+
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
     }
 
     /*!
@@ -55,32 +58,46 @@ public:
      */
     void finalize()
     {
+        sumResidualSaturations_ = 0.0;
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            sumResidualSaturations_ += residualSaturation_[phaseIdx];
+
         EffLawParams::finalize();
+
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
     }
 
     /*!
      * \brief Return the residual saturation of a phase.
      */
     Scalar residualSaturation(int phaseIdx) const
-    { return residualSaturation_[phaseIdx]; }
+    { assertFinalized_(); return residualSaturation_[phaseIdx]; }
 
     /*!
      * \brief Return the sum of the residual saturations.
      */
     Scalar sumResidualSaturations() const
-    { return sumResidualSaturations_; }
+    { assertFinalized_(); return sumResidualSaturations_; }
 
     /*!
      * \brief Set the residual saturation of a phase.
      */
     void setResidualSaturation(int phaseIdx, Scalar value)
-    {
-        sumResidualSaturations_ -= residualSaturation_[phaseIdx];
-        sumResidualSaturations_ += value;
-        residualSaturation_[phaseIdx] = value;
-    }
+    { residualSaturation_[phaseIdx] = value; }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     Scalar residualSaturation_[numPhases];
     Scalar sumResidualSaturations_;
 };

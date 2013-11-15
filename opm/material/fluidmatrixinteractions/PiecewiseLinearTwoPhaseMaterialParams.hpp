@@ -148,20 +148,19 @@ public:
     { krnSamples_ = samples; }
 
 private:
-    void assertFinalized_() const
-    {
 #ifndef NDEBUG
-        assert(finalized_);
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
 #endif
-    }
 
     SamplePoints pcwnSamples_;
     SamplePoints krwSamples_;
     SamplePoints krnSamples_;
-
-#ifndef NDEBUG
-    bool finalized_;
-#endif
 };
 } // namespace Opm
 

@@ -55,7 +55,9 @@ public:
         : Parent(vgAlpha, vgN)
         , pcnwLowSw_(0.01)
         , pcnwHighSw_(0.99)
-    {}
+    {
+        finalize();
+    }
 
     /*!
      * \brief Calculate all dependent quantities once the independent
@@ -76,6 +78,9 @@ public:
                             pcnwHigh_, 0, // y0, y1
                             mThreshold, pcnwSlopeHigh_); // m0, m1
 
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
     }
 
     /*!
@@ -83,14 +88,14 @@ public:
      *        capillary pressure is regularized.
      */
     Scalar pcnwLowSw() const
-    { return pcnwLowSw_; }
+    { assertFinalized_(); return pcnwLowSw_; }
 
     /*!
      * \brief Return the capillary pressure at the low threshold
      *        saturation of the wetting phase.
      */
     Scalar pcnwLow() const
-    { return pcnwLow_; }
+    { assertFinalized_(); return pcnwLow_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -99,7 +104,7 @@ public:
      * For this case, we extrapolate the curve using a straight line.
      */
     Scalar pcnwSlopeLow() const
-    { return pcnwSlopeLow_; }
+    { assertFinalized_(); return pcnwSlopeLow_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
@@ -113,21 +118,21 @@ public:
      *        capillary pressure is regularized.
      */
     Scalar pcnwHighSw() const
-    { return pcnwHighSw_; }
+    { assertFinalized_(); return pcnwHighSw_; }
 
     /*!
      * \brief Return the capillary pressure at the high threshold
      *        saturation of the wetting phase.
      */
     Scalar pcnwHigh() const
-    { return pcnwHigh_; }
+    { assertFinalized_(); return pcnwHigh_; }
 
     /*!
      * \brief Return the spline curve which ought to be used between
      *        the upper threshold saturation and 1.
      */
     const Spline<Scalar> &pcnwHighSpline() const
-    { return pcnwHighSpline_; }
+    { assertFinalized_(); return pcnwHighSpline_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -136,7 +141,7 @@ public:
      * For this case, we extrapolate the curve using a straight line.
      */
     Scalar pcnwSlopeHigh() const
-    { return pcnwSlopeHigh_; }
+    { assertFinalized_(); return pcnwSlopeHigh_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
@@ -146,6 +151,16 @@ public:
     { pcnwHighSw_ = value; }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     Scalar pcnwLowSw_;
     Scalar pcnwHighSw_;
 

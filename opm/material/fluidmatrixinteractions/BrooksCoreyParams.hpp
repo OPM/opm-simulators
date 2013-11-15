@@ -26,6 +26,8 @@
 
 #include <opm/material/Valgrind.hpp>
 
+#include <cassert>
+
 namespace Opm {
 
 /*!
@@ -45,24 +47,35 @@ public:
     typedef TraitsT Traits;
 
     BrooksCoreyParams()
-    { Valgrind::SetUndefined(*this); }
+    {
+        Valgrind::SetUndefined(*this);
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
+    }
 
     BrooksCoreyParams(Scalar entryPressure, Scalar lambda)
         : entryPressure_(entryPressure), lambda_(lambda)
-    { }
+    {
+        finalize();
+    }
 
     /*!
      * \brief Calculate all dependent quantities once the independent
      *        quantities of the parameter object have been set.
      */
     void finalize()
-    { }
+    {
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
+    }
 
     /*!
      * \brief Returns the entry pressure [Pa]
      */
     Scalar entryPressure() const
-    { return entryPressure_; }
+    { assertFinalized_(); return entryPressure_; }
 
     /*!
      * \brief Set the entry pressure [Pa]
@@ -75,7 +88,7 @@ public:
      * \brief Returns the lambda shape parameter
      */
     Scalar lambda() const
-    { return lambda_; }
+    { assertFinalized_(); return lambda_; }
 
     /*!
      * \brief Set the lambda shape parameter
@@ -84,6 +97,16 @@ public:
     { lambda_ = v; }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     Scalar entryPressure_;
     Scalar lambda_;
 };

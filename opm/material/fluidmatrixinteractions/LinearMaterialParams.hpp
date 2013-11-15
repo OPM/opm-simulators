@@ -50,6 +50,10 @@ public:
             setPcMinSat(phaseIdx, 0.0);
             setPcMaxSat(phaseIdx, 0.0);
         }
+
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
     }
 
     /*!
@@ -57,7 +61,11 @@ public:
      *        quantities of the parameter object have been set.
      */
     void finalize()
-    { }
+    {
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
+    }
 
     /*!
      * \brief Return the relative phase pressure at the minimum saturation of a phase.
@@ -65,7 +73,7 @@ public:
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=0\f$.
      */
     Scalar pcMinSat(int phaseIdx) const
-    { return pcMinSat_[phaseIdx]; }
+    { assertFinalized_();return pcMinSat_[phaseIdx]; }
 
     /*!
      * \brief Set the relative phase pressure at the minimum saturation of a phase.
@@ -81,7 +89,7 @@ public:
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=1\f$.
      */
     Scalar pcMaxSat(int phaseIdx) const
-    { return pcMaxSat_[phaseIdx]; }
+    { assertFinalized_(); return pcMaxSat_[phaseIdx]; }
 
     /*!
      * \brief Set the relative phase pressure at the maximum saturation of a phase.
@@ -92,6 +100,16 @@ public:
     { pcMaxSat_[phaseIdx] = val; }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     Scalar pcMaxSat_[numPhases];
     Scalar pcMinSat_[numPhases];
 };
