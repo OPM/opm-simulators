@@ -264,21 +264,23 @@ public:
     static Scalar krn(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sw = fluidState.saturation(wPhaseIdx);
-        Scalar So = fluidState.saturation(oPhaseIdx);
-        Scalar Sg = fluidState.saturation(gPhaseIdx);
+        Scalar Sw = std::min(1.0, std::max(0.0, fluidState.saturation(wPhaseIdx)));
+        Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oPhaseIdx)));
+        Scalar Sg = std::min(1.0, std::max(0.0, fluidState.saturation(gPhaseIdx)));
 
         // connate water. According to the Eclipse TD, this is
         // probably only relevant if hysteresis is enabled...
         Scalar Swco = 0; // todo!
 
-        Scalar krog = GasOilMaterial::twoPhaseSatKrw(params.oilWaterParams(), So - Swco);
+        Scalar krog = GasOilMaterial::twoPhaseSatKrw(params.oilWaterParams(), So + Swco);
         Scalar krow = OilWaterMaterial::twoPhaseSatKrn(params.oilWaterParams(), 1 - So);
 
         if (Sg + Sw - Swco < 1e-30)
-            return 0; // avoid division by zero
-        else
-            return (So * krog + (Sw - Swco)*krow) / (Sg + Sw - Swco);
+            return 1.0; // avoid division by zero
+        else {
+            Scalar tmp = (Sg*krog + (Sw - Swco)*krow) / (Sg + Sw - Swco);
+            return std::min(1.0, std::max(0.0, tmp));
+        }
     }
 
     /*!
