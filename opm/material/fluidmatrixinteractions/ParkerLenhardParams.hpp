@@ -58,8 +58,8 @@ public:
     ParkerLenhardParams(const ParkerLenhardParams &p)
     {
         currentSnr_ = 0;
-        SwrPc_ = p.SwrPc();
-        mdc_ = new ScanningCurve(p.SwrPc());
+        SwrPc_ = p.SwrPc_;
+        mdc_ = new ScanningCurve(SwrPc_);
         pisc_ = csc_ = NULL;
 
 #ifndef NDEBUG
