@@ -5,9 +5,9 @@
 #
 # If found, it sets these variables:
 #
-#	HAVE_OPM_PARSER              Defined if a test program compiled
-#	OPM_PARSER_INCLUDE_DIRS      Header file directories
-#	OPM_PARSER_LIBRARIES         Archives and shared objects
+#       HAVE_OPM_PARSER              Defined if a test program compiled
+#       OPM_PARSER_INCLUDE_DIRS      Header file directories
+#       OPM_PARSER_LIBRARIES         Archives and shared objects
 
 include (FindPackageHandleStandardArgs)
 
@@ -61,18 +61,18 @@ find_path (OPM_PARSER_INCLUDE_DIR
 # then it is probably a build directory; read the CMake cache of
 # opm-parser to figure out where the source directory is
 if ((NOT OPM_PARSER_INCLUDE_DIR) AND
-	(OPM_PARSER_ROOT AND (EXISTS "${OPM_PARSER_ROOT}/CMakeCache.txt")))
+        (OPM_PARSER_ROOT AND (EXISTS "${OPM_PARSER_ROOT}/CMakeCache.txt")))
   set (_regex "^OPMParser_SOURCE_DIR:STATIC=\(.*\)$")
   file (STRINGS
-	"${OPM_PARSER_ROOT}/CMakeCache.txt"
-	_cache_entry
-	REGEX "${_regex}")
+        "${OPM_PARSER_ROOT}/CMakeCache.txt"
+        _cache_entry
+        REGEX "${_regex}")
   string(REGEX REPLACE "${_regex}" "\\1"
-	OPM_PARSER_INCLUDE_DIR
-	"${_cache_entry}")
+        OPM_PARSER_INCLUDE_DIR
+        "${_cache_entry}")
   if (OPM_PARSER_INCLUDE_DIR)
-	set (OPM_PARSER_INCLUDE_DIR "${OPM_PARSER_INCLUDE_DIR}"
-	  CACHE PATH "Path to OPM parser header files" FORCE)
+        set (OPM_PARSER_INCLUDE_DIR "${OPM_PARSER_INCLUDE_DIR}"
+          CACHE PATH "Path to OPM parser header files" FORCE)
   endif ()
 endif ()
 
@@ -109,14 +109,16 @@ endif ()
 # get the prerequisite Boost libraries
 if (NOT Boost_FOUND)
   find_package(Boost 1.44.0
-	COMPONENTS filesystem date_time system unit_test_framework REQUIRED ${OPM_PARSER_QUIET})
+        COMPONENTS filesystem date_time system unit_test_framework REQUIRED ${OPM_PARSER_QUIET})
 endif ()
 
 # setup list of all required libraries to link with opm-parser. notice that
 # we use the plural form to get *all* the libraries needed by cjson
 set (OPM_PARSER_INCLUDE_DIRS
   ${OPM_PARSER_INCLUDE_DIR}
+  ${CJSON_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS})
+
 set (OPM_PARSER_LIBRARIES
   ${OPM_PARSER_LIBRARY}
   ${OPM_JSON_LIBRARY}
@@ -126,7 +128,7 @@ set (OPM_PARSER_LIBRARIES
 # see if we can compile a minimum example
 # CMake logical test doesn't handle lists (sic)
 if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
-	  OR OPM_PARSER_LIBRARIES MATCHES "-NOTFOUND"))
+          OR OPM_PARSER_LIBRARIES MATCHES "-NOTFOUND"))
   include (CMakePushCheckState)
   include (CheckCSourceCompiles)
   cmake_push_check_state ()
@@ -135,7 +137,7 @@ if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
 
   check_cxx_source_compiles (
 "#include <cstdlib>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 int main (void) {
    return EXIT_SUCCESS;
