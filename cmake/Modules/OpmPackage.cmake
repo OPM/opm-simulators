@@ -110,10 +110,12 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  )
 
 	# look in similar dirs for the other module
-	list (APPEND _guess_bin_only
-	  "../../${module}/${_build_dir}"
-	  "../../${_module_lower}/${_build_dir}"
-	  )
+	if (_build_dir)
+	  list (APPEND _guess_bin_only
+		"../../${module}/${_build_dir}"
+		"../../${_module_lower}/${_build_dir}"
+		)
+	endif (_build_dir)
 
 	# generate items that are in the build, not source dir
 	set (_guess_bin)
