@@ -82,6 +82,16 @@ macro (find_opm_package module deps header lib defs prog conf)
   set (${module}_DEFINITIONS ${PkgConf_${module}_CFLAGS_OTHER})
   set (${module}_LINKER_FLAG ${PkgConf_${module}_LDFLAGS_OTHER})
 
+  # try to figure out whether we are in a subdir build tree, and attempt
+  # to put the same name as the appropriate build tree for the module
+  get_filename_component (_build_dir "${CMAKE_CURRENT_BINARY_DIR}" NAME)
+
+  # don't bother if we are in a project specific directory already
+  # (assuming no-one wants to name the build dir after another module!)
+  if ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
+	set (_build_dir "")
+  endif ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
+
   # if the user hasn't specified any location, and it isn't found
   # in standard system locations either, then start to wander
   # about and look for it in proximity to ourself. Qt Creator likes
@@ -98,15 +108,6 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  "../${module}-build"
 	  "../${_module_lower}-build"
 	  )
-	# try to figure out whether we are in a subdir build tree, and attempt
-	# to put the same name as the appropriate build tree for the module
-	get_filename_component (_build_dir "${CMAKE_CURRENT_BINARY_DIR}" NAME)
-
-	# don't bother if we are in a project specific directory already
-	# (assuming no-one wants to name the build dir after another module!)
-	if ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
-	  set (_build_dir "")
-	endif ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
 
 	# look in similar dirs for the other module
 	list (APPEND _guess_bin_only
