@@ -149,10 +149,18 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  ${${module}_DIR}
 	  ${${module}_ROOT}
 	  ${${MODULE}_ROOT}
-	  ${${module}_DIR}/..
-	  ${${module}_ROOT}/..
-	  ${${MODULE}_ROOT}/..
 	  )
+	# only add parent directories for those variants that are actually set
+	# (otherwise, we'll inadvertedly add the root directory (=all))
+	if (${module}_DIR)
+	  list (APPEND _guess ${${module}_DIR}/..)
+	endif (${module}_DIR)
+	if (${module}_ROOT)
+	  list (APPEND _guess ${${module}_ROOT}/..)
+	endif (${module}_ROOT)
+	if (${MODULE}_ROOT)
+	  list (APPEND _guess ${${MODULE}_ROOT}/..)
+	endif (${MODULE}_ROOT)
 	# don't search the system paths! that would be dangerous; if there
 	# is a problem in our own specified directory, we don't necessarily
 	# want an old version that is left in one of the system paths!
