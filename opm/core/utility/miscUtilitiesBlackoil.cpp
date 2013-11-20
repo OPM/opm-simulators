@@ -32,6 +32,8 @@
 #include <functional>
 #include <cmath>
 #include <iterator>
+#include <opm/core/linalg/blas_lapack.h>
+
 
 namespace Opm
 {
@@ -275,6 +277,67 @@ namespace Opm
                 }
             }
         }
+    }
+
+    /// @brief Computes saturation from surface volume
+    void computeSaturation(const BlackoilPropertiesInterface& props,
+                          BlackoilState& state){
+
+        const int np = props.numPhases();
+        const int nc = props.numCells();
+        std::vector<double> allA(nc*np*np);
+        std::vector<int> allcells(nc);
+        for (int c = 0; c < nc; ++c) {
+            allcells[c] = c;
+        }
+
+        //std::vector<double> res_vol(np);
+        const std::vector<double>& z = state.surfacevol();
+
+        props.matrix(nc, &state.pressure()[0], &z[0], &allcells[0], &allA[0], 0);
+
+        // Linear solver.
+        MAT_SIZE_T n = np;
+        MAT_SIZE_T nrhs = 1;
+        MAT_SIZE_T lda = np;
+        std::vector<MAT_SIZE_T> piv(np);
+        MAT_SIZE_T ldb = np;
+        MAT_SIZE_T info = 0;
+
+
+        //double res_vol;
+        double tot_sat;
+        const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+
+        for (int c = 0; c < nc; ++c) {
+            double* A = &allA[c*np*np];
+            const double* z_loc = &z[c*np];
+            double* s = &state.saturation()[c*np];
+
+            for (int p = 0; p < np; ++p){
+                s[p] = z_loc[p];
+                }
+
+            dgesv_(&n, &nrhs, &A[0], &lda, &piv[0], &s[0], &ldb, &info);
+
+            tot_sat = 0;
+            for (int p = 0; p < np; ++p){
+                if (s[p] < epsilon) // saturation may be less then zero due to round of errors
+                    s[p] = 0;
+
+                tot_sat += s[p];
+            }
+
+            for (int p = 0; p < np; ++p){
+                s[p]  = s[p]/tot_sat;
+            }
+
+
+
+
+
+        }
+
     }
 
 

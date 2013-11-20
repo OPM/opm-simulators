@@ -136,6 +136,9 @@ namespace Opm
                            const double* saturation,
                            double* surfacevol);
 
+    /// Computes saturation from surface volume densities
+    void computeSaturation(const BlackoilPropertiesInterface& props,
+                          BlackoilState& state);
 
     /// Compute two-phase transport source terms from well terms.
     /// Note: Unlike the incompressible version of this function,
