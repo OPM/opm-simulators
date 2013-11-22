@@ -247,16 +247,7 @@ public:
     static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
     {
-        if (useComplexRelations)
-            std::cout << "Using complex H2O-N2 fluid system\n";
-        else
-            std::cout << "Using fast H2O-N2 fluid system\n";
-
         if (H2O::isTabulated) {
-            std::cout << "Initializing tables for the H2O fluid properties ("
-                      << nTemp*nPress
-                      << " entries).\n";
-
             TabulatedH2O::init(tempMin, tempMax, nTemp,
                                pressMin, pressMax, nPress);
         }

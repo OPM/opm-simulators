@@ -118,10 +118,6 @@ public:
                      Scalar pressMin, Scalar pressMax, unsigned nPress)
     {
         if (H2O::isTabulated) {
-            std::cout << "Initializing tables for the H2O fluid properties ("
-                      << nTemp*nPress
-                      << " entries).\n";
-
             TabulatedH2O::init(tempMin, tempMax, nTemp,
                                pressMin, pressMax, nPress);
         }

@@ -144,9 +144,6 @@ public:
         //
         fugCoeff = std::max(1e-10, fugCoeff);
         ///////////
-        if (!std::isfinite(fugCoeff)) {
-            std::cout << "Non finite phi: " << fugCoeff << "\n";
-        }
 
         return fugCoeff;
     }

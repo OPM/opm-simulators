@@ -209,13 +209,7 @@ public:
     static void init(Scalar tempMin, Scalar tempMax, int nTemp,
                      Scalar pressMin, Scalar pressMax, int nPress)
     {
-        int myRank = 0;
-#if HAVE_MPI
-        MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-#endif
         if (H2O::isTabulated) {
-            if (myRank == 0)
-                std::cout << "Initializing tables for the pure-water properties.\n";
             H2O_Tabulated::init(tempMin, tempMax, nTemp,
                                 pressMin, pressMax, nPress);
         }
@@ -224,8 +218,6 @@ public:
         Brine_IAPWS::salinity = CO2Tables::brineSalinity;
 
         if (Brine::isTabulated) {
-            if (myRank == 0)
-                std::cout << "Initializing tables for the brine fluid properties.\n";
             Brine_Tabulated::init(tempMin, tempMax, nTemp,
                                   pressMin, pressMax, nPress);
         }

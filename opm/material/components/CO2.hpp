@@ -161,15 +161,6 @@ public:
     static Scalar gasEnthalpy(Scalar temperature,
                               Scalar pressure)
     {
-#ifndef NDEBUG
-        if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
-        {
-            std::cout << "The tables used for the CO2 exhibit subcritical as well as critical values: "
-                      << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
-            warningPrinted=true;
-        }
-#endif
-
         return CO2Tables::tabulatedEnthalpy.eval(temperature, pressure);
     }
 
@@ -190,15 +181,6 @@ public:
     */
     static Scalar gasDensity(Scalar temperature, Scalar pressure)
     {
-#ifndef NDEBUG
-        if ((temperature < criticalTemperature() or pressure < criticalPressure()) and !warningPrinted)
-        {
-            std::cout << "The tables used for the CO2 exhibit subcritical as well as critical values: "
-                      << "Double-check your results if you cross the critical-subcritical line during the simulation!\n";
-            warningPrinted=true;
-        }
-#endif
-
         return CO2Tables::tabulatedDensity.eval(temperature, pressure);
     }
 
@@ -229,12 +211,7 @@ public:
         double visco_CO2;
 
         if(temperature < 275.) // regularization
-        {
             temperature = 275;
-            std::cout << "Temperature below 275K in viscosity function:"
-                      << "Regularizing temperature to 275K. " << std::endl;
-        }
-
 
         TStar = temperature/ESP;
 
