@@ -171,8 +171,7 @@ for OPT in "$@"; do
       OPTARG=${OPT#--}
       # OPTARG now contains everything after double dashes
       case "${OPTARG}" in
-        config-cache)
-        cache-file=*)
+        config-cache|cache-file=*)
           # prevent the previous CMake cache from being deleted. The
           # second option is only here for Dune/autotools compatibility
           config_cache="1"
