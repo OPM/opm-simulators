@@ -81,7 +81,7 @@ class FingerGridCreator
     enum { dim = FINGER_DIM };
 
 public:
-    typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid;
+    typedef Dune::ALUGrid<LENS_DIM, LENS_DIM, Dune::cube, Dune::nonconforming> Grid;
 
     /*!
      * \brief Register all run-time parameters for the grid creator.
