@@ -135,7 +135,7 @@ if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
 
   check_cxx_source_compiles (
 "#include <cstdlib>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 int main (void) {
    return EXIT_SUCCESS;

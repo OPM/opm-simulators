@@ -82,6 +82,16 @@ macro (find_opm_package module deps header lib defs prog conf)
   set (${module}_DEFINITIONS ${PkgConf_${module}_CFLAGS_OTHER})
   set (${module}_LINKER_FLAG ${PkgConf_${module}_LDFLAGS_OTHER})
 
+  # try to figure out whether we are in a subdir build tree, and attempt
+  # to put the same name as the appropriate build tree for the module
+  get_filename_component (_build_dir "${CMAKE_CURRENT_BINARY_DIR}" NAME)
+
+  # don't bother if we are in a project specific directory already
+  # (assuming no-one wants to name the build dir after another module!)
+  if ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
+	set (_build_dir "")
+  endif ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
+
   # if the user hasn't specified any location, and it isn't found
   # in standard system locations either, then start to wander
   # about and look for it in proximity to ourself. Qt Creator likes
@@ -98,21 +108,14 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  "../${module}-build"
 	  "../${_module_lower}-build"
 	  )
-	# try to figure out whether we are in a subdir build tree, and attempt
-	# to put the same name as the appropriate build tree for the module
-	get_filename_component (_build_dir "${CMAKE_CURRENT_BINARY_DIR}" NAME)
-
-	# don't bother if we are in a project specific directory already
-	# (assuming no-one wants to name the build dir after another module!)
-	if ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
-	  set (_build_dir "")
-	endif ("${_build_dir}" STREQUAL "${PROJECT_NAME}")
 
 	# look in similar dirs for the other module
-	list (APPEND _guess_bin_only
-	  "../../${module}/${_build_dir}"
-	  "../../${_module_lower}/${_build_dir}"
-	  )
+	if (_build_dir)
+	  list (APPEND _guess_bin_only
+		"../../${module}/${_build_dir}"
+		"../../${_module_lower}/${_build_dir}"
+		)
+	endif (_build_dir)
 
 	# generate items that are in the build, not source dir
 	set (_guess_bin)
@@ -146,10 +149,18 @@ macro (find_opm_package module deps header lib defs prog conf)
 	  ${${module}_DIR}
 	  ${${module}_ROOT}
 	  ${${MODULE}_ROOT}
-	  ${${module}_DIR}/..
-	  ${${module}_ROOT}/..
-	  ${${MODULE}_ROOT}/..
 	  )
+	# only add parent directories for those variants that are actually set
+	# (otherwise, we'll inadvertedly add the root directory (=all))
+	if (${module}_DIR)
+	  list (APPEND _guess ${${module}_DIR}/..)
+	endif (${module}_DIR)
+	if (${module}_ROOT)
+	  list (APPEND _guess ${${module}_ROOT}/..)
+	endif (${module}_ROOT)
+	if (${MODULE}_ROOT)
+	  list (APPEND _guess ${${MODULE}_ROOT}/..)
+	endif (${MODULE}_ROOT)
 	# don't search the system paths! that would be dangerous; if there
 	# is a problem in our own specified directory, we don't necessarily
 	# want an old version that is left in one of the system paths!
