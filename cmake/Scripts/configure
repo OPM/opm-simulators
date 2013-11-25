@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # where is the source tree located by default relative to here
-srcdir=$(dirname $(dirname $(dirname "$0")))
+srcdir=$(dirname "$(dirname "$(dirname "$0")")")
 
 # display help text
 usage () {
@@ -94,7 +94,7 @@ EOF
 # warn only if option checking is enabled
 invalid_opt () {
   if [ "${option_check}" = "yes" ]; then
-    unknown_arg $@
+    unknown_arg "$@"
   fi
 }
 
@@ -162,7 +162,7 @@ fi
 
 # helper routine
 uppercase () {
-  echo "$@" | tr [a-z-] [A-Z_]
+  echo "$@" | tr "a-z-" "A-Z_"
 }
 
 for OPT in "$@"; do
@@ -426,7 +426,7 @@ for OPT in "$@"; do
               shared="OFF"
               ;;
             *)
-              invalid_opt --enable-${kind}
+              invalid_opt "--enable-${kind}"
               shared=""
               ;;
           esac
@@ -438,7 +438,7 @@ for OPT in "$@"; do
         *)
           # remove everything *after* the equal sign
           arg=${OPTARG%=*}
-          invalid_arg --$arg
+          invalid_arg "--$arg"
           exit 1
           ;;
       esac
@@ -448,7 +448,7 @@ for OPT in "$@"; do
       VARS+=("$OPT")
       ;;
     *)
-      invalid_arg $OPT
+      invalid_arg "$OPT"
       exit 1
       ;;
   esac
@@ -484,12 +484,12 @@ for a in "${VARS[@]}"; do
     CC=*)
       # special processing for compiler options
       a=${a#CC=}
-      [ -x "$(command -v $a)" ] && a=$(command -v "$a")
+      [ -x "$(command -v "$a")" ] && a=$(command -v "$a")
       c_compiler=" -DCMAKE_C_COMPILER=\"${a/\"/\\\"}\""
       ;;
     CXX=*)
       a=${a#CXX=}
-      [ -x "$(command -v $a)" ] && a=$(command -v "$a")
+      [ -x "$(command -v "$a")" ] && a=$(command -v "$a")
       cxx_compiler=" -DCMAKE_CXX_COMPILER=\"${a/\"/\\\"}\""
       ;;
     CFLAGS=*)
@@ -502,7 +502,7 @@ for a in "${VARS[@]}"; do
       ;;
     FC=*)
       a=${a#FC=}
-      [ -x "$(command -v $a)" ] && a=$(command -v "$a")
+      [ -x "$(command -v "$a")" ] && a=$(command -v "$a")
       fort_compiler=" -DCMAKE_Fortran_COMPILER=\"${a/\"/\\\"}\""
       ;;
     FFLAGS=*)
@@ -534,5 +534,5 @@ fi
 # pass everything on to CMake
 CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
 echo --- calling CMake ---
-echo ${CMDLINE}
-eval exec ${CMDLINE}
+echo "${CMDLINE}"
+eval exec "${CMDLINE}"
