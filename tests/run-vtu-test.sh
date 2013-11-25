@@ -6,22 +6,22 @@
 #
 # runTest.sh REFERENCE_RESULT_FILE TEST_RESULT_FILE TEST_BINARY TEST_ARGS
 #
-MY_DIR="$(dirname $0)"
+MY_DIR="$(dirname "$0")"
 
-function usage() {
+usage() {
     echo "Usage:"
     echo
     echo "runTest.sh TEST_TYPE TEST_BINARY [TEST_ARGS]"
     echo "where TEST_TYPE can either be --plain or --simulation (is '$TEST_TYPE')."
 };
 
-function validateResults() {
+validateResults() {
     OUTPUT_FILE="$1"
     SIM_NAME="$2"
 
     for REFERENCE_RESULT in ${MY_DIR}/../tests/referencesolutions/$SIM_NAME*; do
         echo "Comparing with \"$REFERENCE_RESULT\"... "
-        if python ${MY_DIR}/fuzzycomparevtu.py "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
+        if python "${MY_DIR}/fuzzycomparevtu.py" "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
             # SUCCESS!!!!!!
             echo "Result file '$OUTPUT_FILE' and reference '$REFERENCE_RESULT' are identical" 
             return 0
@@ -93,7 +93,7 @@ case "$TEST_TYPE" in
         SIM_NAME=$(grep "Initializing problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
         NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
         TEST_RESULT=$(printf "%s-%05i" "$SIM_NAME" "$NUM_TIMESTEPS")
-        TEST_RESULT=$(ls $TEST_RESULT.*)
+        TEST_RESULT=$(ls "$TEST_RESULT".*)
         rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
             echo "File $TEST_RESULT does not exist or is not readable"
@@ -179,7 +179,7 @@ case "$TEST_TYPE" in
 
     "--parameters")
         HELP_MSG="$($TEST_BINARY --help)"
-        if test "$(echo $HELP_MSG | grep -i usage)" == ''; then
+        if test "$(echo "$HELP_MSG" | grep -i usage)" == ''; then
             echo "$TEST_BINARY did not accept '--help' parameter"
             exit 1
         fi
@@ -194,20 +194,20 @@ EndTime=100
 InitialTimeStepSize=100
 UndefinedParam="blubb"
 EOF
-        if ! $TEST_BINARY --parameter-file="paramfile-$RND.ini" 2>&1 > /dev/null; then
+        if ! $TEST_BINARY --parameter-file="paramfile-$RND.ini" > 2>&1 /dev/null; then
             echo "$TEST_BINARY does not correctly read a parameter file"
             exit 1
-        elif $TEST_BINARY --parameter-file="foobar.ini" 2>&1 > /dev/null; then
+        elif $TEST_BINARY --parameter-file="foobar.ini" > 2>&1 /dev/null; then
             echo "$TEST_BINARY does not abort even though the specified parameter file does not exist"
             exit 1
-        elif ! $TEST_BINARY --foo --end-time=1 2>&1 > /dev/null; then
+        elif ! $TEST_BINARY --foo --end-time=1 > 2>&1 /dev/null; then
             echo "$TEST_BINARY does not accept a flag parameters"
             exit 1
         fi
 
         # test some invalid parameter names
         for PARAM in foo -- -0foo --0foo --foo--bar --foo- -foo --foo-bar§=abc ; do
-            if $TEST_BINARY "$PARAM" --end-time=100 2>&1  > /dev/null; then
+            if $TEST_BINARY "$PARAM" --end-time=100 > 2>&1 /dev/null; then
                 echo "$TEST_BINARY accepted invalid command line option '$PARAM'"
                 exit 1
             fi
