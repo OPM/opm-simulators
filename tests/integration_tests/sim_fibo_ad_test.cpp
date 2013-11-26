@@ -146,7 +146,6 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
                 *new_props,
                 rock_comp->isActive() ? rock_comp.get() : 0,
                 wells,
-                bcs.c_bcs(),
                 linsolver,
                 grav);
      
@@ -249,7 +248,6 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
                 *new_props,
                 rock_comp->isActive() ? rock_comp.get() : 0,
                 wells,
-                bcs.c_bcs(),
                 linsolver,
                 grav);
      
