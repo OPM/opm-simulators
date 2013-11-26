@@ -25,6 +25,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 
 #include <iostream>
+#include <vector>
 
 namespace Opm
 {
@@ -115,86 +116,6 @@ struct HelperOps
         fulldiv = fullngrad.transpose();
     }
 };
-
-
-
-// -------------------- debugger output helpers --------------------
-
-
-#if !defined(NDEBUG)
-#include <cstdio>
-#include <string>
-
-namespace {
-    void
-    printSparseMatrix(const Eigen::SparseMatrix<double>& A,
-                      std::FILE*                         fp)
-    {
-        typedef Eigen::SparseMatrix<double>::Index Index;
-
-        const Index osize = A.outerSize();
-
-        for (Index k = 0; k < osize; ++k) {
-            for (Eigen::SparseMatrix<double>::InnerIterator
-                     i(A, k); i ; ++i) {
-                std::fprintf(fp, "%lu %lu %26.18e\n",
-                             static_cast<unsigned long>(i.row() + 1),
-                             static_cast<unsigned long>(i.col() + 1),
-                             i.value());
-            }
-        }
-    }
-
-    void
-    printSparseMatrix(const Eigen::SparseMatrix<double>& A ,
-                      const char* const                  fn)
-    {
-        std::FILE* fp;
-
-        fp = std::fopen(fn, "w");
-        if (fp != 0) {
-            printSparseMatrix(A, fp);
-        }
-
-        std::fclose(fp);
-    }
-
-    void
-    writeAsMATLAB(const std::vector< Eigen::SparseMatrix<double> >& vA,
-                  std::FILE*        fp   ,
-                  const char* const vname)
-    {
-        const int n = static_cast<int>(vA.size());
-
-        fprintf(fp, "%s = cell([1, %d]);\n\n", vname, n);
-
-        for (int i = 0; i < n; ++i) {
-            fprintf(fp, "%s{%d} = spconvert([\n", vname, i + 1);
-            printSparseMatrix(vA[i], fp);
-            const int rows = vA[i].rows();
-            const int cols = vA[i].cols();
-            fprintf(fp, "%d %d 0.0]);\n\n", rows, cols);
-        }
-    }
-
-    void
-    writeAsMATLAB(const std::vector< Eigen::SparseMatrix<double> >& vA,
-                  const char* const fn   ,
-                  const char* const vname)
-    {
-        std::FILE* fp;
-
-        fp = std::fopen(fn, "w");
-        if (fp != 0) {
-            writeAsMATLAB(vA, fp, vname);
-        }
-
-        std::fclose(fp);
-    }
-} // anonymous namespace
-#endif  // !defined(NDEBUG)
-
-
 
 // -------------------- upwinding helper class --------------------
 
@@ -586,7 +507,6 @@ inline Eigen::ArrayXd sign (const Eigen::ArrayXd& x)
     }
     return retval;
 }
-
 
 } // namespace Opm
 
