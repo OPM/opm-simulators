@@ -45,11 +45,25 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_span.cpp
 	tests/test_syntax.cpp
 	tests/test_scalar_mult.cpp
-	)
+        )
+
+if (INCLUDE_NON_PUBLIC_TESTS)
+        list (APPEND TEST_SOURCE_FILES
+                tests/integration_tests/sim_fibo_ad_test.cpp
+        )
+endif()
 
 list (APPEND TEST_DATA_FILES
 	tests/fluid.data
 	)
+
+if (INCLUDE_NON_PUBLIC_TESTS)
+        list (APPEND TEST_DATA_FILES
+                tests/non_public/SPE1_opm.DATA
+        )
+endif()
+
+
 
 # originally generated with the command:
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
