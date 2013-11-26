@@ -89,6 +89,12 @@ namespace Opm
         return timesteps_[current_step_];
     }
 
+    double SimulatorTimer::stepLengthTaken() const
+    {
+        assert(current_step_ > 0);
+        return timesteps_[current_step_ - 1];
+    }
+
     /// Current time.
     double SimulatorTimer::currentTime() const
     {

@@ -59,9 +59,19 @@ namespace Opm
         /// Set current step number.
         void setCurrentStepNum(int step);
 
-        /// Current step length.
-        /// Note: if done(), it is an error to call currentStepLength().
+        /// Current step length. This is the length of the step
+        /// the simulator will take in the next iteration.
+        ///
+        /// @note if done(), it is an error to call currentStepLength().
         double currentStepLength() const;
+
+        /// Previous step length. This is the length of the step that
+        /// was taken to arrive at this time.
+        ///
+        /// @note if no increments have been done (i.e. the timer is
+        /// still in its constructed state and currentStepNum() == 0),
+        /// it is an error to call stepLengthTaken().
+        double stepLengthTaken () const;
 
         /// Current time.
         double currentTime() const;
