@@ -60,6 +60,7 @@ list (APPEND TEST_DATA_FILES
 if (INCLUDE_NON_PUBLIC_TESTS)
         list (APPEND TEST_DATA_FILES
                 tests/non_public/SPE1_opm.DATA
+                tests/non_public/spe1.xml
         )
 endif()
 
