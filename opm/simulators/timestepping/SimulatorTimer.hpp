@@ -50,10 +50,10 @@ namespace Opm
         /// Total number of steps.
         int numSteps() const;
 
-        /// First timestep returned from currentStepNum
-        static const int FIRST_STEP = 0;
-
-        /// Current step number.
+        /// Current step number. This is the number of timesteps that
+        /// has been completed from the start of the run. The time
+        /// after initialization but before the simulation has started
+        /// is timestep number zero.
         int currentStepNum() const;
 
         /// Set current step number.
