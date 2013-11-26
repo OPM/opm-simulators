@@ -592,5 +592,64 @@ namespace Opm
         return relperms;
     }
 
+    std::vector<ADB> BlackoilPropsAd::capPress(const ADB& sw,
+                                               const ADB& so,
+                                               const ADB& sg,
+                                               const Cells& cells) const
+
+    {
+        const int numCells = cells.size();
+        const int numActivePhases = numPhases();
+        const int numBlocks = so.numBlocks();
+
+        Block activeSat(numCells, numActivePhases);
+        if (pu_.phase_used[Water]) {
+            assert(sw.value().size() == numCells);
+            activeSat.col(pu_.phase_pos[Water]) = sw.value();
+        }
+        if (pu_.phase_used[Oil]) {
+            assert(so.value().size() == numCells);
+            activeSat.col(pu_.phase_pos[Oil]) = so.value();
+        } else {
+            OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::relperm() assumes oil phase is active.");
+        }
+        if (pu_.phase_used[Gas]) {
+            assert(sg.value().size() == numCells);
+            activeSat.col(pu_.phase_pos[Gas]) = sg.value();
+        }
+
+        Block pc(numCells, numActivePhases);
+        Block dpc(numCells, numActivePhases*numActivePhases);
+        props_.capPress(numCells, activeSat.data(), cells.data(), pc.data(), dpc.data());
+
+        std::vector<ADB> adbCapPressures;
+        adbCapPressures.reserve(3);
+        const ADB* s[3] = { &sw, &so, &sg };
+        for (int phase1 = 0; phase1 < 3; ++phase1) {
+            if (pu_.phase_used[phase1]) {
+                const int phase1_pos = pu_.phase_pos[phase1];
+                std::vector<ADB::M> jacs(numBlocks);
+                for (int block = 0; block < numBlocks; ++block) {
+                    jacs[block] = ADB::M(numCells, s[phase1]->derivative()[block].cols());
+                }
+                for (int phase2 = 0; phase2 < 3; ++phase2) {
+                    if (!pu_.phase_used[phase2])
+                        continue;
+                    const int phase2_pos = pu_.phase_pos[phase2];
+                    // Assemble dpc1/ds2.
+                    const int column = phase1_pos + numActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                    ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
+                    for (int block = 0; block < numBlocks; ++block) {
+                        jacs[block] += dpc1_ds2_diag * s[phase2]->derivative()[block];
+                    }
+                }
+                adbCapPressures.emplace_back(ADB::function(pc.col(phase1_pos), jacs));
+            } else {
+                adbCapPressures.emplace_back(ADB::null());
+            }
+        }
+        return adbCapPressures;
+    }
+
 } // namespace Opm
 

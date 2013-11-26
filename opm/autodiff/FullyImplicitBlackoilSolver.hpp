@@ -169,6 +169,9 @@ namespace Opm {
                          WellState& well_state) const;
 
         std::vector<ADB>
+        computePressures(const SolutionState& state) const;
+
+        std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
 
         std::vector<ADB>
@@ -179,7 +182,8 @@ namespace Opm {
         void
         computeMassFlux(const int               actph ,
                         const V&                transi,
-                        const std::vector<ADB>& kr    ,
+                        const ADB&              kr    ,
+                        const ADB&              p     ,
                         const SolutionState&    state );
 
         double
