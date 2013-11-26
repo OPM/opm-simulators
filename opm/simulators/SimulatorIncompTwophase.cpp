@@ -452,7 +452,7 @@ namespace Opm
             std::string filename = output_dir_ + "/step_timing.param";
             tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
         }
-        for (; !timer.done(); ++timer) {
+        while (!timer.done()) {
             // Report timestep and (optionally) write state to disk.
             step_timer.start();
             timer.report(*log_);
@@ -604,6 +604,10 @@ namespace Opm
             if (output_) {
                 sreport.reportParam(tstep_os);
             }
+
+            // advance the timer to the end of the timestep *before* notifying
+            // the client that the timestep is done
+            ++timer;
 
             // notify all clients that we are done with the timestep
             callback_timer.start ();
