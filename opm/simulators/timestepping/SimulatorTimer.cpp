@@ -30,7 +30,7 @@ namespace Opm
 
     /// Default constructor.
     SimulatorTimer::SimulatorTimer()
-        : current_step_(0),
+        : current_step_(FIRST_STEP),
           current_time_(0.0),
           start_date_(2012,1,1)    // A really arbitrary default starting value?!
     {

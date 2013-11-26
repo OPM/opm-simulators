@@ -50,6 +50,9 @@ namespace Opm
         /// Total number of steps.
         int numSteps() const;
 
+        /// First timestep returned from currentStepNum
+        static const int FIRST_STEP = 0;
+
         /// Current step number.
         int currentStepNum() const;
 
