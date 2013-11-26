@@ -194,20 +194,20 @@ EndTime=100
 InitialTimeStepSize=100
 UndefinedParam="blubb"
 EOF
-        if ! $TEST_BINARY --parameter-file="paramfile-$RND.ini" > 2>&1 /dev/null; then
+        if ! $TEST_BINARY --parameter-file="paramfile-$RND.ini" 2>&1 > /dev/null; then
             echo "$TEST_BINARY does not correctly read a parameter file"
             exit 1
-        elif $TEST_BINARY --parameter-file="foobar.ini" > 2>&1 /dev/null; then
+        elif $TEST_BINARY --parameter-file="foobar.ini" 2>&1 > /dev/null; then
             echo "$TEST_BINARY does not abort even though the specified parameter file does not exist"
             exit 1
-        elif ! $TEST_BINARY --foo --end-time=1 > 2>&1 /dev/null; then
+        elif ! $TEST_BINARY --foo --end-time=1 2>&1 > /dev/null; then
             echo "$TEST_BINARY does not accept a flag parameters"
             exit 1
         fi
 
         # test some invalid parameter names
         for PARAM in foo -- -0foo --0foo --foo--bar --foo- -foo --foo-bar§=abc ; do
-            if $TEST_BINARY "$PARAM" --end-time=100 > 2>&1 /dev/null; then
+            if $TEST_BINARY "$PARAM" --end-time=100 2>&1 > /dev/null; then
                 echo "$TEST_BINARY accepted invalid command line option '$PARAM'"
                 exit 1
             fi
