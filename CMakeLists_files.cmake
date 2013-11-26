@@ -57,6 +57,9 @@ list (APPEND TEST_DATA_FILES
 	tests/fluid.data
 	)
 
+# Note, these two files are not included in the repo.
+# If enabling INCLUDE_NON_PUBLIC_TESTS, please add add symlink to the folder
+# "non_public" containing these two files.
 if (INCLUDE_NON_PUBLIC_TESTS)
 	list (APPEND TEST_DATA_FILES
 		tests/non_public/SPE1_opm.DATA
