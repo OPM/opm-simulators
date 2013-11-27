@@ -270,7 +270,7 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
 BOOST_AUTO_TEST_CASE(SPE1_runWithOldAndNewParser_BlackOilStateEqual) {
     boost::filesystem::path test_data("non_public/spe1.xml");
     std::string deck_filename = test_data.string();
-    const char * argv[] = { "", deck_filename.c_str()};
+    const char * argv[] = { "", deck_filename.c_str(), static_cast<const char*>(0)};
     parameter::ParameterGroup param(2, argv, false);
     
     std::vector<BlackoilState> runWithOldParserStates = runWithOldParser(param);
