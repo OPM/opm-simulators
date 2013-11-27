@@ -223,11 +223,6 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     simtimer.init(*old_deck);
     const double total_time = simtimer.totalTime();
 
-    int numEpochsOld = old_deck->numberOfEpochs();
-    int numEpochsNew = schedule_deck->getTimeMap()->size();
-
-    std::cout << "Old " << numEpochsOld << " New: " << numEpochsNew << "\n";
-
     //In the Schedule Deck, we have the start data as the 0th element.
     for (size_t epoch = 0; epoch < schedule_deck->getTimeMap()->size() - 1; ++epoch) {
         // Set epoch index.
