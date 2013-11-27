@@ -74,7 +74,7 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
 
     double gravity[3] = {0.0};
     boost::filesystem::path test_data("non_public/SPE1_opm.DATA");
-    std::string deck_filename = test_data.native_file_string();
+    std::string deck_filename = test_data.string();
     deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
     grid.reset(new GridManager(*deck));
@@ -176,7 +176,7 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
 
     double gravity[3] = {0.0};
     boost::filesystem::path test_data("non_public/SPE1_opm.DATA");
-    std::string deck_filename = test_data.native_file_string();
+    std::string deck_filename = test_data.string();
     deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
     grid.reset(new GridManager(*deck));
@@ -269,7 +269,7 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
 
 BOOST_AUTO_TEST_CASE(SPE1_runWithOldAndNewParser_BlackOilStateEqual) {
     boost::filesystem::path test_data("non_public/spe1.xml");
-    std::string deck_filename = test_data.native_file_string();
+    std::string deck_filename = test_data.string();
     const char * argv[] = { "", deck_filename.c_str()};
     parameter::ParameterGroup param(2, argv, false);
     
