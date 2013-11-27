@@ -47,9 +47,26 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_scalar_mult.cpp
 	)
 
+if (INCLUDE_NON_PUBLIC_TESTS)
+	list (APPEND TEST_SOURCE_FILES
+		tests/integration_tests/sim_fibo_ad_test.cpp
+		)
+endif()
+
 list (APPEND TEST_DATA_FILES
 	tests/fluid.data
 	)
+
+# Note, these two files are not included in the repo.
+# If enabling INCLUDE_NON_PUBLIC_TESTS, please add add symlink to the folder
+# "non_public" containing these two files.
+if (INCLUDE_NON_PUBLIC_TESTS)
+	list (APPEND TEST_DATA_FILES
+		tests/non_public/SPE1_opm.DATA
+		tests/non_public/spe1.xml
+		)
+endif()
+
 
 # originally generated with the command:
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
