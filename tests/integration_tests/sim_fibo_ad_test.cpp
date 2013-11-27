@@ -52,6 +52,10 @@
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
@@ -166,7 +170,14 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
 
 
 std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
-    boost::scoped_ptr<EclipseGridParser> deck;
+    boost::filesystem::path test_data("non_public/SPE1_opm.DATA");
+    std::string deck_filename = test_data.string();
+
+    ParserPtr parser(new Parser());
+    DeckConstPtr deck = parser->parse(deck_filename);
+    ScheduleConstPtr schedule_deck(new Schedule(deck));
+
+    boost::scoped_ptr<EclipseGridParser> old_deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
     boost::scoped_ptr<BlackoilPropsAdInterface> new_props;
@@ -175,20 +186,19 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     std::vector<BlackoilState> state_collection;
 
     double gravity[3] = {0.0};
-    boost::filesystem::path test_data("non_public/SPE1_opm.DATA");
-    std::string deck_filename = test_data.string();
-    deck.reset(new EclipseGridParser(deck_filename));
+
+    old_deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
-    grid.reset(new GridManager(*deck));
+    grid.reset(new GridManager(*old_deck));
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
+    props.reset(new BlackoilPropertiesFromDeck(*old_deck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(*old_deck, *grid->c_grid()));
 
-    rock_comp.reset(new RockCompressibility(*deck));
+    rock_comp.reset(new RockCompressibility(*old_deck));
 
-    gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = old_deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
 
-    initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+    initBlackoilStateFromDeck(*grid->c_grid(), *props, *old_deck, gravity[2], state);
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
@@ -201,7 +211,7 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
             << "                        (number of epochs: "
-            << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
+            << (old_deck->numberOfEpochs()) << ")\n\n" << std::flush;
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
@@ -209,16 +219,23 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     int step = 0;
     SimulatorTimer simtimer;
     // Use timer for last epoch to obtain total time.
-    deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
-    simtimer.init(*deck);
+    old_deck->setCurrentEpoch(old_deck->numberOfEpochs() - 1);
+    simtimer.init(*old_deck);
     const double total_time = simtimer.totalTime();
-    for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
+
+    int numEpochsOld = old_deck->numberOfEpochs();
+    int numEpochsNew = schedule_deck->getTimeMap()->size();
+
+    std::cout << "Old " << numEpochsOld << " New: " << numEpochsNew << "\n";
+
+    //In the Schedule Deck, we have the start data as the 0th element.
+    for (size_t epoch = 0; epoch < schedule_deck->getTimeMap()->size() - 1; ++epoch) {
         // Set epoch index.
-        deck->setCurrentEpoch(epoch);
+        old_deck->setCurrentEpoch(epoch);
 
         // Update the timer.
-        if (deck->hasField("TSTEP")) {
-            simtimer.init(*deck);
+        if (old_deck->hasField("TSTEP")) {
+            simtimer.init(*old_deck);
         } else {
             if (epoch != 0) {
                 OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
@@ -234,7 +251,7 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
                 << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
         // Create new wells, well_state
-        WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+        WellsManager wells(*old_deck, *grid->c_grid(), props->permeability());
         // @@@ HACK: we should really make a new well state and
         // properly transfer old well state to it every epoch,
         // since number of wells may change etc.
