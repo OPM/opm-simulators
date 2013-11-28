@@ -533,7 +533,8 @@ namespace {
             return fluid_.muWat(p, cells);
         case Oil: {
             V dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.muOil(p, dummy_rs, cells);
+            bool dummy_isSat[p.size()];
+            return fluid_.muOil(p, dummy_rs, dummy_isSat, cells);
         }
         case Gas:
             return fluid_.muGas(p, cells);
@@ -553,7 +554,8 @@ namespace {
             return fluid_.muWat(p, cells);
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.muOil(p, dummy_rs, cells);
+            bool dummy_isSat[p.size()];
+            return fluid_.muOil(p, dummy_rs, dummy_isSat, cells);
         }
         case Gas:
             return fluid_.muGas(p, cells);
@@ -573,7 +575,8 @@ namespace {
             return fluid_.bWat(p, cells);
         case Oil: {
             V dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.bOil(p, dummy_rs, cells);
+            bool dummy_isSat[p.size()];
+            return fluid_.bOil(p, dummy_rs, dummy_isSat,cells);
         }
         case Gas:
             return fluid_.bGas(p, cells);
@@ -593,7 +596,8 @@ namespace {
             return fluid_.bWat(p, cells);
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.bOil(p, dummy_rs, cells);
+            bool dummy_isSat[p.size()];
+            return fluid_.bOil(p, dummy_rs, dummy_isSat,cells);
         }
         case Gas:
             return fluid_.bGas(p, cells);
