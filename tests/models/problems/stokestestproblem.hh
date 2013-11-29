@@ -56,6 +56,7 @@ SET_PROP(StokesTestProblem, Fluid)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::GasPhase<Scalar, Opm::N2<Scalar> > type;
 };
@@ -92,15 +93,15 @@ namespace Ewoms {
  * free-flow on the left and no-flow at the top and bottom boundaries.
  */
 template <class TypeTag>
-class StokesTestProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class StokesTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Fluid) Fluid;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -128,7 +129,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     StokesTestProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -154,8 +155,7 @@ public:
      * This problem assumes a constant temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 273.15 + 10; } // -> 10 deg C
 
     //! \}
@@ -173,7 +173,8 @@ public:
      * a parabolic velocity profile via constraints.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -183,16 +184,16 @@ public:
         // parabolic velocity profile
         const Scalar maxVelocity = 1.0;
 
-        Scalar a = - 4*maxVelocity/(height*height);
-        Scalar b = - a*height;
+        Scalar a = -4 * maxVelocity / (height * height);
+        Scalar b = -a * height;
         Scalar c = 0;
 
         DimVector velocity(0.0);
-        velocity[0] = a * y*y + b * y + c;
+        velocity[0] = a * y * y + b * y + c;
 
         if (onRightBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
-        else if(onLeftBoundary_(pos)) {
+        else if (onLeftBoundary_(pos)) {
             // left boundary is constraint!
             values = 0.0;
         }
@@ -213,9 +214,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -225,12 +225,12 @@ public:
         // parabolic velocity profile on boundaries
         const Scalar maxVelocity = 1.0;
 
-        Scalar a = - 4*maxVelocity/(height*height);
-        Scalar b = - a*height;
+        Scalar a = -4 * maxVelocity / (height * height);
+        Scalar b = -a * height;
         Scalar c = 0;
 
         DimVector velocity(0.0);
-        velocity[0] = a * y*y + b * y + c;
+        velocity[0] = a * y * y + b * y + c;
 
         for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
             values[velocity0Idx + axisIdx] = velocity[axisIdx];
@@ -244,9 +244,8 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -256,8 +255,7 @@ public:
      * velocity profile using constraints.
      */
     template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
+    void constraints(Constraints &constraints, const Context &context,
                      int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
@@ -266,7 +264,9 @@ public:
             PrimaryVariables initCond;
             initial(initCond, context, spaceIdx, timeIdx);
 
-            constraints.setConstraint(pressureIdx, conti0EqIdx, initCond[pressureIdx]);;
+            constraints.setConstraint(pressureIdx, conti0EqIdx,
+                                      initCond[pressureIdx]);
+            ;
             for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 constraints.setConstraint(velocity0Idx + axisIdx,
                                           momentum0EqIdx + axisIdx,
@@ -291,9 +291,8 @@ private:
 
     bool onBoundary_(const GlobalPosition &pos) const
     {
-        return
-            onLeftBoundary_(pos) || onRightBoundary_(pos) ||
-            onLowerBoundary_(pos) || onUpperBoundary_(pos);
+        return onLeftBoundary_(pos) || onRightBoundary_(pos)
+               || onLowerBoundary_(pos) || onUpperBoundary_(pos);
     }
 
     Scalar eps_;

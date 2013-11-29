@@ -18,7 +18,8 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief Test for the isothermal Navier-Stokes VCVF discretization; this test case is
+ * \brief Test for the isothermal Navier-Stokes VCVF discretization; this test
+ * case is
  *        known as lid-driven cavity-flow in literature.
  */
 #include "config.h"
@@ -26,7 +27,7 @@
 #include <ewoms/common/start.hh>
 #include "problems/navierstokestestproblem.hh"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(NavierStokesTestProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

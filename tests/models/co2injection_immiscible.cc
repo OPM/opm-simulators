@@ -29,13 +29,15 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(Co2InjectionImmiscibleProblem, INHERITS_FROM(VcfvImmiscible, Co2InjectionBaseProblem));
-} }
+NEW_TYPE_TAG(Co2InjectionImmiscibleProblem,
+             INHERITS_FROM(VcfvImmiscible, Co2InjectionBaseProblem));
+}
+}
 
 ////////////////////////
 // the main function
 ////////////////////////
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionImmiscibleProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

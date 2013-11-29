@@ -62,15 +62,17 @@ SET_PROP(GroundWaterBaseProblem, Fluid)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
 
 // Set the grid type
 SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::YaspGrid<2>);
-//SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::SGrid<2, 2>);
+// SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::SGrid<2, 2>);
 
-SET_TYPE_PROP(GroundWaterBaseProblem, Problem, Ewoms::GroundWaterProblem<TypeTag>);
+SET_TYPE_PROP(GroundWaterBaseProblem, Problem,
+              Ewoms::GroundWaterProblem<TypeTag>);
 
 SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftX, 0.25);
 SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftY, 0.25);
@@ -81,8 +83,10 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightZ, 0.75);
 SET_SCALAR_PROP(GroundWaterBaseProblem, Permeability, 1e-10);
 SET_SCALAR_PROP(GroundWaterBaseProblem, PermeabilityLens, 1e-12);
 // Linear solver settings
-SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper, Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag> );
-SET_TYPE_PROP(GroundWaterBaseProblem, PreconditionerWrapper, Ewoms::Linear::PreconditionerWrapperILU<TypeTag> );
+SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
+              Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag>);
+SET_TYPE_PROP(GroundWaterBaseProblem, PreconditionerWrapper,
+              Ewoms::Linear::PreconditionerWrapperILU<TypeTag>);
 SET_INT_PROP(GroundWaterBaseProblem, LinearSolverVerbosity, 0);
 
 // Enable gravity
@@ -113,8 +117,7 @@ namespace Ewoms {
  * occupied by a rectangular lens of lower permeability.
  */
 template <class TypeTag>
-class GroundWaterProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -135,7 +138,8 @@ class GroundWaterProblem
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
 
     typedef typename GridView::ctype CoordScalar;
@@ -148,7 +152,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     GroundWaterProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -166,12 +170,16 @@ public:
 
         lensUpperRight_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightX);
         if (dim > 1)
-            lensUpperRight_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[1]
+                = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
         if (dim > 2)
-            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[2]
+                = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
 
-        intrinsicPerm_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, Permeability));
-        intrinsicPermLens_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, PermeabilityLens));
+        intrinsicPerm_
+            = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, Permeability));
+        intrinsicPermLens_ = this->toDimMatrix_(
+            EWOMS_GET_PARAM(TypeTag, Scalar, PermeabilityLens));
     }
 
     /*!
@@ -181,21 +189,36 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX, "The x-coordinate of the lens' lower-left corner [m].");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX, "The x-coordinate of the lens' upper-right corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX,
+                             "The x-coordinate of the lens' lower-left corner "
+                             "[m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX,
+                             "The x-coordinate of the lens' upper-right corner "
+                             "[m].");
 
         if (dimWorld > 1) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY, "The y-coordinate of the lens' lower-left corner [m].");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY, "The y-coordinate of the lens' upper-right corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY,
+                                 "The y-coordinate of the lens' lower-left "
+                                 "corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY,
+                                 "The y-coordinate of the lens' upper-right "
+                                 "corner [m].");
         }
 
         if (dimWorld > 2) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ, "The z-coordinate of the lens' lower-left corner [m].");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ, "The z-coordinate of the lens' upper-right corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ,
+                                 "The z-coordinate of the lens' lower-left "
+                                 "corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ,
+                                 "The z-coordinate of the lens' upper-right "
+                                 "corner [m].");
         }
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Permeability, "The intrinsic permeability [m^2] of the ambient material.");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PermeabilityLens, "The intrinsic permeability [m^2] of the lens.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Permeability,
+                             "The intrinsic permeability [m^2] of the ambient "
+                             "material.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PermeabilityLens,
+                             "The intrinsic permeability [m^2] of the lens.");
     }
 
     /*!
@@ -231,8 +254,12 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
-    { return isInLens_(context.pos(spaceIdx, timeIdx))?intrinsicPermLens_:intrinsicPerm_; }
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
+    {
+        return isInLens_(context.pos(spaceIdx, timeIdx)) ? intrinsicPermLens_
+                                                         : intrinsicPerm_;
+    }
 
     //! \}
     /*!
@@ -244,8 +271,7 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
@@ -258,7 +284,8 @@ public:
             else // on upper boundary
                 pressure = 1e5;
 
-            Opm::ImmiscibleFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
+            Opm::ImmiscibleFluidState<Scalar, FluidSystem,
+                                      /*storeEnthalpy=*/false> fs;
             fs.setSaturation(/*phaseIdx=*/0, 1.0);
             fs.setPressure(/*phaseIdx=*/0, pressure);
             fs.setTemperature(T);
@@ -270,7 +297,6 @@ public:
             // no flow boundary
             values.setNoFlow();
         }
-
     }
 
     //! \}
@@ -284,35 +310,34 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
-        //const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
-        values[pressure0Idx] = 1.0e+5;// + 9.81*1.23*(20-globalPos[dim-1]);
+        // const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
+        values[pressure0Idx] = 1.0e+5; // + 9.81*1.23*(20-globalPos[dim-1]);
     }
 
     /*!
      * \copydoc VcfvProblem::source
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
     bool onLowerBoundary_(const GlobalPosition &pos) const
-    { return pos[dim-1] < eps_; }
+    { return pos[dim - 1] < eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &pos) const
-    { return pos[dim-1] > this->bboxMax()[dim-1] - eps_; }
+    { return pos[dim - 1] > this->bboxMax()[dim - 1] - eps_; }
 
     bool isInLens_(const GlobalPosition &pos) const
     {
-        return
-            lensLowerLeft_[0] <= pos[0] && pos[0] <= lensUpperRight_[0] &&
-            lensLowerLeft_[1] <= pos[1] && pos[1] <= lensUpperRight_[1];
+        return lensLowerLeft_[0] <= pos[0] && pos[0] <= lensUpperRight_[0]
+               && lensLowerLeft_[1] <= pos[1] && pos[1] <= lensUpperRight_[1];
     }
 
     GlobalPosition lensLowerLeft_;

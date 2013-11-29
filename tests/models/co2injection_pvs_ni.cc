@@ -19,7 +19,8 @@
 /*!
  * \file
  *
- * \brief Test for the non-isothermal primary variable switching VCVF discretization.
+ * \brief Test for the non-isothermal primary variable switching VCVF
+ *discretization.
  */
 #include "config.h"
 
@@ -29,12 +30,14 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(Co2InjectionPvsNIProblem, INHERITS_FROM(VcfvPvs, Co2InjectionBaseProblem));
+NEW_TYPE_TAG(Co2InjectionPvsNIProblem,
+             INHERITS_FROM(VcfvPvs, Co2InjectionBaseProblem));
 
 SET_BOOL_PROP(Co2InjectionPvsNIProblem, EnableEnergy, true);
-} }
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionPvsNIProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

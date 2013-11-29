@@ -55,7 +55,8 @@ class Co2InjectionProblem;
 
 namespace Co2Injection {
 #include <opm/material/components/co2tables.inc>
-}} // namespace Ewoms
+}
+} // namespace Ewoms
 
 namespace Opm {
 namespace Properties {
@@ -77,18 +78,21 @@ NEW_PROP_TAG(SimulationName);
 SET_TYPE_PROP(Co2InjectionBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(Co2InjectionBaseProblem, Problem, Ewoms::Co2InjectionProblem<TypeTag>);
+SET_TYPE_PROP(Co2InjectionBaseProblem, Problem,
+              Ewoms::Co2InjectionProblem<TypeTag>);
 
 // Set fluid configuration
 SET_PROP(Co2InjectionBaseProblem, FluidSystem)
-{ private:
+{
+private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Ewoms::Co2Injection::CO2Tables CO2Tables;
 
     static const bool useComplexRelations = false;
+
 public:
     typedef Opm::FluidSystems::BrineCO2<Scalar, CO2Tables> type;
-    //typedef Opm::FluidSystems::H2ON2<Scalar, useComplexRelations> type;
+    // typedef Opm::FluidSystems::H2ON2<Scalar, useComplexRelations> type;
 };
 
 // Set the material Law
@@ -99,7 +103,8 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx>
+    Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -181,8 +186,7 @@ namespace Ewoms {
  * hydrostatic pressure is assumed.
  */
 template <class TypeTag>
-class Co2InjectionProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -190,30 +194,23 @@ class Co2InjectionProblem
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-    enum {
-        // Grid and world dimension
-        dim = GridView::dimension,
-        dimWorld = GridView::dimensionworld
-    };
+    enum { dim = GridView::dimension };
+    enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    enum {
-        numPhases = FluidSystem::numPhases,
-
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-        lPhaseIdx = FluidSystem::lPhaseIdx,
-
-        CO2Idx = FluidSystem::CO2Idx,
-        BrineIdx = FluidSystem::BrineIdx,
-
-        conti0EqIdx = Indices::conti0EqIdx,
-        contiCO2EqIdx = conti0EqIdx + CO2Idx
-    };
+    enum { numPhases = FluidSystem::numPhases };
+    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { lPhaseIdx = FluidSystem::lPhaseIdx };
+    enum { CO2Idx = FluidSystem::CO2Idx };
+    enum { BrineIdx = FluidSystem::BrineIdx };
+    enum { conti0EqIdx = Indices::conti0EqIdx };
+    enum { contiCO2EqIdx = conti0EqIdx + CO2Idx };
 
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -229,7 +226,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     Co2InjectionProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -239,20 +236,23 @@ public:
     {
         eps_ = 1e-6;
 
-        temperatureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
-        temperatureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
+        temperatureLow_
+            = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
+        temperatureHigh_
+            = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
         nTemperature_ = EWOMS_GET_PARAM(TypeTag, int, FluidSystemNumTemperature);
 
         nPressure_ = EWOMS_GET_PARAM(TypeTag, int, FluidSystemNumPressure);
         pressureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureLow);
-        pressureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
+        pressureHigh_
+            = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
 
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
         name_ = EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
 
         // initialize the tables of the fluid system
-        //FluidSystem::init();
+        // FluidSystem::init();
         FluidSystem::init(/*Tmin=*/temperatureLow_,
                           /*Tmax=*/temperatureHigh_,
                           /*nT=*/nTemperature_,
@@ -297,17 +297,33 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow, "The lower temperature [K] for tabulation of the fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh, "The upper temperature [K] for tabulation of the fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumTemperature, "The number of intervals between the lower and upper temperature");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow,
+                             "The lower temperature [K] for tabulation of the "
+                             "fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh,
+                             "The upper temperature [K] for tabulation of the "
+                             "fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumTemperature,
+                             "The number of intervals between the lower and "
+                             "upper temperature");
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureLow, "The lower pressure [Pa] for tabulation of the fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureHigh, "The upper pressure [Pa] for tabulation of the fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumPressure, "The number of intervals between the lower and upper pressure");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureLow,
+                             "The lower pressure [Pa] for tabulation of the "
+                             "fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureHigh,
+                             "The upper pressure [Pa] for tabulation of the "
+                             "fluid system");
+        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumPressure,
+                             "The number of intervals between the lower and "
+                             "upper pressure");
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature, "The temperature [K] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
+                             "The temperature [K] in the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth,
+                             "The maximum depth [m] of the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName,
+                             "The name of the simulation used for the output "
+                             "files");
     }
 
     /*!
@@ -339,8 +355,8 @@ public:
 
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
-            std::cout<<"Storage: liquid=[" << storageL << "]"
-                     << " gas=[" << storageG << "]\n";
+            std::cout << "Storage: liquid=[" << storageL << "]"
+                      << " gas=[" << storageG << "]\n";
         }
     }
 
@@ -360,7 +376,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -384,7 +401,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -398,18 +416,18 @@ public:
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
+                             int timeIdx) const
     {
-        return
-            790 // specific heat capacity of granite [J / (kg K)]
-            * 2700; // density of granite [kg/m^3]
+        return 790     // specific heat capacity of granite [J / (kg K)]
+               * 2700; // density of granite [kg/m^3]
     }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::heatConductionParams
      */
     template <class Context>
-    const HeatConductionLawParams&
+    const HeatConductionLawParams &
     heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
@@ -429,8 +447,7 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
@@ -449,7 +466,9 @@ public:
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             fs.setSaturation(gPhaseIdx, 1.0);
-            fs.setPressure(gPhaseIdx,context. volVars(spaceIdx, timeIdx).fluidState().pressure(gPhaseIdx));
+            fs.setPressure(gPhaseIdx,
+                           context.volVars(spaceIdx, timeIdx).fluidState().pressure(
+                               gPhaseIdx));
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
             typename FluidSystem::ParameterCache paramCache;
             paramCache.updatePhase(fs, gPhaseIdx);
@@ -475,13 +494,15 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         initialFluidState_(fs, context, spaceIdx, timeIdx);
 
-        //const auto &matParams = this->materialLawParams(context, spaceIdx, timeIdx);
-        //values.assignMassConservative(fs, matParams, /*inEquilibrium=*/true);
+        // const auto &matParams = this->materialLawParams(context, spaceIdx,
+        // timeIdx);
+        // values.assignMassConservative(fs, matParams, /*inEquilibrium=*/true);
         values.assignNaive(fs);
     }
 
@@ -492,16 +513,16 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
     template <class Context, class FluidState>
-    void initialFluidState_(FluidState &fs, const Context &context, int spaceIdx, int timeIdx) const
+    void initialFluidState_(FluidState &fs, const Context &context,
+                            int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -520,11 +541,12 @@ private:
         // set pressures
         //////
         Scalar densityL = FluidSystem::Brine::liquidDensity(temperature_, 1e5);
-        Scalar depth = maxDepth_ - pos[dim -1];
-        Scalar pl = 1e5 - densityL*this->gravity()[dim - 1]*depth;
+        Scalar depth = maxDepth_ - pos[dim - 1];
+        Scalar pl = 1e5 - densityL * this->gravity()[dim - 1] * depth;
 
         Scalar pC[numPhases];
-        const auto &matParams = this->materialLawParams(context, spaceIdx, timeIdx);
+        const auto &matParams
+            = this->materialLawParams(context, spaceIdx, timeIdx);
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 
         fs.setPressure(lPhaseIdx, pl + (pC[lPhaseIdx] - pC[lPhaseIdx]));
@@ -539,8 +561,7 @@ private:
 
         typename FluidSystem::ParameterCache paramCache;
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
-        CFRP::solve(fs,
-                    paramCache,
+        CFRP::solve(fs, paramCache,
                     /*refPhaseIdx=*/lPhaseIdx,
                     /*setViscosity=*/true,
                     /*setEnthalpy=*/true);
@@ -563,8 +584,9 @@ private:
         Scalar lambdaWater = 0.6;
         Scalar lambdaGranite = 2.8;
 
-        Scalar lambdaWet = std::pow(lambdaGranite, (1-poro)) * std::pow(lambdaWater, poro);
-        Scalar lambdaDry = std::pow(lambdaGranite, (1-poro));
+        Scalar lambdaWet = std::pow(lambdaGranite, (1 - poro))
+                           * std::pow(lambdaWater, poro);
+        Scalar lambdaDry = std::pow(lambdaGranite, (1 - poro));
 
         params.setFullySaturatedLambda(gPhaseIdx, lambdaDry);
         params.setFullySaturatedLambda(lPhaseIdx, lambdaWet);
@@ -572,7 +594,7 @@ private:
     }
 
     bool isFineMaterial_(const GlobalPosition &pos) const
-    { return pos[dim-1] > fineLayerBottom_; }
+    { return pos[dim - 1] > fineLayerBottom_; }
 
     DimMatrix fineK_;
     DimMatrix coarseK_;
@@ -594,7 +616,7 @@ private:
     int nTemperature_;
     int nPressure_;
 
-    std::string name_ ;
+    std::string name_;
 
     Scalar pressureLow_, pressureHigh_;
     Scalar temperatureLow_, temperatureHigh_;

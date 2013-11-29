@@ -57,16 +57,19 @@ NEW_TYPE_TAG(PowerInjectionBaseProblem);
 SET_TYPE_PROP(PowerInjectionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
 // set the GridCreator property
-SET_TYPE_PROP(PowerInjectionBaseProblem, GridCreator, Ewoms::CubeGridCreator<TypeTag>);
+SET_TYPE_PROP(PowerInjectionBaseProblem, GridCreator,
+              Ewoms::CubeGridCreator<TypeTag>);
 
 // Set the problem property
-SET_TYPE_PROP(PowerInjectionBaseProblem, Problem, Ewoms::PowerInjectionProblem<TypeTag>);
+SET_TYPE_PROP(PowerInjectionBaseProblem, Problem,
+              Ewoms::PowerInjectionProblem<TypeTag>);
 
 // Set the wetting phase
 SET_PROP(PowerInjectionBaseProblem, WettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
@@ -76,6 +79,7 @@ SET_PROP(PowerInjectionBaseProblem, NonwettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::GasPhase<Scalar, Opm::Air<Scalar> > type;
 };
@@ -88,7 +92,8 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+    Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -136,8 +141,7 @@ namespace Ewoms {
  * Systems, University of Stuttgart, 2011
  */
 template <class TypeTag>
-class PowerInjectionProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -166,7 +170,8 @@ class PowerInjectionProblem
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -181,7 +186,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     PowerInjectionProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -236,7 +241,7 @@ public:
 
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
-            std::cout<<"Storage: " << storage << std::endl;
+            std::cout << "Storage: " << storage << std::endl;
         }
     }
     //! \}
@@ -250,14 +255,16 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     { return K_; }
 
     /*!
      * \copydoc VcfvForchheimerBaseProblem::ergunCoefficient
      */
     template <class Context>
-    Scalar ergunCoefficient(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar ergunCoefficient(const Context &context, int spaceIdx,
+                            int timeIdx) const
     { return 0.3866; }
 
     /*!
@@ -271,15 +278,15 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return temperature_; }
 
     //! \}
@@ -296,8 +303,7 @@ public:
      * left and a free-flow boundary on the right.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
@@ -310,11 +316,10 @@ public:
             // impose a forced flow boundary
             values.setMassRate(massRate);
         }
-        else  {
+        else {
             // free flow boundary with initial condition on the right
             values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidState_);
         }
-
     }
 
     //! \}
@@ -328,9 +333,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         // assign the primary variables
         values.assignNaive(initialFluidState_);
@@ -343,9 +347,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}

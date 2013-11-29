@@ -63,9 +63,9 @@ NEW_TYPE_TAG(FractureProblem, INHERITS_FROM(VcfvDiscreteFracture));
 SET_TYPE_PROP(FractureProblem, GridCreator, Ewoms::ArtGridCreator<TypeTag>);
 
 // Set the grid type
-SET_TYPE_PROP(FractureProblem,
-              Grid,
-              Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>);
+SET_TYPE_PROP(
+    FractureProblem, Grid,
+    Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>);
 
 // Set the problem property
 SET_TYPE_PROP(FractureProblem, Problem, Ewoms::FractureProblem<TypeTag>);
@@ -98,13 +98,14 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+    Traits;
 
     // define the material law which is parameterized by effective
     // saturations
     typedef Opm::RegularizedBrooksCorey<Traits> EffectiveLaw;
-    //typedef RegularizedVanGenuchten<Traits> EffectiveLaw;
-    //typedef LinearMaterial<Traits> EffectiveLaw;
+    // typedef RegularizedVanGenuchten<Traits> EffectiveLaw;
+    // typedef LinearMaterial<Traits> EffectiveLaw;
 
 public:
     typedef Opm::EffToAbsLaw<EffectiveLaw> type;
@@ -155,9 +156,8 @@ namespace Ewoms {
  * the fractures and gradually pushes the oil out on the right side,
  * where the pressure is kept constant.
  */
-template <class TypeTag >
-class FractureProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+template <class TypeTag>
+class FractureProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
@@ -167,13 +167,15 @@ class FractureProblem
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams)
+        HeatConductionLawParams;
 
     enum {
         // phase indices
@@ -193,10 +195,10 @@ class FractureProblem
     typedef Dune::FieldVector<Scalar, dimWorld> GlobalPosition;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
-    template<int dim>
+    template <int dim>
     struct FaceLayout
     {
-        bool contains (Dune::GeometryType gt)
+        bool contains(Dune::GeometryType gt)
         { return gt.dim() == dim - 1; }
     };
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, FaceLayout> FaceMapper;
@@ -208,7 +210,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     FractureProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -250,8 +252,8 @@ public:
         matrixMaterialParams_.finalize();
         fractureMaterialParams_.finalize();
 
-        matrixK_ = this->toDimMatrix_(1e-15); //m^2
-        fractureK_ = this->toDimMatrix_(1e5*1e-15); //m^2
+        matrixK_ = this->toDimMatrix_(1e-15);         // m^2
+        fractureK_ = this->toDimMatrix_(1e5 * 1e-15); // m^2
 
         matrixPorosity_ = 0.10;
         fracturePorosity_ = 0.25;
@@ -296,8 +298,7 @@ public:
      * \copydoc VcfvMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return temperature_; }
 
     // \}
@@ -311,7 +312,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     { return matrixK_; }
 
     /*!
@@ -320,7 +322,9 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    const DimMatrix &fractureIntrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &fractureIntrinsicPermeability(const Context &context,
+                                                   int spaceIdx,
+                                                   int timeIdx) const
     { return fractureK_; }
 
     /*!
@@ -336,14 +340,16 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    Scalar fracturePorosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar fracturePorosity(const Context &context, int spaceIdx,
+                            int timeIdx) const
     { return fracturePorosity_; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     { return matrixMaterialParams_; }
 
     /*!
@@ -352,7 +358,9 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    const MaterialLawParams& fractureMaterialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &fractureMaterialLawParams(const Context &context,
+                                                       int spaceIdx,
+                                                       int timeIdx) const
     { return fractureMaterialParams_; }
 
     /*!
@@ -374,14 +382,15 @@ public:
      * \param timeIdx The index used by the time discretization.
      */
     template <class Context>
-    Scalar fractureWidth(const Context &context, int spaceIdx1, int spaceIdx2, int timeIdx) const
+    Scalar fractureWidth(const Context &context, int spaceIdx1, int spaceIdx2,
+                         int timeIdx) const
     { return fractureWidth_; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::heatConductionParams
      */
     template <class Context>
-    const HeatConductionLawParams&
+    const HeatConductionLawParams &
     heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
     { return heatCondParams_; }
 
@@ -391,11 +400,11 @@ public:
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
+                             int timeIdx) const
     {
-        return
-            790 // specific heat capacity of granite [J / (kg K)]
-            * 2700; // density of granite [kg/m^3]
+        return 790     // specific heat capacity of granite [J / (kg K)]
+               * 2700; // density of granite [kg/m^3]
     }
 
     // \}
@@ -409,21 +418,20 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
-        if (onRightBoundary_(pos))
-        {
+        if (onRightBoundary_(pos)) {
             // on the right boundary, we impose a free-flow
             // (i.e. Dirichlet) condition
             FluidState fluidState;
             fluidState.setTemperature(temperature_);
 
             fluidState.setSaturation(wPhaseIdx, 0.0);
-            fluidState.setSaturation(nPhaseIdx, 1.0 - fluidState.saturation(wPhaseIdx));
+            fluidState.setSaturation(nPhaseIdx,
+                                     1.0 - fluidState.saturation(wPhaseIdx));
 
             fluidState.setPressure(wPhaseIdx, 1e5);
             fluidState.setPressure(nPhaseIdx, fluidState.pressure(wPhaseIdx));
@@ -448,8 +456,7 @@ public:
      * \copydoc VcfvProblem::constraints
      */
     template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
+    void constraints(Constraints &constraints, const Context &context,
                      int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
@@ -472,25 +479,31 @@ public:
         fractureFluidState.setTemperature(temperature_ + 10);
 
         fractureFluidState.setSaturation(wPhaseIdx, 1.0);
-        fractureFluidState.setSaturation(nPhaseIdx, 1.0 - fractureFluidState.saturation(wPhaseIdx));
+        fractureFluidState.setSaturation(nPhaseIdx,
+                                         1.0 - fractureFluidState.saturation(
+                                                   wPhaseIdx));
 
         Scalar pCFracture[numPhases];
-        MaterialLaw::capillaryPressures(pCFracture, fractureMaterialParams_, fractureFluidState);
+        MaterialLaw::capillaryPressures(pCFracture, fractureMaterialParams_,
+                                        fractureFluidState);
 
         fractureFluidState.setPressure(wPhaseIdx, /*pressure=*/1e5);
-        fractureFluidState.setPressure(nPhaseIdx, fractureFluidState.pressure(wPhaseIdx) + (pCFracture[nPhaseIdx] - pCFracture[wPhaseIdx]));
+        fractureFluidState.setPressure(nPhaseIdx,
+                                       fractureFluidState.pressure(wPhaseIdx)
+                                       + (pCFracture[nPhaseIdx]
+                                          - pCFracture[wPhaseIdx]));
 
         constraints.setAllConstraint();
-        constraints.assignNaiveFromFracture(fractureFluidState, matrixMaterialParams_);
+        constraints.assignNaiveFromFracture(fractureFluidState,
+                                            matrixMaterialParams_);
     }
 
     /*!
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         FluidState fluidState;
         fluidState.setTemperature(temperature_);
@@ -498,7 +511,8 @@ public:
         fluidState.setPressure(nPhaseIdx, fluidState.pressure(wPhaseIdx));
 
         fluidState.setSaturation(wPhaseIdx, 0.0);
-        fluidState.setSaturation(nPhaseIdx, 1.0 - fluidState.saturation(wPhaseIdx));
+        fluidState.setSaturation(nPhaseIdx,
+                                 1.0 - fluidState.saturation(wPhaseIdx));
 
         values.assignNaive(fluidState);
     }
@@ -510,9 +524,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     // \}
@@ -551,17 +564,18 @@ private:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
-                Scalar lambdaFluid =
-                    FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
-                lambdaSaturated = std::pow(lambdaGranite, (1-poro)) + std::pow(lambdaFluid, poro);
+                Scalar lambdaFluid
+                    = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
+                lambdaSaturated = std::pow(lambdaGranite, (1 - poro))
+                                  + std::pow(lambdaFluid, poro);
             }
             else
-                lambdaSaturated = std::pow(lambdaGranite, (1-poro));
+                lambdaSaturated = std::pow(lambdaGranite, (1 - poro));
 
             params.setFullySaturatedLambda(phaseIdx, lambdaSaturated);
         }
 
-        Scalar lambdaVac = std::pow(lambdaGranite, (1-poro));
+        Scalar lambdaVac = std::pow(lambdaGranite, (1 - poro));
         params.setVacuumLambda(lambdaVac);
     }
 

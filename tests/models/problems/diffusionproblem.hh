@@ -82,7 +82,8 @@ private:
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx>
+    Traits;
 
 public:
     typedef Opm::LinearMaterial<Traits> type;
@@ -108,8 +109,8 @@ SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
-}} // namespace Opm, Properties
-
+}
+} // namespace Opm, Properties
 
 namespace Ewoms {
 /*!
@@ -123,8 +124,7 @@ namespace Ewoms {
  * diffusion.
  */
 template <class TypeTag>
-class DiffusionProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -152,7 +152,8 @@ class DiffusionProblem
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -167,7 +168,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     DiffusionProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -212,7 +213,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     { return K_; }
 
     /*!
@@ -226,15 +228,15 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return temperature_; }
 
     //! \}
@@ -250,8 +252,7 @@ public:
      * This problem sets no-flow boundaries everywhere.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     { values.setNoFlow(); }
 
@@ -266,9 +267,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
         if (onLeftSide_(pos))
@@ -284,16 +284,15 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
     bool onLeftSide_(const GlobalPosition &pos) const
-    { return pos[0] < (this->bboxMin()[0] + this->bboxMax()[0])/2; }
+    { return pos[0] < (this->bboxMin()[0] + this->bboxMax()[0]) / 2; }
 
     void setupInitialFluidStates_()
     {
@@ -314,15 +313,16 @@ private:
 
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         typename FluidSystem::ParameterCache paramCache;
-        CFRP::solve(leftInitialFluidState_, paramCache, gPhaseIdx, /*setViscosity=*/false, /*setEnthalpy=*/false);
+        CFRP::solve(leftInitialFluidState_, paramCache, gPhaseIdx,
+                    /*setViscosity=*/false, /*setEnthalpy=*/false);
 
         // create the initial fluid state for the right half of the domain
         rightInitialFluidState_.assign(leftInitialFluidState_);
         xH2O = 0.0;
         rightInitialFluidState_.setMoleFraction(gPhaseIdx, H2OIdx, xH2O);
         rightInitialFluidState_.setMoleFraction(gPhaseIdx, N2Idx, 1 - xH2O);
-        CFRP::solve(rightInitialFluidState_, paramCache, gPhaseIdx, /*setViscosity=*/false, /*setEnthalpy=*/false);
-
+        CFRP::solve(rightInitialFluidState_, paramCache, gPhaseIdx,
+                    /*setViscosity=*/false, /*setEnthalpy=*/false);
     }
 
     DimMatrix K_;

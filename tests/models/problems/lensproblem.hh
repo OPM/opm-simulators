@@ -68,7 +68,8 @@ NEW_PROP_TAG(LensUpperRightZ);
 SET_TYPE_PROP(LensBaseProblem, GridCreator, Ewoms::LensGridCreator<TypeTag>);
 
 // Retrieve the grid type from the grid creator
-SET_TYPE_PROP(LensBaseProblem, Grid, typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
+SET_TYPE_PROP(LensBaseProblem, Grid,
+              typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
 
 // Set the problem property
 SET_TYPE_PROP(LensBaseProblem, Problem, Ewoms::LensProblem<TypeTag>);
@@ -78,6 +79,7 @@ SET_PROP(LensBaseProblem, WettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
@@ -87,6 +89,7 @@ SET_PROP(LensBaseProblem, NonwettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::DNAPL<Scalar> > type;
 };
@@ -99,7 +102,8 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+    Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -114,10 +118,10 @@ public:
 SET_TAG_PROP(LensBaseProblem, LinearSolver, ParallelAmgBackend);
 
 // Enable partial reassembly of the jacobian matrix?
-//SET_BOOL_PROP(LensBaseProblem, EnablePartialReassemble, true);
+// SET_BOOL_PROP(LensBaseProblem, EnablePartialReassemble, true);
 
 // Enable reuse of jacobian matrices?
-//SET_BOOL_PROP(LensBaseProblem, EnableJacobianRecycling, true);
+// SET_BOOL_PROP(LensBaseProblem, EnableJacobianRecycling, true);
 
 // Write the solutions of individual newton iterations?
 SET_BOOL_PROP(LensBaseProblem, NewtonWriteConvergence, false);
@@ -177,8 +181,7 @@ namespace Ewoms {
  * saturation on both sides is zero.
  */
 template <class TypeTag>
-class LensProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class LensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -208,7 +211,8 @@ class LensProblem
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -223,7 +227,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     LensProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -242,7 +246,8 @@ public:
 
         if (dimWorld == 3) {
             lensLowerLeft_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftZ);
-            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
+            lensUpperRight_[2]
+                = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
         }
 
         // parameters for the Van Genuchten law
@@ -271,14 +276,26 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX, "The x-coordinate of the lens' lower-left corner [m].");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY, "The y-coordinate of the lens' lower-left corner [m].");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX, "The x-coordinate of the lens' upper-right corner [m].");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY, "The y-coordinate of the lens' upper-right corner [m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX,
+                             "The x-coordinate of the lens' lower-left corner "
+                             "[m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY,
+                             "The y-coordinate of the lens' lower-left corner "
+                             "[m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX,
+                             "The x-coordinate of the lens' upper-right corner "
+                             "[m].");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY,
+                             "The y-coordinate of the lens' upper-right corner "
+                             "[m].");
 
         if (dimWorld == 3) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ, "The z-coordinate of the lens' lower-left corner [m].");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ, "The z-coordinate of the lens' upper-right corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ,
+                                 "The z-coordinate of the lens' lower-left "
+                                 "corner [m].");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ,
+                                 "The z-coordinate of the lens' upper-right "
+                                 "corner [m].");
         }
     };
 
@@ -291,7 +308,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
@@ -311,7 +329,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
@@ -324,8 +343,7 @@ public:
      * \copydoc VcfvMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return temperature_; }
 
     //! \}
@@ -356,7 +374,7 @@ public:
 
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
-            std::cout<<"Storage: " << storage << std::endl;
+            std::cout << "Storage: " << storage << std::endl;
         }
     }
 
@@ -371,43 +389,43 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
             // free flow boundary
-            Scalar densityW = WettingPhase::density(temperature_, /*pressure=*/1e5);
+            Scalar densityW
+                = WettingPhase::density(temperature_, /*pressure=*/1e5);
 
             Scalar T = temperature(context, spaceIdx, timeIdx);
             Scalar pw, Sw;
 
             // set wetting phase pressure and saturation
-            if (onLeftBoundary_(pos))
-            {
+            if (onLeftBoundary_(pos)) {
                 Scalar height = this->bboxMax()[1] - this->bboxMin()[1];
                 Scalar depth = this->bboxMax()[1] - pos[1];
-                Scalar alpha = (1 + 1.5/height);
+                Scalar alpha = (1 + 1.5 / height);
 
                 // hydrostatic pressure scaled by alpha
-                pw = 1e5 - alpha*densityW*this->gravity()[1]*depth;
+                pw = 1e5 - alpha * densityW * this->gravity()[1] * depth;
                 Sw = 1.0;
             }
             else {
                 Scalar depth = this->bboxMax()[1] - pos[1];
 
                 // hydrostatic pressure
-                pw = 1e5 - densityW*this->gravity()[1]*depth;
+                pw = 1e5 - densityW * this->gravity()[1] * depth;
                 Sw = 1.0;
             }
 
             // specify a full fluid state using pw and Sw
-            const MaterialLawParams &matParams =
-                this->materialLawParams(context, spaceIdx, timeIdx);
+            const MaterialLawParams &matParams
+                = this->materialLawParams(context, spaceIdx, timeIdx);
 
-            Opm::ImmiscibleFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
+            Opm::ImmiscibleFluidState<Scalar, FluidSystem,
+                                      /*storeEnthalpy=*/false> fs;
             fs.setSaturation(wPhaseIdx, Sw);
             fs.setSaturation(nPhaseIdx, 1 - Sw);
             fs.setTemperature(T);
@@ -415,7 +433,7 @@ public:
             Scalar pC[numPhases];
             MaterialLaw::capillaryPressures(pC, matParams, fs);
             fs.setPressure(wPhaseIdx, pw);
-            fs.setPressure(nPhaseIdx, pw +  pC[nPhaseIdx] - pC[wPhaseIdx]);
+            fs.setPressure(nPhaseIdx, pw + pC[nPhaseIdx] - pC[wPhaseIdx]);
 
             // impose an freeflow boundary condition
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
@@ -432,7 +450,6 @@ public:
             // no flow boundary
             values.setNoFlow();
         }
-
     }
 
     //! \}
@@ -446,9 +463,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         Scalar depth = this->bboxMax()[1] - pos[1];
@@ -467,11 +483,11 @@ public:
         Scalar densityW = FluidSystem::density(fs, paramCache, wPhaseIdx);
 
         // hydrostatic pressure (assuming incompressibility)
-        Scalar pw = 1e5 - densityW*this->gravity()[1]*depth;
+        Scalar pw = 1e5 - densityW * this->gravity()[1] * depth;
 
         // calculate the capillary pressure
-        const MaterialLawParams &matParams =
-            this->materialLawParams(context, spaceIdx, timeIdx);
+        const MaterialLawParams &matParams
+            = this->materialLawParams(context, spaceIdx, timeIdx);
         Scalar pC[numPhases];
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 
@@ -490,9 +506,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -501,7 +516,8 @@ private:
     bool isInLens_(const GlobalPosition &pos) const
     {
         for (int i = 0; i < dim; ++i) {
-            if (pos[i] < lensLowerLeft_[i] - eps_ || pos[i] > lensUpperRight_[i] + eps_)
+            if (pos[i] < lensLowerLeft_[i] - eps_ || pos[i] > lensUpperRight_[i]
+                                                              + eps_)
                 return false;
         }
         return true;
@@ -522,8 +538,8 @@ private:
     bool onInlet_(const GlobalPosition &pos) const
     {
         Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
-        Scalar lambda = (this->bboxMax()[0] - pos[0])/width;
-        return onUpperBoundary_(pos) && 0.5 < lambda && lambda < 2.0/3.0;
+        Scalar lambda = (this->bboxMax()[0] - pos[0]) / width;
+        return onUpperBoundary_(pos) && 0.5 < lambda && lambda < 2.0 / 3.0;
     }
 
     GlobalPosition lensLowerLeft_;

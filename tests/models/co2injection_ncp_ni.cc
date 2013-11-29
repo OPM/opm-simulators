@@ -30,12 +30,13 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(Co2InjectionNcpNIProblem, INHERITS_FROM(VcfvNcp, Co2InjectionBaseProblem));
+NEW_TYPE_TAG(Co2InjectionNcpNIProblem,
+             INHERITS_FROM(VcfvNcp, Co2InjectionBaseProblem));
 SET_BOOL_PROP(Co2InjectionNcpNIProblem, EnableEnergy, true);
 }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionNcpNIProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

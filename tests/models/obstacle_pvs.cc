@@ -20,7 +20,8 @@
 /**
  * \file
  *
- * \brief Test for the isothermal primary variable switching VCVF discretization.
+ * \brief Test for the isothermal primary variable switching VCVF
+ *discretization.
  */
 #include "config.h"
 
@@ -34,9 +35,10 @@ NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(VcfvPvs, ObstacleBaseProblem));
 
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
 SET_INT_PROP(ObstacleProblem, PvsVerbosity, 1);
-}}
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(ObstacleProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

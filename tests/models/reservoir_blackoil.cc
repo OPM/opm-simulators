@@ -30,9 +30,10 @@
 namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(ReservoirProblem, INHERITS_FROM(VcfvBlackOil, ReservoirBaseProblem));
-}}
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(ReservoirProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

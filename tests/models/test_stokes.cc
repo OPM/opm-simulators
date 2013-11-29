@@ -24,7 +24,7 @@
 #include <ewoms/common/start.hh>
 #include "problems/stokestestproblem.hh"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(StokesTestProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

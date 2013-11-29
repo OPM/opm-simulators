@@ -51,13 +51,11 @@ SET_TYPE_PROP(Stokes2cTestProblem, Grid, Dune::YaspGrid<2>);
 SET_TYPE_PROP(Stokes2cTestProblem, Problem, Ewoms::Stokes2cTestProblem<TypeTag>);
 
 //! Select the fluid system
-SET_TYPE_PROP(Stokes2cTestProblem,
-              FluidSystem,
+SET_TYPE_PROP(Stokes2cTestProblem, FluidSystem,
               Opm::FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 //! Select the phase to be considered
-SET_INT_PROP(Stokes2cTestProblem,
-             StokesPhaseIndex,
+SET_INT_PROP(Stokes2cTestProblem, StokesPhaseIndex,
              GET_PROP_TYPE(TypeTag, FluidSystem)::gPhaseIdx);
 
 // Disable gravity
@@ -90,15 +88,15 @@ namespace Ewoms {
  * exhibiting slightly higher humitiy than the ones on the right.
  */
 template <class TypeTag>
-class Stokes2cTestProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class Stokes2cTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
@@ -110,11 +108,9 @@ class Stokes2cTestProblem
         // copy some indices for convenience
         conti0EqIdx = Indices::conti0EqIdx,
         momentum0EqIdx = Indices::momentum0EqIdx,
-
         velocity0Idx = Indices::velocity0Idx,
         moleFrac1Idx = Indices::moleFrac1Idx,
         pressureIdx = Indices::pressureIdx,
-
         H2OIdx = FluidSystem::H2OIdx,
         AirIdx = FluidSystem::AirIdx
     };
@@ -127,7 +123,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     Stokes2cTestProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -158,8 +154,7 @@ public:
      * This problem assumes a temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 273.15 + 10; /* -> 10 deg C */ }
 
     // \}
@@ -177,13 +172,14 @@ public:
      * upper edge.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
         if (onLowerBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
-        else if(onUpperBoundary_(pos)) {
+        else if (onUpperBoundary_(pos)) {
             // upper boundary is constraint!
             values = 0.0;
         }
@@ -208,18 +204,19 @@ public:
      * 0.5% is set.
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
         values = 0.0;
 
-        //parabolic profile
+        // parabolic profile
         const Scalar v1 = 1.0;
-        values[velocity0Idx + 1] =
-            - v1*(globalPos[0] - this->bboxMin()[0])*(this->bboxMax()[0] - globalPos[0])
-            / (0.25*(this->bboxMax()[0] - this->bboxMin()[0])*(this->bboxMax()[0] - this->bboxMin()[0]));
+        values[velocity0Idx + 1]
+            = -v1 * (globalPos[0] - this->bboxMin()[0])
+              * (this->bboxMax()[0] - globalPos[0])
+              / (0.25 * (this->bboxMax()[0] - this->bboxMin()[0])
+                 * (this->bboxMax()[0] - this->bboxMin()[0]));
 
         Scalar moleFrac[numComponents];
         if (onUpperBoundary_(globalPos))
@@ -240,9 +237,8 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -252,8 +248,7 @@ public:
      * initial conditions.
      */
     template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
+    void constraints(Constraints &constraints, const Context &context,
                      int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
@@ -262,8 +257,11 @@ public:
             PrimaryVariables initCond;
             initial(initCond, context, spaceIdx, timeIdx);
 
-            constraints.setConstraint(pressureIdx, conti0EqIdx, initCond[pressureIdx]);;
-            constraints.setConstraint(moleFrac1Idx, conti0EqIdx + 1, initCond[moleFrac1Idx]);
+            constraints.setConstraint(pressureIdx, conti0EqIdx,
+                                      initCond[pressureIdx]);
+            ;
+            constraints.setConstraint(moleFrac1Idx, conti0EqIdx + 1,
+                                      initCond[moleFrac1Idx]);
             for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 constraints.setConstraint(velocity0Idx + axisIdx,
                                           momentum0EqIdx + axisIdx,

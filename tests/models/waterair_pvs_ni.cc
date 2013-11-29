@@ -32,9 +32,10 @@ namespace Properties {
 NEW_TYPE_TAG(WaterAirProblem, INHERITS_FROM(VcfvPvs, WaterAirBaseProblem));
 
 SET_BOOL_PROP(WaterAirProblem, EnableEnergy, true);
-} }
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(WaterAirProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

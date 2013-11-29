@@ -29,12 +29,13 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(InfiltrationProblem, INHERITS_FROM(VcfvPvs, InfiltrationBaseProblem));
-}}
+NEW_TYPE_TAG(InfiltrationProblem,
+             INHERITS_FROM(VcfvPvs, InfiltrationBaseProblem));
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(InfiltrationProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
-

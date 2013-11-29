@@ -71,10 +71,11 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-    typedef Opm::ThreePhaseMaterialTraits<Scalar,
-                                          /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                          /*nonWettingPhaseIdx=*/FluidSystem::oPhaseIdx,
-                                          /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+    typedef Opm::
+        ThreePhaseMaterialTraits<Scalar,
+                                 /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+                                 /*nonWettingPhaseIdx=*/FluidSystem::oPhaseIdx,
+                                 /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
 
 public:
     typedef Opm::LinearMaterial<Traits> type;
@@ -132,8 +133,7 @@ namespace Ewoms {
  * which is 50% above the reservoir pressure.
  */
 template <class TypeTag>
-class ReservoirProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -141,32 +141,28 @@ class ReservoirProblem
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-    enum {
-        // Grid and world dimension
-        dim = GridView::dimension,
-        dimWorld = GridView::dimensionworld
-    };
+    // Grid and world dimension
+    enum { dim = GridView::dimension };
+    enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
-    enum {
-        numPhases = FluidSystem::numPhases,
-        numComponents = FluidSystem::numComponents,
-
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-        oPhaseIdx = FluidSystem::oPhaseIdx,
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-
-        gCompIdx = FluidSystem::gCompIdx,
-        oCompIdx = FluidSystem::oCompIdx,
-        wCompIdx = FluidSystem::wCompIdx
-    };
+    enum { numPhases = FluidSystem::numPhases };
+    enum { numComponents = FluidSystem::numComponents };
+    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { oPhaseIdx = FluidSystem::oPhaseIdx };
+    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+    enum { gCompIdx = FluidSystem::gCompIdx };
+    enum { oCompIdx = FluidSystem::oCompIdx };
+    enum { wCompIdx = FluidSystem::wCompIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, BlackOilFluidState) BlackOilFluidState;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BlackOilFluidState) BlackOilFluidState;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
@@ -180,7 +176,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     ReservoirProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -195,71 +191,66 @@ public:
         name_ = EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
 
         FluidSystem::initBegin();
-        std::vector<std::pair<Scalar, Scalar> > Bg = {
-            { 1.013529e+05,  9.998450e-01 },
-            { 2.757903e+06,  3.075500e-02 },
-            { 5.515806e+06,  1.537947e-02 },
-            { 8.273709e+06,  1.021742e-02 },
-            { 1.103161e+07,  7.662783e-03 },
-            { 1.378951e+07,  6.151899e-03 },
-            { 1.654742e+07,  5.108709e-03 },
-            { 1.930532e+07,  4.378814e-03 },
-            { 2.206322e+07,  3.857780e-03 },
-            { 2.482113e+07,  3.388401e-03 },
-            { 2.757903e+07,  3.049842e-03 }
-        };
-        std::vector<std::pair<Scalar, Scalar> > Bo = {
-            { 1.013529e+05, 1.000000e+00 },
-            { 2.757903e+06, 1.012000e+00 },
-            { 5.515806e+06, 1.025500e+00 },
-            { 8.273709e+06, 1.038000e+00 },
-            { 1.103161e+07, 1.051000e+00 },
-            { 1.378951e+07, 1.063000e+00 },
-            { 1.654742e+07, 1.075000e+00 },
-            { 1.930532e+07, 1.087000e+00 },
-            { 2.206322e+07, 1.098500e+00 },
-            { 2.482113e+07, 1.110000e+00 },
-            { 2.757903e+07, 1.120000e+00 }
-        };
-        std::vector<std::pair<Scalar, Scalar> > Rs = {
-            { 1.013529e+05, 0.000000e+00 },
-            { 2.757903e+06, 2.938776e+01 },
-            { 5.515806e+06, 5.966605e+01 },
-            { 8.273709e+06, 8.905380e+01 },
-            { 1.103161e+07, 1.184416e+02 },
-            { 1.378951e+07, 1.474731e+02 },
-            { 1.654742e+07, 1.754360e+02 },
-            { 1.930532e+07, 2.012616e+02 },
-            { 2.206322e+07, 2.261967e+02 },
-            { 2.482113e+07, 2.475696e+02 },
-            { 2.757903e+07, 2.671614e+02 }
-        };
-        std::vector<std::pair<Scalar, Scalar> > muo = {
-            { 1.013529e+05, 1.200000e-03 },
-            { 2.757903e+06, 1.170000e-03 },
-            { 5.515806e+06, 1.140000e-03 },
-            { 8.273709e+06, 1.110000e-03 },
-            { 1.103161e+07, 1.080000e-03 },
-            { 1.378951e+07, 1.060000e-03 },
-            { 1.654742e+07, 1.030000e-03 },
-            { 1.930532e+07, 1.000000e-03 },
-            { 2.206322e+07, 9.800000e-04 },
-            { 2.482113e+07, 9.500000e-04 },
-            { 2.757903e+07, 9.400000e-04 }
-        };
-        std::vector<std::pair<Scalar, Scalar> > mug = {
-            { 1.013529e+05, 1.250000e-05 },
-            { 2.757903e+06, 1.300000e-05 },
-            { 5.515806e+06, 1.350000e-05 },
-            { 8.273709e+06, 1.400000e-05 },
-            { 1.103161e+07, 1.450000e-05 },
-            { 1.378951e+07, 1.500000e-05 },
-            { 1.654742e+07, 1.550000e-05 },
-            { 1.930532e+07, 1.600000e-05 },
-            { 2.206322e+07, 1.650000e-05 },
-            { 2.482113e+07, 1.700000e-05 },
-            { 2.757903e+07, 1.750000e-05 },
-        };
+        std::vector<std::pair<Scalar, Scalar> > Bg
+            = { { 1.013529e+05, 9.998450e-01 },
+                { 2.757903e+06, 3.075500e-02 },
+                { 5.515806e+06, 1.537947e-02 },
+                { 8.273709e+06, 1.021742e-02 },
+                { 1.103161e+07, 7.662783e-03 },
+                { 1.378951e+07, 6.151899e-03 },
+                { 1.654742e+07, 5.108709e-03 },
+                { 1.930532e+07, 4.378814e-03 },
+                { 2.206322e+07, 3.857780e-03 },
+                { 2.482113e+07, 3.388401e-03 },
+                { 2.757903e+07, 3.049842e-03 } };
+        std::vector<std::pair<Scalar, Scalar> > Bo
+            = { { 1.013529e+05, 1.000000e+00 },
+                { 2.757903e+06, 1.012000e+00 },
+                { 5.515806e+06, 1.025500e+00 },
+                { 8.273709e+06, 1.038000e+00 },
+                { 1.103161e+07, 1.051000e+00 },
+                { 1.378951e+07, 1.063000e+00 },
+                { 1.654742e+07, 1.075000e+00 },
+                { 1.930532e+07, 1.087000e+00 },
+                { 2.206322e+07, 1.098500e+00 },
+                { 2.482113e+07, 1.110000e+00 },
+                { 2.757903e+07, 1.120000e+00 } };
+        std::vector<std::pair<Scalar, Scalar> > Rs
+            = { { 1.013529e+05, 0.000000e+00 },
+                { 2.757903e+06, 2.938776e+01 },
+                { 5.515806e+06, 5.966605e+01 },
+                { 8.273709e+06, 8.905380e+01 },
+                { 1.103161e+07, 1.184416e+02 },
+                { 1.378951e+07, 1.474731e+02 },
+                { 1.654742e+07, 1.754360e+02 },
+                { 1.930532e+07, 2.012616e+02 },
+                { 2.206322e+07, 2.261967e+02 },
+                { 2.482113e+07, 2.475696e+02 },
+                { 2.757903e+07, 2.671614e+02 } };
+        std::vector<std::pair<Scalar, Scalar> > muo
+            = { { 1.013529e+05, 1.200000e-03 },
+                { 2.757903e+06, 1.170000e-03 },
+                { 5.515806e+06, 1.140000e-03 },
+                { 8.273709e+06, 1.110000e-03 },
+                { 1.103161e+07, 1.080000e-03 },
+                { 1.378951e+07, 1.060000e-03 },
+                { 1.654742e+07, 1.030000e-03 },
+                { 1.930532e+07, 1.000000e-03 },
+                { 2.206322e+07, 9.800000e-04 },
+                { 2.482113e+07, 9.500000e-04 },
+                { 2.757903e+07, 9.400000e-04 } };
+        std::vector<std::pair<Scalar, Scalar> > mug
+            = { { 1.013529e+05, 1.250000e-05 },
+                { 2.757903e+06, 1.300000e-05 },
+                { 5.515806e+06, 1.350000e-05 },
+                { 8.273709e+06, 1.400000e-05 },
+                { 1.103161e+07, 1.450000e-05 },
+                { 1.378951e+07, 1.500000e-05 },
+                { 1.654742e+07, 1.550000e-05 },
+                { 1.930532e+07, 1.600000e-05 },
+                { 2.206322e+07, 1.650000e-05 },
+                { 2.482113e+07, 1.700000e-05 },
+                { 2.757903e+07, 1.750000e-05 }, };
         FluidSystem::setGasFormationVolumeFactor(Bg);
         FluidSystem::setOilFormationVolumeFactor(Bo);
         FluidSystem::setGasDissolutionFactor(Rs);
@@ -270,7 +261,7 @@ public:
         FluidSystem::setSurfaceDensities(/*oil=*/720.51,
                                          /*water=*/1009.32,
                                          /*gas=*/1.1245);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             FluidSystem::setReferenceVolumeFactor(phaseIdx, 1.0);
         FluidSystem::initEnd();
 
@@ -285,7 +276,7 @@ public:
         finePorosity_ = 0.2;
         coarsePorosity_ = 0.3;
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fineMaterialParams_.setPcMinSat(phaseIdx, 0.0);
             fineMaterialParams_.setPcMaxSat(phaseIdx, 0.0);
 
@@ -307,9 +298,13 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature, "The temperature [K] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth, "The maximum depth [m] of the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName, "The name of the simulation used for the output files");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
+                             "The temperature [K] in the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth,
+                             "The maximum depth [m] of the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName,
+                             "The name of the simulation used for the output "
+                             "files");
     }
 
     /*!
@@ -319,7 +314,8 @@ public:
      * above one with low permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -343,7 +339,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -388,8 +385,7 @@ public:
      * extraction and production wells, so all boundaries are no-flow.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         // no flow on top and bottom
@@ -410,7 +406,8 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         //////
         // set the primary variables
@@ -429,23 +426,19 @@ public:
      * reservoir.
      */
     template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
+    void constraints(Constraints &constraints, const Context &context,
                      int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
         Scalar x = pos[0] - this->bboxMin()[0];
-        Scalar y = pos[dim-1] - this->bboxMin()[dim-1];
-        Scalar height = this->bboxMax()[dim-1] - this->bboxMin()[dim-1];
+        Scalar y = pos[dim - 1] - this->bboxMin()[dim - 1];
+        Scalar height = this->bboxMax()[dim - 1] - this->bboxMin()[dim - 1];
         Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
-        if ((onLeftBoundary_(pos)
-             || onRightBoundary_(pos))
-            && y < height/2)
-        {
+        if ((onLeftBoundary_(pos) || onRightBoundary_(pos)) && y < height / 2) {
             // injectors
             auto fs = initialFluidState_;
 
-            Scalar pInj = pReservoir_*1.5;
+            Scalar pInj = pReservoir_ * 1.5;
             fs.setPressure(wPhaseIdx, pInj);
             fs.setPressure(oPhaseIdx, pInj);
             fs.setPressure(gPhaseIdx, pInj);
@@ -461,21 +454,20 @@ public:
             // set the composition of the oil phase to the initial
             // composition
             for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                fs.setMoleFraction(oPhaseIdx,
-                                   compIdx,
-                                   initialFluidState_.moleFraction(oPhaseIdx, compIdx));
+                fs.setMoleFraction(oPhaseIdx, compIdx,
+                                   initialFluidState_.moleFraction(oPhaseIdx,
+                                                                   compIdx));
 
             fs.setMoleFraction(wPhaseIdx, wCompIdx, 1.0);
 
             constraints.setAllConstraint();
             constraints.assignNaive(fs);
         }
-        else if (width/2 - 1 < x && x < width/2 + 1 && y > height/2)
-        {
+        else if (width / 2 - 1 < x && x < width / 2 + 1 && y > height / 2) {
             // producer
             auto fs = initialFluidState_;
 
-            Scalar pProd = pReservoir_/1.5;
+            Scalar pProd = pReservoir_ / 1.5;
             fs.setPressure(wPhaseIdx, pProd);
             fs.setPressure(oPhaseIdx, pProd);
             fs.setPressure(gPhaseIdx, pProd);
@@ -486,9 +478,9 @@ public:
             // set the compositions to the initial composition
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                    fs.setMoleFraction(phaseIdx,
-                                       compIdx,
-                                       initialFluidState_.moleFraction(phaseIdx, compIdx));
+                    fs.setMoleFraction(phaseIdx, compIdx,
+                                       initialFluidState_.moleFraction(phaseIdx,
+                                                                       compIdx));
 
             constraints.setAllConstraint();
             constraints.assignNaive(fs);
@@ -501,9 +493,8 @@ public:
      * For this problem, the source term of all components is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -558,18 +549,18 @@ private:
         Scalar pSat = pReservoir_; // the saturation pressure of the oil
         Scalar Bo = FluidSystem::oilFormationVolumeFactor(pSat);
         Scalar Rs = FluidSystem::gasDissolutionFactor(pSat);
-        Scalar rhoo = FluidSystem::surfaceDensity(oPhaseIdx)/Bo;
+        Scalar rhoo = FluidSystem::surfaceDensity(oPhaseIdx) / Bo;
         Scalar rhogref = FluidSystem::surfaceDensity(gPhaseIdx);
 
         // calculate composition of oil phase in terms of mass
         // fractions.
-        Scalar XoG = Rs*rhogref / rhoo;
+        Scalar XoG = Rs * rhogref / rhoo;
 
         // convert mass to mole fractions
         Scalar MG = FluidSystem::molarMass(gCompIdx);
         Scalar MO = FluidSystem::molarMass(oCompIdx);
 
-        Scalar xoG = XoG*MO/((MO - MG)*XoG + MG);
+        Scalar xoG = XoG * MO / ((MO - MG) * XoG + MG);
         Scalar xoO = 1 - xoG;
 
         // finally set the oil-phase composition
@@ -587,7 +578,7 @@ private:
     { return onRightBoundary_(pos) && (5 < pos[1]) && (pos[1] < 15); }
 
     bool isFineMaterial_(const GlobalPosition &pos) const
-    { return pos[dim-1] > layerBottom_; }
+    { return pos[dim - 1] > layerBottom_; }
 
     DimMatrix fineK_;
     DimMatrix coarseK_;
@@ -606,7 +597,7 @@ private:
     Scalar maxDepth_;
     Scalar eps_;
 
-    std::string name_ ;
+    std::string name_;
 };
 } // namespace Ewoms
 

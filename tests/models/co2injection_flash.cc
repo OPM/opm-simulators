@@ -35,17 +35,18 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(Co2InjectionFlashProblem, INHERITS_FROM(VcfvFlash, Co2InjectionBaseProblem));
+NEW_TYPE_TAG(Co2InjectionFlashProblem,
+             INHERITS_FROM(VcfvFlash, Co2InjectionBaseProblem));
 
 // for the flash model we want to use thermodynamic hints or it will
 // get _very_ slow.
 SET_BOOL_PROP(Co2InjectionFlashProblem, EnableHints, true);
 
 // use the flash solver adapted to the CO2 injection problem
-SET_TYPE_PROP(Co2InjectionFlashProblem,
-              FlashSolver,
-              Ewoms::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-              typename GET_PROP_TYPE(TypeTag, FluidSystem)> );
+SET_TYPE_PROP(
+    Co2InjectionFlashProblem, FlashSolver,
+    Ewoms::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
+                             typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
@@ -58,7 +59,7 @@ SET_SCALAR_PROP(Co2InjectionFlashProblem, NewtonRelativeTolerance, 1e-5);
 }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionFlashProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

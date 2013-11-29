@@ -53,13 +53,16 @@ SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the physical problem to be solved
 SET_PROP(RichardsLensProblem, Problem)
-{ typedef Ewoms::RichardsLensProblem<TypeTag> type; };
+{
+    typedef Ewoms::RichardsLensProblem<TypeTag> type;
+};
 
 // Set the wetting phase
 SET_PROP(RichardsLensProblem, WettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
@@ -72,7 +75,8 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+    Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -112,7 +116,8 @@ SET_SCALAR_PROP(RichardsLensProblem, EndTime, 3000);
 SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 
 // The default DGF file to load
-SET_STRING_PROP(RichardsLensProblem, GridFile, "./grids/richardslens_24x16.dgf");
+SET_STRING_PROP(RichardsLensProblem, GridFile,
+                "./grids/richardslens_24x16.dgf");
 } // namespace Properties
 } // namespace Opm
 
@@ -134,14 +139,14 @@ namespace Ewoms {
  * instead of a \c DNAPL infiltrates from the top.
  */
 template <class TypeTag>
-class RichardsLensProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
@@ -152,17 +157,15 @@ class RichardsLensProblem
         // copy some indices for convenience
         pressureWIdx = Indices::pressureWIdx,
         contiWEqIdx = Indices::contiWEqIdx,
-
         wPhaseIdx = GET_PROP_VALUE(TypeTag, LiquidPhaseIndex),
         nPhaseIdx = 1 - wPhaseIdx,
-
         numPhases = FluidSystem::numPhases,
 
         // Grid and world dimension
         dimWorld = GridView::dimensionworld
     };
 
-    //get the material law from the property system
+    // get the material law from the property system
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     //! The parameters of the material law to be used
     typedef typename MaterialLaw::Params MaterialLawParams;
@@ -177,13 +180,14 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     RichardsLensProblem(TimeManager &timeManager)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
 #else
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()),
 #endif
-        , pnRef_(1e5)
+          pnRef_(1e5)
     {
         eps_ = 3e-6;
         pnRef_ = 1e5;
@@ -206,10 +210,10 @@ public:
 
         // parameters for the linear law
         // minimum and maximum pressures
-//        lensMaterialParams_.setEntryPC(0);
-//        outerMaterialParams_.setEntryPC(0);
-//        lensMaterialParams_.setMaxPC(0);
-//        outerMaterialParams_.setMaxPC(0);
+        //        lensMaterialParams_.setEntryPC(0);
+        //        outerMaterialParams_.setEntryPC(0);
+        //        lensMaterialParams_.setMaxPC(0);
+        //        outerMaterialParams_.setMaxPC(0);
 
         lensK_ = this->toDimMatrix_(1e-12);
         outerK_ = this->toDimMatrix_(5e-12);
@@ -237,7 +241,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isInLens_(pos))
@@ -256,7 +261,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
         if (isInLens_(pos))
@@ -270,7 +276,8 @@ public:
      * \copydetails Doxygen::contextParams
      */
     template <class Context>
-    Scalar referencePressure(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar referencePressure(const Context &context, int spaceIdx,
+                             int timeIdx) const
     { return pnRef_; }
 
     //! \}
@@ -284,14 +291,14 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
-        if (onLeftBoundary_(pos) ||
-            onRightBoundary_(pos))
-        {
-            const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
+        if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
+            const auto &materialParams
+                = this->materialLawParams(context, spaceIdx, timeIdx);
 
             Scalar Sw = 0.0;
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
@@ -328,11 +335,11 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
-        const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
+        const auto &materialParams
+            = this->materialLawParams(context, spaceIdx, timeIdx);
 
         Scalar Sw = 0.0;
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
@@ -351,7 +358,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -372,8 +380,8 @@ private:
     bool onInlet_(const GlobalPosition &pos) const
     {
         Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
-        Scalar lambda = (this->bboxMax()[0] - pos[0])/width;
-        return onUpperBoundary_(pos) && 0.5 < lambda && lambda < 2.0/3.0;
+        Scalar lambda = (this->bboxMax()[0] - pos[0]) / width;
+        return onUpperBoundary_(pos) && 0.5 < lambda && lambda < 2.0 / 3.0;
     }
 
     bool isInLens_(const GlobalPosition &pos) const

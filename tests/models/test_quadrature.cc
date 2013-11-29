@@ -18,7 +18,8 @@
  *****************************************************************************/
 /*!
  * \file
- * \brief A test for numerical integration using the vertex-centered finite volume geometries.
+ * \brief A test for numerical integration using the vertex-centered finite
+ * volume geometries.
  */
 #include "config.h"
 
@@ -53,16 +54,14 @@ void testIdenityMapping()
 {
     QuadratureGeom foo;
 
-    Scalar corners[][3] = {
-        { 0, 0, 0 },
-        { 1, 0, 0 },
-        { 0, 1, 0 },
-        { 1, 1, 0 },
-        { 0, 0, 1 },
-        { 1, 0, 1 },
-        { 0, 1, 1 },
-        { 1, 1, 1 }
-    };
+    Scalar corners[][3] = { { 0, 0, 0 },
+                            { 1, 0, 0 },
+                            { 0, 1, 0 },
+                            { 1, 1, 0 },
+                            { 0, 0, 1 },
+                            { 1, 0, 1 },
+                            { 0, 1, 1 },
+                            { 1, 1, 1 } };
     foo.setCorners(corners, 8);
 
     std::cout << "testing identity mapping...\n";
@@ -72,9 +71,9 @@ void testIdenityMapping()
             for (int k = 0; k < n; ++k) {
                 LocalPosition localPos;
 
-                localPos[0] = Scalar(i)/(n - 1);
-                localPos[1] = Scalar(j)/(n - 1);
-                localPos[2] = Scalar(k)/(n - 1);
+                localPos[0] = Scalar(i) / (n - 1);
+                localPos[1] = Scalar(j) / (n - 1);
+                localPos[2] = Scalar(k) / (n - 1);
 
                 GlobalPosition globalPos = foo.global(localPos);
 
@@ -107,10 +106,12 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
     for (; eIt != eEndIt; ++eIt) {
         fvElemGeom.update(gridView, *eIt);
         for (int scvIdx = 0; scvIdx < fvElemGeom.numVertices; ++scvIdx) {
-            const auto &scvLocalGeom = *(fvElemGeom.subContVol[scvIdx].localGeometry);
+            const auto &scvLocalGeom
+                = *(fvElemGeom.subContVol[scvIdx].localGeometry);
 
-            for (int i = 0; i < scvLocalGeom.numCorners; ++ i) {
-                GlobalPosition pos(eIt->geometry().global(scvLocalGeom.corner(i)));
+            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
+                GlobalPosition pos(
+                    eIt->geometry().global(scvLocalGeom.corner(i)));
                 gf2.insertVertex(pos);
             }
         }
@@ -121,15 +122,16 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
     for (; eIt != eEndIt; ++eIt) {
         fvElemGeom.update(gridView, *eIt);
         for (int scvIdx = 0; scvIdx < fvElemGeom.numVertices; ++scvIdx) {
-            const auto &scvLocalGeom = *fvElemGeom.subContVol[scvIdx].localGeometry;
+            const auto &scvLocalGeom
+                = *fvElemGeom.subContVol[scvIdx].localGeometry;
 
             std::vector<unsigned int> vertexIndices;
-            for (int i = 0; i < scvLocalGeom.numCorners; ++ i) {
+            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
                 vertexIndices.push_back(cornerOffset);
-                ++ cornerOffset;
+                ++cornerOffset;
             }
 
-            gf2.insertElement(Dune::GeometryType(Dune::GeometryType::cube,dim),
+            gf2.insertElement(Dune::GeometryType(Dune::GeometryType::cube, dim),
                               vertexIndices);
         }
     }
@@ -147,22 +149,16 @@ void testTetrahedron()
     typedef Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> Grid;
     typedef Dune::GridFactory<Grid> GridFactory;
     GridFactory gf;
-    Scalar corners[][3] = {
-        { 0, 0, 0 },
-        { 1, 0, 0 },
-        { 0, 1, 0 },
-        { 0, 0, 1 }
-    };
+    Scalar corners[][3] = { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
 
-    for (unsigned i = 0; i < sizeof(corners)/sizeof(corners[0]); ++i) {
+    for (unsigned i = 0; i < sizeof(corners) / sizeof(corners[0]); ++i) {
         GlobalPosition pos;
         for (unsigned j = 0; j < dim; ++j)
             pos[j] = corners[i][j];
         gf.insertVertex(pos);
     }
     std::vector<unsigned int> v = { 0, 1, 2, 3 };
-    gf.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,dim),
-                     v);
+    gf.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, dim), v);
     auto *grid = gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
@@ -193,10 +189,12 @@ void writeCubeSubControlVolumes(const Grid &grid)
     for (; eIt != eEndIt; ++eIt) {
         fvElemGeom.update(gridView, *eIt);
         for (int scvIdx = 0; scvIdx < fvElemGeom.numVertices; ++scvIdx) {
-            const auto &scvLocalGeom = *(fvElemGeom.subContVol[scvIdx].localGeometry);
+            const auto &scvLocalGeom
+                = *(fvElemGeom.subContVol[scvIdx].localGeometry);
 
-            for (int i = 0; i < scvLocalGeom.numCorners; ++ i) {
-                GlobalPosition pos(eIt->geometry().global(scvLocalGeom.corner(i)));
+            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
+                GlobalPosition pos(
+                    eIt->geometry().global(scvLocalGeom.corner(i)));
                 gf2.insertVertex(pos);
             }
         }
@@ -207,15 +205,16 @@ void writeCubeSubControlVolumes(const Grid &grid)
     for (; eIt != eEndIt; ++eIt) {
         fvElemGeom.update(gridView, *eIt);
         for (int scvIdx = 0; scvIdx < fvElemGeom.numVertices; ++scvIdx) {
-            const auto &scvLocalGeom = *fvElemGeom.subContVol[scvIdx].localGeometry;
+            const auto &scvLocalGeom
+                = *fvElemGeom.subContVol[scvIdx].localGeometry;
 
             std::vector<unsigned int> vertexIndices;
-            for (int i = 0; i < scvLocalGeom.numCorners; ++ i) {
+            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
                 vertexIndices.push_back(cornerOffset);
-                ++ cornerOffset;
+                ++cornerOffset;
             }
 
-            gf2.insertElement(Dune::GeometryType(Dune::GeometryType::cube,dim),
+            gf2.insertElement(Dune::GeometryType(Dune::GeometryType::cube, dim),
                               vertexIndices);
         }
     }
@@ -233,26 +232,23 @@ void testCube()
     typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid;
     typedef Dune::GridFactory<Grid> GridFactory;
     GridFactory gf;
-    Scalar corners[][3] = {
-        { 0, 0, 0 },
-        { 1, 0, 0 },
-        { 0, 2, 0 },
-        { 3, 3, 0 },
-        { 0, 0, 4 },
-        { 5, 0, 5 },
-        { 0, 6, 6 },
-        { 7, 7, 7 },
-    };
+    Scalar corners[][3] = { { 0, 0, 0 },
+                            { 1, 0, 0 },
+                            { 0, 2, 0 },
+                            { 3, 3, 0 },
+                            { 0, 0, 4 },
+                            { 5, 0, 5 },
+                            { 0, 6, 6 },
+                            { 7, 7, 7 }, };
 
-    for (unsigned i = 0; i < sizeof(corners)/sizeof(corners[0]); ++i) {
+    for (unsigned i = 0; i < sizeof(corners) / sizeof(corners[0]); ++i) {
         GlobalPosition pos;
         for (unsigned j = 0; j < dim; ++j)
             pos[j] = corners[i][j];
         gf.insertVertex(pos);
     }
     std::vector<unsigned int> v = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    gf.insertElement(Dune::GeometryType(Dune::GeometryType::cube,dim),
-                     v);
+    gf.insertElement(Dune::GeometryType(Dune::GeometryType::cube, dim), v);
     auto *grid = gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
@@ -266,7 +262,7 @@ void testQuadrature()
 {
     std::cout << "testing SCV quadrature...\n";
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
     std::bitset<dim> isPeriodic(false);
     std::array<int, dim> cellRes;
 #else
@@ -283,16 +279,15 @@ void testQuadrature()
 #ifdef HAVE_MPI
         Dune::MPIHelper::getCommunicator(),
 #endif
-        upperRight, // upper right
-        cellRes, // number of cells
-        isPeriodic,
-        0); // overlap
+        upperRight,     // upper right
+        cellRes,        // number of cells
+        isPeriodic, 0); // overlap
 
     // compute approximate integral
     auto gridView = grid.leafView();
     auto eIt = gridView.begin<0>();
     const auto eEndIt = gridView.end<0>();
-    Scalar result=0;
+    Scalar result = 0;
     // instanciate a FvElementGeometry
     typedef Ewoms::VcfvElementGeometry<Scalar, GridView> FvElementGeometry;
     FvElementGeometry fvElemGeom;
@@ -303,43 +298,46 @@ void testQuadrature()
 
         // loop over all sub-control volumes
         for (int scvIdx = 0; scvIdx < fvElemGeom.numVertices; ++scvIdx) {
-            const auto &scvLocalGeom = *fvElemGeom.subContVol[scvIdx].localGeometry;
+            const auto &scvLocalGeom
+                = *fvElemGeom.subContVol[scvIdx].localGeometry;
 
             Dune::GeometryType geomType = scvLocalGeom.type();
             static const int quadratureOrder = 2;
-            const auto &rule = Dune::QuadratureRules<Scalar,dim>::rule(geomType, quadratureOrder);
+            const auto &rule
+                = Dune::QuadratureRules<Scalar, dim>::rule(geomType,
+                                                           quadratureOrder);
 
             // integrate f over the sub-control volume
-            for (auto it = rule.begin(); it != rule.end(); ++ it)
-            {
+            for (auto it = rule.begin(); it != rule.end(); ++it) {
                 auto posScvLocal = it->position();
                 auto posElemLocal = scvLocalGeom.global(posScvLocal);
                 auto posGlobal = elemGeom.global(posScvLocal);
 
                 Scalar fval = f(posGlobal);
                 Scalar weight = it->weight();
-                Scalar detjac =
-                    scvLocalGeom.integrationElement(posScvLocal) *
-                    elemGeom.integrationElement(posElemLocal);
+                Scalar detjac = scvLocalGeom.integrationElement(posScvLocal)
+                                * elemGeom.integrationElement(posElemLocal);
 
                 result += fval * weight * detjac;
             }
         }
     }
 
-    std::cout << "result: " << result << " (expected value: " << 1.0/(1 << dim) << ")\n";
+    std::cout << "result: " << result
+              << " (expected value: " << 1.0 / (1 << dim) << ")\n";
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     // initialize MPI, finalize is done automatically on exit
     Dune::MPIHelper::instance(argc, argv);
 
     testIdenityMapping();
-    // test the quadrature in a tetrahedron. since the CLang compiler
-    // prior to version 3.2 generates incorrect code here, we do not
-    // do it if the compiler is clang 3.1 or older.
-#if !__clang__ || __clang_major__ > 3 || (__clang_major__ == 3  && __clang_minor__ >= 3)
+// test the quadrature in a tetrahedron. since the CLang compiler
+// prior to version 3.2 generates incorrect code here, we do not
+// do it if the compiler is clang 3.1 or older.
+#if !__clang__ || __clang_major__ > 3                                          \
+    || (__clang_major__ == 3 && __clang_minor__ >= 3)
     testTetrahedron();
     testCube();
 #endif
