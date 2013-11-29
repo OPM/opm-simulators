@@ -33,9 +33,10 @@ NEW_TYPE_TAG(OutflowProblem, INHERITS_FROM(VcfvPvs, OutflowBaseProblem));
 
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
 SET_INT_PROP(OutflowProblem, PvsVerbosity, 1);
-}}
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(OutflowProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

@@ -29,10 +29,12 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(GroundWaterProblem, INHERITS_FROM(VcfvImmiscibleOnePhase, GroundWaterBaseProblem));
-}}
+NEW_TYPE_TAG(GroundWaterProblem,
+             INHERITS_FROM(VcfvImmiscibleOnePhase, GroundWaterBaseProblem));
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(GroundWaterProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

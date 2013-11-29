@@ -33,7 +33,7 @@ NEW_TYPE_TAG(CuvetteProblem, INHERITS_FROM(VcfvPvs, CuvetteBaseProblem));
 }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(CuvetteProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

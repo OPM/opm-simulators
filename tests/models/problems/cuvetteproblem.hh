@@ -65,9 +65,9 @@ SET_TYPE_PROP(CuvetteBaseProblem, Grid, Dune::YaspGrid<2>);
 SET_TYPE_PROP(CuvetteBaseProblem, Problem, Ewoms::CuvetteProblem<TypeTag>);
 
 // Set the fluid system
-SET_TYPE_PROP(CuvetteBaseProblem,
-              FluidSystem,
-              Opm::FluidSystems::H2OAirMesitylene<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+SET_TYPE_PROP(
+    CuvetteBaseProblem, FluidSystem,
+    Opm::FluidSystems::H2OAirMesitylene<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Enable gravity
 SET_BOOL_PROP(CuvetteBaseProblem, EnableGravity, true);
@@ -94,7 +94,7 @@ public:
     // material law API
     typedef Opm::ThreePAdapter<wPhaseIdx, nPhaseIdx, gPhaseIdx, ThreePLaw> type;
 
-    //typedef Opm::MpLinearMaterial<FluidSystem::numPhases, Scalar> type;
+    // typedef Opm::MpLinearMaterial<FluidSystem::numPhases, Scalar> type;
 };
 
 // Set the heat conduction law
@@ -148,7 +148,7 @@ namespace Ewoms {
  * problem to about 2-3 hours simulation time.  Complete remediation
  * of the domain requires much longer (about 10 days simulated time).
  */
-template <class TypeTag >
+template <class TypeTag>
 class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
@@ -158,33 +158,30 @@ class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLaw) HeatConductionLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams)
+        HeatConductionLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     // copy some indices for convenience
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    enum {
-        numPhases = FluidSystem::numPhases,
-        numComponents = FluidSystem::numComponents,
+    enum { numPhases = FluidSystem::numPhases };
+    enum { numComponents = FluidSystem::numComponents };
+    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
+    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { H2OIdx = FluidSystem::H2OIdx };
+    enum { airIdx = FluidSystem::airIdx };
+    enum { NAPLIdx = FluidSystem::NAPLIdx };
+    enum { conti0EqIdx = Indices::conti0EqIdx };
 
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-        nPhaseIdx = FluidSystem::nPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-
-        H2OIdx = FluidSystem::H2OIdx,
-        airIdx = FluidSystem::airIdx,
-        NAPLIdx = FluidSystem::NAPLIdx,
-
-        conti0EqIdx = Indices::conti0EqIdx,
-
-        // Grid and world dimension
-        dim = GridView::dimension,
-        dimWorld = GridView::dimensionworld
-    };
+    // Grid and world dimension
+    enum { dim = GridView::dimension };
+    enum { dimWorld = GridView::dimensionworld };
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
@@ -195,14 +192,14 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     CuvetteProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
 #else
         : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()),
 #endif
-        , eps_(1e-6)
+          eps_(1e-6)
     {
         if (Valgrind::IsRunning())
             FluidSystem::init(/*minT=*/283.15, /*maxT=*/500.0, /*nT=*/20,
@@ -219,7 +216,7 @@ public:
         finePorosity_ = 0.42;
         coarsePorosity_ = 0.42;
 
-        // parameters for the capillary pressure law
+// parameters for the capillary pressure law
 #if 1
         // three-phase van Genuchten law
         fineMaterialParams_.setVgAlpha(0.0005);
@@ -294,7 +291,7 @@ public:
      */
     const char *name() const
     {
-        static std::string tmp = std::string("cuvette_")+this->model().name();
+        static std::string tmp = std::string("cuvette_") + this->model().name();
         return tmp.c_str();
     }
 
@@ -316,7 +313,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -341,7 +339,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -354,7 +353,7 @@ public:
      * \copydoc VcfvMultiPhaseProblem::heatConductionParams
      */
     template <class Context>
-    const HeatConductionLawParams&
+    const HeatConductionLawParams &
     heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
     { return heatCondParams_; }
 
@@ -362,11 +361,11 @@ public:
      * \copydoc VcfvMultiPhaseProblem::heatCapacitySolid
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
+                             int timeIdx) const
     {
-        return
-            850 // specific heat capacity [J / (kg K)]
-            * 2650; // density of sand [kg/m^3]
+        return 850     // specific heat capacity [J / (kg K)]
+               * 2650; // density of sand [kg/m^3]
     }
 
     //! \}
@@ -380,7 +379,8 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -392,27 +392,26 @@ public:
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
             values.setNoFlow();
         }
-        else  if (onLeftBoundary_(pos))
-        {
+        else if (onLeftBoundary_(pos)) {
             // injection
             RateVector molarRate;
 
             // inject with the same composition as the gas phase of
             // the injection fluid state
             Scalar molarInjectionRate = 0.3435; // [mol/(m^2 s)]
-            for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-                molarRate[conti0EqIdx + compIdx] =
-                    - molarInjectionRate
-                    * injectFluidState_.moleFraction(gPhaseIdx, compIdx);
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                molarRate[conti0EqIdx + compIdx]
+                    = -molarInjectionRate
+                      * injectFluidState_.moleFraction(gPhaseIdx, compIdx);
 
             // calculate the total mass injection rate [kg / (m^2 s)
-            Scalar massInjectionRate =
-                molarInjectionRate
-                * injectFluidState_.averageMolarMass(gPhaseIdx);
+            Scalar massInjectionRate
+                = molarInjectionRate
+                  * injectFluidState_.averageMolarMass(gPhaseIdx);
 
             // set the boundary rate vector
             values.setMolarRate(molarRate);
-            values.setEnthalpyRate(- injectFluidState_.enthalpy(gPhaseIdx)
+            values.setEnthalpyRate(-injectFluidState_.enthalpy(gPhaseIdx)
                                    * massInjectionRate); // [J / (m^2 s)]
         }
         else
@@ -430,7 +429,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
 
@@ -447,7 +447,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -467,9 +468,8 @@ private:
 
     bool isContaminated_(const GlobalPosition &pos) const
     {
-        return
-            (0.20 <= pos[0]) && (pos[0] <= 0.80)
-            && (0.4 <= pos[1]) && (pos[1] <= 0.65);
+        return (0.20 <= pos[0]) && (pos[0] <= 0.80) && (0.4 <= pos[1])
+               && (pos[1] <= 0.65);
     }
 
     bool isFineMaterial_(const GlobalPosition &pos) const
@@ -478,14 +478,13 @@ private:
             return true;
         else if (pos[1] <= 0.15 && 1.20 <= pos[0])
             return true;
-        else return false;
+        else
+            return false;
     }
 
     template <class FluidState, class Context>
-    void initialFluidState_(FluidState &fs,
-                            const Context &context,
-                            int spaceIdx,
-                            int timeIdx) const
+    void initialFluidState_(FluidState &fs, const Context &context,
+                            int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -493,23 +492,24 @@ private:
 
         Scalar pw = 1e5;
 
-        if(isContaminated_(pos)) {
+        if (isContaminated_(pos)) {
             fs.setSaturation(wPhaseIdx, 0.12);
             fs.setSaturation(nPhaseIdx, 0.07);
             fs.setSaturation(gPhaseIdx, 1 - 0.12 - 0.07);
 
             // set the capillary pressures
-            const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
+            const auto &matParams
+                = materialLawParams(context, spaceIdx, timeIdx);
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx,
-                               pw + (pc[phaseIdx] - pc[wPhaseIdx]));
+                fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[wPhaseIdx]));
 
             // compute the phase compositions
             typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
             typename FluidSystem::ParameterCache paramCache;
-            MMPC::solve(fs, paramCache, /*setViscosity=*/true, /*setEnthalpy=*/true);
+            MMPC::solve(fs, paramCache, /*setViscosity=*/true,
+                        /*setEnthalpy=*/true);
         }
         else {
             fs.setSaturation(wPhaseIdx, 0.12);
@@ -517,33 +517,33 @@ private:
             fs.setSaturation(nPhaseIdx, 0);
 
             // set the capillary pressures
-            const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
+            const auto &matParams
+                = materialLawParams(context, spaceIdx, timeIdx);
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx,
-                               pw + (pc[phaseIdx] - pc[wPhaseIdx]));
+                fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[wPhaseIdx]));
 
             // compute the phase compositions
             typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
             typename FluidSystem::ParameterCache paramCache;
-            MMPC::solve(fs, paramCache, /*setViscosity=*/true, /*setEnthalpy=*/true);
+            MMPC::solve(fs, paramCache, /*setViscosity=*/true,
+                        /*setEnthalpy=*/true);
 
             // set the contaminant mole fractions to zero. this is a
             // little bit hacky...
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 fs.setMoleFraction(phaseIdx, NAPLIdx, 0.0);
 
                 if (phaseIdx == nPhaseIdx)
                     continue;
 
                 Scalar sumx = 0;
-                for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
                     sumx += fs.moleFraction(phaseIdx, compIdx);
 
-                for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-                    fs.setMoleFraction(phaseIdx,
-                                       compIdx,
+                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                    fs.setMoleFraction(phaseIdx, compIdx,
                                        fs.moleFraction(phaseIdx, compIdx) / sumx);
             }
         }
@@ -570,12 +570,13 @@ private:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
-                Scalar lambdaFluid =
-                    FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
-                lambdaSaturated = std::pow(lambdaGranite, (1-poro)) + std::pow(lambdaFluid, poro);
+                Scalar lambdaFluid
+                    = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
+                lambdaSaturated = std::pow(lambdaGranite, (1 - poro))
+                                  + std::pow(lambdaFluid, poro);
             }
             else
-                lambdaSaturated = std::pow(lambdaGranite, (1-poro));
+                lambdaSaturated = std::pow(lambdaGranite, (1 - poro));
 
             params.setFullySaturatedLambda(phaseIdx, lambdaSaturated);
             if (!FluidSystem::isLiquid(phaseIdx))
@@ -585,26 +586,21 @@ private:
 
     void initInjectFluidState_()
     {
-        injectFluidState_.setTemperature(383.0); // [K]
-        injectFluidState_.setPressure(gPhaseIdx, 1e5); // [Pa]
+        injectFluidState_.setTemperature(383.0);         // [K]
+        injectFluidState_.setPressure(gPhaseIdx, 1e5);   // [Pa]
         injectFluidState_.setSaturation(gPhaseIdx, 1.0); // [-]
 
         Scalar xgH2O = 0.417;
-        injectFluidState_.setMoleFraction(gPhaseIdx,
-                                          H2OIdx,
-                                          xgH2O); // [-]
-        injectFluidState_.setMoleFraction(gPhaseIdx,
-                                          airIdx,
-                                          1 - xgH2O); // [-]
-        injectFluidState_.setMoleFraction(gPhaseIdx,
-                                          NAPLIdx,
-                                          0.0); // [-]
+        injectFluidState_.setMoleFraction(gPhaseIdx, H2OIdx, xgH2O);     // [-]
+        injectFluidState_.setMoleFraction(gPhaseIdx, airIdx, 1 - xgH2O); // [-]
+        injectFluidState_.setMoleFraction(gPhaseIdx, NAPLIdx, 0.0);      // [-]
 
         // set the specific enthalpy of the gas phase
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updatePhase(injectFluidState_, gPhaseIdx);
 
-        Scalar h = FluidSystem::enthalpy(injectFluidState_, paramCache, gPhaseIdx);
+        Scalar h
+            = FluidSystem::enthalpy(injectFluidState_, paramCache, gPhaseIdx);
         injectFluidState_.setEnthalpy(gPhaseIdx, h);
     }
 

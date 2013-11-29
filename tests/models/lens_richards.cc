@@ -26,7 +26,7 @@
 #include <ewoms/common/start.hh>
 #include "problems/richardslensproblem.hh"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(RichardsLensProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

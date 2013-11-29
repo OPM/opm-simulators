@@ -29,12 +29,15 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(PowerInjectionProblem, INHERITS_FROM(VcfvImmiscibleTwoPhase, PowerInjectionBaseProblem));
+NEW_TYPE_TAG(PowerInjectionProblem,
+             INHERITS_FROM(VcfvImmiscibleTwoPhase, PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionProblem, VelocityModule, Ewoms::VcfvForchheimerVelocityModule<TypeTag>);
-} }
+SET_TYPE_PROP(PowerInjectionProblem, VelocityModule,
+              Ewoms::VcfvForchheimerVelocityModule<TypeTag>);
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(PowerInjectionProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

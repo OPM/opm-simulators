@@ -45,15 +45,18 @@ namespace Properties {
 NEW_TYPE_TAG(NavierStokesTestProblem, INHERITS_FROM(VcfvNavierStokes));
 
 // Set the grid type
-SET_TYPE_PROP(NavierStokesTestProblem, Grid, Dune::ALUGrid<2, 2, Dune::cube, Dune::nonconforming>);
+SET_TYPE_PROP(NavierStokesTestProblem, Grid,
+              Dune::ALUGrid<2, 2, Dune::cube, Dune::nonconforming>);
 
 // Set the property which defines the type of the physical problem
-SET_TYPE_PROP(NavierStokesTestProblem, Problem, Ewoms::NavierStokesTestProblem<TypeTag>);
+SET_TYPE_PROP(NavierStokesTestProblem, Problem,
+              Ewoms::NavierStokesTestProblem<TypeTag>);
 
 SET_PROP(NavierStokesTestProblem, Fluid)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::GasPhase<Scalar, Opm::N2<Scalar> > type;
 };
@@ -71,8 +74,10 @@ SET_SCALAR_PROP(NavierStokesTestProblem, EndTime, 1e-3);
 SET_SCALAR_PROP(NavierStokesTestProblem, InitialTimeStepSize, 1e-3);
 
 // Default grid file to load
-SET_STRING_PROP(NavierStokesTestProblem, GridFile, "grids/test_navierstokes.dgf");
-}}
+SET_STRING_PROP(NavierStokesTestProblem, GridFile,
+                "grids/test_navierstokes.dgf");
+}
+}
 
 namespace Ewoms {
 /*!
@@ -102,7 +107,8 @@ class NavierStokesTestProblem : public StokesProblem<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
 
@@ -125,7 +131,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     NavierStokesTestProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -151,8 +157,7 @@ public:
      * This problem assumes a constant temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return 273.15 + 10; }
 
     //! \}
@@ -166,18 +171,19 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
-/*        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        /*        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
-        values.setOutflow(massBalanceIdx);
-        values.setDirichlet(momentumXIdx);
-        values.setDirichlet(momentumYIdx);
-        // set pressure for all vertices at the bottom
-        if (onLowerBoundary_(pos)) {
-            values.setDirichlet(massBalanceIdx);
-        }
-*/
+                values.setOutflow(massBalanceIdx);
+                values.setDirichlet(momentumXIdx);
+                values.setDirichlet(momentumYIdx);
+                // set pressure for all vertices at the bottom
+                if (onLowerBoundary_(pos)) {
+                    values.setDirichlet(massBalanceIdx);
+                }
+        */
         values.setNoFlow(context, spaceIdx, timeIdx);
     }
 
@@ -192,9 +198,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     { initial_(values); }
 
     /*!
@@ -203,14 +208,16 @@ public:
      * For this problem, we fix the velocity of upper boundary.
      */
     template <class Context>
-    void constraints(Constraints &constraints, const Context &context, int spaceIdx, int timeIdx) const
+    void constraints(Constraints &constraints, const Context &context,
+                     int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos)) {
             // lid moves from left to right
             const Scalar lidVelocity = 1.0;
-            constraints.setConstraint(momentum0EqIdx, velocity0Idx + 0, lidVelocity);
+            constraints.setConstraint(momentum0EqIdx, velocity0Idx + 0,
+                                      lidVelocity);
             constraints.setConstraint(momentum0EqIdx + 1, velocity0Idx + 1, 0);
             constraints.setConstraint(conti0EqIdx, pressureIdx, 1e5);
         }
@@ -220,9 +227,8 @@ public:
      * \copydoc VcfvProblem::source
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -246,7 +252,7 @@ private:
     { return globalPos[1] < this->bboxMin()[1] + eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &globalPos) const
-    { return globalPos[1] > this->bboxMax()[1] - eps_;  }
+    { return globalPos[1] > this->bboxMax()[1] - eps_; }
 
     Scalar eps_;
 };

@@ -31,9 +31,10 @@
 namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(LensProblem, INHERITS_FROM(VcfvImmiscibleTwoPhase, LensBaseProblem));
-}}
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(LensProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

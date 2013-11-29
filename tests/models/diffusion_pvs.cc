@@ -33,7 +33,7 @@ NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(VcfvPvs, DiffusionBaseProblem));
 }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(DiffusionProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

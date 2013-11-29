@@ -55,12 +55,13 @@ NEW_TYPE_TAG(InfiltrationBaseProblem);
 SET_TYPE_PROP(InfiltrationBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(InfiltrationBaseProblem, Problem, Ewoms::InfiltrationProblem<TypeTag>);
+SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
+              Ewoms::InfiltrationProblem<TypeTag>);
 
 // Set the fluid system
-SET_TYPE_PROP(InfiltrationBaseProblem,
-              FluidSystem,
-              Opm::FluidSystems::H2OAirMesitylene<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+SET_TYPE_PROP(
+    InfiltrationBaseProblem, FluidSystem,
+    Opm::FluidSystems::H2OAirMesitylene<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Enable gravity?
 SET_BOOL_PROP(InfiltrationBaseProblem, EnableGravity, true);
@@ -113,7 +114,8 @@ SET_SCALAR_PROP(InfiltrationBaseProblem, EndTime, 6e3);
 SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
 
 // The default DGF file to load
-SET_STRING_PROP(InfiltrationBaseProblem, GridFile, "./grids/infiltration_50x3.dgf");
+SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
+                "./grids/infiltration_50x3.dgf");
 } // namespace Properties
 } // namespace Opm
 
@@ -140,7 +142,7 @@ namespace Ewoms {
  * (Dirichlet), Top and bottom are Neumann boundaries, all no-flow
  * except for the small infiltration zone in the upper left part.
  */
-template <class TypeTag >
+template <class TypeTag>
 class InfiltrationProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
@@ -151,7 +153,8 @@ class InfiltrationProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
@@ -188,21 +191,21 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     InfiltrationProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
 #else
         : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()),
 #endif
-        , eps_(1e-6)
+          eps_(1e-6)
     {
         temperature_ = 273.15 + 10.0; // -> 10 degrees Celsius
         FluidSystem::init(/*tempMin=*/temperature_ - 1,
                           /*tempMax=*/temperature_ + 1,
                           /*nTemp=*/3,
-                          /*pressMin=*/0.8*1e5,
-                          /*pressMax=*/3*1e5,
+                          /*pressMin=*/0.8 * 1e5,
+                          /*pressMax=*/3 * 1e5,
                           /*nPress=*/200);
 
         // intrinsic permeabilities
@@ -264,7 +267,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -278,7 +282,7 @@ public:
     template <class Context>
     Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
     {
-        //const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        // const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         // if (isFineMaterial_(pos))
         //     return finePorosity_;
         // else
@@ -290,7 +294,8 @@ public:
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
     /*!
@@ -299,11 +304,11 @@ public:
      * In this case, we assume the rock-matrix to be quartz.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
+                             int timeIdx) const
     {
-        return
-            850. // specific heat capacity [J / (kg K)]
-            * 2650.; // density of sand [kg/m^3]
+        return 850.     // specific heat capacity [J / (kg K)]
+               * 2650.; // density of sand [kg/m^3]
     }
 
     //! \}
@@ -317,7 +322,8 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context, int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -350,7 +356,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
 
@@ -368,7 +375,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -390,15 +398,17 @@ private:
     { return onUpperBoundary_(pos) && 50 < pos[0] && pos[0] < 75; }
 
     template <class FluidState, class Context>
-    void initialFluidState_(FluidState &fs, const Context &context, int spaceIdx, int timeIdx) const
+    void initialFluidState_(FluidState &fs, const Context &context,
+                            int spaceIdx, int timeIdx) const
     {
         const GlobalPosition pos = context.pos(spaceIdx, timeIdx);
         Scalar y = pos[1];
         Scalar x = pos[0];
 
         Scalar densityW = 1000.0;
-        Scalar pc = 9.81 * densityW * (y - (5 - 5e-4*x));
-        if (pc < 0.0) pc = 0.0;
+        Scalar pc = 9.81 * densityW * (y - (5 - 5e-4 * x));
+        if (pc < 0.0)
+            pc = 0.0;
 
         // set pressures
         const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
@@ -427,57 +437,57 @@ private:
         if (onLeftBoundary_(pos))
             pg += 10e3;
         MaterialLaw::capillaryPressures(pcAll, matParams, fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             fs.setPressure(phaseIdx, pg + (pcAll[phaseIdx] - pcAll[gPhaseIdx]));
 
         // set composition of gas phase
         fs.setMoleFraction(gPhaseIdx, H2OIdx, 1e-6);
-        fs.setMoleFraction(gPhaseIdx, airIdx, 1 - fs.moleFraction(gPhaseIdx, H2OIdx));
+        fs.setMoleFraction(gPhaseIdx, airIdx,
+                           1 - fs.moleFraction(gPhaseIdx, H2OIdx));
         fs.setMoleFraction(gPhaseIdx, NAPLIdx, 0);
 
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         typename FluidSystem::ParameterCache paramCache;
-        CFRP::solve(fs,
-                    paramCache,
-                    gPhaseIdx,
+        CFRP::solve(fs, paramCache, gPhaseIdx,
                     /*setViscosity=*/false,
                     /*setEnthalpy=*/false);
 
-        fs.setMoleFraction(wPhaseIdx, H2OIdx, 1 - fs.moleFraction(wPhaseIdx, H2OIdx));
+        fs.setMoleFraction(wPhaseIdx, H2OIdx,
+                           1 - fs.moleFraction(wPhaseIdx, H2OIdx));
     }
 
     static Scalar invertPCGW_(Scalar pcIn, const MaterialLawParams &pcParams)
     {
-        Scalar lower,upper;
+        Scalar lower, upper;
         int k;
         int maxIt = 50;
         Scalar bisLimit = 1.;
         Scalar Sw, pcGW;
-        lower=0.0; upper=1.0;
-        for (k=1; k<=25; k++)
-        {
-            Sw = 0.5*(upper+lower);
+        lower = 0.0;
+        upper = 1.0;
+        for (k = 1; k <= 25; k++) {
+            Sw = 0.5 * (upper + lower);
             pcGW = MaterialLaw::pCGW(pcParams, Sw);
-            Scalar delta = pcGW-pcIn;
-            if (delta<0.) delta*=-1.;
-            if (delta<bisLimit)
-            {
-                return(Sw);
+            Scalar delta = pcGW - pcIn;
+            if (delta < 0.)
+                delta *= -1.;
+            if (delta < bisLimit) {
+                return (Sw);
             }
-            if (k==maxIt) {
-                return(Sw);
+            if (k == maxIt) {
+                return (Sw);
             }
-            if (pcGW>pcIn) lower=Sw;
-            else upper=Sw;
+            if (pcGW > pcIn)
+                lower = Sw;
+            else
+                upper = Sw;
         }
         return 0;
     }
 
     bool isFineMaterial_(const GlobalPosition &pos) const
     {
-        return
-            70. <= pos[0] && pos[0] <= 85. &&
-            7.0 <= pos[1] && pos[1] <= 7.50;
+        return 70. <= pos[0] && pos[0] <= 85. && 7.0 <= pos[1] && pos[1] <= 7.50;
     }
 
     DimMatrix fineK_;

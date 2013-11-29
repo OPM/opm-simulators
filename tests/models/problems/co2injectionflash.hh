@@ -43,25 +43,25 @@ class Co2InjectionFlash : public Opm::NcpFlash<Scalar, FluidSystem>
     typedef typename ParentType::ComponentVector ComponentVector;
 
     enum { numPhases = FluidSystem::numPhases };
+
 public:
     /*!
      * \brief Guess initial values for all quantities.
      */
     template <class FluidState>
-    static void guessInitial(FluidState &fluidState,
-                             ParameterCache &paramCache,
+    static void guessInitial(FluidState &fluidState, ParameterCache &paramCache,
                              const ComponentVector &globalMolarities)
     {
         ParentType::guessInitial(fluidState, paramCache, globalMolarities);
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            // pressure. something close to the reservoid pressure as initial guess
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            // pressure. something close to the reservoid pressure as initial
+            // guess
             fluidState.setPressure(phaseIdx, 1.0135e6);
         }
 
         paramCache.updateAllPressures(fluidState);
     }
-
 };
 
 } // namespace Ewoms

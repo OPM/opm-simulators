@@ -48,13 +48,11 @@ SET_TYPE_PROP(StokesNITestProblem, Grid, Dune::YaspGrid<2>);
 SET_TYPE_PROP(StokesNITestProblem, Problem, Ewoms::StokesNITestProblem<TypeTag>);
 
 //! Select the fluid system
-SET_TYPE_PROP(StokesNITestProblem,
-              FluidSystem,
+SET_TYPE_PROP(StokesNITestProblem, FluidSystem,
               Opm::FluidSystems::H2OAir<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 //! Select the phase to be considered
-SET_INT_PROP(StokesNITestProblem,
-             StokesPhaseIndex,
+SET_INT_PROP(StokesNITestProblem, StokesPhaseIndex,
              GET_PROP_TYPE(TypeTag, FluidSystem)::gPhaseIdx);
 
 // Enable gravity
@@ -90,8 +88,7 @@ namespace Ewoms {
  * conditions.
  */
 template <class TypeTag>
-class StokesNITestProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class StokesNITestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
@@ -100,14 +97,14 @@ class StokesNITestProblem
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
     enum { // Number of equations and grid dimension
         numEq = GET_PROP_VALUE(TypeTag, NumEq),
-        dimWorld = GridView::dimensionworld
-    };
+        dimWorld = GridView::dimensionworld };
     enum {
         // primary variable indices
         pressureIdx = Indices::pressureIdx,
@@ -133,7 +130,7 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     StokesNITestProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -170,16 +167,14 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
-                  int spaceIdx,
-                  int timeIdx) const
+    void boundary(BoundaryRateVector &values, const Context &context,
+                  int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
-        else if(onLowerBoundary_(pos)) {
+        else if (onLowerBoundary_(pos)) {
             // lower boundary is constraint!
             values = 0.0;
         }
@@ -200,9 +195,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -224,18 +218,18 @@ public:
         // parabolic velocity profile
         const Scalar maxVelocity = 1.0;
 
-        Scalar a = - 4*maxVelocity/(width*width);
-        Scalar b = - a*width;
+        Scalar a = -4 * maxVelocity / (width * width);
+        Scalar b = -a * width;
         Scalar c = 0;
 
         DimVector velocity(0.0);
-        velocity[1] = a * x*x + b * x + c;
+        velocity[1] = a * x * x + b * x + c;
 
         // hydrostatic pressure
         Scalar rho = 1.189;
-        Scalar pressure = 1e5 - rho*this->gravity()[1]*y;
+        Scalar pressure = 1e5 - rho * this->gravity()[1] * y;
 
-        for (int axisIdx = 0; axisIdx < dimWorld; ++ axisIdx)
+        for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
             values[velocity0Idx + axisIdx] = velocity[axisIdx];
 
         values[pressureIdx] = pressure;
@@ -250,9 +244,8 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -262,20 +255,23 @@ public:
      * adjacent to the inlet.
      */
     template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
+    void constraints(Constraints &constraints, const Context &context,
                      int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
-        if (onLowerBoundary_(pos) || onUpperBoundary_(pos))
-        {
+        if (onLowerBoundary_(pos) || onUpperBoundary_(pos)) {
             PrimaryVariables initCond;
             initial(initCond, context, spaceIdx, timeIdx);
 
-            constraints.setConstraint(temperatureIdx, energyEqIdx, initCond[temperatureIdx]);;
-            constraints.setConstraint(pressureIdx, conti0EqIdx, initCond[pressureIdx]);
-            constraints.setConstraint(moleFrac1Idx, conti0EqIdx+1, initCond[moleFrac1Idx]);;
+            constraints.setConstraint(temperatureIdx, energyEqIdx,
+                                      initCond[temperatureIdx]);
+            ;
+            constraints.setConstraint(pressureIdx, conti0EqIdx,
+                                      initCond[pressureIdx]);
+            constraints.setConstraint(moleFrac1Idx, conti0EqIdx + 1,
+                                      initCond[moleFrac1Idx]);
+            ;
             for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 constraints.setConstraint(velocity0Idx + axisIdx,
                                           momentum0EqIdx + axisIdx,
@@ -300,18 +296,12 @@ private:
 
     bool onBoundary_(const GlobalPosition &pos) const
     {
-        return onLeftBoundary_(pos)
-            || onRightBoundary_(pos)
-            || onLowerBoundary_(pos)
-            || onUpperBoundary_(pos);
+        return onLeftBoundary_(pos) || onRightBoundary_(pos)
+               || onLowerBoundary_(pos) || onUpperBoundary_(pos);
     }
 
     bool inLens_(const GlobalPosition &pos) const
-    {
-        return
-            pos[0]<0.75 && pos[0]>0.25 &&
-            pos[1]<0.75 && pos[1]>0.25;
-    }
+    { return pos[0] < 0.75 && pos[0] > 0.25 && pos[1] < 0.75 && pos[1] > 0.25; }
 
     Scalar eps_;
 };

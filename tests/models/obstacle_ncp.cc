@@ -31,9 +31,10 @@
 namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(VcfvNcp, ObstacleBaseProblem));
-}}
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(ObstacleProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

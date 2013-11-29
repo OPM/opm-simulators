@@ -50,8 +50,7 @@ namespace Opm {
 //////////
 // Specify the properties for the finger problem
 //////////
-namespace Properties
-{
+namespace Properties {
 // declare the properties required by the for the finger grid creator
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
@@ -88,16 +87,24 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements, "The number of global refinements of the grid executed after it was loaded");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX, "The size of the domain in x direction");
-        EWOMS_REGISTER_PARAM(TypeTag, int, CellsX, "The number of intervalls in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
+                             "The number of global refinements of the grid "
+                             "executed after it was loaded");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX,
+                             "The size of the domain in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, int, CellsX,
+                             "The number of intervalls in x direction");
         if (dim > 1) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY, "The size of the domain in y direction");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CellsY, "The number of intervalls in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY,
+                                 "The size of the domain in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsY,
+                                 "The number of intervalls in y direction");
         }
         if (dim > 2) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ, "The size of the domain in z direction");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CellsZ, "The number of intervalls in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ,
+                                 "The size of the domain in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsZ,
+                                 "The number of intervalls in z direction");
         }
     }
 
@@ -123,20 +130,21 @@ public:
             cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
-        unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        unsigned numRefinments
+            = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
 
         Dune::GridFactory<Grid> factory(grid_);
 
         if (dim == 3) {
-            Dune::FieldVector<double,dim> pos;
+            Dune::FieldVector<double, dim> pos;
             for (int k = 0; k <= cellRes[0]; k++) {
-                pos[2] = upperRight[2]*double(k)/cellRes[2];
+                pos[2] = upperRight[2] * double(k) / cellRes[2];
 
                 for (int j = 0; j <= cellRes[1]; j++) {
-                    pos[1] = upperRight[1]*double(j)/cellRes[1];
+                    pos[1] = upperRight[1] * double(j) / cellRes[1];
 
                     for (int i = 0; i <= cellRes[0]; i++) {
-                        pos[0] = upperRight[0]*double(i)/cellRes[0];
+                        pos[0] = upperRight[0] * double(i) / cellRes[0];
                         factory.insertVertex(pos);
                     }
                 }
@@ -144,12 +152,12 @@ public:
         }
         else {
             assert(dim == 2);
-            Dune::FieldVector<double,dim> pos;
+            Dune::FieldVector<double, dim> pos;
             for (int j = 0; j <= cellRes[1]; j++) {
-                pos[1] = upperRight[1]*double(j)/cellRes[1];
+                pos[1] = upperRight[1] * double(j) / cellRes[1];
 
                 for (int i = 0; i <= cellRes[0]; i++) {
-                    pos[0] = upperRight[0]*double(i)/cellRes[0];
+                    pos[0] = upperRight[0] * double(i) / cellRes[0];
                     factory.insertVertex(pos);
                 }
             }
@@ -166,14 +174,14 @@ public:
                     int m = cellRes[0] + 1;
                     int n = cellRes[1] + 1;
                     for (int k = 0; k < cellRes[2]; ++k) {
-                        int i0 = k*m*n + j*m + i;
-                        int i1 = k*m*n + j*m + (i+1);
-                        int i2 = k*m*n + (j+1)*m + i;
-                        int i3 = k*m*n + (j+1)*m + (i+1);
-                        int i4 = (k+1)*m*n + j*m + i;
-                        int i5 = (k+1)*m*n + j*m + (i+1);
-                        int i6 = (k+1)*m*n + (j+1)*m + i;
-                        int i7 = (k+1)*m*n + (j+1)*m + (i+1);
+                        int i0 = k * m * n + j * m + i;
+                        int i1 = k * m * n + j * m + (i + 1);
+                        int i2 = k * m * n + (j + 1) * m + i;
+                        int i3 = k * m * n + (j + 1) * m + (i + 1);
+                        int i4 = (k + 1) * m * n + j * m + i;
+                        int i5 = (k + 1) * m * n + j * m + (i + 1);
+                        int i6 = (k + 1) * m * n + (j + 1) * m + i;
+                        int i7 = (k + 1) * m * n + (j + 1) * m + (i + 1);
 
 #if FINGER_CUBES
                         v[0] = i0;
@@ -184,44 +192,57 @@ public:
                         v[5] = i5;
                         v[6] = i6;
                         v[7] = i7;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::cube,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::cube, 3), v);
 
 #else
                         v[0] = i0;
                         v[1] = i1;
                         v[2] = i2;
                         v[3] = i4;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
+                            v);
 
                         v[0] = i4;
                         v[1] = i5;
                         v[2] = i6;
                         v[3] = i2;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
+                            v);
 
                         v[0] = i2;
                         v[1] = i5;
                         v[2] = i4;
                         v[3] = i1;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
+                            v);
 
                         v[0] = i2;
                         v[1] = i3;
                         v[2] = i7;
                         v[3] = i5;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
+                            v);
 
                         v[0] = i5;
                         v[1] = i7;
                         v[2] = i6;
                         v[3] = i2;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
+                            v);
 
                         v[0] = i1;
                         v[1] = i3;
                         v[2] = i5;
                         v[3] = i2;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,3), v);
+                        factory.insertElement(
+                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
+                            v);
 #endif
                     }
                 }
@@ -229,26 +250,29 @@ public:
                     assert(dim == 2);
 
                     int m = cellRes[0] + 1;
-                    int i0 = j*m + i;
-                    int i1 = j*m + (i+1);
-                    int i2 = (j+1)*m + i;
-                    int i3 = (j+1)*m + (i+1);
+                    int i0 = j * m + i;
+                    int i1 = j * m + (i + 1);
+                    int i2 = (j + 1) * m + i;
+                    int i3 = (j + 1) * m + (i + 1);
 #if FINGER_CUBES
                     v[0] = i0;
                     v[1] = i1;
                     v[2] = i2;
                     v[3] = i3;
-                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::cube,2), v);
+                    factory.insertElement(
+                        Dune::GeometryType(Dune::GeometryType::cube, 2), v);
 #else
                     v[0] = i0;
                     v[1] = i1;
                     v[2] = i2;
-                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,2), v);
+                    factory.insertElement(
+                        Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
 
                     v[0] = i1;
                     v[1] = i3;
                     v[2] = i2;
-                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex,2), v);
+                    factory.insertElement(
+                        Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
 #endif
                 }
             }
@@ -304,16 +328,24 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements, "The number of global refinements of the grid executed after it was loaded");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX, "The size of the domain in x direction");
-        EWOMS_REGISTER_PARAM(TypeTag, int, CellsX, "The number of intervalls in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
+                             "The number of global refinements of the grid "
+                             "executed after it was loaded");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX,
+                             "The size of the domain in x direction");
+        EWOMS_REGISTER_PARAM(TypeTag, int, CellsX,
+                             "The number of intervalls in x direction");
         if (dim > 1) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY, "The size of the domain in y direction");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CellsY, "The number of intervalls in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY,
+                                 "The size of the domain in y direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsY,
+                                 "The number of intervalls in y direction");
         }
         if (dim > 2) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ, "The size of the domain in z direction");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CellsZ, "The number of intervalls in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ,
+                                 "The size of the domain in z direction");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CellsZ,
+                                 "The number of intervalls in z direction");
         }
     }
 
@@ -322,7 +354,7 @@ public:
      */
     static void makeGrid()
     {
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         std::bitset<FINGER_DIM> isPeriodic(false);
         std::array<int, FINGER_DIM> cellRes;
 #else
@@ -346,16 +378,16 @@ public:
             cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
-        unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        unsigned numRefinments
+            = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
 
         grid_ = new Dune::YaspGrid<FINGER_DIM>(
 #ifdef HAVE_MPI
             Dune::MPIHelper::getCommunicator(),
 #endif
-            upperRight, // upper right
-            cellRes, // number of cells
-            isPeriodic,
-            0); // overlap size
+            upperRight,     // upper right
+            cellRes,        // number of cells
+            isPeriodic, 0); // overlap size
         grid_->globalRefine(numRefinments);
     }
 

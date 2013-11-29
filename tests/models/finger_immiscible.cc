@@ -29,10 +29,12 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(FingerProblem, INHERITS_FROM(VcfvImmiscibleTwoPhase, FingerBaseProblem));
-}}
+NEW_TYPE_TAG(FingerProblem,
+             INHERITS_FROM(VcfvImmiscibleTwoPhase, FingerBaseProblem));
+}
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(FingerProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

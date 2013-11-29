@@ -30,7 +30,8 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(Co2InjectionImmiscibleNIProblem, INHERITS_FROM(VcfvImmiscible, Co2InjectionBaseProblem));
+NEW_TYPE_TAG(Co2InjectionImmiscibleNIProblem,
+             INHERITS_FROM(VcfvImmiscible, Co2InjectionBaseProblem));
 
 SET_BOOL_PROP(Co2InjectionImmiscibleNIProblem, EnableEnergy, true);
 }
@@ -39,7 +40,7 @@ SET_BOOL_PROP(Co2InjectionImmiscibleNIProblem, EnableEnergy, true);
 ////////////////////////
 // the main function
 ////////////////////////
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionImmiscibleNIProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);

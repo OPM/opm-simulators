@@ -19,14 +19,17 @@
 /*!
  * \file
  *
- * \brief Main file of the tutorial for a fully coupled twophase VCVF discretization.
+ * \brief Main file of the tutorial for a fully coupled twophase VCVF
+ *discretization.
  */
-#include "config.h" /*@\label{tutorial-coupled:include-begin}@*/
+#include "config.h"              /*@\label{tutorial-coupled:include-begin}@*/
 #include <ewoms/common/start.hh> /*@\label{tutorial-coupled:include-end}@*/
-#include "tutorial1problem.hh"  /*@\label{tutorial-coupled:include-problem-header}@*/
+#include "tutorial1problem.hh" /*@\label{tutorial-coupled:include-problem-header}@*/
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-    typedef TTAG(TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-    return Ewoms::start<TypeTag>(argc, argv); /*@\label{tutorial-coupled:call-start}@*/
+    typedef TTAG(
+        TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
+    return Ewoms::start<TypeTag>(argc,
+                                 argv); /*@\label{tutorial-coupled:call-start}@*/
 }

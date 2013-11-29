@@ -51,8 +51,10 @@ SET_TYPE_PROP(OutflowBaseProblem, Problem, Ewoms::OutflowProblem<TypeTag>);
 
 // Set fluid system
 SET_PROP(OutflowBaseProblem, FluidSystem)
-{ private:
+{
+private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     // Two-component single phase fluid system
     typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar> type;
@@ -94,8 +96,7 @@ namespace Ewoms {
  * used.
  */
 template <class TypeTag>
-class OutflowProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class OutflowProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -103,7 +104,8 @@ class OutflowProblem
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -129,17 +131,18 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     OutflowProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
 #else
         : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()),
 #endif
-        , eps_(1e-6)
+          eps_(1e-6)
     {
         temperature_ = 273.15 + 20;
-        FluidSystem::init(/*minT=*/temperature_ - 1, /*maxT=*/temperature_ + 2, /*numT=*/3,
+        FluidSystem::init(/*minT=*/temperature_ - 1, /*maxT=*/temperature_ + 2,
+                          /*numT=*/3,
                           /*minp=*/0.8e5, /*maxp=*/2.5e5, /*nump=*/500);
 
         // set parameters of porous medium
@@ -174,7 +177,8 @@ public:
      * This problem uses a constant intrinsic permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     { return perm_; }
 
     /*!
@@ -216,14 +220,14 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(globalPos)) {
-            Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
+            Opm::CompositionalFluidState<Scalar, FluidSystem,
+                                         /*storeEnthalpy=*/false> fs;
             initialFluidState_(fs, context, spaceIdx, timeIdx);
             fs.setPressure(/*phaseIdx=*/0, fs.pressure(/*phaseIdx=*/0) + 1e5);
 
@@ -235,7 +239,8 @@ public:
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
         else if (onRightBoundary_(globalPos)) {
-            Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
+            Opm::CompositionalFluidState<Scalar, FluidSystem,
+                                         /*storeEnthalpy=*/false> fs;
             initialFluidState_(fs, context, spaceIdx, timeIdx);
 
             // impose an outflow boundary condition
@@ -257,7 +262,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
         initialFluidState_(fs, context, spaceIdx, timeIdx);
@@ -272,9 +278,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -287,14 +292,15 @@ private:
     { return pos[0] > this->bboxMax()[0] - eps_; }
 
     template <class FluidState, class Context>
-    void initialFluidState_(FluidState &fs,
-                            const Context &context,
+    void initialFluidState_(FluidState &fs, const Context &context,
                             int spaceIdx, int timeIdx) const
     {
         Scalar T = temperature(context, spaceIdx, timeIdx);
-        //Scalar rho = FluidSystem::H2O::liquidDensity(T, /*pressure=*/1.5e5);
-        //Scalar z = context.pos(spaceIdx, timeIdx)[dim - 1] - this->bboxMax()[dim - 1];
-        //Scalar z = context.pos(spaceIdx, timeIdx)[dim - 1] - this->bboxMax()[dim - 1];
+        // Scalar rho = FluidSystem::H2O::liquidDensity(T, /*pressure=*/1.5e5);
+        // Scalar z = context.pos(spaceIdx, timeIdx)[dim - 1] -
+        // this->bboxMax()[dim - 1];
+        // Scalar z = context.pos(spaceIdx, timeIdx)[dim - 1] -
+        // this->bboxMax()[dim - 1];
 
         fs.setSaturation(/*phaseIdx=*/0, 1.0);
         fs.setPressure(/*phaseIdx=*/0, 1e5 /* + rho*z */);

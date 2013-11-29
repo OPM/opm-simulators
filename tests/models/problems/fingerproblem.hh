@@ -59,7 +59,8 @@ NEW_TYPE_TAG(FingerBaseProblem);
 SET_TYPE_PROP(FingerBaseProblem, GridCreator, Ewoms::FingerGridCreator<TypeTag>);
 
 // Retrieve the grid type from the grid creator
-SET_TYPE_PROP(FingerBaseProblem, Grid, typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
+SET_TYPE_PROP(FingerBaseProblem, Grid,
+              typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
 
 // declare the properties specific for the finger problem
 NEW_PROP_TAG(InitialWaterSaturation);
@@ -72,6 +73,7 @@ SET_PROP(FingerBaseProblem, WettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
@@ -81,6 +83,7 @@ SET_PROP(FingerBaseProblem, NonwettingPhase)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
 public:
     typedef Opm::GasPhase<Scalar, Opm::Air<Scalar> > type;
 };
@@ -92,7 +95,8 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+    Traits;
 
     // use the parker-lenhard hysteresis law
     typedef Opm::ParkerLenhard<Traits> ParkerLenhard;
@@ -100,10 +104,10 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
 };
 
 // Enable partial reassembly of the jacobian matrix?
-//SET_BOOL_PROP(FingerBaseProblem, EnablePartialReassemble, true);
+// SET_BOOL_PROP(FingerBaseProblem, EnablePartialReassemble, true);
 
 // Enable reuse of jacobian matrices?
-//SET_BOOL_PROP(FingerBaseProblem, EnableJacobianRecycling, true);
+// SET_BOOL_PROP(FingerBaseProblem, EnableJacobianRecycling, true);
 
 // Write the solutions of individual newton iterations?
 SET_BOOL_PROP(FingerBaseProblem, NewtonWriteConvergence, false);
@@ -156,10 +160,9 @@ namespace Ewoms {
  * discretization is fine enough.
  */
 template <class TypeTag>
-class FingerProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
-//!\cond SKIP_THIS
+    //!\cond SKIP_THIS
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -189,7 +192,8 @@ class FingerProblem
 
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag,
+                                   BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP(TypeTag, MaterialLaw)::ParkerLenhard ParkerLenhard;
 
@@ -200,14 +204,14 @@ class FingerProblem
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
 
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-//!\endcond
+    //!\endcond
 
 public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
     FingerProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
 #else
@@ -230,7 +234,7 @@ public:
      * \copydoc VcfvProblem::name
      */
     std::string name() const
-    { return std::string("finger_")+this->model().name(); }
+    { return std::string("finger_") + this->model().name(); }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::registerParameters
@@ -239,7 +243,9 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, InitialWaterSaturation, "The initial saturation in the domain [] of the wetting phase");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, InitialWaterSaturation,
+                             "The initial saturation in the domain [] of the "
+                             "wetting phase");
     }
 
     /*!
@@ -260,11 +266,7 @@ public:
 
         // initialize the material parameter objects of the individual
         // finite volumes
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
-        int n = GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView().size(dimWorld);
-#else
-        int n = GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView().size(dimWorld);
-#endif
+        int n = this->model().numDofs();
         materialParams_.resize(n);
         for (int i = 0; i < n; ++i) {
             materialParams_[i].setMicParams(&micParams_);
@@ -292,12 +294,12 @@ public:
 
         auto elemIt = this->gridView().template begin<0>();
         const auto &elemEndIt = this->gridView().template end<0>();
-        for (; elemIt != elemEndIt; ++elemIt)
-        {
+        for (; elemIt != elemEndIt; ++elemIt) {
             elemCtx.updateAll(*elemIt);
             for (int scvIdx = 0; scvIdx < elemCtx.numScv(); ++scvIdx) {
                 int globalIdx = elemCtx.globalSpaceIndex(scvIdx, /*timeIdx=*/0);
-                const auto &fs = elemCtx.volVars(scvIdx, /*timeIdx=*/0).fluidState();
+                const auto &fs
+                    = elemCtx.volVars(scvIdx, /*timeIdx=*/0).fluidState();
                 ParkerLenhard::update(materialParams_[globalIdx], fs);
             }
         }
@@ -314,29 +316,30 @@ public:
      * \copydoc VcfvMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context,
-                       int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
     { return temperature_; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+                                           int timeIdx) const
     { return K_; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::porosity
      */
-     template <class Context>
-     Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
-     { return 0.4; }
+    template <class Context>
+    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    { return 0.4; }
 
     /*!
      * \copydoc VcfvMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context,
+                                               int spaceIdx, int timeIdx) const
     {
         int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return materialParams_[globalSpaceIdx];
@@ -353,13 +356,13 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.cvCenter(spaceIdx, timeIdx);
 
-        if (onLeftBoundary_(pos) || onRightBoundary_(pos) || onLowerBoundary_(pos)) {
+        if (onLeftBoundary_(pos) || onRightBoundary_(pos)
+            || onLowerBoundary_(pos)) {
             values.setNoFlow();
         }
         else {
@@ -371,7 +374,7 @@ public:
         // override the value for the liquid phase by forced
         // imbibition of water on inlet boundary segments
         if (onInlet_(pos)) {
-            values[contiWEqIdx] = - 0.001; // [kg/(m^2 s)]
+            values[contiWEqIdx] = -0.001; // [kg/(m^2 s)]
         }
     }
 
@@ -386,9 +389,8 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
-                 int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+                 int timeIdx) const
     {
         // assign the primary variables
         values.assignNaive(initialFluidState_);
@@ -398,8 +400,7 @@ public:
      * \copydoc VcfvProblem::constraints
      */
     template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
+    void constraints(Constraints &constraints, const Context &context,
                      int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
@@ -421,9 +422,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                int spaceIdx, int timeIdx) const
+    void source(RateVector &rate, const Context &context, int spaceIdx,
+                int timeIdx) const
     { rate = Scalar(0.0); }
     //! \}
 
@@ -443,15 +443,16 @@ private:
     bool onInlet_(const GlobalPosition &pos) const
     {
         Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
-        Scalar lambda = (this->bboxMax()[0] - pos[0])/width;
+        Scalar lambda = (this->bboxMax()[0] - pos[0]) / width;
 
         if (!onUpperBoundary_(pos))
             return false;
 
         Scalar xInject[] = { 0.25, 0.75 };
         Scalar injectLen[] = { 0.1, 0.1 };
-        for (unsigned i = 0; i < sizeof(xInject)/sizeof(Scalar); ++ i) {
-            if (xInject[i] - injectLen[i]/2 < lambda &&  lambda < xInject[i] + injectLen[i]/2)
+        for (unsigned i = 0; i < sizeof(xInject) / sizeof(Scalar); ++i) {
+            if (xInject[i] - injectLen[i] / 2 < lambda
+                && lambda < xInject[i] + injectLen[i] / 2)
                 return true;
         }
         return false;
