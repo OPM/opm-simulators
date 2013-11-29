@@ -1045,7 +1045,7 @@ namespace {
     FullyImplicitBlackoilSolver::computeMassFlux(const int               actph ,
                                                  const V&                transi,
                                                  const ADB&              kr    ,
-                                                 const ADB&              pressure,
+                                                 const ADB&              phasePressure,
                                                  const SolutionState&    state)
     {
         const int canonicalPhaseIdx = canph_[ actph ];
@@ -1053,21 +1053,21 @@ namespace {
         std::vector<PhasePresence> cond;
         classifyCondition(state, cond);
 
-        const ADB mu    = fluidViscosity(phase, pressure, state.rs, cond, cells_);
+        const ADB mu    = fluidViscosity(phase, phasePressure, state.rs, cond, cells_);
 
         rq_[ actph ].mob = tr_mult * kr / mu;
 
-        const ADB rho   = fluidDensity(phase, pressure, state.rs, cond, cells_);
+        const ADB rho   = fluidDensity(phase, phasePressure, state.rs, cond, cells_);
 
         ADB& head = rq_[ actph ].head;
 
         // compute gravity potensial using the face average as in eclipse and MRST
         const ADB rhoavg = ops_.caver * rho;
 
-        const ADB dp = ops_.ngrad * pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        const ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
 
         head = transi*dp;
-        //head      = transi*(ops_.ngrad * pressure) + gflux;
+        //head      = transi*(ops_.ngrad * phasePressure) + gflux;
 
         UpwindSelector<double> upwind(grid_, ops_, head.value());
 
