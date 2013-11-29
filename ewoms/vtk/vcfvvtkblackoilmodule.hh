@@ -57,7 +57,7 @@ namespace Ewoms {
  *
  * \brief VTK output module for the black oil model's parameters.
  */
-template<class TypeTag>
+template <class TypeTag>
 class VcfvVtkBlackOilModule : public VcfvVtkOutputModule<TypeTag>
 {
     typedef VcfvVtkOutputModule<TypeTag> ParentType;
@@ -77,19 +77,27 @@ class VcfvVtkBlackOilModule : public VcfvVtkOutputModule<TypeTag>
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
 
 public:
-    VcfvVtkBlackOilModule(const Problem &problem)
-        : ParentType(problem)
-    { }
+    VcfvVtkBlackOilModule(const Problem &problem) : ParentType(problem)
+    {}
 
     /*!
-     * \brief Register all run-time parameters for the multi-phase VTK output module.
+     * \brief Register all run-time parameters for the multi-phase VTK output
+     * module.
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationFactor, "Include the gas formation factor in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor, "Include the gas formation volume factor in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor, "Include the oil formation volume factor in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure, "Include the saturation pressure of oil in the VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationFactor,
+                             "Include the gas formation factor in the VTK "
+                             "output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor,
+                             "Include the gas formation volume factor in the "
+                             "VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor,
+                             "Include the oil formation volume factor in the "
+                             "VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure,
+                             "Include the saturation pressure of oil in the "
+                             "VTK output files");
     }
 
     /*!
@@ -98,10 +106,14 @@ public:
      */
     void allocBuffers(VtkMultiWriter &writer)
     {
-        if (gasDissolutionFactorOutput_()) this->resizeScalarBuffer_(gasDissolutionFactor_);
-        if (gasFormationVolumeFactorOutput_()) this->resizeScalarBuffer_(gasFormationVolumeFactor_);
-        if (oilFormationVolumeFactorOutput_()) this->resizeScalarBuffer_(oilFormationVolumeFactor_);
-        if (oilSaturationPressureOutput_()) this->resizeScalarBuffer_(oilSaturationPressure_);
+        if (gasDissolutionFactorOutput_())
+            this->resizeScalarBuffer_(gasDissolutionFactor_);
+        if (gasFormationVolumeFactorOutput_())
+            this->resizeScalarBuffer_(gasFormationVolumeFactor_);
+        if (oilFormationVolumeFactorOutput_())
+            this->resizeScalarBuffer_(oilFormationVolumeFactor_);
+        if (oilSaturationPressureOutput_())
+            this->resizeScalarBuffer_(oilSaturationPressure_);
     }
 
     /*!
@@ -111,15 +123,23 @@ public:
     void processElement(const ElementContext &elemCtx)
     {
         for (int i = 0; i < elemCtx.numScv(); ++i) {
-            const auto &fs = elemCtx.volVars(/*spaceIdx=*/i, /*timeIdx=*/0).fluidState();
+            const auto &fs
+                = elemCtx.volVars(/*spaceIdx=*/i, /*timeIdx=*/0).fluidState();
             int I = elemCtx.globalSpaceIndex(/*spaceIdx=*/i, /*timeIdx=*/0);
             Scalar po = fs.pressure(oPhaseIdx);
             Scalar X_oG = fs.massFraction(oPhaseIdx, gCompIdx);
 
-            if (gasDissolutionFactorOutput_()) gasDissolutionFactor_[I] = FluidSystem::gasDissolutionFactor(po);
-            if (gasFormationVolumeFactorOutput_()) gasFormationVolumeFactor_[I] = FluidSystem::gasFormationVolumeFactor(po);
-            if (oilFormationVolumeFactorOutput_()) oilFormationVolumeFactor_[I] = FluidSystem::oilFormationVolumeFactor(po);
-            if (oilSaturationPressureOutput_()) oilSaturationPressure_[I] = FluidSystem::oilSaturationPressure(X_oG);
+            if (gasDissolutionFactorOutput_())
+                gasDissolutionFactor_[I] = FluidSystem::gasDissolutionFactor(po);
+            if (gasFormationVolumeFactorOutput_())
+                gasFormationVolumeFactor_[I]
+                    = FluidSystem::gasFormationVolumeFactor(po);
+            if (oilFormationVolumeFactorOutput_())
+                oilFormationVolumeFactor_[I]
+                    = FluidSystem::oilFormationVolumeFactor(po);
+            if (oilSaturationPressureOutput_())
+                oilSaturationPressure_[I]
+                    = FluidSystem::oilSaturationPressure(X_oG);
         }
     }
 
@@ -128,10 +148,15 @@ public:
      */
     void commitBuffers(VtkMultiWriter &writer)
     {
-        if (gasDissolutionFactorOutput_()) this->commitScalarBuffer_(writer, "R_s", gasDissolutionFactor_);
-        if (gasFormationVolumeFactorOutput_()) this->commitScalarBuffer_(writer, "B_g", gasFormationVolumeFactor_);
-        if (oilFormationVolumeFactorOutput_()) this->commitScalarBuffer_(writer, "B_o", oilFormationVolumeFactor_);
-        if (oilSaturationPressureOutput_()) this->commitScalarBuffer_(writer, "pressure_sat,o", oilSaturationPressure_);
+        if (gasDissolutionFactorOutput_())
+            this->commitScalarBuffer_(writer, "R_s", gasDissolutionFactor_);
+        if (gasFormationVolumeFactorOutput_())
+            this->commitScalarBuffer_(writer, "B_g", gasFormationVolumeFactor_);
+        if (oilFormationVolumeFactorOutput_())
+            this->commitScalarBuffer_(writer, "B_o", oilFormationVolumeFactor_);
+        if (oilSaturationPressureOutput_())
+            this->commitScalarBuffer_(writer, "pressure_sat,o",
+                                      oilSaturationPressure_);
     }
 
 private:
