@@ -42,6 +42,7 @@
 
 // For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
 
 namespace Ewoms {
 // forward declaration of the problem class
@@ -153,7 +154,13 @@ class TutorialProblemCoupled
 public:
     //! The constructor of the problem
     TutorialProblemCoupled(TimeManager &timeManager)
-        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
         , eps_(3e-6)
     {
         // Use an isotropic and homogeneous intrinsic permeability

@@ -41,6 +41,7 @@
 
 #include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
+#include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
@@ -207,7 +208,13 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     FractureProblem(TimeManager &timeManager)
-        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     {
         eps_ = 3e-6;
         temperature_ = 273.15 + 20; // -> 20°C
