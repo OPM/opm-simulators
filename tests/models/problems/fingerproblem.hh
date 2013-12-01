@@ -39,6 +39,7 @@
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 
+#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -206,7 +207,13 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     FingerProblem(TimeManager &timeManager)
-        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     {
         eps_ = 3e-6;
         FluidSystem::init();
@@ -253,7 +260,11 @@ public:
 
         // initialize the material parameter objects of the individual
         // finite volumes
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        int n = GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView().size(dimWorld);
+#else
         int n = GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView().size(dimWorld);
+#endif
         materialParams_.resize(n);
         for (int i = 0; i < n; ++i) {
             materialParams_[i].setMicParams(&micParams_);

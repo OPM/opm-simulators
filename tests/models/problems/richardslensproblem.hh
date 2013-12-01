@@ -35,6 +35,7 @@
 
 #include <dune/grid/io/file/dgfparser.hh>
 
+#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -177,7 +178,11 @@ public:
      */
     RichardsLensProblem(TimeManager &timeManager)
         : ParentType(timeManager,
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
         , pnRef_(1e5)
     {
         eps_ = 3e-6;

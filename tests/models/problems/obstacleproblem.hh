@@ -35,10 +35,9 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 
-#include <dune/grid/io/file/dgfparser/dgfug.hh>
-#include <dune/grid/io/file/dgfparser/dgfs.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+#include <dune/grid/yaspgrid.hh>
 
+#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -181,8 +180,13 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     ObstacleProblem(TimeManager &timeManager)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     {
         eps_ = 1e-6;
         temperature_ = 273.15 + 25; // -> 25°C

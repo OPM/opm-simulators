@@ -39,8 +39,9 @@
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
 #include <opm/material/StaticTabulated2dFunction.hpp>
 
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+#include <dune/grid/yaspgrid.hh>
 
+#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -228,7 +229,13 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     Co2InjectionProblem(TimeManager &timeManager)
-        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     {
         eps_ = 1e-6;
 

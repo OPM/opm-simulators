@@ -30,17 +30,9 @@
 #include <opm/material/fluidsystems/GasPhase.hpp>
 #include <opm/material/components/N2.hpp>
 
-#if HAVE_ALUGRID
 #include <dune/grid/alugrid/2d/alugrid.hh>
-#elif HAVE_UG
-#include <dune/grid/io/file/dgfparser/dgfug.hh>
-#else
-#warning UG or ALUGrid necessary for this test.
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
-#endif
 
-#include <dune/grid/io/file/dgfparser.hh>
-
+#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 
 namespace Ewoms {
@@ -53,13 +45,7 @@ namespace Properties {
 NEW_TYPE_TAG(NavierStokesTestProblem, INHERITS_FROM(VcfvNavierStokes));
 
 // Set the grid type
-#if HAVE_ALUGRID
-    SET_TYPE_PROP(NavierStokesTestProblem, Grid, Dune::ALUGrid<2, 2, Dune::cube, Dune::nonconforming>);
-#elif HAVE_UG
-SET_TYPE_PROP(NavierStokesTestProblem, Grid, Dune::UGGrid<2>);
-#else
-SET_TYPE_PROP(NavierStokesTestProblem, Grid, Dune::YaspGrid<2>);
-#endif
+SET_TYPE_PROP(NavierStokesTestProblem, Grid, Dune::ALUGrid<2, 2, Dune::cube, Dune::nonconforming>);
 
 // Set the property which defines the type of the physical problem
 SET_TYPE_PROP(NavierStokesTestProblem, Problem, Ewoms::NavierStokesTestProblem<TypeTag>);
@@ -139,7 +125,13 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     NavierStokesTestProblem(TimeManager &timeManager)
-        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     { eps_ = 1e-6; }
 
     /*!

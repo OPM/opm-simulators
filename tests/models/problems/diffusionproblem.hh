@@ -33,6 +33,7 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 
+#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -166,7 +167,13 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     DiffusionProblem(TimeManager &timeManager)
-        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
+        : ParentType(timeManager,
+                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     {
         FluidSystem::init();
 
