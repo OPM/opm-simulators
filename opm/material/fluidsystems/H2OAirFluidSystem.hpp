@@ -1,22 +1,24 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
-/*****************************************************************************
- *   Copyright (C) 2011-2012 by Klaus Mosthaf                                *
- *   Copyright (C) 2011-2012 by Andreas Lauser                               *
- *                                                                           *
- *   This program is free software: you can redistribute it and/or modify    *
- *   it under the terms of the GNU General Public License as published by    *
- *   the Free Software Foundation, either version 2 of the License, or       *
- *   (at your option) any later version.                                     *
- *                                                                           *
- *   This program is distributed in the hope that it will be useful,         *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of          *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           *
- *   GNU General Public License for more details.                            *
- *                                                                           *
- *   You should have received a copy of the GNU General Public License       *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
- *****************************************************************************/
+/*
+  Copyright (C) 2011-2012 by Klaus Mosthaf
+  Copyright (C) 2011-2012 by Andreas Lauser
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 /*!
  * \file
  * \copydoc Opm::FluidSystems::H2OAir
@@ -47,7 +49,7 @@ namespace FluidSystems {
  * \ingroup Fluidsystems
  *
  * \brief A fluid system with a liquid and a gaseous phase and water and air
- *        as components.
+       as components.
  *
  *  This fluidsystem is applied by default with the tabulated version of
  *  water of the IAPWS-formulation.
@@ -342,11 +344,11 @@ public:
             else //using a complicated version of this fluid system
             {
                 /* Wilke method. See:
-                 *
+
                  * See: R. Reid, et al.: The Properties of Gases and Liquids,
                  * 4th edition, McGraw-Hill, 1987, 407-410 or
                  * 5th edition, McGraw-Hill, 2000, p. 9.21/22
-                 *
+
                  */
 
                 Scalar muResult = 0;

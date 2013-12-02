@@ -1,21 +1,23 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
-/*****************************************************************************
- *   Copyright (C) 2010-2012 by Andreas Lauser                               *
- *                                                                           *
- *   This program is free software: you can redistribute it and/or modify    *
- *   it under the terms of the GNU General Public License as published by    *
- *   the Free Software Foundation, either version 2 of the License, or       *
- *   (at your option) any later version.                                     *
- *                                                                           *
- *   This program is distributed in the hope that it will be useful,         *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of          *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           *
- *   GNU General Public License for more details.                            *
- *                                                                           *
- *   You should have received a copy of the GNU General Public License       *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
- *****************************************************************************/
+/*
+  Copyright (C) 2010-2012 by Andreas Lauser
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 /*!
  * \file
  * \brief Some templates to wrap the valgrind macros
@@ -61,7 +63,7 @@ inline bool IsRunning()
 /*!
  * \ingroup Valgrind
  * \brief Make valgrind complain if any of the memory occupied by an object
- *        is undefined.
+       is undefined.
  *
  * Please note that this does not check whether the destinations of an
  * object's pointers or references are defined. Also, for performance
@@ -80,7 +82,7 @@ inline bool IsRunning()
  * \param value the object which valgrind should check
  *
  * \return true iff there are no undefined bytes in the memory
- *         occupied by the object.
+        occupied by the object.
  */
 template <class T>
 inline bool CheckDefined(const T &value)
@@ -96,7 +98,7 @@ inline bool CheckDefined(const T &value)
  * \ingroup Valgrind
  *
  *  * \brief Make valgrind complain if any of the the memory occupied
- *        by a C-style array objects is undefined.
+       by a C-style array objects is undefined.
  *
  * Please note that this does not check whether the destinations of an
  * object's pointers or references are defined. Also, for performance
@@ -116,7 +118,7 @@ inline bool CheckDefined(const T &value)
  * \param size The size of the array in number of objects
  *
  * \return true iff there are no undefined bytes in the memory
- *         occupied by the array.
+        occupied by the array.
  */
 template <class T>
 inline bool CheckDefined(const T *value, int size)
@@ -132,7 +134,7 @@ inline bool CheckDefined(const T *value, int size)
 /*!
  * \ingroup Valgrind
  * \brief Make the memory on which an object resides undefined in
- *        valgrind runs.
+       valgrind runs.
  *
  * Example:
  *
@@ -157,7 +159,7 @@ inline void SetUndefined(const T &value)
 /*!
  * \ingroup Valgrind
  * \brief Make the memory on which an array of object resides
- *        undefined in valgrind runs.
+       undefined in valgrind runs.
  *
  * Example:
  *
@@ -207,7 +209,7 @@ inline void SetDefined(const T &value)
 /*!
  * \ingroup Valgrind
  * \brief Make the memory on which a C-style array of objects resides
- *        defined.
+       defined.
  *
  * Example:
  *
@@ -257,7 +259,7 @@ inline void SetNoAccess(const T &value)
 /*!
  * \ingroup Valgrind
  * \brief Make valgrind complain if the memory of a C-style array of
- *        objects is accessed.
+       objects is accessed.
  *
  * Example:
  *

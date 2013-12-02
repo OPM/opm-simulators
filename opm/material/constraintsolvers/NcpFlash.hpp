@@ -1,21 +1,23 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
-/*****************************************************************************
- *   Copyright (C) 2011-2012 by Andreas Lauser                               *
- *                                                                           *
- *   This program is free software: you can redistribute it and/or modify    *
- *   it under the terms of the GNU General Public License as published by    *
- *   the Free Software Foundation, either version 2 of the License, or       *
- *   (at your option) any later version.                                     *
- *                                                                           *
- *   This program is distributed in the hope that it will be useful,         *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of          *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           *
- *   GNU General Public License for more details.                            *
- *                                                                           *
- *   You should have received a copy of the GNU General Public License       *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.   *
- *****************************************************************************/
+/*
+  Copyright (C) 2011-2012 by Andreas Lauser
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 /*!
  * \file
  * \copydoc Opm::NcpFlash
@@ -38,7 +40,7 @@ namespace Opm {
 
 /*!
  * \brief Determines the phase compositions, pressures and saturations
- *        given the total mass of all components.
+       given the total mass of all components.
  *
  * In a M-phase, N-component context, we have the following
  * unknowns:
@@ -51,16 +53,16 @@ namespace Opm {
  * we have:
  *
  * - (M - 1)*N equation stemming from the fact that the
- *   fugacity of any component is the same in all phases
+  fugacity of any component is the same in all phases
  * - 1 equation from the closure condition of all saturations
- *   (they sum up to 1)
+  (they sum up to 1)
  * - M - 1 constraints from the capillary pressures
- *   \f$(-> p_\beta = p_\alpha + p_c\alpha,\beta)\f$
+  \f$(-> p_\beta = p_\alpha + p_c\alpha,\beta)\f$
  * - N constraints from the fact that the total mass of each
- *   component is given \f$(-> sum_\alpha rhoMolar_\alpha *
- *   x_\alpha^\kappa = const)\f$
+  component is given \f$(-> sum_\alpha rhoMolar_\alpha *
+  x_\alpha^\kappa = const)\f$
  * - M model constraints. Here we use the NCP constraints
- *   (-> 0 = min \f$ {S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa}\f$)
+  (-> 0 = min \f$ {S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa}\f$)
  *
  * this also sums up to M*(N + 2).
  *
