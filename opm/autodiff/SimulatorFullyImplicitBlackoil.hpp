@@ -31,6 +31,7 @@ namespace Opm
 {
     namespace parameter { class ParameterGroup; }
     class BlackoilPropsAdInterface;
+    class EclipseWriter;
     class RockCompressibility;
     class WellsManager;
     class LinearSolverInterface;
@@ -71,7 +72,8 @@ namespace Opm
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
                                        LinearSolverInterface& linsolver,
-                                       const double* gravity);
+                                       const double* gravity,
+                                       EclipseWriter &writer);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
