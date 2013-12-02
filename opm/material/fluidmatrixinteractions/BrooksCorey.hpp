@@ -1,7 +1,8 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright (C) 2008-2013 by Andreas Lauser
+  Copyright (C) 2009-2013 by Andreas Lauser
+  Copyright (C) 2011 by Holger Class
   Copyright (C) 2010 by Philipp Nuske
 
   This file is part of the Open Porous Media project (OPM).
