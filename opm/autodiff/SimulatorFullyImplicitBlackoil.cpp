@@ -37,6 +37,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
@@ -71,7 +72,8 @@ namespace Opm
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              LinearSolverInterface& linsolver,
-             const double* gravity);
+             const double* gravity,
+             EclipseWriter &writer);
 
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state,
@@ -100,6 +102,7 @@ namespace Opm
         FullyImplicitBlackoilSolver solver_;
         // Misc. data
         std::vector<int> allcells_;
+        EclipseWriter &eclipseWriter_;
     };
 
 
@@ -111,9 +114,11 @@ namespace Opm
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
                                                                    LinearSolverInterface& linsolver,
-                                                                   const double* gravity)
+                                                                   const double* gravity,
+                                                                   EclipseWriter &eclipseWriter)
+
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity, eclipseWriter));
     }
 
 
@@ -257,7 +262,8 @@ namespace Opm
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
                                                LinearSolverInterface& linsolver,
-                                               const double* gravity)
+                                               const double* gravity,
+                                               EclipseWriter &eclipseWriter)
         : grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -265,7 +271,9 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           gravity_(gravity),
           geo_(grid_, props_, gravity_),
-          solver_(grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver)
+          solver_(grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver),
+          eclipseWriter_(eclipseWriter)
+
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),
                                param.getDefault("nl_pressure_maxiter", 10),
@@ -306,6 +314,8 @@ namespace Opm
                                                               BlackoilState& state,
                                                               WellState& well_state)
     {
+        eclipseWriter_.writeInit(timer, state, well_state);
+
         // Initialisation.
         std::vector<double> porevol;
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -348,7 +358,7 @@ namespace Opm
             std::string filename = output_dir_ + "/step_timing.param";
             tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
         }
-        for (; !timer.done(); ++timer) {
+        while (!timer.done()) {
             // Report timestep and (optionally) write state to disk.
             step_timer.start();
             timer.report(std::cout);
@@ -382,6 +392,7 @@ namespace Opm
                 solver_timer.stop();
                 const double st = solver_timer.secsSinceStart();
                 std::cout << "Fully implicit solver took:  " << st << " seconds." << std::endl;
+
                 stime += st;
                 sreport.pressure_time = st;
 
@@ -465,22 +476,28 @@ namespace Opm
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
                 sreport.reportParam(tstep_os);
-            }
-        }
 
-        if (output_) {
-            if (output_vtk_) {
-                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-            }
-            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                if (output_vtk_) {
+                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+                }
+                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 #if 0
-            outputWaterCut(watercut, output_dir_);
-            if (wells_) {
-                outputWellReport(wellreport, output_dir_);
-            }
+                outputWaterCut(watercut, output_dir_);
+                if (wells_) {
+                    outputWellReport(wellreport, output_dir_);
+                }
 #endif
-            tstep_os.close();
+                tstep_os.close();
+            }
+
+            // advance to next timestep before reporting at this location
+            ++timer;
+
+            // write an output file for later inspection
+            if (output_) {
+                eclipseWriter_.writeTimeStep(timer, state, well_state);
+            }
         }
 
         total_timer.stop();
