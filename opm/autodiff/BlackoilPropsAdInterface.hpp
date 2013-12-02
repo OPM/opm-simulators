@@ -100,11 +100,13 @@ namespace Opm
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         virtual
         V muOil(const V& po,
                 const V& rs,
+                const bool* isSat,
                 const Cells& cells) const = 0;
 
         /// Gas viscosity.
@@ -126,11 +128,13 @@ namespace Opm
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         virtual
         ADB muOil(const ADB& po,
                   const ADB& rs,
+                  const bool* isSat,
                   const Cells& cells) const = 0;
 
         /// Gas viscosity.
@@ -155,11 +159,13 @@ namespace Opm
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
         V bOil(const V& po,
                const V& rs,
+               const bool* isSat,
                const Cells& cells) const = 0;
 
         /// Gas formation volume factor.
@@ -181,11 +187,13 @@ namespace Opm
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
         ADB bOil(const ADB& po,
                  const ADB& rs,
+                 const bool* isSat,
                  const Cells& cells) const = 0;
 
         /// Gas formation volume factor.

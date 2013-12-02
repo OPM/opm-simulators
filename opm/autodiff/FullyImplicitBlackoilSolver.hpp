@@ -189,18 +189,21 @@ namespace Opm {
         fluidViscosity(const int               phase,
                        const ADB&              p    ,
                        const ADB&              rs   ,
+                       const bool*             isSat,
                        const std::vector<int>& cells) const;
 
         ADB
         fluidReciprocFVF(const int               phase,
                          const ADB&              p    ,
                          const ADB&              rs   ,
+                         const bool*             isSat,
                          const std::vector<int>& cells) const;
 
         ADB
         fluidDensity(const int               phase,
                      const ADB&              p    ,
                      const ADB&              rs   ,
+                     const bool*             isSat,
                      const std::vector<int>& cells) const;
 
         V
@@ -216,6 +219,9 @@ namespace Opm {
 
         ADB
         transMult(const ADB& p) const;
+
+        void
+        getSaturatedCells(const SolutionState& state, bool* isSat) const;
     };
 } // namespace Opm
 
