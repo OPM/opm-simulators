@@ -40,10 +40,10 @@ namespace Opm
          typedef ADB::V V;
          std::vector<V> relperm(const V& sw,
                                 const V& so,
-                                const std::vector<int>& cells);
+                                const std::vector<int>& cells) const;
          std::vector<ADB> relperm(const ADB& sw,
                      const ADB& so,
-                     const std::vector<int>& cells);
+                     const std::vector<int>& cells) const;
     private:
         RockBasic rock_;
         PvtPropertiesBasic pvt_;

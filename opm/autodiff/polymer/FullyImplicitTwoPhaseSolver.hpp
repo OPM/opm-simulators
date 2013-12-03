@@ -79,8 +79,6 @@ namespace Opm {
         ADB
         rockPermeability(const ADB& p) const;
         const double
-        fluidViscosity(const int phase) const;
-        const double
         fluidDensity(const int phase) const;
         ADB
         transMult(const ADB& p) const;

@@ -106,7 +106,7 @@ namespace Opm
     typedef std::vector<int> Cells;
     std::vector<V> IncompPropsAdBasic::relperm(const V& sw,
                                                   const V& so,
-                                                  const Cells& cells)
+                                                  const Cells& cells) const
     {
         const int n = cells.size();
         const int np = numPhases();
@@ -128,7 +128,7 @@ namespace Opm
 
     std::vector<ADB>    IncompPropsAdBasic::relperm(const ADB& sw,
                                                     const ADB& so,
-                                                    const Cells& cells)
+                                                    const Cells& cells) const
     {
         const int n = cells.size();
         const int np = numPhases();

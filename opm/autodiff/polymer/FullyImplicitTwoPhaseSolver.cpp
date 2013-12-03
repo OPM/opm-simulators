@@ -18,7 +18,8 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-
+#include <Eigen/Eigen>
+#include <algorithm>
 namespace Opm {
 
 namespace {
@@ -65,10 +66,15 @@ typedef Eigen::Array<double,
          TwophaseState& x,
          const std::vector<double>& src)
     {
-        const V pvol(grid_.number_of_cells);
-        std::transform(grid_.cell_volumes, grid_.cell_volumes + grid_.number_of_cells,
+        V pvol(grid_.number_of_cells);
+/*        const V::Index nc = grid_.number_of_cells;
+        std::transform(grid_.cell_volumes, grid_.cell_volumes + nc,
                         fluid_.porosity(), pvol.data(),
                         std::multiplies<double>());
+        */
+        for (int c = 0; c < grid_.number_of_cells; ++c) {
+            pvol[c] = grid_.cell_volumes[c] * fluid_.porosity()[c];
+        }
         const V pvdt = pvol / dt;
 
         const SolutionState old_state = constantState(x);
@@ -211,14 +217,14 @@ typedef Eigen::Array<double,
         const std::vector<ADB> kr = computeRelPerm(state);
         ADB accum_src(ADB::null());
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-            const ADB f = computeFracFlow(phase, kr);
+           /* const ADB f = computeFracFlow(phase, kr);
             for (int c = 0; c < f.value().size(); ++c) {
                 if (src[c] >= 0)
                     accum_src.value()[c]  = f.value()[c] * src[c];
                 else
                     accum_src.value()[c] = src[c];
             }
-            const ADB mflux = computeMassFlux(phase, trans, kr, state);
+           */ const ADB mflux = computeMassFlux(phase, trans, kr, state);
             residual_[phase] =
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
                 + ops_.div*mflux - accum_src;
@@ -359,10 +365,6 @@ typedef Eigen::Array<double,
         tpfa_trans_compute (ug, htrans.data()     , trans.data());
         
         return trans;
-    }
-    std::vector<ADB>
-    fluidViscosity(const int phase)
-    {
     }
 
 }//namespace Opm

@@ -44,12 +44,6 @@ namespace Opm
         /// \return   Number of active phases (also the number of components).
         virtual int numPhases() const = 0;
 
-
-        // ------ Canonical named indices for each phase ------
-
-        /// Canonical named indices for each phase.
-        enum PhaseIndex { Water = 0, Oil = 1 };
-
         // ------ Density ------
 
         /// Densities of stock components at surface conditions.

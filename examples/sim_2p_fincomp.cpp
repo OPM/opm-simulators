@@ -11,7 +11,7 @@
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/autodiff/polymer/FullyImplicitTwoPhaseSolver.hpp>
-#include <opm/autodiff/IncompPropsAdBasic.hpp>
+#include <opm/autodiff/polymer/IncompPropsAdBasic.hpp>
 
 
 #include <opm/core/simulator/TwophaseState.hpp>
@@ -46,23 +46,28 @@ try
     std::vector<double> omega;
     std::vector<double> src(num_cells, 0.0);
     src[0] = 1.;
-    src[num_cells-1] = -1.;
+//    src[num_cells-1] = -1.;
 
     FlowBCManager bcs;
     LinearSolverUmfpack linsolver;
     FullyImplicitTwoPhaseSolver solver(grid, props, linsolver);
     std::vector<double> porevol;
     Opm::computePorevolume(grid, props.porosity(), porevol);
-    const double tolerance = 1e-9;
-    const int max_iterations = 30;
+//    const double tolerance = 1e-9;
+//    const int max_iterations = 30;
     const double dt = 0.1*day;
     const int num_time_steps = 20;
+    std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;
     }
     TwophaseState state;
     state.init(grid, 2);
-    state.setFirstSat(allcells, props, TwophaseState::MinSat);
+
+    //initial sat
+    std::vector<double> sw(num_cells, 0.2);
+    state.saturation() = sw;
+//    state.setFirstSat(allcells, props, TwophaseState::MinSat);
     std::ostringstream vtkfilename;
 
     for (int i = 0; i < num_time_steps; ++i) {
