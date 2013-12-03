@@ -121,12 +121,12 @@ namespace Opm
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     V BlackoilPropsAd::muOil(const V& po,
                              const V& rs,
-                             const bool* /*isSat*/,
+                             const std::vector<PhasePresence>& /*cond*/,
                              const Cells& cells) const
     {
         if (!pu_.phase_used[Oil]) {
@@ -199,16 +199,16 @@ namespace Opm
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAd::muOil(const ADB& po,
                                const ADB& rs,
-                               const bool* isSat,
+                               const std::vector<PhasePresence>& cond,
                                const Cells& cells) const
     {
 #if 1
-        return ADB::constant(muOil(po.value(), rs.value(), isSat,cells), po.blockPattern());
+        return ADB::constant(muOil(po.value(), rs.value(), cond, cells), po.blockPattern());
 #else
         if (!pu_.phase_used[Oil]) {
             OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
@@ -310,12 +310,12 @@ namespace Opm
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::bOil(const V& po,
                             const V& rs,
-                            const bool* /*isSat*/,
+                            const std::vector<PhasePresence>& /*cond*/,
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Oil]) {
@@ -388,12 +388,12 @@ namespace Opm
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAd::bOil(const ADB& po,
                               const ADB& rs,
-                              const bool* /*isSat*/,
+                              const std::vector<PhasePresence>& /*cond*/,
                               const Cells& cells) const
     {
         if (!pu_.phase_used[Oil]) {

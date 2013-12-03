@@ -212,12 +212,12 @@ namespace Opm
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     V BlackoilPropsAdFromDeck::muOil(const V& po,
                                      const V& rs,
-                                     const bool* isSat,
+                                     const std::vector<PhasePresence>& cond,
                                      const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -229,7 +229,7 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.data(), rs.data(),isSat,
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.data(), rs.data(), &cond[0],
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -287,12 +287,12 @@ namespace Opm
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAdFromDeck::muOil(const ADB& po,
                                        const ADB& rs,
-                                       const bool* isSat,
+                                       const std::vector<PhasePresence>& cond,
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -304,8 +304,8 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.value().data(), rs.value().data(), isSat,
-                                                mu.data(), dmudp.data(), dmudr.data());
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.value().data(), rs.value().data(),
+                                                &cond[0], mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
         ADB::M dmudr_diag = spdiag(dmudr);
@@ -391,11 +391,12 @@ namespace Opm
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAdFromDeck::bOil(const V& po,
                                     const V& rs,
-                                    const bool* isSat,
+                                    const std::vector<PhasePresence>& cond,
                                     const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -408,7 +409,7 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, po.data(), rs.data(),isSat,
+        props_[phase_usage_.phase_pos[Oil]]->b(n, po.data(), rs.data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -471,12 +472,12 @@ namespace Opm
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  isSat  Array of n booleans telling whether the fluid is saturated or not.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAdFromDeck::bOil(const ADB& po,
                                       const ADB& rs,
-                                      const bool* isSat,
+                                      const std::vector<PhasePresence>& cond,
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -489,8 +490,8 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, po.value().data(), rs.value().data(),isSat,
-                                               b.data(), dbdp.data(), dbdr.data());
+        props_[phase_usage_.phase_pos[Oil]]->b(n, po.value().data(), rs.value().data(),
+                                               &cond[0], b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
         ADB::M dbdr_diag = spdiag(dbdr);
