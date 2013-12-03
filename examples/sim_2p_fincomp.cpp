@@ -23,8 +23,8 @@
 int main ()
 try
 {
-    int nx = 20;
-    int ny = 20;
+    int nx = 3;
+    int ny = 3;
     int nz = 1;
     double dx = 10.0;
     double dy = 10.0;
@@ -46,7 +46,7 @@ try
     std::vector<double> omega;
     std::vector<double> src(num_cells, 0.0);
     src[0] = 1.;
-//    src[num_cells-1] = -1.;
+    src[num_cells-1] = -1.;
 
     FlowBCManager bcs;
     LinearSolverUmfpack linsolver;
@@ -67,13 +67,16 @@ try
     //initial sat
     std::vector<double> sw(num_cells, 0.2);
     state.saturation() = sw;
+    //initial pressure
+    std::vector<double> p(num_cells, 4000);
+    state.pressure() = p;
 //    state.setFirstSat(allcells, props, TwophaseState::MinSat);
     std::ostringstream vtkfilename;
 
     for (int i = 0; i < num_time_steps; ++i) {
         solver.step(dt, state, src);
         vtkfilename.str("");
-        vtkfilename << "tutorial3-" << std::setw(3) << std::setfill('0') << i << ".vtu";
+        vtkfilename << "sim_2p_fincomp-" << std::setw(3) << std::setfill('0') << i << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
