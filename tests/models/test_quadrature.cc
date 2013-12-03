@@ -286,7 +286,11 @@ void testQuadrature()
         isPeriodic, 0); // overlap
 
     // compute approximate integral
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
+    auto gridView = grid.leafGridView();
+#else
     auto gridView = grid.leafView();
+#endif
     auto eIt = gridView.begin<0>();
     const auto eEndIt = gridView.end<0>();
     Scalar result = 0;
