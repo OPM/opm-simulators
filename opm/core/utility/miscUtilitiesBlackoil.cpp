@@ -19,20 +19,23 @@
 
 
 #include "config.h"
+
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
-#include <opm/core/utility/Units.hpp>
+
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
+#include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-#include <iostream>
+#include <opm/core/utility/Units.hpp>
+
 #include <algorithm>
-#include <functional>
 #include <cmath>
+#include <functional>
+#include <iostream>
 #include <iterator>
-#include <opm/core/linalg/blas_lapack.h>
 
 
 namespace Opm
