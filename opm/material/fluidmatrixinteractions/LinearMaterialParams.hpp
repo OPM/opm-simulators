@@ -29,7 +29,7 @@ namespace Opm {
 
 /*!
  * \brief Reference implementation of params for the linear M-phase
-       material material.
+ *        material material.
  */
 template<class TraitsT>
 class LinearMaterialParams

@@ -38,7 +38,7 @@ namespace Opm {
 
 /*!
  * \brief Specifies an auxiliary constraint for the
-       MiscibleMultiPhaseComposition constraint solver.
+ *        MiscibleMultiPhaseComposition constraint solver.
  *
  * For this constraint solver, an auxiliary constraint is defined as a
  * fixed mole fraction of a component in a fluid phase.
@@ -95,8 +95,8 @@ private:
 
 /*!
  * \brief Computes the composition of all phases of a N-phase,
-       N-component fluid system assuming that all N phases are
-       present
+ *        N-component fluid system assuming that all N phases are
+ *        present
  *
  * The constraint solver assumes the following quantities to be set:
  *

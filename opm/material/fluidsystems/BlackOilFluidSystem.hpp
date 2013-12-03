@@ -44,7 +44,7 @@ namespace FluidSystems {
 
 /*!
  * \brief A fluid system which uses the black-oil parameters
-       to calculate termodynamically meaningful quantities.
+ *        to calculate termodynamically meaningful quantities.
  */
 template <class Scalar>
 class BlackOil

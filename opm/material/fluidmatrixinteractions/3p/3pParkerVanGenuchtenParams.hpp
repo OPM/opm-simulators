@@ -38,7 +38,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Specification of the material params for the three-phase van
-       Genuchten capillary pressure model.
+ *        Genuchten capillary pressure model.
  *
  * In comparison to the two-phase version, this parameter object also
  * includes the residual saturations, as their handling is very

@@ -33,8 +33,8 @@ namespace Opm {
 
 /*!
  * \brief Default implementation for the parameters required by the
-       default three-phase capillary pressure model used by
-       Eclipse.
+ *        default three-phase capillary pressure model used by
+ *        Eclipse.
  *
  * Essentially, this class just stores the two parameter objects for
  * the twophase capillary pressure laws.

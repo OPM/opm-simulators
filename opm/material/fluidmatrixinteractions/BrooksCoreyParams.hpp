@@ -36,7 +36,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Specification of the material parameters for the
-       Brooks-Corey constitutive relations.
+ *        Brooks-Corey constitutive relations.
  *
  *\see BrooksCorey
  */

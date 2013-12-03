@@ -38,7 +38,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-       phase fugacity coefficients explicitly.
+ *        phase fugacity coefficients explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -108,7 +108,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which stores the phase
-       fugacity coefficients explicitly assuming immiscibility.
+ *        fugacity coefficients explicitly assuming immiscibility.
  */
 template <class Scalar,
           class FluidSystem,
@@ -176,7 +176,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not store the
-       fugacitys but throws std::logic_error instead.
+ *        fugacities but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

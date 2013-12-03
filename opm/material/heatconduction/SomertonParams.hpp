@@ -31,7 +31,7 @@ namespace Opm {
 
 /*!
  * \brief The default implementation of a parameter object for the
-       Somerton heatconduction law.
+ *        Somerton heatconduction law.
  */
 template <int numPhases, class ScalarT>
 class SomertonParams

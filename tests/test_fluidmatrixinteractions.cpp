@@ -22,8 +22,8 @@
  * \file
  *
  * \brief This test makes sure that the API for fluid-matrix
-       interactions is observed by all capillary pressure / relperm
-       laws.
+ *        interactions is observed by all capillary pressure / relperm
+ *        laws.
  */
 #include "config.h"
 

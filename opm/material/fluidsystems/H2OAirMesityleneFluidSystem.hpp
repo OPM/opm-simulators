@@ -49,7 +49,7 @@ namespace FluidSystems {
 /*!
  * \ingroup Fluidsystems
  * \brief A fluid system with water, gas and NAPL as phases and
-       water, air and mesitylene (DNAPL) as components.
+ *        water, air and mesitylene (DNAPL) as components.
  */
 template <class Scalar>
 class H2OAirMesitylene
@@ -263,11 +263,11 @@ public:
         assert (phaseIdx == gPhaseIdx);
 
         /* Wilke method. See:
-
+         *
          * See: R. Reid, et al.: The Properties of Gases and Liquids,
          * 4th edition, McGraw-Hill, 1987, 407-410
          * 5th edition, McGraw-Hill, 20001, p. 9.21/22
-
+         *
          * in this case, we use a simplified version in order to avoid
          * computationally costly evaluation of sqrt and pow functions and
          * divisions

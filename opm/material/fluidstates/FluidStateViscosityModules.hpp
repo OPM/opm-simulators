@@ -38,7 +38,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-      viscositys explicitly.
+ *       viscosities explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -94,7 +94,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
-       viscositys but throws std::logic_error instead.
+ *        viscosities but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

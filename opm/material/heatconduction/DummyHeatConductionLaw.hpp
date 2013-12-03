@@ -34,7 +34,7 @@ namespace Opm
  * \ingroup material
  *
  * \brief Implements a dummy law for heat conduction to which isothermal models
-       can fall back to.
+ *        can fall back to.
  *
  * If any method of this law is called, it throws std::logic_error.
  */

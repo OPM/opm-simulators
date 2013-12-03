@@ -48,7 +48,7 @@ namespace FluidSystems {
  * \ingroup Fluidsystems
  *
  * \brief A fluid system with a liquid and a gaseous phase and water and air
-       as components.
+ *        as components.
  *
  *  This fluidsystem is applied by default with the tabulated version of
  *  water of the IAPWS-formulation.
@@ -343,11 +343,11 @@ public:
             else //using a complicated version of this fluid system
             {
                 /* Wilke method. See:
-
+                 *
                  * See: R. Reid, et al.: The Properties of Gases and Liquids,
                  * 4th edition, McGraw-Hill, 1987, 407-410 or
                  * 5th edition, McGraw-Hill, 2000, p. 9.21/22
-
+                 *
                  */
 
                 Scalar muResult = 0;

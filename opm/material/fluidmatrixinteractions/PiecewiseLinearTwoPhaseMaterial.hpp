@@ -39,7 +39,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Implementation of a tabulated, piecewise linear capillary
-       pressure law.
+ *        pressure law.
  *
  * It would be equally possible to use cubic splines, but since the
  * ECLIPSE reservoir simulator uses linear interpolation for capillary

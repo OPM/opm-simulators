@@ -35,7 +35,7 @@ namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
  * \brief Implementation of the regularized Brooks-Corey capillary
-       pressure / relative permeability <-> saturation relation.
+ *        pressure / relative permeability <-> saturation relation.
  *
  * This class bundles the "raw" curves as static members and doesn't
  * concern itself converting absolute to effective saturations and
@@ -55,8 +55,8 @@ namespace Opm {
  *
  * The implementation is accomplished as follows:
  * - check whether we are in the range of regularization
-  - yes: use the regularization
-  - no: forward to the standard material law.
+ *   - yes: use the regularization
+ *   - no: forward to the standard material law.
  *
  * \see BrooksCorey
  */

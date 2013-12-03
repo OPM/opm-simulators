@@ -39,7 +39,7 @@ namespace Opm {
 
 /*!
  * \brief Implements the Peng-Robinson equation of state for liquids
-       and gases.
+ *        and gases.
  *
  * See:
  *

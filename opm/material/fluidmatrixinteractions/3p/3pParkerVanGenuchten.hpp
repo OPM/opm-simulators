@@ -36,7 +36,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Implementation of van Genuchten's capillary pressure <->
-       saturation relation.
+ *        saturation relation.
  *
  * \sa VanGenuchten, VanGenuchtenThreephase
  */

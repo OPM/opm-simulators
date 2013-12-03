@@ -34,7 +34,7 @@ namespace Opm
 /*!
  * \ingroup Binarycoefficients
  * \brief The Henry constants in liquid water using the IAPWS 2004
-       formulation.
+ *        formulation.
  *
  * This function calculates \f$K_D\f$, see:
  *

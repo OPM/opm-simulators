@@ -37,7 +37,7 @@ namespace Opm {
 
 /*!
  * \brief Computes all quantities of a generic fluid state if a
-       reference phase has been specified.
+ *        reference phase has been specified.
  *
  * This makes it is possible to specify just one phase and let the
  * remaining ones be calculated by the constraint solver. This

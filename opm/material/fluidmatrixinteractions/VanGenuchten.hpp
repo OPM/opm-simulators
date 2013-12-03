@@ -37,7 +37,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Implementation of the van Genuchten capillary pressure -
-       saturation relation.
+ *        saturation relation.
  *
  * This class only implements the "raw" van-Genuchten curves as static
  * members and doesn't concern itself converting absolute to effective

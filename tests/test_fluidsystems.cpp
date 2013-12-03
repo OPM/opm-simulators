@@ -22,7 +22,7 @@
  * \file
  *
  * \brief This test makes sure that the programming interface is
-       observed by all fluid systems
+ *        observed by all fluid systems
  */
 #include "config.h"
 

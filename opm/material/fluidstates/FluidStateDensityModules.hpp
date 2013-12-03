@@ -37,7 +37,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-      densitys explicitly.
+ *       densities explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -108,7 +108,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
-       densitys but throws std::logic_error instead.
+ *        densities but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

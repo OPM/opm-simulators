@@ -37,7 +37,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Makes the three-phase capillary pressure-saturation relations
-       available under the M-phase API for material laws.
+ *        available under the M-phase API for material laws.
  */
 template <int wPhaseIdx, int nPhaseIdx, int gPhaseIdx, class ThreePLaw>
 class ThreePAdapter

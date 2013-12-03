@@ -37,7 +37,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-      saturations explicitly.
+ *       saturations explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -93,7 +93,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
-       saturations but throws std::logic_error instead.
+ *        saturations but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

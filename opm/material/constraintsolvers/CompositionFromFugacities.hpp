@@ -39,7 +39,7 @@ namespace Opm {
 
 /*!
  * \brief Calculates the chemical equilibrium from the component
-       fugacities in a phase.
+ *        fugacities in a phase.
  */
 template <class Scalar, class FluidSystem>
 class CompositionFromFugacities

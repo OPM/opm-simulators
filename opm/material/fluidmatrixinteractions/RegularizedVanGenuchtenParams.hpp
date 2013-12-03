@@ -36,7 +36,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief   Parameters that are necessary for the \em regularization of
-         VanGenuchten "material law".
+ *          VanGenuchten "material law".
  *
  */
 template<class TraitsT>

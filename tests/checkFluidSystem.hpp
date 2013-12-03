@@ -51,7 +51,7 @@
 
 /*!
  * \brief This is a fluid state which makes sure that only the quantities
-       allowed are accessed.
+ *        allowed are accessed.
  */
 template <class Scalar,
           class FluidSystem,

@@ -34,8 +34,8 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief This material law takes a material law defined for effective
-       saturations and converts it to a material law defined on absolute
-       saturations.
+ *        saturations and converts it to a material law defined on absolute
+ *        saturations.
  *
  * The idea: "material laws" (like VanGenuchten or BrooksCorey) are
  * defined for effective saturations.  The numeric calculations
@@ -59,10 +59,10 @@ namespace Opm {
  *
  * This boils down to:
  * - the actual material laws (linear, VanGenuchten...) do not need to
-  deal with any kind of conversion
+ *   deal with any kind of conversion
  * - the definition of the material law in the spatial parameters is
-  not really intuitive, but using it is: Hand in values, get back
-  values, do not deal with conversion.
+ *   not really intuitive, but using it is: Hand in values, get back
+ *   values, do not deal with conversion.
  */
 template <class EffLawT, class ParamsT = EffToAbsLawParams<typename EffLawT::Params, EffLawT::numPhases> >
 class EffToAbsLaw : public EffLawT::Traits

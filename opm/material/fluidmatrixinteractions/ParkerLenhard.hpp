@@ -231,8 +231,8 @@ private:
 /*!
  * \ingroup material
  * \brief Implements the Parker-Lenhard twophase
-       p_c-Sw hysteresis model. This class adheres to the twophase
-       capillary pressure API.
+ *        p_c-Sw hysteresis model. This class adheres to the twophase
+ *        capillary pressure API.
  */
 template <class TraitsT, class ParamsT = ParkerLenhardParams<TraitsT> >
 class ParkerLenhard : public TraitsT

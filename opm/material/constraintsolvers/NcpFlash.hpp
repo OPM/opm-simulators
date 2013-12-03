@@ -40,7 +40,7 @@ namespace Opm {
 
 /*!
  * \brief Determines the phase compositions, pressures and saturations
-       given the total mass of all components.
+ *        given the total mass of all components.
  *
  * In a M-phase, N-component context, we have the following
  * unknowns:
@@ -53,16 +53,16 @@ namespace Opm {
  * we have:
  *
  * - (M - 1)*N equation stemming from the fact that the
-  fugacity of any component is the same in all phases
+ *   fugacity of any component is the same in all phases
  * - 1 equation from the closure condition of all saturations
-  (they sum up to 1)
+ *   (they sum up to 1)
  * - M - 1 constraints from the capillary pressures
-  \f$(-> p_\beta = p_\alpha + p_c\alpha,\beta)\f$
+ *   \f$(-> p_\beta = p_\alpha + p_c\alpha,\beta)\f$
  * - N constraints from the fact that the total mass of each
-  component is given \f$(-> sum_\alpha rhoMolar_\alpha *
-  x_\alpha^\kappa = const)\f$
+ *   component is given \f$(-> sum_\alpha rhoMolar_\alpha *
+ *   x_\alpha^\kappa = const)\f$
  * - M model constraints. Here we use the NCP constraints
-  (-> 0 = min \f$ {S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa}\f$)
+ *   (-> 0 = min \f$ {S_\alpha, 1 - \sum_\kappa x_\alpha^\kappa}\f$)
  *
  * this also sums up to M*(N + 2).
  *

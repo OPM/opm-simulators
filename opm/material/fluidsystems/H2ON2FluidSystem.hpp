@@ -342,7 +342,7 @@ public:
         else
         {
             /* Wilke method. See:
-
+             *
              * See: R. Reid, et al.: The Properties of Gases and Liquids,
              * 4th edition, McGraw-Hill, 1987, 407-410
              * 5th edition, McGraw-Hill, 20001, p. 9.21/22

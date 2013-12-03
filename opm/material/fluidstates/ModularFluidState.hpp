@@ -41,8 +41,8 @@ namespace Opm {
 
 /*!
  * \brief Represents all relevant thermodynamic quantities of a
-       multi-phase, multi-component fluid system assuming
-       thermodynamic equilibrium.
+ *        multi-phase, multi-component fluid system assuming
+ *        thermodynamic equilibrium.
  *
  * This class uses a modular approach which results in storing only a
  * set of requested thermodynamic quantities.

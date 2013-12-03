@@ -30,8 +30,8 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief A default implementation of the parameters for the adapter
-       class to convert material laws from effective to absolute
-       saturations.
+ *        class to convert material laws from effective to absolute
+ *        saturations.
  */
 template <class EffLawParamsT, int numPhases>
 class EffToAbsLawParams : public EffLawParamsT

@@ -37,7 +37,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-      enthalpys explicitly.
+ *       enthalpies explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -102,7 +102,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not store the
-       enthalpies but throws std::logic_error instead.
+ *        enthalpies but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

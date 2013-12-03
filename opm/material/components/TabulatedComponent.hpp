@@ -41,7 +41,7 @@ namespace Opm
  * \ingroup Components
  *
  * \brief A generic class which tabulates all thermodynamic properties
-       of a given component.
+ *        of a given component.
  *
  * At the moment, this class can only handle the sub-critical fluids
  * since it tabulates along the vapor pressure curve.
@@ -49,7 +49,7 @@ namespace Opm
  * \tparam Scalar  The type used for scalar values
  * \tparam Scalar  The component which ought to be tabulated
  * \tparam useVaporPressure If true, tabulate all quantities along the
-                         vapor pressure curve, if false use the pressure range [p_min, p_max]
+ *                          vapor pressure curve, if false use the pressure range [p_min, p_max]
  */
 template <class Scalar, class RawComponent, bool useVaporPressure=true>
 class TabulatedComponent

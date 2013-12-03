@@ -43,7 +43,7 @@ namespace FluidSystems {
  * \ingroup Fluidsystems
  *
  * \brief A fluid system for two-phase models assuming immiscibility and
-       thermodynamic equilibrium
+ *        thermodynamic equilibrium
  *
  * The wetting and the non-wetting phase can be defined individually
  * via <tt>Opm::LiquidPhase<Component></tt> and

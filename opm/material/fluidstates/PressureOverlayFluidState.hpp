@@ -33,8 +33,8 @@ namespace Opm {
 
 /*!
  * \brief This is a fluid state which allows to set the fluid
-       pressures and takes all other quantities from an other
-       fluid state.
+ *        pressures and takes all other quantities from an other
+ *        fluid state.
  */
 template <class Scalar, class FluidState>
 class PressureOverlayFluidState

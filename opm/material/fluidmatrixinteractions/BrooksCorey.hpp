@@ -38,7 +38,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Implementation of the Brooks-Corey capillary pressure <->
-       saturation relation.
+ *        saturation relation.
  *
  * This class provides the "raw" curves as static members and doesn't
  * concern itself converting absolute to effective saturations and

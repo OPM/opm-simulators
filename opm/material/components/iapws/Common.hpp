@@ -39,7 +39,7 @@ namespace IAPWS {
  *  \ingroup IAPWS
  *
  * \brief Implements relations which are common for all regions of the IAPWS '97
-       formulation.
+ *        formulation.
  *
  * \tparam Scalar The type used for scalar values
  *

@@ -39,7 +39,7 @@ namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
  * \brief Implementation of the regularized  van Genuchten's
-       capillary pressure / relative permeability  <-> saturation relation.
+ *        capillary pressure / relative permeability  <-> saturation relation.
  *
  * This class bundles the "raw" curves as static members and doesn't
  * concern itself converting absolute to effective saturations and

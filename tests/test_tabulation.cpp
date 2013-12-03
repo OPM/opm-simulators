@@ -22,7 +22,7 @@
  * \file
  *
  * \brief This is a program to test the tabulation class for of
-       individual components.
+ *        individual components.
  *
  * It either prints "success" or "error", it does not do anything
  * else.

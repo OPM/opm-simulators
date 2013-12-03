@@ -50,7 +50,7 @@ namespace FluidSystems {
  * \ingroup Fluidsystems
  *
  * \brief A liquid-phase-only fluid system with water and nitrogen as
-       components.
+ *        components.
  */
 template <class Scalar, bool useComplexRelations = true>
 class H2ON2LiquidPhase

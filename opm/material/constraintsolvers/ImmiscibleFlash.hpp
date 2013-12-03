@@ -39,7 +39,7 @@ namespace Opm {
 
 /*!
  * \brief Determines the pressures and saturations of all fluid phases
-       given the total mass of all components.
+ *        given the total mass of all components.
  *
  * In a N-phase, N-component context, we have the following
  * unknowns if assuming immiscibility:

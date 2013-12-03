@@ -22,8 +22,8 @@
  * \file
  *
  * \brief Represents all relevant thermodynamic quantities of a
-       multi-phase, multi-component fluid system assuming
-       thermodynamic equilibrium.
+ *        multi-phase, multi-component fluid system assuming
+ *        thermodynamic equilibrium.
  */
 #ifndef OPM_COMPOSITIONAL_FLUID_STATE_HPP
 #define OPM_COMPOSITIONAL_FLUID_STATE_HPP
@@ -37,8 +37,8 @@ namespace Opm {
 
 /*!
  * \brief Represents all relevant thermodynamic quantities of a
-       multi-phase, multi-component fluid system assuming
-       thermodynamic equilibrium.
+ *        multi-phase, multi-component fluid system assuming
+ *        thermodynamic equilibrium.
  */
 template <class Scalar, class FluidSystem, bool storeEnthalpy=true>
 class CompositionalFluidState;

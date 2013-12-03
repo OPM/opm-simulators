@@ -36,7 +36,7 @@ namespace BinaryCoeff {
 /*!
  * \ingroup Binarycoefficients
  * \brief Estimate binary diffusion coefficents \f$\mathrm{[m^2/s]}\f$ in gases according to
-       the method by Fuller.
+ *        the method by Fuller.
  *
  * \param M molar masses \f$\mathrm{[g/mol]}\f$
  * \param SigmaNu atomic diffusion volume

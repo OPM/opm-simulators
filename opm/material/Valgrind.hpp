@@ -63,7 +63,7 @@ inline bool IsRunning()
 /*!
  * \ingroup Valgrind
  * \brief Make valgrind complain if any of the memory occupied by an object
-       is undefined.
+ *        is undefined.
  *
  * Please note that this does not check whether the destinations of an
  * object's pointers or references are defined. Also, for performance
@@ -82,7 +82,7 @@ inline bool IsRunning()
  * \param value the object which valgrind should check
  *
  * \return true iff there are no undefined bytes in the memory
-        occupied by the object.
+ *         occupied by the object.
  */
 template <class T>
 inline bool CheckDefined(const T &value)
@@ -98,7 +98,7 @@ inline bool CheckDefined(const T &value)
  * \ingroup Valgrind
  *
  *  * \brief Make valgrind complain if any of the the memory occupied
-       by a C-style array objects is undefined.
+ *        by a C-style array objects is undefined.
  *
  * Please note that this does not check whether the destinations of an
  * object's pointers or references are defined. Also, for performance
@@ -118,7 +118,7 @@ inline bool CheckDefined(const T &value)
  * \param size The size of the array in number of objects
  *
  * \return true iff there are no undefined bytes in the memory
-        occupied by the array.
+ *         occupied by the array.
  */
 template <class T>
 inline bool CheckDefined(const T *value, int size)
@@ -134,7 +134,7 @@ inline bool CheckDefined(const T *value, int size)
 /*!
  * \ingroup Valgrind
  * \brief Make the memory on which an object resides undefined in
-       valgrind runs.
+ *        valgrind runs.
  *
  * Example:
  *
@@ -159,7 +159,7 @@ inline void SetUndefined(const T &value)
 /*!
  * \ingroup Valgrind
  * \brief Make the memory on which an array of object resides
-       undefined in valgrind runs.
+ *        undefined in valgrind runs.
  *
  * Example:
  *
@@ -209,7 +209,7 @@ inline void SetDefined(const T &value)
 /*!
  * \ingroup Valgrind
  * \brief Make the memory on which a C-style array of objects resides
-       defined.
+ *        defined.
  *
  * Example:
  *
@@ -259,7 +259,7 @@ inline void SetNoAccess(const T &value)
 /*!
  * \ingroup Valgrind
  * \brief Make valgrind complain if the memory of a C-style array of
-       objects is accessed.
+ *        objects is accessed.
  *
  * Example:
  *

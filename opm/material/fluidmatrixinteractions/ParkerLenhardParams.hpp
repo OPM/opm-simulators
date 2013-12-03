@@ -35,7 +35,7 @@ class PLScanningCurve;
 
 /*!
  * \brief Default parameter class for the Parker-Lenhard hysteresis
-       model.
+ *        model.
  */
 template <class TraitsT>
 class ParkerLenhardParams

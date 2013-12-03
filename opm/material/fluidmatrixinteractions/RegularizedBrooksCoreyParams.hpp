@@ -32,7 +32,7 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief   Parameters that are necessary for the \em regularization of
-         the Brooks-Corey capillary pressure model.
+ *          the Brooks-Corey capillary pressure model.
  */
 template <class TraitsT>
 class RegularizedBrooksCoreyParams : public Opm::BrooksCoreyParams<TraitsT>

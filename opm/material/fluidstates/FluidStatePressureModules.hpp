@@ -37,7 +37,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-      pressures explicitly.
+ *       pressures explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -94,7 +94,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
-       pressures but throws std::logic_error instead.
+ *        pressures but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

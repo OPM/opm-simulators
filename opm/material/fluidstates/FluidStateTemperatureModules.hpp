@@ -39,7 +39,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-      temperatures explicitly.
+ *       temperatures explicitly.
  */
 template <class Scalar,
           class FluidSystem,
@@ -95,7 +95,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which stores the
-       temperatures explicitly and assumes thermal equilibrium.
+ *        temperatures explicitly and assumes thermal equilibrium.
  */
 template <class Scalar,
           class FluidSystem,
@@ -153,7 +153,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not  the
-       temperatures but throws std::logic_error instead.
+ *        temperatures but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

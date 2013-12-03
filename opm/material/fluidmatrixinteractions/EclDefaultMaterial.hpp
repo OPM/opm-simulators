@@ -41,7 +41,7 @@ namespace Opm {
  * \ingroup material
  *
  * \brief Implements the default three phase capillary pressure law
-       used by the ECLipse simulator.
+ *        used by the ECLipse simulator.
  *
  * This material law is valid for three fluid phases and only depends
  * on the saturations.

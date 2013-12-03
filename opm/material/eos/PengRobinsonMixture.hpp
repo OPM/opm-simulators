@@ -35,7 +35,7 @@
 namespace Opm {
 /*!
  * \brief Implements the Peng-Robinson equation of state for a
-       mixture.
+ *        mixture.
  */
 template <class Scalar, class StaticParameters>
 class PengRobinsonMixture

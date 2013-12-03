@@ -38,7 +38,7 @@ namespace Opm {
 
 /*!
  * \brief Module for the modular fluid state which stores the
-       phase compositions explicitly in terms of mole fractions.
+ *        phase compositions explicitly in terms of mole fractions.
  */
 template <class Scalar,
           class FluidSystem,
@@ -164,7 +164,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which provides the
-       phase compositions assuming immiscibility.
+ *        phase compositions assuming immiscibility.
  */
 template <class Scalar,
           class FluidSystem,
@@ -241,7 +241,7 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not store the
-       compositions but throws std::logic_error instead.
+ *        compositions but throws std::logic_error instead.
  */
 template <class Scalar,
           class FluidSystem,

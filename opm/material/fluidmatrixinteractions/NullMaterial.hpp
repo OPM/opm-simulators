@@ -38,7 +38,7 @@ namespace Opm
  * \ingroup material
  *
  * \brief Implements a dummy linear saturation-capillary pressure
-       relation which just disables capillary pressure.
+ *        relation which just disables capillary pressure.
  */
 template <class TraitsT>
 class NullMaterial : public TraitsT

@@ -585,7 +585,7 @@ public:
               Scalar RT = Rs*temperature;
               Scalar dv_dp =
               RT/(dp_dpi*pv)
-
+              *
               (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             */
 
@@ -693,7 +693,7 @@ public:
               Scalar RT = Rs*temperature;
               Scalar dv_dp =
               RT/(dp_dpi*pv)
-
+              *
               (dgamma_dpi + pi*ddgamma_ddpi - v0*dp_dpi/RT);
             */
 
