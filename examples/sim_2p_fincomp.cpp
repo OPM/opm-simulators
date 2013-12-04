@@ -20,7 +20,8 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-int main ()
+
+int main (int argc, char** argv)
 try
 {
     int nx = 20;
@@ -30,6 +31,7 @@ try
     double dy = 10.0;
     double dz = 10.0;
     using namespace Opm;
+    parameter::ParameterGroup param(argc, argv, false);
     GridManager grid_manager(nx, ny, nz, dx, dy, dz);
     const UnstructuredGrid& grid = *grid_manager.c_grid();
     int num_cells = grid.number_of_cells;
@@ -55,8 +57,8 @@ try
     Opm::computePorevolume(grid, props.porosity(), porevol);
 //    const double tolerance = 1e-9;
 //    const int max_iterations = 30;
-    const double dt = 0.0001*day;
-    const int num_time_steps = 200;
+    const double dt = param.getDefault("dt", 0.1) * day;
+    const int num_time_steps = param.getDefault("nsteps", 20);
     std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;
