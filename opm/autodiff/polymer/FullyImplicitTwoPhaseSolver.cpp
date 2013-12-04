@@ -37,6 +37,10 @@ namespace {
 
 }//anonymous namespace
 
+
+
+
+
 typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
@@ -45,6 +49,10 @@ typedef Eigen::Array<double,
                      Eigen::Dynamic,
                      Eigen::Dynamic,
                      Eigen::RowMajor> DataBlock;
+
+
+
+
 
     FullyImplicitTwoPhaseSolver::
     FullyImplicitTwoPhaseSolver(const UnstructuredGrid&         grid,
@@ -60,25 +68,30 @@ typedef Eigen::Array<double,
      }
 
 
+
+
+
     void
     FullyImplicitTwoPhaseSolver::
     step(const double   dt,
          TwophaseState& x,
          const std::vector<double>& src)
     {
+        
         V pvol(grid_.number_of_cells);
-/*        const V::Index nc = grid_.number_of_cells;
+        // Pore volume
+        const typename V::Index nc = grid_.number_of_cells;
+        V rho = V::Constant(pvol.size(), 1, *fluid_.porosity());
         std::transform(grid_.cell_volumes, grid_.cell_volumes + nc,
-                        fluid_.porosity(), pvol.data(),
-                        std::multiplies<double>());
-        */
-        for (int c = 0; c < grid_.number_of_cells; ++c) {
-            pvol[c] = grid_.cell_volumes[c] * fluid_.porosity()[c];
-        }
+                       rho.data(), pvol.data(),
+                       std::multiplies<double>());
+        std::cout <<"poro volume\n" << pvol << std::endl;
+
         const V pvdt = pvol / dt;
 
         const SolutionState old_state = constantState(x);
-
+        std::cout << "sw " << old_state.saturation[0].value() << std::endl;
+        std::cout << "so " << old_state.saturation[1].value() << std::endl;
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
@@ -93,7 +106,7 @@ typedef Eigen::Array<double,
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
             const V dx = solveJacobianSystem();
-
+	        std::cout << "dx\n" << dx << std::endl;
             updateState(dx, x);
 
             assemble(pvdt, old_state, x, src);
@@ -112,11 +125,20 @@ typedef Eigen::Array<double,
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
     }
+
+
+
+
+
     FullyImplicitTwoPhaseSolver::SolutionState::SolutionState(const int np)
         : pressure   (    ADB::null())
         , saturation (np, ADB::null())
     {
     }
+
+
+
+
 
     FullyImplicitTwoPhaseSolver::SolutionState
     FullyImplicitTwoPhaseSolver::constantState(const TwophaseState& x)
@@ -132,20 +154,23 @@ typedef Eigen::Array<double,
 
         // Pressure.
         assert (not x.pressure().empty());
-        const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
+        const V p = Eigen::Map<const V>(& x.pressure()[0], nc);
         state.pressure = ADB::constant(p, bpat);
 
         // Saturation.
         assert (not x.saturation().empty());
-        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        const V sw = Eigen::Map<const V>(& x.saturation()[0], nc);
         V so = V::Ones(nc, 1);
-        const V  sw  = s.col(0);
         so -= sw;
         state.saturation[0] = ADB::constant(sw, bpat);
         state.saturation[1] = ADB::constant(so, bpat);
 
         return state;
     }
+
+
+
+
 
     FullyImplicitTwoPhaseSolver::SolutionState
     FullyImplicitTwoPhaseSolver::variableState(const TwophaseState& x)
@@ -158,13 +183,12 @@ typedef Eigen::Array<double,
 
         // Initial pressure.
         assert (not x.pressure().empty());
-        const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
+        const V p = Eigen::Map<const V>(& x.pressure()[0], nc);
         vars0.push_back(p);
 
         // Initial saturation.
         assert (not x.saturation().empty());
-        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
-        const V sw = s.col(0);
+        const V sw = Eigen::Map<const V>(& x.saturation()[0], nc);
         vars0.push_back(sw);
 
 
@@ -191,6 +215,10 @@ typedef Eigen::Array<double,
         return state;
     }
   
+
+
+
+
     void
     FullyImplicitTwoPhaseSolver::
     assemble(const V&             pvdt,
@@ -200,39 +228,81 @@ typedef Eigen::Array<double,
     {
         // Create the primary variables.
         const SolutionState state = variableState(x);
-//        const V source = Eigen::Map<V>(& src[0], nc, 1); //src[0]-src[nc-1] is total volume rate.
-        // ---compute the source term
-  //      std::vector<V> accum_src(fluid_.numPhases()); 
-  //      const typename V::Index nc = grid.number_of_cells;
-   //     for (int phase = 0; phase < 2; ++phase) {
-//            src[phase] = src[phase] / fluid_.Density()[phase];
-   //         std::transform(grid.cell_volumes, grid.cell_volumes + nc,
-    //                        src[phase].data(), accum[phase].data(),
-     //                       std::multiplies<double>());
-      //  }
-
 
         // -------- Mass balance equations --------
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        ADB accum_src(ADB::null());
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-           /* const ADB f = computeFracFlow(phase, kr);
-            for (int c = 0; c < f.value().size(); ++c) {
-                if (src[c] >= 0)
-                    accum_src.value()[c]  = f.value()[c] * src[c];
-                else
-                    accum_src.value()[c] = src[c];
-            }
-           */ const ADB mflux = computeMassFlux(phase, trans, kr, state);
+            const ADB mflux = computeMassFlux(phase, trans, kr, state);
+            ADB source = accmuSource(phase, kr, src);
+            std::cout << "source"<< "["<<phase <<"]\n"<< source.value() << std::endl;
             residual_[phase] =
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
-                + ops_.div*mflux - accum_src;
+                + ops_.div*mflux - source;
+        std::cout << "Assemble Info for phase" << phase << std::endl;
+        std::cout << "accum\n" << pvdt*(state.saturation[phase].value() - old_state.saturation[phase].value()) << std::endl;
+        std::cout << "mass flux \n" << (ops_.div * mflux).value() << std::endl;
+        std::cout << "residual:\n" << residual_[phase].value() << std::endl;
         }
 
     }
-    
-    V FullyImplicitTwoPhaseSolver::solveJacobianSystem() const
+   
+
+
+
+
+
+    ADB 
+    FullyImplicitTwoPhaseSolver::accmuSource(const int phase,
+                                                 const std::vector<ADB>& kr,
+                                                 const std::vector<double>& src) const
+    {
+        //extract the source to out and in source.
+        std::vector<double> outsrc;
+        std::vector<double> insrc;
+        std::vector<double>::const_iterator it;
+        for (it = src.begin(); it != src.end(); ++it) {
+            if (*it > 0) {
+                outsrc.push_back(*it);
+                insrc.push_back(0.0);
+            } else if (*it < 0) {
+                insrc.push_back(*it);
+                outsrc.push_back(0.0);
+            } else {
+                outsrc.emplace_back(0);
+                insrc.emplace_back(0);
+            }
+        }
+        const V source = Eigen::Map<const V>(& src[0], grid_.number_of_cells, 1);
+        const V outSrc = Eigen::Map<const V>(& outsrc[0], grid_.number_of_cells, 1);
+        const V inSrc = Eigen::Map<const V>(& insrc[0], grid_.number_of_cells, 1);
+        
+      //  std::cout << "out and in source \n" << outSrc << inSrc <<std::endl; 
+        // compute the out-fracflow.
+        const double* mus = fluid_.viscosity();
+        ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
+        ADB  mob_wat = kr[0] / V::Constant(kr[0].size(), 1, mus[0]);
+        ADB  mob_oil= kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
+        ADB  total_mob = mob_wat + mob_oil;
+        ADB f_out = mob_phase / total_mob;
+//        std::cout << "water kr " << kr[0] << std::endl;
+//        std::cout << "oil   kr " << kr[1] << std::endl; 
+        // compute the in-fracflow.
+        V f_in;
+        if (phase == 1) {
+            f_in = V::Zero(grid_.number_of_cells);
+        } else if (phase == 0) {
+            f_in = V::Ones(grid_.number_of_cells);
+        }
+        std::cout << "out-flow frac flow\n" << f_out.value() << std::endl;
+        return f_out * outSrc + f_in * inSrc;
+     }
+
+
+
+
+    V 
+    FullyImplicitTwoPhaseSolver::solveJacobianSystem() const
     {
         const int np = fluid_.numPhases();
         ADB mass_res = residual_[0];
@@ -240,7 +310,6 @@ typedef Eigen::Array<double,
             mass_res = vertcat(mass_res, residual_[phase]);
         }
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = mass_res.derivative()[0];
-
         V dx(V::Zero(mass_res.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
@@ -253,6 +322,11 @@ typedef Eigen::Array<double,
         }
         return dx;
     }
+
+
+
+
+
     void FullyImplicitTwoPhaseSolver::updateState(const V& dx,
                                                   TwophaseState& state) const
     {
@@ -295,20 +369,25 @@ typedef Eigen::Array<double,
         }
 
     }
-    
+   
+
+
+
+
     std::vector<ADB>
     FullyImplicitTwoPhaseSolver::computeRelPerm(const SolutionState& state) const
     {
-        const int               nc   = grid_.number_of_cells;
-        const std::vector<int>& bpat = state.pressure.blockPattern();
-
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
 
         const ADB sw = state.saturation[0];
         const ADB so = state.saturation[1];
 
         return fluid_.relperm(sw, so, cells_);
     }
+    
+    
+    
+    
+    
     ADB
     FullyImplicitTwoPhaseSolver::computeFracFlow(int                     phase,
                                                  const std::vector<ADB>& kr)
@@ -322,13 +401,17 @@ typedef Eigen::Array<double,
 
         return f;
     }
+    
+    
+    
+    
+    
     ADB
     FullyImplicitTwoPhaseSolver::computeMassFlux(const int               phase ,
                                                  const V&                trans,
                                                  const std::vector<ADB>& kr    ,
                                                  const SolutionState&    state )
     {
-        
 //        const ADB tr_mult = transMult(state.pressure);
         const double* mus = fluid_.viscosity();
         ADB  mob = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
@@ -340,6 +423,11 @@ typedef Eigen::Array<double,
 
         return upwind.select(mob) * head;
     }
+  
+
+   
+   
+   
     double
     FullyImplicitTwoPhaseSolver::residualNorm() const
     {
@@ -354,6 +442,11 @@ typedef Eigen::Array<double,
 
         return r;
     }
+   
+   
+   
+   
+   
     V
     FullyImplicitTwoPhaseSolver::transmissibility() const
     {
@@ -366,5 +459,10 @@ typedef Eigen::Array<double,
         
         return trans;
     }
+
+
+
+
+
 
 }//namespace Opm

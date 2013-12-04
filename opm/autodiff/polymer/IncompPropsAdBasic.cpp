@@ -27,6 +27,8 @@ namespace Opm
         viscosity_.resize(pvt_.numPhases());
         pvt_.mu(1, 0, 0, &viscosity_[0]);
     }
+
+
     IncompPropsAdBasic::IncompPropsAdBasic(const int num_phases,
                                                  const  SaturationPropsBasic::RelPermFunc& relpermfunc,
                                                  const std::vector<double>&  rho,
@@ -104,9 +106,11 @@ namespace Opm
     typedef IncompPropsAdBasic::V V;
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
     typedef std::vector<int> Cells;
-    std::vector<V> IncompPropsAdBasic::relperm(const V& sw,
-                                                  const V& so,
-                                                  const Cells& cells) const
+
+    std::vector<V> 
+    IncompPropsAdBasic::relperm(const V& sw,
+                                const V& so,
+                                const Cells& cells) const
     {
         const int n = cells.size();
         const int np = numPhases();
@@ -126,9 +130,10 @@ namespace Opm
         return relperms;
     }
 
-    std::vector<ADB>    IncompPropsAdBasic::relperm(const ADB& sw,
-                                                    const ADB& so,
-                                                    const Cells& cells) const
+    std::vector<ADB>    
+    IncompPropsAdBasic::relperm(const ADB& sw,
+                                const ADB& so,
+                                const Cells& cells) const
     {
         const int n = cells.size();
         const int np = numPhases();

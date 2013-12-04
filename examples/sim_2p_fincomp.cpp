@@ -55,8 +55,8 @@ try
     Opm::computePorevolume(grid, props.porosity(), porevol);
 //    const double tolerance = 1e-9;
 //    const int max_iterations = 30;
-    const double dt = 0.1*day;
-    const int num_time_steps = 20;
+    const double dt = 0.00001*day;
+    const int num_time_steps = 1;
     std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;

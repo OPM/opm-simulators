@@ -66,6 +66,10 @@ namespace Opm {
         ADB
         computeFracFlow(int    phase,
                         const std::vector<ADB>& kr);
+        ADB 
+        accmuSource(const int phase,
+                    const std::vector<ADB>& kr,
+                    const std::vector<double>& src) const;
         ADB
         computeMassFlux(const int               phase,
                         const V&                trans,
