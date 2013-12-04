@@ -67,7 +67,7 @@ namespace Opm {
         computeFracFlow(int    phase,
                         const std::vector<ADB>& kr);
         ADB 
-        accmuSource(const int phase,
+        accumSource(const int phase,
                     const std::vector<ADB>& kr,
                     const std::vector<double>& src) const;
         ADB

@@ -23,8 +23,8 @@
 int main ()
 try
 {
-    int nx = 3;
-    int ny = 3;
+    int nx = 20;
+    int ny = 20;
     int nz = 1;
     double dx = 10.0;
     double dy = 10.0;
@@ -55,8 +55,8 @@ try
     Opm::computePorevolume(grid, props.porosity(), porevol);
 //    const double tolerance = 1e-9;
 //    const int max_iterations = 30;
-    const double dt = 0.00001*day;
-    const int num_time_steps = 1;
+    const double dt = 0.0001*day;
+    const int num_time_steps = 200;
     std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;
@@ -65,10 +65,11 @@ try
     state.init(grid, 2);
 
     //initial sat
-    std::vector<double> sw(num_cells, 0.2);
-    state.saturation() = sw;
-    //initial pressure
-    std::vector<double> p(num_cells, 4000);
+    for (int c = 0; c < num_cells; ++c) {
+        state.saturation()[2*c] = 0.2;
+        state.saturation()[2*c+1] = 0.8;
+    }
+    std::vector<double> p(num_cells, 200*Opm::unit::barsa);
     state.pressure() = p;
 //    state.setFirstSat(allcells, props, TwophaseState::MinSat);
     std::ostringstream vtkfilename;

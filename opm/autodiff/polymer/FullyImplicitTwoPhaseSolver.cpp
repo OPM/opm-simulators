@@ -23,6 +23,7 @@
 namespace Opm {
 
 namespace {
+    
     std::vector<int>
     buildAllCells(const int nc)
     {
@@ -31,9 +32,9 @@ namespace {
 
         return all_cells;
     }
-            struct Chop01 {
-                        double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
-                                };
+    struct Chop01 {
+        double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
+    };
 
 }//anonymous namespace
 
@@ -44,7 +45,6 @@ namespace {
 typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
-
 typedef Eigen::Array<double,
                      Eigen::Dynamic,
                      Eigen::Dynamic,
@@ -146,24 +146,18 @@ typedef Eigen::Array<double,
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
 
-        // The block pattern assumes the following primary variables:
-        //    pressure
-        //    water saturation (if water present)
-        std::vector<int> bpat(np, nc);
         SolutionState state(np);
 
         // Pressure.
         assert (not x.pressure().empty());
         const V p = Eigen::Map<const V>(& x.pressure()[0], nc);
-        state.pressure = ADB::constant(p, bpat);
+        state.pressure = ADB::constant(p);
 
         // Saturation.
         assert (not x.saturation().empty());
-        const V sw = Eigen::Map<const V>(& x.saturation()[0], nc);
-        V so = V::Ones(nc, 1);
-        so -= sw;
-        state.saturation[0] = ADB::constant(sw, bpat);
-        state.saturation[1] = ADB::constant(so, bpat);
+        const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, 2);
+        state.saturation[0] = ADB::constant(s_all.col(0));
+        state.saturation[1] = ADB::constant(s_all.col(1));
 
         return state;
     }
@@ -188,7 +182,8 @@ typedef Eigen::Array<double,
 
         // Initial saturation.
         assert (not x.saturation().empty());
-        const V sw = Eigen::Map<const V>(& x.saturation()[0], nc);
+        const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, 2);
+        const V sw = s_all.col(0);
         vars0.push_back(sw);
 
 
@@ -234,7 +229,7 @@ typedef Eigen::Array<double,
         const std::vector<ADB> kr = computeRelPerm(state);
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             const ADB mflux = computeMassFlux(phase, trans, kr, state);
-            ADB source = accmuSource(phase, kr, src);
+            ADB source = accumSource(phase, kr, src);
             std::cout << "source"<< "["<<phase <<"]\n"<< source.value() << std::endl;
             residual_[phase] =
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
@@ -253,7 +248,7 @@ typedef Eigen::Array<double,
 
 
     ADB 
-    FullyImplicitTwoPhaseSolver::accmuSource(const int phase,
+    FullyImplicitTwoPhaseSolver::accumSource(const int phase,
                                                  const std::vector<ADB>& kr,
                                                  const std::vector<double>& src) const
     {
@@ -262,10 +257,10 @@ typedef Eigen::Array<double,
         std::vector<double> insrc;
         std::vector<double>::const_iterator it;
         for (it = src.begin(); it != src.end(); ++it) {
-            if (*it > 0) {
+            if (*it < 0) {
                 outsrc.push_back(*it);
                 insrc.push_back(0.0);
-            } else if (*it < 0) {
+            } else if (*it > 0) {
                 insrc.push_back(*it);
                 outsrc.push_back(0.0);
             } else {
@@ -305,10 +300,10 @@ typedef Eigen::Array<double,
     FullyImplicitTwoPhaseSolver::solveJacobianSystem() const
     {
         const int np = fluid_.numPhases();
-        ADB mass_res = residual_[0];
-        for (int phase = 1; phase < np; ++phase) {
-            mass_res = vertcat(mass_res, residual_[phase]);
-        }
+	if (np != 2) {
+	  OPM_THROW(std::logic_error, "Only two-phase ok in FullyImplicitTwoPhaseSolver.");
+	}
+	ADB mass_res = collapseJacs(vertcat(residual_[0], residual_[1]));
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = mass_res.derivative()[0];
         V dx(V::Zero(mass_res.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
@@ -347,9 +342,7 @@ typedef Eigen::Array<double,
         // Pressure update.
         const double dpmaxrel = 0.8;
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
-        const V absdpmax = dpmaxrel*p_old.abs();
-        const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
-        const V p = (p_old - dp_limited).max(zero);
+        const V p = p_old - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
 
