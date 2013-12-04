@@ -110,7 +110,7 @@ namespace Opm
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         V muOil(const V& po,
@@ -135,7 +135,7 @@ namespace Opm
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         ADB muOil(const ADB& po,
@@ -163,7 +163,7 @@ namespace Opm
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         V bOil(const V& po,
@@ -188,7 +188,7 @@ namespace Opm
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         ADB bOil(const ADB& po,
