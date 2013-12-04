@@ -533,7 +533,9 @@ namespace {
             return fluid_.muWat(p, cells);
         case Oil: {
             V dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.muOil(p, dummy_rs, cells);
+            std::vector<PhasePresence> cond(dummy_rs.size());
+
+            return fluid_.muOil(p, dummy_rs, cond, cells);
         }
         case Gas:
             return fluid_.muGas(p, cells);
@@ -553,7 +555,9 @@ namespace {
             return fluid_.muWat(p, cells);
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.muOil(p, dummy_rs, cells);
+            std::vector<PhasePresence> cond(dummy_rs.size());
+
+            return fluid_.muOil(p, dummy_rs, cond, cells);
         }
         case Gas:
             return fluid_.muGas(p, cells);
@@ -573,7 +577,9 @@ namespace {
             return fluid_.bWat(p, cells);
         case Oil: {
             V dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.bOil(p, dummy_rs, cells);
+            std::vector<PhasePresence> cond(dummy_rs.size());
+
+            return fluid_.bOil(p, dummy_rs, cond, cells);
         }
         case Gas:
             return fluid_.bGas(p, cells);
@@ -593,7 +599,9 @@ namespace {
             return fluid_.bWat(p, cells);
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
-            return fluid_.bOil(p, dummy_rs, cells);
+            std::vector<PhasePresence> cond(dummy_rs.size());
+
+            return fluid_.bOil(p, dummy_rs, cond, cells);
         }
         case Gas:
             return fluid_.bGas(p, cells);
