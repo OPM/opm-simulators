@@ -37,6 +37,8 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
     opm/autodiff/polymer/IncompPropsAdInterface.cpp
     opm/autodiff/polymer/IncompPropsAdBasic.cpp
+    opm/autodiff/polymer/IncompPropsAdFromDeck.cpp
+    opm/autodiff/polymer/SimulatorFullyImplicitTwophase.cpp
     opm/autodiff/polymer/FullyImplicitTwoPhaseSolver.cpp
 	)
 
@@ -64,7 +66,8 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/sim_simple.cpp
 	examples/test_impestpfa_ad.cpp
 	examples/test_implicit_ad.cpp
-    examples/sim_2p_fincomp.cpp
+    examples/sim_2p_fincomp_ad.cpp
+    examples/sim_2p_fim.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -93,4 +96,6 @@ list (APPEND PUBLIC_HEADER_FILES
     opm/autodiff/polymer/IncompPropsAdInterface.hpp
     opm/autodiff/polymer/IncompPropsAdBasic.hpp
     opm/autodiff/polymer/FullyImplicitTwoPhaseSolver.hpp
+    opm/autodiff/polymer/IncompPropsAdFromDeck.hpp
+    opm/autodiff/polymer/SimulatorFullyImplicitTwophase.hpp
 	)

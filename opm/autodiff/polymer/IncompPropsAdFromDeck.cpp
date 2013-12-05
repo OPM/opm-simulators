@@ -46,25 +46,35 @@ namespace Opm
     {
         return pvt_.numPhases();
     }
+
+
     const double* IncompPropsAdFromDeck::viscosity() const
     {
         return pvt_.viscosity();
     }
+
+
     const double* IncompPropsAdFromDeck::density() const
     {
         return pvt_.reservoirDensities();
     }
+
+
     const double* IncompPropsAdFromDeck::surfaceDensity() const
     {
         return pvt_.surfaceDensities();
     }
 
+
     typedef IncompPropsAdFromDeck::ADB ADB;
     typedef IncompPropsAdFromDeck::V V;
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
-    std::vector<V> IncompPropsAdFromDeck::relperm(const V& sw,
-                                                  const V& so,
-                                                  const Cells& cells) const
+
+
+    std::vector<V> 
+    IncompPropsAdFromDeck::relperm(const V& sw,
+                                   const V& so,
+                                   const Cells& cells) const
     {
         const int n = cells.size();
         const int np = numPhases();
@@ -75,16 +85,19 @@ namespace Opm
         Block kr(n, np);
         satprops_.relperm(n, s_all.data(), cells.data(), kr.data(), 0);
         std::vector<V> relperms;
-        relperms.reserve(2);
-        for (int phase = 0; phase < 2; ++phase) {
-                relperms.emplace_back(kr.col(phase));
+        relperms.reserve(np);
+        for (int phase = 0; phase < np; ++phase) {
+            relperms.emplace_back(kr.col(phase));
         }
         return relperms;
     }
 
-    std::vector<ADB> IncompPropsAdFromDeck::relperm(const ADB& sw,
-                                                    const ADB& so,
-                                                    const Cells& cells) const
+
+
+    std::vector<ADB> 
+    IncompPropsAdFromDeck::relperm(const ADB& sw,
+                                   const ADB& so,
+                                   const Cells& cells) const
     {
         const int n = cells.size();
         const int np = numPhases();
@@ -97,16 +110,16 @@ namespace Opm
         satprops_.relperm(n, s_all.data(), cells.data(), kr.data(), dkr.data());
         const int num_blocks = so.numBlocks();
         std::vector<ADB> relperms;
-        relperms.reserve(2);
+        relperms.reserve(np);
         typedef const ADB* ADBPtr;
         ADBPtr s[2] = { &sw, &so };
-        for (int phase1 = 0; phase1 < 2; ++phase1) {
+        for (int phase1 = 0; phase1 < np; ++phase1) {
             const int phase1_pos = phase1;
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {
                 jacs[block] = ADB::M(n, s[phase1]->derivative()[block].cols());
             }
-            for (int phase2 = 0; phase2 < 2; ++phase2) {
+            for (int phase2 = 0; phase2 < np; ++phase2) {
                 const int phase2_pos = phase2;
                 // Assemble dkr1/ds2.
                 const int column = phase1_pos + np*phase2_pos; // Recall: Fortran ordering from props_.relperm()

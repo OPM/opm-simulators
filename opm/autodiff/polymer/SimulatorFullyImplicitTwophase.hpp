@@ -60,7 +60,8 @@ namespace Opm
         SimulatorFullyImplicitTwophase(const parameter::ParameterGroup& param,
                                        const UnstructuredGrid& grid,
                                        const IncompPropsAdInterface& props,
-                                       LinearSolverInterface& linsolver);
+                                       LinearSolverInterface& linsolver,
+                                       std::vector<double>& src);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -70,7 +71,8 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            TwophaseState& state);
+                            TwophaseState& state,
+                            std::vector<double>& src);
 
     private:
         class Impl;

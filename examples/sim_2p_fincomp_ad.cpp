@@ -55,8 +55,6 @@ try
     FullyImplicitTwoPhaseSolver solver(grid, props, linsolver);
     std::vector<double> porevol;
     Opm::computePorevolume(grid, props.porosity(), porevol);
-//    const double tolerance = 1e-9;
-//    const int max_iterations = 30;
     const double dt = param.getDefault("dt", 0.1) * day;
     const int num_time_steps = param.getDefault("nsteps", 20);
     std::vector<int> allcells(num_cells);

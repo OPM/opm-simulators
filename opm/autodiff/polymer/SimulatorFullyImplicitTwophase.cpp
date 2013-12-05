@@ -56,13 +56,14 @@ namespace Opm
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
              const IncompPropsAdInterface& props,
-             LinearSolverInterface& linsolver);
+             LinearSolverInterface& linsolver,
+             std::vector<double>& src);
 
         SimulatorReport run(SimulatorTimer& timer,
-                            TwophaseState& state);
+                            TwophaseState& state,
+                            std::vector<double>& src);
 
     private:
-        // Data.
 
         // Parameters for output.
         bool output_;
@@ -85,9 +86,10 @@ namespace Opm
     SimulatorFullyImplicitTwophase::SimulatorFullyImplicitTwophase(const parameter::ParameterGroup& param,
                                                                    const UnstructuredGrid& grid,
                                                                    const IncompPropsAdInterface& props,
-                                                                   LinearSolverInterface& linsolver)
+                                                                   LinearSolverInterface& linsolver,
+                                                                   std::vector<double>& src)
     {
-        pimpl_.reset(new Impl(param, grid, props, linsolver));
+        pimpl_.reset(new Impl(param, grid, props, linsolver, src));
     }
 
 
@@ -95,9 +97,10 @@ namespace Opm
 
 
     SimulatorReport SimulatorFullyImplicitTwophase::run(SimulatorTimer& timer,
-                                                        TwophaseState& state)
+                                                        TwophaseState& state,
+                                                        std::vector<double>& src)
     {
-        return pimpl_->run(timer, state);
+        return pimpl_->run(timer, state, src);
     }
 
 
@@ -130,7 +133,7 @@ namespace Opm
         dm["velocity"] = &cell_velocity;
         Opm::writeVtkData(grid, dm, vtkfile);
     }
-
+/*
     static void outputWaterCut(const Opm::Watercut& watercut,
                                const std::string& output_dir)
     {
@@ -142,25 +145,17 @@ namespace Opm
         }
         watercut.write(os);
     }
-#if 0
-    static void outputWellReport(const Opm::WellReport& wellreport,
-                                 const std::string& output_dir)
-    {
-        // Write well report.
-        std::string fname = output_dir  + "/wellreport.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        wellreport.write(os);
-    }
-
-#endif
-    // \TODO: Treat bcs.
+    
+   */ 
+    
+    
+    
+    
     SimulatorFullyImplicitTwophase::Impl::Impl(const parameter::ParameterGroup& param,
                                                const UnstructuredGrid& grid,
                                                const IncompPropsAdInterface& props,
-                                               LinearSolverInterface& linsolver)
+                                               LinearSolverInterface& linsolver,
+                                               std::vector<double>& src)
         : grid_(grid),
           props_(props),
           solver_(grid_, props_, linsolver)
@@ -193,7 +188,8 @@ namespace Opm
 
 
     SimulatorReport SimulatorFullyImplicitTwophase::Impl::run(SimulatorTimer& timer,
-                                                              TwophaseState& state)
+                                                              TwophaseState& state,
+                                                              std::vector<double>& src)
     {
         // Initialisation.
         std::vector<double> porevol;
@@ -208,19 +204,6 @@ namespace Opm
         Opm::time::StopWatch total_timer;
         total_timer.start();
         // These must be changed for three-phase.
-        double init_surfvol[2] = { 0.0 };
- //       double inplace_surfvol[2] = { 0.0 };
-   //     double tot_injected[2] = { 0.0 };
-     //   double tot_produced[2] = { 0.0 };
-        std::vector<double> src(grid_.number_of_cells * 2, 0.0);
-        src[0] = 1.;
-        src[grid_.number_of_cells -1] = -1.;
-        src[grid_.number_of_cells] = 1.;
-        src[grid_.number_of_cells * 2 - 1] = -1.;
-        Opm::computeSaturatedVol(porevol, state.saturation(), init_surfvol);
-        Opm::Watercut watercut;
-        watercut.push(0.0, 0.0, 0.0);
-        Opm::WellReport wellreport;
         std::vector<double> fractional_flows;
         std::fstream tstep_os;
         if (output_) {
@@ -251,54 +234,6 @@ namespace Opm
             stime += st;
             sreport.pressure_time = st;
 
-
-            // The reports below are geared towards two phases only.
-#if 0
-            // Report mass balances.
-            double stepsize = timer.currentStepLength();
-            double injected[2] = { 0.0 };
-            double produced[2] = { 0.0 };
-            double transport_src[2] = { 0.0 };
-            Opm::computeInjectedProduced(props_, state, transport_src, stepsize,
-                                         injected, produced);
-            Opm::computeSaturatedVol(porevol, state.saturation(), inplace_surfvol);
-            tot_injected[0] += injected[0];
-            tot_injected[1] += injected[1];
-            tot_produced[0] += produced[0];
-            tot_produced[1] += produced[1];
-            std::cout.precision(5);
-            const int width = 18;
-            std::cout << "\nMass balance report.\n";
-            std::cout << "    Injected surface volumes:      "
-                      << std::setw(width) << injected[0]
-                      << std::setw(width) << injected[1] << std::endl;
-            std::cout << "    Produced surface volumes:      "
-                      << std::setw(width) << produced[0]
-                      << std::setw(width) << produced[1] << std::endl;
-            std::cout << "    Total inj surface volumes:     "
-                      << std::setw(width) << tot_injected[0]
-                      << std::setw(width) << tot_injected[1] << std::endl;
-            std::cout << "    Total prod surface volumes:    "
-                      << std::setw(width) << tot_produced[0]
-                      << std::setw(width) << tot_produced[1] << std::endl;
-            const double balance[2] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
-                                        init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1] };
-            std::cout << "    Initial - inplace + inj - prod: "
-                      << std::setw(width) << balance[0]
-                      << std::setw(width) << balance[1]
-                      << std::endl;
-            std::cout << "    Relative mass error:            "
-                      << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
-                      << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
-                      << std::endl;
-            std::cout.precision(8);
-
-            // Make well reports.
-            const double tot_porevol_init = std::accumulate(porevol.begin(), porovol.end(), 0.0);
-            watercut.push(timer.currentTime() + timer.currentStepLength(),
-                          produced[0]/(produced[0] + produced[1]),
-                          tot_produced[0]/tot_porevol_init);
-#endif
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
                 sreport.reportParam(tstep_os);
@@ -309,7 +244,7 @@ namespace Opm
             if (output_vtk_) {
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
-            outputWaterCut(watercut, output_dir_);
+     //       outputWaterCut(watercut, output_dir_);
             tstep_os.close();
         }
 

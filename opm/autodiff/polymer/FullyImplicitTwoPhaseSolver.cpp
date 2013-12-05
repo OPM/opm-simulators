@@ -260,17 +260,12 @@ typedef Eigen::Array<double,
                 insrc.emplace_back(0);
             }
         }
-        const V source = Eigen::Map<const V>(& src[0], grid_.number_of_cells, 1);
-        const V outSrc = Eigen::Map<const V>(& outsrc[0], grid_.number_of_cells, 1);
-        const V inSrc = Eigen::Map<const V>(& insrc[0], grid_.number_of_cells, 1);
+        const V source = Eigen::Map<const V>(& src[0], grid_.number_of_cells);
+        const V outSrc = Eigen::Map<const V>(& outsrc[0], grid_.number_of_cells);
+        const V inSrc = Eigen::Map<const V>(& insrc[0], grid_.number_of_cells);
         
         // compute the out-fracflow.
-        const double* mus = fluid_.viscosity();
-        ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
-        ADB  mob_wat = kr[0] / V::Constant(kr[0].size(), 1, mus[0]);
-        ADB  mob_oil= kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
-        ADB  total_mob = mob_wat + mob_oil;
-        ADB f_out = mob_phase / total_mob;
+        ADB f_out = computeFracFlow(phase, kr);
         // compute the in-fracflow.
         V f_in;
         if (phase == 1) {
@@ -280,6 +275,25 @@ typedef Eigen::Array<double,
         }
         return f_out * outSrc + f_in * inSrc;
      }
+
+
+
+
+
+    ADB
+    FullyImplicitTwoPhaseSolver::computeFracFlow(int                     phase,
+                                                 const std::vector<ADB>& kr) const
+    {
+        const double* mus = fluid_.viscosity();
+        ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
+        ADB  mob_wat = kr[0] / V::Constant(kr[0].size(), 1, mus[0]);
+        ADB  mob_oil= kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
+        ADB  total_mob = mob_wat + mob_oil;
+        ADB f = mob_phase / total_mob;
+
+        return f;
+    }
+
 
 
 
@@ -328,7 +342,7 @@ typedef Eigen::Array<double,
         assert(varstart == dx.size());
 
         // Pressure update.
-        const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc);
         const V p = p_old - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
@@ -368,19 +382,6 @@ typedef Eigen::Array<double,
     
     
     
-    ADB
-    FullyImplicitTwoPhaseSolver::computeFracFlow(int                     phase,
-                                                 const std::vector<ADB>& kr) const
-    {
-        const double* mus = fluid_.viscosity();
-        ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
-        ADB  mob_wat = kr[0] / V::Constant(kr[0].size(), 1, mus[0]);
-        ADB  mob_oil= kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
-        ADB  total_mob = mob_wat + mob_oil;
-        ADB f = mob_phase / total_mob;
-
-        return f;
-    }
     
     
     
