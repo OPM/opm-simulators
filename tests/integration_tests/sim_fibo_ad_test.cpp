@@ -39,7 +39,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -51,6 +51,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -82,6 +83,20 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
     deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
     grid.reset(new GridManager(*deck));
+
+    // use the capitalized part of the deck's filename between the
+    // last '/' and the last '.' character as base name.
+    std::string baseName = deck_filename;
+    auto charPos = baseName.rfind('/');
+    if (charPos != std::string::npos)
+        baseName = baseName.substr(charPos + 1);
+    charPos = baseName.rfind('.');
+    if (charPos != std::string::npos)
+        baseName = baseName.substr(0, charPos);
+    baseName = boost::to_upper_copy(baseName);
+
+    Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
+
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
     new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
@@ -151,7 +166,8 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
                 rock_comp->isActive() ? rock_comp.get() : 0,
                 wells,
                 linsolver,
-                grav);
+                grav,
+                outputWriter);
      
         SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
         
@@ -190,6 +206,20 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     old_deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
     grid.reset(new GridManager(*old_deck));
+
+    // use the capitalized part of the deck's filename between the
+    // last '/' and the last '.' character as base name.
+    std::string baseName = deck_filename;
+    auto charPos = baseName.rfind('/');
+    if (charPos != std::string::npos)
+        baseName = baseName.substr(charPos + 1);
+    charPos = baseName.rfind('.');
+    if (charPos != std::string::npos)
+        baseName = baseName.substr(0, charPos);
+    baseName = boost::to_upper_copy(baseName);
+
+    Opm::EclipseWriter outputWriter(param, share_obj(*old_deck), share_obj(*grid->c_grid()));
+
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(*old_deck, *grid->c_grid(), param));
     new_props.reset(new BlackoilPropsAdFromDeck(*old_deck, *grid->c_grid()));
@@ -261,7 +291,8 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
                 rock_comp->isActive() ? rock_comp.get() : 0,
                 wells,
                 linsolver,
-                grav);
+                grav,
+                outputWriter);
      
         SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
         
