@@ -85,13 +85,10 @@ typedef Eigen::Array<double,
         std::transform(grid_.cell_volumes, grid_.cell_volumes + nc,
                        rho.data(), pvol.data(),
                        std::multiplies<double>());
-        std::cout <<"poro volume\n" << pvol << std::endl;
 
         const V pvdt = pvol / dt;
 
         const SolutionState old_state = constantState(x);
-        std::cout << "sw " << old_state.saturation[0].value() << std::endl;
-        std::cout << "so " << old_state.saturation[1].value() << std::endl;
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
@@ -106,7 +103,6 @@ typedef Eigen::Array<double,
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
             const V dx = solveJacobianSystem();
-	        std::cout << "dx\n" << dx << std::endl;
             updateState(dx, x);
 
             assemble(pvdt, old_state, x, src);
@@ -155,10 +151,11 @@ typedef Eigen::Array<double,
 
         // Saturation.
         assert (not x.saturation().empty());
-        const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, 2);
-        state.saturation[0] = ADB::constant(s_all.col(0));
-        state.saturation[1] = ADB::constant(s_all.col(1));
-
+        const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        for (int phase = 0; phase < np; ++phase) {
+            state.saturation[phase] = ADB::constant(s_all.col(phase));
+   //     state.saturation[1] = ADB::constant(s_all.col(1));
+        }
         return state;
     }
 
@@ -182,7 +179,7 @@ typedef Eigen::Array<double,
 
         // Initial saturation.
         assert (not x.saturation().empty());
-        const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, 2);
+        const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
         const V sw = s_all.col(0);
         vars0.push_back(sw);
 
@@ -230,14 +227,9 @@ typedef Eigen::Array<double,
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             const ADB mflux = computeMassFlux(phase, trans, kr, state);
             ADB source = accumSource(phase, kr, src);
-            std::cout << "source"<< "["<<phase <<"]\n"<< source.value() << std::endl;
             residual_[phase] =
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
                 + ops_.div*mflux - source;
-        std::cout << "Assemble Info for phase" << phase << std::endl;
-        std::cout << "accum\n" << pvdt*(state.saturation[phase].value() - old_state.saturation[phase].value()) << std::endl;
-        std::cout << "mass flux \n" << (ops_.div * mflux).value() << std::endl;
-        std::cout << "residual:\n" << residual_[phase].value() << std::endl;
         }
 
     }
@@ -272,7 +264,6 @@ typedef Eigen::Array<double,
         const V outSrc = Eigen::Map<const V>(& outsrc[0], grid_.number_of_cells, 1);
         const V inSrc = Eigen::Map<const V>(& insrc[0], grid_.number_of_cells, 1);
         
-      //  std::cout << "out and in source \n" << outSrc << inSrc <<std::endl; 
         // compute the out-fracflow.
         const double* mus = fluid_.viscosity();
         ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
@@ -280,8 +271,6 @@ typedef Eigen::Array<double,
         ADB  mob_oil= kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
         ADB  total_mob = mob_wat + mob_oil;
         ADB f_out = mob_phase / total_mob;
-//        std::cout << "water kr " << kr[0] << std::endl;
-//        std::cout << "oil   kr " << kr[1] << std::endl; 
         // compute the in-fracflow.
         V f_in;
         if (phase == 1) {
@@ -289,7 +278,6 @@ typedef Eigen::Array<double,
         } else if (phase == 0) {
             f_in = V::Ones(grid_.number_of_cells);
         }
-        std::cout << "out-flow frac flow\n" << f_out.value() << std::endl;
         return f_out * outSrc + f_in * inSrc;
      }
 
@@ -300,10 +288,10 @@ typedef Eigen::Array<double,
     FullyImplicitTwoPhaseSolver::solveJacobianSystem() const
     {
         const int np = fluid_.numPhases();
-	if (np != 2) {
-	  OPM_THROW(std::logic_error, "Only two-phase ok in FullyImplicitTwoPhaseSolver.");
-	}
-	ADB mass_res = collapseJacs(vertcat(residual_[0], residual_[1]));
+    	if (np != 2) {
+	        OPM_THROW(std::logic_error, "Only two-phase ok in FullyImplicitTwoPhaseSolver.");
+	    }
+	    ADB mass_res = collapseJacs(vertcat(residual_[0], residual_[1]));
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = mass_res.derivative()[0];
         V dx(V::Zero(mass_res.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
@@ -340,7 +328,6 @@ typedef Eigen::Array<double,
         assert(varstart == dx.size());
 
         // Pressure update.
-        const double dpmaxrel = 0.8;
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V p = p_old - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
@@ -383,7 +370,7 @@ typedef Eigen::Array<double,
     
     ADB
     FullyImplicitTwoPhaseSolver::computeFracFlow(int                     phase,
-                                                 const std::vector<ADB>& kr)
+                                                 const std::vector<ADB>& kr) const
     {
         const double* mus = fluid_.viscosity();
         ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
@@ -403,7 +390,7 @@ typedef Eigen::Array<double,
     FullyImplicitTwoPhaseSolver::computeMassFlux(const int               phase ,
                                                  const V&                trans,
                                                  const std::vector<ADB>& kr    ,
-                                                 const SolutionState&    state )
+                                                 const SolutionState&    state ) const
     {
 //        const ADB tr_mult = transMult(state.pressure);
         const double* mus = fluid_.viscosity();

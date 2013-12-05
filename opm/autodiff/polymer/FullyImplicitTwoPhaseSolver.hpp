@@ -65,7 +65,7 @@ namespace Opm {
         transmissibility() const;
         ADB
         computeFracFlow(int    phase,
-                        const std::vector<ADB>& kr);
+                        const std::vector<ADB>& kr) const;
         ADB 
         accumSource(const int phase,
                     const std::vector<ADB>& kr,
@@ -74,7 +74,7 @@ namespace Opm {
         computeMassFlux(const int               phase,
                         const V&                trans,
                         const std::vector<ADB>& kr,
-                        const SolutionState&    state);
+                        const SolutionState&    state) const;
         double
         residualNorm() const;
 
