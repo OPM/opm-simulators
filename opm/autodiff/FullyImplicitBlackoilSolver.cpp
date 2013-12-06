@@ -581,16 +581,17 @@ namespace {
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-            computeMassFlux(phase, transi, kr, state);
+        const std::vector<ADB> pressures = computePressures(state);
+        for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+            computeMassFlux(phaseIdx, transi, kr[phaseIdx], pressures[phaseIdx], state);
             // std::cout << "===== kr[" << phase << "] = \n" << std::endl;
             // std::cout << kr[phase];
             // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
             // std::cout << rq_[phase].mflux;
 
-            residual_.mass_balance[ phase ] =
-                pvdt*(rq_[phase].accum[1] - rq_[phase].accum[0])
-                + ops_.div*rq_[phase].mflux;
+            residual_.mass_balance[ phaseIdx ] =
+                pvdt*(rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
+                + ops_.div*rq_[phaseIdx].mflux;
 
             // DUMP(residual_.mass_balance[phase]);
         }
@@ -968,6 +969,44 @@ namespace {
     }
 
 
+    std::vector<ADB>
+    FullyImplicitBlackoilSolver::computePressures(const SolutionState& state) const
+    {
+        const int               nc   = grid_.number_of_cells;
+        const std::vector<int>& bpat = state.pressure.blockPattern();
+
+        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const ADB sw = (active_[ Water ]
+                        ? state.saturation[ pu.phase_pos[ Water ] ]
+                        : null);
+
+        const ADB so = (active_[ Oil ]
+                        ? state.saturation[ pu.phase_pos[ Oil ] ]
+                        : null);
+
+        const ADB sg = (active_[ Gas ]
+                        ? state.saturation[ pu.phase_pos[ Gas ] ]
+                        : null);
+
+        // convert the pressure offsets to the capillary pressures
+        std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
+        for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
+#warning "what's the reference phase??"
+            if (phaseIdx == BlackoilPhases::Liquid)
+                continue;
+            pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
+        }
+
+        // add the total pressure to the capillary pressures
+        for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
+            pressure[phaseIdx] += state.pressure;
+        }
+
+        return pressure;
+    }
+
 
 
 
@@ -1005,30 +1044,31 @@ namespace {
     void
     FullyImplicitBlackoilSolver::computeMassFlux(const int               actph ,
                                                  const V&                transi,
-                                                 const std::vector<ADB>& kr    ,
-                                                 const SolutionState&    state )
+                                                 const ADB&              kr    ,
+                                                 const ADB&              phasePressure,
+                                                 const SolutionState&    state)
     {
-        const int phase = canph_[ actph ];
+        const int canonicalPhaseIdx = canph_[ actph ];
 
         std::vector<PhasePresence> cond;
         classifyCondition(state, cond);
 
-        const ADB mu    = fluidViscosity(phase, state.pressure, state.rs, cond, cells_);
         const ADB tr_mult = transMult(state.pressure);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.rs, cond, cells_);
 
-        rq_[ actph ].mob = tr_mult * kr[ phase ] / mu;
+        rq_[ actph ].mob = tr_mult * kr / mu;
 
-        const ADB rho   = fluidDensity(phase, state.pressure, state.rs, cond, cells_);
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.rs, cond, cells_);
 
         ADB& head = rq_[ actph ].head;
 
         // compute gravity potensial using the face average as in eclipse and MRST
         const ADB rhoavg = ops_.caver * rho;
 
-        const ADB dp = ops_.ngrad * state.pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        const ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
 
         head = transi*dp;
-        //head      = transi*(ops_.ngrad * state.pressure) + gflux;
+        //head      = transi*(ops_.ngrad * phasePressure) + gflux;
 
         UpwindSelector<double> upwind(grid_, ops_, head.value());
 
