@@ -1053,11 +1053,12 @@ namespace {
         std::vector<PhasePresence> cond;
         classifyCondition(state, cond);
 
-        const ADB mu    = fluidViscosity(phase, phasePressure, state.rs, cond, cells_);
+        const ADB tr_mult = transMult(state.pressure);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.rs, cond, cells_);
 
         rq_[ actph ].mob = tr_mult * kr / mu;
 
-        const ADB rho   = fluidDensity(phase, phasePressure, state.rs, cond, cells_);
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.rs, cond, cells_);
 
         ADB& head = rq_[ actph ].head;
 
