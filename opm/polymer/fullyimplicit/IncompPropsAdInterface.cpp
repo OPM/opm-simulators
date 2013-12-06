@@ -1,5 +1,5 @@
 
-#include <opm/autodiff/polymer/IncompPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 
 Opm::IncompPropsAdInterface::~IncompPropsAdInterface()
 {

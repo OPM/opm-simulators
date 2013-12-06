@@ -1,8 +1,8 @@
 /**/
 #ifndef OPM_INCOMPPROPSADFROMDECK_HEADER_INCLUDED
 #define OPM_INCOMPPROPSADFROMDECK_HEADER_INCLUDED
-#include <opm/autodiff/polymer/IncompPropsAdInterface.hpp>
-#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>

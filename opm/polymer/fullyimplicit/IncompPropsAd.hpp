@@ -10,7 +10,7 @@ Properties for incompressible immiscible two-phase flow
 #define  OPM_INCOMPROPSAD_HEADER_INCLUDED
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/props/rock/RockBasic.hpp>
-#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 #include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
 #include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
 

@@ -4,7 +4,7 @@
 
 #ifndef OPM_INCOMPPROPSADINTERFACE_HEADER_INCLUDED
 #define OPM_INCOMPPROPSADINTERFACE_HEADER_INCLUDED
-#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 
 namespace Opm
 {

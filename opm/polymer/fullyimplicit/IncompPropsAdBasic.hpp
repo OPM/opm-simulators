@@ -3,11 +3,11 @@
 #ifndef OPM_INCOMPPROPSADBASIC_HEADER_INCLUDED
 #define OPM_INCOMPPROPSADBASIC_HEADER_INCLUDED
 
-#include <opm/autodiff/polymer/IncompPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/core/props/rock/RockBasic.hpp>
 #include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
 #include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
-#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 namespace Opm
 {
     class IncompPropsAdBasic : public IncompPropsAdInterface

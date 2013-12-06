@@ -17,12 +17,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/autodiff/polymer/SimulatorFullyImplicitTwophase.hpp>
+#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitTwophase.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
-#include <opm/autodiff/polymer/FullyImplicitTwoPhaseSolver.hpp>
-#include <opm/autodiff/polymer/IncompPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/FullyImplicitTwoPhaseSolver.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>

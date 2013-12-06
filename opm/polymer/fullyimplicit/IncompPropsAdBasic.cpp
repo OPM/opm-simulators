@@ -1,9 +1,9 @@
 /**/
 
-#include <opm/autodiff/polymer/IncompPropsAdBasic.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdBasic.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/polymer/fulluimplicit/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>
 

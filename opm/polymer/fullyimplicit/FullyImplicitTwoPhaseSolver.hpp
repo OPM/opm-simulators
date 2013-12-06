@@ -3,9 +3,9 @@
 #ifndef OPM_FULLYIMPLICITTWOPHASESOLVER_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITTWOPHASESOLVER_HEADER_INCLUDED
 
-#include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/polymer/IncompPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
+#include <opm/polymer//fullyimplicit/AutoDiffHelpers.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
 

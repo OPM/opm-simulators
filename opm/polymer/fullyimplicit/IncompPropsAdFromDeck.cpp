@@ -1,6 +1,6 @@
 /**/
-#include <opm/autodiff/polymer/IncompPropsAdFromDeck.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdFromDeck.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>

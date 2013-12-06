@@ -20,7 +20,7 @@
 #ifndef OPM_AUTODIFFHELPERS_HEADER_INCLUDED
 #define OPM_AUTODIFFHELPERS_HEADER_INCLUDED
 
-#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
