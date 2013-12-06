@@ -65,10 +65,15 @@ namespace Opm {
 */
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
-        PolymerPropsAd(const PolymerPropperties& polyprops);
+        PolymerPropsAd(const PolymerPropperties& polymer_props);
         ~PolymerPropsAd();
+        V PolymerPropsAd::effectiveInvWaterVisc(const V& c,const double* visc) const;
+        ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,const double* visc) const;
+
+        V PolymerPropsAd::polymerWaterVelocityRatio(const V& c) const;
+        ADB PolymerPropsAd::polymerWaterVelocityRatio(const ADB& c) const;
     private:
-        const PolymerProperties polyprops_;
+        const PolymerProperties polymer_props_;
     };
 
     

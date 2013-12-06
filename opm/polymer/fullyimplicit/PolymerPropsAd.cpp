@@ -163,13 +163,28 @@ namespace Opm {
 
     }
 */
+    PolymerPropsAd::PolymerPropsAd(const PolymerProperties& polymer_props)
+        : polymer_props_ (polymer_props)
+    {
+    }
+
+
+
+
+    PolymerPropsAd::~PolymerPropsAd()
+    {
+    }
+
+
+
+
     V PolymerPropsAd::effectiveInvWaterVisc(const V& c,
                                             const double* visc) const
     {
         const int nc = c.size();
         V inv_mu_w_eff(n);
         for (int i = 0; i < nc; ++i) {
-            double im;
+            double im = 0;
             polymer_props_.effectiveInvVisc(c(i), visc, im);
             inv_mu_w_eff(i) = im;
         }
@@ -185,21 +200,21 @@ namespace Opm {
     ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,
 	                    				      const double* visc)
     {
-	    const int n = c.size();
+	    const int nc = c.size();
     	V inv_mu_w_eff(n);
     	V dinv_mu_w_eff(n);
-    	for (int i = 0; i < n; ++i) {
-    	    double im, dim;
+    	for (int i = 0; i < nc; ++i) {
+    	    double im = 0, dim = 0;
     	    polymer_props_.effectiveInvViscWithDer(c.value()(i), visc, im, dim);
     	    inv_mu_w_eff(i) = im;
     	    dinv_mu_w_eff(i) = dim;
     	}
-            ADB::M dim_diag = spdiag(dinv_mu_w_eff);
-            const int num_blocks = c.numBlocks();
-            std::vector<ADB::M> jacs(num_blocks);
-            for (int block = 0; block < num_blocks; ++block) {
-                jacs[block] = dim_diag * c.derivative()[block];
-            }
+        ADB::M dim_diag = spdiag(dinv_mu_w_eff);
+        const int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dim_diag * c.derivative()[block];
+        }
         return ADB::function(inv_mu_w_eff, jacs);
     }
 
@@ -209,8 +224,46 @@ namespace Opm {
 
     V PolymerPropsAd::polymerWaterVelocityRatio(const V& c) const
     {
-        const int nc
+        const int nc = c.size();
+        V mc(n);
+
+        for (int i = 0; i < nc; ++i) {
+            double m = 0;
+            polymer_props_.computeMc(c(i), m);
+            mc(i) = m;
+        }
        
+       return mc;
     }
 
-} // namespace Opm
+
+
+
+
+    ADB PolymerPropsAd::polymerWaterVelocityRatio(const ADB& c) const
+    {
+    
+        const int nc = c.size();
+        V mc(n);
+        V dmc(n);
+        
+        for (int i = 0; i < nc; ++i) {
+            double m = 0;
+            double dm = 0;
+            polymer_props_.computeMcWithDer(c(i), m, dm);
+
+            mc(i) = m;
+            dmc(i) = dm;
+        }
+
+        ADB::M dmc_diag = spdiag(dmc);
+        const int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dmc_diag * c.derivative()[block];
+        }
+
+        return ADB::function(mc, jacs);
+    }
+
+}// namespace Opm
