@@ -110,10 +110,12 @@ namespace Opm
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         V muOil(const V& po,
                 const V& rs,
+                const std::vector<PhasePresence>& cond,
                 const Cells& cells) const;
 
         /// Gas viscosity.
@@ -133,10 +135,12 @@ namespace Opm
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         ADB muOil(const ADB& po,
                   const ADB& rs,
+                  const std::vector<PhasePresence>& cond,
                   const Cells& cells) const;
 
         /// Gas viscosity.
@@ -159,10 +163,12 @@ namespace Opm
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         V bOil(const V& po,
                const V& rs,
+               const std::vector<PhasePresence>& cond,
                const Cells& cells) const;
 
         /// Gas formation volume factor.
@@ -182,10 +188,12 @@ namespace Opm
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  rs     Array of n gas solution factor values.
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         ADB bOil(const ADB& po,
                  const ADB& rs,
+                 const std::vector<PhasePresence>& cond,
                  const Cells& cells) const;
 
         /// Gas formation volume factor.
@@ -238,6 +246,19 @@ namespace Opm
                                  const ADB& so,
                                  const ADB& sg,
                                  const Cells& cells) const;
+
+        /// Capillary pressure for all phases.
+        /// \param[in]  sw     Array of n water saturation values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  sg     Array of n gas saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+        /// \return            An std::vector with 3 elements, each an array of n capillary pressure values,
+        ///                    containing the offsets for each p_g, p_o, p_w. The capillary pressure between
+        ///                    two arbitrary phases alpha and beta is then given as p_alpha - p_beta.
+        std::vector<ADB> capPress(const ADB& sw,
+                                  const ADB& so,
+                                  const ADB& sg,
+                                  const Cells& cells) const;
 
     private:
         RockFromDeck rock_;
