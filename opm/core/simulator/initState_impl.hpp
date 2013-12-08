@@ -30,6 +30,7 @@
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
 #include <iostream>
 #include <cmath>
@@ -606,14 +607,13 @@ namespace Opm
                 }
             }
         }
-    }
-
+    }   
     /// Initialize surface volume from pressure and saturation by z = As.
-    /// Here the RS factor is used to compute an intial z for the
+    /// Here the gas/oil ratio is used to compute an intial z for the
     /// computation of A.
     template <class Props, class State>
-    void initBlackoilSurfvol(const UnstructuredGrid& grid,
-                             const BlackoilPropertiesInterface& props,
+    void initBlackoilSurfvolUsingRS(const UnstructuredGrid& grid,
+                             const Props& props,
                              State& state)
     {
         if (props.numPhases() != 3) {
@@ -739,7 +739,8 @@ namespace Opm
                 int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
                 state.gasoilratio()[c] = rs_deck[c_deck];
             }
-            initBlackoilSurfvol(grid, props, state);
+            initBlackoilSurfvolUsingRS(grid, props, state);
+            computeSaturation(props,state);
         } else {
             OPM_THROW(std::runtime_error, "Temporarily, we require the RS field.");
         }
