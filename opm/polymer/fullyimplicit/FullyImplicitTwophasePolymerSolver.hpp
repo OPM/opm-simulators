@@ -87,7 +87,11 @@ namespace Opm {
                         const SolutionState&    state) const;
         double
         residualNorm() const;
-        
+        ADB
+        polymerSource(const std::vector<ADB>& kr,
+                      const std::vector<double>& src,
+                      const std::vector<double>& polymer_inflow_c,
+                      const SolutionState& state) const;
 
         ADB 
         computeMc(const SolutionState& state) const;
@@ -100,7 +104,7 @@ namespace Opm {
         ADB
         transMult(const ADB& p) const;
         double
-        PolymerInjectedAmount(const std::vector<double>& polymer_inflow) const;
+        polymerInjectedAmount(const std::vector<double>& polymer_inflow) const;
     };
 } // namespace Opm
 #endif// OPM_FULLYIMPLICITTWOPHASESOLVER_HEADER_INCLUDED

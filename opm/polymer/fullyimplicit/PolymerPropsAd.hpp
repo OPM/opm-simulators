@@ -65,7 +65,6 @@ namespace Opm {
 */
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
-
         PolymerPropsAd(const PolymerProperties& polymer_props);
 
         ~PolymerPropsAd();
