@@ -17,18 +17,20 @@ namespace Opm {
     class PolymerState;
 
     
-    class FullyImplicitTwoPhaseSolver
+    class FullyImplicitTwophasePolymerSolver
     {
     public:
-        FullyImplicitTwoPhaseSolver(const UnstructuredGrid&        grid,
-                                    const IncompPropsAdInterface&  fluid,
-                                    const PolymerProperties&       polymer_props,
-                                    const PolymerPropsAd&          polymer_props_ad,
-                                    const LinearSolverInterface&    linsolver);
+        FullyImplicitTwophasePolymerSolver(const UnstructuredGrid&        grid,
+                                           const IncompPropsAdInterface&  fluid,
+                                           const PolymerPropsAd&          polymer_props_ad,
+                                           const LinearSolverInterface&    linsolver);
 
         void step(const double   dt,
                   PolymerState& state,
-                  const std::vector<double>& src);
+                  const std::vector<double>& src,
+                  const std::vector<double>& polymer_inflow
+                  );
+//                  const bool if_polymer_actived);
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
@@ -46,7 +48,6 @@ namespace Opm {
         };
         const UnstructuredGrid&         grid_;
         const IncompPropsAdInterface&   fluid_;
-        const PolymerProperties&        polymer_props_;
         const PolymerPropsAd&           polymer_props_ad_;
         const LinearSolverInterface&    linsolver_;
         const std::vector<int>          cells_;
@@ -62,7 +63,9 @@ namespace Opm {
         assemble(const V&               pvdt,
                  const SolutionState&   old_state,
                  const PolymerState&  x,
-                 const std::vector<double>& src);
+                 const std::vector<double>& src,
+                 const std::vector<double>& polymer_inflow);
+//                 const bool if_polymer_actived);
         V solveJacobianSystem() const;
         void updateState(const V&             dx,
                          PolymerState& x) const;
@@ -84,7 +87,10 @@ namespace Opm {
                         const SolutionState&    state) const;
         double
         residualNorm() const;
+        
 
+        ADB 
+        computeMc(const SolutionState& state) const;
         ADB
         rockPorosity(const ADB& p) const;
         ADB
@@ -93,6 +99,8 @@ namespace Opm {
         fluidDensity(const int phase) const;
         ADB
         transMult(const ADB& p) const;
+        double
+        PolymerInjectedAmount(const std::vector<double>& polymer_inflow) const;
     };
 } // namespace Opm
 #endif// OPM_FULLYIMPLICITTWOPHASESOLVER_HEADER_INCLUDED

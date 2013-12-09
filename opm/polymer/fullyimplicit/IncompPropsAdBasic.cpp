@@ -2,7 +2,7 @@
 
 #include <opm/polymer/fullyimplicit/IncompPropsAdBasic.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/polymer/fulluimplicit/AutoDiffBlock.hpp>
+#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 #include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>

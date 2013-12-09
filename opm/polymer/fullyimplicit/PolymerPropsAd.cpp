@@ -182,7 +182,7 @@ namespace Opm {
                                             const double* visc) const
     {
         const int nc = c.size();
-        V inv_mu_w_eff(n);
+        V inv_mu_w_eff(nc);
         for (int i = 0; i < nc; ++i) {
             double im = 0;
             polymer_props_.effectiveInvVisc(c(i), visc, im);
@@ -198,11 +198,11 @@ namespace Opm {
 
 
     ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,
-	                    				      const double* visc)
+	                    				      const double* visc) const
     {
 	    const int nc = c.size();
-    	V inv_mu_w_eff(n);
-    	V dinv_mu_w_eff(n);
+    	V inv_mu_w_eff(nc);
+    	V dinv_mu_w_eff(nc);
     	for (int i = 0; i < nc; ++i) {
     	    double im = 0, dim = 0;
     	    polymer_props_.effectiveInvViscWithDer(c.value()(i), visc, im, dim);
@@ -221,11 +221,10 @@ namespace Opm {
 
 
 
-
     V PolymerPropsAd::polymerWaterVelocityRatio(const V& c) const
     {
         const int nc = c.size();
-        V mc(n);
+        V mc(nc);
 
         for (int i = 0; i < nc; ++i) {
             double m = 0;
@@ -244,13 +243,13 @@ namespace Opm {
     {
     
         const int nc = c.size();
-        V mc(n);
-        V dmc(n);
+        V mc(nc);
+        V dmc(nc);
         
         for (int i = 0; i < nc; ++i) {
             double m = 0;
             double dm = 0;
-            polymer_props_.computeMcWithDer(c(i), m, dm);
+            polymer_props_.computeMcWithDer(c.value()(i), m, dm);
 
             mc(i) = m;
             dmc(i) = dm;

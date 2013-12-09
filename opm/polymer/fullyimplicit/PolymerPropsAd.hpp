@@ -6,7 +6,7 @@
 #include <vector>
 #include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
 #include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
-#include <opm/polymer/polymerProperties.hpp>
+#include <opm/polymer/PolymerProperties.hpp>
 namespace Opm {
 
     
@@ -65,15 +65,25 @@ namespace Opm {
 */
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
-        PolymerPropsAd(const PolymerPropperties& polymer_props);
-        ~PolymerPropsAd();
-        V PolymerPropsAd::effectiveInvWaterVisc(const V& c,const double* visc) const;
-        ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,const double* visc) const;
 
-        V PolymerPropsAd::polymerWaterVelocityRatio(const V& c) const;
-        ADB PolymerPropsAd::polymerWaterVelocityRatio(const ADB& c) const;
+        PolymerPropsAd(const PolymerProperties& polymer_props);
+
+        ~PolymerPropsAd();
+
+        V 
+        effectiveInvWaterVisc(const V& c,const double* visc) const;
+
+        ADB 
+        effectiveInvWaterVisc(const ADB& c,const double* visc) const;
+
+        V 
+        polymerWaterVelocityRatio(const V& c) const;
+
+        ADB
+        polymerWaterVelocityRatio(const ADB& c) const;
+
     private:
-        const PolymerProperties polymer_props_;
+        const PolymerProperties& polymer_props_;
     };
 
     
