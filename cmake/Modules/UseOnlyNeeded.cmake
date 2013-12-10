@@ -4,11 +4,23 @@
 # in order to get only the minimal set of dependencies.
 
 function (prepend var_name value)
-  if (${var_name})
-	set (${var_name} "${value} ${${var_name}}" PARENT_SCOPE)
-  else (${var_name})
-	set (${var_name} "${value}")
-  endif (${var_name})
+  # only add the prefix if it is not already at the beginning. this
+  # prevents the same string to be added at the same place every time
+  # we check for reconfiguration (e.g. "--as-needed" below)
+  string (LENGTH "${value}" _val_len)
+  string (LENGTH "${${var_name}}" _var_len)
+  if (NOT (${_var_len} LESS ${_val_len}))
+	string (SUBSTRING "${${var_name}}" 0 ${_val_len} _var_pre)
+  else (NOT (${_var_len} LESS ${_val_len}))
+	set (_var_pre)
+  endif (NOT (${_var_len} LESS ${_val_len}))
+  if (NOT ("${_var_pre}" STREQUAL "${value}"))
+	if (${var_name})
+	  set (${var_name} "${value} ${${var_name}}" PARENT_SCOPE)
+	else (${var_name})
+	  set (${var_name} "${value}")
+	endif (${var_name})
+  endif (NOT ("${_var_pre}" STREQUAL "${value}"))
 endfunction (prepend var_name value)
 
 # only ELF shared objects can be underlinked, and only GNU will accept
