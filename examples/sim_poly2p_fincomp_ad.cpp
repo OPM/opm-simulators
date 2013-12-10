@@ -36,12 +36,12 @@ try
     }
     std::string deck_filename = param.get<std::string>("deck_filename");
     EclipseGridParser deck = EclipseGridParser(deck_filename);
-    int nx = param.getDefault("nx", 20);
-    int ny = param.getDefault("ny", 20);
+    int nx = param.getDefault("nx", 30);
+    int ny = param.getDefault("ny", 30);
     int nz = 1;
-    double dx = 2.0;
-    double dy = 2.0;
-    double dz = 0.5;
+    double dx = 10.0;
+    double dy = 1.0;
+    double dz = 1.0;
     GridManager grid_manager(nx, ny, nz, dx, dy, dz);
     const UnstructuredGrid& grid = *grid_manager.c_grid();
     int num_cells = grid.number_of_cells;
@@ -51,7 +51,7 @@ try
     std::vector<double> density(num_phases, 1000.0);
     std::vector<double> viscosity(num_phases, 1.0*centi*Poise);
     viscosity[0] = 0.5 * centi * Poise;
-    viscosity[0] = 5 * centi * Poise;
+    viscosity[1] = 5 * centi * Poise;
     double porosity = 0.35;
     double permeability = 10.0*milli*darcy;
     SaturationPropsBasic::RelPermFunc rel_perm_func = SaturationPropsBasic::Linear;
@@ -97,10 +97,10 @@ try
     std::vector<double> src(num_cells, 0.0);
     std::vector<double> src_polymer(num_cells);
     src[0] = 10. / day;
-    src[num_cells-1] = -1. / day;
+    src[num_cells-1] = -10. / day;
 
-    PolymerInflowBasic polymer_inflow(param.getDefault("poly_start_days", 30.0)*Opm::unit::day,
-                                      param.getDefault("poly_end_days", 80.0)*Opm::unit::day,
+    PolymerInflowBasic polymer_inflow(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
+                                      param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
                                       param.getDefault("poly_amount", polymer_props.cMax()));
     FlowBCManager bcs;
     LinearSolverUmfpack linsolver;
@@ -120,7 +120,7 @@ try
         state.saturation()[2*c] = 0.2;
         state.saturation()[2*c+1] = 0.8;
     }
-    std::vector<double> p(num_cells, 200*Opm::unit::barsa);
+    std::vector<double> p(num_cells, 100*Opm::unit::barsa);
     state.pressure() = p;
 
     std::vector<double> c(num_cells, 0.0);
@@ -137,6 +137,7 @@ try
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
+        dm["concentration"] = &state.concentration();
         Opm::writeVtkData(grid, dm, vtkfile);
     }
 }

@@ -24,12 +24,12 @@
 int main (int argc, char** argv)
 try
 {
-    int nx = 20;
-    int ny = 20;
+    int nx = 30;
+    int ny = 30;
     int nz = 1;
-    double dx = 10.0;
-    double dy = 10.0;
-    double dz = 10.0;
+    double dx = 2.0;
+    double dy = 2.0;
+    double dz = 0.5;
     using namespace Opm;
     parameter::ParameterGroup param(argc, argv, false);
     GridManager grid_manager(nx, ny, nz, dx, dy, dz);
@@ -40,23 +40,25 @@ try
     using namespace Opm::prefix;
     std::vector<double> density(num_phases, 1000.0);
     std::vector<double> viscosity(num_phases, 1.0*centi*Poise);
-    double porosity = 0.5;
+    viscosity[0] = 0.5 * centi * Poise;
+    viscosity[1] = 5 * centi * Poise;
+    double porosity = 0.35;
     double permeability = 10.0*milli*darcy;
     SaturationPropsBasic::RelPermFunc rel_perm_func = SaturationPropsBasic::Linear;
     IncompPropsAdBasic props(num_phases, rel_perm_func, density, viscosity,
                                 porosity, permeability, grid.dimensions, num_cells);
     std::vector<double> omega;
     std::vector<double> src(num_cells, 0.0);
-    src[0] = 1.;
-    src[num_cells-1] = -1.;
+    src[0] = 10. / day;
+    src[num_cells-1] = -10. / day;
 
     FlowBCManager bcs;
     LinearSolverUmfpack linsolver;
     FullyImplicitTwoPhaseSolver solver(grid, props, linsolver);
     std::vector<double> porevol;
     Opm::computePorevolume(grid, props.porosity(), porevol);
-    const double dt = param.getDefault("dt", 0.1) * day;
-    const int num_time_steps = param.getDefault("nsteps", 20);
+    const double dt = param.getDefault("dt", 10) * day;
+    const int num_time_steps = param.getDefault("nsteps", 10);
     std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;
@@ -66,10 +68,10 @@ try
 
     //initial sat
     for (int c = 0; c < num_cells; ++c) {
-        state.saturation()[2*c] = 0.2;
-        state.saturation()[2*c+1] = 0.8;
+        state.saturation()[2*c] = 0;
+        state.saturation()[2*c+1] = 1;
     }
-    std::vector<double> p(num_cells, 200*Opm::unit::barsa);
+    std::vector<double> p(num_cells, 100*Opm::unit::barsa);
     state.pressure() = p;
 //    state.setFirstSat(allcells, props, TwophaseState::MinSat);
     std::ostringstream vtkfilename;

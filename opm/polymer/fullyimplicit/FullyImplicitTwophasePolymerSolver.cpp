@@ -97,13 +97,8 @@ typedef Eigen::Array<double,
         const SolutionState old_state = constantState(x);
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
-        const int    maxit = 15;
-
-        std::cout << "Primary variables:\n";
-        std::cout << "pressure\n"<<old_state.pressure<< std::endl;
-        std::cout << "saturation\n"<<old_state.saturation[0] << std::endl;
-        std::cout << "concentration\n"<<old_state.concentration << std::endl;
-        assemble(pvdt, old_state, x, src, polymer_inflow);//, if_polymer_actived);
+        const int    maxit = 40;
+        assemble(pvdt, old_state, x, src, polymer_inflow);
 
         const double r0  = residualNorm();
         int          it  = 0;
@@ -115,7 +110,7 @@ typedef Eigen::Array<double,
             const V dx = solveJacobianSystem();
             updateState(dx, x);
 
-            assemble(pvdt, old_state, x, src, polymer_inflow);//, if_polymer_actived);
+            assemble(pvdt, old_state, x, src, polymer_inflow);
 
             const double r = residualNorm();
 
@@ -238,10 +233,9 @@ typedef Eigen::Array<double,
     FullyImplicitTwophasePolymerSolver::
     assemble(const V&             pvdt,
              const SolutionState& old_state,
-             const PolymerState& x   ,
+             const PolymerState&  x,
              const std::vector<double>& src,
              const std::vector<double>& polymer_inflow)
-    //         const bool if_polymer_actived)
     {
         // Create the primary variables.
         const SolutionState state = variableState(x);
@@ -256,44 +250,33 @@ typedef Eigen::Array<double,
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
                 + ops_.div*mflux - source;
         }
-
-     //   bool use_polymer = 1;//(amount != 0);
-   //     const int nc = grid_.number_of_cells;
-//        if (use_polymer) {
-            // Mass balance equation for polymer
-            const ADB src_polymer = polymerSource(kr ,src, polymer_inflow, state);  
-            ADB mc = computeMc(state);
-            ADB mflux  = computeMassFlux(0, trans, kr, state);
-            residual_[2] = pvdt * (state.saturation[0] * state.concentration 
-                        - old_state.saturation[0] * old_state.concentration) 
-                        + ops_.div * state.concentration * mc * mflux - src_polymer;
-  //      } else {
-    //        residual_[2] = ADB::constant(V::Zero(nc));
-//        }
-        for (int i = 0; i < 3; ++i)
-        std::cout<<"residual_["<<i<<"]\n"<<residual_[i] << std::endl;
+      // Mass balance equation for polymer
+        const ADB src_polymer = polymerSource(kr, src, polymer_inflow, state);
+  //      std::cout << "polymer src\n";
+   //     std::cout << src_polymer << std::endl;
+ //       const ADB src_polymer =ADB::function(V::Zero(grid_.number_of_cells), state.concentration.derivative());
+        ADB mc = computeMc(state);
+        
+        ADB poly_mflux  = computePolymerMassFlux(trans, mc, kr, state);
+#if 0
+        std::cout << "polymer mass\n";
+        std::cout << pvdt * (state.saturation[0] * state.concentration 
+                               - old_state.saturation[0] * old_state.concentration) <<std::endl;
+        std::cout << "polymer mass flux\n";
+        std::cout << poly_mflux << std::endl;
+#endif     
+        residual_[2] = pvdt * (state.saturation[0] * state.concentration 
+                      - old_state.saturation[0] * old_state.concentration) 
+                      + ops_.div * poly_mflux - src_polymer;
 
     }
    
-
-    double
-    FullyImplicitTwophasePolymerSolver::
-    polymerInjectedAmount(const std::vector<double>& polymer_inflow) const
-    {
-        double amount = 0;
-        for (int i = 0; i < int(polymer_inflow.size()); ++i) {
-            amount += polymer_inflow[i];
-        }
-        return amount;
-    }
-
 
 
     ADB 
     FullyImplicitTwophasePolymerSolver::accumSource(const int phase,
                                                  const std::vector<ADB>& kr,
-                                                 const std::vector<double>& src
-                                                 ) const
+                                                 const std::vector<double>& src) const
     {
         //extract the source to out and in source.
         std::vector<double> outsrc;
@@ -329,8 +312,7 @@ typedef Eigen::Array<double,
 
     ADB 
     FullyImplicitTwophasePolymerSolver::
-    polymerSource(
-                  const std::vector<ADB>& kr,
+    polymerSource(const std::vector<ADB>& kr,
                   const std::vector<double>& src,
                   const std::vector<double>& polymer_inflow_c,
                   const SolutionState& state) const
@@ -359,13 +341,15 @@ typedef Eigen::Array<double,
         ADB f_out = computeFracFlow(0, kr);
         // compute the in-fracflow.
         V f_in = V::Ones(grid_.number_of_cells);
-        return f_out * outSrc * state.concentration + f_in * inSrc * polyin ;
+        
+//        ADB polymer_insrc = ADB::function(f_in * inSrc * polyin, state.concentration.derivative());
+        return f_out * outSrc * state.concentration + f_in * inSrc * polyin;
      }
 
 
     ADB
-    FullyImplicitTwophasePolymerSolver::computeFracFlow(int                     phase,
-                                                 const std::vector<ADB>& kr) const
+    FullyImplicitTwophasePolymerSolver::computeFracFlow(int                    phase,
+                                                        const std::vector<ADB>& kr) const
     {
         const double* mus = fluid_.viscosity();
         ADB  mob_phase = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
@@ -498,8 +482,25 @@ typedef Eigen::Array<double,
         return upwind.select(mob) * head;
     }
   
+    ADB 
+    FullyImplicitTwophasePolymerSolver::computePolymerMassFlux(const V& trans,
+                                                               const ADB& mc, 
+                                                               const std::vector<ADB>& kr,
+                                                               const SolutionState& state) const
 
+   {
+        const double* mus = fluid_.viscosity();
+        ADB water_mob = kr[0] / V::Constant(kr[0].size(), 1, mus[0]);
+        ADB poly_mob = state.concentration * mc * water_mob;
+        
+        const ADB dp = ops_.ngrad * state.pressure;
+        const ADB head = trans * dp;
+
+        UpwindSelector<double> upwind(grid_, ops_, head.value());
+
+        return upwind.select(poly_mob) * head;
    
+   }
    
    
     double

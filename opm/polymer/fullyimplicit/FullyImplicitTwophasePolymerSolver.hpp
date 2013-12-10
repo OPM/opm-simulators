@@ -30,7 +30,6 @@ namespace Opm {
                   const std::vector<double>& src,
                   const std::vector<double>& polymer_inflow
                   );
-//                  const bool if_polymer_actived);
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
@@ -44,7 +43,6 @@ namespace Opm {
             ADB             pressure;
             std::vector<ADB> saturation;
             ADB             concentration;
-//            ADB             cmax;
         };
         const UnstructuredGrid&         grid_;
         const IncompPropsAdInterface&   fluid_;
@@ -65,7 +63,6 @@ namespace Opm {
                  const PolymerState&  x,
                  const std::vector<double>& src,
                  const std::vector<double>& polymer_inflow);
-//                 const bool if_polymer_actived);
         V solveJacobianSystem() const;
         void updateState(const V&             dx,
                          PolymerState& x) const;
@@ -85,6 +82,11 @@ namespace Opm {
                         const V&                trans,
                         const std::vector<ADB>& kr,
                         const SolutionState&    state) const;
+        ADB 
+        computePolymerMassFlux(const V& trans,
+                               const ADB& mc, 
+                               const std::vector<ADB>& kr,
+                               const SolutionState& state) const;
         double
         residualNorm() const;
         ADB
@@ -103,8 +105,8 @@ namespace Opm {
         fluidDensity(const int phase) const;
         ADB
         transMult(const ADB& p) const;
-        double
-        polymerInjectedAmount(const std::vector<double>& polymer_inflow) const;
     };
+
+
 } // namespace Opm
 #endif// OPM_FULLYIMPLICITTWOPHASESOLVER_HEADER_INCLUDED
