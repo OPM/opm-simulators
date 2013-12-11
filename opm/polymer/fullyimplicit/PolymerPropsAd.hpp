@@ -81,6 +81,17 @@ namespace Opm {
         ADB
         polymerWaterVelocityRatio(const ADB& c) const;
 
+        V
+        adsorption(const V& c) const;
+
+        ADB
+        adsorption(const ADB& c) const;
+
+        V
+        effectiveRelPerm(const V& c, const V& cmax_cells, const V& relperm) const;
+
+        ADB
+        effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw, const ADB& sw) const;
     private:
         const PolymerProperties& polymer_props_;
     };

@@ -31,7 +31,7 @@ namespace Opm {
     }
     
 
-    double PolymerProsAd::num_cells() const
+    double PolymerPropsAd::num_cells() const
     {
         return num__cells_;
     }
@@ -263,6 +263,97 @@ namespace Opm {
         }
 
         return ADB::function(mc, jacs);
+    }
+
+
+
+    V PolymerPropsAd::adsorption(const V& c, const V& cmax_cells) const
+    {
+        const int nc = c.size();
+        V ads(nc);
+
+        for (int i = 0; i < nc; ++i) {
+            double c_ads = 0;
+            polymer_props_.adsorption(c(i), cmax_cells(i), c_ads);
+
+            ads(i) = c_ads;
+        }
+
+        return ads;
+    }
+
+    ADB PolymerPropsAd::adsorption(const ADB& c, const ADB& cmax_cells) const
+    {
+        const int nc = c.value().size();
+
+        V ads(nc);
+        V dads(nc);
+
+        for (int i = 0; i < nc; ++i) {
+            double c_ads = 0;
+            double dc_ads = 0;
+            polymer_props_.adsorptionWithDer(c.value()(i), cmax_cells.value()(i), c_ads, dc_ads);
+            ads(i) = c_ads;
+            dads(i) = dc_ads;
+        }
+
+        ADB::M dads_diag = spdiag(dads);
+        int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dads_diag * c.derivative()[block];
+        }
+
+        return ADB::function(ads, jacs);
+    }
+
+
+    V
+    PolymerPropsAd::effectiveRelPerm(const V& c, 
+                                     const V& cmax_cells,
+                                     const V& krw) const
+    {
+        const int nc = c.size();
+
+        V one  = V::Ones(nc);
+        V ads = adsorption(c);
+        double max_ads = polymer_props_.cMaxAds();
+        double res_factor = polymer_props_.resFactor();
+        double factor = (res_factor -1.) / max_ads;
+        V rk = one + factor * ads;
+        V krw_eff = krw / rk;
+
+        return eff_relperm;
+    }
+
+
+    ADB
+    PolymerPropsAd::effectiveRelPerm(const ADB& c,
+                                     const ADB& cmax_cells,
+                                     const ADB& krw,
+                                     const ADB& sw) const
+    {
+        const int nc = c.value().size();
+
+        V one = V::Ones(nc);
+
+        ADB ads = adsorption(c);
+        V krw_eff = effectiveRelPerm(c.value(), cmax_cells.value(), krw.value());
+
+        double max_ads = polymer_props_.cMaxAds();
+        double res_factor = polymer_props_.resFactor();
+        double factor = (res_factor - 1.) / max_ads;
+        ADB rk = one + ads * factor; 
+        ADB::M dkrw_ds = krw.derivative() / rk.derivative();
+        ADB::M dkrw_dc = -krw.value() / (rk.value * rk.value()) * ads.derivative() * factor;
+
+        const int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jac[block] = dkrw_ds * sw.derivative()[block] + dkrw_dc * c.derivative()[block];
+        }
+
+        return ADB::function(krw_eff, jacs);
     }
 
 }// namespace Opm

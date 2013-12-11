@@ -246,7 +246,6 @@ typedef Eigen::Array<double,
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             const ADB mflux = computeMassFlux(phase, trans, kr, state);
             ADB source = accumSource(phase, kr, src);
- //           std::cout << "phase-"<<phase<<"-source\n"<< source.value() << std::endl;
             residual_[phase] =
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
                 + ops_.div*mflux - source;
@@ -255,7 +254,6 @@ typedef Eigen::Array<double,
         const ADB src_polymer = polymerSource(kr, src, polymer_inflow, state);
         ADB mc = computeMc(state);
         ADB poly_mflux  = computePolymerMassFlux(trans, mc, kr, state);
-//      std::cout << "polymer source \n" << src_polymer.value() << std::endl;
         residual_[2] = pvdt * (state.saturation[0] * state.concentration 
                       - old_state.saturation[0] * old_state.concentration) 
                       + ops_.div * poly_mflux - src_polymer;
