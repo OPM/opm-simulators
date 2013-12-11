@@ -39,7 +39,7 @@ try
     int nx = param.getDefault("nx", 30);
     int ny = param.getDefault("ny", 30);
     int nz = 1;
-    double dx = 10.0;
+    double dx = 10./nx;
     double dy = 1.0;
     double dz = 1.0;
     GridManager grid_manager(nx, ny, nz, dx, dy, dz);
@@ -60,7 +60,7 @@ try
 
     // Init polymer properties.
     // Setting defaults to provide a simple example case.
-        PolymerProperties polymer_props(deck);
+    PolymerProperties polymer_props(deck);
   #if 0
     if (use_poly_deck) {
     } else {
@@ -96,8 +96,8 @@ try
     std::vector<double> omega;
     std::vector<double> src(num_cells, 0.0);
     std::vector<double> src_polymer(num_cells);
-    src[0] = 10. / day;
-    src[num_cells-1] = -10. / day;
+    src[0] = param.getDefault("insrc", 1.) / day;
+    src[num_cells-1] = -param.getDefault("insrc", 1.) / day;
 
     PolymerInflowBasic polymer_inflow(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                       param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
@@ -127,12 +127,22 @@ try
     state.concentration() = c;
     std::ostringstream vtkfilename;
     double currentime = 0;
+
+    // Write the initial state.
+    vtkfilename.str("");
+    vtkfilename << "sim_poly2p_fincomp_ad_" << std::setw(3) << std::setfill('0') << 0<< ".vtu";
+    std::ofstream vtkfile(vtkfilename.str().c_str());
+    Opm::DataMap dm;
+    dm["saturation"] = &state.saturation();
+    dm["pressure"] = &state.pressure();
+    dm["concentration"] = &state.concentration();
+    Opm::writeVtkData(grid, dm, vtkfile);
     for (int i = 0; i < num_time_steps; ++i) {
         currentime += dt;
         polymer_inflow.getInflowValues(currentime, currentime+dt, src_polymer);
         solver.step(dt, state, src, src_polymer);
         vtkfilename.str("");
-        vtkfilename << "sim_poly2p_fincomp_ad_" << std::setw(3) << std::setfill('0') << i << ".vtu";
+        vtkfilename << "sim_poly2p_fincomp_ad_" << std::setw(3) << std::setfill('0') << i + 1<< ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();

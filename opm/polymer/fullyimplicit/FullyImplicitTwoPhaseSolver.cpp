@@ -396,7 +396,8 @@ typedef Eigen::Array<double,
 //        const ADB tr_mult = transMult(state.pressure);
         const double* mus = fluid_.viscosity();
         ADB  mob = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
-
+        if (phase ==0)
+            std::cout << "watetr mob\n" << mob.value() << std::endl;
         const ADB dp = ops_.ngrad * state.pressure;
         const ADB head = trans * dp;
 

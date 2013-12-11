@@ -165,8 +165,8 @@ typedef Eigen::Array<double,
         // Concentration
         assert(not x.concentration().empty());
         const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
-
         state.concentration = ADB::constant(c);
+
         return state;
     }
 
@@ -246,25 +246,16 @@ typedef Eigen::Array<double,
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             const ADB mflux = computeMassFlux(phase, trans, kr, state);
             ADB source = accumSource(phase, kr, src);
+ //           std::cout << "phase-"<<phase<<"-source\n"<< source.value() << std::endl;
             residual_[phase] =
                 pvdt*(state.saturation[phase] - old_state.saturation[phase])
                 + ops_.div*mflux - source;
         }
       // Mass balance equation for polymer
         const ADB src_polymer = polymerSource(kr, src, polymer_inflow, state);
-  //      std::cout << "polymer src\n";
-   //     std::cout << src_polymer << std::endl;
- //       const ADB src_polymer =ADB::function(V::Zero(grid_.number_of_cells), state.concentration.derivative());
         ADB mc = computeMc(state);
-        
         ADB poly_mflux  = computePolymerMassFlux(trans, mc, kr, state);
-#if 0
-        std::cout << "polymer mass\n";
-        std::cout << pvdt * (state.saturation[0] * state.concentration 
-                               - old_state.saturation[0] * old_state.concentration) <<std::endl;
-        std::cout << "polymer mass flux\n";
-        std::cout << poly_mflux << std::endl;
-#endif     
+//      std::cout << "polymer source \n" << src_polymer.value() << std::endl;
         residual_[2] = pvdt * (state.saturation[0] * state.concentration 
                       - old_state.saturation[0] * old_state.concentration) 
                       + ops_.div * poly_mflux - src_polymer;
@@ -418,7 +409,6 @@ typedef Eigen::Array<double,
         const V p = p_old - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
-
         // Saturation updates.
         const double dsmax = 0.3;
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
@@ -472,8 +462,18 @@ typedef Eigen::Array<double,
     {
 //        const ADB tr_mult = transMult(state.pressure);
         const double* mus = fluid_.viscosity();
-        ADB  mob = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
-
+        ADB mob = ADB::null();
+        if (phase == 0) {
+            ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mus);
+//            for (int i = 0; i < grid_.number_of_cells; ++i) {
+//             std::cout << state.concentration.value()(i) << "  " << 1./inv_wat_eff_vis.value()(i) << std::endl;
+//            std::cout << "water effective vis\n"<<1./inv_wat_eff_v1./inv_wat_eff_vis.value()is.value()<<std::endl;
+//            }
+            mob = kr[0] * inv_wat_eff_vis;
+//            std::cout << "watetr mob\n" << mob.value() << std::endl;
+        } else if (phase == 1) {
+            mob = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
+        }
         const ADB dp = ops_.ngrad * state.pressure;
         const ADB head = trans * dp;
 
@@ -490,8 +490,8 @@ typedef Eigen::Array<double,
 
    {
         const double* mus = fluid_.viscosity();
-        ADB water_mob = kr[0] / V::Constant(kr[0].size(), 1, mus[0]);
-        ADB poly_mob = state.concentration * mc * water_mob;
+        ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mus);
+        ADB poly_mob =  mc * kr[0] * inv_wat_eff_vis;
         
         const ADB dp = ops_.ngrad * state.pressure;
         const ADB head = trans * dp;

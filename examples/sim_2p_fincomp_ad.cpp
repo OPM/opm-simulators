@@ -24,14 +24,14 @@
 int main (int argc, char** argv)
 try
 {
-    int nx = 30;
-    int ny = 30;
-    int nz = 1;
-    double dx = 2.0;
-    double dy = 2.0;
-    double dz = 0.5;
     using namespace Opm;
     parameter::ParameterGroup param(argc, argv, false);
+    int nx = param.getDefault("nx", 30);
+    int ny = param.getDefault("ny", 1);
+    int nz = 1;
+    double dx = 10./nx;
+    double dy = 1.0;
+    double dz = 1.0;
     GridManager grid_manager(nx, ny, nz, dx, dy, dz);
     const UnstructuredGrid& grid = *grid_manager.c_grid();
     int num_cells = grid.number_of_cells;
@@ -49,15 +49,15 @@ try
                                 porosity, permeability, grid.dimensions, num_cells);
     std::vector<double> omega;
     std::vector<double> src(num_cells, 0.0);
-    src[0] = 10. / day;
-    src[num_cells-1] = -10. / day;
+    src[0] = 1. / day;
+    src[num_cells-1] = -1. / day;
 
     FlowBCManager bcs;
     LinearSolverUmfpack linsolver;
     FullyImplicitTwoPhaseSolver solver(grid, props, linsolver);
     std::vector<double> porevol;
     Opm::computePorevolume(grid, props.porosity(), porevol);
-    const double dt = param.getDefault("dt", 10) * day;
+    const double dt = param.getDefault("dt", 10.) * day;
     const int num_time_steps = param.getDefault("nsteps", 10);
     std::vector<int> allcells(num_cells);
     for (int cell = 0; cell < num_cells; ++cell) {
@@ -68,18 +68,25 @@ try
 
     //initial sat
     for (int c = 0; c < num_cells; ++c) {
-        state.saturation()[2*c] = 0;
-        state.saturation()[2*c+1] = 1;
+        state.saturation()[2*c] = 0.2;
+        state.saturation()[2*c+1] = 0.8;
     }
     std::vector<double> p(num_cells, 100*Opm::unit::barsa);
     state.pressure() = p;
-//    state.setFirstSat(allcells, props, TwophaseState::MinSat);
     std::ostringstream vtkfilename;
 
+    // Write the initial state.
+    vtkfilename.str("");
+    vtkfilename << "sim_2p_fincomp_" << std::setw(3) << std::setfill('0') << 0 << ".vtu";
+    std::ofstream vtkfile(vtkfilename.str().c_str());
+    Opm::DataMap dm;
+    dm["saturation"] = &state.saturation();
+    dm["pressure"] = &state.pressure();
+    Opm::writeVtkData(grid, dm, vtkfile);
     for (int i = 0; i < num_time_steps; ++i) {
         solver.step(dt, state, src);
         vtkfilename.str("");
-        vtkfilename << "sim_2p_fincomp-" << std::setw(3) << std::setfill('0') << i << ".vtu";
+        vtkfilename << "sim_2p_fincomp_" << std::setw(3) << std::setfill('0') << i + 1 << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
