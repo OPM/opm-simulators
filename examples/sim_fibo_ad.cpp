@@ -49,6 +49,9 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -101,13 +104,17 @@ try
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
     deck.reset(new EclipseGridParser(deck_filename));
+
+    Opm::ParserPtr newParser(new Opm::Parser() );
+    Opm::DeckConstPtr newParserDeck = newParser->parse( deck_filename );
+
     // Grid init
     grid.reset(new GridManager(*deck));
 
     Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
+    props.reset(new BlackoilPropertiesFromDeck(*deck, newParserDeck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(*deck, newParserDeck, *grid->c_grid()));
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.

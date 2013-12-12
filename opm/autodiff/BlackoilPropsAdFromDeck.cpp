@@ -32,6 +32,8 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 namespace Opm
 {
 
@@ -45,6 +47,7 @@ namespace Opm
 
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+                                                     Opm::DeckConstPtr newParserDeck,
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
     {

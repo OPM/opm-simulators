@@ -46,6 +46,9 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/SimulatorCompressibleAd.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
@@ -98,10 +101,13 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         deck.reset(new EclipseGridParser(deck_filename));
+        Opm::ParserPtr newParser(new Opm::Parser() );
+        Opm::DeckConstPtr newParserDeck = newParser->parse( deck_filename );
+
         // Grid init
         grid.reset(new GridManager(*deck));
         // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
+        props.reset(new BlackoilPropertiesFromDeck(*deck, newParserDeck, *grid->c_grid(), param));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
