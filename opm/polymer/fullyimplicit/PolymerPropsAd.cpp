@@ -170,6 +170,12 @@ namespace Opm {
     }
 
 
+    double
+    PolymerPropsAd::deadPoreVol() const
+    {
+        return polymer_props_.deadPoreVol();
+    }
+
 
 
 

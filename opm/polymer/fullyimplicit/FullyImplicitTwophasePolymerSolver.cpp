@@ -260,21 +260,27 @@ typedef Eigen::Array<double,
         const ADB cmax = computeCmax(state.concentration);
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
-
+        std::cout << "krw  krw_eff\n";
+        for (int i = 0; i < grid_.number_of_cells; ++i) {
+            std::cout <<kr[0].value()(i)<<"  "<<krw_eff.value()(i)<< std::endl;
+        }
         const ADB mc = computeMc(state);
-        const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[0], krw_eff, state);
+       // const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[0], krw_eff, state);
+        const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[1], krw_eff, state);
         const std::vector<ADB> source = accumSource(kr[1], krw_eff, state.concentration, src, polymer_inflow);
         const double rho_r = polymer_props_ad_.rockDensity();
         const V phi = V::Constant(pvdt.size(), 1, *fluid_.porosity());
-        residual_[0] =  pvdt*(state.saturation[0] - old_state.saturation[0])
-                        + ops_.div*mflux[0] - source[0];
-        residual_[1] =  pvdt*(state.saturation[1] - old_state.saturation[1])
-                        + ops_.div*mflux[1] - source[1];
+
+        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
+        residual_[0] =  pvdt * (state.saturation[0] - old_state.saturation[0])
+                        + ops_.div * mflux[0] - source[0];
+        residual_[1] =  pvdt * (state.saturation[1] - old_state.saturation[1])
+                        + ops_.div * mflux[1] - source[1];
       // Mass balance equation for polymer
-        residual_[2] = pvdt * (state.saturation[0] * state.concentration 
-                      - old_state.saturation[0] * old_state.concentration)
+        residual_[2] = pvdt * (state.saturation[0] * state.concentration
+                      - old_state.saturation[0] * old_state.concentration) * (1. - dead_pore_vol)
                       + pvdt * rho_r * (1. - phi) / phi * ads
-                      + ops_.div * mflux[3] - source[3];
+                      + ops_.div * mflux[2] - source[2];
 
     }
    
