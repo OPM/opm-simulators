@@ -228,7 +228,7 @@ typedef Eigen::Array<double,
 
     ADB 
     FullyImplicitTwophasePolymerSolver::
-    computeCmax(const ADB& c)
+    computeCmax(const ADB& c) const
     {
         const int nc = c.value().size();
         V cmax(nc);
@@ -258,8 +258,8 @@ typedef Eigen::Array<double,
         const std::vector<ADB> kr = computeRelPerm(state);
 
         const ADB cmax = computeCmax(state.concentration);
-        const ADB ads = adsorption(state.concentration, cmax);
-        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(c, cmax, kr[0], state.saturation[0]);
+        const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
+        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
 
         const ADB mc = computeMc(state);
         const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[0], krw_eff, state);
@@ -274,7 +274,7 @@ typedef Eigen::Array<double,
         residual_[2] = pvdt * (state.saturation[0] * state.concentration 
                       - old_state.saturation[0] * old_state.concentration)
                       + pvdt * rho_r * (1. - phi) / phi * ads
-                      + ops_.div * mflux[3] - srouce[3];
+                      + ops_.div * mflux[3] - source[3];
 
     }
    
@@ -289,7 +289,7 @@ typedef Eigen::Array<double,
         std::vector<ADB> mflux;
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mus);
         ADB wat_mob = krw_eff * inv_wat_eff_vis;
-        ADB oil_mob = kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
+        ADB oil_mob = kro / V::Constant(kro.size(), 1, mus[1]);
         ADB poly_mob =  mc * krw_eff * inv_wat_eff_vis;
 
 
@@ -325,11 +325,10 @@ typedef Eigen::Array<double,
                 insrc.push_back(*it);
                 outsrc.push_back(0.0);
             } else {
-                outsrc.emplace_back(0);
-                insrc.emplace_back(0);
+                outsrc.push_back(0);
+                insrc.push_back(0);
             }
         }
-        const V source = Eigen::Map<const V>(& src[0], grid_.number_of_cells);
         const V outSrc = Eigen::Map<const V>(& outsrc[0], grid_.number_of_cells);
         const V inSrc = Eigen::Map<const V>(& insrc[0], grid_.number_of_cells);
         const V polyin = Eigen::Map<const V>(& polymer_inflow_c[0], grid_.number_of_cells);
@@ -338,7 +337,6 @@ typedef Eigen::Array<double,
         // compute the in-fracflow.
         V   zero = V::Zero(grid_.number_of_cells);
         V   one  = V::Ones(grid_.number_of_cells);
-        return f_out * outSrc + f_in * inSrc ;
 
         std::vector<ADB> source;
         //water source
@@ -346,7 +344,9 @@ typedef Eigen::Array<double,
         //oil source
         source.push_back(f[1] * outSrc + zero * inSrc);
         //polymer source
-        source.push_back(f[0] * outSrc * c + one * inSrc * polyin)
+        source.push_back(f[0] * outSrc * c + one * inSrc * polyin);
+
+        return source;
      }
 
 
@@ -359,8 +359,8 @@ typedef Eigen::Array<double,
     {
         const double* mus = fluid_.viscosity();
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(c, mus);
-        ADB wat_mob = kr[0] * inv_wat_eff_vis;
-        ADB oil_mob = kr[1] / V::Constant(kr[1].size(), 1, mus[1]);
+        ADB wat_mob = krw_eff * inv_wat_eff_vis;
+        ADB oil_mob = kro / V::Constant(kro.size(), 1, mus[1]);
         ADB total_mob = wat_mob + oil_mob;
 
         std::vector<ADB> fracflow;

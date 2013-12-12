@@ -90,11 +90,6 @@ namespace Opm {
         computeFracFlow(const ADB& kro,
                         const ADB& krw_eff,
                         const ADB& c) const;
-        ADB 
-        computePolymerMassFlux(const V& trans,
-                               const ADB& mc, 
-                               const std::vector<ADB>& kr,
-                               const SolutionState& state) const;
         double
         residualNorm() const;
         ADB
@@ -103,6 +98,8 @@ namespace Opm {
                       const std::vector<double>& polymer_inflow_c,
                       const SolutionState& state) const;
 
+        ADB
+        computeCmax(const ADB& c) const;
         ADB 
         computeMc(const SolutionState& state) const;
         ADB
