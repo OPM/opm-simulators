@@ -70,18 +70,26 @@ namespace Opm {
         computeRelPerm(const SolutionState& state) const;
         V
         transmissibility() const;
-        ADB
-        computeFracFlow(int    phase,
-                        const std::vector<ADB>& kr) const;
-        ADB 
-        accumSource(const int phase,
-                    const std::vector<ADB>& kr,
-                    const std::vector<double>& src) const;
-        ADB
-        computeMassFlux(const int               phase,
-                        const V&                trans,
-                        const std::vector<ADB>& kr,
-                        const SolutionState&    state) const;
+        
+        std::vector<ADB>
+        computeMassFlux(const V&                trans,
+                        const ADB&              mc,
+                        const ADB&              kro,
+                        const ADB&              krw_eff,
+                        const SolutionState&    state ) const;
+    
+        std::vector<ADB>
+        accumSource(const ADB&                 kro,
+                    const ADB&                 krw_eff,
+                    const ADB&                 c,
+                    const std::vector<double>& src,
+                    const std::vector<double>& polymer_inflow_c) const;
+
+        
+        std::vector<ADB>
+        computeFracFlow(const ADB& kro,
+                        const ADB& krw_eff,
+                        const ADB& c) const;
         ADB 
         computePolymerMassFlux(const V& trans,
                                const ADB& mc, 
