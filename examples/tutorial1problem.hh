@@ -23,31 +23,29 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::TutorialProblemCoupled
+ * \copydoc Ewoms::Tutorial1Problem
  */
-#ifndef EWOMS_TUTORIAL1_PROBLEM_HH // guardian macro
-                                   // /*@\label{tutorial-coupled:guardian1}@*/
-#define EWOMS_TUTORIAL1_PROBLEM_HH // guardian macro
-                                   // /*@\label{tutorial-coupled:guardian2}@*/
+#ifndef EWOMS_TUTORIAL1_PROBLEM_HH /*@\label{tutorial1:guardian1}@*/
+#define EWOMS_TUTORIAL1_PROBLEM_HH /*@\label{tutorial1:guardian2}@*/
 
 // The numerical model
 #include <ewoms/models/immiscible/immisciblemodel.hh>
+
+// The spatial discretization (VCFV == Vertex-Centered Finite Volumes)
+#include <ewoms/disc/vcfv/vcfvdiscretization.hh>  /*@\label{tutorial1:include-discretization}@*/
 
 // The chemical species that are used
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Lnapl.hpp>
 
 // Headers required for the capillary pressure law
-#include                                                                       \
-    <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp> /*@\label{tutorial-coupled:rawLawInclude}@*/
+#include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp> /*@\label{tutorial1:rawLawInclude}@*/
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 // For the DUNE grid
-#include                                                                       \
-    <dune/grid/yaspgrid.hh> /*@\label{tutorial-coupled:include-grid-manager}@*/
-#include                                                                       \
-    <ewoms/io/cubegridcreator.hh> /*@\label{tutorial-coupled:include-grid-creator}@*/
+#include <dune/grid/yaspgrid.hh> /*@\label{tutorial1:include-grid-manager}@*/
+#include <ewoms/io/cubegridcreator.hh> /*@\label{tutorial1:include-grid-creator}@*/
 
 // For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>
@@ -56,99 +54,88 @@
 namespace Ewoms {
 // forward declaration of the problem class
 template <class TypeTag>
-class TutorialProblemCoupled;
+class Tutorial1Problem;
 }
 
 namespace Opm {
 namespace Properties {
 // Create a new type tag for the problem
-NEW_TYPE_TAG(TutorialProblemCoupled,
-             INHERITS_FROM(VcfvImmiscibleTwoPhase)); /*@\label
-             {tutorial-coupled:create-type-tag}@*/
+NEW_TYPE_TAG(Tutorial1Problem, INHERITS_FROM(ImmiscibleTwoPhaseModel)); /*@\label{tutorial1:create-type-tag}@*/
+
+// Select the vertex centered finite volume method as spatial discretization
+SET_TAG_PROP(Tutorial1Problem, SpatialDiscretizationSplice,
+             VcfvDiscretization); /*@\label{tutorial1:set-spatial-discretization}@*/
 
 // Set the "Problem" property
-SET_PROP(TutorialProblemCoupled,
-         Problem) /*@\label{tutorial-coupled:set-problem}@*/
-{
-    typedef Ewoms::TutorialProblemCoupled<TypeTag> type;
-};
+SET_TYPE_PROP(Tutorial1Problem, Problem,
+              Ewoms::Tutorial1Problem<TypeTag>); /*@\label{tutorial1:set-problem}@*/
 
 // Set grid and the grid creator to be used
-SET_TYPE_PROP(TutorialProblemCoupled, Grid,
-              Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial-coupled:set-grid}@*/
-SET_TYPE_PROP(TutorialProblemCoupled, GridCreator,
-              Ewoms::CubeGridCreator<TypeTag>); /*@\label{tutorial-coupled:set-gridcreator}@*/
+SET_TYPE_PROP(Tutorial1Problem, Grid, Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial1:set-grid}@*/
+SET_TYPE_PROP(Tutorial1Problem, GridCreator, Ewoms::CubeGridCreator<TypeTag>); /*@\label{tutorial1:set-gridcreator}@*/
 
-// Set the wetting phase /*@\label{tutorial-coupled:2p-system-start}@*/
-SET_TYPE_PROP(
-    TutorialProblemCoupled,
-    WettingPhase, /*@\label{tutorial-coupled:wettingPhase}@*/
-    Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                     Opm::SimpleH2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
+// Set the wetting phase /*@\label{tutorial1:2p-system-start}@*/
+SET_TYPE_PROP(Tutorial1Problem,
+              WettingPhase, /*@\label{tutorial1:wettingPhase}@*/
+              Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+                               Opm::SimpleH2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
 
 // Set the non-wetting phase
-SET_TYPE_PROP(
-    TutorialProblemCoupled,
-    NonwettingPhase, /*@\label{tutorial-coupled:nonwettingPhase}@*/
-    Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                     Opm::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >); /*@\label
-                     {tutorial-coupled:2p-system-end}@*/
+SET_TYPE_PROP(Tutorial1Problem,
+              NonwettingPhase, /*@\label{tutorial1:nonwettingPhase}@*/
+              Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
+                               Opm::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >); /*@\label{tutorial1:2p-system-end}@*/
 
 // Set the material law
-SET_PROP(TutorialProblemCoupled, MaterialLaw)
+SET_PROP(Tutorial1Problem, MaterialLaw)
 {
 private:
     // create a class holding the necessary information for a
     // two-phase capillary pressure law
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
+    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
-    Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedBrooksCorey<Traits>
-    RawMaterialLaw; /*@\label{tutorial-coupled:rawlaw}@*/
+    typedef Opm::RegularizedBrooksCorey<Traits> RawMaterialLaw; /*@\label{tutorial1:rawlaw}@*/
 
 public:
     // Convert absolute saturations into effective ones before passing
     // it to the base capillary pressure law
-    typedef Opm::EffToAbsLaw<RawMaterialLaw> type; /*@\label{tutorial-coupled:eff2abs}@*/
+    typedef Opm::EffToAbsLaw<RawMaterialLaw> type; /*@\label{tutorial1:eff2abs}@*/
 };
 
 // Disable gravity
-SET_BOOL_PROP(TutorialProblemCoupled, EnableGravity,
-              false); /*@\label{tutorial-coupled:gravity}@*/
+SET_BOOL_PROP(Tutorial1Problem, EnableGravity, false); /*@\label{tutorial1:gravity}@*/
 
 // define how long the simulation should run [s]
-// /*@\label{tutorial-coupled:default-params-begin}@*/
-SET_SCALAR_PROP(TutorialProblemCoupled, EndTime, 100e3);
+SET_SCALAR_PROP(Tutorial1Problem, EndTime, 100e3); /*@\label{tutorial1:default-params-begin}@*/
 
 // define the size of the initial time step [s]
-SET_SCALAR_PROP(TutorialProblemCoupled, InitialTimeStepSize, 125.0);
+SET_SCALAR_PROP(Tutorial1Problem, InitialTimeStepSize, 125.0);
 
 // define the physical size of the problem's domain [m]
-SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeX,
-                300.0); /*@\label{tutorial-coupled:grid-default-params-begin}@*/
-SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeY, 60.0);
-SET_SCALAR_PROP(TutorialProblemCoupled, DomainSizeZ, 0.0);
+SET_SCALAR_PROP(Tutorial1Problem, DomainSizeX, 300.0); /*@\label{tutorial1:grid-default-params-begin}@*/
+SET_SCALAR_PROP(Tutorial1Problem, DomainSizeY, 60.0);
+SET_SCALAR_PROP(Tutorial1Problem, DomainSizeZ, 0.0);
 
 // // define the number of cells used for discretizing the physical domain
-SET_INT_PROP(TutorialProblemCoupled, CellsX, 100);
-SET_INT_PROP(TutorialProblemCoupled, CellsY, 1);
-SET_INT_PROP(TutorialProblemCoupled, CellsZ,
-             1); /*@\label{tutorial-coupled:default-params-end}@*/
+SET_INT_PROP(Tutorial1Problem, CellsX, 100);
+SET_INT_PROP(Tutorial1Problem, CellsY, 1);
+SET_INT_PROP(Tutorial1Problem, CellsZ, 1); /*@\label{tutorial1:default-params-end}@*/
 } // namespace Properties
 } // namespace Opm
 
 namespace Ewoms {
-//! Tutorial problem using the fully-implicit immiscible model.
+//! Tutorial problem using the "immiscible" model.
 template <class TypeTag>
-class TutorialProblemCoupled
-    : public GET_PROP_TYPE(TypeTag,
-                           BaseProblem) /*@\label{tutorial-coupled:def-problem}@*/
+class Tutorial1Problem
+    : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\label{tutorial1:def-problem}@*/
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -164,13 +151,11 @@ class TutorialProblemCoupled
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams)
-        MaterialLawParams; /*@\label{tutorial-coupled:matLawObjectType}@*/
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams; /*@\label{tutorial1:matLawObjectType}@*/
 
     // phase indices
     enum { numPhases = FluidSystem::numPhases };
@@ -183,7 +168,7 @@ class TutorialProblemCoupled
 
 public:
     //! The constructor of the problem
-    TutorialProblemCoupled(TimeManager &timeManager)
+    Tutorial1Problem(TimeManager &timeManager)
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         : ParentType(timeManager,
                      GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
@@ -197,8 +182,7 @@ public:
         K_ = this->toDimMatrix_(1e-7);
 
         // Parameters of the Brooks-Corey law
-        materialParams_.setEntryPressure(500.0); // entry pressure [Pa]
-        // /*@\label{tutorial-coupled:setLawParams}@*/
+        materialParams_.setEntryPressure(500.0 /*Pa*/); /*@\label{tutorial1:setLawParams}@*/
         materialParams_.setLambda(2); // shape parameter
 
         // Set the residual saturations
@@ -209,8 +193,7 @@ public:
         materialParams_.finalize();
     }
 
-    //! Specifies the problem name. This is used for files generated by the
-    // simulation.
+    //! Specifies the problem name. This is used for files generated by the simulation.
     const char *name() const
     { return "tutorial_coupled"; }
 
@@ -221,22 +204,20 @@ public:
 
     //! Returns the intrinsic permeability tensor [m^2] at a position.
     template <class Context>
-    const DimMatrix &intrinsicPermeability(
-        const Context &context, /*@\label{tutorial-coupled:permeability}@*/
-        int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, /*@\label{tutorial1:permeability}@*/
+                                           int spaceIdx, int timeIdx) const
     { return K_; }
 
     //! Defines the porosity [-] of the medium at a given position
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx,
-                    int timeIdx) const /*@\label{tutorial-coupled:porosity}@*/
+    Scalar porosity(const Context &context,
+                    int spaceIdx, int timeIdx) const /*@\label{tutorial1:porosity}@*/
     { return 0.2; }
 
     //! Returns the parameter object for the material law at a given position
     template <class Context>
-    const MaterialLawParams &materialLawParams(
-        const Context &context, /*@\label{tutorial-coupled:matLawParams}@*/
-        int spaceIdx, int timeIdx) const
+    const MaterialLawParams &materialLawParams(const Context &context, /*@\label{tutorial1:matLawParams}@*/
+                                               int spaceIdx, int timeIdx) const
     { return materialParams_; }
 
     //! Evaluates the boundary conditions.
@@ -277,8 +258,8 @@ public:
     }
 
     //! Evaluates the source term for all conserved quantities at a given
-    // position
-    //! of the domain [kg/(m^3 * s)]. Positive values mean that mass is created.
+    //! position of the domain [kg/(m^3 * s)]. Positive values mean that
+    //! mass is created.
     template <class Context>
     void source(RateVector &source, const Context &context, int spaceIdx,
                 int timeIdx) const
@@ -315,8 +296,8 @@ public:
 
 private:
     DimMatrix K_;
-    // Object that holds the values/parameters of the selected material law.
-    MaterialLawParams materialParams_; /*@\label{tutorial-coupled:matParamsObject}@*/
+    // Object that holds the parameters of required by the capillary pressure law.
+    MaterialLawParams materialParams_; /*@\label{tutorial1:matParamsObject}@*/
 
     // small epsilon value
     Scalar eps_;
