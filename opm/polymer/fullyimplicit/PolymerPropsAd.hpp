@@ -63,6 +63,7 @@ namespace Opm {
                      const ADB& muWat,
                      const ADB& muPolyEff) const;
 */
+        double rockDensity() const;
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         PolymerPropsAd(const PolymerProperties& polymer_props);

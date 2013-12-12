@@ -163,6 +163,16 @@ namespace Opm {
 
     }
 */
+    double
+    PolymerPropsAd::rockDensity() const
+    {
+        return polymer_props_.rockDensity();
+    }
+
+
+
+
+
     PolymerPropsAd::PolymerPropsAd(const PolymerProperties& polymer_props)
         : polymer_props_ (polymer_props)
     {
