@@ -21,17 +21,15 @@
 /*!
  * \file
  *
- * \brief Main file of the tutorial for a fully coupled twophase VCVF
- *discretization.
+ * \brief Main file of the tutorial problem using the model which assumes
+ *        immisciblility.
  */
-#include "config.h"              /*@\label{tutorial-coupled:include-begin}@*/
-#include <ewoms/common/start.hh> /*@\label{tutorial-coupled:include-end}@*/
-#include "tutorial1problem.hh" /*@\label{tutorial-coupled:include-problem-header}@*/
+#include "config.h"              /*@\label{tutorial1:include-begin}@*/
+#include <ewoms/common/start.hh> /*@\label{tutorial1:include-end}@*/
+#include "tutorial1problem.hh" /*@\label{tutorial1:include-problem-header}@*/
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(
-        TutorialProblemCoupled) TypeTag; /*@\label{tutorial-coupled:set-type-tag}@*/
-    return Ewoms::start<TypeTag>(argc,
-                                 argv); /*@\label{tutorial-coupled:call-start}@*/
+    typedef TTAG(Tutorial1Problem) TypeTag; /*@\label{tutorial1:set-type-tag}@*/
+    return Ewoms::start<TypeTag>(argc, argv); /*@\label{tutorial1:call-start}@*/
 }
