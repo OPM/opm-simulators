@@ -119,7 +119,7 @@ namespace Opm
                 simpleAdsorptionBoth(c, c_ads, dc_ads_dc, if_with_der);
             }
         } else {
-            THROW("Invalid Adsoption index");
+            OPM_THROW(std::runtime_error, "Invalid Adsoption index");
         }
     }
 

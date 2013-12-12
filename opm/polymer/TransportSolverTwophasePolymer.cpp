@@ -24,9 +24,10 @@
 #include <opm/core/utility/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <cmath>
 #include <list>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <iostream>
 // Choose error policy for scalar solves here.
 typedef Opm::RegulaFalsi<Opm::WarnAndContinueOnError> RootFinder;
 
@@ -199,7 +200,7 @@ namespace Opm
 	  adhoc_safety_(1.1) 
     {
 	if (props.numPhases() != 2) {
-	    THROW("Property object must have 2 phases");
+	    OPM_THROW(std::runtime_error, "Property object must have 2 phases");
 	}
 	visc_ = props.viscosity();
 
@@ -569,7 +570,7 @@ namespace Opm
 	    solveSingleCellNewtonSimple(cell,false);
 	    break;	    
 	default:
-	    THROW("Unknown method " << method_);
+	    OPM_THROW(std::runtime_error, "Unknown method " << method_);
 	}
     }
 
@@ -751,7 +752,7 @@ namespace Opm
 
 
         if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
-            MESSAGE("Newton for single cell did not work in cell number " << cell);
+            OPM_MESSAGE("Newton for single cell did not work in cell number " << cell);
             solveSingleCellBracketing(cell);
         } else {
             scToc(x, x_c);
@@ -850,7 +851,7 @@ namespace Opm
 	}
 		
 	if ((iters_used_split >=  max_iters_split) && (norm(res) > tol_)) {
-	    MESSAGE("Newton for single cell did not work in cell number " << cell);
+	    OPM_MESSAGE("Newton for single cell did not work in cell number " << cell);
 	    solveSingleCellBracketing(cell);
 	} else {
 	    concentration_[cell] = x[1];
@@ -943,7 +944,7 @@ namespace Opm
 	    }
 	    det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
 	    if(det==0){
-		THROW("det is zero");
+		OPM_THROW(std::runtime_error, "det is zero");
 	    }
 
 	    double alpha=1;
@@ -997,7 +998,7 @@ namespace Opm
 	}
 		
 	if ((iters_used_split >=  max_iters_split) || (norm(res) > tol_)) {
-	    MESSAGE("NewtonSimple for single cell did not work in cell number " << cell);
+	    OPM_MESSAGE("NewtonSimple for single cell did not work in cell number " << cell);
 	    solveSingleCellBracketing(cell);
 	} else {
 	    concentration_[cell] = x[1];
@@ -1056,11 +1057,11 @@ namespace Opm
 	    // 	      << "    in cell " << max_change_cell << std::endl;
 	} while (((max_s_change > tol_) || (max_c_change > tol_)) && ++num_iters < maxit_);
 	if (max_s_change > tol_) {
-	    THROW("In solveMultiCell(), we did not converge after "
+	    OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
 		  << num_iters << " iterations. Delta s = " << max_s_change);
 	}
 	if (max_c_change > tol_) {
-	    THROW("In solveMultiCell(), we did not converge after "
+	    OPM_THROW(std::runtime_error, "In solveMultiCell(), we did not converge after "
 		  << num_iters << " iterations. Delta c = " << max_c_change);
 	}
 	std::cout << "Solved " << num_cells << " cell multicell problem in "
@@ -1365,7 +1366,7 @@ namespace Opm
 	} while (max_sc_change > tol_ && ++num_iters < maxit_);
 
 	if (max_sc_change > tol_) {
-	    THROW("In solveGravityColumn(), we did not converge after "
+	    OPM_THROW(std::runtime_error, "In solveGravityColumn(), we did not converge after "
 	    	  << num_iters << " iterations. Delta s = " << max_sc_change);
 	}
         return num_iters + 1;
@@ -1501,7 +1502,7 @@ namespace
 	} else if (t1_exists) {
 	    t_out_ = t1;
 	} else {
-	    THROW("Direction illegal: is a zero vector.");
+	    OPM_THROW(std::runtime_error, "Direction illegal: is a zero vector.");
 	}
 	x_out_[0] = x_[0] + t_out_*direction_[0];
 	x_out_[1] = x_[1] + t_out_*direction_[1];

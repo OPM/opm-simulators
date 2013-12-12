@@ -46,7 +46,7 @@ namespace Opm
         if (step_start + eps >= stime_ && step_end - eps <= etime_) {
             std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
         } else if (step_start + eps <= etime_ && step_end - eps >= stime_) {
-            MESSAGE("Warning: polymer injection set to change inside timestep. Using value at start of step.");
+            OPM_MESSAGE("Warning: polymer injection set to change inside timestep. Using value at start of step.");
             std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
         } else {
             std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), 0.0);
@@ -66,7 +66,7 @@ namespace Opm
         : sparse_inflow_(num_cells)
     {
         if (!deck.hasField("WPOLYMER")) {
-            MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
+            OPM_MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
             return;
         }
 
@@ -85,7 +85,7 @@ namespace Opm
                 }
             }
             if (wix == wells.number_of_wells) {
-                THROW("Could not find a match for well " << wpl[i].well_ << " from WPOLYMER.");
+                OPM_THROW(std::runtime_error, "Could not find a match for well " << wpl[i].well_ << " from WPOLYMER.");
             }
             for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
                 const int perf_cell = wells.well_cells[j];

@@ -117,7 +117,7 @@ namespace Opm
 
             // We assume NTSFUN=1
             const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
-            ASSERT(plyrock.size() == 5);
+            assert(plyrock.size() == 5);
             dead_pore_vol_ = plyrock[0];
             res_factor_ = plyrock[1];
             rock_density_ = plyrock[2];

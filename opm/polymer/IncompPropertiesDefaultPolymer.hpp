@@ -43,7 +43,7 @@ namespace Opm
         IncompPropertiesDefaultPolymer(const Opm::parameter::ParameterGroup& param, int dim, int num_cells)
             : Opm::IncompPropertiesBasic(param, dim, num_cells)
         {
-            ASSERT(numPhases() == 2);
+            assert(numPhases() == 2);
             sw_.resize(3);
             sw_[0] = 0.2;
             sw_[1] = 0.7;
@@ -76,7 +76,7 @@ namespace Opm
                              double* kr,
                              double* dkrds) const
         {
-            // ASSERT(dkrds == 0);
+            // assert(dkrds == 0);
             // We assume two phases flow
             for (int i = 0; i < n; ++i) {
                 kr[2*i] = krw(s[2*i]);
