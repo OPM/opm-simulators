@@ -439,6 +439,33 @@ namespace Opm
         return b;
     }
 
+    /// Gas formation volume factor.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  rv     Array of n vapor oil/gas ratio
+    /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n formation volume factor values.
+    V BlackoilPropsAdFromDeck::bGas(const V& pg,
+           const V& rv,
+           const std::vector<PhasePresence>& cond,
+           const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+        }
+        const int n = cells.size();
+        assert(pg.size() == n);
+
+        V b(n);
+        V dbdp(n);
+        V dbdr(n);
+
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.data(), rv.data(), &cond[0],
+                                               b.data(), dbdp.data(), dbdr.data());
+
+        return b;
+    }
+
     /// Water formation volume factor.
     /// \param[in]  pw     Array of n water pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -519,9 +546,42 @@ namespace Opm
         V b(n);
         V dbdp(n);
         V dbdr(n);
-        const double* rs = 0;
+        const double* rv = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.value().data(), rs,
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.value().data(), rv,
+                                               b.data(), dbdp.data(), dbdr.data());
+
+        ADB::M dbdp_diag = spdiag(dbdp);
+        const int num_blocks = pg.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dbdp_diag * pg.derivative()[block];
+        }
+        return ADB::function(b, jacs);
+    }
+
+    /// Gas formation volume factor.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  rv     Array of n vapor oil/gas ratio
+    /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n formation volume factor values.
+    ADB BlackoilPropsAdFromDeck::bGas(const ADB& pg,
+           const ADB& rv,
+           const std::vector<PhasePresence>& cond,
+           const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+        }
+        const int n = cells.size();
+        assert(pg.size() == n);
+
+        V b(n);
+        V dbdp(n);
+        V dbdr(n);
+
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.value().data(), rv.value().data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -541,7 +601,7 @@ namespace Opm
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n bubble point values for Rs.
-    V BlackoilPropsAdFromDeck::rsMax(const V& po,
+    V BlackoilPropsAdFromDeck::rsSat(const V& po,
                                      const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -551,7 +611,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rbub(n, po.data(), rbub.data(), drbubdp.data());
+        props_[Oil]->rsSat(n, po.data(), rbub.data(), drbubdp.data());
         return rbub;
     }
 
@@ -559,7 +619,7 @@ namespace Opm
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n bubble point values for Rs.
-    ADB BlackoilPropsAdFromDeck::rsMax(const ADB& po,
+    ADB BlackoilPropsAdFromDeck::rsSat(const ADB& po,
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -569,7 +629,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rbub(n, po.value().data(), rbub.data(), drbubdp.data());
+        props_[Oil]->rsSat(n, po.value().data(), rbub.data(), drbubdp.data());
         ADB::M drbubdp_diag = spdiag(drbubdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -577,6 +637,50 @@ namespace Opm
             jacs[block] = drbubdp_diag * po.derivative()[block];
         }
         return ADB::function(rbub, jacs);
+    }
+
+    // ------ Condensation curve ------
+
+    /// Condensation curve for Rv as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    V BlackoilPropsAdFromDeck::rvSat(const V& po,
+                                     const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
+        }
+        const int n = cells.size();
+        assert(po.size() == n);
+        V rv(n);
+        V drvdp(n);
+        props_[Oil]->rvSat(n, po.data(), rv.data(), drvdp.data());
+        return rv;
+    }
+
+    /// Condensation curve for Rv as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADB BlackoilPropsAdFromDeck::rvSat(const ADB& po,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
+        }
+        const int n = cells.size();
+        assert(po.size() == n);
+        V rv(n);
+        V drvdp(n);
+        props_[Oil]->rvSat(n, po.value().data(), rv.data(), drvdp.data());
+        ADB::M drvdp_diag = spdiag(drvdp);
+        const int num_blocks = po.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = drvdp_diag * po.derivative()[block];
+        }
+        return ADB::function(rv, jacs);
     }
 
     // ------ Relative permeability ------
