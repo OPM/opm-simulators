@@ -47,13 +47,16 @@ namespace Opm
 
         std::vector<double>& surfacevol  () { return surfvol_; }
         std::vector<double>& gasoilratio () { return gor_   ; }
+        std::vector<double>& rv () {return rv_ ; }
 
         const std::vector<double>& surfacevol  () const { return surfvol_; }
         const std::vector<double>& gasoilratio () const { return gor_   ; }
+        const std::vector<double>& rv () const {return rv_ ; }
 
     private:
         std::vector<double> surfvol_;
         std::vector<double> gor_   ;
+        std::vector<double> rv_ ;
     };
 
 } // namespace Opm
