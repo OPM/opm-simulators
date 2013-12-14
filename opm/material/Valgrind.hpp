@@ -20,29 +20,16 @@
 */
 /*!
  * \file
- * \brief Some templates to wrap the valgrind macros
+ * \brief Some templates to wrap the valgrind client request macros
  */
 #ifndef OPM_VALGRIND_HPP
 #define OPM_VALGRIND_HPP
 
 #include <opm/core/utility/Unused.hpp>
 
-#if ! HAVE_VALGRIND && ! defined(DOXYGEN)
-namespace Valgrind
-{
-inline bool boolBlubb(bool value) { return value; }
-inline void voidBlubb() { }
-
-#define SetUndefined(t) voidBlubb()
-#define SetDefined(t) voidBlubb()
-#define CheckDefined(t) boolBlubb(true)
-#define SetNoAccess(t) voidBlubb()
-#define IsRunning() boolBlubb(false)
-} // namespace Valgrind
-
-#else
-
+#if HAVE_VALGRIND
 #include <valgrind/memcheck.h>
+#endif
 
 namespace Valgrind
 {
@@ -58,7 +45,6 @@ inline bool IsRunning()
     return false;
 #endif
 }
-
 
 /*!
  * \ingroup Valgrind
@@ -94,10 +80,10 @@ inline bool CheckDefined(const T &value)
     return true;
 #endif
 }
+
 /*!
  * \ingroup Valgrind
- *
- *  * \brief Make valgrind complain if any of the the memory occupied
+ * \brief Make valgrind complain if any of the the memory occupied
  *        by a C-style array objects is undefined.
  *
  * Please note that this does not check whether the destinations of an
@@ -283,7 +269,5 @@ inline void SetNoAccess(const T *value, int size)
 }
 
 } // namespace Valgrind
-
-#endif
 
 #endif
