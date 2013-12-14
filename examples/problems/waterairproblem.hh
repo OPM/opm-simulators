@@ -42,6 +42,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
 
 #include <sstream>
 #include <string>
@@ -208,7 +209,11 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     WaterAirProblem(TimeManager &timeManager)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+        : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
+#else
         : ParentType(timeManager, GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
+#endif
     {
         maxDepth_ = 1000.0; // [m]
         eps_ = 1e-6;
