@@ -213,7 +213,7 @@ namespace Opm
         if (if_with_der) {
             deff_relperm_wat_ds = (drelperm_ds[0]-drelperm_ds[2])/rk; //derivative with respect to sw
             //\frac{\partial k_{rw_eff}}{\parital c} = -\frac{krw}{rk^2}\frac{(RRF-1)}{c^a_{max}}\frac{\partial c^a}{\partial c}.
-            deff_relperm_wat_dc = -(res_factor - 1)*dc_ads_dc*relperm[0]/(rk*rk*c_max_ads_); 
+            deff_relperm_wat_dc = -(res_factor_ - 1)*dc_ads_dc*relperm[0]/(rk*rk*c_max_ads_); 
         } else {
             deff_relperm_wat_ds = -1.0;
             deff_relperm_wat_dc = -1.0;
