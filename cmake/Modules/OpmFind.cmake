@@ -137,7 +137,7 @@ macro (find_and_append_package_to prefix name)
 	# using config mode is better than using module (aka. find) mode
 	# because then the package has already done all its probes and
 	# stored them in the config file for us
-	if (NOT DEFINED ${name}_FOUND)
+	if (NOT DEFINED ${name}_FOUND AND NOT DEFINED ${NAME}_FOUND)
 	  if (${name}_DIR)
 		message (STATUS "Finding package ${name} using config mode")
 		find_package (${name} ${ARGN} NO_MODULE PATHS ${${name}_DIR} NO_DEFAULT_PATH)
@@ -146,8 +146,11 @@ macro (find_and_append_package_to prefix name)
 		find_package (${name} ${ARGN})
 	  endif ()
 	endif ()
-	if (NOT ${name}_FOUND)
-	  set (${name}_FOUND "0")
+	if (NOT DEFINED ${name}_FOUND)
+	  set (${name}_FOUND "${${NAME}_FOUND}")
+	endif ()
+	if (NOT DEFINED ${NAME}_FOUND)
+	  set (${NAME}_FOUND "${${name}_FOUND}")
 	endif ()
   endif ()
 
