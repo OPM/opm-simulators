@@ -22,14 +22,14 @@ namespace Opm {
     public:
         FullyImplicitTwoPhaseSolver(const UnstructuredGrid&        grid,
                                     const IncompPropsAdInterface&  fluid,
-                                    const Wells&                   wells,
-                                    const LinearSolverInterface&   linsolver,
-                                    const double*                  gravity);
+                                  //  const Wells&                   wells,
+                                    const LinearSolverInterface&   linsolver);
+                                  //  const double*                  gravity);
 
         void step(const double   dt,
                   TwophaseState& state,
-                  const std::vector<double>& src,
-                  WellState& wstate);
+                  const std::vector<double>& src);
+//                  WellState& wstate);
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
@@ -50,20 +50,21 @@ namespace Opm {
             std::vector<double> src;
         } source;
         */
+ /*
         struct WellOps {
             WellOps(const Wells& wells);
             M w2p;          // well->perf
             M p2w;          // perf->well
         };
-
+*/
         const UnstructuredGrid&         grid_;
         const IncompPropsAdInterface&   fluid_;
-        const Wells&                    wells_;
+  //      const Wells&                    wells_;
         const LinearSolverInterface&    linsolver_;
-        const double*                   grav_;
+ //       const double*                   grav_;
         const std::vector<int>          cells_;
         HelperOps                       ops_;
-        const WellOps                   wops_;
+    //    const WellOps                   wops_;
 
         std::vector<ADB>          mob_;
 

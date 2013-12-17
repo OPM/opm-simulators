@@ -313,7 +313,7 @@ namespace {
                 residual_.mass_balance[phase] =  residual_.mass_balance[phase] - source;
             }
         }
-
+#if 0
         // -------- Well equation, and well contributions to the mass balance equations --------
 
         // Contribution to mass balance will have to wait.
@@ -407,6 +407,7 @@ namespace {
         const ADB bhp_residual = bhp - bhp_targets;
         // Choose bhp residual for positive bhp targets.
         residual_.well_eq = bhp_residual;
+#endif
     }
    
 
@@ -587,7 +588,7 @@ namespace {
         const double* grav = gravity();
         const ADB rho = fluidDensity(phase, state.pressure);
         const ADB rhoavg = ops_.caver * rho;
-        const ADB dp = ops_.ngrad * state.pressure - grav[2] * (rhoavg * (ops_.ngrad * z.matrix()));
+        const ADB dp = ops_.ngrad * state.pressure;// - grav[2] * (rhoavg * (ops_.ngrad * z.matrix()));
         const ADB head = trans * dp;
 
         UpwindSelector<double> upwind(grid_, ops_, head.value());
