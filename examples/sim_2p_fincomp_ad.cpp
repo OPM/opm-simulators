@@ -6,6 +6,9 @@
 #include <cassert>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
+
+#include <opm/core/wells.h>
+#include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
@@ -24,8 +27,17 @@
 int main (int argc, char** argv)
 try
 {
+ 
     using namespace Opm;
     parameter::ParameterGroup param(argc, argv, false);
+
+    bool use_deck = param.has("deck_filename");
+    if (!use_deck) {
+        OPM_THROW(std::runtime_error, "FullyImplicitTwoPhaseSolver cannot run without deckfile.");
+    }
+    double gravity[3] = { 0.0 };
+    std::string deck_filename = param.get<std::string>("deck_filename");
+    EclipseGridParser deck = EclipseGridParser(deck_filename);
     int nx = param.getDefault("nx", 30);
     int ny = param.getDefault("ny", 1);
     int nz = 1;
@@ -47,14 +59,20 @@ try
     SaturationPropsBasic::RelPermFunc rel_perm_func = SaturationPropsBasic::Linear;
     IncompPropsAdBasic props(num_phases, rel_perm_func, density, viscosity,
                                 porosity, permeability, grid.dimensions, num_cells);
-    std::vector<double> omega;
+/*
     std::vector<double> src(num_cells, 0.0);
     src[0] = 1. / day;
     src[num_cells-1] = -1. / day;
+  */ 
 
     FlowBCManager bcs;
     LinearSolverUmfpack linsolver;
-    FullyImplicitTwoPhaseSolver solver(grid, props, linsolver);
+    TwophaseState state;
+    state.init(grid, 2);
+    WellState well_state;
+    WellsManager wells(deck, grid, props.permeability());
+    well_state.init(wells.c_wells(), state);
+    FullyImplicitTwoPhaseSolver solver(grid, props, *wells.c_wells(), linsolver, gravity);
     std::vector<double> porevol;
     Opm::computePorevolume(grid, props.porosity(), porevol);
     const double dt = param.getDefault("dt", 10.) * day;
@@ -63,10 +81,9 @@ try
     for (int cell = 0; cell < num_cells; ++cell) {
         allcells[cell] = cell;
     }
-    TwophaseState state;
-    state.init(grid, 2);
-
-    //initial sat
+    std::vector<double> src; // empty src term.
+    gravity[2] = param.getDefault("gravity", 0.0);
+        //initial sat
     for (int c = 0; c < num_cells; ++c) {
         state.saturation()[2*c] = 0.2;
         state.saturation()[2*c+1] = 0.8;
@@ -74,8 +91,6 @@ try
     std::vector<double> p(num_cells, 100*Opm::unit::barsa);
     state.pressure() = p;
     std::ostringstream vtkfilename;
-
-    // Write the initial state.
     vtkfilename.str("");
     vtkfilename << "sim_2p_fincomp_" << std::setw(3) << std::setfill('0') << 0 << ".vtu";
     std::ofstream vtkfile(vtkfilename.str().c_str());
@@ -84,7 +99,7 @@ try
     dm["pressure"] = &state.pressure();
     Opm::writeVtkData(grid, dm, vtkfile);
     for (int i = 0; i < num_time_steps; ++i) {
-        solver.step(dt, state, src);
+        solver.step(dt, state, src, well_state);
         vtkfilename.str("");
         vtkfilename << "sim_2p_fincomp_" << std::setw(3) << std::setfill('0') << i + 1 << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
@@ -92,7 +107,7 @@ try
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
         Opm::writeVtkData(grid, dm, vtkfile);
-    }
+    } 
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";

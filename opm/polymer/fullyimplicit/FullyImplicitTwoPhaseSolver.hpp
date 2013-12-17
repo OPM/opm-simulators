@@ -7,7 +7,8 @@
 #include <opm/polymer//fullyimplicit/AutoDiffHelpers.hpp>
 #include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
-
+#include <opm/core/wells/WellsManager.hpp>
+#include <opm/core/simulator/WellState.hpp>
 
 struct UnstructuredGrid;
 namespace Opm {
@@ -21,11 +22,14 @@ namespace Opm {
     public:
         FullyImplicitTwoPhaseSolver(const UnstructuredGrid&        grid,
                                     const IncompPropsAdInterface&  fluid,
-                                    const LinearSolverInterface&    linsolver);
+                                    const Wells&                   wells,
+                                    const LinearSolverInterface&   linsolver,
+                                    const double*                  gravity);
 
         void step(const double   dt,
                   TwophaseState& state,
-                  const std::vector<double>& src);
+                  const std::vector<double>& src,
+                  WellState& wstate);
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
@@ -38,34 +42,60 @@ namespace Opm {
             SolutionState(const int np);
             ADB             pressure;
             std::vector<ADB> saturation;
+            ADB             bhp;
         };
+        /*
+        struct Source {
+            Wells& wells;
+            std::vector<double> src;
+        } source;
+        */
+        struct WellOps {
+            WellOps(const Wells& wells);
+            M w2p;          // well->perf
+            M p2w;          // perf->well
+        };
+
         const UnstructuredGrid&         grid_;
         const IncompPropsAdInterface&   fluid_;
+        const Wells&                    wells_;
         const LinearSolverInterface&    linsolver_;
+        const double*                   grav_;
         const std::vector<int>          cells_;
         HelperOps                       ops_;
-        std::vector<ADB>                residual_;
+        const WellOps                   wops_;
+
+        std::vector<ADB>          mob_;
+
+        struct {
+            std::vector<ADB> mass_balance;
+            ADB well_flux_eq;
+            ADB well_eq;
+        } residual_;
        
 
         SolutionState
-        constantState(const TwophaseState& x);
+        constantState(const TwophaseState& x,
+                      const WellState&     xw);
         SolutionState
-        variableState(const TwophaseState& x);
+        variableState(const TwophaseState& x,
+                      const WellState&     xw);
         void
         assemble(const V&               pvdt,
                  const SolutionState&   old_state,
                  const TwophaseState&  x,
+                 const WellState&      xw,
                  const std::vector<double>& src);
         V solveJacobianSystem() const;
-        void updateState(const V&             dx,
-                         TwophaseState& x) const;
+        void updateState(const V&       dx,
+                         TwophaseState& x,
+                         WellState&     xw)const;
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
         V
         transmissibility() const;
         ADB
-        computeFracFlow(int    phase,
-                        const std::vector<ADB>& kr) const;
+        computeFracFlow(const int phase) const;
         ADB 
         accumSource(const int phase,
                     const std::vector<ADB>& kr,
@@ -74,7 +104,7 @@ namespace Opm {
         computeMassFlux(const int               phase,
                         const V&                trans,
                         const std::vector<ADB>& kr,
-                        const SolutionState&    state) const;
+                        const SolutionState&    state);
         double
         residualNorm() const;
 
@@ -86,6 +116,11 @@ namespace Opm {
         fluidDensity(const int phase) const;
         ADB
         transMult(const ADB& p) const;
+        
+        ADB
+        fluidDensity(const int phase,
+                     const ADB& p) const;
+        const double* gravity() const { return grav_; }
     };
 } // namespace Opm
 #endif// OPM_FULLYIMPLICITTWOPHASESOLVER_HEADER_INCLUDED
