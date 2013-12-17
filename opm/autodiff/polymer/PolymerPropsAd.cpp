@@ -52,6 +52,27 @@ namespace Opm {
     }
 
 
+    ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,
+					      const double* visc)
+    {
+	const int n = c.size();
+	V inv_mu_w_eff(n);
+	V dinv_mu_w_eff(n);
+	for (int i = 0; i < n; ++i) {
+	    double im, dim;
+	    polymer_props_.effectiveInvViscWithDer(c.value()(i), visc, im, dim);
+	    inv_mu_w_eff(i) = im;
+	    dinv_mu_w_eff(i) = dim;
+	}
+        ADB::M dim_diag = spdiag(dinv_mu_w_eff);
+        const int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dim_diag * c.derivative()[block];
+        }
+        return ADB::function(inv_mu_w_eff, jacs);
+    }
+
     V PolymerPropsAd::muM(const V& c,
                           const double* visc) const
     {
