@@ -20,6 +20,7 @@
 #ifndef OPM_WELLS_H_INCLUDED
 #define OPM_WELLS_H_INCLUDED
 
+#include <stdbool.h>
 
 /**
  * \file
@@ -82,6 +83,8 @@ struct WellControls
      */
     int num;
 
+    int number_of_phases;
+
     /**
      * Array of control types.
      */
@@ -94,7 +97,7 @@ struct WellControls
 
     /**
      * Array of rate control distributions,
-     * <CODE>Wells::number_of_phases</CODE> numbers for each control
+     * <CODE>number_of_phases</CODE> numbers for each control
      */
     double *distr;
 
@@ -326,6 +329,12 @@ destroy_wells(struct Wells *W);
  */
 struct Wells *
 clone_wells(const struct Wells *W);
+
+bool
+wells_equal(const struct Wells *W1, const struct Wells *W2);
+
+bool
+well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2);
 
 
 #ifdef __cplusplus

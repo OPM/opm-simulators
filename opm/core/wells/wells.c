@@ -41,6 +41,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <stdio.h>
+
 struct WellControlMgmt {
     int cpty;
 };
@@ -123,13 +125,14 @@ well_controls_create(void)
 
     if (ctrl != NULL) {
         /* Initialise empty control set */
-        ctrl->num     = 0;
-        ctrl->type    = NULL;
-        ctrl->target  = NULL;
-        ctrl->distr   = NULL;
-        ctrl->current = -1;
+        ctrl->num               = 0;
+        ctrl->number_of_phases  = 0;
+        ctrl->type              = NULL;
+        ctrl->target            = NULL;
+        ctrl->distr             = NULL;
+        ctrl->current           = -1;
 
-        ctrl->data    = create_ctrl_mgmt();
+        ctrl->data              = create_ctrl_mgmt();
 
         if (ctrl->data == NULL) {
             well_controls_destroy(ctrl);
@@ -160,6 +163,8 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
     if (target != NULL) { ctrl->target = target; ok++; }
     if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
 
+    ctrl->number_of_phases = nphases;
+
     if (ok == 3) {
         m = ctrl->data;
         for (c = m->cpty; c < nctrl; c++) {
@@ -167,7 +172,7 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
             ctrl->target[c] = -1.0;
         }
 
-        for (p = m->cpty * nphases; p < nctrl * nphases; ++p) {
+        for (p = m->cpty * ctrl->number_of_phases; p < nctrl * ctrl->number_of_phases; ++p) {
             ctrl->distr[ p ] = 0.0;
         }
 
@@ -591,6 +596,7 @@ clear_well_controls(int well_index, struct Wells *W)
 
     if (W->ctrls[well_index] != NULL) {
         W->ctrls[well_index]->num = 0;
+        W->ctrls[well_index]->number_of_phases = 0;
     }
 }
 
@@ -667,4 +673,68 @@ clone_wells(const struct Wells *W)
     }
 
     return ret;
+}
+
+/* ---------------------------------------------------------------------- */
+bool
+wells_equal(const struct Wells *W1, const struct Wells *W2)
+/* ---------------------------------------------------------------------- */
+{
+    bool are_equal = true;
+    are_equal = (W1->number_of_wells == W2->number_of_wells);
+    are_equal &= (W1->number_of_phases == W2->number_of_phases);
+    if (!are_equal) {
+        return are_equal;
+    }
+
+    for (int i=0; i<W1->number_of_wells; i++) {
+        are_equal &= (strcmp(W1->name[i], W2->name[i]) == 0);
+        are_equal &= (W1->type[i] == W2->type[i]);
+        are_equal &= (W1->depth_ref[i] == W2->depth_ref[i]);
+        are_equal &= (well_controls_equal(W1->ctrls[i], W2->ctrls[i]));
+    }
+
+
+    struct WellMgmt* mgmt1 = (struct WellMgmt*)(W1->data);
+    struct WellMgmt* mgmt2 = (struct WellMgmt*)(W2->data);
+    are_equal &= (mgmt1->perf_cpty == mgmt2->perf_cpty);
+    are_equal &= (mgmt1->well_cpty == mgmt2->well_cpty);
+
+    are_equal &= (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) == 0);
+    are_equal &= (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) == 0);
+    if (!are_equal) {
+        return are_equal;
+    }
+
+    {
+        int number_of_perforations = W1->well_connpos[W1->number_of_wells];
+
+        are_equal &= (memcmp(W1->well_cells, W2->well_cells, number_of_perforations * sizeof *W1->well_cells ) == 0);
+        are_equal &= (memcmp(W1->WI, W2->WI, number_of_perforations * sizeof *W1->WI ) == 0);
+    }
+
+    return are_equal;
+}
+
+/* ---------------------------------------------------------------------- */
+bool
+well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2)
+/* ---------------------------------------------------------------------- */
+{
+    bool are_equal = true;
+    are_equal = (ctrls1->num == ctrls2->num);
+    are_equal &= (ctrls1->number_of_phases == ctrls2->number_of_phases);
+    if (!are_equal) {
+        return are_equal;
+    }
+
+    are_equal &= (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) == 0);
+    are_equal &= (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) == 0);
+    are_equal &= (memcmp(ctrls1->distr, ctrls2->distr, ctrls1->num * ctrls1->number_of_phases * sizeof *ctrls1->distr ) == 0);
+
+    struct WellControlMgmt* mgmt1 = (struct WellControlMgmt*)(ctrls1->data);
+    struct WellControlMgmt* mgmt2 = (struct WellControlMgmt*)(ctrls2->data);
+    are_equal &= (mgmt1->cpty == mgmt2->cpty);
+
+    return are_equal;
 }

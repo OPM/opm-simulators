@@ -203,3 +203,29 @@ BOOST_AUTO_TEST_CASE(Copy)
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE(Equals_WellsEqual_ReturnsTrue) {
+    const int nphases = 2;
+    const int nwells  = 2;
+    const int nperfs  = 2;
+
+    std::shared_ptr<Wells> W1(create_wells(nphases, nwells, nperfs),
+                                destroy_wells);
+    std::shared_ptr<Wells> W2(create_wells(nphases, nwells, nperfs),
+                                destroy_wells);
+
+    BOOST_CHECK(wells_equal(W1.get(), W2.get()));
+}
+
+
+BOOST_AUTO_TEST_CASE(Equals_WellsDiffer_ReturnsFalse) {
+    const int nphases = 2;
+    const int nperfs  = 2;
+
+    std::shared_ptr<Wells> W1(create_wells(nphases, 2, nperfs),
+                                destroy_wells);
+    std::shared_ptr<Wells> W2(create_wells(nphases, 3, nperfs),
+                                destroy_wells);
+
+    BOOST_CHECK(!wells_equal(W1.get(), W2.get()));
+}
