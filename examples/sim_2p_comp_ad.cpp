@@ -105,13 +105,13 @@ try
         Opm::DeckConstPtr newParserDeck = newParser->parse( deck_filename );
 
         // Grid init
-        grid.reset(new GridManager(*deck));
+        grid.reset(new GridManager(newParserDeck));
         // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(*deck, newParserDeck, *grid->c_grid(), param));
+        props.reset(new BlackoilPropertiesFromDeck(newParserDeck, *grid->c_grid(), param));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(*deck));
+        rock_comp.reset(new RockCompressibility(newParserDeck));
         // Gravity.
         gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
         // Init state variables (saturation and pressure).

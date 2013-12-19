@@ -113,8 +113,16 @@ try
 
     Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(*deck, newParserDeck, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(*deck, newParserDeck, *grid->c_grid()));
+
+#if 0
+    std::cout << "new parser\n";
+    props.reset(new BlackoilPropertiesFromDeck(newParserDeck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid->c_grid()));
+#else
+    std::cout << "old parser\n";
+    props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
+#endif
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.

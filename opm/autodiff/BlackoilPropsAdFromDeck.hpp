@@ -52,7 +52,11 @@ namespace Opm
     public:
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
-                                Opm::DeckConstPtr newParserDeck,
+                                const UnstructuredGrid& grid,
+                                const bool init_rock = true );
+
+        /// Constructor wrapping an opm-core black oil interface.
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
