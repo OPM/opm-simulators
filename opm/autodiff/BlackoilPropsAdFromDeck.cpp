@@ -140,6 +140,7 @@ namespace Opm
         if (init_rock){
             rock_.init(newParserDeck, grid);
         }
+
         const int region_number = 0;
 
         phase_usage_ = phaseUsageFromDeck(newParserDeck);
@@ -179,6 +180,7 @@ namespace Opm
                 props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(0.5*Opm::prefix::centi*Opm::unit::Poise));
             }
         }
+
         // Oil PVT
         if (phase_usage_.phase_used[Liquid]) {
             if (newParserDeck->hasKeyword("PVDO")) {
@@ -213,6 +215,7 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "Input is missing PVDO or PVTO\n");
             }
         }
+
         // Gas PVT
         if (phase_usage_.phase_used[Vapour]) {
             if (newParserDeck->hasKeyword("PVDG")) {
