@@ -66,7 +66,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/sim_simple.cpp
 	examples/test_impestpfa_ad.cpp
 	examples/test_implicit_ad.cpp
-    examples/sim_2p_fincomp_ad.cpp
+#    examples/sim_2p_fincomp_ad.cpp
     examples/sim_fi2p_incomp_ad.cpp
 	)
 

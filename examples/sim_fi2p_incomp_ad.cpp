@@ -130,7 +130,7 @@ try
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
-    const double *grav = use_gravity ? &gravity[0] : 0;
+//    const double *grav = use_gravity ? &gravity[0] : 0;
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
@@ -165,7 +165,7 @@ try
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
-//    WellState well_state;
+    WellState well_state;
     int step = 0;
     SimulatorTimer simtimer;
     // Use timer for last epoch to obtain total time.
@@ -194,13 +194,13 @@ try
                   << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
         // Create new wells, well_state
-//        WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+        WellsManager wells(*deck, *grid->c_grid(), props->permeability());
         // @@@ HACK: we should really make a new well state and
         // properly transfer old well state to it every epoch,
         // since number of wells may change etc.
-  //      if (epoch == 0) {
-    //        well_state.init(wells.c_wells(), state);
-    //    }
+        if (epoch == 0) {
+            well_state.init(wells.c_wells(), state);
+        }
 
         // Create and run simulator.
         std::vector<double> src(grid->c_grid()->number_of_cells, 0.0);
@@ -209,12 +209,13 @@ try
         SimulatorFullyImplicitTwophase simulator(param,
                                                  *grid->c_grid(),
                                                  *new_props,
-                                                 linsolver,
-                                                 src);
+                                                 wells,
+                                                 linsolver);
+//                                                 src);
         if (epoch == 0) {
             warnIfUnusedParams(param);
         }
-        SimulatorReport epoch_rep = simulator.run(simtimer, state, src);
+        SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
         if (output) {
             epoch_rep.reportParam(epoch_os);
         }

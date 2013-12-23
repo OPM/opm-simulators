@@ -26,6 +26,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
+#include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -38,6 +39,7 @@
 
 #include <opm/core/grid/ColumnExtract.hpp>
 #include <opm/core/simulator/TwophaseState.hpp>
+#include <opm/core/simulator/WellState.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -58,12 +60,13 @@ namespace Opm
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
              const IncompPropsAdInterface& props,
-             LinearSolverInterface& linsolver,
-             std::vector<double>& src);
+             WellsManager&          well_manager,
+             LinearSolverInterface& linsolver);
+//             std::vector<double>& src);
 
         SimulatorReport run(SimulatorTimer& timer,
                             TwophaseState& state,
-                            std::vector<double>& src);
+                            WellState&     well_state);
 
     private:
 
@@ -73,10 +76,14 @@ namespace Opm
         std::string output_dir_;
         int output_interval_;
         // Parameters for well control
+        bool check_well_controls_;
+        int max_well_control_iterations_;
         // Observed objects.
         const UnstructuredGrid& grid_;
         const IncompPropsAdInterface& props_;
-        const std::vector<double>& src_;
+        WellsManager&   wells_manager_;
+        const Wells*    wells_;
+//        const std::vector<double>& src_;
         // Solvers
         FullyImplicitTwoPhaseSolver solver_;
         // Misc. data
@@ -89,10 +96,11 @@ namespace Opm
     SimulatorFullyImplicitTwophase::SimulatorFullyImplicitTwophase(const parameter::ParameterGroup& param,
                                                                    const UnstructuredGrid& grid,
                                                                    const IncompPropsAdInterface& props,
-                                                                   LinearSolverInterface& linsolver,
-                                                                   std::vector<double>& src)
+                                                                   WellsManager&    wells_manager,
+                                                                   LinearSolverInterface& linsolver)
+                              //                                     std::vector<double>& src)
     {
-        pimpl_.reset(new Impl(param, grid, props, linsolver, src));
+        pimpl_.reset(new Impl(param, grid, props, wells_manager, linsolver));
     }
 
 
@@ -101,9 +109,9 @@ namespace Opm
 
     SimulatorReport SimulatorFullyImplicitTwophase::run(SimulatorTimer& timer,
                                                         TwophaseState& state,
-                                                        std::vector<double>& src)
+                                                        WellState&     well_state)
     {
-        return pimpl_->run(timer, state, src);
+        return pimpl_->run(timer, state, well_state);
     }
 
 
@@ -171,10 +179,11 @@ namespace Opm
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
     }
-#if 0
-    static void outputWellStateMatlab(const Opm::WellState& well_state,
-                                  const int step,
-                                  const std::string& output_dir)
+
+
+    static void outputWellStateMatlab(WellState& well_state,
+                                      const int step,
+                                      const std::string& output_dir)
     {
         Opm::DataMap dm;
         dm["bhp"] = &well_state.bhp();
@@ -202,7 +211,6 @@ namespace Opm
         }
     }
 
-#endif
 
     
 /*
@@ -235,12 +243,14 @@ namespace Opm
     SimulatorFullyImplicitTwophase::Impl::Impl(const parameter::ParameterGroup& param,
                                                const UnstructuredGrid& grid,
                                                const IncompPropsAdInterface& props,
-                                               LinearSolverInterface& linsolver,
-                                               std::vector<double>& src)
+                                               WellsManager& wells_manager,
+                                               LinearSolverInterface& linsolver)
+                                              // std::vector<double>& src)
         : grid_(grid),
           props_(props),
-          src_ (src),
-          solver_(grid_, props_, linsolver)
+          wells_manager_(wells_manager),
+          wells_(wells_manager.c_wells()),
+          solver_(grid_, props_, linsolver, *wells_manager.c_wells())
 
     {
         // For output.
@@ -272,7 +282,8 @@ namespace Opm
 
     SimulatorReport SimulatorFullyImplicitTwophase::Impl::run(SimulatorTimer& timer,
                                                               TwophaseState& state,
-                                                              std::vector<double>& src)
+                                                              WellState&    well_state)
+//                                                              std::vector<double>& src)
     {
 
         // Initialisation.
@@ -314,15 +325,19 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-        //        outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 
             }
 
             SimulatorReport sreport;
 
+            bool well_control_passed = !check_well_controls_;
+            int well_control_iteration = 0;
+            do {
                 // Run solver.
                 solver_timer.start();
-                solver_.step(timer.currentStepLength(), state, src);
+                std::vector<double> initial_pressure = state.pressure();
+                solver_.step(timer.currentStepLength(), state, well_state);
 
                 // Stop timer and report.
                 solver_timer.stop();
@@ -331,6 +346,27 @@ namespace Opm
 
                 stime += st;
                 sreport.pressure_time = st;
+
+                // Optionally, check if well controls are satisfied.
+                if (check_well_controls_) {
+                    Opm::computePhaseFlowRatesPerWell(*wells_,
+                                                      well_state.perfRates(),
+                                                      fractional_flows,
+                                                      well_resflows_phase);
+                    std::cout << "Checking well conditions." << std::endl;
+                    // For testing we set surface := reservoir
+                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
+                    ++well_control_iteration;
+                    if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
+                        OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
+                    }
+                    if (!well_control_passed) {
+                        std::cout << "Well controls not passed, solving again." << std::endl;
+                    } else {
+                        std::cout << "Well conditions met." << std::endl;
+                    }
+                }
+            } while (!well_control_passed);
 
             // Update pore volumes if rock is compressible.
             initial_porevol = porevol;
@@ -393,7 +429,7 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-              //  outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 #if 0
                 outputWaterCut(watercut, output_dir_);
                 if (wells_) {

@@ -24,7 +24,7 @@
 #include <vector>
 
 struct UnstructuredGrid;
-
+struct Wells;
 namespace Opm
 {
     namespace parameter { class ParameterGroup; }
@@ -32,6 +32,8 @@ namespace Opm
     class LinearSolverInterface;
     class SimulatorTimer;
     class TwophaseState;
+    class WellState;
+    class WellsManager;
     struct SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
@@ -60,8 +62,9 @@ namespace Opm
         SimulatorFullyImplicitTwophase(const parameter::ParameterGroup& param,
                                        const UnstructuredGrid& grid,
                                        const IncompPropsAdInterface& props,
-                                       LinearSolverInterface& linsolver,
-                                       std::vector<double>& src);
+                                       WellsManager&        well_manager,
+                                       LinearSolverInterface& linsolver);
+                   //                    std::vector<double>& src);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -72,7 +75,7 @@ namespace Opm
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
                             TwophaseState& state,
-                            std::vector<double>& src);
+                            WellState&    well_state);
 
     private:
         class Impl;
