@@ -106,7 +106,7 @@ namespace {
         , ops_(grid)
         , wops_(wells)
         , mob_(std::vector<ADB>(fluid.numPhases(), ADB::null()))
-        , residual_( { std::vector<ADB>(fluid.numPhases(), ADB::null()), ADB::null()})
+        , residual_( { std::vector<ADB>(fluid.numPhases(), ADB::null()), ADB::null(), ADB::null()})
      {
      }
 
@@ -204,6 +204,7 @@ namespace {
     FullyImplicitTwoPhaseSolver::SolutionState::SolutionState(const int np)
         : pressure   (    ADB::null())
         , saturation (np, ADB::null())
+        , qs         (    ADB::null())
         , bhp        (    ADB::null())
     {
     }
@@ -222,10 +223,12 @@ namespace {
         // The block pattern assumes the following primary variables:
         //    pressure
         //    water saturation (if water present)
+        //    well surface rates
         //    well bottom-hole pressure
         // Note that oil is assumed to always be present, but is never
         // a primary variable.
         std::vector<int> bpat(np, nc);
+        bpat.push_back(xw.bhp().size() * np);
         bpat.push_back(xw.bhp().size());
         
         SolutionState state(np);
@@ -242,6 +245,16 @@ namespace {
             state.saturation[phase] = ADB::constant(s_all.col(phase), bpat);
    //     state.saturation[1] = ADB::constant(s_all.col(1));
         }
+
+        // Well rates.
+        assert (not xw.wellRates().empty());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        state.qs = ADB::constant(qs, bpat);
 
         // Bottom hole pressure.
         assert (not xw.bhp().empty());
@@ -276,6 +289,16 @@ namespace {
         const V sw = s_all.col(0);
         vars0.push_back(sw);
 
+        // Initial well rates.
+        assert (not xw.wellRates().empty());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        vars0.push_back(qs);
+
         // Initial well bottom hole pressure.
         assert (not xw.bhp().size());
         const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
@@ -298,6 +321,8 @@ namespace {
             state.saturation[1] = so;
         }
 
+        // Qs.
+        state.qs = vars[ nextvar++ ];
         // BHP.
         state.bhp = vars[ nextvar++ ];
 
@@ -386,7 +411,6 @@ namespace {
         }
         const Selector<double> producer(prodperfs);
         const V rho_perf = producer.select(rho_perf_cell, rho_perf_well);
-        // Without gravity.
         const V well_perf_dp = computePerfPress(grid_, wells_, rho_perf, gravity_ ? gravity_[dim - 1] : 0.0);
 
         const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
@@ -421,34 +445,34 @@ namespace {
         }
 
         // Set the well flux equation
-//        residual_.well_flux_eq = state.qs + well_rates_all;
+        residual_.well_flux_eq = state.qs + well_rates_all;
         // DUMP(residual_.well_flux_eq);
 
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
-//        V rate_targets(nw);
-//        M rate_distr(nw, np*nw);
+        V rate_targets(nw);
+        M rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
             if (wc->type[wc->current] == BHP) {
                 bhp_targets[w] = wc->target[wc->current];
-  //              rate_targets[w] = -1e100;
-            } /*else if (wc->type[wc->current] == SURFACE_RATE) {
+                rate_targets[w] = -1e100;
+            } else if (wc->type[wc->current] == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
                 rate_targets[w] = wc->target[wc->current];
                 for (int phase = 0; phase < np; ++phase) {
                     rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
                 }
-            } */else {
+            } else {
                 OPM_THROW(std::runtime_error, "Can only handle BHP type controls.");
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
-//        const ADB rate_residual = rate_distr * state.qs - rate_targets;
+        const ADB rate_residual = rate_distr * state.qs - rate_targets;
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
-//        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
-        residual_.well_eq = bhp_residual;
+        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+ //       residual_.well_eq = bhp_residual;
 
     }
    
@@ -510,7 +534,8 @@ namespace {
 	        OPM_THROW(std::logic_error, "Only two-phase ok in FullyImplicitTwoPhaseSolver.");
 	    }
 	    ADB mass_res = vertcat(residual_.mass_balance[0], residual_.mass_balance[1]);
-        ADB total_res = collapseJacs(vertcat(mass_res, residual_.well_eq));
+        ADB well_res = vertcat(residual_.well_flux_eq, residual_.well_eq);
+        ADB total_res = collapseJacs(vertcat(mass_res, well_res));
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_res.derivative()[0];
         V dx(V::Zero(total_res.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
@@ -542,6 +567,8 @@ namespace {
         int varstart = nc;
         const V dsw = subset(dx, Span(nc, 1, varstart));
         varstart += dsw.size();
+        const V dqs = subset(dx, Span(np*nw, 1, varstart));
+        varstart += dqs.size();
         const V dbhp = subset(dx, Span(nw, 1, varstart));
         varstart += dbhp.size();
         assert(varstart == dx.size());
@@ -563,6 +590,17 @@ namespace {
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np] = sw[c];
         }
+
+        // Qs update.
+        // Since we need to update the wellrates, that are ordered by wells,
+        // from dqs which are ordered by phase, the simplest is to compute
+        // dwr, which is the data from dqs but ordered by wells.
+        const DataBlock wwr = Eigen::Map<const DataBlock>(dqs.data(), np, nw).transpose();
+        const V dwr = Eigen::Map<const V>(wwr.data(), nw*np);
+        const V wr_old = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np);
+        const V wr = wr_old - dwr;
+        std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
+
 
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);

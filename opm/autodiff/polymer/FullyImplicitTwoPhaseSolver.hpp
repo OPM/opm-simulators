@@ -12,7 +12,6 @@
 struct UnstructuredGrid;
 struct Wells;
 namespace Opm {
-//    struct HelperOps;
     class LinearSolverInterface;
     class TwophaseState;
     class WellState;
@@ -29,7 +28,6 @@ namespace Opm {
         void step(const double   dt,
                   TwophaseState& state,
                   WellState&     well_state);
-//                  const std::vector<double>& src);
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
@@ -42,6 +40,7 @@ namespace Opm {
             SolutionState(const int np);
             ADB              pressure;
             std::vector<ADB> saturation;
+            ADB              qs;
             ADB              bhp;
         };
         struct WellOps {
@@ -62,7 +61,7 @@ namespace Opm {
         struct {
             std::vector<ADB>    mass_balance;
             ADB                 well_eq;
-//            ADB                 well_flux_eq;
+            ADB                 well_flux_eq;
         } residual_;
        
 
