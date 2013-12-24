@@ -95,11 +95,13 @@ namespace {
     FullyImplicitTwoPhaseSolver(const UnstructuredGrid&         grid,
                                 const IncompPropsAdInterface&   fluid,
                                 const LinearSolverInterface&    linsolver,
-                                const Wells&                    wells)
+                                const Wells&                    wells,
+                                const double*                   gravity)
         : grid_ (grid)
         , fluid_(fluid)
         , linsolver_(linsolver)
         , wells_(wells)
+        , gravity_(gravity)
         , cells_ (buildAllCells(grid.number_of_cells))
         , ops_(grid)
         , wops_(wells)
@@ -352,7 +354,13 @@ namespace {
         // Finally construct well perforation pressures and well flows.
 
         // Compute well pressure differentials.
-        // Construct pressure difference vector for wells without gravity.
+        // Construct pressure difference vector for wells.
+        const int dim = grid_.dimensions;
+        if (gravity_) {
+            for (int dd = 0; dd < dim -1; ++dd) {
+                assert(g[dd] == 0.0);
+            }
+        }
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
         for (int phase = 0; phase < 2; ++phase) {
             // For incompressible flow cell rho is the same.
@@ -379,7 +387,7 @@ namespace {
         const Selector<double> producer(prodperfs);
         const V rho_perf = producer.select(rho_perf_cell, rho_perf_well);
         // Without gravity.
-        const V well_perf_dp = computePerfPress(grid_, wells_, rho_perf, 0.0);
+        const V well_perf_dp = computePerfPress(grid_, wells_, rho_perf, gravity_ ? gravity_[dim - 1] : 0.0);
 
         const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
@@ -645,7 +653,19 @@ namespace {
         const double* mus = fluid_.viscosity();
         mob_[phase] = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
         
-        const ADB dp = ops_.ngrad * state.pressure;
+        const ADB rho = fluidDensity(phase, state.pressure);
+        const ADB rhoavg = ops_.caver * rho;
+        // Compute z coordinates
+        const int nc = grid_.number_of_cells; 
+        V z(nc);
+        // Compute z coordinates
+        for (int c = 0; c < nc; ++c){
+            z[c] = grid_.cell_centroids[c * 3 + 2];
+        }
+
+        const ADB dp = ops_.ngrad * state.pressure
+                       - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
+
         const ADB head = trans * dp;
 
         UpwindSelector<double> upwind(grid_, ops_, head.value());

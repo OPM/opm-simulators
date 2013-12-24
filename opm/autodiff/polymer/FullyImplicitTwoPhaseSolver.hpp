@@ -22,8 +22,9 @@ namespace Opm {
     public:
         FullyImplicitTwoPhaseSolver(const UnstructuredGrid&        grid,
                                     const IncompPropsAdInterface&  fluid,
-                                    const LinearSolverInterface&    linsolver,
-                                    const Wells&                    wells);
+                                    const LinearSolverInterface&   linsolver,
+                                    const Wells&                   wells,
+                                    const double*                  gravity);
 
         void step(const double   dt,
                   TwophaseState& state,
@@ -52,14 +53,16 @@ namespace Opm {
         const IncompPropsAdInterface&   fluid_;
         const LinearSolverInterface&    linsolver_;
         const Wells&                    wells_;
+        const double*                   gravity_;
         const std::vector<int>          cells_;
         HelperOps                       ops_;
         const WellOps                   wops_;
-        std::vector<ADB>          mob_;
+        std::vector<ADB>                mob_;
         
         struct {
             std::vector<ADB>    mass_balance;
             ADB                 well_eq;
+//            ADB                 well_flux_eq;
         } residual_;
        
 

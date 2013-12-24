@@ -61,7 +61,8 @@ namespace Opm
              const UnstructuredGrid& grid,
              const IncompPropsAdInterface& props,
              WellsManager&          well_manager,
-             LinearSolverInterface& linsolver);
+             LinearSolverInterface& linsolver,
+             const double* gravity);
 //             std::vector<double>& src);
 
         SimulatorReport run(SimulatorTimer& timer,
@@ -97,10 +98,11 @@ namespace Opm
                                                                    const UnstructuredGrid& grid,
                                                                    const IncompPropsAdInterface& props,
                                                                    WellsManager&    wells_manager,
-                                                                   LinearSolverInterface& linsolver)
+                                                                   LinearSolverInterface& linsolver,
+                                                                   const double* gravity)
                               //                                     std::vector<double>& src)
     {
-        pimpl_.reset(new Impl(param, grid, props, wells_manager, linsolver));
+        pimpl_.reset(new Impl(param, grid, props, wells_manager, linsolver, gravity));
     }
 
 
@@ -244,13 +246,14 @@ namespace Opm
                                                const UnstructuredGrid& grid,
                                                const IncompPropsAdInterface& props,
                                                WellsManager& wells_manager,
-                                               LinearSolverInterface& linsolver)
+                                               LinearSolverInterface& linsolver,
+                                               const double* gravity)
                                               // std::vector<double>& src)
         : grid_(grid),
           props_(props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
-          solver_(grid_, props_, linsolver, *wells_manager.c_wells())
+          solver_(grid_, props_, linsolver, *wells_manager.c_wells(), gravity)
 
     {
         // For output.

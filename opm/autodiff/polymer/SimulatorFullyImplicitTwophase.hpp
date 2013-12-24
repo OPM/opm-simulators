@@ -63,7 +63,8 @@ namespace Opm
                                        const UnstructuredGrid& grid,
                                        const IncompPropsAdInterface& props,
                                        WellsManager&        well_manager,
-                                       LinearSolverInterface& linsolver);
+                                       LinearSolverInterface& linsolver,
+                                       const double*        gravity);
                    //                    std::vector<double>& src);
 
         /// Run the simulation.
