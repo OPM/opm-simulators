@@ -39,16 +39,13 @@
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
+#include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 
-#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitTwophasePolymer.hpp>
+#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitTwophase.hpp>
 #include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/polymer/fullyimplicit/IncompPropsAdBasic.hpp>
 #include <opm/polymer/fullyimplicit/IncompPropsAdFromDeck.hpp>
-#include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
-#include <opm/polymer/PolymerProperties.hpp>
-#include <opm/polymer/PolymerInflow.hpp>
-#include <opm/polymer/PolymerState.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -96,10 +93,9 @@ try
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<IncompPropsAdInterface> new_props;
-//    boost::scoped_ptr<PolymerPropsAd> polymer_props;
-    PolymerState state;
-//    bool check_well_controls = false;
-//    int max_well_control_iterations = 0;
+    TwophaseState state;
+    // bool check_well_controls = false;
+    // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
     deck.reset(new EclipseGridParser(deck_filename));
@@ -120,11 +116,9 @@ try
     // Rock and fluid init
     props.reset(new IncompPropertiesFromDeck(*deck, *grid->c_grid()));
     new_props.reset(new IncompPropsAdFromDeck(*deck, *grid->c_grid()));
-    PolymerProperties polymer_props(*deck);
-    PolymerPropsAd polymer_props_ad(polymer_props);
-//    polymer_props.reset(new PolymerPropsAd(*deck, *grid->c_grid()));
-//     check_well_controls = param.getDefault("check_well_controls", false);
-//     max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
+    // check_well_controls = param.getDefault("check_well_controls", false);
+    // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
+    // Rock compressibility.
     // Gravity.
     gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
     // Init state variables (saturation and pressure).
@@ -136,7 +130,7 @@ try
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
-    const double* grav = use_gravity ? &gravity[0] : 0;
+    const double *grav = use_gravity ? &gravity[0] : 0;
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
@@ -170,57 +164,37 @@ try
               << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
 
     SimulatorReport rep;
-        // With a deck, we may have more epochs etc.
-        WellState well_state;
-        int step = 0;
-        SimulatorTimer simtimer;
-        // Use timer for last epoch to obtain total time.
-        deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
-        simtimer.init(*deck);
-        const double total_time = simtimer.totalTime();
-        // Check for WPOLYMER presence in last epoch to decide
-        // polymer injection control type.
-        const bool use_wpolymer = deck->hasField("WPOLYMER");
-        if (use_wpolymer) {
-            if (param.has("poly_start_days")) {
-                OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
-                        "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
+    // With a deck, we may have more epochs etc.
+    WellState well_state;
+    int step = 0;
+    SimulatorTimer simtimer;
+    // Use timer for last epoch to obtain total time.
+    deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
+    simtimer.init(*deck);
+    const double total_time = simtimer.totalTime();
+    for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
+        // Set epoch index.
+        deck->setCurrentEpoch(epoch);
+
+        // Update the timer.
+        if (deck->hasField("TSTEP")) {
+            simtimer.init(*deck);
+        } else {
+            if (epoch != 0) {
+                OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
             }
+            simtimer.init(param);
         }
-        for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
-            // Set epoch index.
-            deck->setCurrentEpoch(epoch);
+        simtimer.setCurrentStepNum(step);
+        simtimer.setTotalTime(total_time);
 
-            // Update the timer.
-            if (deck->hasField("TSTEP")) {
-                simtimer.init(*deck);
-            } else {
-                if (epoch != 0) {
-                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
-                }
-                simtimer.init(param);
-            }
-            simtimer.setCurrentStepNum(step);
-            simtimer.setTotalTime(total_time);
+        // Report on start of epoch.
+        std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
+                  << "\n                  (number of steps: "
+                  << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
-            // Report on start of epoch.
-            std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
-                      << "\n                  (number of steps: "
-                      << simtimer.numSteps() - step << ")\n\n" << std::flush;
-
-            // Create new wells, polymer inflow controls.
-            WellsManager wells(*deck, *grid->c_grid(), props->permeability());
-            boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
-            if (use_wpolymer) {
-                if (wells.c_wells() == 0) {
-                    OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
-                }
-                polymer_inflow.reset(new PolymerInflowFromDeck(*deck, *wells.c_wells(), props->numCells()));
-            } else {
-                polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
-                                                            param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
-                                                            param.getDefault("poly_amount", polymer_props.cMax())));
-            }
+        // Create new wells, well_state
+        WellsManager wells(*deck, *grid->c_grid(), props->permeability());
         // @@@ HACK: we should really make a new well state and
         // properly transfer old well state to it every epoch,
         // since number of wells may change etc.
@@ -229,26 +203,20 @@ try
         }
 
         // Create and run simulator.
-        #if 0
         std::vector<double> src(grid->c_grid()->number_of_cells, 0.0);
         src[0] = 10. / Opm::unit::day;
         src[grid->c_grid()->number_of_cells-1] = -10. / Opm::unit::day;
-        PolymerInflowBasic polymer_inflow(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
-                                      param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
-                                      param.getDefault("poly_amount", polymer_props.cMax()));
-        #endif
-        SimulatorFullyImplicitTwophasePolymer simulator(param,
+        SimulatorFullyImplicitTwophase simulator(param,
                                                  *grid->c_grid(),
                                                  *new_props,
-                                                 polymer_props_ad,
-                                                 linsolver,
                                                  wells,
-                                                 *polymer_inflow,
+                                                 linsolver,
+                                                 src,
                                                  grav);
         if (epoch == 0) {
             warnIfUnusedParams(param);
         }
-        SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
+        SimulatorReport epoch_rep = simulator.run(simtimer, state, src, well_state);
         if (output) {
             epoch_rep.reportParam(epoch_os);
         }

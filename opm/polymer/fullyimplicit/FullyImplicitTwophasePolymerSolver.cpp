@@ -25,23 +25,6 @@
 #include <algorithm>
 namespace Opm {
 
-namespace {
-    
-    std::vector<int>
-    buildAllCells(const int nc)
-    {
-        std::vector<int> all_cells(nc);
-        for (int c = 0; c < nc; ++c) { all_cells[c] = c; }
-
-        return all_cells;
-    }
-    struct Chop01 {
-        double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
-    };
-
-}//anonymous namespace
-
-
 
 
 
@@ -56,21 +39,107 @@ typedef Eigen::Array<double,
 
 
 
+namespace {
+    
+    std::vector<int>
+    buildAllCells(const int nc)
+    {
+        std::vector<int> all_cells(nc);
+        for (int c = 0; c < nc; ++c) { all_cells[c] = c; }
+
+        return all_cells;
+    }
+    struct Chop01 {
+        double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
+    };
+
+
+
+
+
+    V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
+    {
+        const int nw = wells.number_of_wells;
+        const int nperf = wells.well_connpos[nw];
+        const int dim = grid.dimensions;
+        V wdp = V::Zero(nperf,1);
+        assert(wdp.size() == rho.size());
+
+        // Main loop, iterate over all perforations,
+        // using the following formula:
+        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
+        // where the total density rho(perf) is taken to be
+        //    sum_p (rho_p*saturation_p) in the perforation cell.
+        // [although this is computed on the outside of this function].
+        for (int w = 0; w < nw; ++w) {
+            const double ref_depth = wells.depth_ref[w];
+            for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
+                const int cell = wells.well_cells[j];
+                const double cell_depth = grid.cell_centroids[dim * cell + dim - 1];
+                wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
+            }
+        }
+        return wdp;
+    }
+
+}//anonymous namespace
+
+
+
+
+
 
     FullyImplicitTwophasePolymerSolver::
     FullyImplicitTwophasePolymerSolver(const UnstructuredGrid&         grid,
-                                const IncompPropsAdInterface&   fluid,
-                                const PolymerPropsAd&           polymer_props_ad,
-                                const LinearSolverInterface&    linsolver)
+                                       const IncompPropsAdInterface&   fluid,
+                                       const PolymerPropsAd&           polymer_props_ad,
+                                       const LinearSolverInterface&    linsolver,
+                                       const Wells&                    wells,
+                                       const double*                   gravity)
         : grid_ (grid)
         , fluid_(fluid)
         , polymer_props_ad_ (polymer_props_ad)
         , linsolver_(linsolver)
+        , wells_(wells)
+        , gravity_(gravity)
         , cells_ (buildAllCells(grid.number_of_cells))
         , ops_(grid)
-        , residual_(std::vector<ADB>(3, ADB::null()))
+        , wops_(wells)
+        , mob_(std::vector<ADB>(fluid.numPhases() + 1, ADB::null()))
+        , residual_( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()), ADB::null(), ADB::null()})
      {
      }
+
+
+
+
+
+    FullyImplicitTwophasePolymerSolver::
+    WellOps::WellOps(const Wells& wells)
+        : w2p(wells.well_connpos[ wells.number_of_wells ],
+              wells.number_of_wells)
+        , p2w(wells.number_of_wells,
+              wells.well_connpos[ wells.number_of_wells ])
+    {
+        const int        nw   = wells.number_of_wells;
+        const int* const wpos = wells.well_connpos;
+
+        typedef Eigen::Triplet<double> Tri;
+
+        std::vector<Tri> scatter, gather;
+        scatter.reserve(wpos[nw]);
+        gather .reserve(wpos[nw]);
+
+        for (int w = 0, i = 0; w < nw; ++w) {
+            for (; i < wpos[ w + 1 ]; ++i) {
+                scatter.push_back(Tri(i, w, 1.0));
+                gather .push_back(Tri(w, i, 1.0));
+            }
+        }
+
+        w2p.setFromTriplets(scatter.begin(), scatter.end());
+        p2w.setFromTriplets(gather .begin(), gather .end());
+    }
 
 
 
@@ -79,8 +148,8 @@ typedef Eigen::Array<double,
     void
     FullyImplicitTwophasePolymerSolver::
     step(const double   dt,
-         PolymerState& x,
-         const std::vector<double>& src,
+         PolymerState&  x,
+         WellState&     xw,
          const std::vector<double>& polymer_inflow)
     {
         
@@ -94,11 +163,11 @@ typedef Eigen::Array<double,
 
         const V pvdt = pvol / dt;
 
-        const SolutionState old_state = constantState(x);
+        const SolutionState old_state = constantState(x, xw);
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 40;
-        assemble(pvdt, old_state, x, src, polymer_inflow);
+        assemble(pvdt, old_state, x, xw, polymer_inflow);
 
         const double r0  = residualNorm();
         int          it  = 0;
@@ -108,9 +177,9 @@ typedef Eigen::Array<double,
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
             const V dx = solveJacobianSystem();
-            updateState(dx, x);
+            updateState(dx, x, xw);
 
-            assemble(pvdt, old_state, x, src, polymer_inflow);
+            assemble(pvdt, old_state, x, xw, polymer_inflow);
 
             const double r = residualNorm();
 
@@ -135,6 +204,8 @@ typedef Eigen::Array<double,
         : pressure   (    ADB::null())
         , saturation (np, ADB::null())
         , concentration ( ADB::null())
+        , qs            ( ADB::null())
+        , bhp           ( ADB::null())
     {
     }
 
@@ -143,10 +214,23 @@ typedef Eigen::Array<double,
 
 
     FullyImplicitTwophasePolymerSolver::SolutionState
-    FullyImplicitTwophasePolymerSolver::constantState(const PolymerState& x)
+    FullyImplicitTwophasePolymerSolver::constantState(const PolymerState& x,
+                                                      const WellState&    xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
+        // The block pattern assumes the following primary variables:
+        //    pressure
+        //    water saturation 
+        //    polymer concentration
+        //    well surface rates
+        //    well bottom-hole pressure
+        // Note that oil is assumed to always be present, but is never
+        // a primary variable.
+        std::vector<int> bpat(np + 1, nc);
+        bpat.push_back(xw.bhp().size() * np);
+        bpat.push_back(xw.bhp().size());
+        
 
         SolutionState state(np);
 
@@ -167,6 +251,20 @@ typedef Eigen::Array<double,
         const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
         state.concentration = ADB::constant(c);
 
+        // Well rates.
+        assert (not xw.wellRates().empty());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw * np);
+        state.qs = ADB::constant(qs, bpat);
+
+        // Bottom hole pressure.
+        assert (not xw.bhp().empty());
+        const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
+        state.bhp = ADB::constant(bhp, bpat);
         return state;
     }
 
@@ -175,13 +273,14 @@ typedef Eigen::Array<double,
 
 
     FullyImplicitTwophasePolymerSolver::SolutionState
-    FullyImplicitTwophasePolymerSolver::variableState(const PolymerState& x)
+    FullyImplicitTwophasePolymerSolver::variableState(const PolymerState& x,
+                                                      const WellState&    xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
 
         std::vector<V> vars0;
-        vars0.reserve(np); 
+        vars0.reserve(np + 3); 
 
         // Initial pressure.
         assert (not x.pressure().empty());
@@ -198,6 +297,21 @@ typedef Eigen::Array<double,
         assert (not x.concentration().empty());
         const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
         vars0.push_back(c);
+
+        // Initial well rates.
+        assert (not xw.wellRates().empty());
+        // Need to reshuffle well rates, from ordered by wells, then phase,
+        // to ordered by phase, then wells.
+        const int nw = wells_.number_of_wells;
+        // The transpose() below switches the ordering.
+        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        vars0.push_back(qs);
+
+        // Initial well bottom hole pressure.
+        assert (not xw.bhp().size());
+        const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
+        vars0.push_back(bhp);
 
         std::vector<ADB> vars = ADB::variables(vars0);
 
@@ -220,6 +334,10 @@ typedef Eigen::Array<double,
         // Concentration.
         state.concentration = vars[nextvar++];
 
+        // Qs.
+        state.qs = vars[ nextvar++ ];
+        // BHP.
+        state.bhp = vars[ nextvar++ ];
         assert(nextvar == int(vars.size()));
 
         return state;
@@ -237,7 +355,7 @@ typedef Eigen::Array<double,
             cmax(i) = (cmax(i) > c.value()(i)) ? cmax(i) : c.value()(i);
         }
 
-        return ADB::constant(cmax);
+        return ADB::constant(cmax, c.blockPattern());
     }
 
 
@@ -247,11 +365,11 @@ typedef Eigen::Array<double,
     assemble(const V&             pvdt,
              const SolutionState& old_state,
              const PolymerState&  x,
-             const std::vector<double>& src,
+             const WellState&     xw,
              const std::vector<double>& polymer_inflow)
     {
         // Create the primary variables.
-        const SolutionState state = variableState(x);
+        const SolutionState state = variableState(x, xw);
 
         // -------- Mass balance equations for water and oil --------
         const V trans = subset(transmissibility(), ops_.internal_faces);
@@ -260,27 +378,147 @@ typedef Eigen::Array<double,
         const ADB cmax = computeCmax(state.concentration);
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
-        std::cout << "krw  krw_eff\n";
-        for (int i = 0; i < grid_.number_of_cells; ++i) {
-            std::cout <<kr[0].value()(i)<<"  "<<krw_eff.value()(i)<< std::endl;
-        }
         const ADB mc = computeMc(state);
-       // const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[0], krw_eff, state);
         const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[1], krw_eff, state);
-        const std::vector<ADB> source = accumSource(kr[1], krw_eff, state.concentration, src, polymer_inflow);
+        //const std::vector<ADB> source = accumSource(kr[1], krw_eff, state.concentration, src, polymer_inflow);
+       // const std::vector<ADB> source = polymerSource();
         const double rho_r = polymer_props_ad_.rockDensity();
         const V phi = V::Constant(pvdt.size(), 1, *fluid_.porosity());
 
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-        residual_[0] =  pvdt * (state.saturation[0] - old_state.saturation[0])
-                        + ops_.div * mflux[0] - source[0];
-        residual_[1] =  pvdt * (state.saturation[1] - old_state.saturation[1])
-                        + ops_.div * mflux[1] - source[1];
+        residual_.mass_balance[0] =  pvdt * (state.saturation[0] - old_state.saturation[0])
+                        + ops_.div * mflux[0];
+        residual_.mass_balance[1] =  pvdt * (state.saturation[1] - old_state.saturation[1])
+                        + ops_.div * mflux[1];
       // Mass balance equation for polymer
-        residual_[2] = pvdt * (state.saturation[0] * state.concentration
+        residual_.mass_balance[2] = pvdt * (state.saturation[0] * state.concentration
                       - old_state.saturation[0] * old_state.concentration) * (1. - dead_pore_vol)
                       + pvdt * rho_r * (1. - phi) / phi * ads
-                      + ops_.div * mflux[2] - source[2];
+                      + ops_.div * mflux[2];
+
+        // -------- Well equation, and well contributions to the mass balance equations --------
+
+        // Contribution to mass balance will have to wait.
+
+        const int nc = grid_.number_of_cells;
+        const int np = wells_.number_of_phases;
+        const int nw = wells_.number_of_wells;
+        const int nperf = wells_.well_connpos[nw];
+
+        const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
+        const V transw = Eigen::Map<const V>(wells_.WI, nperf);
+
+        const ADB& bhp = state.bhp;
+
+        const DataBlock well_s = wops_.w2p * Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np).matrix();
+
+        // Extract variables for perforation cell pressures
+        // and corresponding perforation well pressures.
+        const ADB p_perfcell = subset(state.pressure, well_cells);
+        // Finally construct well perforation pressures and well flows.
+
+        // Compute well pressure differentials.
+        // Construct pressure difference vector for wells.
+        const int dim = grid_.dimensions;
+        if (gravity_) {
+            for (int dd = 0; dd < dim -1; ++dd) {
+                assert(g[dd] == 0.0);
+            }
+        }
+        ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
+        for (int phase = 0; phase < 2; ++phase) {
+            // For incompressible flow cell rho is the same.
+            const ADB cell_rho = fluidDensity(phase, state.pressure);
+            cell_rho_total += state.saturation[phase] * cell_rho;
+        }
+        ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        assert(np == wells_.number_of_phases);
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
+        for (int phase = 0; phase < 2; ++phase) {
+            const ADB cell_rho = fluidDensity(phase, state.pressure);
+            const V fraction = compi.col(phase);
+            inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
+        }
+        const V rho_perf_cell = subset(cell_rho_total, well_cells).value();
+        const V rho_perf_well = inj_rho_total.value();
+        V prodperfs = V::Constant(nperf, -1.0);
+        for (int w = 0; w < nw; ++w) {
+            if (wells_.type[w] == PRODUCER) {
+                std::fill(prodperfs.data() + wells_.well_connpos[w],
+                          prodperfs.data() + wells_.well_connpos[w+1], 1.0);
+            }
+        }
+        const Selector<double> producer(prodperfs);
+        const V rho_perf = producer.select(rho_perf_cell, rho_perf_well);
+        const V well_perf_dp = computePerfPress(grid_, wells_, rho_perf, gravity_ ? gravity_[dim - 1] : 0.0);
+
+        const ADB p_perfwell = wops_.w2p * bhp + well_perf_dp;
+        const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
+        // DUMP(nkgradp_well);
+        const Selector<double> cell_to_well_selector(nkgradp_well.value());
+        ADB well_rates_all = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
+
+        ADB perf_total_mob = subset(mob_[0], well_cells) + subset(mob_[1], well_cells);
+
+        std::vector<ADB> well_contribs(np, ADB::null());
+        std::vector<ADB> well_perf_rates(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+//            const ADB& cell_b = rq_[phase].b;
+  //          const ADB perf_b = subset(cell_b, well_cells);
+            const ADB& cell_mob = mob_[phase];
+            const V well_fraction = compi.col(phase);
+            // Using total mobilities for all phases for injection.
+            const ADB perf_mob_injector = (wops_.w2p * well_fraction.matrix()).array() * perf_total_mob;
+            const ADB perf_mob = producer.select(subset(cell_mob, well_cells),
+                                                 perf_mob_injector);
+            const ADB perf_flux = perf_mob * (nkgradp_well); // No gravity term for perforations.
+            well_perf_rates[phase] = perf_flux;
+            const ADB well_rates = wops_.p2w * well_perf_rates[phase];
+            well_rates_all += superset(well_rates, Span(nw, 1, phase*nw), nw*np);
+
+            // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
+            well_contribs[phase] = superset(perf_flux, well_cells, nc);
+            // DUMP(well_contribs[phase]);
+            residual_.mass_balance[phase] += well_contribs[phase];
+        }
+
+        // well rates contribs to polymer mass balance eqn.
+        // for injection wells.
+        const V polyin = Eigen::Map<const V>(& polymer_inflow[0], nc);
+        const V poly_in_perf = subset(polyin, well_cells);
+        const V poly_c_cell = subset(state.concentration, well_cells).value();
+        const V poly_c = producer.select(poly_c_cell, poly_in_perf);
+        residual_.mass_balance[2] += superset(well_perf_rates[0] * poly_c, well_cells, nc);
+
+        // Set the well flux equation
+        residual_.well_flux_eq = state.qs + well_rates_all;
+        // DUMP(residual_.well_flux_eq);
+
+        // Handling BHP and SURFACE_RATE wells.
+        V bhp_targets(nw);
+        V rate_targets(nw);
+        M rate_distr(nw, np*nw);
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells_.ctrls[w];
+            if (wc->type[wc->current] == BHP) {
+                bhp_targets[w] = wc->target[wc->current];
+                rate_targets[w] = -1e100;
+            } else if (wc->type[wc->current] == SURFACE_RATE) {
+                bhp_targets[w] = -1e100;
+                rate_targets[w] = wc->target[wc->current];
+                for (int phase = 0; phase < np; ++phase) {
+                    rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
+                }
+            } else {
+                OPM_THROW(std::runtime_error, "Can only handle BHP type controls.");
+            }
+        }
+        const ADB bhp_residual = bhp - bhp_targets;
+        const ADB rate_residual = rate_distr * state.qs - rate_targets;
+        // Choose bhp residual for positive bhp targets.
+        Selector<double> bhp_selector(bhp_targets);
+        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+ //       residual_.well_eq = bhp_residual;
 
     }
    
@@ -289,24 +527,39 @@ typedef Eigen::Array<double,
                                                         const ADB&              mc,
                                                         const ADB&              kro,
                                                         const ADB&              krw_eff,
-                                                        const SolutionState&    state ) const
+                                                        const SolutionState&    state )
     {
         const double* mus = fluid_.viscosity();
         std::vector<ADB> mflux;
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mus);
-        ADB wat_mob = krw_eff * inv_wat_eff_vis;
-        ADB oil_mob = kro / V::Constant(kro.size(), 1, mus[1]);
-        ADB poly_mob =  mc * krw_eff * inv_wat_eff_vis;
+        mob_[0] = krw_eff * inv_wat_eff_vis;
+        mob_[1] = kro / V::Constant(kro.size(), 1, mus[1]);
+        mob_[2] =  mc * krw_eff * inv_wat_eff_vis;
 
 
-        const ADB dp = ops_.ngrad * state.pressure;
+        const int nc = grid_.number_of_cells; 
+        V z(nc);
+        // Compute z coordinates
+        for (int c = 0; c < nc; ++c){
+            z[c] = grid_.cell_centroids[c * 3 + 2];
+        }
+        for (int phase = 0; phase < 2; ++phase) {
+            const ADB rho = fluidDensity(phase, state.pressure);
+            const ADB rhoavg = ops_.caver * rho;
+            const ADB dp = ops_.ngrad * state.pressure
+                           - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
+            const ADB head = trans * dp;
+            UpwindSelector<double> upwind(grid_, ops_, head.value());
+            mflux.push_back(upwind.select(mob_[phase])*head);
+        }
+        // polymer mass flux.
+        const ADB rho = fluidDensity(0, state.pressure);
+        const ADB rhoavg = ops_.caver * rho;
+        const ADB dp = ops_.ngrad * state.pressure
+                       - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
         const ADB head = trans * dp;
         UpwindSelector<double> upwind(grid_, ops_, head.value());
-
-        mflux.push_back(upwind.select(wat_mob)*head);
-        mflux.push_back(upwind.select(oil_mob)*head);
-        mflux.push_back(upwind.select(poly_mob)*head);
-        
+        mflux.push_back(upwind.select(mob_[2])*head);
         
         return mflux;
     }
@@ -363,16 +616,12 @@ typedef Eigen::Array<double,
                                                         const ADB& krw_eff,
                                                         const ADB& c) const
     {
-        const double* mus = fluid_.viscosity();
-        ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(c, mus);
-        ADB wat_mob = krw_eff * inv_wat_eff_vis;
-        ADB oil_mob = kro / V::Constant(kro.size(), 1, mus[1]);
-        ADB total_mob = wat_mob + oil_mob;
+        ADB total_mob = mob_[0] + mob_[1];
 
         std::vector<ADB> fracflow;
 
-        fracflow.push_back(wat_mob / total_mob);
-        fracflow.push_back(oil_mob / total_mob);
+        fracflow.push_back(mob_[0] / total_mob);
+        fracflow.push_back(mob_[1] / total_mob);
 
         return fracflow;
     }
@@ -388,15 +637,17 @@ typedef Eigen::Array<double,
     	if (np != 2) {
 	        OPM_THROW(std::logic_error, "Only two-phase ok in FullyImplicitTwophasePolymerSolver.");
 	    }
-        ADB mass_phase_res = vertcat(residual_[0], residual_[1]);
-	    ADB mass_res = collapseJacs(vertcat(mass_phase_res, residual_[2]));
+	    ADB mass_res = vertcat(residual_.mass_balance[0], residual_.mass_balance[1]);
+        mass_res = vertcat(mass_res, residual_.mass_balance[2]);
+        ADB well_res = vertcat(residual_.well_flux_eq, residual_.well_eq);
+	    ADB total_res = collapseJacs(vertcat(mass_res, well_res));
 
-        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = mass_res.derivative()[0];
-        V dx(V::Zero(mass_res.size()));
+        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_res.derivative()[0];
+        V dx(V::Zero(total_res.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                               mass_res.value().data(), dx.data());
+                               total_res.value().data(), dx.data());
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
@@ -410,13 +661,12 @@ typedef Eigen::Array<double,
 
 
     void FullyImplicitTwophasePolymerSolver::updateState(const V& dx,
-                                                  PolymerState& state) const
+                                                  PolymerState& state,
+                                                  WellState&    well_state) const
     {
         const int np = fluid_.numPhases();
         const int nc = grid_.number_of_cells;
-        const V null;
-        assert(null.size() == 0);
-        const V zero = V::Zero(nc);
+        const int nw = wells_.number_of_wells;
         const V one = V::Constant(nc, 1.0);
 
         // Extract parts of dx corresponding to each part.
@@ -426,6 +676,10 @@ typedef Eigen::Array<double,
         varstart += dsw.size();
         const V dc = subset(dx, Span(nc, 1, varstart));
         varstart += dc.size();
+        const V dqs = subset(dx, Span(np*nw, 1, varstart));
+        varstart += dqs.size();
+        const V dbhp = subset(dx, Span(nw, 1, varstart));
+        varstart += dbhp.size();
 
         assert(varstart == dx.size());
 
@@ -453,6 +707,24 @@ typedef Eigen::Array<double,
         const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc);
         const V c = c_old - dc;
         std::copy(&c[0], &c[0] + nc, state.concentration().begin());
+
+
+
+        // Qs update.
+        // Since we need to update the wellrates, that are ordered by wells,
+        // from dqs which are ordered by phase, the simplest is to compute
+        // dwr, which is the data from dqs but ordered by wells.
+        const DataBlock wwr = Eigen::Map<const DataBlock>(dqs.data(), np, nw).transpose();
+        const V dwr = Eigen::Map<const V>(wwr.data(), nw*np);
+        const V wr_old = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np);
+        const V wr = wr_old - dwr;
+        std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
+
+
+        // Bhp update.
+        const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
+        const V bhp = bhp_old - dbhp;
+        std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
     }
    
@@ -486,18 +758,31 @@ typedef Eigen::Array<double,
     {
         double r = 0;
         for (std::vector<ADB>::const_iterator
-                 b = residual_.begin(),
-                 e = residual_.end();
+                 b = residual_.mass_balance.begin(),
+                 e = residual_.mass_balance.end();
              b != e; ++b)
         {
             r = std::max(r, (*b).value().matrix().norm());
         }
 
+        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
+        r = std::max(r, residual_.well_eq.value().matrix().norm());
         return r;
     }
    
    
    
+
+    ADB
+    FullyImplicitTwophasePolymerSolver::fluidDensity(const int phase,
+                                              const ADB p) const
+    {
+        const double* rhos = fluid_.surfaceDensity();
+        ADB rho = ADB::constant(V::Constant(grid_.number_of_cells, 1, rhos[phase]),
+                               p.blockPattern());
+        
+        return rho;
+    }
    
    
     V

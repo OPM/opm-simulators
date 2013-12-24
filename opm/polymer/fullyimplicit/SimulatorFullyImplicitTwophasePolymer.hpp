@@ -24,7 +24,7 @@
 #include <vector>
 
 struct UnstructuredGrid;
-
+struct Wells;
 namespace Opm
 {
     namespace parameter { class ParameterGroup; }
@@ -34,6 +34,8 @@ namespace Opm
     class PolymerState;
     class PolymerPropsAd;
     class PolymerInflowInterface;
+    class WellsManager;
+    class WellState;
     struct SimulatorReport;
     
     /// Class collecting all necessary components for a two-phase simulation.
@@ -64,8 +66,9 @@ namespace Opm
                                        const IncompPropsAdInterface& props,
                                        const PolymerPropsAd&    polymer_props,
                                        LinearSolverInterface& linsolver,
-                                       const PolymerInflowInterface& polymer_inflow,
-                                       std::vector<double>& src);
+                                       WellsManager&      wells_manager,
+                                       PolymerInflowInterface& polymer_inflow,
+                                       const double* gravity);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -75,7 +78,8 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerState& state);
+                            PolymerState& state,
+                            WellState&    well_state);
 
     private:
         class Impl;
