@@ -222,7 +222,7 @@ namespace {
 
         // The block pattern assumes the following primary variables:
         //    pressure
-        //    water saturation (if water present)
+        //    water saturation 
         //    well surface rates
         //    well bottom-hole pressure
         // Note that oil is assumed to always be present, but is never
@@ -253,7 +253,7 @@ namespace {
         const int nw = wells_.number_of_wells;
         // The transpose() below switches the ordering.
         const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        const V qs = Eigen::Map<const V>(wrates.data(), nw * np);
         state.qs = ADB::constant(qs, bpat);
 
         // Bottom hole pressure.
@@ -276,7 +276,7 @@ namespace {
         const int np = x.numPhases();
 
         std::vector<V> vars0;
-        vars0.reserve(np); 
+        vars0.reserve(np + 2); 
 
         // Initial pressure.
         assert (not x.pressure().empty());
@@ -590,7 +590,9 @@ namespace {
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np] = sw[c];
         }
-
+        for (int c = 0; c < nc; ++c) {
+            state.saturation()[c*np+1] = so[c];
+        }
         // Qs update.
         // Since we need to update the wellrates, that are ordered by wells,
         // from dqs which are ordered by phase, the simplest is to compute
@@ -693,7 +695,6 @@ namespace {
         
         const ADB rho = fluidDensity(phase, state.pressure);
         const ADB rhoavg = ops_.caver * rho;
-        // Compute z coordinates
         const int nc = grid_.number_of_cells; 
         V z(nc);
         // Compute z coordinates
@@ -726,6 +727,7 @@ namespace {
         {
             r = std::max(r, (*b).value().matrix().norm());
         }
+        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
         r = std::max(r, residual_.well_eq.value().matrix().norm());
 
         return r;
