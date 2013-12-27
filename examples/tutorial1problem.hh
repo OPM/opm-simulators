@@ -244,7 +244,7 @@ public:
 
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
-        else if (pos[0] > this->bboxMax()[0] - eps_) {
+        else if (pos[0] > this->boundingBoxMax()[0] - eps_) {
             // forced outflow at the right boundary
             RateVector massRate(0.0);
 

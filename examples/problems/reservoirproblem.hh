@@ -424,10 +424,10 @@ public:
                      int spaceIdx, int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
-        Scalar x = pos[0] - this->bboxMin()[0];
-        Scalar y = pos[dim - 1] - this->bboxMin()[dim - 1];
-        Scalar height = this->bboxMax()[dim - 1] - this->bboxMin()[dim - 1];
-        Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
+        Scalar x = pos[0] - this->boundingBoxMin()[0];
+        Scalar y = pos[dim - 1] - this->boundingBoxMin()[dim - 1];
+        Scalar height = this->boundingBoxMax()[dim - 1] - this->boundingBoxMin()[dim - 1];
+        Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
         if ((onLeftBoundary_(pos) || onRightBoundary_(pos)) && y < height / 2) {
             // injectors
             auto fs = initialFluidState_;
@@ -566,7 +566,7 @@ private:
     { return pos[0] < eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     bool onInlet_(const GlobalPosition &pos) const
     { return onRightBoundary_(pos) && (5 < pos[1]) && (pos[1] < 15); }

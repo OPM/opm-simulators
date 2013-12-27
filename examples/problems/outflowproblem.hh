@@ -291,7 +291,7 @@ private:
     { return pos[0] < eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     template <class FluidState, class Context>
     void initialFluidState_(FluidState &fs, const Context &context,
@@ -300,9 +300,9 @@ private:
         Scalar T = temperature(context, spaceIdx, timeIdx);
         // Scalar rho = FluidSystem::H2O::liquidDensity(T, /*pressure=*/1.5e5);
         // Scalar z = context.pos(spaceIdx, timeIdx)[dim - 1] -
-        // this->bboxMax()[dim - 1];
+        // this->boundingBoxMax()[dim - 1];
         // Scalar z = context.pos(spaceIdx, timeIdx)[dim - 1] -
-        // this->bboxMax()[dim - 1];
+        // this->boundingBoxMax()[dim - 1];
 
         fs.setSaturation(/*phaseIdx=*/0, 1.0);
         fs.setPressure(/*phaseIdx=*/0, 1e5 /* + rho*z */);

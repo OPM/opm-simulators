@@ -244,16 +244,16 @@ private:
     }
 
     bool onLeftBoundary_(const GlobalPosition &globalPos) const
-    { return globalPos[0] < this->bboxMin()[0] + eps_; }
+    { return globalPos[0] < this->boundingBoxMin()[0] + eps_; }
 
     bool onRightBoundary_(const GlobalPosition &globalPos) const
-    { return globalPos[0] > this->bboxMax()[0] - eps_; }
+    { return globalPos[0] > this->boundingBoxMax()[0] - eps_; }
 
     bool onLowerBoundary_(const GlobalPosition &globalPos) const
-    { return globalPos[1] < this->bboxMin()[1] + eps_; }
+    { return globalPos[1] < this->boundingBoxMin()[1] + eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &globalPos) const
-    { return globalPos[1] > this->bboxMax()[1] - eps_; }
+    { return globalPos[1] > this->boundingBoxMax()[1] - eps_; }
 
     Scalar eps_;
 };
