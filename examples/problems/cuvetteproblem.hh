@@ -182,7 +182,6 @@ class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
     // Grid and world dimension
-    enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
     typedef typename GridView::ctype CoordScalar;
