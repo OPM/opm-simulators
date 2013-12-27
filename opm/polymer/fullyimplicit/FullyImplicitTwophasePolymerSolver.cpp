@@ -698,8 +698,6 @@ namespace {
         so -= sw;
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np] = sw[c];
-        }
-        for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np + 1] = so[c];
         }
         
@@ -793,7 +791,7 @@ namespace {
         V trans(grid_.cell_facepos[nc]);
         UnstructuredGrid* ug = const_cast<UnstructuredGrid*>(& grid_);
         tpfa_htrans_compute(ug, fluid_.permeability(), htrans.data());
-        tpfa_trans_compute (ug, htrans.data()     , trans.data());
+        tpfa_trans_compute (ug, htrans.data(), trans.data());
         
         return trans;
     }

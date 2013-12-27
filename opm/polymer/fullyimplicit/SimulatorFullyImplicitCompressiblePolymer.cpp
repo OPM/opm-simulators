@@ -17,30 +17,40 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitTwophasePolymer.hpp>
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif // HAVE_CONFIG_H
+
+#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitCompressiblePolymer.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
-#include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
-#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
-#include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+#include <opm/polymer/fullyimplicit/GeoProps.hpp>
+#include <opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp>
+#include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
+
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
-#include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
-
-
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
+
+#include <opm/core/wells/WellsManager.hpp>
+
+#include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/grid/ColumnExtract.hpp>
-#include <opm/polymer/PolymerState.hpp>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
+#include <opm/core/simulator/WellState.hpp>
+#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -49,29 +59,30 @@
 #include <numeric>
 #include <fstream>
 #include <iostream>
-#include <Eigen/Eigen>
+
+
 namespace Opm
 {
 
-
-
-    class SimulatorFullyImplicitTwophasePolymer::Impl
+    class SimulatorFullyImplicitCompressiblePolymer::Impl
     {
     public:
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
-             const IncompPropsAdInterface& props,
-             const PolymerPropsAd&  polymer_props,
-             LinearSolverInterface& linsolver,
-             WellsManager&    wells_manager,
+             const BlackoilPropsAdInterface& props,
+             const PolymerPropsAd&          polymer_props,
+             const RockCompressibility* rock_comp_props,
+             WellsManager& wells_manager,
              PolymerInflowInterface& polymer_inflow,
+             LinearSolverInterface& linsolver,
              const double* gravity);
 
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerState& state,
-                            WellState&    well_state);
+                            PolymerBlackoilState& state,
+                            WellState& well_state);
 
     private:
+        // Data.
 
         // Parameters for output.
         bool output_;
@@ -83,13 +94,16 @@ namespace Opm
         int max_well_control_iterations_;
         // Observed objects.
         const UnstructuredGrid& grid_;
-        const IncompPropsAdInterface& props_;
-        const PolymerPropsAd&  polymer_props_;
-        WellsManager&   wells_manager_;
-        const Wells*    wells_;
+        const BlackoilPropsAdInterface& props_;
+        const PolymerPropsAd&       polymer_props_;
+        const RockCompressibility* rock_comp_props_;
+        WellsManager& wells_manager_;
+        const Wells* wells_;
         PolymerInflowInterface& polymer_inflow_;
+        const double* gravity_;
         // Solvers
-        FullyImplicitTwophasePolymerSolver solver_;
+        DerivedGeology geo_;
+        FullyImplicitCompressiblePolymerSolver solver_;
         // Misc. data
         std::vector<int> allcells_;
     };
@@ -97,26 +111,28 @@ namespace Opm
 
 
 
-    SimulatorFullyImplicitTwophasePolymer::
-    SimulatorFullyImplicitTwophasePolymer(const parameter::ParameterGroup& param,
-                                          const UnstructuredGrid& grid,
-                                          const IncompPropsAdInterface& props,
-                                          const PolymerPropsAd& polymer_props,
-                                          LinearSolverInterface& linsolver,
-                                          WellsManager& wells_manager,
-                                          PolymerInflowInterface&  polymer_inflow,
-                                          const double* gravity)
+    SimulatorFullyImplicitCompressiblePolymer::
+    SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
+                                                                   const UnstructuredGrid& grid,
+                                                                   const BlackoilPropsAdInterface& props,
+                                                                   const PolymerPropsAd&    polymer_props,
+                                                                   const RockCompressibility* rock_comp_props,
+                                                                   WellsManager& wells_manager,
+                                                                   PolymerInflowInterface&  polymer_inflow,
+                                                                   LinearSolverInterface& linsolver,
+                                                                   const double* gravity)
+
     {
-        pimpl_.reset(new Impl(param, grid, props, polymer_props, linsolver, wells_manager, polymer_inflow, gravity));
+        pimpl_.reset(new Impl(param, grid, props, polymer_props, rock_comp_props, wells_manager, polymer_inflow, linsolver, gravity));
     }
 
 
 
 
 
-    SimulatorReport SimulatorFullyImplicitTwophasePolymer::run(SimulatorTimer& timer,
-                                                        PolymerState& state,
-                                                        WellState&    well_state)
+    SimulatorReport SimulatorFullyImplicitCompressiblePolymer::run(SimulatorTimer& timer,
+                                                        PolymerBlackoilState& state,
+                                                        WellState& well_state)
     {
         return pimpl_->run(timer, state, well_state);
     }
@@ -124,7 +140,7 @@ namespace Opm
 
 
     static void outputStateVtk(const UnstructuredGrid& grid,
-                               const Opm::PolymerState& state,
+                               const Opm::PolymerBlackoilState& state,
                                const int step,
                                const std::string& output_dir)
     {
@@ -155,7 +171,7 @@ namespace Opm
 
 
     static void outputStateMatlab(const UnstructuredGrid& grid,
-                                  const Opm::PolymerState& state,
+                                  const Opm::PolymerBlackoilState& state,
                                   const int step,
                                   const std::string& output_dir)
     {
@@ -163,6 +179,7 @@ namespace Opm
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
         dm["concentration"] = &state.concentration();
+        dm["surfvolume"] = &state.surfacevol();
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
         dm["velocity"] = &cell_velocity;
@@ -188,37 +205,9 @@ namespace Opm
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
     }
-
-
-    
-/*
-    static void outputWaterCut(const Opm::Watercut& watercut,
-                               const std::string& output_dir)
-    {
-        // Write water cut curve.
-        std::string fname = output_dir  + "/watercut.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        watercut.write(os);
-    }
-    static void outputWellReport(const Opm::WellReport& wellreport,
-                                 const std::string& output_dir)
-    {
-        // Write well report.
-        std::string fname = output_dir  + "/wellreport.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        wellreport.write(os);
-    }
-  */  
-    
-    static void outputWellStateMatlab(WellState& well_state,
-                                      const int step,
-                                      const std::string& output_dir)
+    static void outputWellStateMatlab(const Opm::WellState& well_state,
+                                  const int step,
+                                  const std::string& output_dir)
     {
         Opm::DataMap dm;
         dm["bhp"] = &well_state.bhp();
@@ -246,25 +235,58 @@ namespace Opm
         }
     }
 
+#if 0
+    static void outputWaterCut(const Opm::Watercut& watercut,
+                               const std::string& output_dir)
+    {
+        // Write water cut curve.
+        std::string fname = output_dir  + "/watercut.txt";
+        std::ofstream os(fname.c_str());
+        if (!os) {
+            OPM_THROW(std::runtime_error, "Failed to open " << fname);
+        }
+        watercut.write(os);
+    }
 
-    
-    
-    SimulatorFullyImplicitTwophasePolymer::Impl::Impl(const parameter::ParameterGroup& param,
+    static void outputWellReport(const Opm::WellReport& wellreport,
+                                 const std::string& output_dir)
+    {
+        // Write well report.
+        std::string fname = output_dir  + "/wellreport.txt";
+        std::ofstream os(fname.c_str());
+        if (!os) {
+            OPM_THROW(std::runtime_error, "Failed to open " << fname);
+        }
+        wellreport.write(os);
+    }
+#endif
+
+
+    // \TODO: Treat bcs.
+    SimulatorFullyImplicitCompressiblePolymer::Impl::Impl(const parameter::ParameterGroup& param,
                                                const UnstructuredGrid& grid,
-                                               const IncompPropsAdInterface& props,
+                                               const BlackoilPropsAdInterface& props,
                                                const PolymerPropsAd&    polymer_props,
+                                               const RockCompressibility* rock_comp_props,
+                                               WellsManager& wells_manager,
+                                               PolymerInflowInterface&  polymer_inflow,
                                                LinearSolverInterface& linsolver,
-                                               WellsManager&  wells_manager,
-                                               PolymerInflowInterface& polymer_inflow,
                                                const double* gravity)
         : grid_(grid),
           props_(props),
           polymer_props_(polymer_props),
+          rock_comp_props_(rock_comp_props),
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
           polymer_inflow_(polymer_inflow),
-          solver_(grid_, props_, polymer_props_, linsolver, *wells_manager.c_wells(), gravity)
+          gravity_(gravity),
+          geo_(grid_, props_, gravity_),
+          solver_(grid_, props_, geo_, rock_comp_props, polymer_props, *wells_manager.c_wells(), linsolver)
 
+          /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
+                               param.getDefault("nl_pressure_change_tolerance", 1.0),
+                               param.getDefault("nl_pressure_maxiter", 10),
+                               gravity,  */
     {
         // For output.
         output_ = param.getDefault("output", true);
@@ -281,6 +303,11 @@ namespace Opm
             }
             output_interval_ = param.getDefault("output_interval", 1);
         }
+
+        // Well control related init.
+        check_well_controls_ = param.getDefault("check_well_controls", false);
+        max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
+
         // Misc init.
         const int num_cells = grid.number_of_cells;
         allcells_.resize(num_cells);
@@ -289,18 +316,25 @@ namespace Opm
         }
     }
 
-    SimulatorReport SimulatorFullyImplicitTwophasePolymer::Impl::run(SimulatorTimer& timer,
-                                                              PolymerState& state,
-                                                              WellState&    well_state)
+
+
+
+    SimulatorReport SimulatorFullyImplicitCompressiblePolymer::Impl::run(SimulatorTimer& timer,
+                                                              PolymerBlackoilState& state,
+                                                              WellState& well_state)
     {
 
         // Initialisation.
         std::vector<double> porevol;
-        Opm::computePorevolume(grid_, props_.porosity(), porevol);
-
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
+        } else {
+            computePorevolume(grid_, props_.porosity(), porevol);
+        }
         // const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-        std::vector<double> polymer_inflow_c(grid_.number_of_cells);
+        std::vector<double> initial_porevol = porevol;
 
+        std::vector<double> polymer_inflow_c(grid_.number_of_cells);
         // Main simulation loop.
         Opm::time::StopWatch solver_timer;
         double stime = 0.0;
@@ -316,9 +350,18 @@ namespace Opm
         Opm::computeSaturatedVol(porevol, state.surfacevol(), init_surfvol);
         Opm::Watercut watercut;
         watercut.push(0.0, 0.0, 0.0);
+        Opm::WellReport wellreport;
 #endif
         std::vector<double> fractional_flows;
         std::vector<double> well_resflows_phase;
+        if (wells_) {
+            well_resflows_phase.resize((wells_->number_of_phases)*(wells_->number_of_wells), 0.0);
+#if 0
+            wellreport.push(props_, *wells_,
+                            state.pressure(), state.surfacevol(), state.saturation(),
+                            0.0, well_state.bhp(), well_state.perfRates());
+#endif
+        }
         std::fstream tstep_os;
         if (output_) {
             std::string filename = output_dir_ + "/step_timing.param";
@@ -339,6 +382,13 @@ namespace Opm
 
             SimulatorReport sreport;
 
+            // Solve pressure equation.
+            // if (check_well_controls_) {
+            //     computeFractionalFlow(props_, allcells_,
+            //                           state.pressure(), state.surfacevol(), state.saturation(),
+            //                           fractional_flows);
+            //     wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
+            // }
             bool well_control_passed = !check_well_controls_;
             int well_control_iteration = 0;
             do {
@@ -379,8 +429,11 @@ namespace Opm
                 }
             } while (!well_control_passed);
 
-
             // Update pore volumes if rock is compressible.
+            if (rock_comp_props_ && rock_comp_props_->isActive()) {
+                initial_porevol = porevol;
+                computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
+            }
 
             // The reports below are geared towards two phases only.
 #if 0
@@ -464,9 +517,6 @@ namespace Opm
         report.total_time = total_timer.secsSinceStart();
         return report;
     }
-
-
-
 
 
 } // namespace Opm

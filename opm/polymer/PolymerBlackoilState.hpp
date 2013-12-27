@@ -39,6 +39,10 @@ namespace Opm
             concentration_.resize(g.number_of_cells, 0.0);
             cmax_.resize(g.number_of_cells, 0.0);
         }
+        int numPhases() const
+        {
+            return state_blackoil_.numPhases();
+        }
 
         enum ExtremalSat { MinSat = BlackoilState::MinSat, MaxSat = BlackoilState::MaxSat };
 
