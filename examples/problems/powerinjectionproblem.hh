@@ -361,10 +361,10 @@ public:
 
 private:
     bool onLeftBoundary_(const GlobalPosition &pos) const
-    { return pos[0] < this->bboxMin()[0] + eps_; }
+    { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     void setupInitialFluidState_()
     {

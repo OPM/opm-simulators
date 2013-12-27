@@ -409,8 +409,8 @@ public:
 
             // set wetting phase pressure and saturation
             if (onLeftBoundary_(pos)) {
-                Scalar height = this->bboxMax()[1] - this->bboxMin()[1];
-                Scalar depth = this->bboxMax()[1] - pos[1];
+                Scalar height = this->boundingBoxMax()[1] - this->boundingBoxMin()[1];
+                Scalar depth = this->boundingBoxMax()[1] - pos[1];
                 Scalar alpha = (1 + 1.5 / height);
 
                 // hydrostatic pressure scaled by alpha
@@ -418,7 +418,7 @@ public:
                 Sw = 1.0;
             }
             else {
-                Scalar depth = this->bboxMax()[1] - pos[1];
+                Scalar depth = this->boundingBoxMax()[1] - pos[1];
 
                 // hydrostatic pressure
                 pw = 1e5 - densityW * this->gravity()[1] * depth;
@@ -472,7 +472,7 @@ public:
                  int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
-        Scalar depth = this->bboxMax()[1] - pos[1];
+        Scalar depth = this->boundingBoxMax()[1] - pos[1];
 
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
         fs.setPressure(wPhaseIdx, /*pressure=*/1e5);
@@ -529,21 +529,21 @@ private:
     }
 
     bool onLeftBoundary_(const GlobalPosition &pos) const
-    { return pos[0] < this->bboxMin()[0] + eps_; }
+    { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     bool onLowerBoundary_(const GlobalPosition &pos) const
-    { return pos[1] < this->bboxMin()[1] + eps_; }
+    { return pos[1] < this->boundingBoxMin()[1] + eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &pos) const
-    { return pos[1] > this->bboxMax()[1] - eps_; }
+    { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
     bool onInlet_(const GlobalPosition &pos) const
     {
-        Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
-        Scalar lambda = (this->bboxMax()[0] - pos[0]) / width;
+        Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
+        Scalar lambda = (this->boundingBoxMax()[0] - pos[0]) / width;
         return onUpperBoundary_(pos) && 0.5 < lambda && lambda < 2.0 / 3.0;
     }
 

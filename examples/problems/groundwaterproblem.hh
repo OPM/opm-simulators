@@ -334,7 +334,7 @@ private:
     { return pos[dim - 1] < eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &pos) const
-    { return pos[dim - 1] > this->bboxMax()[dim - 1] - eps_; }
+    { return pos[dim - 1] > this->boundingBoxMax()[dim - 1] - eps_; }
 
     bool isInLens_(const GlobalPosition &pos) const
     {

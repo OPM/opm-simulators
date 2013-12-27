@@ -294,7 +294,7 @@ public:
 
 private:
     bool onLeftSide_(const GlobalPosition &pos) const
-    { return pos[0] < (this->bboxMin()[0] + this->bboxMax()[0]) / 2; }
+    { return pos[0] < (this->boundingBoxMin()[0] + this->boundingBoxMax()[0]) / 2; }
 
     void setupInitialFluidStates_()
     {

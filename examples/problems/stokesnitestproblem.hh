@@ -213,9 +213,9 @@ public:
         moleFrac[AirIdx] = 1 - moleFrac[H2OIdx];
 
         // parabolic velocity profile
-        Scalar y = this->bboxMax()[1] - pos[1];
-        Scalar x = pos[0] - this->bboxMin()[0];
-        Scalar width = this->bboxMax()[0] - this->bboxMin()[0];
+        Scalar y = this->boundingBoxMax()[1] - pos[1];
+        Scalar x = pos[0] - this->boundingBoxMin()[0];
+        Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
 
         // parabolic velocity profile
         const Scalar maxVelocity = 1.0;
@@ -285,16 +285,16 @@ public:
 
 private:
     bool onLeftBoundary_(const GlobalPosition &pos) const
-    { return pos[0] < this->bboxMin()[0] + eps_; }
+    { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     bool onLowerBoundary_(const GlobalPosition &pos) const
-    { return pos[1] < this->bboxMin()[1] + eps_; }
+    { return pos[1] < this->boundingBoxMin()[1] + eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &pos) const
-    { return pos[1] > this->bboxMax()[1] - eps_; }
+    { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
     bool onBoundary_(const GlobalPosition &pos) const
     {

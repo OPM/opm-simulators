@@ -444,13 +444,13 @@ private:
     { return pos[0] < eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     bool onLowerBoundary_(const GlobalPosition &pos) const
     { return pos[1] < eps_; }
 
     bool onUpperBoundary_(const GlobalPosition &pos) const
-    { return pos[1] > this->bboxMax()[1] - eps_; }
+    { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
     bool onInlet_(const GlobalPosition &pos) const
     { return onLowerBoundary_(pos) && (15.0 < pos[0]) && (pos[0] < 25.0); }

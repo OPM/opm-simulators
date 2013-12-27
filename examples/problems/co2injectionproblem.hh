@@ -577,7 +577,7 @@ private:
     { return pos[0] < eps_; }
 
     bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->bboxMax()[0] - eps_; }
+    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     bool onInlet_(const GlobalPosition &pos) const
     { return onRightBoundary_(pos) && (5 < pos[1]) && (pos[1] < 15); }
