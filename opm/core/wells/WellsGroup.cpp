@@ -20,6 +20,7 @@
 #include "config.h"
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <cmath>

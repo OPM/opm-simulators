@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/linalg/sparse_sys.h>
 

@@ -35,6 +35,7 @@
 */
 #include "config.h"
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 
 #include <assert.h>
 #include <stddef.h>

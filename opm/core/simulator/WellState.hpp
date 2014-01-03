@@ -21,6 +21,7 @@
 #define OPM_WELLSTATE_HEADER_INCLUDED
 
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <vector>
 
 namespace Opm
