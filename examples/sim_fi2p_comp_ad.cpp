@@ -138,7 +138,7 @@ try
             }
         }
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+        initStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
