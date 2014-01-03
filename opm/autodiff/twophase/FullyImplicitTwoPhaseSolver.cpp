@@ -156,7 +156,7 @@ namespace {
         
         V pvol(grid_.number_of_cells);
         // Pore volume
-        const typename V::Index nc = grid_.number_of_cells;
+        const V::Index nc = grid_.number_of_cells;
         V rho = V::Constant(pvol.size(), 1, *fluid_.porosity());
         std::transform(grid_.cell_volumes, grid_.cell_volumes + nc,
                        rho.data(), pvol.data(),
@@ -384,7 +384,7 @@ namespace {
         const int dim = grid_.dimensions;
         if (gravity_) {
             for (int dd = 0; dd < dim -1; ++dd) {
-                assert(g[dd] == 0.0);
+                assert(gravity_[dd] == 0.0);
             }
         }
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
