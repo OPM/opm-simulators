@@ -184,3 +184,40 @@ BOOST_AUTO_TEST_CASE(Constructor_Works) {
 
 
 
+BOOST_AUTO_TEST_CASE(WellsEqual) {
+    Opm::EclipseGridParser Deck("wells_manager_data.data");
+    Opm::GridManager gridManager(Deck);
+
+    Deck.setCurrentEpoch(0);
+    Opm::WellsManager wellsManager0(Deck, *gridManager.c_grid(), NULL);
+
+    Deck.setCurrentEpoch(1);
+    Opm::WellsManager wellsManager1(Deck, *gridManager.c_grid(), NULL);
+
+    BOOST_CHECK(  wells_equal( wellsManager0.c_wells() , wellsManager0.c_wells()) ); 
+    BOOST_CHECK( !wells_equal( wellsManager0.c_wells() , wellsManager1.c_wells()) ); 
+}
+
+
+BOOST_AUTO_TEST_CASE(ControlsEqual) {
+    Opm::EclipseGridParser Deck("wells_manager_data.data");
+    Opm::GridManager gridManager(Deck);
+
+    Deck.setCurrentEpoch(0);
+    Opm::WellsManager wellsManager0(Deck, *gridManager.c_grid(), NULL);
+
+    Deck.setCurrentEpoch(1);
+    Opm::WellsManager wellsManager1(Deck, *gridManager.c_grid(), NULL);
+
+    BOOST_CHECK(  well_controls_equal( wellsManager0.c_wells()->ctrls[0] , wellsManager0.c_wells()->ctrls[0]));
+    BOOST_CHECK(  well_controls_equal( wellsManager0.c_wells()->ctrls[1] , wellsManager0.c_wells()->ctrls[1]));
+    BOOST_CHECK(  well_controls_equal( wellsManager1.c_wells()->ctrls[0] , wellsManager1.c_wells()->ctrls[0]));
+    BOOST_CHECK(  well_controls_equal( wellsManager1.c_wells()->ctrls[1] , wellsManager1.c_wells()->ctrls[1]));
+
+    BOOST_CHECK(  !well_controls_equal( wellsManager0.c_wells()->ctrls[0] , wellsManager0.c_wells()->ctrls[1]));
+    BOOST_CHECK(  !well_controls_equal( wellsManager0.c_wells()->ctrls[1] , wellsManager0.c_wells()->ctrls[0]));
+    BOOST_CHECK(  !well_controls_equal( wellsManager1.c_wells()->ctrls[0] , wellsManager0.c_wells()->ctrls[0]));
+    BOOST_CHECK(  !well_controls_equal( wellsManager1.c_wells()->ctrls[1] , wellsManager0.c_wells()->ctrls[1]));
+}
+
+
