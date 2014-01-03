@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 
 // A debugging utility.
@@ -614,6 +615,28 @@ namespace {
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
+
+       std::ofstream outfile;
+       outfile.open("mat.dat");
+
+
+    int col = 0, num = 0;
+    outfile << matr.rows() << " " << matr.rows() << " " << matr.nonZeros() << std::endl;
+    for (int k = 0; k < matr.rows(); ++k) {
+        int count = 0;
+        while (count < (matr.outerIndexPtr()[num + 1] - matr.outerIndexPtr()[num])) {
+            ++count;
+            outfile << k << "  " << matr.innerIndexPtr()[col] << "  " << matr.valuePtr()[col] << std::endl;
+            ++col;
+        }
+        ++num;
+    }
+    std::ofstream rhsfile;
+    rhsfile.open("rhs.dat");
+    for (int k = 0; k < matr.rows(); ++k) {
+        rhsfile << total_residual.value()[k] << std::endl;
+    }
+    exit(1);
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitCompressibleSolver::solveJacobianSystem(): "

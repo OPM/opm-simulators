@@ -57,7 +57,7 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         std::vector<ADB>                mob_;
-        
+       
         struct {
             std::vector<ADB>    mass_balance;
             ADB                 well_eq;

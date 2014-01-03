@@ -42,10 +42,10 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 
-#include <opm/autodiff/polymer/SimulatorFullyImplicitTwophase.hpp>
-#include <opm/autodiff/polymer/IncompPropsAdInterface.hpp>
-#include <opm/autodiff/polymer/IncompPropsAdBasic.hpp>
-#include <opm/autodiff/polymer/IncompPropsAdFromDeck.hpp>
+#include <opm/autodiff/twophase/SimulatorFullyImplicitTwophase.hpp>
+#include <opm/autodiff/twophase/IncompPropsAdInterface.hpp>
+#include <opm/autodiff/twophase/IncompPropsAdBasic.hpp>
+#include <opm/autodiff/twophase/IncompPropsAdFromDeck.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -94,8 +94,8 @@ try
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<IncompPropsAdInterface> new_props;
     TwophaseState state;
-    // bool check_well_controls = false;
-    // int max_well_control_iterations = 0;
+//    bool check_well_controls = false;
+//    int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
     deck.reset(new EclipseGridParser(deck_filename));
@@ -116,8 +116,8 @@ try
     // Rock and fluid init
     props.reset(new IncompPropertiesFromDeck(*deck, *grid->c_grid()));
     new_props.reset(new IncompPropsAdFromDeck(*deck, *grid->c_grid()));
-    // check_well_controls = param.getDefault("check_well_controls", false);
-    // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
+//    check_well_controls = param.getDefault("check_well_controls", false);
+//    max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
     // Gravity.
     gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;

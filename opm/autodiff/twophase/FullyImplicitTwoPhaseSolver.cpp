@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <Eigen/Eigen>
 #include <algorithm>
@@ -542,6 +543,33 @@ namespace {
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_res.value().data(), dx.data());
+/*        matrix_->m = matr.rows();
+        matrix_->nnz = matr.nonZeros();
+        matrix_->ia = matr.outerIndexPtr();
+        matrix_->ja = matr.innerIndexPtr();
+        matrix_->sa = matr.valuePtr();
+  */     // output CSR matrix.
+       std::ofstream outfile;
+       outfile.open("mat.dat");
+
+
+    int col = 0, num = 0;
+    outfile << matr.rows() << " " << matr.rows() << " " << matr.nonZeros() << std::endl;
+    for (int k = 0; k < matr.rows(); ++k) {
+        int count = 0;
+        while (count < (matr.outerIndexPtr()[num + 1] - matr.outerIndexPtr()[num])) {
+            ++count;
+            outfile << k << "  " << matr.innerIndexPtr()[col] << "  " << matr.valuePtr()[col] << std::endl;
+            ++col;
+        }
+        ++num;
+    }
+    std::ofstream rhsfile;
+    rhsfile.open("rhs.dat");
+    for (int k = 0; k < matr.rows(); ++k) {
+        rhsfile << total_res.value()[k] << std::endl;
+    }
+        
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitTwoPhaseSolver::solveJacobianSystem(): "
