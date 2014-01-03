@@ -155,7 +155,7 @@ namespace {
         
         V pvol(grid_.number_of_cells);
         // Pore volume
-        const typename V::Index nc = grid_.number_of_cells;
+        const V::Index nc = grid_.number_of_cells;
         V rho = V::Constant(pvol.size(), 1, *fluid_.porosity());
         std::transform(grid_.cell_volumes, grid_.cell_volumes + nc,
                        rho.data(), pvol.data(),
