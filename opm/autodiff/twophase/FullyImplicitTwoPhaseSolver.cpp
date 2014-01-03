@@ -301,7 +301,7 @@ namespace {
         vars0.push_back(qs);
 
         // Initial well bottom hole pressure.
-        assert (not xw.bhp().size());
+        assert (not xw.bhp().empty());
         const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
         vars0.push_back(bhp);
 
