@@ -3,15 +3,15 @@ GAS
 WATER
 
 DIMENS
-   15 5  5  /
+   10 10  5  /
 
 GRID
 
 DXV
-15*1000.0 /
+10*1000.0 /
 
 DYV
-5*1000.0 /
+10*1000.0 /
 
 DZV
 10.0 20.0 30.0 10.0 5.0 /
@@ -26,16 +26,29 @@ WELSPECS
 COMPDAT
     'INJ1'   1  1 1  1 'OPEN' 1   10.6092   0.5  /
     'PROD1'  10 3 3  3 'OPEN' 0   10.6092   0.5  /
-    
-  /
+/
 
 WCONPROD
      'PROD1' 'OPEN' 'ORAT' 20000  4* 1000 /
   /
 
 WCONINJE
-     'INJ1' 'GAS' 'OPEN' 'RATE' 100000 100000 50000/
+     'INJ1' 'GAS' 'OPEN' 'RATE' 100 200 400 /
   /
+
+
+DATES
+ 1 'FEB' 2000 /
+/
+
+WCONPROD
+   'PROD1' 'OPEN' 'RESV' 999  3* 123 100 /
+/
+
+WCONINJE
+   'INJ1' 'WATER' 'OPEN' 'RESV' 10 20 40 /
+/
+
 
 
 TSTEP
