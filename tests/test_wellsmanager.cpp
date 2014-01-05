@@ -28,6 +28,9 @@
 #define BOOST_TEST_MODULE WellsManagerTests
 #include <boost/test/unit_test.hpp>
 #include <opm/core/wells/WellsManager.hpp>
+#include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
+
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid/GridManager.hpp>
 

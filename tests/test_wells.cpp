@@ -29,6 +29,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 
 #include <iostream>
 #include <vector>

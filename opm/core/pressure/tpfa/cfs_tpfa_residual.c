@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define HAVE_WELLCONTROLS
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/linalg/blas_lapack.h>

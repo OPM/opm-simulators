@@ -56,6 +56,7 @@ extern "C" {
  * value for the well.
  */
 
+//#ifdef HAVE_WELLCONTROLS
 struct WellControls
 {
     /**
@@ -91,6 +92,9 @@ struct WellControls
     */
     int cpty;
 };
+//#else
+//struct WellControls;
+//#endif
 
 bool 
 well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2);
