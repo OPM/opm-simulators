@@ -35,6 +35,7 @@
 */
 #include "config.h"
 #include <opm/core/wells.h>
+#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 
 #include <assert.h>
@@ -44,36 +45,11 @@
 
 #include <stdio.h>
 
-struct WellControlMgmt {
-    int cpty;
-};
 
 struct WellMgmt {
     int well_cpty;
     int perf_cpty;
 };
-
-
-static void
-destroy_ctrl_mgmt(struct WellControlMgmt *m)
-{
-    free(m);
-}
-
-
-static struct WellControlMgmt *
-create_ctrl_mgmt(void)
-{
-    struct WellControlMgmt *m;
-
-    m = malloc(1 * sizeof *m);
-
-    if (m != NULL) {
-        m->cpty = 0;
-    }
-
-    return m;
-}
 
 
 static void
@@ -99,89 +75,6 @@ create_well_mgmt(void)
 }
 
 
-/* ---------------------------------------------------------------------- */
-static void
-well_controls_destroy(struct WellControls *ctrl)
-/* ---------------------------------------------------------------------- */
-{
-    if (ctrl != NULL) {
-        destroy_ctrl_mgmt(ctrl->data);
-        free             (ctrl->distr);
-        free             (ctrl->target);
-        free             (ctrl->type);
-    }
-
-    free(ctrl);
-}
-
-
-/* ---------------------------------------------------------------------- */
-static struct WellControls *
-well_controls_create(void)
-/* ---------------------------------------------------------------------- */
-{
-    struct WellControls *ctrl;
-
-    ctrl = malloc(1 * sizeof *ctrl);
-
-    if (ctrl != NULL) {
-        /* Initialise empty control set */
-        ctrl->num               = 0;
-        ctrl->number_of_phases  = 0;
-        ctrl->type              = NULL;
-        ctrl->target            = NULL;
-        ctrl->distr             = NULL;
-        ctrl->current           = -1;
-
-        ctrl->data              = create_ctrl_mgmt();
-
-        if (ctrl->data == NULL) {
-            well_controls_destroy(ctrl);
-            ctrl = NULL;
-        }
-    }
-
-    return ctrl;
-}
-
-
-/* ---------------------------------------------------------------------- */
-static int
-well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
-/* ---------------------------------------------------------------------- */
-{
-    int   c, p, ok;
-    void *type, *target, *distr;
-
-    struct WellControlMgmt *m;
-
-    type   = realloc(ctrl->type  , nctrl * 1       * sizeof *ctrl->type  );
-    target = realloc(ctrl->target, nctrl * 1       * sizeof *ctrl->target);
-    distr  = realloc(ctrl->distr , nctrl * nphases * sizeof *ctrl->distr );
-
-    ok = 0;
-    if (type   != NULL) { ctrl->type   = type  ; ok++; }
-    if (target != NULL) { ctrl->target = target; ok++; }
-    if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
-
-    ctrl->number_of_phases = nphases;
-
-    if (ok == 3) {
-        m = ctrl->data;
-        for (c = m->cpty; c < nctrl; c++) {
-            ctrl->type  [c] =  BHP;
-            ctrl->target[c] = -1.0;
-        }
-
-        for (p = m->cpty * ctrl->number_of_phases; p < nctrl * ctrl->number_of_phases; ++p) {
-            ctrl->distr[ p ] = 0.0;
-        }
-
-        m->cpty = nctrl;
-    }
-
-    return ok == 3;
-}
 
 
 /* ---------------------------------------------------------------------- */
@@ -718,24 +611,3 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
 }
 
 /* ---------------------------------------------------------------------- */
-bool
-well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2)
-/* ---------------------------------------------------------------------- */
-{
-    bool are_equal = true;
-    are_equal = (ctrls1->num == ctrls2->num);
-    are_equal &= (ctrls1->number_of_phases == ctrls2->number_of_phases);
-    if (!are_equal) {
-        return are_equal;
-    }
-
-    are_equal &= (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) == 0);
-    are_equal &= (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) == 0);
-    are_equal &= (memcmp(ctrls1->distr, ctrls2->distr, ctrls1->num * ctrls1->number_of_phases * sizeof *ctrls1->distr ) == 0);
-
-    struct WellControlMgmt* mgmt1 = (struct WellControlMgmt*)(ctrls1->data);
-    struct WellControlMgmt* mgmt2 = (struct WellControlMgmt*)(ctrls2->data);
-    are_equal &= (mgmt1->cpty == mgmt2->cpty);
-
-    return are_equal;
-}
