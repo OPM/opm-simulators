@@ -430,7 +430,6 @@ append_well_controls(enum WellControlType type,
 {
     int ok, alloc, np;
     struct WellControls    *ctrl;
-    struct WellControlMgmt *m;
 
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
@@ -440,11 +439,10 @@ append_well_controls(enum WellControlType type,
 
     assert (ctrl != NULL);
 
-    m  = ctrl->data;
-    ok = ctrl->num < m->cpty;
+    ok = ctrl->num < ctrl->cpty;
 
     if (! ok) {
-        alloc = alloc_size(ctrl->num, 1, m->cpty);
+        alloc = alloc_size(ctrl->num, 1, ctrl->cpty);
         ok    = well_controls_reserve(alloc, np, ctrl);
     }
 

@@ -86,10 +86,10 @@ struct WellControls
      */
     int current;
 
-    /**
-     * Internal management structure.
-     */
-    void *data;
+    /* 
+       The capacity allocated.
+    */
+    int cpty;
 };
 
 bool 
@@ -105,9 +105,6 @@ void
 well_controls_destroy(struct WellControls *ctrl);
 
 
-struct WellControlMgmt {
-    int cpty;
-};
 
 
 
