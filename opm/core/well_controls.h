@@ -56,7 +56,7 @@ extern "C" {
  * value for the well.
  */
 
-//#ifdef HAVE_WELLCONTROLS
+#ifdef HAVE_WELLCONTROLS
 struct WellControls
 {
     /**
@@ -92,15 +92,15 @@ struct WellControls
     */
     int cpty;
 };
-//#else
-//struct WellControls;
-//#endif
+#else
+struct WellControls;
+#endif
 
 bool 
 well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2);
 
-int 
-well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl);
+//int 
+//well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl);
 
 struct WellControls * 
 well_controls_create(void);
@@ -109,7 +109,35 @@ void
 well_controls_destroy(struct WellControls *ctrl);
 
 
+int 
+well_controls_get_num(const struct WellControls *ctrl);
 
+int 
+well_controls_get_cpty(const struct WellControls *ctrl);
+
+int 
+well_controls_get_current( const struct WellControls * ctrl);
+
+void
+well_controls_set_current( struct WellControls * ctrl, int current);
+
+int
+well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl);
+
+enum WellControlType 
+well_controls_iget_type(const struct WellControls * ctrl, int control_index);
+
+double
+well_controls_iget_target(const struct WellControls * ctrl, int control_index);
+
+const double *
+well_controls_iget_distr(const struct WellControls * ctrl, int control_index);
+
+void 
+well_controls_assert_number_of_phases(struct WellControls * ctrl , int number_of_phases);
+
+void 
+well_controls_clear(struct WellControls * ctrl);
 
 
 #ifdef __cplusplus

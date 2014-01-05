@@ -36,11 +36,13 @@
 
 #include "config.h"
 
+#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <stdio.h>
 
 
 
@@ -77,7 +79,6 @@ well_controls_create(void)
         ctrl->target            = NULL;
         ctrl->distr             = NULL;
         ctrl->current           = -1;
-
         ctrl->cpty              = 0;         
     }
 
@@ -86,23 +87,21 @@ well_controls_create(void)
 
 
 /* ---------------------------------------------------------------------- */
-int
-well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
+static int
+well_controls_reserve(int nctrl, struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
     int   c, p, ok;
     void *type, *target, *distr;
 
-    type   = realloc(ctrl->type  , nctrl * 1       * sizeof *ctrl->type  );
-    target = realloc(ctrl->target, nctrl * 1       * sizeof *ctrl->target);
-    distr  = realloc(ctrl->distr , nctrl * nphases * sizeof *ctrl->distr );
+    type   = realloc(ctrl->type  , nctrl * 1                      * sizeof *ctrl->type  );
+    target = realloc(ctrl->target, nctrl * 1                      * sizeof *ctrl->target);
+    distr  = realloc(ctrl->distr , nctrl * ctrl->number_of_phases * sizeof *ctrl->distr );
 
     ok = 0;
     if (type   != NULL) { ctrl->type   = type  ; ok++; }
     if (target != NULL) { ctrl->target = target; ok++; }
     if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
-
-    ctrl->number_of_phases = nphases;
 
     if (ok == 3) {
         for (c = ctrl->cpty; c < nctrl; c++) {
@@ -121,6 +120,81 @@ well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
 }
 
 
+int well_controls_get_num(const struct WellControls *ctrl) {
+  return ctrl->num;
+}
+
+
+int well_controls_get_cpty(const struct WellControls *ctrl) {
+  return ctrl->cpty;
+}
+
+
+int well_controls_get_current( const struct WellControls * ctrl) {
+    return ctrl->current;
+}
+
+void
+well_controls_set_current( struct WellControls * ctrl, int current) {
+    ctrl->current = current;
+}
+
+
+enum WellControlType 
+well_controls_iget_type(const struct WellControls * ctrl, int control_index) {
+    return ctrl->type[control_index];
+}
+
+double
+well_controls_iget_target(const struct WellControls * ctrl, int control_index) {
+    return ctrl->target[control_index];
+}
+
+const double *
+well_controls_iget_distr(const struct WellControls * ctrl, int control_index) {
+    int offset = control_index * ctrl->number_of_phases;
+    return &ctrl->distr[offset];
+}
+
+
+void 
+well_controls_assert_number_of_phases(struct WellControls * ctrl , int number_of_phases) {
+    if (ctrl->num == 0)
+        ctrl->number_of_phases = number_of_phases;
+
+    assert( ctrl->number_of_phases == number_of_phases );
+}
+
+void 
+well_controls_clear(struct WellControls * ctrl) {
+    ctrl->num = 0;
+    ctrl->number_of_phases = 0;
+}
+
+
+
+int
+well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl) { 
+    if (ctrl->num == ctrl->cpty) {
+        int new_cpty = 2*ctrl->cpty;
+        if (new_cpty == ctrl->num)
+            new_cpty += 1;
+
+        if (!well_controls_reserve( new_cpty , ctrl))
+            return 0;
+    }
+
+    ctrl->type  [ctrl->num] = type  ;
+    ctrl->target[ctrl->num] = target;
+    
+    if (distr != NULL) {
+        int offset = ctrl->num * ctrl->number_of_phases;
+        memcpy(&ctrl->distr[offset] , distr, ctrl->number_of_phases * sizeof * ctrl->distr);
+    }
+    
+    ctrl->num += 1;
+    return 1;
+}
 
 
 bool
@@ -141,3 +215,4 @@ well_controls_equal(const struct WellControls *ctrls1, const struct WellControls
 
     return are_equal;
 }
+
