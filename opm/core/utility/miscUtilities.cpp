@@ -22,6 +22,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
+#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>

@@ -8,6 +8,7 @@
 #include <opm/core/linalg/sparse_sys.h>
 
 #include <opm/core/wells.h>
+#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>

@@ -29,6 +29,7 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
+#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
