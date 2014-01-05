@@ -35,7 +35,6 @@
 */
 #include "config.h"
 #include <opm/core/wells.h>
-#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 
 #include <assert.h>
@@ -153,7 +152,7 @@ initialise_new_wells(int nwells, struct Wells *W)
     }
 
     for (w = m->well_cpty, ok = 1; ok && (w < nwells); w++) {
-        W->ctrls[w] = well_controls_create();
+        W->ctrls[w] = well_controls_create( );
 
         ok = W->ctrls[w] != NULL;
     }
@@ -428,37 +427,16 @@ append_well_controls(enum WellControlType type,
                      struct Wells        *W)
 /* ---------------------------------------------------------------------- */
 {
-    int ok, alloc, np;
     struct WellControls    *ctrl;
 
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
 
     ctrl = W->ctrls[well_index];
-    np = W->number_of_phases;
-
     assert (ctrl != NULL);
-
-    ok = ctrl->num < ctrl->cpty;
-
-    if (! ok) {
-        alloc = alloc_size(ctrl->num, 1, ctrl->cpty);
-        ok    = well_controls_reserve(alloc, np, ctrl);
-    }
-
-    if (ok) {
-        ctrl->type  [ctrl->num] = type  ;
-        ctrl->target[ctrl->num] = target;
-
-        if (distr != NULL) {
-            memcpy(ctrl->distr + (ctrl->num * np), distr,
-                   np * sizeof *ctrl->distr);
-        }
-
-        ctrl->num += 1;
-    }
-
-    return ok;
+    
+    well_controls_assert_number_of_phases( ctrl , W->number_of_phases);
+    return well_controls_add_new(type , target , distr , ctrl);
 }
 
 
@@ -469,12 +447,10 @@ set_current_control(int well_index, int current_control, struct Wells *W)
 {
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
-
     assert (W->ctrls[well_index] != NULL);
-
-    assert (current_control < W->ctrls[well_index]->num);
-
-    W->ctrls[well_index]->current = current_control;
+    assert (current_control < well_controls_get_num(W->ctrls[well_index]));
+    
+    well_controls_set_current(W->ctrls[well_index] , current_control);
 }
 
 
@@ -486,11 +462,11 @@ clear_well_controls(int well_index, struct Wells *W)
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
 
-    if (W->ctrls[well_index] != NULL) {
-        W->ctrls[well_index]->num = 0;
-        W->ctrls[well_index]->number_of_phases = 0;
-    }
+    if (W->ctrls[well_index] != NULL) 
+        well_controls_clear( W->ctrls[well_index] );
 }
+
+
 
 
 /* ---------------------------------------------------------------------- */
@@ -505,17 +481,17 @@ clone_wells(const struct Wells *W)
     enum WellControlType       type;
     const struct WellControls *ctrls;
 
-    struct Wells *ret;
+    struct Wells *newWells;
 
     if (W == NULL) {
-        ret = NULL;
+        newWells = NULL;
     }
     else {
         np  = W->number_of_phases;
-        ret = create_wells(W->number_of_phases, W->number_of_wells,
-                           W->well_connpos[ W->number_of_wells ]);
+        newWells = create_wells(W->number_of_phases, W->number_of_wells,
+                                W->well_connpos[ W->number_of_wells ]);
 
-        if (ret != NULL) {
+        if (newWells != NULL) {
             pos = W->well_connpos[ 0 ];
             ok  = 1;
 
@@ -527,7 +503,7 @@ clone_wells(const struct Wells *W)
                 comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
 
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
-                              comp_frac, cells, WI, W->name[ w ], ret);
+                              comp_frac, cells, WI, W->name[ w ], newWells);
 
                 /* Capacity should be sufficient from create_wells() */
                 assert (ok);
@@ -535,36 +511,32 @@ clone_wells(const struct Wells *W)
                 ctrls = W->ctrls[ w ];
 
                 if (ok) {
-                    ok = well_controls_reserve(ctrls->num, np, ret->ctrls[ w ]);
+                    for (c = 0; ok && (c < well_controls_get_num(ctrls)); c++) {
+                        type   = well_controls_iget_type( ctrls , c );
+                        target = well_controls_iget_target( ctrls , c );
+                        distr  = well_controls_iget_distr( ctrls , c );
 
-                    for (c = 0; ok && (c < ctrls->num); c++) {
-                        type   =   ctrls->type  [ c ];
-                        target =   ctrls->target[ c ];
-                        distr  = & ctrls->distr [ c * np ];
-
-                        ok = append_well_controls(type, target, distr, w, ret);
-
-                        /* Capacity *should* be sufficient from
-                         *  well_controls_reserve() */
+                        ok = append_well_controls(type, target, distr, w, newWells);
+                        
                         assert (ok);
                     }
                 }
 
                 if (ok) {
-                    set_current_control(w, ctrls->current, ret);
+                    set_current_control(w, well_controls_get_current( ctrls) , newWells);
                 }
 
                 pos = W->well_connpos[w + 1];
             }
 
             if (! ok) {
-                destroy_wells(ret);
-                ret = NULL;
+                destroy_wells(newWells);
+                newWells = NULL;
             }
         }
     }
 
-    return ret;
+    return newWells;
 }
 
 /* ---------------------------------------------------------------------- */
