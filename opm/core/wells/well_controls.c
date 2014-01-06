@@ -175,6 +175,14 @@ well_controls_iget_distr(const struct WellControls * ctrl, int control_index) {
 
 
 void 
+well_controls_iset_distr(const struct WellControls * ctrl, int control_index, const double * distr) {
+    int offset = control_index * ctrl->number_of_phases;
+    for (int p=0; p < ctrl->number_of_phases; p++)
+        ctrl->distr[offset + p] = distr[p];
+}
+
+
+void 
 well_controls_assert_number_of_phases(struct WellControls * ctrl , int number_of_phases) {
     if (ctrl->num == 0)
         ctrl->number_of_phases = number_of_phases;

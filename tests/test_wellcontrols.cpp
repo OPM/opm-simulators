@@ -87,6 +87,15 @@ BOOST_AUTO_TEST_CASE(Construction)
     BOOST_CHECK_EQUAL( BHP, well_controls_iget_type( ctrls , 1 ));
     
 
+    {
+        double newDist[3] = {77,78,79};
+        const double * tmp;
+        well_controls_iset_distr( ctrls , 0 , newDist );
+        tmp = well_controls_iget_distr( ctrls , 0);
+        BOOST_CHECK( memcmp(tmp , newDist , 3 * sizeof * tmp ) == 0);
+    }
+
+
     well_controls_destroy( ctrls );
 }
 

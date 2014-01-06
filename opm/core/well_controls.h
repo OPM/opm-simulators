@@ -143,6 +143,9 @@ const double *
 well_controls_iget_distr(const struct WellControls * ctrl, int control_index);
 
 void 
+well_controls_iset_distr(const struct WellControls * ctrl, int control_index, const double * distr);
+
+void 
 well_controls_assert_number_of_phases(struct WellControls * ctrl , int number_of_phases);
 
 void 
