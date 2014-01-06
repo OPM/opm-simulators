@@ -40,6 +40,8 @@
 #include <opm/core/utility/Event.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
+#include <opm/core/well_controls.h>
+#include <opm/core/wells.h>
 
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -308,8 +310,8 @@ namespace Opm
         const int nw = wells->number_of_wells;
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells->ctrls[w];
-            if (wc->current >= 0) {
-                if (wc->type[wc->current] == BHP) {
+            if (well_controls_get_current(wc) >= 0) {
+                if (well_controls_get_current_type(wc) == BHP) {
                     return false;
                 }
             }
