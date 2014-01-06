@@ -559,10 +559,12 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
     }
 
 
-    struct WellMgmt* mgmt1 = (struct WellMgmt*)(W1->data);
-    struct WellMgmt* mgmt2 = (struct WellMgmt*)(W2->data);
-    are_equal &= (mgmt1->perf_cpty == mgmt2->perf_cpty);
-    are_equal &= (mgmt1->well_cpty == mgmt2->well_cpty);
+    {
+        struct WellMgmt* mgmt1 = W1->data;
+        struct WellMgmt* mgmt2 = W2->data;
+        are_equal &= (mgmt1->perf_cpty == mgmt2->perf_cpty);
+        are_equal &= (mgmt1->well_cpty == mgmt2->well_cpty);
+    }
 
     are_equal &= (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) == 0);
     are_equal &= (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) == 0);
