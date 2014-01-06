@@ -757,15 +757,13 @@ namespace Opm
                 if (line.openshutflag_ == "SHUT") {
                     int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
                     if (cur_ctrl >= 0) {
-                        cur_ctrl = ~cur_ctrl;
-                        well_controls_set_current(w_->ctrls[index] , cur_ctrl);
+                        well_controls_invert_current(w_->ctrls[index]);
                     }
                     assert(well_controls_get_current(w_->ctrls[index]) < 0);
                 } else if (line.openshutflag_ == "OPEN") {
                     int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
                     if (cur_ctrl < 0) {
-                        cur_ctrl = ~cur_ctrl;
-                        well_controls_set_current(w_->ctrls[index] , cur_ctrl);
+                        well_controls_invert_current(w_->ctrls[index]);
                     }
                     assert(well_controls_get_current(w_->ctrls[index]) >= 0);
                 } else {
