@@ -1,6 +1,5 @@
 /*
   Copyright 2012 SINTEF ICT, Applied Mathematics.
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -20,7 +19,6 @@
 #include "config.h"
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/wells.h>
-#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
@@ -657,18 +655,19 @@ namespace Opm
 
         // Check constraints.
         bool is_producer = (wells_->type[self_index_] == PRODUCER);
-        const WellControls& ctrls = *wells_->ctrls[self_index_];
-        for (int ctrl_index = 0; ctrl_index < ctrls.num; ++ctrl_index) {
-            if (ctrl_index == ctrls.current || ctrl_index == group_control_index_) {
+        const WellControls * ctrls = wells_->ctrls[self_index_];
+        for (int ctrl_index = 0; ctrl_index < well_controls_get_num(ctrls); ++ctrl_index) {
+            if (ctrl_index == well_controls_get_current(ctrls) || ctrl_index == group_control_index_) {
                 // We do not check constraints that either were used
                 // as the active control, or that come from group control.
                 continue;
             }
             bool ctrl_violated = false;
-            switch (ctrls.type[ctrl_index]) {
+            switch (well_controls_iget_type(ctrls , ctrl_index)) {
+
             case BHP: {
                 const double my_well_bhp = well_bhp[self_index_];
-                const double my_target_bhp = ctrls.target[ctrl_index];
+                const double my_target_bhp = well_controls_iget_target( ctrls , ctrl_index);
                 ctrl_violated = is_producer ? (my_target_bhp > my_well_bhp)
                     : (my_target_bhp < my_well_bhp);
                 if (ctrl_violated) {
@@ -678,12 +677,14 @@ namespace Opm
                 }
                 break;
             }
+
             case RESERVOIR_RATE: {
                 double my_rate = 0.0;
+                const double * ctrls_distr = well_controls_iget_distr( ctrls , ctrl_index );
                 for (int phase = 0; phase < np; ++phase) {
-                    my_rate += ctrls.distr[np*ctrl_index + phase]*well_reservoirrates_phase[np*self_index_ + phase];
+                    my_rate += ctrls_distr[phase] * well_reservoirrates_phase[np*self_index_ + phase];
                 }
-                const double my_rate_target = ctrls.target[ctrl_index];
+                const double my_rate_target = well_controls_iget_target(ctrls , ctrl_index);
                 ctrl_violated = std::fabs(my_rate) - std::fabs(my_rate_target)> std::max(std::abs(my_rate), std::abs(my_rate_target))*1e-6;
                 if (ctrl_violated) {
                     std::cout << "RESERVOIR_RATE limit violated for well " << name() << ":\n";
@@ -692,12 +693,14 @@ namespace Opm
                 }
                 break;
             }
+
             case SURFACE_RATE: {
                 double my_rate = 0.0;
+                const double * ctrls_distr = well_controls_iget_distr( ctrls , ctrl_index );
                 for (int phase = 0; phase < np; ++phase) {
-                    my_rate += ctrls.distr[np*ctrl_index + phase]*well_surfacerates_phase[np*self_index_ + phase];
+                    my_rate += ctrls_distr[phase] * well_surfacerates_phase[np*self_index_ + phase];
                 }
-                const double my_rate_target = ctrls.target[ctrl_index];
+                const double my_rate_target = well_controls_iget_target(ctrls , ctrl_index);
                 ctrl_violated = std::fabs(my_rate) > std::fabs(my_rate_target);
                 if (ctrl_violated) {
                     std::cout << "SURFACE_RATE limit violated for well " << name() << ":\n";
@@ -744,9 +747,9 @@ namespace Opm
     void WellNode::shutWell()
     {
         if (shut_well_) {
-        	// We set the tilde of the current control
+            // We set the tilde of the current control
             // set_current_control(self_index_, -1, wells_);
-        	wells_->ctrls[self_index_]->current = ~ wells_->ctrls[self_index_]->current;
+            well_controls_invert_current(wells_->ctrls[self_index_]);
         }
         else {
             const double target = 0.0;
@@ -755,16 +758,16 @@ namespace Opm
             if (group_control_index_ < 0) {
                 // The well only had its own controls, no group controls.
                 append_well_controls(SURFACE_RATE, target, distr, self_index_, wells_);
-                group_control_index_ = wells_->ctrls[self_index_]->num - 1;
+                group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
             } else {
                 // We will now modify the last control, that
                 // "belongs to" the group control.
-                const int np = wells_->number_of_phases;
-                wells_->ctrls[self_index_]->type[group_control_index_] = SURFACE_RATE;
-                wells_->ctrls[self_index_]->target[group_control_index_] = target;
-                std::copy(distr, distr + np, wells_->ctrls[self_index_]->distr + np * group_control_index_);
+                
+                well_controls_iset_type( wells_->ctrls[self_index_] , group_control_index_ , SURFACE_RATE);
+                well_controls_iset_target( wells_->ctrls[self_index_] , group_control_index_ , target);
+                well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
             }
-            wells_->ctrls[self_index_]->current = ~ wells_->ctrls[self_index_]->current;
+            well_controls_invert_current(wells_->ctrls[self_index_]);
         }
     }
 
@@ -810,14 +813,13 @@ namespace Opm
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
             append_well_controls(wct, target, distr, self_index_, wells_);
-            group_control_index_ = wells_->ctrls[self_index_]->num - 1;
+            group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
-            const int np = wells_->number_of_phases;
-            wells_->ctrls[self_index_]->type[group_control_index_] = wct;
-            wells_->ctrls[self_index_]->target[group_control_index_] = target;
-            std::copy(distr, distr + np, wells_->ctrls[self_index_]->distr + np*group_control_index_);
+            well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , wct);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ ,target);
+            well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
         set_current_control(self_index_, group_control_index_, wells_);
     }
@@ -922,14 +924,13 @@ namespace Opm
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
             append_well_controls(wct, ntarget, distr, self_index_, wells_);
-            group_control_index_ = wells_->ctrls[self_index_]->num - 1;
+            group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
-            const int np = wells_->number_of_phases;
-            wells_->ctrls[self_index_]->type[group_control_index_] = wct;
-            wells_->ctrls[self_index_]->target[group_control_index_] = ntarget;
-            std::copy(distr, distr + np, wells_->ctrls[self_index_]->distr + np*group_control_index_);
+            well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , wct);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , ntarget);
+            well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
         set_current_control(self_index_, group_control_index_, wells_);
     }
