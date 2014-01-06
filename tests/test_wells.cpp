@@ -105,20 +105,20 @@ BOOST_AUTO_TEST_CASE(Controls)
             if (ok1 && ok2) {
                 WellControls* ctrls = W->ctrls[0];
 
-                BOOST_CHECK_EQUAL(ctrls->num    ,  2);
-                BOOST_CHECK_EQUAL(ctrls->current, -1);
+                BOOST_CHECK_EQUAL(well_controls_get_num(ctrls)    ,  2);
+                BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), -1);
 
                 set_current_control(0, 0, W.get());
-                BOOST_CHECK_EQUAL(ctrls->current, 0);
+                BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), 0);
 
                 set_current_control(0, 1, W.get());
-                BOOST_CHECK_EQUAL(ctrls->current, 1);
+                BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), 1);
 
-                BOOST_CHECK_EQUAL(ctrls->type[0], BHP);
-                BOOST_CHECK_EQUAL(ctrls->type[1], SURFACE_RATE);
+                BOOST_CHECK_EQUAL(well_controls_iget_type(ctrls , 0) , BHP);
+                BOOST_CHECK_EQUAL(well_controls_iget_type(ctrls , 1) , SURFACE_RATE);
 
-                BOOST_CHECK_EQUAL(ctrls->target[0], 1.0);
-                BOOST_CHECK_EQUAL(ctrls->target[1], 1.0);
+                BOOST_CHECK_EQUAL(well_controls_iget_target(ctrls , 0), 1.0);
+                BOOST_CHECK_EQUAL(well_controls_iget_target(ctrls , 1), 1.0);
             }
         }
     }
@@ -189,18 +189,22 @@ BOOST_AUTO_TEST_CASE(Copy)
             WellControls* c1 = W1->ctrls[w];
             WellControls* c2 = W2->ctrls[w];
 
-            BOOST_CHECK_EQUAL(c2->num    , c1->num    );
-            BOOST_CHECK_EQUAL(c2->current, c1->current);
+            BOOST_CHECK_EQUAL(well_controls_get_num(c2)    , well_controls_get_num(c1));
+            BOOST_CHECK_EQUAL(well_controls_get_current(c2)    , well_controls_get_current(c1));
 
-            for (int c = 0; c < c1->num; ++c) {
-                BOOST_CHECK_EQUAL(c2->type  [c], c1->type  [c]);
-                BOOST_CHECK_EQUAL(c2->target[c], c1->target[c]);
+            for (int c = 0; c < well_controls_get_num(c1); ++c) {
+                BOOST_CHECK_EQUAL(well_controls_iget_type(c2, c)    , well_controls_iget_type(c1 , c));
+                BOOST_CHECK_EQUAL(well_controls_iget_target(c2, c)  , well_controls_iget_target(c1 , c));
 
-                for (int p = 0; p < W1->number_of_phases; ++p) {
-                    BOOST_CHECK_EQUAL(c2->distr[c*W1->number_of_phases + p],
-                                      c1->distr[c*W1->number_of_phases + p]);
+                {
+                    const double * dist1 = well_controls_iget_distr(c1 , c );
+                    const double * dist2 = well_controls_iget_distr(c2 , c );
+                    
+                    for (int p = 0; p < W1->number_of_phases; ++p) 
+                        BOOST_CHECK_EQUAL( dist1[p] , dist2[p]);
                 }
             }
+            BOOST_CHECK( well_controls_equal( c1 , c2 ));
         }
     }
 }
