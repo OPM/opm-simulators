@@ -29,7 +29,6 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
-#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
@@ -69,44 +68,50 @@ void check_controls_epoch0( struct WellControls ** ctrls) {
     // The injector
     {
         const struct WellControls * ctrls0 = ctrls[0];        
-        BOOST_CHECK_EQUAL( 3 , ctrls0->num);   // The number of controls for the injector == 3??
+        BOOST_CHECK_EQUAL( 3 , well_controls_get_num(ctrls0));   // The number of controls for the injector == 3??
 
-        BOOST_CHECK_EQUAL( SURFACE_RATE   , ctrls0->type[0] );
-        BOOST_CHECK_EQUAL( RESERVOIR_RATE , ctrls0->type[1] );
-        BOOST_CHECK_EQUAL( BHP            , ctrls0->type[2] );
+        BOOST_CHECK_EQUAL( SURFACE_RATE   , well_controls_iget_type(ctrls0 , 0) );
+        BOOST_CHECK_EQUAL( RESERVOIR_RATE , well_controls_iget_type(ctrls0 , 1) );
+        BOOST_CHECK_EQUAL( BHP            , well_controls_iget_type(ctrls0 , 2) );
 
         // The different targets
-        BOOST_CHECK_EQUAL( 100.0 / 86400 , ctrls0->target[0]);
-        BOOST_CHECK_EQUAL( 200.0 / 86400 , ctrls0->target[1]);
-        BOOST_CHECK_EQUAL( 400 * 100000  , ctrls0->target[2]);
+        BOOST_CHECK_EQUAL( 100.0 / 86400 , well_controls_iget_target(ctrls0,0));
+        BOOST_CHECK_EQUAL( 200.0 / 86400 , well_controls_iget_target(ctrls0,1));
+        BOOST_CHECK_EQUAL( 400 * 100000  , well_controls_iget_target(ctrls0,2));
 
         // Which control is active
-        BOOST_CHECK_EQUAL( 0 , ctrls0->current );
+        BOOST_CHECK_EQUAL( 0 , well_controls_get_current(ctrls0) );
         
         // The phase distribution in the active target
-        BOOST_CHECK_EQUAL( 0 , ctrls0->distr[0] );  // Water
-        BOOST_CHECK_EQUAL( 0 , ctrls0->distr[1] );  // Oil
-        BOOST_CHECK_EQUAL( 1 , ctrls0->distr[2] );  // Gas
+        { 
+             const double * distr = well_controls_iget_distr( ctrls0 , 0 );
+             BOOST_CHECK_EQUAL( 0 , distr[0] );  // Water
+             BOOST_CHECK_EQUAL( 0 , distr[1] );  // Oil
+             BOOST_CHECK_EQUAL( 1 , distr[2] );  // Gas
+        }
     }
     
     // The producer
     {
         const struct WellControls * ctrls1 = ctrls[1];
-        BOOST_CHECK_EQUAL( 2 , ctrls1->num);   // The number of controls for the producer == 2??
-        BOOST_CHECK_EQUAL( SURFACE_RATE   , ctrls1->type[0] );
-        BOOST_CHECK_EQUAL( BHP            , ctrls1->type[1] );
+        BOOST_CHECK_EQUAL( 2 , well_controls_get_num( ctrls1 ));   // The number of controls for the producer == 2??
+        BOOST_CHECK_EQUAL( SURFACE_RATE   , well_controls_iget_type(ctrls1 , 0) );
+        BOOST_CHECK_EQUAL( BHP            , well_controls_iget_type(ctrls1 , 1) );
 
         // The different targets
-        BOOST_CHECK_EQUAL( -20000.0 / 86400 , ctrls1->target[0]);
-        BOOST_CHECK_EQUAL(  1000 * 100000  , ctrls1->target[1]);
+        BOOST_CHECK_EQUAL( -20000.0 / 86400 , well_controls_iget_target(ctrls1,0));
+        BOOST_CHECK_EQUAL(  1000 * 100000   , well_controls_iget_target(ctrls1,1));
 
         // Which control is active
-        BOOST_CHECK_EQUAL( 0 , ctrls1->current );
+        BOOST_CHECK_EQUAL( 0 , well_controls_get_current(ctrls1));
 
         // The phase distribution in the active target
-        BOOST_CHECK_EQUAL( 0 , ctrls1->distr[0] );  // Water
-        BOOST_CHECK_EQUAL( 1 , ctrls1->distr[1] );  // Oil
-        BOOST_CHECK_EQUAL( 0 , ctrls1->distr[2] );  // Gas
+       { 
+            const double * distr = well_controls_iget_distr( ctrls1 , 0 );
+            BOOST_CHECK_EQUAL( 0 , distr[0] );  // Water
+            BOOST_CHECK_EQUAL( 1 , distr[1] );  // Oil
+            BOOST_CHECK_EQUAL( 0 , distr[2] );  // Gas
+        }
     }
 }
 
@@ -117,46 +122,50 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
     // The injector
     {
         const struct WellControls * ctrls0 = ctrls[0];        
-        BOOST_CHECK_EQUAL( 3 , ctrls0->num);   // The number of controls for the injector == 3??
+        BOOST_CHECK_EQUAL( 3 , well_controls_get_num(ctrls0));   // The number of controls for the injector == 3??
 
-        BOOST_CHECK_EQUAL( SURFACE_RATE   , ctrls0->type[0] );
-        BOOST_CHECK_EQUAL( RESERVOIR_RATE , ctrls0->type[1] );
-        BOOST_CHECK_EQUAL( BHP            , ctrls0->type[2] );
+        BOOST_CHECK_EQUAL( SURFACE_RATE   , well_controls_iget_type(ctrls0 , 0 ));
+        BOOST_CHECK_EQUAL( RESERVOIR_RATE , well_controls_iget_type(ctrls0 , 1 ));
+        BOOST_CHECK_EQUAL( BHP            , well_controls_iget_type(ctrls0 , 2 ));
 
         // The different targets
-        BOOST_CHECK_CLOSE( 10.0 / 86400 , ctrls0->target[0] , 0.001);
-        BOOST_CHECK_CLOSE( 20.0 / 86400 , ctrls0->target[1] , 0.001);
-        BOOST_CHECK_CLOSE( 40 * 100000  , ctrls0->target[2] , 0.001);
+        BOOST_CHECK_CLOSE( 10.0 / 86400 , well_controls_iget_target(ctrls0 , 0) , 0.001);
+        BOOST_CHECK_CLOSE( 20.0 / 86400 , well_controls_iget_target(ctrls0 , 1) , 0.001);
+        BOOST_CHECK_CLOSE( 40 * 100000  , well_controls_iget_target(ctrls0 , 2) , 0.001);
 
         // Which control is active
-        BOOST_CHECK_EQUAL( 1 , ctrls0->current );
-        
-        // The phase distribution in the active target
-        BOOST_CHECK_EQUAL( 1 , ctrls0->distr[3] );  // Water
-        BOOST_CHECK_EQUAL( 0 , ctrls0->distr[4] );  // Oil
-        BOOST_CHECK_EQUAL( 0 , ctrls0->distr[5] );  // Gas
+        BOOST_CHECK_EQUAL( 1 , well_controls_get_current(ctrls0));
+
+        { 
+            const double * distr = well_controls_iget_distr( ctrls0 , 1 );
+            BOOST_CHECK_EQUAL( 1 , distr[0] );  // Water
+            BOOST_CHECK_EQUAL( 0 , distr[1] );  // Oil
+            BOOST_CHECK_EQUAL( 0 , distr[2] );  // Gas
+        }
     }
     
     // The producer
     {
         const struct WellControls * ctrls1 = ctrls[1];
-        BOOST_CHECK_EQUAL( 3 , ctrls1->num);   // The number of controls for the producer - now 3.
-        BOOST_CHECK_EQUAL( SURFACE_RATE   , ctrls1->type[0] );
-        BOOST_CHECK_EQUAL( RESERVOIR_RATE , ctrls1->type[1] );
-        BOOST_CHECK_EQUAL( BHP            , ctrls1->type[2] );
+        BOOST_CHECK_EQUAL( 3 , well_controls_get_num(ctrls1));   // The number of controls for the producer - now 3.
+        BOOST_CHECK_EQUAL( SURFACE_RATE   , well_controls_iget_type(ctrls1 , 0) );
+        BOOST_CHECK_EQUAL( RESERVOIR_RATE , well_controls_iget_type(ctrls1 , 1) );
+        BOOST_CHECK_EQUAL( BHP            , well_controls_iget_type(ctrls1 , 2) );
 
         // The different targets
-        BOOST_CHECK_CLOSE( -999.0 / 86400 , ctrls1->target[0], 0.001);
-        BOOST_CHECK_CLOSE( -123.0 / 86400 , ctrls1->target[1], 0.001);
-        BOOST_CHECK_CLOSE(  100 * 100000  , ctrls1->target[2], 0.001);
+        BOOST_CHECK_CLOSE( -999.0 / 86400 , well_controls_iget_target(ctrls1 , 0), 0.001);
+        BOOST_CHECK_CLOSE( -123.0 / 86400 , well_controls_iget_target(ctrls1 , 1), 0.001);
+        BOOST_CHECK_CLOSE(  100 * 100000  , well_controls_iget_target(ctrls1 , 2), 0.001);
 
         // Which control is active
-        BOOST_CHECK_EQUAL( 1 , ctrls1->current );
+        BOOST_CHECK_EQUAL( 1 , well_controls_get_current(ctrls1) );
 
-        // The phase distribution in the active target
-        BOOST_CHECK_EQUAL( 1 , ctrls1->distr[3] );  // Water
-        BOOST_CHECK_EQUAL( 1 , ctrls1->distr[4] );  // Oil
-        BOOST_CHECK_EQUAL( 1 , ctrls1->distr[5] );  // Gas
+        { 
+            const double * distr = well_controls_iget_distr( ctrls1 , 1 );
+            BOOST_CHECK_EQUAL( 1 , distr[0] );  // Water
+            BOOST_CHECK_EQUAL( 1 , distr[1] );  // Oil
+            BOOST_CHECK_EQUAL( 1 , distr[2] );  // Gas
+        }
     }
 }
 
