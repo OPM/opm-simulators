@@ -121,11 +121,20 @@ well_controls_get_current( const struct WellControls * ctrl);
 void
 well_controls_set_current( struct WellControls * ctrl, int current);
 
+void
+well_controls_invert_current( struct WellControls * ctrl );
+
 int
 well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl);
 
 enum WellControlType 
 well_controls_iget_type(const struct WellControls * ctrl, int control_index);
+
+void
+well_controls_iset_type( struct WellControls * ctrls , int control_index , enum WellControlType type);
+
+void
+well_controls_iset_target(struct WellControls * ctrl, int control_index , double target);
 
 double
 well_controls_iget_target(const struct WellControls * ctrl, int control_index);

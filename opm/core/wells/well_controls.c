@@ -139,16 +139,33 @@ well_controls_set_current( struct WellControls * ctrl, int current) {
     ctrl->current = current;
 }
 
+void 
+well_controls_invert_current( struct WellControls * ctrl ) {
+    ctrl->current = ~ctrl->current;
+}
+
 
 enum WellControlType 
 well_controls_iget_type(const struct WellControls * ctrl, int control_index) {
     return ctrl->type[control_index];
 }
 
+void
+well_controls_iset_type( struct WellControls * ctrls , int control_index , enum WellControlType type) {
+    ctrls->type[control_index] = type;
+}
+
+
 double
 well_controls_iget_target(const struct WellControls * ctrl, int control_index) {
     return ctrl->target[control_index];
 }
+
+void
+well_controls_iset_target(struct WellControls * ctrl, int control_index , double target) {
+    ctrl->target[control_index] = target;
+}
+
 
 const double *
 well_controls_iget_distr(const struct WellControls * ctrl, int control_index) {
