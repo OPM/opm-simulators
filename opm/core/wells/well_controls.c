@@ -303,15 +303,15 @@ well_controls_equal(const struct WellControls *ctrls1, const struct WellControls
 {
     bool are_equal = true;
     are_equal = (ctrls1->num == ctrls2->num);
-    are_equal &= (ctrls1->number_of_phases == ctrls2->number_of_phases);
+    are_equal = are_equal && (ctrls1->number_of_phases == ctrls2->number_of_phases);
     if (!are_equal) {
         return are_equal;
     }
 
-    are_equal &= (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) == 0);
-    are_equal &= (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) == 0);
-    are_equal &= (memcmp(ctrls1->distr, ctrls2->distr, ctrls1->num * ctrls1->number_of_phases * sizeof *ctrls1->distr ) == 0);
-    are_equal &= (ctrls1->cpty == ctrls2->cpty);
+    are_equal = are_equal && (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) == 0);
+    are_equal = are_equal && (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) == 0);
+    are_equal = are_equal && (memcmp(ctrls1->distr, ctrls2->distr, ctrls1->num * ctrls1->number_of_phases * sizeof *ctrls1->distr ) == 0);
+    are_equal = are_equal && (ctrls1->cpty == ctrls2->cpty);
 
     return are_equal;
 }

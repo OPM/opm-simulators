@@ -546,28 +546,28 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
 {
     bool are_equal = true;
     are_equal = (W1->number_of_wells == W2->number_of_wells);
-    are_equal &= (W1->number_of_phases == W2->number_of_phases);
+    are_equal = are_equal && (W1->number_of_phases == W2->number_of_phases);
     if (!are_equal) {
         return are_equal;
     }
 
     for (int i=0; i<W1->number_of_wells; i++) {
-        are_equal &= (strcmp(W1->name[i], W2->name[i]) == 0);
-        are_equal &= (W1->type[i] == W2->type[i]);
-        are_equal &= (W1->depth_ref[i] == W2->depth_ref[i]);
-        are_equal &= (well_controls_equal(W1->ctrls[i], W2->ctrls[i]));
+        are_equal = are_equal && (strcmp(W1->name[i], W2->name[i]) == 0);
+        are_equal = are_equal && (W1->type[i] == W2->type[i]);
+        are_equal = are_equal && (W1->depth_ref[i] == W2->depth_ref[i]);
+        are_equal = are_equal && (well_controls_equal(W1->ctrls[i], W2->ctrls[i]));
     }
 
 
     {
         struct WellMgmt* mgmt1 = W1->data;
         struct WellMgmt* mgmt2 = W2->data;
-        are_equal &= (mgmt1->perf_cpty == mgmt2->perf_cpty);
-        are_equal &= (mgmt1->well_cpty == mgmt2->well_cpty);
+        are_equal = are_equal && (mgmt1->perf_cpty == mgmt2->perf_cpty);
+        are_equal = are_equal && (mgmt1->well_cpty == mgmt2->well_cpty);
     }
 
-    are_equal &= (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) == 0);
-    are_equal &= (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) == 0);
+    are_equal = are_equal && (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) == 0);
+    are_equal = are_equal && (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) == 0);
     if (!are_equal) {
         return are_equal;
     }
@@ -575,8 +575,8 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
     {
         int number_of_perforations = W1->well_connpos[W1->number_of_wells];
 
-        are_equal &= (memcmp(W1->well_cells, W2->well_cells, number_of_perforations * sizeof *W1->well_cells ) == 0);
-        are_equal &= (memcmp(W1->WI, W2->WI, number_of_perforations * sizeof *W1->WI ) == 0);
+        are_equal = are_equal && (memcmp(W1->well_cells, W2->well_cells, number_of_perforations * sizeof *W1->well_cells ) == 0);
+        are_equal = are_equal && (memcmp(W1->WI, W2->WI, number_of_perforations * sizeof *W1->WI ) == 0);
     }
 
     return are_equal;
