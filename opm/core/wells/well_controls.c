@@ -209,14 +209,12 @@ well_controls_add_new(enum WellControlType type , double target , const double *
             return 0;
     }
 
-    ctrl->type  [ctrl->num] = type  ;
-    ctrl->target[ctrl->num] = target;
+    well_controls_iset_type( ctrl , ctrl->num , type);
+    well_controls_iset_target( ctrl , ctrl->num , target);
     
-    if (distr != NULL) {
-        int offset = ctrl->num * ctrl->number_of_phases;
-        memcpy(&ctrl->distr[offset] , distr, ctrl->number_of_phases * sizeof * ctrl->distr);
-    }
-    
+    if (distr != NULL) 
+        well_controls_iset_distr( ctrl , ctrl->num , distr);
+
     ctrl->num += 1;
     return 1;
 }
