@@ -22,7 +22,6 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
-#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
@@ -459,22 +458,25 @@ namespace Opm
         }
         src.resize(num_cells);
         for (int w = 0; w < wells.number_of_wells; ++w) {
-            const int cur = wells.ctrls[w]->current;
-            if (wells.ctrls[w]->num != 1) {
+            const int cur = well_controls_get_current(wells.ctrls[w]);
+            if (well_controls_get_num(wells.ctrls[w]) != 1) {
                 OPM_MESSAGE("In wellsToSrc(): well has more than one control, all but current control will be ignored.");
             }
-            if (wells.ctrls[w]->type[cur] != RESERVOIR_RATE) {
+            if (well_controls_iget_type(wells.ctrls[w] , cur) != RESERVOIR_RATE) {
                 OPM_THROW(std::runtime_error, "In wellsToSrc(): well is something other than RESERVOIR_RATE.");
             }
             if (wells.well_connpos[w+1] - wells.well_connpos[w] != 1) {
                 OPM_THROW(std::runtime_error, "In wellsToSrc(): well has multiple perforations.");
             }
-            for (int p = 0; p < np; ++p) {
-                if (wells.ctrls[w]->distr[np*cur + p] != 1.0) {
-                    OPM_THROW(std::runtime_error, "In wellsToSrc(): well not controlled on total rate.");
+            {
+                const double * distr = well_controls_iget_distr( wells.ctrls[w] , cur);
+                for (int p = 0; p < np; ++p) {
+                    if (distr[p] != 1.0) {
+                        OPM_THROW(std::runtime_error, "In wellsToSrc(): well not controlled on total rate.");
+                    }
                 }
             }
-            double flow = wells.ctrls[w]->target[cur];
+            double flow = well_controls_iget_target(wells.ctrls[w] , cur);
             if (wells.type[w] == INJECTOR) {
                 flow *= wells.comp_frac[np*w + 0]; // Obtaining water rate for inflow source.
             }
