@@ -22,7 +22,6 @@
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
-#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -507,7 +506,7 @@ namespace Opm
                         int ok = 1;
                         int control_pos[5] = { -1, -1, -1, -1, -1 };
                         if (ok && wci_line.surface_flow_max_rate_ >= 0.0) {
-                            control_pos[InjectionControl::RATE] = w_->ctrls[wix]->num;
+                            control_pos[InjectionControl::RATE] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             if (wci_line.injector_type_ == "WATER") {
                                 distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
@@ -523,7 +522,7 @@ namespace Opm
                                                       distr, wix, w_);
                         }
                         if (ok && wci_line.reservoir_flow_max_rate_ >= 0.0) {
-                            control_pos[InjectionControl::RESV] = w_->ctrls[wix]->num;
+                            control_pos[InjectionControl::RESV] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             if (wci_line.injector_type_ == "WATER") {
                                 distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
@@ -539,7 +538,7 @@ namespace Opm
                                                       distr, wix, w_);
                         }
                         if (ok && wci_line.BHP_limit_ > 0.0) {
-                            control_pos[InjectionControl::BHP] = w_->ctrls[wix]->num;
+                            control_pos[InjectionControl::BHP] = well_controls_get_num(w_->ctrls[wix]);
                             ok = append_well_controls(BHP, wci_line.BHP_limit_,
                                                       NULL, wix, w_);
                         }
@@ -620,7 +619,7 @@ namespace Opm
                             if (!pu.phase_used[BlackoilPhases::Liquid]) {
                                 OPM_THROW(std::runtime_error, "Oil phase not active and ORAT control specified.");
                             }
-                            control_pos[ProductionControl::ORAT] = w_->ctrls[wix]->num;
+                            control_pos[ProductionControl::ORAT] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.oil_max_rate_,
@@ -630,7 +629,7 @@ namespace Opm
                             if (!pu.phase_used[BlackoilPhases::Aqua]) {
                                 OPM_THROW(std::runtime_error, "Water phase not active and WRAT control specified.");
                             }
-                            control_pos[ProductionControl::WRAT] = w_->ctrls[wix]->num;
+                            control_pos[ProductionControl::WRAT] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.water_max_rate_,
@@ -640,7 +639,7 @@ namespace Opm
                             if (!pu.phase_used[BlackoilPhases::Vapour]) {
                                 OPM_THROW(std::runtime_error, "Gas phase not active and GRAT control specified.");
                             }
-                            control_pos[ProductionControl::GRAT] = w_->ctrls[wix]->num;
+                            control_pos[ProductionControl::GRAT] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                             ok = append_well_controls(SURFACE_RATE, -wcp_line.gas_max_rate_,
@@ -653,7 +652,7 @@ namespace Opm
                             if (!pu.phase_used[BlackoilPhases::Liquid]) {
                                 OPM_THROW(std::runtime_error, "Oil phase not active and LRAT control specified.");
                             }
-                            control_pos[ProductionControl::LRAT] = w_->ctrls[wix]->num;
+                            control_pos[ProductionControl::LRAT] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 0.0, 0.0, 0.0 };
                             distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
                             distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
@@ -661,13 +660,13 @@ namespace Opm
                                                       distr, wix, w_);
                         }
                         if (ok && wcp_line.reservoir_flow_max_rate_ >= 0.0) {
-                            control_pos[ProductionControl::RESV] = w_->ctrls[wix]->num;
+                            control_pos[ProductionControl::RESV] = well_controls_get_num(w_->ctrls[wix]);
                             double distr[3] = { 1.0, 1.0, 1.0 };
                             ok = append_well_controls(RESERVOIR_RATE, -wcp_line.reservoir_flow_max_rate_,
                                                  distr, wix, w_);
                         }
                         if (ok && wcp_line.BHP_limit_ > 0.0) {
-                            control_pos[ProductionControl::BHP] = w_->ctrls[wix]->num;
+                            control_pos[ProductionControl::BHP] = well_controls_get_num(w_->ctrls[wix]);
                             ok = append_well_controls(BHP, wcp_line.BHP_limit_,
                                                  NULL, wix, w_);
                         }
@@ -756,17 +755,19 @@ namespace Opm
                 }
                 const int index = it->second;
                 if (line.openshutflag_ == "SHUT") {
-                    int& cur_ctrl = w_->ctrls[index]->current;
+                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
                     if (cur_ctrl >= 0) {
                         cur_ctrl = ~cur_ctrl;
+                        well_controls_set_current(w_->ctrls[index] , cur_ctrl);
                     }
-                    assert(w_->ctrls[index]->current < 0);
+                    assert(well_controls_get_current(w_->ctrls[index]) < 0);
                 } else if (line.openshutflag_ == "OPEN") {
-                    int& cur_ctrl = w_->ctrls[index]->current;
+                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
                     if (cur_ctrl < 0) {
                         cur_ctrl = ~cur_ctrl;
+                        well_controls_set_current(w_->ctrls[index] , cur_ctrl);
                     }
-                    assert(w_->ctrls[index]->current >= 0);
+                    assert(well_controls_get_current(w_->ctrls[index]) >= 0);
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
                 }
