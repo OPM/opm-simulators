@@ -29,7 +29,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/core/wells.h>
-#define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
 
 #include <iostream>
@@ -68,7 +67,11 @@ BOOST_AUTO_TEST_CASE(Construction)
 
         BOOST_CHECK_EQUAL( 2*target , well_controls_iget_target(ctrls , 1 ));
         BOOST_CHECK_EQUAL( type2 , well_controls_iget_type(ctrls , 1 ));
-        
+        well_controls_set_current( ctrls , 1 );
+        BOOST_CHECK_EQUAL( type2 , well_controls_get_current_type( ctrls ));
+
+        BOOST_CHECK_EQUAL( well_controls_iget_target( ctrls , 1 ) , well_controls_get_current_target( ctrls ));
+
         {
             const double * d1 = well_controls_iget_distr( ctrls , 0 );
             const double * d2 = well_controls_iget_distr( ctrls , 1 );

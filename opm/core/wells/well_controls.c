@@ -38,7 +38,6 @@
 
 #define HAVE_WELLCONTROLS
 #include <opm/core/well_controls.h>
-
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -150,6 +149,13 @@ well_controls_iget_type(const struct WellControls * ctrl, int control_index) {
     return ctrl->type[control_index];
 }
 
+
+enum WellControlType 
+well_controls_get_current_type(const struct WellControls * ctrl) {
+    return well_controls_iget_type( ctrl , ctrl->current);
+}
+
+
 void
 well_controls_iset_type( struct WellControls * ctrls , int control_index , enum WellControlType type) {
     ctrls->type[control_index] = type;
@@ -159,6 +165,11 @@ well_controls_iset_type( struct WellControls * ctrls , int control_index , enum 
 double
 well_controls_iget_target(const struct WellControls * ctrl, int control_index) {
     return ctrl->target[control_index];
+}
+
+double
+well_controls_get_current_target(const struct WellControls * ctrl) {
+    return ctrl->target[ctrl->current];
 }
 
 void
@@ -172,6 +183,13 @@ well_controls_iget_distr(const struct WellControls * ctrl, int control_index) {
     int offset = control_index * ctrl->number_of_phases;
     return &ctrl->distr[offset];
 }
+
+
+const double *
+well_controls_get_current_distr(const struct WellControls * ctrl) {
+    return well_controls_iget_distr( ctrl , ctrl->current );
+}
+
 
 
 void 
