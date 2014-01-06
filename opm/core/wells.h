@@ -21,7 +21,7 @@
 #define OPM_WELLS_H_INCLUDED
 
 #include <stdbool.h>
-#include <opm/core/well_control_type.h>
+#include <opm/core/well_controls.h>
 
 /**
  * \file
@@ -44,8 +44,6 @@ enum WellType {
 };
 
 
-
-struct WellControls;
 /**
  *  Data structure aggregating static information about all wells in a scenario.
  */
