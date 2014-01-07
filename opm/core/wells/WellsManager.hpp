@@ -21,6 +21,8 @@
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
 
 
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
 
@@ -56,7 +58,14 @@ namespace Opm
 	/// order to approximate these by the Peaceman formula.
 	WellsManager(const Opm::EclipseGridParser& deck,
 		     const UnstructuredGrid& grid,
-		     const double* permeability);
+             const double* permeability);
+
+
+    WellsManager(const Opm::SchedulePtr schedule,
+                 const size_t timeStep,
+                 const Opm::EclipseGridParser& deck,
+                 const UnstructuredGrid& grid,
+                 const double* permeability);
 
 	/// Destructor.
 	~WellsManager();

@@ -27,6 +27,10 @@
 
 #define BOOST_TEST_MODULE WellsManagerTests
 #include <boost/test/unit_test.hpp>
+
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
@@ -192,6 +196,39 @@ BOOST_AUTO_TEST_CASE(Constructor_Works) {
         
         wells_static_check( wells );    
         check_controls_epoch1( wells->ctrls );
+    }
+}
+
+BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
+
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::SchedulePtr schedule(new Opm::Schedule(parser->parse("wells_manager_data.data")));
+
+    Opm::EclipseGridParser Deck("wells_manager_data.data");
+    Opm::GridManager gridManager(Deck);
+
+    Deck.setCurrentEpoch(0);
+    {
+        Opm::WellsManager wellsManager(schedule, 0, Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
+
+        const Wells* wells = wellsManager.c_wells();
+        wells_static_check( wells );
+        check_controls_epoch0( wells->ctrls );
+
+        BOOST_CHECK(wells_equal(wells, oldWellsManager.c_wells()));
+    }
+
+    Deck.setCurrentEpoch(1);
+    {
+        Opm::WellsManager wellsManager(schedule, 1,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
+
+        const Wells* wells = wellsManager.c_wells();
+        wells_static_check( wells );
+        check_controls_epoch1( wells->ctrls );
+
+        BOOST_CHECK(wells_equal(wells, oldWellsManager.c_wells()));
     }
 }
 
