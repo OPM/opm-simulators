@@ -8,6 +8,7 @@
 #include <opm/core/linalg/sparse_sys.h>
 
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 
@@ -229,7 +230,7 @@ assemble_bhp_well(int nc, int w,
 
     ctrls = W->ctrls[ w ];
     wdof  = nc + w;
-    bhp   = ctrls->target[ ctrls->current ];
+    bhp   = well_controls_get_current_target(ctrls);
 
     jw    = csrmatrix_elm_index(wdof, wdof, h->A);
 
@@ -268,7 +269,7 @@ assemble_rate_well(int nc, int w,
 
     ctrls = W->ctrls[ w ];
     wdof  = nc + w;
-    resv  = ctrls->target[ ctrls->current ];
+    resv  = well_controls_get_current_target(ctrls);
 
     jww   = csrmatrix_elm_index(wdof, wdof, h->A);
 
@@ -362,7 +363,7 @@ assemble_well_contrib(int                   nc ,
     for (w = 0; w < W->number_of_wells; w++) {
         ctrls = W->ctrls[ w ];
 
-        if (ctrls->current < 0) {
+        if (well_controls_get_current(ctrls) < 0) {
 
             /* Treat this well as a shut well, isolated from the domain. */
 
@@ -370,9 +371,9 @@ assemble_well_contrib(int                   nc ,
 
         } else {
 
-            assert (ctrls->current <  ctrls->num);
+            assert (well_controls_get_current(ctrls) <  well_controls_get_num(ctrls));
 
-            switch (ctrls->type[ ctrls->current ]) {
+            switch (well_controls_get_current_type(ctrls)) {
             case BHP:
                 *all_rate = 0;
                 assemble_bhp_well (nc, w, W, mt, wdp, h);
@@ -383,8 +384,9 @@ assemble_well_contrib(int                   nc ,
                     /* Ensure minimal consistency.  A PRODUCER should
                      * specify a phase distribution of all ones in the
                      * case of RESV controls. */
+                    const double * distr = well_controls_get_current_distr( ctrls );
                     for (p = 0; p < np; p++) {
-                        if (ctrls->distr[np * ctrls->current + p] != 1.0) {
+                        if (distr[p] != 1.0) {
                             *ok = 0;
                             break;
                         }
@@ -550,7 +552,7 @@ well_solution(const struct UnstructuredGrid *G   ,
     if (soln->well_press != NULL) {
         /* Extract BHP directly from solution vector for non-shut wells */
         for (w = 0; w < F->W->number_of_wells; w++) {
-            if (F->W->ctrls[w]->current >= 0) {
+            if (well_controls_get_current(F->W->ctrls[w]) >= 0) {
                 soln->well_press[w] = h->x[G->number_of_cells + w];
             }
         }
@@ -563,8 +565,8 @@ well_solution(const struct UnstructuredGrid *G   ,
 
         for (w = i = 0; w < F->W->number_of_wells; w++) {
             bhp = h->x[G->number_of_cells + w];
-            shut = (F->W->ctrls[w]->current < 0);
-
+            shut = (well_controls_get_current(F->W->ctrls[w]) < 0);
+            
             for (; i < F->W->well_connpos[ w + 1 ]; i++) {
 
                 c = F->W->well_cells[ i ];
