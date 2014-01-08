@@ -202,14 +202,14 @@ BOOST_AUTO_TEST_CASE(Constructor_Works) {
 BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::SchedulePtr schedule(new Opm::Schedule(parser->parse("wells_manager_data.data")));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(parser->parse("wells_manager_data.data")));
 
     Opm::EclipseGridParser Deck("wells_manager_data.data");
     Opm::GridManager gridManager(Deck);
 
     Deck.setCurrentEpoch(0);
     {
-        Opm::WellsManager wellsManager(schedule, 0, Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         const Wells* wells = wellsManager.c_wells();
@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     Deck.setCurrentEpoch(1);
     {
-        Opm::WellsManager wellsManager(schedule, 1,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 1,Deck, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         const Wells* wells = wellsManager.c_wells();

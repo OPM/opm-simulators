@@ -21,7 +21,7 @@
 #define OPM_WELLSMANAGER_HEADER_INCLUDED
 
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
@@ -61,7 +61,7 @@ namespace Opm
              const double* permeability);
 
 
-    WellsManager(const Opm::SchedulePtr schedule,
+    WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                  const size_t timeStep,
                  const Opm::EclipseGridParser& deck,
                  const UnstructuredGrid& grid,

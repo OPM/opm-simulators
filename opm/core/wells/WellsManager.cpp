@@ -237,7 +237,7 @@ namespace Opm
 
 
     /// Construct wells from deck.
-    WellsManager::WellsManager(const Opm::SchedulePtr schedule,
+    WellsManager::WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                                const size_t timeStep,
                                const Opm::EclipseGridParser& deck,
                                const UnstructuredGrid& grid,
