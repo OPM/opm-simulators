@@ -39,9 +39,6 @@ struct WellControls;
 bool 
 well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2);
 
-//int 
-//well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl);
-
 struct WellControls * 
 well_controls_create(void);
 
