@@ -552,7 +552,22 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
     }
 
     for (int i=0; i<W1->number_of_wells; i++) {
-        are_equal = are_equal && (strcmp(W1->name[i], W2->name[i]) == 0);
+        if (are_equal) {
+            /*
+              The name attribute can be NULL. The comparison is as
+              follows:
+              
+                1. If both names are different from NULL a normal
+                   strcmp() is performed.
+                2. If both names are NULL they compare as equal.
+                3. If one name is NULL and the other is not NULL
+                   they are regarded as different.
+            */
+            if (W1->name[i] && W2->name[i])
+                are_equal = are_equal && (strcmp(W1->name[i], W2->name[i]) == 0);
+            else 
+                are_equal = are_equal && (W1->name[i] == W2->name[i]);  
+        }
         are_equal = are_equal && (W1->type[i] == W2->type[i]);
         are_equal = are_equal && (W1->depth_ref[i] == W2->depth_ref[i]);
         are_equal = are_equal && (well_controls_equal(W1->ctrls[i], W2->ctrls[i]));
