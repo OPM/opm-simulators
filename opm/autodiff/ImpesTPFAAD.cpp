@@ -377,14 +377,21 @@ namespace {
         M rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
-            if (wc->type[wc->current] == BHP) {
-                bhp_targets[w] = wc->target[wc->current];
+            if (well_controls_get_current_type(wc) == BHP) {
+                bhp_targets[w] = well_controls_get_current_target( wc );
                 rate_targets[w] = -1e100;
-            } else if (wc->type[wc->current] == SURFACE_RATE) {
+            } else if (well_controls_get_current_type(wc) == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
-                rate_targets[w] = wc->target[wc->current];
-                for (int phase = 0; phase < np; ++phase) {
-                    rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
+                rate_targets[w] = well_controls_get_current_target( wc );
+                {
+                    /* 
+                       Would have guessed that this should use the 
+                       well_control_get_current_distr() function instead? 
+                    */
+                    const double * distr = well_controls_iget_distr( wc , 0 );
+                    for (int phase = 0; phase < np; ++phase) {
+                        rate_distr.insert(w, phase*nw + w) = distr[phase];
+                    }
                 }
             } else {
                 OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
