@@ -30,6 +30,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -672,14 +673,15 @@ namespace Opm
             const int nw = wells->number_of_wells;
             for (int w = 0; w < nw; ++w) {
                 const WellControls* wc = wells->ctrls[w];
-                if (wc->current >= 0) {
-                    if (wc->type[wc->current] == BHP) {
+                if (well_controls_get_current( wc ) >= 0) {
+                    if (well_controls_get_current_type(wc) == BHP) {
                         return false;
                     }
                 }
             }
             return true;
         }
+
 
 
     } // anonymous namespace
