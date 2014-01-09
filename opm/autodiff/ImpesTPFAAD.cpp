@@ -384,11 +384,7 @@ namespace {
                 bhp_targets[w] = -1e100;
                 rate_targets[w] = well_controls_get_current_target( wc );
                 {
-                    /* 
-                       Would have guessed that this should use the 
-                       well_control_get_current_distr() function instead? 
-                    */
-                    const double * distr = well_controls_iget_distr( wc , 0 );
+                    const double * distr = well_controls_get_current_distr( wc );
                     for (int phase = 0; phase < np; ++phase) {
                         rate_distr.insert(w, phase*nw + w) = distr[phase];
                     }
