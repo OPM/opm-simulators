@@ -1,4 +1,3 @@
-/**/
 
 #include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
 
@@ -760,11 +759,11 @@ namespace {
                  e = residual_.mass_balance.end();
              b != e; ++b)
         {
-            r = std::max(r, (*b).value().matrix().norm());
+            r = std::max(r, (*b).value().matrix().lpNorm<Eigen::Infinity>());
         }
 
-        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
-        r = std::max(r, residual_.well_eq.value().matrix().norm());
+        r = std::max(r, residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>());
+        r = std::max(r, residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>());
         return r;
     }
    

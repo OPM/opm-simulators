@@ -834,10 +834,10 @@ namespace {
                  e = residual_.mass_balance.end();
              b != e; ++b)
         {
-            r = std::max(r, (*b).value().matrix().norm());
+            r = std::max(r, (*b).value().matrix().lpNorm<Eigen::Infinity>());
         }
-        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
-        r = std::max(r, residual_.well_eq.value().matrix().norm());
+        r = std::max(r, residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>());
+        r = std::max(r, residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>());
 
         return r;
     }
@@ -848,8 +848,8 @@ namespace {
 
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidViscosity(const int               phase,
-                                                const ADB&              p    ,
-                                                const std::vector<int>& cells) const
+		                                                   const ADB&              p    ,
+           			                                       const std::vector<int>& cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
         switch (phase) {
@@ -869,8 +869,8 @@ namespace {
 
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidReciprocFVF(const int               phase,
-                                                  const ADB&              p    ,
-                                                  const std::vector<int>& cells) const
+                                                  		     const ADB&              p    ,
+                                                  		     const std::vector<int>& cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
         switch (phase) {
@@ -890,8 +890,8 @@ namespace {
 
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidDensity(const int               phase,
-                                              const ADB&              p    ,
-                                              const std::vector<int>& cells) const
+                                              			 const ADB&              p    ,
+                                              		     const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
         ADB b = fluidReciprocFVF(phase, p, cells);
