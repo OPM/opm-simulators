@@ -33,8 +33,8 @@
 #include <opm/core/utility/Units.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Utility/FullTable.hpp>
-#include <opm/parser/eclipse/Utility/SimpleTable.hpp>
+#include <opm/parser/eclipse/Utility/PvdoTable.hpp>
+#include <opm/parser/eclipse/Utility/PvdcoTable.hpp>
 
 namespace Opm
 {
@@ -109,7 +109,8 @@ namespace Opm
             if (deck.hasField("PVDG")) {
                 if (samples > 0) {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDeadSpline(deck.getPVDG().pvdg_, samples));
-                } else {
+                }
+                else {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(deck.getPVDG().pvdg_));
                 }
              } else if (deck.hasField("PVTG")) {
@@ -168,11 +169,7 @@ namespace Opm
         // Water PVT
         if (phase_usage_.phase_used[Aqua]) {
             if (newParserDeck->hasKeyword("PVTW")) {
-                std::vector<std::string> columnNames{
-                    "PREF", "FVFREF", "COMPRESSIBILITY", "MUREF", "VISCOSIBILITY"};
-
-                Opm::DeckKeywordConstPtr keyword = newParserDeck->getKeyword("PVTW");
-                Opm::SimpleTable pvtwTable(keyword, columnNames, /*recordIdx=*/region_number);
+                Opm::PvtwTable pvtwTable(newParserDeck->getKeyword("PVTW"), region_number);
 
                 props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(pvtwTable));
             } else {
@@ -184,33 +181,18 @@ namespace Opm
         // Oil PVT
         if (phase_usage_.phase_used[Liquid]) {
             if (newParserDeck->hasKeyword("PVDO")) {
-                std::vector<std::string> columnNames{
-                    "PO", "BO", "MUO"};
+                Opm::PvdoTable pvdoTable(newParserDeck->getKeyword("PVDO"), region_number);
 
-                Opm::DeckKeywordConstPtr keyword = newParserDeck->getKeyword("PVDO");
-                Opm::SimpleTable pvdoTable(keyword, columnNames, region_number);
-
-                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDeadSpline(pvdoTable));
+                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(pvdoTable));
             }
             else if (newParserDeck->hasKeyword("PVTO")) {
-                std::vector<std::string> outerColumnNames{
-                    "RS", "PBUBB", "RSSAT", "MU"};
-
-                std::vector<std::string> innerColumnNames{
-                    "P", "RSSAT", "MU"};
-
-                Opm::DeckKeywordConstPtr pvtoKeyword = newParserDeck->getKeyword("PVTO");
-                Opm::FullTable pvtoTable(pvtoKeyword, outerColumnNames, innerColumnNames);
+                Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"));
 
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(pvtoTable));
             } else if (newParserDeck->hasKeyword("PVCDO")) {
-                std::vector<std::string> columnNames{
-                    "PREF", "BO", "CO", "MUREF", "CMUO"};
+                Opm::PvdcoTable pvdcoTable(newParserDeck->getKeyword("PVDCO"), region_number);
 
-                Opm::DeckKeywordConstPtr pvcdoKeyword = newParserDeck->getKeyword("PVCDO");
-                Opm::SimpleTable pvcdoTable(pvcdoKeyword, columnNames, region_number);
-
-                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(pvcdoTable));
+                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(pvdcoTable));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDO or PVTO\n");
             }
@@ -219,15 +201,11 @@ namespace Opm
         // Gas PVT
         if (phase_usage_.phase_used[Vapour]) {
             if (newParserDeck->hasKeyword("PVDG")) {
-                std::vector<std::string> columnNames{
-                    "PG", "BG", "MUG"};
+                Opm::PvdoTable pvdgTable(newParserDeck->getKeyword("PVDG"), region_number);
 
-                Opm::DeckKeywordConstPtr keyword = newParserDeck->getKeyword("PVDG");
-                Opm::SimpleTable pvdgTable(keyword, columnNames, region_number);
-
-                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDeadSpline(pvdgTable));
+                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(pvdgTable));
             } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
+                OPM_THROW(std::runtime_error, "Input is missing PVDG\n");
             }
         }
 
