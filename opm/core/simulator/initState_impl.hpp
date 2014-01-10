@@ -609,26 +609,26 @@ namespace Opm
         }
     }   
     /// Initialize surface volume from pressure and saturation by z = As.
-    /// Here the gas/oil ratio is used to compute an intial z for the
-    /// computation of A.
+    /// Here the solution gas/oil ratio or vapor oil/gas ratio is used to
+    /// compute an intial z for the computation of A.
     template <class Props, class State>
-    void initBlackoilSurfvolUsingRS(const UnstructuredGrid& grid,
+    void initBlackoilSurfvolUsingRSorRV(const UnstructuredGrid& grid,
                              const Props& props,
                              State& state)
     {
         if (props.numPhases() != 3) {
             OPM_THROW(std::runtime_error, "initBlackoilSurfvol() is only supported in three-phase simulations.");
         }
-
         const std::vector<double>& rs = state.gasoilratio();
+        const std::vector<double>& rv = state.rv();
 
         //make input for computation of the A matrix
         state.surfacevol() = state.saturation();
-        //const PhaseUsage pu = phaseUsageFromDeck(deck);
         const PhaseUsage pu = props.phaseUsage();
 
         const int np = props.numPhases();
         const int nc = grid.number_of_cells;
+
         std::vector<double> allA_a(nc*np*np);
         std::vector<double> allA_l(nc*np*np);
         std::vector<double> allA_v(nc*np*np);
@@ -687,7 +687,7 @@ namespace Opm
                          if(state.saturation()[np*c + p] > 0)
                              z_tmp = 1e10;
                          else
-                             z_tmp = rs[c];
+                             z_tmp = rv[c];
                      }
                      else if(p == BlackoilPhases::Vapour)
                          z_tmp = 1;
@@ -717,7 +717,9 @@ namespace Opm
                 z[2] += A_v[2 + np*col]*s[col];
 
             }
+            double ztmp = z[2];
             z[2] += z[1]*rs[c];
+            z[1] += ztmp*rv[c];
 
         }
     }
@@ -739,10 +741,21 @@ namespace Opm
                 int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
                 state.gasoilratio()[c] = rs_deck[c_deck];
             }
-            initBlackoilSurfvolUsingRS(grid, props, state);
+            initBlackoilSurfvolUsingRSorRV(grid, props, state);
             computeSaturation(props,state);
-        } else {
-            OPM_THROW(std::runtime_error, "Temporarily, we require the RS field.");
+        } else if (deck.hasField("RV")){
+            const std::vector<double>& rv_deck = deck.getFloatingPointValue("RV");
+            const int num_cells = grid.number_of_cells;
+            for (int c = 0; c < num_cells; ++c) {
+                int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                state.rv()[c] = rv_deck[c_deck];
+            }
+            initBlackoilSurfvolUsingRSorRV(grid, props, state);
+            computeSaturation(props,state);
+        }
+
+        else {
+            OPM_THROW(std::runtime_error, "Temporarily, we require the RS or the RV field.");
         }
     }
 
