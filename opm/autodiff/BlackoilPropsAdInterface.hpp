@@ -145,6 +145,15 @@ namespace Opm
         ADB muGas(const ADB& pg,
                   const Cells& cells) const = 0;
 
+        /// Gas viscosity.
+        /// \param[in]  pg     Array of n gas pressure values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n viscosity values.
+        virtual
+        ADB muGas(const ADB& pg,
+                  const ADB& rv,
+                  const std::vector<PhasePresence>& cond,
+                  const Cells& cells) const = 0;
 
         // ------ Formation volume factor (b) ------
 

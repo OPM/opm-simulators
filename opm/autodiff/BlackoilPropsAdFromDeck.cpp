@@ -28,6 +28,7 @@
 #include <opm/core/props/pvt/SinglePvtDead.hpp>
 #include <opm/core/props/pvt/SinglePvtDeadSpline.hpp>
 #include <opm/core/props/pvt/SinglePvtLiveOil.hpp>
+#include <opm/core/props/pvt/SinglePvtLiveGas.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -108,8 +109,8 @@ namespace Opm
                 } else {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(deck.getPVDG().pvdg_));
                 }
-            // } else if (deck.hasField("PVTG")) {
-            //     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtLiveGas(deck.getPVTG().pvtg_));
+             } else if (deck.hasField("PVTG")) {
+                 props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtLiveGas(deck.getPVTG().pvtg_));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
             }
@@ -256,6 +257,29 @@ namespace Opm
         return mu;
     }
 
+    /// Gas viscosity.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n viscosity values.
+    V BlackoilPropsAdFromDeck::muGas(const V& pg,
+                                     const V& rv,
+                                     const std::vector<PhasePresence>& cond,
+                                     const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+        }
+        const int n = cells.size();
+        assert(pg.size() == n);
+        V mu(n);
+        V dmudp(n);
+        V dmudr(n);
+
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.data(), rv.data(),&cond[0],
+                                                mu.data(), dmudp.data(), dmudr.data());
+        return mu;
+    }
+
     /// Water viscosity.
     /// \param[in]  pw     Array of n water pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -332,9 +356,9 @@ namespace Opm
         V mu(n);
         V dmudp(n);
         V dmudr(n);
-        const double* rs = 0;
+        const double* rv = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.value().data(), rs,
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.value().data(), rv,
                                                   mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -342,6 +366,37 @@ namespace Opm
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
             jacs[block] = dmudp_diag * pg.derivative()[block];
+        }
+        return ADB::function(mu, jacs);
+    }
+
+    /// Gas viscosity.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n viscosity values.
+    ADB BlackoilPropsAdFromDeck::muGas(const ADB& pg,
+                                       const ADB& rv,
+                                       const std::vector<PhasePresence>& cond,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+        }
+        const int n = cells.size();
+        assert(pg.value().size() == n);
+        V mu(n);
+        V dmudp(n);
+        V dmudr(n);
+
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.value().data(), rv.value().data(),&cond[0],
+                                                  mu.data(), dmudp.data(), dmudr.data());
+
+        ADB::M dmudp_diag = spdiag(dmudp);
+        ADB::M dmudr_diag = spdiag(dmudr);
+        const int num_blocks = pg.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dmudp_diag * pg.derivative()[block] + dmudr_diag * rv.derivative()[block];
         }
         return ADB::function(mu, jacs);
     }
@@ -585,10 +640,11 @@ namespace Opm
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
+        ADB::M dmudr_diag = spdiag(dbdr);
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dbdp_diag * pg.derivative()[block];
+            jacs[block] = dbdp_diag * pg.derivative()[block] + dmudr_diag * rv.derivative()[block];;
         }
         return ADB::function(b, jacs);
     }
@@ -655,7 +711,7 @@ namespace Opm
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[Oil]->rvSat(n, po.data(), rv.data(), drvdp.data());
+        props_[Gas]->rvSat(n, po.data(), rv.data(), drvdp.data());
         return rv;
     }
 
@@ -673,7 +729,7 @@ namespace Opm
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[Oil]->rvSat(n, po.value().data(), rv.data(), drvdp.data());
+        props_[Gas]->rvSat(n, po.value().data(), rv.data(), drvdp.data());
         ADB::M drvdp_diag = spdiag(drvdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);

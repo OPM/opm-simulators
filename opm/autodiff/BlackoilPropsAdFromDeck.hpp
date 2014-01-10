@@ -125,6 +125,17 @@ namespace Opm
         V muGas(const V& pg,
                 const Cells& cells) const;
 
+        /// Oil viscosity.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  rv     Array of n vapor oil/gas ratio
+        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n viscosity values.
+        V muGas(const V& po,
+                const V& rv,
+                const std::vector<PhasePresence>& cond,
+                const Cells& cells) const;
+
         /// Water viscosity.
         /// \param[in]  pw     Array of n water pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
@@ -150,6 +161,14 @@ namespace Opm
         ADB muGas(const ADB& pg,
                   const Cells& cells) const;
 
+        /// Gas viscosity.
+        /// \param[in]  pg     Array of n gas pressure values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n viscosity values.
+        ADB muGas(const ADB& pg,
+                  const ADB& rv,
+                  const std::vector<PhasePresence>& cond,
+                  const Cells& cells) const;
 
         // ------ Formation volume factor (b) ------
 
