@@ -21,6 +21,7 @@
 #define OPM_WELLSTATE_HEADER_INCLUDED
 
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <vector>
 
 namespace Opm
@@ -50,21 +51,22 @@ namespace Opm
                     // above or below (depending on if the well is an
                     // injector or producer) pressure in first perforation
                     // cell.
-                    if ((ctrl->current < 0) || // SHUT
-                        (ctrl->type[ctrl->current] != BHP)) {
+                    if ((well_controls_get_current(ctrl) < 0) || // SHUT
+                        (well_controls_get_current_type(ctrl) != BHP)) {
                         const int first_cell = wells->well_cells[wells->well_connpos[w]];
                         const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
                         bhp_[w] = safety_factor*state.pressure()[first_cell];
                     } else {
-                        bhp_[w] = ctrl->target[ctrl->current];
+                        bhp_[w] = well_controls_get_current_target( ctrl );
                     }
+
                     // Initialize well rates to match controls if type is SURFACE_RATE
-                    if ((ctrl->current >= 0) && // open well
-                        (ctrl->type[ctrl->current] == SURFACE_RATE)) {
-                        const double rate_target = ctrl->target[ctrl->current];
+                    if ((well_controls_get_current(ctrl) >= 0) && // open well
+                        (well_controls_get_current_type(ctrl) == SURFACE_RATE)) {
+                        const double rate_target = well_controls_get_current_target(ctrl);
+                        const double * distr = well_controls_get_current_distr( ctrl );
                         for (int p = 0; p < np; ++p) {
-                            const double phase_distr = ctrl->distr[np * ctrl->current + p];
-                            wellrates_[np*w + p] = rate_target * phase_distr;
+                            wellrates_[np*w + p] = rate_target * distr[p];
                         }
                     }
                 }

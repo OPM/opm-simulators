@@ -35,42 +35,20 @@
 */
 #include "config.h"
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct WellControlMgmt {
-    int cpty;
-};
+#include <stdio.h>
+
 
 struct WellMgmt {
     int well_cpty;
     int perf_cpty;
 };
-
-
-static void
-destroy_ctrl_mgmt(struct WellControlMgmt *m)
-{
-    free(m);
-}
-
-
-static struct WellControlMgmt *
-create_ctrl_mgmt(void)
-{
-    struct WellControlMgmt *m;
-
-    m = malloc(1 * sizeof *m);
-
-    if (m != NULL) {
-        m->cpty = 0;
-    }
-
-    return m;
-}
 
 
 static void
@@ -96,86 +74,6 @@ create_well_mgmt(void)
 }
 
 
-/* ---------------------------------------------------------------------- */
-static void
-well_controls_destroy(struct WellControls *ctrl)
-/* ---------------------------------------------------------------------- */
-{
-    if (ctrl != NULL) {
-        destroy_ctrl_mgmt(ctrl->data);
-        free             (ctrl->distr);
-        free             (ctrl->target);
-        free             (ctrl->type);
-    }
-
-    free(ctrl);
-}
-
-
-/* ---------------------------------------------------------------------- */
-static struct WellControls *
-well_controls_create(void)
-/* ---------------------------------------------------------------------- */
-{
-    struct WellControls *ctrl;
-
-    ctrl = malloc(1 * sizeof *ctrl);
-
-    if (ctrl != NULL) {
-        /* Initialise empty control set */
-        ctrl->num     = 0;
-        ctrl->type    = NULL;
-        ctrl->target  = NULL;
-        ctrl->distr   = NULL;
-        ctrl->current = -1;
-
-        ctrl->data    = create_ctrl_mgmt();
-
-        if (ctrl->data == NULL) {
-            well_controls_destroy(ctrl);
-            ctrl = NULL;
-        }
-    }
-
-    return ctrl;
-}
-
-
-/* ---------------------------------------------------------------------- */
-static int
-well_controls_reserve(int nctrl, int nphases, struct WellControls *ctrl)
-/* ---------------------------------------------------------------------- */
-{
-    int   c, p, ok;
-    void *type, *target, *distr;
-
-    struct WellControlMgmt *m;
-
-    type   = realloc(ctrl->type  , nctrl * 1       * sizeof *ctrl->type  );
-    target = realloc(ctrl->target, nctrl * 1       * sizeof *ctrl->target);
-    distr  = realloc(ctrl->distr , nctrl * nphases * sizeof *ctrl->distr );
-
-    ok = 0;
-    if (type   != NULL) { ctrl->type   = type  ; ok++; }
-    if (target != NULL) { ctrl->target = target; ok++; }
-    if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
-
-    if (ok == 3) {
-        m = ctrl->data;
-        for (c = m->cpty; c < nctrl; c++) {
-            ctrl->type  [c] =  BHP;
-            ctrl->target[c] = -1.0;
-        }
-
-        for (p = m->cpty * nphases; p < nctrl * nphases; ++p) {
-            ctrl->distr[ p ] = 0.0;
-        }
-
-        m->cpty = nctrl;
-    }
-
-    return ok == 3;
-}
 
 
 /* ---------------------------------------------------------------------- */
@@ -254,7 +152,7 @@ initialise_new_wells(int nwells, struct Wells *W)
     }
 
     for (w = m->well_cpty, ok = 1; ok && (w < nwells); w++) {
-        W->ctrls[w] = well_controls_create();
+        W->ctrls[w] = well_controls_create( );
 
         ok = W->ctrls[w] != NULL;
     }
@@ -529,39 +427,16 @@ append_well_controls(enum WellControlType type,
                      struct Wells        *W)
 /* ---------------------------------------------------------------------- */
 {
-    int ok, alloc, np;
     struct WellControls    *ctrl;
-    struct WellControlMgmt *m;
 
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
 
     ctrl = W->ctrls[well_index];
-    np = W->number_of_phases;
-
     assert (ctrl != NULL);
-
-    m  = ctrl->data;
-    ok = ctrl->num < m->cpty;
-
-    if (! ok) {
-        alloc = alloc_size(ctrl->num, 1, m->cpty);
-        ok    = well_controls_reserve(alloc, np, ctrl);
-    }
-
-    if (ok) {
-        ctrl->type  [ctrl->num] = type  ;
-        ctrl->target[ctrl->num] = target;
-
-        if (distr != NULL) {
-            memcpy(ctrl->distr + (ctrl->num * np), distr,
-                   np * sizeof *ctrl->distr);
-        }
-
-        ctrl->num += 1;
-    }
-
-    return ok;
+    
+    well_controls_assert_number_of_phases( ctrl , W->number_of_phases);
+    return well_controls_add_new(type , target , distr , ctrl);
 }
 
 
@@ -572,12 +447,10 @@ set_current_control(int well_index, int current_control, struct Wells *W)
 {
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
-
     assert (W->ctrls[well_index] != NULL);
-
-    assert (current_control < W->ctrls[well_index]->num);
-
-    W->ctrls[well_index]->current = current_control;
+    assert (current_control < well_controls_get_num(W->ctrls[well_index]));
+    
+    well_controls_set_current(W->ctrls[well_index] , current_control);
 }
 
 
@@ -589,10 +462,11 @@ clear_well_controls(int well_index, struct Wells *W)
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
 
-    if (W->ctrls[well_index] != NULL) {
-        W->ctrls[well_index]->num = 0;
-    }
+    if (W->ctrls[well_index] != NULL) 
+        well_controls_clear( W->ctrls[well_index] );
 }
+
+
 
 
 /* ---------------------------------------------------------------------- */
@@ -607,17 +481,17 @@ clone_wells(const struct Wells *W)
     enum WellControlType       type;
     const struct WellControls *ctrls;
 
-    struct Wells *ret;
+    struct Wells *newWells;
 
     if (W == NULL) {
-        ret = NULL;
+        newWells = NULL;
     }
     else {
         np  = W->number_of_phases;
-        ret = create_wells(W->number_of_phases, W->number_of_wells,
-                           W->well_connpos[ W->number_of_wells ]);
+        newWells = create_wells(W->number_of_phases, W->number_of_wells,
+                                W->well_connpos[ W->number_of_wells ]);
 
-        if (ret != NULL) {
+        if (newWells != NULL) {
             pos = W->well_connpos[ 0 ];
             ok  = 1;
 
@@ -629,7 +503,7 @@ clone_wells(const struct Wells *W)
                 comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
 
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
-                              comp_frac, cells, WI, W->name[ w ], ret);
+                              comp_frac, cells, WI, W->name[ w ], newWells);
 
                 /* Capacity should be sufficient from create_wells() */
                 assert (ok);
@@ -637,34 +511,90 @@ clone_wells(const struct Wells *W)
                 ctrls = W->ctrls[ w ];
 
                 if (ok) {
-                    ok = well_controls_reserve(ctrls->num, np, ret->ctrls[ w ]);
+                    for (c = 0; ok && (c < well_controls_get_num(ctrls)); c++) {
+                        type   = well_controls_iget_type( ctrls , c );
+                        target = well_controls_iget_target( ctrls , c );
+                        distr  = well_controls_iget_distr( ctrls , c );
 
-                    for (c = 0; ok && (c < ctrls->num); c++) {
-                        type   =   ctrls->type  [ c ];
-                        target =   ctrls->target[ c ];
-                        distr  = & ctrls->distr [ c * np ];
-
-                        ok = append_well_controls(type, target, distr, w, ret);
-
-                        /* Capacity *should* be sufficient from
-                         *  well_controls_reserve() */
+                        ok = append_well_controls(type, target, distr, w, newWells);
+                        
                         assert (ok);
                     }
                 }
 
                 if (ok) {
-                    set_current_control(w, ctrls->current, ret);
+                    set_current_control(w, well_controls_get_current( ctrls) , newWells);
                 }
 
                 pos = W->well_connpos[w + 1];
             }
 
             if (! ok) {
-                destroy_wells(ret);
-                ret = NULL;
+                destroy_wells(newWells);
+                newWells = NULL;
             }
         }
     }
 
-    return ret;
+    return newWells;
 }
+
+/* ---------------------------------------------------------------------- */
+bool
+wells_equal(const struct Wells *W1, const struct Wells *W2)
+/* ---------------------------------------------------------------------- */
+{
+    bool are_equal = true;
+    are_equal = (W1->number_of_wells == W2->number_of_wells);
+    are_equal = are_equal && (W1->number_of_phases == W2->number_of_phases);
+    if (!are_equal) {
+        return are_equal;
+    }
+
+    for (int i=0; i<W1->number_of_wells; i++) {
+        if (are_equal) {
+            /*
+              The name attribute can be NULL. The comparison is as
+              follows:
+              
+                1. If both names are different from NULL a normal
+                   strcmp() is performed.
+                2. If both names are NULL they compare as equal.
+                3. If one name is NULL and the other is not NULL
+                   they are regarded as different.
+            */
+            if (W1->name[i] && W2->name[i])
+                are_equal = are_equal && (strcmp(W1->name[i], W2->name[i]) == 0);
+            else 
+                are_equal = are_equal && (W1->name[i] == W2->name[i]);  
+        }
+        are_equal = are_equal && (W1->type[i] == W2->type[i]);
+        are_equal = are_equal && (W1->depth_ref[i] == W2->depth_ref[i]);
+        are_equal = are_equal && (well_controls_equal(W1->ctrls[i], W2->ctrls[i]));
+    }
+
+
+    {
+        struct WellMgmt* mgmt1 = W1->data;
+        struct WellMgmt* mgmt2 = W2->data;
+        are_equal = are_equal && (mgmt1->perf_cpty == mgmt2->perf_cpty);
+        are_equal = are_equal && (mgmt1->well_cpty == mgmt2->well_cpty);
+    }
+
+    are_equal = are_equal && (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) == 0);
+    are_equal = are_equal && (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) == 0);
+    if (!are_equal) {
+        return are_equal;
+    }
+
+    {
+        int number_of_perforations = W1->well_connpos[W1->number_of_wells];
+
+        are_equal = are_equal && (memcmp(W1->well_cells, W2->well_cells, number_of_perforations * sizeof *W1->well_cells ) == 0);
+        are_equal = are_equal && (memcmp(W1->WI, W2->WI, number_of_perforations * sizeof *W1->WI ) == 0);
+    }
+
+    return are_equal;
+}
+
+/* ---------------------------------------------------------------------- */

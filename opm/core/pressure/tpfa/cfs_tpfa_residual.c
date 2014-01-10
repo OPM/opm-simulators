@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/linalg/sparse_sys.h>
 
@@ -806,7 +808,7 @@ welleq_coeff_resv(int np, struct cfs_tpfa_res_data *h,
     pflux    = h->pimpl->flux_work;
     dpflux_w = pflux       + (1             * np);
     dpflux_c = dpflux_w    + (1             * np);
-    distr    = ctrl->distr + (ctrl->current * np);
+    distr    = well_controls_get_current_distr( ctrl );
 
     *res = *w2c = *w2w = 0.0;
     for (p = 0; p < np; p++) {
@@ -833,7 +835,7 @@ welleq_coeff_surfrate(int i, int np, struct cfs_tpfa_res_data *h,
     pflux    = h->pimpl->compflux_p       + (i             * (1 * np));
     dpflux_w = h->pimpl->compflux_deriv_p + (i             * (2 * np));
     dpflux_c = dpflux_w                   + (1             * (1 * np));
-    distr    = ctrl->distr                + (ctrl->current * (1 * np));
+    distr    = well_controls_get_current_distr( ctrl );
 
     *res = *w2c = *w2w = 0.0;
     for (p = 0; p < np; p++) {
@@ -867,14 +869,14 @@ assemble_completion_to_well(int i, int w, int c, int nc, int np,
     W    = wells->W;
     ctrl = W->ctrls[ w ];
 
-    if (ctrl->current < 0) {
+    if (well_controls_get_current(ctrl) < 0) {
         /* Interpreting a negative current control index to mean a shut well */
         welleq_coeff_shut(np, h, &res, &w2c, &w2w);
     }
     else {
-        switch (ctrl->type[ ctrl->current ]) {
+        switch (well_controls_get_current_type(ctrl)) {
         case BHP :
-            welleq_coeff_bhp(np, pw - ctrl->target[ ctrl->current ],
+            welleq_coeff_bhp(np, pw - well_controls_get_current_target( ctrl ),
                              h, &res, &w2c, &w2w);
             break;
 
@@ -931,7 +933,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
 
     for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[ w ];
-        is_open = W->ctrls[w]->current >= 0;
+        is_open = (well_controls_get_current(W->ctrls[w]) >= 0);
 
         for (; i < W->well_connpos[w + 1]; i++, pmobp += np) {
 
@@ -956,10 +958,10 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
         }
 
         ctrl = W->ctrls[ w ];
-        if ((ctrl->current >= 0) && /* OPEN? */
-            (ctrl->type[ ctrl->current ] != BHP)) {
-
-            h->F[ nc + w ] -= dt * ctrl->target[ ctrl->current ];
+        if ((well_controls_get_current(ctrl) >= 0) && /* OPEN? */
+            (well_controls_get_current_type(ctrl) != BHP)) {
+            
+            h->F[ nc + w ] -= dt * well_controls_get_current_target(ctrl);
         }
         else {
             is_neumann = 0;
