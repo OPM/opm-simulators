@@ -641,6 +641,17 @@ namespace Opm
             allcells[c] = c;
         }
 
+        std::vector<double> capPressures(nc*np);
+        props.capPress(nc,&state.saturation()[0],&allcells[0],&capPressures[0],NULL);
+
+        std::vector<double> Pw(nc);
+        std::vector<double> Pg(nc);
+
+        for (int c = 0; c < nc; ++c){
+            Pw[c] = state.pressure()[c] + capPressures[c*np + BlackoilPhases::Aqua];
+            Pg[c] = state.pressure()[c] + capPressures[c*np + BlackoilPhases::Vapour];
+        }
+
 
         double z_tmp;
 
