@@ -261,7 +261,7 @@ namespace Opm
         }
 
         // Obtain phase usage data.
-        PhaseUsage pu = phaseUsageFromDeck(deck);
+        PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
         // These data structures will be filled in this constructor,
         // then used to initialize the Wells struct.
