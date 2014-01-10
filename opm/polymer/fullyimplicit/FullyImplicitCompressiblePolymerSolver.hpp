@@ -130,7 +130,7 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         const M                         grav_;
-
+		V  								cmax_;
         std::vector<ReservoirResidualQuant> rq_;
 
         // The mass_balance vector has one element for each active phase,
@@ -191,8 +191,8 @@ namespace Opm {
         computeFracFlow(const ADB&              kro,
                         const ADB&              krw_eff,
                         const ADB&              c) const;
-        V
-        computeCmax(const PolymerBlackoilState& x) const;
+        ADB
+        computeCmax(const ADB& c);
         ADB
         computeMc(const SolutionState&  state) const;
         ADB

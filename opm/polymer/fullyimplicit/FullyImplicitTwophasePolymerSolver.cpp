@@ -104,6 +104,7 @@ namespace {
         , ops_(grid)
         , wops_(wells)
         , mob_(std::vector<ADB>(fluid.numPhases() + 1, ADB::null()))
+		, cmax_(V::Zero(grid.number_of_cells))
         , residual_( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()), ADB::null(), ADB::null()})
      {
      }
@@ -343,18 +344,16 @@ namespace {
     }
   
 
-    V
+    ADB
     FullyImplicitTwophasePolymerSolver::
-    computeCmax(const PolymerState& x) const
+    computeCmax(const ADB& c)
     {
-        const int nc = c.value().size();
-		const V cmax = Eigen::Map<const V>(& x.maxconcentration()[0], nc);
-		const V c    = Eigen::Map<const V>(& x.concentration()[0], nc);
+        const int nc = grid_.number_of_cells;
         for (int i = 0; i < nc; ++i) {
-		      cmax(i) = std::max(cmax(i), c(i));
+		    cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
 
-        return cmax;
+        return ADB::constant(cmax_, c.blockPattern());
     }
 
 
@@ -374,8 +373,7 @@ namespace {
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
 
-        const V cmax_v = computeCmax(x);
-		const ADB cmax = ADB::constant(cmax, state.concentration.blockPattern());
+        const ADB cmax = computeCmax(state.concentration);
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);

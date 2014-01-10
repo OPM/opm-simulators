@@ -61,7 +61,7 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         std::vector<ADB>                mob_;
-       
+      	V								cmax_; 
         struct {
             std::vector<ADB>     mass_balance;
             ADB                  well_eq;
@@ -114,8 +114,8 @@ namespace Opm {
                       const std::vector<double>& polymer_inflow_c,
                       const SolutionState& state) const;
 
-        V
-        computeCmax(const PolymerState& x) const;
+        ADB
+        computeCmax(const ADB& c);
         ADB 
         computeMc(const SolutionState& state) const;
         ADB
