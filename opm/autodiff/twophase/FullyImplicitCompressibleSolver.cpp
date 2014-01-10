@@ -223,6 +223,9 @@ namespace {
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
+	//		if (it == 1) {
+   	//			 exit(1);
+	//		}
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::endl;
         }
@@ -615,11 +618,9 @@ namespace {
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
-
+#if 0
        std::ofstream outfile;
        outfile.open("mat.dat");
-
-
     int col = 0, num = 0;
     outfile << matr.rows() << " " << matr.rows() << " " << matr.nonZeros() << std::endl;
     for (int k = 0; k < matr.rows(); ++k) {
@@ -636,7 +637,12 @@ namespace {
     for (int k = 0; k < matr.rows(); ++k) {
         rhsfile << total_residual.value()[k] << std::endl;
     }
-    exit(1);
+	std::ofstream dxfile;
+	dxfile.open("dx.dat");
+	for (int k = 0; k < matr.rows(); ++k) {
+		dxfile << dx(k) << std::endl;
+	}
+#endif
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitCompressibleSolver::solveJacobianSystem(): "
