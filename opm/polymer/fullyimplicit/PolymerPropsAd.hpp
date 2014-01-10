@@ -65,8 +65,10 @@ namespace Opm {
 */
         double rockDensity() const;
         double deadPoreVol() const;
-        typedef AutoDiffBlock<double> ADB;
+        
+		typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
+
         PolymerPropsAd(const PolymerProperties& polymer_props);
 
         ~PolymerPropsAd();
@@ -94,6 +96,8 @@ namespace Opm {
 
         ADB
         effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw, const ADB& sw) const;
+
+
     private:
         const PolymerProperties& polymer_props_;
     };

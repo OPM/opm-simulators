@@ -1,4 +1,3 @@
-
 #include <cmath>
 #include <vector>
 #include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
@@ -168,6 +167,8 @@ namespace Opm {
     {
         return polymer_props_.rockDensity();
     }
+
+
 
 
     double
@@ -360,8 +361,10 @@ namespace Opm {
         double res_factor = polymer_props_.resFactor();
         double factor = (res_factor - 1.) / max_ads;
         ADB rk = one + ads * factor; 
-        ADB dkrw_ds = krw / rk.value();
-        ADB dkrw_dc = -krw.value() / (rk.value() * rk.value()) * ads * factor;
+//        ADB dkrw_ds = krw / rk.value();
+		ADB dkrw_ds = krw / rk;
+//        ADB dkrw_dc = -krw.value() / (rk.value() * rk.value()) * ads * factor;
+        ADB dkrw_dc = -factor * krw / (rk * rk) * ads ;
 
         const int num_blocks = c.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
