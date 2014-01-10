@@ -78,6 +78,8 @@ list (APPEND EXAMPLE_SOURCE_FILES
 list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_fibo_ad.cpp
+    examples/sim_fi2p_incomp_ad.cpp
+    examples/sim_fi2p_comp_ad.cpp
 	)
 
 # originally generated with the command:
@@ -96,11 +98,11 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
-    opm/autodiff/twophase/IncompPropsAdInterface.hpp
-    opm/autodiff/twophase/IncompPropsAdBasic.hpp
-    opm/autodiff/twophase/FullyImplicitTwoPhaseSolver.hpp
-    opm/autodiff/twophase/IncompPropsAdFromDeck.hpp
-    opm/autodiff/twophase/SimulatorFullyImplicitTwophase.hpp
-    opm/autodiff/twophase/FullyImplicitCompressibleSolver.hpp
-    opm/autodiff/twophase/SimulatorFullyImplicitCompressible.hpp
+  opm/autodiff/twophase/IncompPropsAdInterface.hpp
+  opm/autodiff/twophase/IncompPropsAdBasic.hpp
+  opm/autodiff/twophase/FullyImplicitTwoPhaseSolver.hpp
+  opm/autodiff/twophase/IncompPropsAdFromDeck.hpp
+  opm/autodiff/twophase/SimulatorFullyImplicitTwophase.hpp
+  opm/autodiff/twophase/FullyImplicitCompressibleSolver.hpp
+  opm/autodiff/twophase/SimulatorFullyImplicitCompressible.hpp
 	)
