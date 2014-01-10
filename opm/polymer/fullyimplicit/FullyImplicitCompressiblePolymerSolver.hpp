@@ -191,8 +191,8 @@ namespace Opm {
         computeFracFlow(const ADB&              kro,
                         const ADB&              krw_eff,
                         const ADB&              c) const;
-        ADB
-        computeCmax(const ADB&  c) const;
+        V
+        computeCmax(const PolymerBlackoilState& x) const;
         ADB
         computeMc(const SolutionState&  state) const;
         ADB

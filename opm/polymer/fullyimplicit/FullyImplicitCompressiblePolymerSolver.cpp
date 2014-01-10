@@ -297,7 +297,7 @@ namespace {
 
     FullyImplicitCompressiblePolymerSolver::SolutionState
     FullyImplicitCompressiblePolymerSolver::constantState(const PolymerBlackoilState& x,
-                                               const WellState&     xw)
+                                               			  const WellState&     xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
@@ -342,7 +342,7 @@ namespace {
         const int nw = wells_.number_of_wells;
         // The transpose() below switches the ordering.
         const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        const V qs = Eigen::Map<const V>(wrates.data(), nw * np);
         state.qs = ADB::constant(qs, bpat);
 
         // Well bottom-hole pressure.
@@ -359,7 +359,7 @@ namespace {
 
     FullyImplicitCompressiblePolymerSolver::SolutionState
     FullyImplicitCompressiblePolymerSolver::variableState(const PolymerBlackoilState& x,
-                                               const WellState&     xw)
+                                               			  const WellState&     xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
@@ -435,7 +435,7 @@ namespace {
 
     void
     FullyImplicitCompressiblePolymerSolver::computeAccum(const SolutionState& state,
-                                              const int            aix  )
+                                              		     const int            aix  )
     {
 
         const ADB&              press = state.pressure;
@@ -454,18 +454,18 @@ namespace {
 
 
 
-    ADB 
+    V 
     FullyImplicitCompressiblePolymerSolver::
-    computeCmax(const ADB& c) const
+    computeCmax(const PolymerBlackoilState& x) const
     {
         const int nc = c.value().size();
-        V cmax(nc);
-
-        for (int i = 0; i < nc; ++i) {
-            cmax(i) = (cmax(i) > c.value()(i)) ? cmax(i) : c.value()(i);
+       	const V cmax = Eigen::Map<const V>(& x.maxconcentration()[0], nc);
+		const V c = Eigen::Map<const V>(& x.concentration()[0], nc);
+		for (int i = 0; i < nc; ++i) {
+			cmax(i) = std::max(cmax(i), c(i));
         }
-
-        return ADB::constant(cmax, c.blockPattern());
+		
+		return cmax;
     }
 
     void
@@ -493,7 +493,8 @@ namespace {
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-        const ADB cmax = computeCmax(state.concentration);
+        const V cmax_v = computeCmax(x);
+		const ADB cmax = ADB::constant(cmax_v, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);

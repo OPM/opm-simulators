@@ -1,4 +1,3 @@
-
 #include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
 
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
@@ -304,7 +303,7 @@ namespace {
         const int nw = wells_.number_of_wells;
         // The transpose() below switches the ordering.
         const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+        const V qs = Eigen::Map<const V>(wrates.data(), nw * np);
         vars0.push_back(qs);
 
         // Initial well bottom hole pressure.
@@ -335,6 +334,7 @@ namespace {
 
         // Qs.
         state.qs = vars[ nextvar++ ];
+
         // BHP.
         state.bhp = vars[ nextvar++ ];
         assert(nextvar == int(vars.size()));
@@ -343,18 +343,18 @@ namespace {
     }
   
 
-    ADB 
+    V
     FullyImplicitTwophasePolymerSolver::
-    computeCmax(const ADB& c) const
+    computeCmax(const PolymerState& x) const
     {
         const int nc = c.value().size();
-        V cmax(nc);
-
+		const V cmax = Eigen::Map<const V>(& x.maxconcentration()[0], nc);
+		const V c    = Eigen::Map<const V>(& x.concentration()[0], nc);
         for (int i = 0; i < nc; ++i) {
-            cmax(i) = (cmax(i) > c.value()(i)) ? cmax(i) : c.value()(i);
+		      cmax(i) = std::max(cmax(i), c(i));
         }
 
-        return ADB::constant(cmax, c.blockPattern());
+        return cmax;
     }
 
 
@@ -374,7 +374,8 @@ namespace {
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
 
-        const ADB cmax = computeCmax(state.concentration);
+        const V cmax_v = computeCmax(x);
+		const ADB cmax = ADB::constant(cmax, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
@@ -594,7 +595,7 @@ namespace {
         const V inSrc = Eigen::Map<const V>(& insrc[0], grid_.number_of_cells);
         const V polyin = Eigen::Map<const V>(& polymer_inflow_c[0], grid_.number_of_cells);
         // compute the out-fracflow.
-        const std::vector<ADB> f = computeFracFlow(kro, krw_eff, c);
+        const std::vector<ADB> f = computeFracFlow();
         // compute the in-fracflow.
         V   zero = V::Zero(grid_.number_of_cells);
         V   one  = V::Ones(grid_.number_of_cells);
@@ -614,9 +615,7 @@ namespace {
 
 
     std::vector<ADB>
-    FullyImplicitTwophasePolymerSolver::computeFracFlow(const ADB& kro,
-                                                        const ADB& krw_eff,
-                                                        const ADB& c) const
+    FullyImplicitTwophasePolymerSolver::computeFracFlow() const
     {
         ADB total_mob = mob_[0] + mob_[1];
 
