@@ -13,7 +13,7 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-
+#include <opm/core/well_controls.h>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -455,14 +455,17 @@ namespace {
         M rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
-            if (wc->type[wc->current] == BHP) {
-                bhp_targets[w] = wc->target[wc->current];
+            if (well_controls_get_current_type(wc) == BHP) {
+                bhp_targets[w] = well_controls_get_current_target(wc);
                 rate_targets[w] = -1e100;
             } else if (wc->type[wc->current] == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
-                rate_targets[w] = wc->target[wc->current];
-                for (int phase = 0; phase < np; ++phase) {
-                    rate_distr.insert(w, phase*nw + w) = wc->distr[phase];
+                rate_targets[w] = well_controls_get_current_target(wc);
+                {
+                    const double * distr = well_controls_get_current_distr( wc );
+                    for (int phase = 0; phase < np; ++phase) {
+                        rate_distr.insert(w, phase*nw + w) = distr[phase];
+                    }
                 }
             } else {
                 OPM_THROW(std::runtime_error, "Can only handle BHP type controls.");
