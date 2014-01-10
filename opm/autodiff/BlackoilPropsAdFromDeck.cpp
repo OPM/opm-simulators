@@ -212,10 +212,12 @@ namespace Opm
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     V BlackoilPropsAdFromDeck::muOil(const V& po,
                                      const V& rs,
+                                     const std::vector<PhasePresence>& cond,
                                      const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -227,7 +229,7 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.data(), rs.data(),
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.data(), rs.data(), &cond[0],
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -285,10 +287,12 @@ namespace Opm
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAdFromDeck::muOil(const ADB& po,
                                        const ADB& rs,
+                                       const std::vector<PhasePresence>& cond,
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -301,7 +305,7 @@ namespace Opm
         V dmudr(n);
 
         props_[phase_usage_.phase_pos[Oil]]->mu(n, po.value().data(), rs.value().data(),
-                                                mu.data(), dmudp.data(), dmudr.data());
+                                                &cond[0], mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
         ADB::M dmudr_diag = spdiag(dmudr);
@@ -387,10 +391,12 @@ namespace Opm
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAdFromDeck::bOil(const V& po,
                                     const V& rs,
+                                    const std::vector<PhasePresence>& cond,
                                     const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -403,7 +409,7 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, po.data(), rs.data(),
+        props_[phase_usage_.phase_pos[Oil]]->b(n, po.data(), rs.data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -466,10 +472,12 @@ namespace Opm
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAdFromDeck::bOil(const ADB& po,
                                       const ADB& rs,
+                                      const std::vector<PhasePresence>& cond,
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
@@ -483,7 +491,7 @@ namespace Opm
         V dbdr(n);
 
         props_[phase_usage_.phase_pos[Oil]]->b(n, po.value().data(), rs.value().data(),
-                                               b.data(), dbdp.data(), dbdr.data());
+                                               &cond[0], b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
         ADB::M dbdr_diag = spdiag(dbdr);
@@ -676,6 +684,64 @@ namespace Opm
             }
         }
         return relperms;
+    }
+
+    std::vector<ADB> BlackoilPropsAdFromDeck::capPress(const ADB& sw,
+                                                       const ADB& so,
+                                                       const ADB& sg,
+                                                       const Cells& cells) const
+    {
+        const int numCells = cells.size();
+        const int numActivePhases = numPhases();
+        const int numBlocks = so.numBlocks();
+
+        Block activeSat(numCells, numActivePhases);
+        if (phase_usage_.phase_used[Water]) {
+            assert(sw.value().size() == numCells);
+            activeSat.col(phase_usage_.phase_pos[Water]) = sw.value();
+        }
+        if (phase_usage_.phase_used[Oil]) {
+            assert(so.value().size() == numCells);
+            activeSat.col(phase_usage_.phase_pos[Oil]) = so.value();
+        } else {
+            OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::relperm() assumes oil phase is active.");
+        }
+        if (phase_usage_.phase_used[Gas]) {
+            assert(sg.value().size() == numCells);
+            activeSat.col(phase_usage_.phase_pos[Gas]) = sg.value();
+        }
+
+        Block pc(numCells, numActivePhases);
+        Block dpc(numCells, numActivePhases*numActivePhases);
+        satprops_->capPress(numCells, activeSat.data(), cells.data(), pc.data(), dpc.data());
+
+        std::vector<ADB> adbCapPressures;
+        adbCapPressures.reserve(3);
+        const ADB* s[3] = { &sw, &so, &sg };
+        for (int phase1 = 0; phase1 < 3; ++phase1) {
+            if (phase_usage_.phase_used[phase1]) {
+                const int phase1_pos = phase_usage_.phase_pos[phase1];
+                std::vector<ADB::M> jacs(numBlocks);
+                for (int block = 0; block < numBlocks; ++block) {
+                    jacs[block] = ADB::M(numCells, s[phase1]->derivative()[block].cols());
+                }
+                for (int phase2 = 0; phase2 < 3; ++phase2) {
+                    if (!phase_usage_.phase_used[phase2])
+                        continue;
+                    const int phase2_pos = phase_usage_.phase_pos[phase2];
+                    // Assemble dpc1/ds2.
+                    const int column = phase1_pos + numActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                    ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
+                    for (int block = 0; block < numBlocks; ++block) {
+                        jacs[block] += dpc1_ds2_diag * s[phase2]->derivative()[block];
+                    }
+                }
+                adbCapPressures.emplace_back(ADB::function(pc.col(phase1_pos), jacs));
+            } else {
+                adbCapPressures.emplace_back(ADB::null());
+            }
+        }
+        return adbCapPressures;
     }
 
 } // namespace Opm

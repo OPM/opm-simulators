@@ -27,6 +27,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/simulator/initState.hpp>
@@ -165,8 +166,8 @@ try
         if (!ok) {
             OPM_THROW(std::runtime_error, "Simple well init failed.");
         }
-        simple_wells->ctrls[0]->current = 0;
-        simple_wells->ctrls[1]->current = 0;
+        well_controls_set_current( simple_wells->ctrls[0] , 0);
+        well_controls_set_current( simple_wells->ctrls[1] , 0);
     }
 
     // Linear solver.
