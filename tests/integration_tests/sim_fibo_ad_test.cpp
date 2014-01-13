@@ -190,7 +190,7 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     std::string deck_filename = test_data.string();
 
     ParserPtr parser(new Parser());
-    DeckConstPtr deck = parser->parse(deck_filename);
+    DeckConstPtr deck = parser->parseFile(deck_filename);
     ScheduleConstPtr schedule_deck(new Schedule(deck));
 
     boost::scoped_ptr<EclipseGridParser> old_deck;
