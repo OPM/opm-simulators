@@ -38,6 +38,16 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
+
+        struct ReservoirResidualQuant {
+            ReservoirResidualQuant();
+            std::vector<ADB> accum; // Accumulations
+            ADB              mflux; // Mass flux (surface conditions)
+            ADB              b;     // Reciprocal FVF
+            ADB              head;  // Pressure drop across int. interfaces
+            ADB              mob;   // Phase mobility (per cell)
+        };
+
         struct SolutionState {
             SolutionState(const int np);
             ADB             pressure;
@@ -46,11 +56,13 @@ namespace Opm {
             ADB             qs;
             ADB             bhp;
         };
+
         struct WellOps {
             WellOps(const Wells& wells);
             M w2p;              // well -> perf (scatter)
             M p2w;              // perf -> well (gather)
         };
+
         const UnstructuredGrid&         grid_;
         const IncompPropsAdInterface&   fluid_;
         const PolymerPropsAd&           polymer_props_ad_;
@@ -60,8 +72,8 @@ namespace Opm {
         const std::vector<int>          cells_;
         HelperOps                       ops_;
         const WellOps                   wops_;
-        std::vector<ADB>                mob_;
-      	V								cmax_; 
+      	V								cmax_;
+        std::vector<ReservoirResidualQuant> rq_;
         struct {
             std::vector<ADB>     mass_balance;
             ADB                  well_eq;
@@ -89,7 +101,7 @@ namespace Opm {
         V
         transmissibility() const;
         
-        std::vector<ADB>
+		void
         computeMassFlux(const V&                trans,
                         const ADB&              mc,
                         const ADB&              kro,
@@ -116,6 +128,9 @@ namespace Opm {
 
         ADB
         computeCmax(const ADB& c);
+    	void
+		computeAccum(const SolutionState& state,
+                 	const int            aix  );
         ADB 
         computeMc(const SolutionState& state) const;
         ADB

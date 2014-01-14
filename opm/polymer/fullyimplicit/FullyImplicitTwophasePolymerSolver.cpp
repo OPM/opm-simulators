@@ -103,8 +103,9 @@ namespace {
         , cells_ (buildAllCells(grid.number_of_cells))
         , ops_(grid)
         , wops_(wells)
-        , mob_(std::vector<ADB>(fluid.numPhases() + 1, ADB::null()))
+//        , mob_(std::vector<ADB>(fluid.numPhases() + 1, ADB::null()))
 		, cmax_(V::Zero(grid.number_of_cells))
+        , rq_(fluid.numPhases() + 1)
         , residual_( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()), ADB::null(), ADB::null()})
      {
      }
@@ -163,6 +164,7 @@ namespace {
         const V pvdt = pvol / dt;
 
         const SolutionState old_state = constantState(x, xw);
+		computeAccum(old_state, 0);
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 40;
@@ -196,6 +198,15 @@ namespace {
     }
 
 
+
+    FullyImplicitTwophasePolymerSolver::ReservoirResidualQuant::ReservoirResidualQuant()
+        : accum(2, ADB::null())
+        , mflux(   ADB::null())
+        , b    (   ADB::null())
+        , head (   ADB::null())
+        , mob  (   ADB::null())
+    {
+    }
 
 
 
@@ -356,6 +367,25 @@ namespace {
         return ADB::constant(cmax_, c.blockPattern());
     }
 
+    void
+    FullyImplicitTwophasePolymerSolver::
+	computeAccum(const SolutionState& state,
+                 const int            aix  )
+    {
+
+        const std::vector<ADB>& sat   = state.saturation;
+        const ADB&              c     = state.concentration;
+
+        rq_[0].accum[aix] = sat[0];
+        rq_[1].accum[aix] = sat[1];
+        const ADB cmax = computeCmax(state.concentration);
+        const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
+        const double rho_rock = polymer_props_ad_.rockDensity();
+        const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
+
+        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
+        rq_[2].accum[aix] = sat[0] * c * (1. - dead_pore_vol) + rho_rock * (1. - phi) / phi * ads;
+    }
 
 
     void
@@ -368,31 +398,37 @@ namespace {
     {
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
-
+		computeAccum(state, 1);
         // -------- Mass balance equations for water and oil --------
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
 
         const ADB cmax = computeCmax(state.concentration);
-        const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
+ //       const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
-        const std::vector<ADB> mflux = computeMassFlux(trans, mc, kr[1], krw_eff, state);
+        computeMassFlux(trans, mc, kr[1], krw_eff, state);
         //const std::vector<ADB> source = accumSource(kr[1], krw_eff, state.concentration, src, polymer_inflow);
        // const std::vector<ADB> source = polymerSource();
-        const double rho_r = polymer_props_ad_.rockDensity();
-        const V phi = V::Constant(pvdt.size(), 1, *fluid_.porosity());
+ //       const double rho_r = polymer_props_ad_.rockDensity();
+//        const V phi = V::Constant(pvdt.size(), 1, *fluid_.porosity());
 
-        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-        residual_.mass_balance[0] =  pvdt * (state.saturation[0] - old_state.saturation[0])
-                        + ops_.div * mflux[0];
-        residual_.mass_balance[1] =  pvdt * (state.saturation[1] - old_state.saturation[1])
-                        + ops_.div * mflux[1];
+//        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
+//        residual_.mass_balance[0] =  pvdt * (state.saturation[0] - old_state.saturation[0])
+//                        + ops_.div * mflux[0];
+//        residual_.mass_balance[1] =  pvdt * (state.saturation[1] - old_state.saturation[1])
+//                        + ops_.div * mflux[1];
       // Mass balance equation for polymer
-        residual_.mass_balance[2] = pvdt * (state.saturation[0] * state.concentration
-                      - old_state.saturation[0] * old_state.concentration) * (1. - dead_pore_vol)
-                      + pvdt * rho_r * (1. - phi) / phi * ads
-                      + ops_.div * mflux[2];
+//        residual_.mass_balance[2] = pvdt * (state.saturation[0] * state.concentration
+//                      - old_state.saturation[0] * old_state.concentration) * (1. - dead_pore_vol)
+//                      + pvdt * rho_r * (1. - phi) / phi * ads
+ //                     + ops_.div * mflux[2];
+        residual_.mass_balance[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
+                                    + ops_.div*rq_[0].mflux;
+        residual_.mass_balance[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
+                                    + ops_.div*rq_[1].mflux;
+        residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0])
+                                    + ops_.div*rq_[2].mflux;
 
         // -------- Well equation, and well contributions to the mass balance equations --------
 
@@ -456,14 +492,14 @@ namespace {
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
         ADB well_rates_all = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
 
-        ADB perf_total_mob = subset(mob_[0], well_cells) + subset(mob_[1], well_cells);
+        ADB perf_total_mob = subset(rq_[0].mob, well_cells) + subset(rq_[1].mob, well_cells);
 
         std::vector<ADB> well_contribs(np, ADB::null());
         std::vector<ADB> well_perf_rates(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
 //            const ADB& cell_b = rq_[phase].b;
   //          const ADB perf_b = subset(cell_b, well_cells);
-            const ADB& cell_mob = mob_[phase];
+            const ADB& cell_mob = rq_[phase].mob;
             const V well_fraction = compi.col(phase);
             // Using total mobilities for all phases for injection.
             const ADB perf_mob_injector = (wops_.w2p * well_fraction.matrix()).array() * perf_total_mob;
@@ -523,7 +559,7 @@ namespace {
 
     }
    
-    std::vector<ADB>
+    void
     FullyImplicitTwophasePolymerSolver::computeMassFlux(const V&                trans,
                                                         const ADB&              mc,
                                                         const ADB&              kro,
@@ -531,11 +567,10 @@ namespace {
                                                         const SolutionState&    state )
     {
         const double* mus = fluid_.viscosity();
-        std::vector<ADB> mflux;
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mus);
-        mob_[0] = krw_eff * inv_wat_eff_vis;
-        mob_[1] = kro / V::Constant(kro.size(), 1, mus[1]);
-        mob_[2] =  mc * krw_eff * inv_wat_eff_vis;
+        rq_[0].mob = krw_eff * inv_wat_eff_vis;
+        rq_[1].mob = kro / V::Constant(kro.size(), 1, mus[1]);
+        rq_[2].mob =  mc * krw_eff * inv_wat_eff_vis;
 
 
         const int nc = grid_.number_of_cells; 
@@ -546,23 +581,18 @@ namespace {
         }
         for (int phase = 0; phase < 2; ++phase) {
             const ADB rho = fluidDensity(phase, state.pressure);
+			ADB& head = rq_[phase].head;
             const ADB rhoavg = ops_.caver * rho;
             const ADB dp = ops_.ngrad * state.pressure
                            - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
-            const ADB head = trans * dp;
+            head = trans * dp;
             UpwindSelector<double> upwind(grid_, ops_, head.value());
-            mflux.push_back(upwind.select(mob_[phase])*head);
+			const ADB& mob = rq_[phase].mob;
+            rq_[phase].mflux = upwind.select(mob) * head;
         }
-        // polymer mass flux.
-        const ADB rho = fluidDensity(0, state.pressure);
-        const ADB rhoavg = ops_.caver * rho;
-        const ADB dp = ops_.ngrad * state.pressure
-                       - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
-        const ADB head = trans * dp;
-        UpwindSelector<double> upwind(grid_, ops_, head.value());
-        mflux.push_back(upwind.select(mob_[2])*head);
-        
-        return mflux;
+		rq_[2].head = rq_[0].head;
+		UpwindSelector<double> upwind(grid_, ops_, rq_[2].head.value());
+		rq_[2].mflux = upwind.select(rq_[2].mob) * rq_[2].head;
     }
 
 
@@ -615,12 +645,12 @@ namespace {
     std::vector<ADB>
     FullyImplicitTwophasePolymerSolver::computeFracFlow() const
     {
-        ADB total_mob = mob_[0] + mob_[1];
+        ADB total_mob = rq_[0].mob + rq_[1].mob;
 
         std::vector<ADB> fracflow;
 
-        fracflow.push_back(mob_[0] / total_mob);
-        fracflow.push_back(mob_[1] / total_mob);
+        fracflow.push_back(rq_[0].mob / total_mob);
+        fracflow.push_back(rq_[1].mob / total_mob);
 
         return fracflow;
     }

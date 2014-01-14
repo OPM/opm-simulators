@@ -510,7 +510,6 @@ namespace {
                                     + ops_.div*rq_[0].mflux;
         residual_.mass_balance[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
                                     + ops_.div*rq_[1].mflux;
-   //     residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) * (1. - dead_pore_vol) 
         residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0])
                                     + ops_.div*rq_[2].mflux;
 
