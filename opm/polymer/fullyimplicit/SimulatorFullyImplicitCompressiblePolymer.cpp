@@ -235,7 +235,6 @@ namespace Opm
         }
     }
 
-#if 0
     static void outputWaterCut(const Opm::Watercut& watercut,
                                const std::string& output_dir)
     {
@@ -247,6 +246,7 @@ namespace Opm
         }
         watercut.write(os);
     }
+#if 0
 
     static void outputWellReport(const Opm::WellReport& wellreport,
                                  const std::string& output_dir)

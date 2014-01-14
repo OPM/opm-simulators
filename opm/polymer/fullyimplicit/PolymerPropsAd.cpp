@@ -177,8 +177,12 @@ namespace Opm {
         return polymer_props_.deadPoreVol();
     }
 
-
-
+	double
+	PolymerPropsAd::cMax() const
+	{
+		return polymer_props_.cMax();
+	}
+	
 
     PolymerPropsAd::PolymerPropsAd(const PolymerProperties& polymer_props)
         : polymer_props_ (polymer_props)

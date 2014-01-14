@@ -217,7 +217,6 @@ namespace {
             const V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);
-
             assemble(pvdt, x, xw, polymer_inflow);
 
             const double r = residualNorm();
@@ -449,9 +448,15 @@ namespace {
         }
         rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
         rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
-        rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c;
+        const ADB cmax = computeCmax(state.concentration);
+        const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
+        const double rho_rock = polymer_props_ad_.rockDensity();
+        const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
 
+        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
+        rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c * (1. - dead_pore_vol) + rho_rock * (1. - phi) / phi * ads;
     }
+	
 
 
 
@@ -460,10 +465,13 @@ namespace {
     computeCmax(const ADB& c)
     {
         const int nc = grid_.number_of_cells;
+//		const V cmax = Eigen::Map<const V>(&state.maxconcentration()[0], nc, 1);
+//		cmax_ = &cmax;
 		for (int i = 0; i < nc; ++i) {
 			cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
 		
+//        std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
 		return ADB::constant(cmax_, c.blockPattern());
     }
 
@@ -491,20 +499,19 @@ namespace {
         // for each active phase.
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
         const ADB cmax = computeCmax(state.concentration);
-        const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
+    //    const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
         computeMassFlux(trans, mc, kr[1], krw_eff, state);
-        const double rho_rock = polymer_props_ad_.rockDensity();
-        const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
+     //   const double rho_rock = polymer_props_ad_.rockDensity();
+      //  const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
         residual_.mass_balance[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
                                     + ops_.div*rq_[0].mflux;
         residual_.mass_balance[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
                                     + ops_.div*rq_[1].mflux;
-        residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) * (1. - dead_pore_vol) 
-                                    + pvdt * rho_rock * (1. - phi) / phi * ads
+   //     residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) * (1. - dead_pore_vol) 
+        residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0])
                                     + ops_.div*rq_[2].mflux;
 
 
@@ -675,6 +682,9 @@ namespace {
         struct Chop01 {
             double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
         };
+        struct Chop02 {
+            double operator()(double x) const { return std::max(std::min(x, 1.25), 0.0); }
+        };
     }
 
 
@@ -713,7 +723,7 @@ namespace {
 
         // Saturation updates.
         const double dsmax = 0.3;
-        const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+        const DataBlock s_old = Eigen::Map<const DataBlock>(&state.saturation()[0], nc, np);
         V so = one;
         const V sw_old = s_old.col(0);
         const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
@@ -725,8 +735,13 @@ namespace {
         }
 
         // Concentration updates.
-        const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc);
-        const V c = c_old - dc;
+        const double dcmax = 0.3 * polymer_props_ad_.cMax();
+//		std::cout << "\n the max concentration: " << dcmax / 0.3 << std::endl;
+        const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
+//        const V absdcmax = dcmax*c_old.abs();
+        const V dc_limited = sign(dc) * dc.abs().min(dcmax);
+        const V c = (c_old - dc_limited);//.unaryExpr(Chop02());
+  //      const V c = (c_old - dc);
         std::copy(&c[0], &c[0] + nc, state.concentration().begin());
 
         // Qs update.

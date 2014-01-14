@@ -65,7 +65,7 @@ namespace Opm {
 */
         double rockDensity() const;
         double deadPoreVol() const;
-        
+       	double cMax() const; 
 		typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
 
