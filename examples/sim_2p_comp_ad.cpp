@@ -102,7 +102,7 @@ try
         std::string deck_filename = param.get<std::string>("deck_filename");
         deck.reset(new EclipseGridParser(deck_filename));
         Opm::ParserPtr newParser(new Opm::Parser() );
-        Opm::DeckConstPtr newParserDeck = newParser->parse( deck_filename );
+        Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
 
         // Grid init
         grid.reset(new GridManager(newParserDeck));
