@@ -10,7 +10,7 @@ sets up declarative lists of prerequisites and content and rely on convention
 and pre-made modules to do the build. Its goal is to replace but be
 compatible with the old autotools-based system.
 
-## Notation
+## Terminology
 
 In the build system to following abstract locations are referred to:
 
