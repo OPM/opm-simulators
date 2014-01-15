@@ -19,5 +19,5 @@ set (opm-autodiff_DEPS
 	dune-istl REQUIRED;
 	opm-core REQUIRED"
 	# Eigen
-	"Eigen3 3.1 REQUIRED"
+	"Eigen3 3.1.2 "
 	)
