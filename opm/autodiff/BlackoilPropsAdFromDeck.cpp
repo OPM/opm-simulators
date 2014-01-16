@@ -34,6 +34,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Utility/PvdoTable.hpp>
+#include <opm/parser/eclipse/Utility/PvtgTable.hpp>
 #include <opm/parser/eclipse/Utility/PvdcoTable.hpp>
 
 namespace Opm
@@ -186,7 +187,7 @@ namespace Opm
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(pvdoTable));
             }
             else if (newParserDeck->hasKeyword("PVTO")) {
-                Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"));
+                Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"), /*tableIdx=*/0);
 
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(pvtoTable));
             } else if (newParserDeck->hasKeyword("PVCDO")) {
@@ -204,8 +205,12 @@ namespace Opm
                 Opm::PvdoTable pvdgTable(newParserDeck->getKeyword("PVDG"), region_number);
 
                 props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(pvdgTable));
+            } else if (newParserDeck->hasKeyword("PVTG")) {
+                Opm::PvtgTable pvtgTable(newParserDeck->getKeyword("PVTG"), /*tableIdx=*/0);
+
+                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtLiveGas(pvtgTable));
             } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDG\n");
+                OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
             }
         }
 
