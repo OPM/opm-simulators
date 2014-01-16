@@ -48,10 +48,10 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 
-#include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <memory>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -89,35 +89,61 @@ try
         OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
                   "Specify the deck with deck_filename=deckname.data (for example).");
     }
-//    boost::scoped_ptr<EclipseGridParser> deck;
-    boost::scoped_ptr<GridManager> grid;
-    boost::scoped_ptr<BlackoilPropertiesInterface> props;
-    boost::scoped_ptr<BlackoilPropsAdInterface> new_props;
-    boost::scoped_ptr<RockCompressibility> rock_comp;
+    std::shared_ptr<GridManager> grid;
+    std::shared_ptr<BlackoilPropertiesInterface> props;
+    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
-//    deck.reset(new EclipseGridParser(deck_filename));
 
+#define USE_NEW_PARSER 1
+#if USE_NEW_PARSER
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
+#else
+    std::shared_ptr<EclipseGridParser> deck;
+    deck.reset(new EclipseGridParser(deck_filename));
+#endif
 
     // Grid init
+#if USE_NEW_PARSER
     grid.reset(new GridManager(newParserDeck));
+#else
+    grid.reset(new GridManager(*deck));
+#endif
 
+#if USE_NEW_PARSER
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
+#else
+    Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
+#endif
+
     // Rock and fluid init
+#if USE_NEW_PARSER
     props.reset(new BlackoilPropertiesFromDeck(newParserDeck, *grid->c_grid(), param));
     new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid->c_grid()));
+#else
+    props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
+#endif
 
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
+#if USE_NEW_PARSER
     rock_comp.reset(new RockCompressibility(newParserDeck));
+#else
+    rock_comp.reset(new RockCompressibility(*deck));
+#endif
     // Gravity.
+#if USE_NEW_PARSER
     gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+#else
+    gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+#endif
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
@@ -133,7 +159,11 @@ try
             }
         }
     } else {
+#if USE_NEW_PARSER
         initBlackoilStateFromDeck(*grid->c_grid(), *props, newParserDeck, gravity[2], state);
+#else
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+#endif
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -174,15 +204,22 @@ try
     SimulatorTimer simtimer;
     int step = 0;
 
-    simtimer.init(newParserDeck);
-    const double total_time = simtimer.totalTime();
-
     // Update the timer.
+#if USE_NEW_PARSER
     if (newParserDeck->hasKeyword("TSTEP")) {
         simtimer.init(newParserDeck);
     } else {
         simtimer.init(param);
     }
+#else
+    if (deck->hasField("TSTEP")) {
+        simtimer.init(*deck);
+    } else {
+        simtimer.init(param);
+    }
+#endif
+    const double total_time = simtimer.totalTime();
+
     simtimer.setCurrentStepNum(step);
     simtimer.setTotalTime(total_time);
 
@@ -190,7 +227,11 @@ try
               << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
     // Create new wells, well_state
+#if USE_NEW_PARSER
     WellsManager wells(newParserDeck, *grid->c_grid(), props->permeability());
+#else
+    WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+#endif
     well_state.init(wells.c_wells(), state);
 
     // Create and run simulator.
