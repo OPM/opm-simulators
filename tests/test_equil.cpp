@@ -75,8 +75,11 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
                Opm::equil::miscibility::NoMixing(),
                props.phaseUsage());
 
+    std::vector<int> cells(G->number_of_cells);
+    std::iota(cells.begin(), cells.end(), 0);
+
     const double grav   = 10;
-    const PPress ppress = Opm::equil::phasePressures(*G, region, grav);
+    const PPress ppress = Opm::equil::phasePressures(*G, region, cells, grav);
 
     const int first = 0, last = G->number_of_cells - 1;
     const double reltol = 1.0e-8;
