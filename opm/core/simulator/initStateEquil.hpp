@@ -27,6 +27,7 @@
 
 #include <array>
 #include <cassert>
+#include <utility>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -101,6 +102,96 @@ namespace Opm
                 std::vector<double> rs_;
             };
         } // namespace miscibility
+
+        template < class Region = std::vector<int> >
+        class RegionMapping {
+        public:
+            explicit
+            RegionMapping(const Region& reg)
+                : reg_(reg)
+            {
+                rev_.init(reg_);
+            }
+
+            typedef typename Region::value_type                  RegionId;
+            typedef typename Region::size_type                   CellId;
+            typedef typename std::vector<CellId>::const_iterator CellIter;
+
+            class CellRange {
+            public:
+                CellRange(const CellIter b,
+                          const CellIter e)
+                    : b_(b), e_(e)
+                {}
+
+                typedef CellIter iterator;
+                typedef CellIter const_iterator;
+
+                iterator begin() const { return b_; }
+                iterator end()   const { return e_; }
+
+            private:
+                iterator b_;
+                iterator e_;
+            };
+
+            RegionId
+            numRegions() const { return RegionId(rev_.p.size()) - 1; }
+
+            RegionId
+            region(const CellId c) const { return reg_[c]; }
+
+            CellRange
+            cells(const RegionId r) const {
+                const RegionId i = r - rev_.low;
+                return CellRange(rev_.c.begin() + rev_.p[i + 0],
+                                 rev_.c.begin() + rev_.p[i + 1]);
+            }
+
+        private:
+            Region reg_;
+
+            struct {
+                typedef typename std::vector<CellId>::size_type Pos;
+                std::vector<Pos>    p;
+                std::vector<CellId> c;
+                RegionId            low;
+
+                void
+                init(const Region& reg)
+                {
+                    typedef typename Region::const_iterator CI;
+                    const std::pair<CI,CI>
+                        m = std::minmax_element(reg.begin(), reg.end());
+
+                    low  = *m.first;
+
+                    const typename Region::size_type
+                        n = *m.second - low + 1;
+
+                    p.resize(n + 1);  std::fill(p.begin(), p.end(), Pos(0));
+                    for (CellId i = 0, nc = reg.size(); i < nc; ++i) {
+                        p[ reg[i] - low + 1 ] += 1;
+                    }
+
+                    for (typename std::vector<Pos>::size_type
+                             i = 1, sz = p.size(); i < sz; ++i) {
+                        p[0] += p[i];
+                        p[i]  = p[0] - p[i];
+                    }
+
+                    assert (p[0] ==
+                            static_cast<typename Region::size_type>(reg.size()));
+
+                    c.resize(reg.size());
+                    for (CellId i = 0, nc = reg.size(); i < nc; ++i) {
+                        c[ p[ reg[i] - low + 1 ] ++ ] = i;
+                    }
+
+                    p[0] = 0;
+                }
+            } rev_;
+        };
 
         struct EquilRecord {
             struct {
