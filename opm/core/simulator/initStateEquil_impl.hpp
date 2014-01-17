@@ -286,31 +286,40 @@ namespace Opm
         } // namespace PhaseIndex
 
         namespace PhasePressure {
-            template <class PressFunction>
+            template <class PressFunction,
+                      class CellRange>
             void
             assign(const UnstructuredGrid&             G    ,
                    const std::array<PressFunction, 2>& f    ,
                    const double                        split,
+                   const CellRange&                    cells,
                    std::vector<double>&                p    )
             {
-                const int     nd    = G.dimensions, nc = G.number_of_cells;
-                const double* depth = & G.cell_centroids[0*nd + (nd - 1)];
+                const int nd = G.dimensions;
 
                 enum { up = 0, down = 1 };
 
-                for (int c = 0; c < nc; ++c, depth += nd) {
-                    const double z = *depth;
+                std::vector<double>::size_type c = 0;
+                for (typename CellRange::const_iterator
+                         ci = cells.begin(), ce = cells.end();
+                     ci != ce; ++ci, ++c)
+                {
+                    assert (c < p.size());
+
+                    const double z = G.cell_centroids[(*ci)*nd + (nd - 1)];
                     p[c] = (z < split) ? f[up](z) : f[down](z);
                 }
             }
 
-            template <class Region>
+            template <class Region,
+                      class CellRange>
             void
             water(const UnstructuredGrid&     G     ,
                   const Region&               reg   ,
                   const std::array<double,2>& span  ,
                   const double                grav  ,
                   const double                po_woc,
+                  const CellRange&            cells ,
                   std::vector<double>&        press )
             {
                 using PhasePressODE::Water;
@@ -336,15 +345,17 @@ namespace Opm
                     }
                 };
 
-                assign(G, wpress, z0, press);
+                assign(G, wpress, z0, cells, press);
             }
 
-            template <class Region>
+            template <class Region,
+                      class CellRange>
             void
             oil(const UnstructuredGrid&     G     ,
                 const Region&               reg   ,
                 const std::array<double,2>& span  ,
                 const double                grav  ,
+                const CellRange&            cells ,
                 std::vector<double>&        press ,
                 double&                     po_woc,
                 double&                     po_goc)
@@ -376,7 +387,7 @@ namespace Opm
                     }
                 };
 
-                assign(G, opress, z0, press);
+                assign(G, opress, z0, cells, press);
 
                 po_woc = -std::numeric_limits<double>::max();
                 po_goc = -std::numeric_limits<double>::max();
@@ -394,13 +405,15 @@ namespace Opm
                 else               { po_goc = p0;             } // GOC *at*  datum
             }
 
-            template <class Region>
+            template <class Region,
+                      class CellRange>
             void
             gas(const UnstructuredGrid&     G     ,
                 const Region&               reg   ,
                 const std::array<double,2>& span  ,
                 const double                grav  ,
                 const double                po_goc,
+                const CellRange&            cells ,
                 std::vector<double>&        press )
             {
                 using PhasePressODE::Gas;
@@ -431,16 +444,18 @@ namespace Opm
                     }
                 };
 
-                assign(G, gpress, z0, press);
+                assign(G, gpress, z0, cells, press);
             }
         } // namespace PhasePressure
 
-        template <class Region>
+        template <class Region,
+                  class CellRange>
         void
         equilibrateOWG(const UnstructuredGrid&             G,
                        const Region&                       reg,
                        const double                        grav,
                        const std::array<double,2>&         span,
+                       const CellRange&                    cells,
                        std::vector< std::vector<double> >& press)
         {
             const PhaseUsage& pu = reg.phaseUsage();
@@ -448,53 +463,93 @@ namespace Opm
             double po_woc = -1, po_goc = -1;
             if (PhaseUsed::oil(pu)) {
                 const int oix = PhaseIndex::oil(pu);
-                PhasePressure::oil(G, reg, span, grav,
+                PhasePressure::oil(G, reg, span, grav, cells,
                                    press[ oix ], po_woc, po_goc);
             }
 
             if (PhaseUsed::water(pu)) {
                 const int wix = PhaseIndex::water(pu);
-                PhasePressure::water(G, reg, span, grav,
-                                     po_woc, press[ wix ]);
+                PhasePressure::water(G, reg, span, grav, po_woc,
+                                     cells, press[ wix ]);
             }
 
             if (PhaseUsed::gas(pu)) {
                 const int gix = PhaseIndex::gas(pu);
-                PhasePressure::gas(G, reg, span, grav,
-                                   po_goc, press[ gix ]);
+                PhasePressure::gas(G, reg, span, grav, po_goc,
+                                   cells, press[ gix ]);
             }
         }
     } // namespace Details
 
     namespace equil {
-        template <class Region>
+        template <class Region,
+                  class CellRange>
         std::vector< std::vector<double> >
         phasePressures(const UnstructuredGrid& G,
                        const Region&           reg,
+                       const CellRange&        cells,
                        const double            grav)
         {
             std::array<double,2> span =
                 {{  std::numeric_limits<double>::max() ,
                    -std::numeric_limits<double>::max() }}; // Symm. about 0.
+
+            int ncell = 0;
             {
                 // This code is only supported in three space dimensions
                 assert (G.dimensions == 3);
 
-                const int     nd    = G.dimensions;
-                const double* depth = & G.node_coordinates[0*nd + (nd - 1)];
+                const int nd = G.dimensions;
 
-                for (int n = 0; n < G.number_of_nodes; ++n, depth += nd) {
-                    const double z = *depth;
+                // Define short-name aliases to reduce visual clutter.
+                const double* const nc  = & G.node_coordinates[0];
 
-                    if (z < span[0]) { span[0] = z; }
-                    if (z > span[1]) { span[1] = z; }
+                const int*    const cfp = & G.cell_facepos[0];
+                const int*    const cf  = & G.cell_faces[0];
+
+                const int*    const fnp = & G.face_nodepos[0];
+                const int*    const fn  = & G.face_nodes[0];
+
+                // Define vertical span as
+                //
+                //   [minimum(node depth(cells)), maximum(node depth(cells))]
+                //
+                // Note: We use a sledgehammer approach--looping all
+                // the nodes of all the faces of all the 'cells'--to
+                // compute those bounds.  This necessarily entails
+                // visiting some nodes (and faces) multiple times.
+                //
+                // Note: The implementation of 'RK4IVP<>' implicitly
+                // imposes the requirement that cell centroids are all
+                // within this vertical span.  That requirement is not
+                // checked.
+                for (typename CellRange::const_iterator
+                         ci = cells.begin(), ce = cells.end();
+                     ci != ce; ++ci, ++ncell)
+                {
+                    for (const int
+                             *fi = & cf[ cfp[*ci + 0] ],
+                             *fe = & cf[ cfp[*ci + 1] ];
+                         fi != fe; ++fi)
+                    {
+                        for (const int
+                                 *i = & fn[ fnp[*fi + 0] ],
+                                 *e = & fn[ fnp[*fi + 1] ];
+                             i != e; ++i)
+                        {
+                            const double z = nc[(*i)*nd + (nd - 1)];
+
+                            if (z < span[0]) { span[0] = z; }
+                            if (z > span[1]) { span[1] = z; }
+                        }
+                    }
                 }
             }
 
             const int np = reg.phaseUsage().num_phases;
 
             typedef std::vector<double> pval;
-            std::vector<pval> press(np, pval(G.number_of_cells, 0.0));
+            std::vector<pval> press(np, pval(ncell, 0.0));
 
             const double z0   = reg.datum();
             const double zwoc = reg.zwoc ();
@@ -502,7 +557,7 @@ namespace Opm
 
             if (! ((zgoc > z0) || (z0 > zwoc))) {
                 // Datum depth in oil zone  (zgoc <= z0 <= zwoc)
-                Details::equilibrateOWG(G, reg, grav, span, press);
+                Details::equilibrateOWG(G, reg, grav, span, cells, press);
             }
 
             return press;
