@@ -160,10 +160,11 @@ namespace Opm
             PhaseUsage  pu_;
         };
 
-        template <class Region>
+        template <class Region, class CellRange>
         std::vector< std::vector<double> >
         phasePressures(const UnstructuredGrid& G,
                        const Region&           reg,
+                       const CellRange&        cells,
                        const double            grav = unit::gravity);
     } // namespace equil
 } // namespace Opm
