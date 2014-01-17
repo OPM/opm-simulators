@@ -25,6 +25,8 @@
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <opm/core/pressure/msmfem/partition.h>
+
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -184,6 +186,114 @@ BOOST_AUTO_TEST_CASE (CellSubset)
         PVal::size_type i = 0;
         for (std::vector<int>::const_iterator
                  c = r->begin(), ce = r->end();
+             c != ce; ++c, ++i)
+        {
+            assert (i < p[0].size());
+
+            ppress[0][*c] = p[0][i];
+            ppress[1][*c] = p[1][i];
+        }
+    }
+
+    const int first = 0, last = G->number_of_cells - 1;
+    const double reltol = 1.0e-8;
+    BOOST_CHECK_CLOSE(ppress[0][first] , 105e3   , reltol);
+    BOOST_CHECK_CLOSE(ppress[0][last ] , 195e3   , reltol);
+    BOOST_CHECK_CLOSE(ppress[1][first] , 103.5e3 , reltol);
+    BOOST_CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
+}
+
+BOOST_AUTO_TEST_CASE (RegMapping)
+{
+    typedef std::vector<double> PVal;
+    typedef std::vector<PVal> PPress;
+
+    std::shared_ptr<UnstructuredGrid>
+        G(create_grid_cart3d(10, 1, 10), destroy_grid);
+
+    Opm::parameter::ParameterGroup param;
+    {
+        using Opm::unit::kilogram;
+        using Opm::unit::meter;
+        using Opm::unit::cubic;
+
+        std::stringstream dens; dens << 700*kilogram/cubic(meter);
+        param.insertParameter("rho2", dens.str());
+    }
+
+    typedef Opm::BlackoilPropertiesBasic Props;
+    Props props(param, G->dimensions, G->number_of_cells);
+
+    typedef Opm::equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
+    RhoCalc calc(props, 0);
+
+    Opm::equil::EquilRecord record[] =
+        {
+            {
+                { 0   ,  1e5     } , // Datum depth, pressure
+                { 2.5 , -0.075e5 } , // Zwoc       , Pcow_woc
+                { 0   ,  0       }   // Zgoc       , Pcgo_goc
+            }
+            ,
+            {
+                { 5   ,  1.35e5  } , // Datum depth, pressure
+                { 7.5 , -0.225e5 } , // Zwoc       , Pcow_woc
+                { 5   ,  0       }   // Zgoc       , Pcgo_goc
+            }
+        };
+
+    Opm::equil::EquilReg<RhoCalc> region[] =
+        {
+            Opm::equil::EquilReg<RhoCalc>(record[0], calc,
+                                          Opm::equil::miscibility::NoMixing(),
+                                          Opm::equil::miscibility::NoMixing(),
+                                          props.phaseUsage())
+            ,
+            Opm::equil::EquilReg<RhoCalc>(record[0], calc,
+                                          Opm::equil::miscibility::NoMixing(),
+                                          Opm::equil::miscibility::NoMixing(),
+                                          props.phaseUsage())
+            ,
+            Opm::equil::EquilReg<RhoCalc>(record[1], calc,
+                                          Opm::equil::miscibility::NoMixing(),
+                                          Opm::equil::miscibility::NoMixing(),
+                                          props.phaseUsage())
+            ,
+            Opm::equil::EquilReg<RhoCalc>(record[1], calc,
+                                          Opm::equil::miscibility::NoMixing(),
+                                          Opm::equil::miscibility::NoMixing(),
+                                          props.phaseUsage())
+        };
+
+    std::vector<int> eqlnum(G->number_of_cells);
+    {
+        std::vector<int> cells(G->number_of_cells);
+        std::iota(cells.begin(), cells.end(), 0);
+
+        const int cdim[] = { 2, 1, 2 };
+        int ncoarse = cdim[0];
+        for (std::size_t d = 1; d < 3; ++d) { ncoarse *= cdim[d]; }
+
+        partition_unif_idx(G->dimensions, G->number_of_cells,
+                           G->cartdims, cdim,
+                           &cells[0], &eqlnum[0]);
+    }
+    Opm::equil::RegionMapping<> eqlmap(eqlnum);
+
+    PPress ppress(2, PVal(G->number_of_cells, 0));
+    for (int r = 0, e = eqlmap.numRegions(); r != e; ++r)
+    {
+        const Opm::equil::RegionMapping<>::CellRange&
+            rng = eqlmap.cells(r);
+
+        const int    rno  = r;
+        const double grav = 10;
+        const PPress p    =
+            Opm::equil::phasePressures(*G, region[rno], rng, grav);
+
+        PVal::size_type i = 0;
+        for (Opm::equil::RegionMapping<>::CellRange::const_iterator
+                 c = rng.begin(), ce = rng.end();
              c != ce; ++c, ++i)
         {
             assert (i < p[0].size());
