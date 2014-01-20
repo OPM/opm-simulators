@@ -98,6 +98,7 @@ namespace Opm {
             ADB              b;     // Reciprocal FVF
             ADB              head;  // Pressure drop across int. interfaces
             ADB              mob;   // Phase mobility (per cell)
+			std::vector<ADB> ads;   //
         };
 
         struct SolutionState {
@@ -130,7 +131,7 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         const M                         grav_;
-		V  								cmax_;
+		V    			 				cmax_;
         std::vector<ReservoirResidualQuant> rq_;
 
         // The mass_balance vector has one element for each active phase,
@@ -156,7 +157,7 @@ namespace Opm {
                      const int            aix  );
 
         void
-        assemble(const V&             pvdt,
+        assemble(const double             dt,
                  const PolymerBlackoilState& x,
                  const WellState&     xw,  
                  const std::vector<double>& polymer_inflow);
@@ -191,7 +192,7 @@ namespace Opm {
         computeFracFlow(const ADB&              kro,
                         const ADB&              krw_eff,
                         const ADB&              c) const;
-        ADB
+        void
         computeCmax(const ADB& c);
         ADB
         computeMc(const SolutionState&  state) const;

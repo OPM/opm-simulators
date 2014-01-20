@@ -194,38 +194,40 @@ namespace {
          WellState&            xw,
          const std::vector<double>& polymer_inflow)
     {
-        const V pvdt = geo_.poreVolume() / dt;
 
-        {
-            const SolutionState state = constantState(x, xw);
-            computeAccum(state, 0);
-        }
+        const SolutionState state = constantState(x, xw);
+		computeCmax(state.concentration);
+        computeAccum(state, 0);
 
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
 
-        assemble(pvdt, x, xw, polymer_inflow);
+        assemble(dt, x, xw, polymer_inflow);
 
         const double r0  = residualNorm();
+        const double r_polymer = residual_.mass_balance[2].value().matrix().lpNorm<Eigen::Infinity>();
         int          it  = 0;
-        std::cout << "\nIteration         Residual\n"
+        std::cout << "\nIteration         Residual     Polymer Res\n"
                   << std::setw(9) << it << std::setprecision(9)
-                  << std::setw(18) << r0 << std::endl;
+                  << std::setw(18) << r0 << std::setprecision(9)
+                  << std::setw(18) << r_polymer << std::endl;
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
             const V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);
-            assemble(pvdt, x, xw, polymer_inflow);
+            assemble(dt, x, xw, polymer_inflow);
 
             const double r = residualNorm();
 
+        	const double rr_polymer = residual_.mass_balance[2].value().matrix().lpNorm<Eigen::Infinity>();
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
-                      << std::setw(18) << r << std::endl;
+                      << std::setw(18) << r << std::setprecision(9)
+                  << std::setw(18) << rr_polymer << std::endl;
         }
 
         if (resTooLarge) {
@@ -244,6 +246,7 @@ namespace {
         , b    (   ADB::null())
         , head (   ADB::null())
         , mob  (   ADB::null())
+        , ads  (2, ADB::null())
     {
     }
 
@@ -448,7 +451,7 @@ namespace {
         }
         rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
         rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
-        const ADB cmax = computeCmax(state.concentration);
+		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const double rho_rock = polymer_props_ad_.rockDensity();
         const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
@@ -460,31 +463,28 @@ namespace {
 
 
 
-    ADB 
+    void 
     FullyImplicitCompressiblePolymerSolver::
     computeCmax(const ADB& c)
     {
         const int nc = grid_.number_of_cells;
-//		const V cmax = Eigen::Map<const V>(&state.maxconcentration()[0], nc, 1);
-//		cmax_ = &cmax;
 		for (int i = 0; i < nc; ++i) {
 			cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
-		
-//        std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
-		return ADB::constant(cmax_, c.blockPattern());
+	//	return ADB::constant(cmax_, c.blockPattern());
+
     }
 
     void
     FullyImplicitCompressiblePolymerSolver::
-    assemble(const V&             pvdt,
+    assemble(const double             dt,
              const PolymerBlackoilState& x   ,
              const WellState&     xw,
              const std::vector<double>& polymer_inflow)
     {
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
-
+		const V pvdt = geo_.poreVolume() / dt;
         // -------- Mass balance equations --------
 
         // Compute b_p and the accumulation term b_p*s_p for each phase,
@@ -499,18 +499,16 @@ namespace {
         // for each active phase.
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        const ADB cmax = computeCmax(state.concentration);
-    //    const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
+//		const ADB cmax = computeCmax(state.concentration);
+		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
         computeMassFlux(trans, mc, kr[1], krw_eff, state);
-     //   const double rho_rock = polymer_props_ad_.rockDensity();
-      //  const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
         residual_.mass_balance[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
                                     + ops_.div*rq_[0].mflux;
         residual_.mass_balance[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
                                     + ops_.div*rq_[1].mflux;
-        residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0])
+        residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) //+ cell / dt * (rq_[2].ads[1] - rq_[2].ads[0])
                                     + ops_.div*rq_[2].mflux;
 
 
@@ -608,10 +606,14 @@ namespace {
         // well rates contribs to polymer mass balance eqn.
         // for injection wells.
         const V polyin = Eigen::Map<const V>(& polymer_inflow[0], nc);
+//		std::cout<< "Polymer in flow:" << polyin << std::endl;
         const V poly_in_perf = subset(polyin, well_cells);
-        const V poly_c_cell = subset(state.concentration, well_cells).value();
-        const V poly_c = producer.select(poly_c_cell, poly_in_perf);
-        residual_.mass_balance[2] += superset(well_perf_rates[0] * poly_c, well_cells, nc);
+        //const V poly_c_cell = subset(state.concentration, well_cells).value();
+		const V poly_mc_cell = subset(mc, well_cells).value();
+		const V poly_in_c = poly_in_perf;// * poly_mc_cell;
+        const V poly_mc = producer.select(poly_mc_cell, poly_in_c);
+        
+		residual_.mass_balance[2] += superset(well_perf_rates[0] * poly_mc, well_cells, nc);
         // Set the well flux equation
         residual_.well_flux_eq = state.qs + well_rates_all;
         // DUMP(residual_.well_flux_eq);
@@ -682,7 +684,7 @@ namespace {
             double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
         };
         struct Chop02 {
-            double operator()(double x) const { return std::max(std::min(x, 1.25), 0.0); }
+            double operator()(double x) const { return std::min(x, 1.1*1.25); }
         };
     }
 
@@ -727,6 +729,7 @@ namespace {
         const V sw_old = s_old.col(0);
         const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
         const V sw = (sw_old - dsw_limited).unaryExpr(Chop01());
+ //       const V sw = (sw_old - dsw);
         so -= sw;
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np] = sw[c];
@@ -734,13 +737,12 @@ namespace {
         }
 
         // Concentration updates.
-        const double dcmax = 0.3 * polymer_props_ad_.cMax();
+//        const double dcmax = 0.3 * polymer_props_ad_.cMax();
 //		std::cout << "\n the max concentration: " << dcmax / 0.3 << std::endl;
         const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
-//        const V absdcmax = dcmax*c_old.abs();
-        const V dc_limited = sign(dc) * dc.abs().min(dcmax);
-        const V c = (c_old - dc_limited);//.unaryExpr(Chop02());
-  //      const V c = (c_old - dc);
+//        const V dc_limited = sign(dc) * dc.abs().unaryExpr(Chop02());
+//        const V c = (c_old - dc_limited).max(zero);//unaryExpr(Chop02());
+        const V c = (c_old - dc);//.max(zero);
         std::copy(&c[0], &c[0] + nc, state.concentration().begin());
 
         // Qs update.
