@@ -30,17 +30,45 @@
 #include <utility>
 #include <vector>
 
+/**
+ * \file
+ * Facilities for an ECLIPSE-style equilibration-based
+ * initialisation scheme (keyword 'EQUIL').
+ */
 struct UnstructuredGrid;
 
 namespace Opm
 {
+    /**
+     * Types and routines that collectively implement a basic
+     * ECLIPSE-style equilibration-based initialisation scheme.
+     *
+     * This namespace is intentionally nested to avoid name clashes
+     * with other parts of OPM.
+     */
     namespace equil {
         template <class Props>
         class DensityCalculator;
 
+        /**
+         * Facility for calculating phase densities based on the
+         * BlackoilPropertiesInterface.
+         *
+         * Implements the crucial <CODE>operator()(p,svol)</CODE>
+         * function that is expected by class EquilReg.
+         */
         template <>
         class DensityCalculator< BlackoilPropertiesInterface > {
         public:
+            /**
+             * Constructor.
+             *
+             * \param[in] props Implementation of the
+             * BlackoilPropertiesInterface.
+             *
+             * \param[in] c Single cell used as a representative cell
+             * in a PVT region.
+             */
             DensityCalculator(const BlackoilPropertiesInterface& props,
                               const int                          c)
                 : props_(props)
@@ -48,6 +76,16 @@ namespace Opm
             {
             }
 
+            /**
+             * Compute phase densities of all phases at phase point
+             * given by (pressure, surface volume) tuple.
+             *
+             * \param[in] p Fluid pressure.
+             *
+             * \param[in] z Surface volumes of all phases.
+             *
+             * \return Phase densities at phase point.
+             */
             std::vector<double>
             operator()(const double               p,
                        const std::vector<double>& z) const
@@ -71,8 +109,28 @@ namespace Opm
             const std::vector<int>             c_;
         };
 
+        /**
+         * Types and routines relating to phase mixing in
+         * equilibration calculations.
+         */
         namespace miscibility {
+            /**
+             * Type that implements "no phase mixing" policy.
+             */
             struct NoMixing {
+                /**
+                 * Function call.
+                 *
+                 * \param[in] depth Depth at which to calculate RS
+                 * value.
+                 *
+                 * \param[in] press Pressure at which to calculate RS
+                 * value.
+                 *
+                 * \return Dissolved gas-oil ratio (RS) at depth @c
+                 * depth and pressure @c press.  In "no mixing
+                 * policy", this is identically zero.
+                 */
                 double
                 operator()(const double /* depth */,
                            const double /* press */) const
@@ -81,8 +139,19 @@ namespace Opm
                 }
             };
 
+            /**
+             * Type that implements "dissolved gas-oil ratio"
+             * tabulated as a function of depth policy.  Data
+             * typically taken from keyword 'RSVD'.
+             */
             class RsVD {
             public:
+                /**
+                 * Constructor.
+                 *
+                 * \param[in] depth Depth nodes.
+                 * \param[in] rs Dissolved gas-oil ratio at @c depth.
+                 */
                 RsVD(const std::vector<double>& depth,
                      const std::vector<double>& rs)
                     : depth_(depth)
@@ -90,6 +159,18 @@ namespace Opm
                 {
                 }
 
+                /**
+                 * Function call.
+                 *
+                 * \param[in] depth Depth at which to calculate RS
+                 * value.
+                 *
+                 * \param[in] press Pressure at which to calculate RS
+                 * value.
+                 *
+                 * \return Dissolved gas-oil ratio (RS) at depth @c
+                 * depth and pressure @c press.
+                 */
                 double
                 operator()(const double depth,
                            const double /* press */) const
@@ -98,14 +179,31 @@ namespace Opm
                 }
 
             private:
-                std::vector<double> depth_;
-                std::vector<double> rs_;
+                std::vector<double> depth_; /**< Depth nodes */
+                std::vector<double> rs_;    /**< Dissolved gas-oil ratio */
             };
         } // namespace miscibility
 
+        /**
+         * Forward and reverse mappings between cells and
+         * regions/partitions (e.g., the ECLIPSE-style 'SATNUM',
+         * 'PVTNUM', or 'EQUILNUM' arrays).
+         *
+         * \tparam Region Type of a forward region mapping.  Expected
+         *                to provide indexed access through
+         *                operator[]() as well as inner types
+         *                'value_type', 'size_type', and
+         *                'const_iterator'.
+         */
         template < class Region = std::vector<int> >
         class RegionMapping {
         public:
+            /**
+             * Constructor.
+             *
+             * \param[in] reg Forward region mapping, restricted to
+             *                active cells only.
+             */
             explicit
             RegionMapping(const Region& reg)
                 : reg_(reg)
@@ -113,34 +211,82 @@ namespace Opm
                 rev_.init(reg_);
             }
 
-            typedef typename Region::value_type                  RegionId;
-            typedef typename Region::size_type                   CellId;
+            /**
+             * Type of forward (cell-to-region) mapping result.
+             * Expected to be an integer.
+             */
+            typedef typename Region::value_type RegionId;
+
+            /**
+             * Type of reverse (region-to-cell) mapping (element)
+             * result.
+             */
+            typedef typename Region::size_type CellId;
+
+            /**
+             * Type of reverse region-to-cell range bounds and
+             * iterators.
+             */
             typedef typename std::vector<CellId>::const_iterator CellIter;
 
+            /**
+             * Range of cells.  Result from reverse (region-to-cell)
+             * mapping.
+             */
             class CellRange {
             public:
+                /**
+                 * Constructor.
+                 *
+                 * \param[in] b Beginning of range.
+                 * \param[in] e One past end of range.
+                 */
                 CellRange(const CellIter b,
                           const CellIter e)
                     : b_(b), e_(e)
                 {}
 
-                typedef CellIter iterator;
+                /**
+                 * Read-only iterator on cell ranges.
+                 */
                 typedef CellIter const_iterator;
 
-                iterator begin() const { return b_; }
-                iterator end()   const { return e_; }
+                /**
+                 * Beginning of cell range.
+                 */
+                const_iterator begin() const { return b_; }
+
+                /**
+                 * One past end of cell range.
+                 */
+                const_iterator end()   const { return e_; }
 
             private:
-                iterator b_;
-                iterator e_;
+                const_iterator b_;
+                const_iterator e_;
             };
 
+            /**
+             * Number of declared regions in cell-to-region mapping.
+             */
             RegionId
             numRegions() const { return RegionId(rev_.p.size()) - 1; }
 
+            /**
+             * Compute region number of given active cell.
+             *
+             * \param[in] c Active cell
+             * \return Region to which @c c belongs.
+             */
             RegionId
             region(const CellId c) const { return reg_[c]; }
 
+            /**
+             * Extract active cells in particular region.
+             *
+             * \param[in] r Region number
+             * \returns Range of active cells in region @c r.
+             */
             CellRange
             cells(const RegionId r) const {
                 const RegionId i = r - rev_.low;
@@ -149,14 +295,24 @@ namespace Opm
             }
 
         private:
+            /**
+             * Copy of forward region mapping (cell-to-region).
+             */
             Region reg_;
 
+            /**
+             * Reverse mapping (region-to-cell).
+             */
             struct {
                 typedef typename std::vector<CellId>::size_type Pos;
-                std::vector<Pos>    p;
-                std::vector<CellId> c;
-                RegionId            low;
+                std::vector<Pos>    p;   /**< Region start pointers */
+                std::vector<CellId> c;   /**< Region cells */
+                RegionId            low; /**< Smallest region number */
 
+                /**
+                 * Compute reverse mapping.  Standard linear insertion
+                 * sort algorithm.
+                 */
                 void
                 init(const Region& reg)
                 {
@@ -190,9 +346,32 @@ namespace Opm
 
                     p[0] = 0;
                 }
-            } rev_;
+            } rev_; /**< Reverse mapping instance */
         };
 
+        /**
+         * Equilibration record.
+         *
+         * Layout and contents inspired by first six items of
+         * ECLIPSE's 'EQUIL' records.  This is the minimum amount of
+         * input data needed to define phase pressures in an
+         * equilibration region.
+         *
+         * Data consists of three pairs of depth and pressure values:
+         *   1. main
+         *     - @c depth Main datum depth.
+         *     - @c press Pressure at datum depth.
+         *
+         *   2. woc
+         *     - @c depth Depth of water-oil contact
+         *     - @c press water-oil capillary pressure at water-oil contact.
+         *       Capillary pressure defined as "P_oil - P_water".
+         *
+         *   3. goc
+         *     - @c depth Depth of gas-oil contact
+         *     - @c press Gas-oil capillary pressure at gas-oil contact.
+         *       Capillary pressure defined as "P_gas - P_oil".
+         */
         struct EquilRecord {
             struct {
                 double depth;
@@ -200,11 +379,63 @@ namespace Opm
             } main, woc, goc;
         };
 
+        /**
+         * Aggregate information base of an equilibration region.
+         *
+         * Provides inquiry methods for retrieving depths of contacs
+         * and pressure values as well as a means of calculating fluid
+         * densities, dissolved gas-oil ratio and vapourised oil-gas
+         * ratios.
+         *
+         * \tparam DensCalc Type that provides access to a phase
+         * density calculation facility.  Must implement an operator()
+         * declared as
+         * <CODE>
+         * std::vector<double>
+         * operator()(const double               press,
+         *            const std::vector<double>& svol )
+         * </CODE>
+         * that calculates the phase densities of all phases in @c
+         * svol at fluid pressure @c press.
+         *
+         * \tparam RS Type that provides access to a calculator for
+         * (initial) dissolved gas-oil ratios as a function of depth
+         * and (oil) pressure.  Must implement an operator() declared
+         * as
+         * <CODE>
+         * double
+         * operator()(const double depth,
+         *            const double press)
+         * </CODE>
+         * that calculates the dissolved gas-oil ratio at depth @c
+         * depth and (oil) pressure @c press.
+         *
+         * \tparam RV Type that provides access to a calculator for
+         * (initial) vapourised oil-gas ratios as a function of depth
+         * and (gas) pressure.  Must implement an operator() declared
+         * as
+         * <CODE>
+         * double
+         * operator()(const double depth,
+         *            const double press)
+         * </CODE>
+         * that calculates the vapourised oil-gas ratio at depth @c
+         * depth and (gas) pressure @c press.
+         */
         template <class DensCalc,
                   class RS = miscibility::NoMixing,
                   class RV = miscibility::NoMixing>
         class EquilReg {
         public:
+            /**
+             * Constructor.
+             *
+             * \param[in] rec     Equilibration data of current region.
+             * \param[in] density Density calculator of current region.
+             * \param[in] rs      Calculator of dissolved gas-oil ratio.
+             * \param[in] rv      Calculator of vapourised oil-gas ratio.
+             * \param[in] pu      Summary of current active phases.
+             */
             EquilReg(const EquilRecord& rec,
                      const DensCalc&    density,
                      const RS&          rs,
@@ -218,39 +449,124 @@ namespace Opm
             {
             }
 
+            /**
+             * Type of density calculator.
+             */
             typedef DensCalc CalcDensity;
-            typedef RS       CalcDissolution;
-            typedef RV       CalcEvaporation;
 
+            /**
+             * Type of dissolved gas-oil ratio calculator.
+             */
+            typedef RS CalcDissolution;
+
+            /**
+             * Type of vapourised oil-gas ratio calculator.
+             */
+            typedef RV CalcEvaporation;
+
+            /**
+             * Datum depth in current region
+             */
             double datum()    const { return this->rec_.main.depth; }
+
+            /**
+             * Pressure at datum depth in current region.
+             */
             double pressure() const { return this->rec_.main.press; }
 
+            /**
+             * Depth of water-oil contact.
+             */
             double zwoc()     const { return this->rec_.woc .depth; }
+
+            /**
+             * water-oil capillary pressure at water-oil contact.
+             *
+             * \return P_o - P_w at WOC.
+             */
             double pcow_woc() const { return this->rec_.woc .press; }
 
+            /**
+             * Depth of gas-oil contact.
+             */
             double zgoc()     const { return this->rec_.goc .depth; }
+
+            /**
+             * Gas-oil capillary pressure at gas-oil contact.
+             *
+             * \return P_g - P_o at GOC.
+             */
             double pcgo_goc() const { return this->rec_.goc .press; }
 
+            /**
+             * Retrieve phase density calculator of current region.
+             */
             const CalcDensity&
             densityCalculator() const { return this->density_; }
 
+            /**
+             * Retrieve dissolved gas-oil ratio calculator of current
+             * region.
+             */
             const CalcDissolution&
             dissolutionCalculator() const { return this->rs_; }
 
+            /**
+             * Retrieve vapourised oil-gas ratio calculator of current
+             * region.
+             */
             const CalcEvaporation&
             evaporationCalculator() const { return this->rv_; }
 
+            /**
+             * Retrieve active fluid phase summary.
+             */
             const PhaseUsage&
             phaseUsage() const { return this->pu_; }
 
         private:
-            EquilRecord rec_;
-            DensCalc    density_;
-            RS          rs_;
-            RV          rv_;
-            PhaseUsage  pu_;
+            EquilRecord rec_;     /**< Equilibration data */
+            DensCalc    density_; /**< Density calculator */
+            RS          rs_;      /**< RS calculator */
+            RV          rv_;      /**< RV calculator */
+            PhaseUsage  pu_;      /**< Active phase summary */
         };
 
+        /**
+         * Compute initial phase pressures by means of equilibration.
+         *
+         * This function uses the information contained in an
+         * equilibration record (i.e., depths and pressurs) as well as
+         * a density calculator and related data to vertically
+         * integrate the phase pressure ODE
+         * \f[
+         * \frac{\mathrm{d}p_{\alpha}}{\mathrm{d}z} =
+         * \rho_{\alpha}(z,p_{\alpha})\cdot g
+         * \f]
+         * in which \f$\rho_{\alpha}$ denotes the fluid density of
+         * fluid phase \f$\alpha\f$, \f$p_{\alpha}\f$ is the
+         * corresponding phase pressure, \f$z\f$ is the depth and
+         * \f$g\f$ is the acceleration due to gravity (assumed
+         * directed downwords, in the positive \f$z\f$ direction).
+         *
+         * \tparam Region Type of an equilibration region information
+         *                base.  Typically an instance of the EquilReg
+         *                class template.
+         *
+         * \tparam CellRange Type of cell range that demarcates the
+         *                cells pertaining to the current
+         *                equilibration region.
+         *
+         * \param[in] G     Grid.
+         * \param[in] reg   Current equilibration region.
+         * \param[in] cells Range that spans the cells of the current
+         *                  equilibration region.
+         * \param[in] grav  Acceleration of gravity.
+         *
+         * \return Phase pressures, one vector for each active phase,
+         * of pressure values in each cell in the current
+         * equilibration region.
+         */
         template <class Region, class CellRange>
         std::vector< std::vector<double> >
         phasePressures(const UnstructuredGrid& G,
