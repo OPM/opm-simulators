@@ -555,7 +555,10 @@ namespace Opm
          *
          * \tparam CellRange Type of cell range that demarcates the
          *                cells pertaining to the current
-         *                equilibration region.
+         *                equilibration region.  Must implement
+         *                methods begin() and end() to bound the range
+         *                as well as provide an inner type,
+         *                const_iterator, to traverse the range.
          *
          * \param[in] G     Grid.
          * \param[in] reg   Current equilibration region.
