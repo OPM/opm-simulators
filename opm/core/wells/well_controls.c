@@ -183,11 +183,6 @@ int well_controls_get_num(const struct WellControls *ctrl) {
 }
 
 
-int well_controls_get_cpty(const struct WellControls *ctrl) {
-  return ctrl->cpty;
-}
-
-
 int well_controls_get_current( const struct WellControls * ctrl) {
     return ctrl->current;
 }
