@@ -73,8 +73,12 @@ namespace Opm
                 // Dense output (O(h**3)) according to Shampine
                 // (Hermite interpolation)
                 const double h = stepsize();
-                const int    i = (x - span_[0]) / h;
+                int          i = (x - span_[0]) / h;
                 const double t = (x - (span_[0] + i*h)) / h;
+
+                // Crude handling of evaluation point outside "span_";
+                if (i  <  0) { i = 0;      }
+                if (N_ <= i) { i = N_ - 1; }
 
                 const double y0 = y_[i], y1 = y_[i + 1];
                 const double f0 = f_[i], f1 = f_[i + 1];
