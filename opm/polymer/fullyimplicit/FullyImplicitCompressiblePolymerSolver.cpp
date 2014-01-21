@@ -196,7 +196,7 @@ namespace {
     {
 
         const SolutionState state = constantState(x, xw);
-		computeCmax(state.concentration);
+		computeCmax(x, state.concentration);
         computeAccum(state, 0);
 
         const double atol  = 1.0e-12;
@@ -457,7 +457,7 @@ namespace {
         const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
 
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-        rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c * (1. - dead_pore_vol) + rho_rock * (1. - phi) / phi * ads;
+        rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c * (1. - dead_pore_vol) + pv_mult *  rho_rock * (1. - phi) / phi * ads;
     }
 	
 
@@ -465,13 +465,15 @@ namespace {
 
     void 
     FullyImplicitCompressiblePolymerSolver::
-    computeCmax(const ADB& c)
+    computeCmax(PolymerBlackoilState& state,
+				const ADB& c)
     {
         const int nc = grid_.number_of_cells;
 		for (int i = 0; i < nc; ++i) {
 			cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
 	//	return ADB::constant(cmax_, c.blockPattern());
+		std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
 
     }
 
@@ -683,9 +685,6 @@ namespace {
         struct Chop01 {
             double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
         };
-        struct Chop02 {
-            double operator()(double x) const { return std::min(x, 1.1*1.25); }
-        };
     }
 
 
@@ -740,9 +739,9 @@ namespace {
 //        const double dcmax = 0.3 * polymer_props_ad_.cMax();
 //		std::cout << "\n the max concentration: " << dcmax / 0.3 << std::endl;
         const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
-//        const V dc_limited = sign(dc) * dc.abs().unaryExpr(Chop02());
+//        const V dc_limited = sign(dc) * dc.abs().min(dcmax);
 //        const V c = (c_old - dc_limited).max(zero);//unaryExpr(Chop02());
-        const V c = (c_old - dc);//.max(zero);
+        const V c = (c_old - dc).max(zero);
         std::copy(&c[0], &c[0] + nc, state.concentration().begin());
 
         // Qs update.

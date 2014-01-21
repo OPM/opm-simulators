@@ -193,7 +193,8 @@ namespace Opm {
                         const ADB&              krw_eff,
                         const ADB&              c) const;
         void
-        computeCmax(const ADB& c);
+        computeCmax(PolymerBlackoilState& state,
+					const ADB& c);
         ADB
         computeMc(const SolutionState&  state) const;
         ADB
