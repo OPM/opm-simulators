@@ -126,8 +126,9 @@ namespace Opm {
                       const std::vector<double>& polymer_inflow_c,
                       const SolutionState& state) const;
 
-        ADB
-        computeCmax(const ADB& c);
+        void
+        computeCmax(PolymerState& state,
+					const ADB& c);
     	void
 		computeAccum(const SolutionState& state,
                  	const int            aix  );

@@ -164,6 +164,7 @@ namespace {
         const V pvdt = pvol / dt;
 
         const SolutionState old_state = constantState(x, xw);
+		computeCmax(x, old_state.concentration);
 		computeAccum(old_state, 0);
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
@@ -355,16 +356,17 @@ namespace {
     }
   
 
-    ADB
+    void
     FullyImplicitTwophasePolymerSolver::
-    computeCmax(const ADB& c)
+    computeCmax(PolymerState& state,
+				const ADB& c)
     {
         const int nc = grid_.number_of_cells;
         for (int i = 0; i < nc; ++i) {
 		    cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
+		std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
 
-        return ADB::constant(cmax_, c.blockPattern());
     }
 
     void
@@ -378,7 +380,7 @@ namespace {
 
         rq_[0].accum[aix] = sat[0];
         rq_[1].accum[aix] = sat[1];
-        const ADB cmax = computeCmax(state.concentration);
+		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const double rho_rock = polymer_props_ad_.rockDensity();
         const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
@@ -403,7 +405,7 @@ namespace {
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
 
-        const ADB cmax = computeCmax(state.concentration);
+		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
  //       const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
@@ -697,6 +699,7 @@ namespace {
         const int nc = grid_.number_of_cells;
         const int nw = wells_.number_of_wells;
         const V one = V::Constant(nc, 1.0);
+        const V zero = V::Zero(nc);
 
         // Extract parts of dx corresponding to each part.
         const V dp = subset(dx, Span(nc));
@@ -732,7 +735,7 @@ namespace {
         
         // Concentration updates.
         const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc);
-        const V c = c_old - dc;
+        const V c = (c_old - dc).max(zero);
         std::copy(&c[0], &c[0] + nc, state.concentration().begin());
 
 
