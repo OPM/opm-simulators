@@ -142,7 +142,6 @@ try
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
-
     // Linear solver.
     LinearSolverFactory linsolver(param);
 

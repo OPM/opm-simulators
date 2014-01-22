@@ -79,7 +79,8 @@ namespace Opm {
         step(const double   dt    ,
              PolymerBlackoilState& state ,
              WellState&     wstate,
-             const std::vector<double>& polymer_inflow);
+             const std::vector<double>& polymer_inflow,
+			 std::vector<double>& src);
 
     private:
         // Types and enums
@@ -160,7 +161,8 @@ namespace Opm {
         assemble(const double             dt,
                  const PolymerBlackoilState& x,
                  const WellState&     xw,  
-                 const std::vector<double>& polymer_inflow);
+                 const std::vector<double>& polymer_inflow,
+				 std::vector<double>& src);
 
         V solveJacobianSystem() const;
 

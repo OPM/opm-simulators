@@ -163,7 +163,8 @@ namespace {
                                 const RockCompressibility*      rock_comp_props,
                                 const PolymerPropsAd&           polymer_props_ad,
                                 const Wells&                    wells,
-                                const LinearSolverInterface&    linsolver)
+                                const LinearSolverInterface&    linsolver
+								)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -192,7 +193,8 @@ namespace {
     step(const double          dt,
          PolymerBlackoilState& x ,
          WellState&            xw,
-         const std::vector<double>& polymer_inflow)
+         const std::vector<double>& polymer_inflow,
+		 std::vector<double>& src)
     {
 
         const SolutionState state = constantState(x, xw);
@@ -202,8 +204,7 @@ namespace {
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
-
-        assemble(dt, x, xw, polymer_inflow);
+        assemble(dt, x, xw, polymer_inflow, src);
 
         const double r0  = residualNorm();
         const double r_polymer = residual_.mass_balance[2].value().matrix().lpNorm<Eigen::Infinity>();
@@ -217,7 +218,7 @@ namespace {
             const V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);
-            assemble(dt, x, xw, polymer_inflow);
+            assemble(dt, x, xw, polymer_inflow, src);
 
             const double r = residualNorm();
 
@@ -482,9 +483,11 @@ namespace {
     assemble(const double             dt,
              const PolymerBlackoilState& x   ,
              const WellState&     xw,
-             const std::vector<double>& polymer_inflow)
+             const std::vector<double>& polymer_inflow,
+			 std::vector<double>& src)
     {
         // Create the primary variables.
+        //
         const SolutionState state = variableState(x, xw);
 		const V pvdt = geo_.poreVolume() / dt;
         // -------- Mass balance equations --------
@@ -519,7 +522,6 @@ namespace {
         // Add the extra (flux) terms to the gas mass balance equations
         // from gas dissolved in the oil phase.
         // The extra terms in the accumulation part of the equation are already handled.
-
         // -------- Well equation, and well contributions to the mass balance equations --------
 
         // Contribution to mass balance will have to wait.
@@ -528,6 +530,9 @@ namespace {
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
+		for (int i = 0; i < nc; ++i) {
+			src[i] = 0.0;
+		}
 
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
         const V transw = Eigen::Map<const V>(wells_.WI, nperf);
@@ -603,6 +608,9 @@ namespace {
             well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
             // DUMP(well_contribs[phase]);
             residual_.mass_balance[phase] += well_contribs[phase];
+			for (int cell = 0; cell < nc; ++cell) {
+				src[cell] += well_contribs[phase].value()[cell];
+			}
         }
 
         // well rates contribs to polymer mass balance eqn.
@@ -647,6 +655,11 @@ namespace {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+//		for (int i = 0; i < nc; ++i) {
+//			std::cout << src[i] << "  ";
+//			if ((i+1) % 10 == 0)
+//				std::cout<<std::endl;
+//		}
         // DUMP(residual_.well_eq);
     }
 
