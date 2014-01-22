@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(Constructor_Works) {
 BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(parser->parse("wells_manager_data.data")));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(parser->parseFile("wells_manager_data.data")));
 
     Opm::EclipseGridParser Deck("wells_manager_data.data");
     Opm::GridManager gridManager(Deck);

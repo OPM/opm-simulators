@@ -247,17 +247,10 @@ namespace Opm
         if (grid.dimensions != 3) {
             OPM_THROW(std::runtime_error, "We cannot initialize wells from a deck unless the corresponding grid is 3-dimensional.");
         }
-        // NOTE: Implementation copied and modified from dune-porsol's class BlackoilWells.
-        std::vector<std::string> keywords;
-        keywords.push_back("WELSPECS");
-        keywords.push_back("COMPDAT");
-//      keywords.push_back("WELTARG");
-        if (!deck.hasFields(keywords)) {
-            OPM_MESSAGE("Missing well keywords in deck, initializing no wells.");
+
+        if (eclipseState->getSchedule()->numWells() == 0) {
+            OPM_MESSAGE("No wells specified in Schedule section, initializing no wells");
             return;
-        }
-        if (!(deck.hasField("WCONINJE") || deck.hasField("WCONPROD")) ) {
-            OPM_THROW(std::runtime_error, "Needed field is missing in file");
         }
 
         // Obtain phase usage data.
@@ -273,43 +266,34 @@ namespace Opm
         std::map<std::string, int> well_names_to_index;
         typedef std::map<std::string, int>::const_iterator WNameIt;
 
-        // Get WELSPECS data.
-        // It is allowed to have multiple lines corresponding to
-        // the same well, in which case the last one encountered
-        // is the one used.
-        const WELSPECS& welspecs = deck.getWELSPECS();
-        const int num_welspecs = welspecs.welspecs.size();
-        well_names.reserve(num_welspecs);
-        well_data.reserve(num_welspecs);
-        for (int w = 0; w < num_welspecs; ++w) {
-            // First check if this well has already been encountered.
-            // If so, we modify it's data instead of appending a new well
-            // to the well_data and well_names vectors.
-            const std::string& name = welspecs.welspecs[w].name_;
-            const double refdepth = welspecs.welspecs[w].datum_depth_BHP_;
-            WNameIt wit = well_names_to_index.find(name);
-            if (wit == well_names_to_index.end()) {
-                // New well, append data.
-                well_names_to_index[welspecs.welspecs[w].name_] = well_data.size();
-                well_names.push_back(name);
+
+
+        // Main "well-loop" to populate the data structures (well_names, well_data, ...)
+        ScheduleConstPtr schedule = eclipseState->getSchedule();
+        std::vector<WellConstPtr> wells = schedule->getWells(timeStep);
+        well_names.reserve(wells.size());
+        well_data.reserve(wells.size());
+
+        int well_index = 0;
+        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
+            WellConstPtr well = (*wellIter);
+            well_names_to_index[well->name()] = well_index;
+            well_names.push_back(well->name());
+            {
                 WellData wd;
                 // If negative (defaulted), set refdepth to a marker
                 // value, will be changed after getting perforation
                 // data to the centroid of the cell of the top well
                 // perforation.
-                wd.reference_bhp_depth = (refdepth < 0.0) ? -1e100 : refdepth;
-                wd.welspecsline = w;
+                wd.reference_bhp_depth = (well->getRefDepth() < 0.0) ? -1e100 : well->getRefDepth();
+                wd.welspecsline = -1;
                 well_data.push_back(wd);
-            } else {
-                // Existing well, change data.
-                const int wix = wit->second;
-                well_data[wix].reference_bhp_depth = (refdepth < 0.0) ? -1e100 : refdepth;
-                well_data[wix].welspecsline = w;
             }
+            well_index++;
         }
+
         const int num_wells = well_data.size();
         wellperf_data.resize(num_wells);
-
 
         // global_cell is a map from compressed cells to Cartesian grid cells.
         // We must make the inverse lookup.
@@ -345,23 +329,20 @@ namespace Opm
             bool found = false;
             for (int wix = 0; wix < num_wells; ++wix) {
                 if (well_names[wix].compare(0,len, name) == 0) { // equal
-                    // Extract corresponding WELSPECS defintion for
-                    // purpose of default location specification.
-                    const WelspecsLine& wspec = welspecs.welspecs[well_data[wix].welspecsline];
-
                     // We have a matching name.
                     int ix = compdat.compdat[kw].grid_ind_[0] - 1;
                     int jy = compdat.compdat[kw].grid_ind_[1] - 1;
                     int kz1 = compdat.compdat[kw].grid_ind_[2] - 1;
                     int kz2 = compdat.compdat[kw].grid_ind_[3] - 1;
 
+                    WellConstPtr well = schedule->getWell(well_names[wix]);
                     if (ix < 0) {
                         // Defaulted I location.  Extract from WELSPECS.
-                        ix = wspec.I_ - 1;
+                        ix = well->getHeadI() - 1;
                     }
                     if (jy < 0) {
                         // Defaulted J location.  Extract from WELSPECS.
-                        jy = wspec.J_ - 1;
+                        jy = well->getHeadJ() - 1;
                     }
                     if (kz1 < 0) {
                         // Defaulted KZ1.  Use top layer.
@@ -784,9 +765,8 @@ namespace Opm
                 well_collection_.addChild(it->first, it->second, deck);
             }
         }
-        for (size_t i = 0; i < welspecs.welspecs.size(); ++i) {
-            WelspecsLine line = welspecs.welspecs[i];
-            well_collection_.addChild(line.name_, line.group_, deck);
+        for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
+            well_collection_.addChild((*wellIter)->name(), (*wellIter)->getGroupName(timeStep), deck);
         }
 
 
