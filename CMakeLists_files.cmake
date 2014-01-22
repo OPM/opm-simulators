@@ -30,6 +30,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAdInterface.cpp
 	opm/autodiff/FullyImplicitBlackoilSolver.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
+	opm/autodiff/SegmentedWellModel.cpp
 	opm/autodiff/SimulatorCompressibleAd.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.cpp
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
@@ -82,6 +83,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver.hpp
+	opm/autodiff/SegmentedWellModel.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
