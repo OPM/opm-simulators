@@ -39,6 +39,17 @@ namespace Opm
     class SegmentedWellModel
     {
     public:
+        /// Compute pressure deltas.
+        /// Notation: N = number of perforations, P = number of phases.
+        /// \param[in] wells        struct with static well info
+        /// \param[in] wstate       dynamic well solution information, only perfRates() is used
+        /// \param[in] phase_usage  specifies which phases are active and not
+        /// \param[in] b_perf       inverse ('little b') formation volume factor, size NP, P values per perforation
+        /// \param[in] rsmax_perf   saturation point for rs (gas in oil) at each perforation, size N
+        /// \param[in] rvmax_perf   saturation point for rv (oil in gas) at each perforation, size N
+        /// \param[in] z_perf       depth values for each perforation, size N
+        /// \param[in] surf_dens    surface densities for active components, size P
+        /// \param[in] gravity      gravity acceleration constant
         static std::vector<double> computeConnectionPressureDelta(const Wells& wells,
                                                                   const WellState& wstate,
                                                                   const PhaseUsage& phase_usage,
