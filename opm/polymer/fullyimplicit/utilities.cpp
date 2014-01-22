@@ -3,7 +3,9 @@
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -78,6 +80,94 @@ namespace Opm
                 }
             }
         }
+    }
+
+    /// @brief Computes injected and produced volumes of all phases,
+    ///        and injected and produced polymer mass - in the compressible case.
+    /// Note 1: assumes that only the first phase is injected.
+    /// Note 2: assumes that transport has been done with an
+    ///         implicit method, i.e. that the current state
+    ///         gives the mobilities used for the preceding timestep.
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  state     state variables (pressure, fluxes etc.)
+    /// @param[in]  transport_src  if < 0: total reservoir volume outflow,
+    ///                       if > 0: first phase *surface volume* inflow.
+    /// @param[in]  inj_c     injected concentration by cell
+    /// @param[in]  dt        timestep used
+    /// @param[out] injected  must point to a valid array with P elements,
+    ///                       where P = s.size()/transport_src.size().
+    /// @param[out] produced  must also point to a valid array with P elements.
+    /// @param[out] polyinj   injected mass of polymer
+    /// @param[out] polyprod  produced mass of polymer
+    void computeInjectedProduced(const IncompPropsAdInterface& props,
+                                 const Opm::PolymerPropsAd& polymer_props,
+                                 const PolymerState& state,
+                                 const std::vector<double>& transport_src,
+                                 const std::vector<double>& inj_c,
+                                 const double dt,
+                                 double* injected,
+                                 double* produced,
+                                 double& polyinj,
+                                 double& polyprod)
+    {
+        const int num_cells = transport_src.size();
+        if (props.numCells() != num_cells) {
+            OPM_THROW(std::runtime_error, "Size of transport_src vector does not match number of cells in props.");
+        }
+        const int np = props.numPhases();
+        if (int(state.saturation().size()) != num_cells*np) {
+            OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
+        }
+		std::vector<int> cells(num_cells);
+		const V p = Eigen::Map<const V>(&state.pressure()[0], num_cells, 1);
+        const DataBlock s = Eigen::Map<const DataBlock>(&state.saturation()[0], num_cells, np);
+		const V sw = s.col(0);
+		const V so = s.col(1);
+		const V c = Eigen::Map<const V>(&state.concentration()[0], num_cells, 1);
+		const V cmax = Eigen::Map<const V>(&state.maxconcentration()[0], num_cells, 1);
+		const V trans_src = Eigen::Map<const V>(&transport_src[0], num_cells, 1);
+		V src = V::Constant(num_cells, -1.0); // negative is injec, positive is producer.
+		for (int cell = 0; cell < num_cells; ++cell) {
+			cells[cell] = cell;
+			if(transport_src[cell] > 0.0) {
+				src[cell] = 1.0;
+			}
+		}
+		const Selector<double> src_selector(src);
+		const V one = V::Constant(num_cells, 1.0);
+		const V zero = V::Zero(num_cells);
+		const std::vector<V> kr = props.relperm(sw, so, cells);
+
+        const V krw_eff = polymer_props.effectiveRelPerm(c, cmax, kr[0]);
+        const double* mus = props.viscosity();
+		const V inv_muw_eff = polymer_props.effectiveInvWaterVisc(c, mus);
+		std::vector<V> mob(np);
+		mob[0] = krw_eff * inv_muw_eff;
+		mob[1] = kr[1] / mu[1];
+		
+		const V watmob_c = src_selector.select(mob[0], one);
+		const V oilmob_c = src_selector.select(mob[1], zero);
+		const V flux = trans_src * dt;
+	    const V totmob_c = watmob_c + oilmob_c;
+		const V wat_src = flux * (watmob_c / totmob_c);
+		const V oil_src = flux * (oilmob_c / totmob_c);
+		const V mc = polymer_props.polymerWaterVelocityRatio(c);
+		
+        polyinj = 0.0;
+        polyprod = 0.0;
+		std::fill(injected, injected + np , 0.0);
+		std::fill(produced, produced + np , 0.0);
+		for (int cell = 0; cell < num_cells; ++cell) {
+			if (wat_src[cell] < 0) {
+				injected[0] += wat_src[cell];
+				polyinj += injected[0] * inj_c[cell];
+			} else {
+				produced[0] += wat_src[cell];
+				produced[1] += oil_src[cell];
+				polyprod += produced[0] * mc[cell];
+			}
+		}
     }
 
 

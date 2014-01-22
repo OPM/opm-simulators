@@ -5,7 +5,9 @@
 #include <opm/core/wells.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
+#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -45,6 +47,35 @@ namespace Opm
                                 const Wells* wells,
                                 const WellState& well_state,
                                 std::vector<double>& transport_src);
+
+    /// @brief Computes injected and produced volumes of all phases,
+    ///        and injected and produced polymer mass - in the compressible case.
+    /// Note 1: assumes that only the first phase is injected.
+    /// Note 2: assumes that transport has been done with an
+    ///         implicit method, i.e. that the current state
+    ///         gives the mobilities used for the preceding timestep.
+    /// @param[in]  props     fluid and rock properties.
+    /// @param[in]  polyprops polymer properties
+    /// @param[in]  state     state variables (pressure, fluxes etc.)
+    /// @param[in]  transport_src  if < 0: total reservoir volume outflow,
+    ///                       if > 0: first phase *surface volume* inflow.
+    /// @param[in]  inj_c     injected concentration by cell
+    /// @param[in]  dt        timestep used
+    /// @param[out] injected  must point to a valid array with P elements,
+    ///                       where P = s.size()/transport_src.size().
+    /// @param[out] produced  must also point to a valid array with P elements.
+    /// @param[out] polyinj   injected mass of polymer
+    /// @param[out] polyprod  produced mass of polymer
+    void computeInjectedProduced(const IncompPropsAdInterface& props,
+                                 const Opm::PolymerPropsAd& polymer_props,
+                                 const PolymerState& state,
+                                 const std::vector<double>& transport_src,
+                                 const std::vector<double>& inj_c,
+                                 const double dt,
+                                 double* injected,
+                                 double* produced,
+                                 double& polyinj,
+                                 double& polyprod);
 
 
     /// @brief Computes injected and produced volumes of all phases,
