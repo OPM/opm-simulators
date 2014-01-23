@@ -42,20 +42,28 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
 {
     // Simple water injector.
     const int np = 3;
-    const int nperf = 4;
-    const double ref_depth = 1000.0;
-    const double comp_frac[np] = { 1.0, 0.0, 0.0 };
-    const int cells[nperf] = { 0, 1, 2, 3 };
-    const double WI[nperf] = { 1.0, 1.0, 1.0, 1.0 };
-    const char *name = "INJECTOR";
-    Wells* wells = create_wells(np, 1, nperf);
+    const int nperf = 10;
+    const double ref_depth = 0.0;
+    const double comp_frac_w[np] = { 1.0, 0.0, 0.0 };
+    const double comp_frac_o[np] = { 0.0, 1.0, 0.0 };
+    const int cells[nperf/2] = { 0, 1, 2, 3, 4 };
+    const double WI[nperf/2] = { 1.0, 1.0, 1.0, 1.0 };
+    Wells* wells = create_wells(np, 2, nperf);
     BOOST_REQUIRE(wells != NULL);
-    const int ok = add_well(INJECTOR, ref_depth, nperf, comp_frac, cells, WI, name, wells);
+    int ok = add_well(INJECTOR, ref_depth, nperf/2, comp_frac_w, cells, WI, "INJ", wells);
+    BOOST_REQUIRE(ok);
+    ok = add_well(PRODUCER, ref_depth, nperf/2, comp_frac_o, cells, WI, "PROD", wells);
     BOOST_REQUIRE(ok);
     std::vector<double> rates = { 1.0, 0.0, 0.0,
                                   1.0, 0.0, 0.0,
-                                  1.5, 0.0, 0.0,
-                                  1.5, 0.0, 0.0 };
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0,
+                                  1.0, 0.0, 0.0 };
     WellState wellstate;
     wellstate.perfRates() = rates;
     PhaseUsage pu;
@@ -66,18 +74,26 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
     pu.phase_pos[0] = 0;
     pu.phase_pos[1] = 1;
     pu.phase_pos[2] = 2;
-    const std::vector<double> b_perf = { 2.0, 3.0, 100.0,
-                                         2.0, 3.5, 110.0,
-                                         2.0, 4.0, 120.0,
-                                         2.0, 4.5, 130.0 };
-    const std::vector<double> rsmax_perf;
-    const std::vector<double> rvmax_perf;
-    const std::vector<double> z_perf = { 1100.0, 1200.0, 1300.0, 1400.0 };
+    const std::vector<double> b_perf = { 2.0, 3.0, 100,
+                                         2.1, 3.3, 110,
+                                         2.2, 3.6, 120,
+                                         2.3, 4.0, 130,
+                                         2.4, 4.5, 140,
+                                         2.0, 3.0, 100,
+                                         2.1, 3.3, 110,
+                                         2.2, 3.6, 120,
+                                         2.3, 4.0, 130,
+                                         2.4, 4.5, 140 };
+    const std::vector<double> rsmax_perf = { 50, 50, 50, 50, 50, 50, 50, 50, 50, 50 };
+    const std::vector<double> rvmax_perf = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01 };
+    const std::vector<double> z_perf = { 10, 30, 50, 70, 90, 10, 30, 50, 70, 90 };
     const std::vector<double> surf_dens = { 1000.0, 800.0, 10.0 };
     const double gravity = Opm::unit::gravity;
     const std::vector<double> dp = SegmentedWellModel::computeConnectionPressureDelta(*wells, wellstate, pu, b_perf, rsmax_perf, rvmax_perf, z_perf, surf_dens, gravity);
-    const std::vector<double> answer = { 2e5*gravity, 4e5*gravity, 6e5*gravity, 8e5*gravity };
+    const std::vector<double> answer = { 20e3*gravity, 62e3*gravity, 106e3*gravity, 152e3*gravity, 200e3*gravity, 
+                                         20e3*gravity, 62e3*gravity, 106e3*gravity, 152e3*gravity, 200e3*gravity };
     BOOST_REQUIRE_EQUAL(dp.size(), answer.size());
+    // for (auto p : dp) { std::cout << p << std::endl; }
     for (size_t i = 0; i < dp.size(); ++i) {
         BOOST_CHECK_CLOSE(dp[i], answer[i], 1e-8);
     }
