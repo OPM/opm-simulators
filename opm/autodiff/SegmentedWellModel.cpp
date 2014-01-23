@@ -121,18 +121,22 @@ std::vector<double> Opm::SegmentedWellModel::computeConnectionPressureDelta(cons
             double rs = 0.0;
             double rv = 0.0;
             if (!rsmax_perf.empty() && mix[oilpos] > 0.0) {
-                // Subtract gas in oil from gas mixture
                 rs = std::min(mix[gaspos]/mix[oilpos], rsmax_perf[perf]);
-                x[gaspos] = mix[gaspos] - mix[oilpos]*rs;
             }
             if (!rvmax_perf.empty() && mix[gaspos] > 0.0) {
-                // Subtract oil in gas from oil mixture
                 rv = std::min(mix[oilpos]/mix[gaspos], rvmax_perf[perf]);
-                x[oilpos] = mix[oilpos] - mix[gaspos]*rv;
+            }
+            if (rs != 0.0) {
+                // Subtract gas in oil from gas mixture
+                x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/(1.0 - rs*rv);
+            }
+            if (rv != 0.0) {
+                // Subtract oil in gas from oil mixture
+                x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/(1.0 - rs*rv);;
             }
             double volrat = 0.0;
             for (int phase = 0; phase < np; ++phase) {
-                volrat += x[phase] / (b_perf[perf*np + phase] * (1.0 - rs*rv));
+                volrat += x[phase] / b_perf[perf*np + phase];
             }
             // Compute segment density.
             dens[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
