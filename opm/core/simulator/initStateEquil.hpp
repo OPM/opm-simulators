@@ -20,6 +20,7 @@
 #ifndef OPM_INITSTATEEQUIL_HEADER_INCLUDED
 #define OPM_INITSTATEEQUIL_HEADER_INCLUDED
 
+#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
@@ -576,6 +577,131 @@ namespace Opm
                        const Region&           reg,
                        const CellRange&        cells,
                        const double            grav = unit::gravity);
+
+        namespace DeckDependent {
+            inline
+            std::vector<EquilRecord>
+            getEquil(const EclipseGridParser& deck)
+            {
+                if (deck.hasField("EQUIL")) {
+                    const EQUIL& eql = deck.getEQUIL();
+
+                    typedef std::vector<EquilLine>::size_type sz_t;
+                    const sz_t nrec = eql.equil.size();
+
+                    std::vector<EquilRecord> ret;
+                    ret.reserve(nrec);
+                    for (sz_t r = 0; r < nrec; ++r) {
+                        const EquilLine& rec = eql.equil[r];
+
+                        EquilRecord record =
+                            {
+                                { rec.datum_depth_             ,
+                                  rec.datum_depth_pressure_    }
+                                ,
+                                { rec.water_oil_contact_depth_ ,
+                                  rec.oil_water_cap_pressure_  }
+                                ,
+                                { rec.gas_oil_contact_depth_   ,
+                                  rec.gas_oil_cap_pressure_    }
+                            };
+
+                        ret.push_back(record);
+                    }
+
+                    return ret;
+                }
+                else {
+                    OPM_THROW(std::domain_error,
+                              "Deck does not provide equilibration data.");
+                }
+            }
+
+            inline
+            std::vector<int>
+            equilnum(const EclipseGridParser& deck,
+                     const UnstructuredGrid&  G   )
+            {
+                std::vector<int> eqlnum;
+                if (deck.hasField("EQLNUM")) {
+                    eqlnum = deck.getIntegerValue("EQLNUM");
+                }
+                else {
+                    // No explicit equilibration region.
+                    // All cells in region zero.
+                    eqlnum.assign(G.number_of_cells, 0);
+                }
+
+                return eqlnum;
+            }
+
+            template <class InputDeck>
+            class PhasePressureComputer;
+
+            template <>
+            class PhasePressureComputer<Opm::EclipseGridParser> {
+            public:
+                PhasePressureComputer(const BlackoilPropertiesInterface& props,
+                                      const EclipseGridParser&           deck ,
+                                      const UnstructuredGrid&            G    )
+                    : pp_(props.numPhases(),
+                          std::vector<double>(G.number_of_cells))
+                {
+                    const std::vector<EquilRecord> rec = getEquil(deck);
+                    const RegionMapping<> eqlmap(equilnum(deck, G));
+
+                    calcII(eqlmap, rec, props, G);
+                }
+
+                typedef std::vector<double> PVal;
+                typedef std::vector<PVal>   PPress;
+
+                const PPress& press() const { return pp_; }
+
+            private:
+                typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
+                typedef EquilReg<RhoCalc> EqReg;
+
+                PPress pp_;
+
+                template <class RMap>
+                void
+                calcII(const RMap&                             reg  ,
+                       const std::vector< EquilRecord >&       rec  ,
+                       const Opm::BlackoilPropertiesInterface& props,
+                       const UnstructuredGrid&                 G    )
+                {
+                    typedef miscibility::NoMixing NoMix;
+
+                    for (typename RMap::RegionId
+                             r = 0, nr = reg.numRegions();
+                         r < nr; ++r)
+                    {
+                        const typename RMap::CellRange cells = reg.cells(r);
+
+                        const int repcell = *cells.begin();
+                        const RhoCalc calc(props, repcell);
+
+                        const EqReg eqreg(rec[r], calc, NoMix(), NoMix(),
+                                          props.phaseUsage());
+
+                        const PPress& res = phasePressures(G, eqreg, cells);
+
+                        for (int p = 0, np = props.numPhases(); p < np; ++p) {
+                            PVal&                d = pp_[p];
+                            PVal::const_iterator s = res[p].begin();
+                            for (typename RMap::CellRange::const_iterator
+                                     c = cells.begin(),
+                                     e = cells.end();
+                                 c != e; ++c, ++s)
+                            {
+                                d[*c] = *s;
+                            }
+                        }
+                    }
+                }
+            };
+        } // namespace DeckDependent
     } // namespace equil
 } // namespace Opm
 
