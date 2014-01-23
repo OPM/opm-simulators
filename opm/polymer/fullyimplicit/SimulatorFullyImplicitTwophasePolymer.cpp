@@ -24,6 +24,7 @@
 #include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
 #include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+#include <opm/polymer/fullyimplicit/utilities.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -146,6 +147,7 @@ namespace Opm
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
+        dm["cmax"] = &state.maxconcentration();
         dm["concentration"] = &state.concentration();
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
@@ -162,6 +164,7 @@ namespace Opm
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
+        dm["cmax"] = &state.maxconcentration();
         dm["concentration"] = &state.concentration();
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
@@ -191,7 +194,6 @@ namespace Opm
 
 
     
-/*
     static void outputWaterCut(const Opm::Watercut& watercut,
                                const std::string& output_dir)
     {
@@ -203,6 +205,7 @@ namespace Opm
         }
         watercut.write(os);
     }
+/*
     static void outputWellReport(const Opm::WellReport& wellreport,
                                  const std::string& output_dir)
     {
@@ -298,8 +301,9 @@ namespace Opm
         std::vector<double> porevol;
         Opm::computePorevolume(grid_, props_.porosity(), porevol);
 
-        // const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
+        const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
         std::vector<double> polymer_inflow_c(grid_.number_of_cells);
+		std::vector<double> transport_src(grid_.number_of_cells);
 
         // Main simulation loop.
         Opm::time::StopWatch solver_timer;
@@ -307,6 +311,10 @@ namespace Opm
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
+        double tot_injected[2] = { 0.0 };
+        double tot_produced[2] = { 0.0 };
+        Opm::Watercut watercut;
+        watercut.push(0.0, 0.0, 0.0);
 #if 0
         // These must be changed for three-phase.
         double init_surfvol[2] = { 0.0 };
@@ -333,7 +341,7 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+        //        outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 
             }
 
@@ -348,7 +356,7 @@ namespace Opm
                 polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
                 solver_timer.start();
                 std::vector<double> initial_pressure = state.pressure();
-                solver_.step(timer.currentStepLength(), state, well_state, polymer_inflow_c);
+                solver_.step(timer.currentStepLength(), state, well_state, polymer_inflow_c, transport_src);
 
                 // Stop timer and report.
                 solver_timer.stop();
@@ -378,6 +386,38 @@ namespace Opm
                     }
                 }
             } while (!well_control_passed);
+         	double injected[2] = { 0.0 };
+          	double produced[2] = { 0.0 };
+			double polyinj = 0;
+			double polyprod = 0;
+
+            Opm::computeInjectedProduced(props_, polymer_props_,
+                                         state,
+                                         transport_src, polymer_inflow_c, timer.currentStepLength(),
+                                         injected, produced,
+                                         polyinj, polyprod);
+            tot_injected[0] += injected[0];
+            tot_injected[1] += injected[1];
+            tot_produced[0] += produced[0];
+            tot_produced[1] += produced[1];
+         	watercut.push(timer.currentTime() + timer.currentStepLength(),
+                          	  produced[0]/(produced[0] + produced[1]),
+                          	  tot_produced[0]/tot_porevol_init);
+            std::cout.precision(5);
+            const int width = 18;
+            std::cout << "\nMass balance report.\n";
+            std::cout << "    Injected reservoir volumes:      "
+                      << std::setw(width) << injected[0]
+                      << std::setw(width) << injected[1] << std::endl;
+            std::cout << "    Produced reservoir volumes:      "
+                      << std::setw(width) << produced[0]
+                      << std::setw(width) << produced[1] << std::endl;
+            std::cout << "    Total inj reservoir volumes:     "
+                      << std::setw(width) << tot_injected[0]
+                      << std::setw(width) << tot_injected[1] << std::endl;
+            std::cout << "    Total prod reservoir volumes:    "
+                      << std::setw(width) << tot_produced[0]
+                      << std::setw(width) << tot_produced[1] << std::endl;
 
 
             // Update pore volumes if rock is compressible.
@@ -440,9 +480,9 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
-#if 0
                 outputWaterCut(watercut, output_dir_);
+#if 0
+                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
                 if (wells_) {
                     outputWellReport(wellreport, output_dir_);
                 }

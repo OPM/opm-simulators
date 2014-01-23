@@ -29,7 +29,8 @@ namespace Opm {
         void step(const double   dt,
                   PolymerState& state,
                   WellState&    well_state,
-                  const std::vector<double>& polymer_inflow);
+                  const std::vector<double>& polymer_inflow,
+				  std::vector<double>& src);
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
@@ -88,10 +89,10 @@ namespace Opm {
                       const WellState&    xw);
         void
         assemble(const V&               pvdt,
-                 const SolutionState&   old_state,
                  const PolymerState&    x,
                  const WellState&       xw,
-                 const std::vector<double>& polymer_inflow);
+                 const std::vector<double>& polymer_inflow,
+				 std::vector<double>& src);
         V solveJacobianSystem() const;
         void updateState(const V&             dx,
                          PolymerState& x,

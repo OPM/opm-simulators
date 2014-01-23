@@ -150,7 +150,8 @@ namespace {
     step(const double   dt,
          PolymerState&  x,
          WellState&     xw,
-         const std::vector<double>& polymer_inflow)
+         const std::vector<double>& polymer_inflow,
+		 std::vector<double>& src)
     {
         
         V pvol(grid_.number_of_cells);
@@ -169,7 +170,7 @@ namespace {
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 40;
-        assemble(pvdt, old_state, x, xw, polymer_inflow);
+        assemble(pvdt, x, xw, polymer_inflow, src);
 
         const double r0  = residualNorm();
         int          it  = 0;
@@ -181,7 +182,7 @@ namespace {
             const V dx = solveJacobianSystem();
             updateState(dx, x, xw);
 
-            assemble(pvdt, old_state, x, xw, polymer_inflow);
+            assemble(pvdt, x, xw, polymer_inflow, src);
 
             const double r = residualNorm();
 
@@ -393,10 +394,10 @@ namespace {
     void
     FullyImplicitTwophasePolymerSolver::
     assemble(const V&             pvdt,
-             const SolutionState& old_state,
              const PolymerState&  x,
              const WellState&     xw,
-             const std::vector<double>& polymer_inflow)
+             const std::vector<double>& polymer_inflow,
+			 std::vector<double>& src)
     {
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
@@ -404,27 +405,10 @@ namespace {
         // -------- Mass balance equations for water and oil --------
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-
 		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
- //       const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
         computeMassFlux(trans, mc, kr[1], krw_eff, state);
-        //const std::vector<ADB> source = accumSource(kr[1], krw_eff, state.concentration, src, polymer_inflow);
-       // const std::vector<ADB> source = polymerSource();
- //       const double rho_r = polymer_props_ad_.rockDensity();
-//        const V phi = V::Constant(pvdt.size(), 1, *fluid_.porosity());
-
-//        const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-//        residual_.mass_balance[0] =  pvdt * (state.saturation[0] - old_state.saturation[0])
-//                        + ops_.div * mflux[0];
-//        residual_.mass_balance[1] =  pvdt * (state.saturation[1] - old_state.saturation[1])
-//                        + ops_.div * mflux[1];
-      // Mass balance equation for polymer
-//        residual_.mass_balance[2] = pvdt * (state.saturation[0] * state.concentration
-//                      - old_state.saturation[0] * old_state.concentration) * (1. - dead_pore_vol)
-//                      + pvdt * rho_r * (1. - phi) / phi * ads
- //                     + ops_.div * mflux[2];
         residual_.mass_balance[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
                                     + ops_.div*rq_[0].mflux;
         residual_.mass_balance[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
@@ -516,14 +500,17 @@ namespace {
             well_contribs[phase] = superset(perf_flux, well_cells, nc);
             // DUMP(well_contribs[phase]);
             residual_.mass_balance[phase] += well_contribs[phase];
+			for (int i = 0; i < nc; ++i) {
+				src[i] += well_contribs[phase].value()[i];
+			}
         }
 
         // well rates contribs to polymer mass balance eqn.
         // for injection wells.
         const V polyin = Eigen::Map<const V>(& polymer_inflow[0], nc);
         const V poly_in_perf = subset(polyin, well_cells);
-        const V poly_c_cell = subset(state.concentration, well_cells).value();
-        const V poly_c = producer.select(poly_c_cell, poly_in_perf);
+        const V poly_mc_cell = subset(mc, well_cells).value();
+        const V poly_c = producer.select(poly_mc_cell, poly_in_perf);
         residual_.mass_balance[2] += superset(well_perf_rates[0] * poly_c, well_cells, nc);
 
         // Set the well flux equation

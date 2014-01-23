@@ -144,7 +144,7 @@ namespace Opm
 		const V inv_muw_eff = polymer_props.effectiveInvWaterVisc(c, mus);
 		std::vector<V> mob(np);
 		mob[0] = krw_eff * inv_muw_eff;
-		mob[1] = kr[1] / mu[1];
+		mob[1] = kr[1] / mus[1];
 		
 		const V watmob_c = src_selector.select(mob[0], one);
 		const V oilmob_c = src_selector.select(mob[1], zero);
