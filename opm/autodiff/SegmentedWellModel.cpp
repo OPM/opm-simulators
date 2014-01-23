@@ -25,6 +25,7 @@
 #include <numeric>
 #include <cmath>
 
+
 std::vector<double> Opm::SegmentedWellModel::computeConnectionPressureDelta(const Wells& wells,
                                                                             const WellState& wstate,
                                                                             const PhaseUsage& phase_usage,
@@ -151,7 +152,7 @@ std::vector<double> Opm::SegmentedWellModel::computeConnectionPressureDelta(cons
     std::vector<double> dp_perf(nperf);
     for (int w = 0; w < nw; ++w) {
         for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w+1]; ++perf) {
-            const double z_above = perf == 0 ? wells.depth_ref[w] : z_perf[perf - 1];
+            const double z_above = perf == wells.well_connpos[w] ? wells.depth_ref[w] : z_perf[perf - 1];
             const double dz = z_perf[perf] - z_above;
             dp_perf[perf] = dz * dens[perf] * gravity;
         }
@@ -160,7 +161,12 @@ std::vector<double> Opm::SegmentedWellModel::computeConnectionPressureDelta(cons
     // 4. Compute pressure differences to the reference point (bhp) by
     //    accumulating the already computed adjacent pressure
     //    differences, storing the result in dp_perf.
-    std::partial_sum(dp_perf.begin(), dp_perf.end(), dp_perf.begin());
+    //    This accumulation must be done per well.
+    for (int w = 0; w < nw; ++w) {
+        const auto beg = dp_perf.begin() + wells.well_connpos[w];
+        const auto end = dp_perf.begin() + wells.well_connpos[w + 1];
+        std::partial_sum(beg, end, beg);
+    }
 
     return dp_perf;
 }
