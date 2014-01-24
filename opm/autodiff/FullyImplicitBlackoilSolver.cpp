@@ -470,12 +470,12 @@ namespace {
                     disgas = true;
             }
 
-            for (int c=0;c<nc;c++){
+            for (int c = 0; c < nc ; c++ ) {
                 const PhasePresence cond = phaseCondition()[c];
-                if (not cond.hasFreeGas() & disgas) {
+                if ( (!cond.hasFreeGas()) && disgas ) {
                     isRs[c] = 1;
                 }
-                else if (not cond.hasFreeOil() & vapoil){
+                else if ( (!cond.hasFreeOil()) && vapoil ) {
                     isRv[c] = 1;
                 }
                 else {
@@ -908,12 +908,12 @@ namespace {
         }
 
         const std::vector<PhasePresence> conditions = phaseCondition();
-        for (int c=0;c<nc;c++){
+        for (int c = 0; c < nc; c++ ) {
             const PhasePresence cond = conditions[c];
-            if (not cond.hasFreeGas() & disgas) {
+            if ( (!cond.hasFreeGas()) && disgas ) {
                 isRs[c] = 1;
             }
-            else if (not cond.hasFreeOil() & vapoil){
+            else if ( (!cond.hasFreeOil()) && vapoil ) {
                 isRv[c] = 1;
             }
             else {
