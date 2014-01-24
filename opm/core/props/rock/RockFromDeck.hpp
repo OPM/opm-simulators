@@ -22,6 +22,9 @@
 
 
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
+
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <vector>
 
 struct UnstructuredGrid;
@@ -41,6 +44,14 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         void init(const EclipseGridParser& deck,
+                  const UnstructuredGrid& grid);
+
+        /// Initialize from deck and grid.
+        /// \param  newParserDeck Deck produced by the opm-parser code
+        /// \param  grid          Grid to which property object applies, needed for the
+        ///                       mapping from cell indices (typically from a processed grid)
+        ///                       to logical cartesian indices consistent with the deck.
+        void init(Opm::DeckConstPtr newParserDeck,
                   const UnstructuredGrid& grid);
 
         /// \return   D, the number of spatial dimensions. Always 3 for deck input.
@@ -72,9 +83,14 @@ namespace Opm
     private:
         void assignPorosity(const EclipseGridParser& parser,
                             const UnstructuredGrid& grid);
+        void assignPorosity(Opm::DeckConstPtr newParserDeck,
+                            const UnstructuredGrid& grid);
         void assignPermeability(const EclipseGridParser& parser,
                                 const UnstructuredGrid& grid,
                                 const double perm_threshold);
+        void assignPermeability(Opm::DeckConstPtr newParserDeck,
+                                const UnstructuredGrid& grid,
+                                double perm_threshold);
 
         std::vector<double> porosity_;
         std::vector<double> permeability_;

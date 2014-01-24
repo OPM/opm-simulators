@@ -25,6 +25,8 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 
+#include <opm/parser/eclipse/Utility/SimpleTable.hpp>
+
 #include <iostream>
 
 namespace Opm
@@ -60,6 +62,53 @@ namespace Opm
             const ROCK& r = deck.getROCK();
             pref_ = r.rock_compressibilities_[0][0];
             rock_comp_ = r.rock_compressibilities_[0][1];
+        } else {
+            std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
+        }
+    }
+
+    RockCompressibility::RockCompressibility(Opm::DeckConstPtr newParserDeck)
+        : pref_(0.0),
+          rock_comp_(0.0)
+    {
+        if (newParserDeck->hasKeyword("ROCKTAB")) {
+            Opm::DeckKeywordConstPtr rtKeyword = newParserDeck->getKeyword("ROCKTAB");
+            if (rtKeyword->size() != 1)
+                OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
+
+            std::vector<std::string> rtColumnNames
+            {
+                "PRESSURE",
+                "POREVOL MULT",
+                "TRANSMISC MULT"
+            };
+            if (newParserDeck->hasKeyword("RKTRMDIR"))
+            {
+                // the number of colums of the "ROCKTAB" keyword
+                // depends on the presence of the "RKTRMDIR"
+                // keyword. Messy stuff...
+                rtColumnNames.push_back("TRANSMISC MULT Y");
+                rtColumnNames.push_back("TRANSMISC MULT Z");
+
+                // well, okay. we don't support non-isotropic
+                // transmiscibility multipliers yet
+                OPM_THROW(std::runtime_error, "Support for non-isotropic "
+                          "transmiscibility multipliers is not implemented yet.");
+            };
+
+            Opm::SimpleTable rtTable(rtKeyword, rtColumnNames);
+
+            p_ = rtTable.getColumn(0);
+            poromult_ = rtTable.getColumn(1);
+            transmult_ = rtTable.getColumn(2);
+        } else if (newParserDeck->hasKeyword("ROCK")) {
+            Opm::DeckKeywordConstPtr rockKeyword = newParserDeck->getKeyword("ROCK");
+            if (rockKeyword->size() != 1)
+                OPM_THROW(std::runtime_error, "Can only handle a single region in ROCK.");
+
+            Opm::DeckRecordConstPtr rockRecord = rockKeyword->getRecord(0);
+            pref_ = rockRecord->getItem(0)->getSIDouble(0);
+            rock_comp_ = rockRecord->getItem(1)->getSIDouble(0);
         } else {
             std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
         }
