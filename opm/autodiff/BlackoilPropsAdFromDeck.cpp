@@ -372,6 +372,8 @@ namespace Opm
 
     /// Gas viscosity.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  rv     Array of n vapor oil/gas ratio
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAdFromDeck::muGas(const ADB& pg,
