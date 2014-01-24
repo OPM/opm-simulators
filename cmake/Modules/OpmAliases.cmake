@@ -8,6 +8,7 @@ function (set_aliases)
   # hardcoded list of "dune-var opm-var" pairs, where the components
   # are separated by space
   set (aliases
+	"HAVE_UMFPACK             HAVE_SUITESPARSE_UMFPACK_H"
 	)
   foreach (alias IN LISTS aliases)
 	# convert entry "X Y" into a list "X;Y", then pick apart
