@@ -463,7 +463,7 @@ namespace {
             // this is a temporary hack to find if vapoil or disgas
             // is a active component. Should be given directly from
             // DISGAS and VAPOIL keywords in the deck.
-            for (int c = 0; c<nc; c++){
+            for (int c = 0; c < nc; c++){
                 if(x.rv()[c] > 0)
                     vapoil = true;
                 if(x.gasoilratio ()[c] > 0)
@@ -534,19 +534,19 @@ namespace {
             ADB rsSat = fluidRsSat(state.pressure,all_cells);
             ADB rvSat = fluidRvSat(state.pressure,all_cells);
             ADB xvar = vars[ nextvar++ ];
-            if (active_[ Gas]){
+            if (active_[ Gas]) {
                 ADB sg = isSg*xvar + isRv* so;
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
 
-                if (disgas){
+                if (disgas) {
                     state.rs = (1-isRs) * rsSat + isRs*xvar;
-                }else{
+                } else {
                     state.rs = rsSat;
                 }
-                if (vapoil){
+                if (vapoil) {
                     state.rv = (1-isRv) * rvSat + isRv*xvar;
-                }else{
+                } else {
                     state.rv = rvSat;
                 }
             }
@@ -710,6 +710,7 @@ namespace {
             }
         }
 
+        // make a copy of the phaseConditions
         std::vector<PhasePresence> cond = phaseCondition_;
 
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
@@ -964,7 +965,7 @@ namespace {
         }
 
         V sg;
-        if (active_[Gas]){
+        if (active_[Gas]) {
             const int pos = pu.phase_pos[ Gas ];
             const V sg_old = s_old.col(pos);
             const V dsg = isSg * dxvar - isRv * dsw;
@@ -978,16 +979,16 @@ namespace {
         const double drsmax = 1e9;
         const double drvmax = 1e9;//% same as in Mrst
         V rs;
-        if (disgas){
+        if (disgas) {
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
-            const V drs = isRs*dxvar;
+            const V drs = isRs * dxvar;
             const V drs_limited = sign(drs) * drs.abs().min(drsmax);
             rs = rs_old - drs_limited;
         }
         V rv;
-        if (vapoil){
+        if (vapoil) {
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
-            const V drv = isRv*dxvar;
+            const V drv = isRv * dxvar;
             const V drv_limited = sign(drv) * drv.abs().min(drvmax);
             rv = rv_old - drv_limited;
         }
@@ -1004,20 +1005,20 @@ namespace {
         // reset the phase conditions
         std::vector<PhasePresence> cond(nc);
 
-        if (disgas){
+        if (disgas) {
             // The obvioious case
-            auto ix0 = (sg>0 && isRs == 0);
+            auto ix0 = (sg > 0 && isRs == 0);
 
             // keep oil saturated if previous sg is sufficient large:
             const int pos = pu.phase_pos[ Gas ];
-            auto ix1 = (sg < 0 && s_old.col(pos)>epsilon);
+            auto ix1 = (sg < 0 && s_old.col(pos) > epsilon);
             // Set oil saturated if previous rs is sufficiently large
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
-            auto ix2 =  ( (rs > rsSat*(1+epsilon) && isRs == 1) && (rs_old > rsSat0*(1-epsilon)));
+            auto ix2 =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
 
             auto gasPresent = watOnly || ix0 || ix1  || ix2;
             for (int c = 0; c < nc; ++c) {
-                if( gasPresent[c] ){
+                if (gasPresent[c]) {
                     rs[c] = rsSat[c];
                     cond[c].setFreeGas();
                 }
@@ -1029,19 +1030,19 @@ namespace {
         const V rvSat0 = fluidRvSat(p_old, cells_);
         const V rvSat = fluidRvSat(p, cells_);
 
-        if (vapoil){
+        if (vapoil) {
             // The obvious case
-            auto ix0 = (so>0 && isRv == 0);
+            auto ix0 = (so > 0 && isRv == 0);
 
             // keep oil saturated if previous sg is sufficient large:
             const int pos = pu.phase_pos[ Oil ];
             auto ix1 = (so < 0 && s_old.col(pos) > epsilon );
             // Set oil saturated if previous rs is sufficiently large
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
-            auto ix2 = ( (rv > rvSat*(1+epsilon) && isRv == 1) && (rv_old > rvSat0*(1-epsilon)));
+            auto ix2 = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
             auto oilPresent = watOnly || ix0 || ix1 || ix2;
             for (int c = 0; c < nc; ++c) {
-                if( oilPresent[c] ){
+                if (oilPresent[c]) {
                     rv[c] = rvSat[c];
                     cond[c].setFreeOil();
                 }
@@ -1052,9 +1053,9 @@ namespace {
 
         auto ixg = sg < 0;
         for (int c = 0; c < nc; ++c) {
-            if(ixg[c]){
-                sw[c] = sw[c]/(1-sg[c]);
-                so[c] = so[c]/(1-sg[c]);
+            if (ixg[c]) {
+                sw[c] = sw[c] / (1-sg[c]);
+                so[c] = so[c] / (1-sg[c]);
                 sg[c] = 0;
             }
         }
@@ -1062,18 +1063,18 @@ namespace {
 
         auto ixo = so < 0;
         for (int c = 0; c < nc; ++c) {
-            if(ixo[c]){
-                sw[c] = sw[c]/(1-so[c]);
-                sg[c] = sg[c]/(1-so[c]);
+            if (ixo[c]) {
+                sw[c] = sw[c] / (1-so[c]);
+                sg[c] = sg[c] / (1-so[c]);
                 so[c] = 0;
             }
         }
 
         auto ixw = sw < 0;
         for (int c = 0; c < nc; ++c) {
-            if(ixw[c]){
-                so[c] = so[c]/(1-sw[c]);
-                sg[c] = sg[c]/(1-so[c]);
+            if (ixw[c]) {
+                so[c] = so[c] / (1-sw[c]);
+                sg[c] = sg[c] / (1-so[c]);
                 sw[c] = 0;
             }
         }
