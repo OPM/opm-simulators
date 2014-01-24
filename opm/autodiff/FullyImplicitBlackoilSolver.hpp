@@ -102,8 +102,9 @@ namespace Opm {
             ADB              pressure;
             std::vector<ADB> saturation;
             ADB              rs;
+            ADB              rv;
             ADB              qs;
-            ADB              bhp;
+            ADB              bhp;       
         };
 
         struct WellOps {
@@ -133,6 +134,7 @@ namespace Opm {
         const M                         grav_;
 
         std::vector<ReservoirResidualQuant> rq_;
+        std::vector<PhasePresence> phaseCondition_;
 
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
@@ -166,7 +168,7 @@ namespace Opm {
 
         void updateState(const V& dx,
                          BlackoilState& state,
-                         WellState& well_state) const;
+                         WellState& well_state);
 
         std::vector<ADB>
         computePressures(const SolutionState& state) const;
@@ -193,6 +195,7 @@ namespace Opm {
         fluidViscosity(const int               phase,
                        const ADB&              p    ,
                        const ADB&              rs   ,
+                       const ADB&              rv   ,
                        const std::vector<PhasePresence>& cond,
                        const std::vector<int>& cells) const;
 
@@ -200,6 +203,7 @@ namespace Opm {
         fluidReciprocFVF(const int               phase,
                          const ADB&              p    ,
                          const ADB&              rs   ,
+                         const ADB&              rv   ,
                          const std::vector<PhasePresence>& cond,
                          const std::vector<int>& cells) const;
 
@@ -207,15 +211,24 @@ namespace Opm {
         fluidDensity(const int               phase,
                      const ADB&              p    ,
                      const ADB&              rs   ,
+                     const ADB&              rv   ,
                      const std::vector<PhasePresence>& cond,
                      const std::vector<int>& cells) const;
 
         V
-        fluidRsMax(const V&                p,
+        fluidRsSat(const V&                p,
                    const std::vector<int>& cells) const;
 
         ADB
-        fluidRsMax(const ADB&              p,
+        fluidRsSat(const ADB&              p,
+                   const std::vector<int>& cells) const;
+
+        V
+        fluidRvSat(const V&                p,
+                   const std::vector<int>& cells) const;
+
+        ADB
+        fluidRvSat(const ADB&              p,
                    const std::vector<int>& cells) const;
 
         ADB
@@ -227,6 +240,14 @@ namespace Opm {
         void
         classifyCondition(const SolutionState&        state,
                           std::vector<PhasePresence>& cond ) const;
+
+        const std::vector<PhasePresence>
+        phaseCondition() const {return phaseCondition_;}
+
+        void
+        classifyCondition(const BlackoilState&        state);
+
+
     };
 } // namespace Opm
 
