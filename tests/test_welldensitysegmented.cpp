@@ -24,9 +24,9 @@
 #define BOOST_TEST_DYN_LINK
 #endif
 
-#define BOOST_TEST_MODULE SegmentedWellModelTest
+#define BOOST_TEST_MODULE WellDensitySegmentedTest
 
-#include <opm/autodiff/SegmentedWellModel.hpp>
+#include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
     const std::vector<double> z_perf = { 10, 30, 50, 70, 90, 10, 30, 50, 70, 90 };
     const std::vector<double> surf_dens = { 1000.0, 800.0, 10.0 };
     const double gravity = Opm::unit::gravity;
-    const std::vector<double> dp = SegmentedWellModel::computeConnectionPressureDelta(*wells, wellstate, pu, b_perf, rsmax_perf, rvmax_perf, z_perf, surf_dens, gravity);
+    const std::vector<double> dp = WellDensitySegmented::computeConnectionPressureDelta(*wells, wellstate, pu, b_perf, rsmax_perf, rvmax_perf, z_perf, surf_dens, gravity);
     const std::vector<double> answer = { 20e3*gravity, 62e3*gravity, 106e3*gravity, 152e3*gravity, 200e3*gravity, 
                                          20e3*gravity, 62e3*gravity, 106e3*gravity, 152e3*gravity, 200e3*gravity };
     BOOST_REQUIRE_EQUAL(dp.size(), answer.size());

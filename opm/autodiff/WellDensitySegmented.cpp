@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/autodiff/SegmentedWellModel.hpp>
+#include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -26,15 +26,15 @@
 #include <cmath>
 
 
-std::vector<double> Opm::SegmentedWellModel::computeConnectionPressureDelta(const Wells& wells,
-                                                                            const WellState& wstate,
-                                                                            const PhaseUsage& phase_usage,
-                                                                            const std::vector<double>& b_perf,
-                                                                            const std::vector<double>& rsmax_perf,
-                                                                            const std::vector<double>& rvmax_perf,
-                                                                            const std::vector<double>& z_perf,
-                                                                            const std::vector<double>& surf_dens,
-                                                                            const double gravity)
+std::vector<double> Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
+                                                                              const WellState& wstate,
+                                                                              const PhaseUsage& phase_usage,
+                                                                              const std::vector<double>& b_perf,
+                                                                              const std::vector<double>& rsmax_perf,
+                                                                              const std::vector<double>& rvmax_perf,
+                                                                              const std::vector<double>& z_perf,
+                                                                              const std::vector<double>& surf_dens,
+                                                                              const double gravity)
 {
     // Verify that we have consistent input.
     const int np = wells.number_of_phases;

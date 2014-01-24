@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SEGMENTEDWELLMODEL_HEADER_INCLUDED
-#define OPM_SEGMENTEDWELLMODEL_HEADER_INCLUDED
+#ifndef OPM_WELLDENSITYSEGMENTED_HEADER_INCLUDED
+#define OPM_WELLDENSITYSEGMENTED_HEADER_INCLUDED
 
 #include <vector>
 
@@ -36,7 +36,7 @@ namespace Opm
     /// pressure. This class contains an explicit model, that uses a
     /// different density for each well segment, that is between each
     /// pair of perforations.
-    class SegmentedWellModel
+    class WellDensitySegmented
     {
     public:
         /// Compute pressure deltas.
@@ -63,4 +63,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_SEGMENTEDWELLMODEL_HEADER_INCLUDED
+#endif // OPM_WELLDENSITYSEGMENTED_HEADER_INCLUDED
