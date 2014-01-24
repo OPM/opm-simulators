@@ -501,11 +501,10 @@ public:
         // pressure of water as a starting point. (we just set it to
         // 30 kPa to ease interpreting the results.)
         const Scalar pvWater = 30e3;
-        if (compIdx == oCompIdx ||
-            compIdx == gCompIdx)
-        {
+        if (compIdx == oCompIdx)
+            return 1e3*pvWater / pressure;
+        else if (compIdx == gCompIdx)
             return 1e6*pvWater / pressure;
-        }
 
         return pvWater / pressure;
     }
