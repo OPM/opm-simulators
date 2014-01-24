@@ -37,7 +37,7 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-#include <fstream>
+//#include <fstream>
 
 // A debugging utility.
 #define DUMP(foo)                                                       \
@@ -843,8 +843,7 @@ namespace {
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
-
-        if (0){
+        /*
         std::ofstream filestream("matrix.out");
         filestream << matr;
         filestream.close();
@@ -853,8 +852,8 @@ namespace {
         filestream2.close();
         std::ofstream filestream3("r.out");
         filestream3 << total_residual.value();
-        filestream3.close();
-        }
+        filestream3.close(); */
+
 
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
@@ -1454,7 +1453,7 @@ namespace {
     }
 
 
-    // not in use?
+    /*
     void
     FullyImplicitBlackoilSolver::
     classifyCondition(const SolutionState&        state,
@@ -1493,7 +1492,8 @@ namespace {
                 if (so[c] > 0) { cond[c].setFreeOil(); }
             }
         }
-    }
+    } */
+
 
     void
     FullyImplicitBlackoilSolver::classifyCondition(const BlackoilState& state)
