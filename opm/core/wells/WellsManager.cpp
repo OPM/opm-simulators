@@ -287,6 +287,12 @@ namespace Opm
                 // perforation.
                 wd.reference_bhp_depth = (well->getRefDepth() < 0.0) ? -1e100 : well->getRefDepth();
                 wd.welspecsline = -1;
+
+                if (well->isProducer(timeStep))
+                    wd.type = PRODUCER;
+                else
+                    wd.type = INJECTOR;
+
                 well_data.push_back(wd);
             }
             well_index++;
@@ -412,32 +418,6 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Failed creating Wells struct.");
         }
 
-        // Classify wells
-        if (deck.hasField("WCONINJE")) {
-            const std::vector<WconinjeLine>& lines = deck.getWCONINJE().wconinje;
-            for (size_t i = 0 ; i < lines.size(); ++i) {
-                const std::map<std::string, int>::const_iterator it = well_names_to_index.find(lines[i].well_);
-                if (it != well_names_to_index.end()) {
-                    const int well_index = it->second;
-                    well_data[well_index].type = INJECTOR;
-                } else {
-                    OPM_THROW(std::runtime_error, "Unseen well name: " << lines[i].well_ << " first seen in WCONINJE");
-                }
-            }
-        }
-        if (deck.hasField("WCONPROD")) {
-            const std::vector<WconprodLine>& lines = deck.getWCONPROD().wconprod;
-            for (size_t i = 0; i < lines.size(); ++i) {
-                const std::map<std::string, int>::const_iterator it = well_names_to_index.find(lines[i].well_);
-                if (it != well_names_to_index.end()) {
-                    const int well_index = it->second;
-                    well_data[well_index].type = PRODUCER;
-                } else {
-                    OPM_THROW(std::runtime_error, "Unseen well name: " << lines[i].well_ << " first seen in WCONPROD");
-                }
-
-            }
-        }
 
         // Add wells.
         for (int w = 0; w < num_wells; ++w) {
