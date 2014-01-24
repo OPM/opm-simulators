@@ -424,6 +424,12 @@ system usable with dunecontrol. There is one in the project root directory
 which just forwards everything to the main script in `cmake/Scripts`.
 
 <tr>
+<td>	OpmAliases
+<td>
+Copy variables which are probed by our find modules to the names which
+are expected by DUNE.
+
+<tr>
 <td>	OpmCompile
 <td>
 Set up a compilation target for the library itself. It is assumed that
