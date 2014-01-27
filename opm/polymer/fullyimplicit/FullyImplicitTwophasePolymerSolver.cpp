@@ -548,6 +548,25 @@ namespace {
 
     }
    
+    std::vector<ADB>
+    FullyImplicitTwophasePolymerSolver::
+	computePressures(const SolutionState& state) const
+    {
+        const ADB sw = state.saturation[0];
+        const ADB so = state.saturation[1];
+
+        // convert the pressure offsets to the capillary pressures
+        std::vector<ADB> pressure = fluid_.capPress(sw, so, cells_);
+		pressure[0] = pressure[0] - pressure[1];
+
+        // add the total pressure to the capillary pressures
+        for (int phaseIdx = 0; phaseIdx < 2; ++phaseIdx) {
+            pressure[phaseIdx] += state.pressure;
+        }
+
+        return pressure;
+    }
+
     void
     FullyImplicitTwophasePolymerSolver::computeMassFlux(const V&                trans,
                                                         const ADB&              mc,
@@ -561,18 +580,18 @@ namespace {
         rq_[1].mob = kro / V::Constant(kro.size(), 1, mus[1]);
         rq_[2].mob =  mc * krw_eff * inv_wat_eff_vis;
 
-
         const int nc = grid_.number_of_cells; 
         V z(nc);
         // Compute z coordinates
         for (int c = 0; c < nc; ++c){
             z[c] = grid_.cell_centroids[c * 3 + 2];
         }
+		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < 2; ++phase) {
             const ADB rho = fluidDensity(phase, state.pressure);
 			ADB& head = rq_[phase].head;
             const ADB rhoavg = ops_.caver * rho;
-            const ADB dp = ops_.ngrad * state.pressure
+            const ADB dp = ops_.ngrad * press[phase]
                            - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
             head = trans * dp;
             UpwindSelector<double> upwind(grid_, ops_, head.value());

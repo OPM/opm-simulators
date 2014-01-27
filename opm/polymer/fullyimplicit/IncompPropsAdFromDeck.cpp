@@ -132,5 +132,47 @@ namespace Opm
         }
         return relperms;
     }
+    std::vector<ADB> 
+	IncompPropsAdFromDeck::capPress(const ADB& sw,
+                                    const ADB& so,
+                                    const Cells& cells) const
+    {
+
+        const int n = cells.size();
+        const int np = numPhases();
+        const int num_blocks = so.numBlocks();
+        Block s_all(n, np);
+        assert(sw.size() == n && so.size() == n);
+        s_all.col(0) = sw.value();
+        s_all.col(1) = so.value();
+
+        Block pc(n, np);
+        Block dpc(n, np * np);
+
+        satprops_.capPress(n, s_all.data(), cells.data(), pc.data(), dpc.data());
+
+        std::vector<ADB> capPressures;
+        capPressures.reserve(2);
+        const ADB* s[2] = { &sw, &so};
+        for (int phase1 = 0; phase1 < 3; ++phase1) {
+        	const int phase1_pos = phase1;
+            std::vector<ADB::M> jacs(num_blocks);
+            for (int block = 0; block < num_blocks; ++block) {
+                jacs[block] = ADB::M(n, s[phase1]->derivative()[block].cols());
+            }
+            for (int phase2 = 0; phase2 < 3; ++phase2) {
+                const int phase2_pos = phase2;
+                // Assemble dpc1/ds2.
+                const int column = phase1_pos + phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
+                for (int block = 0; block < num_blocks; ++block) {
+                    jacs[block] += dpc1_ds2_diag * s[phase2]->derivative()[block];
+                }
+         	}
+            capPressures.emplace_back(ADB::function(pc.col(phase1_pos), jacs));
+		}
+        return capPressures;
+    }
+
 } //namespace Opm
 

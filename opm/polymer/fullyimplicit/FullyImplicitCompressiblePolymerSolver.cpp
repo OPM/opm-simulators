@@ -831,7 +831,7 @@ namespace {
 
         // convert the pressure offsets to the capillary pressures
         std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
-		pressure[0] = pressure[0] - pressure[0];
+		pressure[0] = pressure[0] - pressure[1];
 
         // add the total pressure to the capillary pressures
         for (int phaseIdx = 0; phaseIdx < 2; ++phaseIdx) {

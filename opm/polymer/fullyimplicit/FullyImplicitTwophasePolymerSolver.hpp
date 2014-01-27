@@ -102,6 +102,8 @@ namespace Opm {
         V
         transmissibility() const;
         
+		std::vector<ADB>
+		computePressures(const SolutionState& state) const;
 		void
         computeMassFlux(const V&                trans,
                         const ADB&              mc,
