@@ -35,6 +35,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
+	opm/autodiff/WellDensitySegmented.cpp
 	)
 
 # originally generated with the command:
@@ -45,6 +46,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_span.cpp
 	tests/test_syntax.cpp
 	tests/test_scalar_mult.cpp
+	tests/test_welldensitysegmented.cpp
 	)
 
 list (APPEND TEST_DATA_FILES
@@ -86,4 +88,5 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
+	opm/autodiff/WellDensitySegmented.hpp
 	)
