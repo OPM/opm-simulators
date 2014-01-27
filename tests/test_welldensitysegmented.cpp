@@ -35,6 +35,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <iostream>
+#include <memory>
 
 using namespace Opm;
 
@@ -48,11 +49,11 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
     const double comp_frac_o[np] = { 0.0, 1.0, 0.0 };
     const int cells[nperf/2] = { 0, 1, 2, 3, 4 };
     const double WI[nperf/2] = { 1.0, 1.0, 1.0, 1.0 };
-    Wells* wells = create_wells(np, 2, nperf);
-    BOOST_REQUIRE(wells != NULL);
-    int ok = add_well(INJECTOR, ref_depth, nperf/2, comp_frac_w, cells, WI, "INJ", wells);
+    std::shared_ptr<Wells> wells(create_wells(np, 2, nperf), destroy_wells);
+    BOOST_REQUIRE(wells);
+    int ok = add_well(INJECTOR, ref_depth, nperf/2, comp_frac_w, cells, WI, "INJ", wells.get());
     BOOST_REQUIRE(ok);
-    ok = add_well(PRODUCER, ref_depth, nperf/2, comp_frac_o, cells, WI, "PROD", wells);
+    ok = add_well(PRODUCER, ref_depth, nperf/2, comp_frac_o, cells, WI, "PROD", wells.get());
     BOOST_REQUIRE(ok);
     std::vector<double> rates = { 1.0, 0.0, 0.0,
                                   1.0, 0.0, 0.0,
