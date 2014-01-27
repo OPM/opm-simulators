@@ -174,8 +174,6 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
 }
 
 
-
-
 BOOST_AUTO_TEST_CASE(Constructor_Works) {
     Opm::EclipseGridParser Deck("wells_manager_data.data");
     Opm::GridManager gridManager(Deck);
@@ -194,7 +192,7 @@ BOOST_AUTO_TEST_CASE(Constructor_Works) {
         Opm::WellsManager wellsManager(Deck, *gridManager.c_grid(), NULL);
         const Wells* wells = wellsManager.c_wells();
         
-        wells_static_check( wells );    
+        wells_static_check( wells );
         check_controls_epoch1( wells->ctrls );
     }
 }
@@ -212,11 +210,15 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
         Opm::WellsManager wellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
-        const Wells* wells = wellsManager.c_wells();
-        wells_static_check( wells );
-        check_controls_epoch0( wells->ctrls );
+        std::cout << "Checking new well structure, epoch 0" << std::endl;
+        wells_static_check( wellsManager.c_wells() );
 
-        BOOST_CHECK(wells_equal(wells, oldWellsManager.c_wells()));
+        std::cout << "Checking old well structure, epoch 0" << std::endl;
+        wells_static_check( oldWellsManager.c_wells() );
+
+        check_controls_epoch0( wellsManager.c_wells()->ctrls );
+
+        BOOST_CHECK(wells_equal(wellsManager.c_wells(), oldWellsManager.c_wells()));
     }
 
     Deck.setCurrentEpoch(1);
@@ -224,11 +226,41 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
         Opm::WellsManager wellsManager(eclipseState, 1,Deck, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
-        const Wells* wells = wellsManager.c_wells();
-        wells_static_check( wells );
-        check_controls_epoch1( wells->ctrls );
+        std::cout << "Checking new well structure, epoch 1" << std::endl;
+        wells_static_check( wellsManager.c_wells() );
 
-        BOOST_CHECK(wells_equal(wells, oldWellsManager.c_wells()));
+        std::cout << "Checking old well structure, epoch 1" << std::endl;
+        wells_static_check( oldWellsManager.c_wells() );
+
+        check_controls_epoch1( wellsManager.c_wells()->ctrls );
+
+        BOOST_CHECK(wells_equal( wellsManager.c_wells(), oldWellsManager.c_wells()));
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(New_Constructor_Works_ExpandedData) {
+
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(parser->parseFile("wells_manager_data_expanded.data")));
+
+    Opm::EclipseGridParser Deck("wells_manager_data_expanded.data");
+    Opm::GridManager gridManager(Deck);
+
+    Deck.setCurrentEpoch(0);
+    {
+        Opm::WellsManager wellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
+
+        BOOST_CHECK(wells_equal(wellsManager.c_wells(), oldWellsManager.c_wells()));
+    }
+
+    Deck.setCurrentEpoch(1);
+    {
+        Opm::WellsManager wellsManager(eclipseState, 1,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
+
+        BOOST_CHECK(wells_equal( wellsManager.c_wells(), oldWellsManager.c_wells()));
     }
 }
 
@@ -244,8 +276,8 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
     Deck.setCurrentEpoch(1);
     Opm::WellsManager wellsManager1(Deck, *gridManager.c_grid(), NULL);
 
-    BOOST_CHECK(  wells_equal( wellsManager0.c_wells() , wellsManager0.c_wells()) ); 
-    BOOST_CHECK( !wells_equal( wellsManager0.c_wells() , wellsManager1.c_wells()) ); 
+    BOOST_CHECK(  wells_equal( wellsManager0.c_wells() , wellsManager0.c_wells()) );
+    BOOST_CHECK( !wells_equal( wellsManager0.c_wells() , wellsManager1.c_wells()) );
 }
 
 
