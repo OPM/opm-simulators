@@ -177,6 +177,8 @@ namespace Opm {
         computeRelPermWells(const SolutionState& state,
                             const DataBlock& well_s,
                             const std::vector<int>& well_cells) const;
+		std::vector<ADB>
+		computePressures(const SolutionState& state) const;
 
         void
         computeMassFlux(const int               actph ,

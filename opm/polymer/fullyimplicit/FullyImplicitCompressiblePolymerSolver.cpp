@@ -504,7 +504,6 @@ namespace {
         // for each active phase.
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-//		const ADB cmax = computeCmax(state.concentration);
 		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
@@ -815,6 +814,33 @@ namespace {
 
 
 
+    std::vector<ADB>
+    FullyImplicitCompressiblePolymerSolver::
+	computePressures(const SolutionState& state) const
+    {
+        const int               nc   = grid_.number_of_cells;
+        const std::vector<int>& bpat = state.pressure.blockPattern();
+
+        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+
+        const ADB sw = state.saturation[0];
+
+        const ADB so = state.saturation[1];
+
+        const ADB sg = null;
+
+        // convert the pressure offsets to the capillary pressures
+        std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
+		pressure[0] = pressure[0] - pressure[0];
+
+        // add the total pressure to the capillary pressures
+        for (int phaseIdx = 0; phaseIdx < 2; ++phaseIdx) {
+            pressure[phaseIdx] += state.pressure;
+        }
+
+        return pressure;
+    }
+
 
 
     void
@@ -833,12 +859,13 @@ namespace {
         rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
         const ADB mu_o = fluidViscosity(1, state.pressure, cells_);
         rq_[1].mob = tr_mult * kro / mu_o;
+		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < 2; ++phase) {
             const ADB rho   = fluidDensity(phase, state.pressure, cells_);
             ADB& head = rq_[ phase ].head;
             // compute gravity potensial using the face average as in eclipse and MRST
             const ADB rhoavg = ops_.caver * rho;
-            const ADB dp = ops_.ngrad * state.pressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+            const ADB dp = ops_.ngrad * press[phase] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
             head = transi*dp;
             UpwindSelector<double> upwind(grid_, ops_, head.value());
             const ADB& b       = rq_[ phase ].b;
