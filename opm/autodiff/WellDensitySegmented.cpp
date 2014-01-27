@@ -82,7 +82,7 @@ std::vector<double> Opm::WellDensitySegmented::computeConnectionPressureDelta(co
         // Iterate over well perforations from bottom to top.
         for (int perf = wells.well_connpos[w+1] - 1; perf >= wells.well_connpos[w]; --perf) {
             for (int phase = 0; phase < np; ++phase) {
-                if (perf == wells.well_connpos[w+1]) {
+                if (perf == wells.well_connpos[w+1] - 1) {
                     // This is the bottom perforation. No flow from below.
                     q_out_perf[perf*np + phase] = 0.0;
                 } else {
