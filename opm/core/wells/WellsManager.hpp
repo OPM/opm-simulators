@@ -124,7 +124,7 @@ namespace Opm
 
 	// Data
 	Wells* w_;
-        WellCollection well_collection_;
+    WellCollection well_collection_;
 
 
 
