@@ -35,13 +35,17 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
+#<<<<<<< HEAD
     opm/autodiff/twophase/IncompPropsAdInterface.cpp
     opm/autodiff/twophase/IncompPropsAdBasic.cpp
     opm/autodiff/twophase/IncompPropsAdFromDeck.cpp
     opm/autodiff/twophase/SimulatorFullyImplicitTwophase.cpp
     opm/autodiff/twophase/FullyImplicitTwoPhaseSolver.cpp
-    opm/autodiff/twophase/FullyImplicitCompressibleSolver.cpp
-    opm/autodiff/twophase/SimulatorFullyImplicitCompressible.cpp
+  #  opm/autodiff/twophase/FullyImplicitCompressibleSolver.cpp
+  #  opm/autodiff/twophase/SimulatorFullyImplicitCompressible.cpp
+	opm/autodiff/WellDensitySegmented.cpp
+#=======
+#>>>>>>> opm/master
 	)
 
 # originally generated with the command:
@@ -52,6 +56,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_span.cpp
 	tests/test_syntax.cpp
 	tests/test_scalar_mult.cpp
+	tests/test_welldensitysegmented.cpp
 	)
 
 list (APPEND TEST_DATA_FILES
@@ -70,7 +75,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/test_implicit_ad.cpp
 #    examples/sim_2p_fincomp_ad.cpp
     examples/sim_fi2p_incomp_ad.cpp
-    examples/sim_fi2p_comp_ad.cpp
+ #   examples/sim_fi2p_comp_ad.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -79,7 +84,7 @@ list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_fibo_ad.cpp
     examples/sim_fi2p_incomp_ad.cpp
-    examples/sim_fi2p_comp_ad.cpp
+  #  examples/sim_fi2p_comp_ad.cpp
 	)
 
 # originally generated with the command:
@@ -98,11 +103,15 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
+#<<<<<<< HEAD
   opm/autodiff/twophase/IncompPropsAdInterface.hpp
   opm/autodiff/twophase/IncompPropsAdBasic.hpp
   opm/autodiff/twophase/FullyImplicitTwoPhaseSolver.hpp
   opm/autodiff/twophase/IncompPropsAdFromDeck.hpp
   opm/autodiff/twophase/SimulatorFullyImplicitTwophase.hpp
-  opm/autodiff/twophase/FullyImplicitCompressibleSolver.hpp
-  opm/autodiff/twophase/SimulatorFullyImplicitCompressible.hpp
+#  opm/autodiff/twophase/FullyImplicitCompressibleSolver.hpp
+#  opm/autodiff/twophase/SimulatorFullyImplicitCompressible.hpp
+#=======
+	opm/autodiff/WellDensitySegmented.hpp
+#>>>>>>> opm/master
 	)

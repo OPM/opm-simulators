@@ -91,10 +91,13 @@ namespace Opm {
         accumSource(const int phase,
                     const std::vector<ADB>& kr,
                     const std::vector<double>& src) const;
+		std::vector<ADB>
+		computePressures(const SolutionState& state) const;
         ADB
         computeMassFlux(const int               phase,
                         const V&                trans,
                         const std::vector<ADB>& kr,
+						const ADB&				phasePress,
                         const SolutionState&    state);
         double
         residualNorm() const;

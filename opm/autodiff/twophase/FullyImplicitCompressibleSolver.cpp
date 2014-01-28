@@ -29,6 +29,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -578,7 +579,7 @@ namespace {
             if (well_controls_get_current_type(wc) == BHP) {
                 bhp_targets[w] = well_controls_get_current_target(wc);
                 rate_targets[w] = -1e100;
-            } else if (wc->type[wc->current] == SURFACE_RATE) {
+            } else if (well_controls_get_current_type(wc) == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
                 rate_targets[w] = well_controls_get_current_target(wc);
                 {
@@ -833,11 +834,12 @@ namespace {
                                                 const std::vector<int>& cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
+        const std::vector<PhasePresence> cond(grid_.number_of_cells, 0.0);
         switch (phase) {
         case Water:
             return fluid_.muWat(p, cells);
         case Oil: {
-            return fluid_.muOil(p, null, cells);
+            return fluid_.muOil(p, null, cond, cells);
         }
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);

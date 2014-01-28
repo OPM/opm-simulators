@@ -350,8 +350,9 @@ namespace {
         // -------- Mass balance equations --------
         const V trans = subset(transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
+		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-            const ADB mflux = computeMassFlux(phase, trans, kr, state);
+            const ADB mflux = computeMassFlux(phase, trans, kr, press[phase], state);
 //            ADB source = accumSource(phase, kr, src);
             residual_.mass_balance[phase] =
                 pvdt * (state.saturation[phase] - old_state.saturation[phase])
@@ -458,7 +459,7 @@ namespace {
             if (well_controls_get_current_type(wc) == BHP) {
                 bhp_targets[w] = well_controls_get_current_target(wc);
                 rate_targets[w] = -1e100;
-            } else if (wc->type[wc->current] == SURFACE_RATE) {
+            } else if (well_controls_get_current_type(wc) == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
                 rate_targets[w] = well_controls_get_current_target(wc);
                 {
@@ -709,6 +710,24 @@ namespace {
     
     
     
+    std::vector<ADB>
+    FullyImplicitTwoPhaseSolver::
+	computePressures(const SolutionState& state) const
+    {
+        const ADB sw = state.saturation[0];
+        const ADB so = state.saturation[1];
+
+        // convert the pressure offsets to the capillary pressures
+        std::vector<ADB> pressure = fluid_.capPress(sw, so, cells_);
+		pressure[0] = pressure[0] - pressure[1];
+
+        // add the total pressure to the capillary pressures
+        for (int phaseIdx = 0; phaseIdx < 2; ++phaseIdx) {
+            pressure[phaseIdx] += state.pressure;
+        }
+
+        return pressure;
+    }
     
     
     
@@ -718,6 +737,7 @@ namespace {
     FullyImplicitTwoPhaseSolver::computeMassFlux(const int               phase ,
                                                  const V&                trans,
                                                  const std::vector<ADB>& kr    ,
+												 const ADB&				 phasePress,
                                                  const SolutionState&    state )
     {
 //        const ADB tr_mult = transMult(state.pressure);
@@ -733,7 +753,7 @@ namespace {
             z[c] = grid_.cell_centroids[c * 3 + 2];
         }
 
-        const ADB dp = ops_.ngrad * state.pressure
+        const ADB dp = ops_.ngrad * phasePress
                        - gravity_[2] * (rhoavg * (ops_.ngrad * z.matrix()));
 
         const ADB head = trans * dp;
