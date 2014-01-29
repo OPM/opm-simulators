@@ -7,6 +7,7 @@ void
 BlackoilState::init(const UnstructuredGrid& g, int num_phases) {
    SimulatorState::init(g, num_phases);
    gor_.resize(g.number_of_cells, 0.) ;
+   rv_.resize(g.number_of_cells,0.);
    // surfvol_ intentionally empty, left to initBlackoilSurfvol
 }
 
