@@ -353,7 +353,6 @@ namespace Opm
         assert(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
-            printf("New version; num_perfs %d \n", num_perfs);
             if (well_data[w].reference_bhp_depth < 0.0) {
                 // It was defaulted. Set reference depth to minimum perforation depth.
                 double min_depth = 1e100;
@@ -944,7 +943,6 @@ namespace Opm
         assert(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
-            printf("Old version; num_perfs %d \n", num_perfs);
             if (well_data[w].reference_bhp_depth < 0.0) {
                 // It was defaulted. Set reference depth to minimum perforation depth.
                 double min_depth = 1e100;
