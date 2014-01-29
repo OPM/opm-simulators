@@ -315,9 +315,9 @@ namespace Opm
                 CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
                 for (size_t c=0; c<completionSet->size(); c++) {
                     CompletionConstPtr completion = completionSet->get(c);
-                    int i = completion->getI() - 1;
-                    int j = completion->getJ() - 1;
-                    int k = completion->getK() - 1;
+                    int i = completion->getI();
+                    int j = completion->getJ();
+                    int k = completion->getK();
                     int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
                     std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
                     if (cgit == cartesian_to_compressed.end()) {
@@ -337,95 +337,13 @@ namespace Opm
                         }
                         std::array<double, 3> cubical = getCubeDim(grid, cell);
                         const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
-                        pd.well_index = computeWellIndex(radius, cubical, cell_perm,
-                                                         completion->getDiameter());
+                        pd.well_index = computeWellIndex(radius, cubical, cell_perm, completion->getDiameter());
                     }
                     wellperf_data[well_index].push_back(pd);
                 }
             }
             well_index++;
         }
-
-
-
-
-
-//        // Get COMPDAT data
-//        // It is *not* allowed to have multiple lines corresponding to
-//        // the same perforation!
-//        const COMPDAT& compdat = deck.getCOMPDAT();
-//        const int num_compdat  = compdat.compdat.size();
-//        for (int kw = 0; kw < num_compdat; ++kw) {
-//            // Extract well name, or the part of the well name that
-//            // comes before the '*'.
-//            std::string name = compdat.compdat[kw].well_;
-//            std::string::size_type len = name.find('*');
-//            if (len != std::string::npos) {
-//                name = name.substr(0, len);
-//            }
-//            // Look for well with matching name.
-//            bool found = false;
-//            for (int wix = 0; wix < num_wells; ++wix) {
-//                if (well_names[wix].compare(0,len, name) == 0) { // equal
-//                    // We have a matching name.
-//                    int ix = compdat.compdat[kw].grid_ind_[0] - 1;
-//                    int jy = compdat.compdat[kw].grid_ind_[1] - 1;
-//                    int kz1 = compdat.compdat[kw].grid_ind_[2] - 1;
-//                    int kz2 = compdat.compdat[kw].grid_ind_[3] - 1;
-
-//                    WellConstPtr well = schedule->getWell(well_names[wix]);
-//                    if (ix < 0) {
-//                        // Defaulted I location.  Extract from WELSPECS.
-//                        ix = well->getHeadI() - 1;
-//                    }
-//                    if (jy < 0) {
-//                        // Defaulted J location.  Extract from WELSPECS.
-//                        jy = well->getHeadJ() - 1;
-//                    }
-//                    if (kz1 < 0) {
-//                        // Defaulted KZ1.  Use top layer.
-//                        kz1 = 0;
-//                    }
-//                    if (kz2 < 0) {
-//                        // Defaulted KZ2.  Use bottom layer.
-//                        kz2 = cpgdim[2] - 1;
-//                    }
-
-//                    for (int kz = kz1; kz <= kz2; ++kz) {
-//                        int cart_grid_indx = ix + cpgdim[0]*(jy + cpgdim[1]*kz);
-//                        std::map<int, int>::const_iterator cgit =
-//                            cartesian_to_compressed.find(cart_grid_indx);
-//                        if (cgit == cartesian_to_compressed.end()) {
-//                            OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << ix << ' ' << jy << ' '
-//                                  << kz << " not found in grid (well = " << name << ')');
-//                        }
-//                        int cell = cgit->second;
-//                        PerfData pd;
-//                        pd.cell = cell;
-//                        if (compdat.compdat[kw].connect_trans_fac_ > 0.0) {
-//                            pd.well_index = compdat.compdat[kw].connect_trans_fac_;
-//                        } else {
-//                            double radius = 0.5*compdat.compdat[kw].diameter_;
-//                            if (radius <= 0.0) {
-//                                radius = 0.5*unit::feet;
-//                                OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
-//                            }
-//                            std::array<double, 3> cubical = getCubeDim(grid, cell);
-//                            const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
-//                            pd.well_index = computeWellIndex(radius, cubical, cell_perm,
-//                                                             compdat.compdat[kw].skin_factor_);
-//                        }
-//                        wellperf_data[wix].push_back(pd);
-//                    }
-//                    found = true;
-//                    break;
-//                }
-//            }
-//            if (!found) {
-//                OPM_THROW(std::runtime_error, "Undefined well name: " << compdat.compdat[kw].well_
-//                      << " in COMPDAT");
-//            }
-//        }
 
         // Set up reference depths that were defaulted. Count perfs.
 
@@ -435,6 +353,7 @@ namespace Opm
         assert(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
+            printf("New version; num_perfs %d \n", num_perfs);
             if (well_data[w].reference_bhp_depth < 0.0) {
                 // It was defaulted. Set reference depth to minimum perforation depth.
                 double min_depth = 1e100;
@@ -1025,6 +944,7 @@ namespace Opm
         assert(grid.dimensions == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
+            printf("Old version; num_perfs %d \n", num_perfs);
             if (well_data[w].reference_bhp_depth < 0.0) {
                 // It was defaulted. Set reference depth to minimum perforation depth.
                 double min_depth = 1e100;

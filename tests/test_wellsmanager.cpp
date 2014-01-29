@@ -61,7 +61,7 @@ void wells_static_check(const Wells* wells) {
 }
 
 
-/* 
+/*
    The number of controls is determined by looking at which elements
    have been given explicit - non-default - values in the WCONxxxx
    keyword. Is that at all interesting?
@@ -71,7 +71,7 @@ void wells_static_check(const Wells* wells) {
 void check_controls_epoch0( struct WellControls ** ctrls) {
     // The injector
     {
-        const struct WellControls * ctrls0 = ctrls[0];        
+        const struct WellControls * ctrls0 = ctrls[0];
         BOOST_CHECK_EQUAL( 3 , well_controls_get_num(ctrls0));   // The number of controls for the injector == 3??
 
         BOOST_CHECK_EQUAL( SURFACE_RATE   , well_controls_iget_type(ctrls0 , 0) );
@@ -87,7 +87,7 @@ void check_controls_epoch0( struct WellControls ** ctrls) {
         BOOST_CHECK_EQUAL( 0 , well_controls_get_current(ctrls0) );
         
         // The phase distribution in the active target
-        { 
+        {
              const double * distr = well_controls_iget_distr( ctrls0 , 0 );
              BOOST_CHECK_EQUAL( 0 , distr[0] );  // Water
              BOOST_CHECK_EQUAL( 0 , distr[1] );  // Oil
@@ -110,7 +110,7 @@ void check_controls_epoch0( struct WellControls ** ctrls) {
         BOOST_CHECK_EQUAL( 0 , well_controls_get_current(ctrls1));
 
         // The phase distribution in the active target
-       { 
+       {
             const double * distr = well_controls_iget_distr( ctrls1 , 0 );
             BOOST_CHECK_EQUAL( 0 , distr[0] );  // Water
             BOOST_CHECK_EQUAL( 1 , distr[1] );  // Oil
@@ -125,7 +125,7 @@ void check_controls_epoch0( struct WellControls ** ctrls) {
 void check_controls_epoch1( struct WellControls ** ctrls) {
     // The injector
     {
-        const struct WellControls * ctrls0 = ctrls[0];        
+        const struct WellControls * ctrls0 = ctrls[0];
         BOOST_CHECK_EQUAL( 3 , well_controls_get_num(ctrls0));   // The number of controls for the injector == 3??
 
         BOOST_CHECK_EQUAL( SURFACE_RATE   , well_controls_iget_type(ctrls0 , 0 ));
@@ -140,7 +140,7 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
         // Which control is active
         BOOST_CHECK_EQUAL( 1 , well_controls_get_current(ctrls0));
 
-        { 
+        {
             const double * distr = well_controls_iget_distr( ctrls0 , 1 );
             BOOST_CHECK_EQUAL( 1 , distr[0] );  // Water
             BOOST_CHECK_EQUAL( 0 , distr[1] );  // Oil
@@ -164,7 +164,7 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
         // Which control is active
         BOOST_CHECK_EQUAL( 1 , well_controls_get_current(ctrls1) );
 
-        { 
+        {
             const double * distr = well_controls_iget_distr( ctrls1 , 1 );
             BOOST_CHECK_EQUAL( 1 , distr[0] );  // Water
             BOOST_CHECK_EQUAL( 1 , distr[1] );  // Oil
