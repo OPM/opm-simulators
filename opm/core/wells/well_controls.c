@@ -293,19 +293,38 @@ well_controls_add_new(enum WellControlType type , double target , const double *
 
 
 bool
-well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2)
+well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2 , bool verbose)
 /* ---------------------------------------------------------------------- */
 {
     bool are_equal = true;
-    are_equal = (ctrls1->num == ctrls2->num);
-    are_equal = are_equal && (ctrls1->number_of_phases == ctrls2->number_of_phases);
+
+    if (ctrls1->num !=  ctrls2->num) {
+        are_equal = false;
+        if (verbose)
+            printf("ctrls1->num:%d    ctrls2->num:%d \n",ctrls1->num , ctrls2->num);
+    }
+
+    if (ctrls1->number_of_phases !=  ctrls2->number_of_phases) {
+        are_equal = false;
+        if (verbose)
+            printf("ctrls1->number_of_phases:%d    ctrls2->number_of_phases:%d \n",ctrls1->number_of_phases , ctrls2->number_of_phases);
+    }
+
     if (!are_equal) {
         return are_equal;
     }
 
-    are_equal = are_equal && (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) == 0);
-    are_equal = are_equal && (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) == 0);
-    are_equal = are_equal && (memcmp(ctrls1->distr, ctrls2->distr, ctrls1->num * ctrls1->number_of_phases * sizeof *ctrls1->distr ) == 0);
+    if (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) != 0) {
+        are_equal = false;
+        if (verbose) 
+            printf("The ->type vectors are different \n");
+    }
+
+    if (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) != 0) {
+        are_equal = false;
+        if (verbose) 
+            printf("The ->target vectors are different \n");
+    }
     are_equal = are_equal && (ctrls1->cpty == ctrls2->cpty);
 
     return are_equal;

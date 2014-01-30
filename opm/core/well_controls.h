@@ -34,10 +34,10 @@ enum WellControlType  {
     SURFACE_RATE      /**< Well constrained by surface volume flow rate */
 };
 
-struct WellControls;
+struct WellControls; 
 
 bool 
-well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2);
+well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2 , bool verbose);
 
 struct WellControls * 
 well_controls_create(void);
