@@ -453,7 +453,7 @@ namespace Opm
                 int ok = 1;
                 int control_pos[5] = { -1, -1, -1, -1, -1 };
 
-                if (well->getSurfaceInjectionRate( timeStep ) >= 0.0) {
+                if (well->hasInjectionControl(timeStep , WellInjector::RATE)) {
                     control_pos[InjectionControl::RATE] = well_controls_get_num(w_->ctrls[well_index]);
                     double distr[3] = { 0.0, 0.0, 0.0 };
                     WellInjector::TypeEnum injectorType = well->getInjectorType(timeStep);
@@ -473,7 +473,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && well->getReservoirInjectionRate(timeStep) >= 0.0) {
+                if (ok && well->hasInjectionControl(timeStep , WellInjector::RESV)) {
                     control_pos[InjectionControl::RESV] = well_controls_get_num(w_->ctrls[well_index]);
                     double distr[3] = { 0.0, 0.0, 0.0 };
                     WellInjector::TypeEnum injectorType = well->getInjectorType(timeStep);
@@ -493,7 +493,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && well->getBHPLimit(timeStep) > 0.0) {
+                if (ok && well->hasInjectionControl(timeStep , WellInjector::BHP)) {
                     control_pos[InjectionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]);
                     ok = append_well_controls(BHP, 
                                               well->getBHPLimit(timeStep),
@@ -502,7 +502,7 @@ namespace Opm
                                               w_);
                 }
               
-                if (ok && well->getTHPLimit(timeStep) > 0.0) {
+                if (ok && well->hasInjectionControl(timeStep , WellInjector::THP)) {
                     OPM_THROW(std::runtime_error, "We cannot handle THP limit for well " << well_names[well_index]);
                 }
 
