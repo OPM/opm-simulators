@@ -30,6 +30,8 @@
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+
 #include <array>
 #include <algorithm>
 #include <cassert>
@@ -142,6 +144,25 @@ namespace
                       << control << " in input file");
             }
         }
+
+        Mode mode(Opm::WellInjector::ControlModeEnum controlMode)
+        {
+            switch ( controlMode  ) {
+            case Opm::WellInjector::GRUP:
+                return GRUP;
+            case Opm::WellInjector::RESV:
+                return RESV;
+            case Opm::WellInjector::RATE:
+                return RATE;
+            case Opm::WellInjector::THP:
+                return THP;
+            case Opm::WellInjector::BHP:
+                return BHP;
+            default:
+                throw std::invalid_argument("unhandled enum value");
+            }
+        }
+
     } // namespace InjectionControl
 
 
@@ -437,117 +458,112 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "Failed adding well " << well_names[w] << " to Wells data structure.");
             }
         }
+        
+        
+        well_index = 0;
+        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
+            WellConstPtr well = (*wellIter);
+            
+            if (well->isInjector(timeStep)) {
+                clear_well_controls(well_index, w_);
+                int ok = 1;
+                int control_pos[5] = { -1, -1, -1, -1, -1 };
 
-        // Get WCONINJE data, add injection controls to wells.
-        // It is allowed to have multiple lines corresponding to
-        // the same well, in which case the last one encountered
-        // is the one used.
-        if (deck.hasField("WCONINJE")) {
-            const WCONINJE& wconinjes = deck.getWCONINJE();
-            const int num_wconinjes = wconinjes.wconinje.size();
-            for (int kw = 0; kw < num_wconinjes; ++kw) {
-                const WconinjeLine& wci_line = wconinjes.wconinje[kw];
-                // Extract well name, or the part of the well name that
-                // comes before the '*'.
-                std::string name = wci_line.well_;
-                std::string::size_type len = name.find('*');
-                if (len != std::string::npos) {
-                    name = name.substr(0, len);
+                if (well->getSurfaceInjectionRate( timeStep ) >= 0.0) {
+                    control_pos[InjectionControl::RATE] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    WellInjector::TypeEnum injectorType = well->getInjectorType(timeStep);
+                    
+                    if (injectorType == WellInjector::TypeEnum::WATER) {
+                        distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                    } else if (injectorType == WellInjector::TypeEnum::OIL) {
+                        distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    } else if (injectorType == WellInjector::TypeEnum::GAS) {
+                        distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                    } 
+
+                    ok = append_well_controls(SURFACE_RATE, 
+                                              well->getSurfaceInjectionRate( timeStep ) ,  
+                                              distr, 
+                                              well_index, 
+                                              w_);
                 }
-                bool well_found = false;
-                for (int wix = 0; wix < num_wells; ++wix) {
-                    if (well_names[wix].compare(0,len, name) == 0) { //equal
-                        well_found = true;
-                        assert(well_data[wix].type == w_->type[wix]);
-                        if (well_data[wix].type != INJECTOR) {
-                            OPM_THROW(std::runtime_error, "Found WCONINJE entry for a non-injector well: " << well_names[wix]);
-                        }
 
-                        // Add all controls that are present in well.
-                        // First we must clear existing controls, in case the
-                        // current WCONINJE line is modifying earlier controls.
-                        clear_well_controls(wix, w_);
-                        int ok = 1;
-                        int control_pos[5] = { -1, -1, -1, -1, -1 };
-                        if (ok && wci_line.surface_flow_max_rate_ >= 0.0) {
-                            control_pos[InjectionControl::RATE] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            if (wci_line.injector_type_ == "WATER") {
-                                distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            } else if (wci_line.injector_type_ == "OIL") {
-                                distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            } else if (wci_line.injector_type_ == "GAS") {
-                                distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                            } else {
-                                OPM_THROW(std::runtime_error, "Injector type " << wci_line.injector_type_ << " not supported."
-                                      "WellsManager only supports WATER, OIL and GAS injector types.");
-                            }
-                            ok = append_well_controls(SURFACE_RATE, wci_line.surface_flow_max_rate_,
-                                                      distr, wix, w_);
-                        }
-                        if (ok && wci_line.reservoir_flow_max_rate_ >= 0.0) {
-                            control_pos[InjectionControl::RESV] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            if (wci_line.injector_type_ == "WATER") {
-                                distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            } else if (wci_line.injector_type_ == "OIL") {
-                                distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            } else if (wci_line.injector_type_ == "GAS") {
-                                distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                            } else {
-                                OPM_THROW(std::runtime_error, "Injector type " << wci_line.injector_type_ << " not supported."
-                                      "WellsManager only supports WATER, OIL and GAS injector types.");
-                            }
-                            ok = append_well_controls(RESERVOIR_RATE, wci_line.reservoir_flow_max_rate_,
-                                                      distr, wix, w_);
-                        }
-                        if (ok && wci_line.BHP_limit_ > 0.0) {
-                            control_pos[InjectionControl::BHP] = well_controls_get_num(w_->ctrls[wix]);
-                            ok = append_well_controls(BHP, wci_line.BHP_limit_,
-                                                      NULL, wix, w_);
-                        }
-                        if (ok && wci_line.THP_limit_ > 0.0) {
-                            OPM_THROW(std::runtime_error, "We cannot handle THP limit for well " << well_names[wix]);
-                        }
-                        if (!ok) {
-                            OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[wix]);
-                        }
-                        InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
-                        int cpos = control_pos[mode];
-                        if (cpos == -1 && mode != InjectionControl::GRUP) {
-                            OPM_THROW(std::runtime_error, "Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
-                        }
-                        // We need to check if the well is shut or not
-                        if (wci_line.open_shut_flag_ == "SHUT") {
-                            cpos = ~cpos;
-                        }
-                        set_current_control(wix, cpos, w_);
+                if (ok && well->getReservoirInjectionRate(timeStep) >= 0.0) {
+                    control_pos[InjectionControl::RESV] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    WellInjector::TypeEnum injectorType = well->getInjectorType(timeStep);
+                    
+                    if (injectorType == WellInjector::TypeEnum::WATER) {
+                        distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                    } else if (injectorType == WellInjector::TypeEnum::OIL) {
+                        distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    } else if (injectorType == WellInjector::TypeEnum::GAS) {
+                        distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                    } 
+                    
+                    ok = append_well_controls(RESERVOIR_RATE, 
+                                              well->getReservoirInjectionRate( timeStep ),
+                                              distr, 
+                                              well_index, 
+                                              w_);
+                }
 
-                        // Set well component fraction.
-                        double cf[3] = { 0.0, 0.0, 0.0 };
-                        if (wci_line.injector_type_[0] == 'W') {
-                            if (!pu.phase_used[BlackoilPhases::Aqua]) {
-                                OPM_THROW(std::runtime_error, "Water phase not used, yet found water-injecting well.");
-                            }
-                            cf[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                        } else if (wci_line.injector_type_[0] == 'O') {
-                            if (!pu.phase_used[BlackoilPhases::Liquid]) {
-                                OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil-injecting well.");
-                            }
-                            cf[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                        } else if (wci_line.injector_type_[0] == 'G') {
-                            if (!pu.phase_used[BlackoilPhases::Vapour]) {
-                                OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas-injecting well.");
-                            }
-                            cf[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                        }
-                        std::copy(cf, cf + pu.num_phases, w_->comp_frac + wix*pu.num_phases);
+                if (ok && well->getBHPLimit(timeStep) > 0.0) {
+                    control_pos[InjectionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]);
+                    ok = append_well_controls(BHP, 
+                                              well->getBHPLimit(timeStep),
+                                              NULL, 
+                                              well_index, 
+                                              w_);
+                }
+              
+                if (ok && well->getTHPLimit(timeStep) > 0.0) {
+                    OPM_THROW(std::runtime_error, "We cannot handle THP limit for well " << well_names[well_index]);
+                }
+
+
+                if (!ok) {
+                    OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[well_index]);
+                }
+
+                
+                {
+                    InjectionControl::Mode mode = InjectionControl::mode( well->getInjectorControlMode(timeStep) );
+                    int cpos = control_pos[mode];
+                    if (cpos == -1 && mode != InjectionControl::GRUP) {
+                        OPM_THROW(std::runtime_error, "Control not specified in well " << well_names[well_index]);
                     }
+                    
+                    // We need to check if the well is shut or not
+                    if (well->getStatus( timeStep ) == WellCommon::SHUT) {
+                        cpos = ~cpos;
+                    }
+                    set_current_control(well_index, cpos, w_);
                 }
-                if (!well_found) {
-                    OPM_THROW(std::runtime_error, "Undefined well name: " << wci_line.well_
-                          << " in WCONINJE");
+
+                
+                // Set well component fraction.
+                double cf[3] = { 0.0, 0.0, 0.0 };
+                if (well->getInjectorType(timeStep) == WellInjector::WATER) {
+                    if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                        OPM_THROW(std::runtime_error, "Water phase not used, yet found water-injecting well.");
+                    }
+                    cf[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                } else if (well->getInjectorType(timeStep) == WellInjector::OIL) {
+                    if (!pu.phase_used[BlackoilPhases::Liquid]) {
+                        OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil-injecting well.");
+                    }
+                    cf[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                } else if (well->getInjectorType(timeStep) == WellInjector::GAS) {
+                    if (!pu.phase_used[BlackoilPhases::Vapour]) {
+                        OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas-injecting well.");
+                    }
+                    cf[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                 }
+                std::copy(cf, cf + pu.num_phases, w_->comp_frac + well_index*pu.num_phases);
+                
+                well_index++;
             }
         }
 
