@@ -39,13 +39,13 @@ namespace Opm
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
         // Discover phase usage.
-        if (eclipseState->hasPhase(PhaseEnum::WATER)) {
+        if (eclipseState->hasPhase(Phase::PhaseEnum::WATER)) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
         }
-        if (eclipseState->hasPhase(PhaseEnum::OIL)) {
+        if (eclipseState->hasPhase(Phase::PhaseEnum::OIL)) {
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
-        if (eclipseState->hasPhase(PhaseEnum::GAS)) {
+        if (eclipseState->hasPhase(Phase::PhaseEnum::GAS)) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;
