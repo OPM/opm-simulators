@@ -105,6 +105,33 @@ namespace
                       << control << " in input file");
             }
         }
+
+
+        Mode mode(Opm::WellProducer::ControlModeEnum controlMode)
+        {
+            switch( controlMode ) {
+            case Opm::WellProducer::ORAT:
+                return ORAT;
+            case Opm::WellProducer::WRAT:
+                return WRAT;
+            case Opm::WellProducer::GRAT:
+                return GRAT;
+            case Opm::WellProducer::LRAT:
+                return LRAT;
+            case Opm::WellProducer::CRAT:
+                return CRAT;
+            case Opm::WellProducer::RESV:
+                return RESV;
+            case Opm::WellProducer::BHP:
+                return BHP;
+            case Opm::WellProducer::THP:
+                return THP;
+            case Opm::WellProducer::GRUP:
+                return GRUP;
+            default:
+                throw std::invalid_argument("unhandled enum value");
+            }
+        }
     } // namespace ProductionControl
 
 
@@ -521,117 +548,116 @@ namespace Opm
                 std::copy(cf, cf + pu.num_phases, w_->comp_frac + well_index*pu.num_phases);
                 
             }
+
+            if (well->isProducer(timeStep)) {
+                // Add all controls that are present in well.
+                // First we must clear existing controls, in case the
+                // current WCONPROD line is modifying earlier controls.
+                clear_well_controls(well_index, w_);
+                int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+                int ok = 1;
+                if (ok && well->hasProductionControl(timeStep , WellProducer::ORAT)) {
+                    if (!pu.phase_used[BlackoilPhases::Liquid]) {
+                        OPM_THROW(std::runtime_error, "Oil phase not active and ORAT control specified.");
+                    }
+
+                    control_pos[ProductionControl::ORAT] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    ok = append_well_controls(SURFACE_RATE, 
+                                              -well->getOilRate( timeStep ),
+                                              distr, 
+                                               well_index, 
+                                              w_);
+                }
+                
+                if (ok && well->hasProductionControl(timeStep , WellProducer::WRAT)) {
+                    if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                        OPM_THROW(std::runtime_error, "Water phase not active and WRAT control specified.");
+                    }
+                    control_pos[ProductionControl::WRAT] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                    ok = append_well_controls(SURFACE_RATE, 
+                                              -well->getWaterRate(timeStep),
+                                              distr, 
+                                              well_index, 
+                                              w_);
+                }
+
+                if (ok && well->hasProductionControl(timeStep , WellProducer::GRAT)) {
+                    if (!pu.phase_used[BlackoilPhases::Vapour]) {
+                        OPM_THROW(std::runtime_error, "Gas phase not active and GRAT control specified.");
+                    }
+                    control_pos[ProductionControl::GRAT] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                    ok = append_well_controls(SURFACE_RATE, 
+                                              -well->getGasRate( timeStep ),
+                                              distr, 
+                                              well_index, 
+                                              w_);
+                }
+
+                if (ok && well->hasProductionControl(timeStep , WellProducer::LRAT)) {
+                    if (!pu.phase_used[BlackoilPhases::Aqua]) {
+                        OPM_THROW(std::runtime_error, "Water phase not active and LRAT control specified.");
+                    }
+                    if (!pu.phase_used[BlackoilPhases::Liquid]) {
+                        OPM_THROW(std::runtime_error, "Oil phase not active and LRAT control specified.");
+                    }
+                    control_pos[ProductionControl::LRAT] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 0.0, 0.0, 0.0 };
+                    distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                    distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    ok = append_well_controls(SURFACE_RATE, 
+                                              -well->getLiquidRate(timeStep),
+                                              distr, 
+                                              well_index, 
+                                              w_);
+                }
+                
+                if (ok && well->hasProductionControl(timeStep , WellProducer::RESV)) {
+                    control_pos[ProductionControl::RESV] = well_controls_get_num(w_->ctrls[well_index]);
+                    double distr[3] = { 1.0, 1.0, 1.0 };
+                    ok = append_well_controls(RESERVOIR_RATE, 
+                                              -well->getResVRate(timeStep),
+                                              distr, 
+                                              well_index, 
+                                              w_);
+                }
+
+                if (ok && well->hasProductionControl(timeStep , WellProducer::BHP)) {
+                    control_pos[ProductionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]);
+                    ok = append_well_controls(BHP, 
+                                              well->getBHPLimit( timeStep ) , 
+                                              NULL, 
+                                              well_index, 
+                                              w_);
+                }
+                
+                if (ok && well->hasProductionControl(timeStep , WellProducer::THP)) {
+                    OPM_THROW(std::runtime_error, "We cannot handle THP limit for well " << well_names[well_index]);
+                }
+
+                if (!ok) {
+                    OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[well_index]);
+                }
+
+                ProductionControl::Mode mode = ProductionControl::mode(well->getProducerControlMode(timeStep));
+                int cpos = control_pos[mode];
+                if (cpos == -1 && mode != ProductionControl::GRUP) {
+                    OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
+                }
+                // If it's shut, we complement the cpos
+                if (well->getStatus(timeStep) == WellCommon::SHUT) {
+                    cpos = ~cpos; // So we can easily retrieve the cpos later
+                }
+                set_current_control(well_index, cpos, w_);
+            }
             well_index++;
         }
-
-        // Get WCONPROD data
-        // It is allowed to have multiple lines corresponding to
-        // the same well, in which case the last one encountered
-        // is the one used.
-        if (deck.hasField("WCONPROD")) {
-            const WCONPROD& wconprods = deck.getWCONPROD();
-            const int num_wconprods   = wconprods.wconprod.size();
-            for (int kw = 0; kw < num_wconprods; ++kw) {
-                const WconprodLine& wcp_line = wconprods.wconprod[kw];
-                std::string name = wcp_line.well_;
-                std::string::size_type len = name.find('*');
-                if (len != std::string::npos) {
-                    name = name.substr(0, len);
-                }
-                bool well_found = false;
-                for (int wix = 0; wix < num_wells; ++wix) {
-                    if (well_names[wix].compare(0,len, name) == 0) { //equal
-                        well_found = true;
-                        assert(well_data[wix].type == w_->type[wix]);
-                        if (well_data[wix].type != PRODUCER) {
-                            std::cout << "Looking at well: " << well_names[wix] << std::endl;
-                            OPM_THROW(std::runtime_error, "Found WCONPROD entry for a non-producer well: " << well_names[wix]);
-                        }
-                        // Add all controls that are present in well.
-                        // First we must clear existing controls, in case the
-                        // current WCONPROD line is modifying earlier controls.
-                        clear_well_controls(wix, w_);
-                        int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
-                        int ok = 1;
-                        if (ok && wcp_line.oil_max_rate_ >= 0.0) {
-                            if (!pu.phase_used[BlackoilPhases::Liquid]) {
-                                OPM_THROW(std::runtime_error, "Oil phase not active and ORAT control specified.");
-                            }
-                            control_pos[ProductionControl::ORAT] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, -wcp_line.oil_max_rate_,
-                                                      distr, wix, w_);
-                        }
-                        if (ok && wcp_line.water_max_rate_ >= 0.0) {
-                            if (!pu.phase_used[BlackoilPhases::Aqua]) {
-                                OPM_THROW(std::runtime_error, "Water phase not active and WRAT control specified.");
-                            }
-                            control_pos[ProductionControl::WRAT] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, -wcp_line.water_max_rate_,
-                                                      distr, wix, w_);
-                        }
-                        if (ok && wcp_line.gas_max_rate_ >= 0.0) {
-                            if (!pu.phase_used[BlackoilPhases::Vapour]) {
-                                OPM_THROW(std::runtime_error, "Gas phase not active and GRAT control specified.");
-                            }
-                            control_pos[ProductionControl::GRAT] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            distr[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, -wcp_line.gas_max_rate_,
-                                                      distr, wix, w_);
-                        }
-                        if (ok && wcp_line.liquid_max_rate_ >= 0.0) {
-                            if (!pu.phase_used[BlackoilPhases::Aqua]) {
-                                OPM_THROW(std::runtime_error, "Water phase not active and LRAT control specified.");
-                            }
-                            if (!pu.phase_used[BlackoilPhases::Liquid]) {
-                                OPM_THROW(std::runtime_error, "Oil phase not active and LRAT control specified.");
-                            }
-                            control_pos[ProductionControl::LRAT] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 0.0, 0.0, 0.0 };
-                            distr[pu.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                            distr[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                            ok = append_well_controls(SURFACE_RATE, -wcp_line.liquid_max_rate_,
-                                                      distr, wix, w_);
-                        }
-                        if (ok && wcp_line.reservoir_flow_max_rate_ >= 0.0) {
-                            control_pos[ProductionControl::RESV] = well_controls_get_num(w_->ctrls[wix]);
-                            double distr[3] = { 1.0, 1.0, 1.0 };
-                            ok = append_well_controls(RESERVOIR_RATE, -wcp_line.reservoir_flow_max_rate_,
-                                                 distr, wix, w_);
-                        }
-                        if (ok && wcp_line.BHP_limit_ > 0.0) {
-                            control_pos[ProductionControl::BHP] = well_controls_get_num(w_->ctrls[wix]);
-                            ok = append_well_controls(BHP, wcp_line.BHP_limit_,
-                                                 NULL, wix, w_);
-                        }
-                        if (ok && wcp_line.THP_limit_ > 0.0) {
-                            OPM_THROW(std::runtime_error, "We cannot handle THP limit for well " << well_names[wix]);
-                        }
-                        if (!ok) {
-                            OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[wix]);
-                        }
-                        ProductionControl::Mode mode = ProductionControl::mode(wcp_line.control_mode_);
-                        int cpos = control_pos[mode];
-                        if (cpos == -1 && mode != ProductionControl::GRUP) {
-                            OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[wix]);
-                        }
-                        // If it's shut, we complement the cpos
-                        if (wcp_line.open_shut_flag_ == "SHUT") {
-                            cpos = ~cpos; // So we can easily retrieve the cpos later
-                        }
-                        set_current_control(wix, cpos, w_);
-                    }
-                }
-                if (!well_found) {
-                    OPM_THROW(std::runtime_error, "Undefined well name: " << wcp_line.well_
-                          << " in WCONPROD");
-                }
-            }
-        }
+        
 
         // Get WELTARG data
         if (deck.hasField("WELTARG")) {
