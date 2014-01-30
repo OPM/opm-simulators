@@ -315,6 +315,7 @@ namespace Opm
                                                               WellState& well_state)
     {
         eclipseWriter_.writeInit(timer, state, well_state);
+        eclipseWriter_.writeTimeStep(timer, state, well_state);
 
         // Initialisation.
         std::vector<double> porevol;
