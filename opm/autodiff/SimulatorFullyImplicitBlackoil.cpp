@@ -315,6 +315,7 @@ namespace Opm
                                                               WellState& well_state)
     {
         eclipseWriter_.writeInit(timer, state, well_state);
+        eclipseWriter_.writeTimeStep(timer, state, well_state);
 
         // Initialisation.
         std::vector<double> porevol;
@@ -332,26 +333,10 @@ namespace Opm
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-#if 0
-        // These must be changed for three-phase.
-        double init_surfvol[2] = { 0.0 };
-        double inplace_surfvol[2] = { 0.0 };
-        double tot_injected[2] = { 0.0 };
-        double tot_produced[2] = { 0.0 };
-        Opm::computeSaturatedVol(porevol, state.surfacevol(), init_surfvol);
-        Opm::Watercut watercut;
-        watercut.push(0.0, 0.0, 0.0);
-        Opm::WellReport wellreport;
-#endif
         std::vector<double> fractional_flows;
         std::vector<double> well_resflows_phase;
         if (wells_) {
             well_resflows_phase.resize((wells_->number_of_phases)*(wells_->number_of_wells), 0.0);
-#if 0
-            wellreport.push(props_, *wells_,
-                            state.pressure(), state.surfacevol(), state.saturation(),
-                            0.0, well_state.bhp(), well_state.perfRates());
-#endif
         }
         std::fstream tstep_os;
         if (output_) {
@@ -423,56 +408,6 @@ namespace Opm
                 computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
 
-            // The reports below are geared towards two phases only.
-#if 0
-            // Report mass balances.
-            double injected[2] = { 0.0 };
-            double produced[2] = { 0.0 };
-            Opm::computeInjectedProduced(props_, state, transport_src, stepsize,
-                                         injected, produced);
-            Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
-            tot_injected[0] += injected[0];
-            tot_injected[1] += injected[1];
-            tot_produced[0] += produced[0];
-            tot_produced[1] += produced[1];
-            std::cout.precision(5);
-            const int width = 18;
-            std::cout << "\nMass balance report.\n";
-            std::cout << "    Injected surface volumes:      "
-                      << std::setw(width) << injected[0]
-                      << std::setw(width) << injected[1] << std::endl;
-            std::cout << "    Produced surface volumes:      "
-                      << std::setw(width) << produced[0]
-                      << std::setw(width) << produced[1] << std::endl;
-            std::cout << "    Total inj surface volumes:     "
-                      << std::setw(width) << tot_injected[0]
-                      << std::setw(width) << tot_injected[1] << std::endl;
-            std::cout << "    Total prod surface volumes:    "
-                      << std::setw(width) << tot_produced[0]
-                      << std::setw(width) << tot_produced[1] << std::endl;
-            const double balance[2] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
-                                        init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1] };
-            std::cout << "    Initial - inplace + inj - prod: "
-                      << std::setw(width) << balance[0]
-                      << std::setw(width) << balance[1]
-                      << std::endl;
-            std::cout << "    Relative mass error:            "
-                      << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
-                      << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
-                      << std::endl;
-            std::cout.precision(8);
-
-            // Make well reports.
-            watercut.push(timer.currentTime() + timer.currentStepLength(),
-                          produced[0]/(produced[0] + produced[1]),
-                          tot_produced[0]/tot_porevol_init);
-            if (wells_) {
-                wellreport.push(props_, *wells_,
-                                state.pressure(), state.surfacevol(), state.saturation(),
-                                timer.currentTime() + timer.currentStepLength(),
-                                well_state.bhp(), well_state.perfRates());
-            }
-#endif
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
                 sreport.reportParam(tstep_os);
@@ -482,12 +417,6 @@ namespace Opm
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
-#if 0
-                outputWaterCut(watercut, output_dir_);
-                if (wells_) {
-                    outputWellReport(wellreport, output_dir_);
-                }
-#endif
                 tstep_os.close();
             }
 
