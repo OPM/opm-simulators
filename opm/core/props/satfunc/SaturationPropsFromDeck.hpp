@@ -101,34 +101,54 @@ namespace Opm
                       const int* cells,
                       double* smin,
                       double* smax) const;
+        
+        /// Update saturation state for the hysteresis tracking 
+        /// \param[in]  n      Number of data points. 
+        /// \param[in]  s      Array of nP saturation values.             
+        void updateSatHyst(const int n,
+                           const int* cells,
+                           const double* s);
 
     private:
         PhaseUsage phase_usage_;
         std::vector<SatFuncSet> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
 
-        struct { // End point scaling parameters
-            std::vector<double> swl_;
-            std::vector<double> swcr_;
-            std::vector<double> swu_;
-            std::vector<double> sowcr_;
-            std::vector<double> krw_;
-            std::vector<double> krwr_;
-            std::vector<double> kro_;
-            std::vector<double> krorw_;
-        } eps_;
         bool do_eps_;  // ENDSCALE is active
         bool do_3pt_;  // SCALECRS: YES~true  NO~false
+        bool do_hyst_;  // Keywords ISWL etc detected     
+        std::vector<EPSTransforms> eps_transf_;
+        std::vector<EPSTransforms> eps_transf_hyst_;
+        std::vector<SatHyst> sat_hyst_;
 
         typedef SatFuncSet Funcs;
 
         const Funcs& funcForCell(const int cell) const;
-
         void initEPS(const EclipseGridParser& deck,
-                          const UnstructuredGrid& grid,
-                          const std::string& keyword,
-                          std::vector<double>& scaleparam);
-        void relpermEPS(const double *s, const int cell, double *kr, double *dkrds= 0) const;
+                     const UnstructuredGrid& grid);
+        void initEPSHyst(const EclipseGridParser& deck,
+                         const UnstructuredGrid& grid);
+        void initEPSKey(const EclipseGridParser& deck,
+                        const UnstructuredGrid& grid,
+                        const std::string& keyword,
+                        std::vector<double>& scaleparam);
+        void initEPSParam(const int cell, 
+                          EPSTransforms::Transform& data,
+                          const bool oil,
+                          const double sl_tab,
+                          const double scr_tab,
+                          const double su_tab,
+                          const double sxcr_tab,
+                          const double s0_tab,
+                          const double krsr_tab,
+                          const double krmax_tab,
+                          const std::vector<double>& sl,
+                          const std::vector<double>& scr,
+                          const std::vector<double>& su,
+                          const std::vector<double>& sxcr,
+                          const std::vector<double>& s0,
+                          const std::vector<double>& krsr,
+                          const std::vector<double>& krmax);
     };
 
 
