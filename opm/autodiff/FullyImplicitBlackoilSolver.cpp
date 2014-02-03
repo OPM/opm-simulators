@@ -208,11 +208,11 @@ namespace {
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
         , rq_    (fluid.numPhases())
+        , phaseCondition_(grid.number_of_cells)
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null(),
                         ADB::null() } )
-        , phaseCondition_(grid.number_of_cells)
     {
     }
 
