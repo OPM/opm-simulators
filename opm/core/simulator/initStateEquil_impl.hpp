@@ -32,7 +32,7 @@ namespace Opm
 {
     namespace Details {
         template <class RHS>
-        class RK4IVP : public std::binary_function<double,double,double> {
+        class RK4IVP {
         public:
             RK4IVP(const RHS&                  f   ,
                    const std::array<double,2>& span,
