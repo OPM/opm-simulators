@@ -23,6 +23,7 @@
 #include <opm/core/grid/cart_grid.h>
 
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
+#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/core/pressure/msmfem/partition.h>
@@ -91,6 +92,9 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
     BOOST_CHECK_CLOSE(ppress[1][first] , 103.5e3 , reltol);
     BOOST_CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
 }
+
+
+
 
 BOOST_AUTO_TEST_CASE (CellSubset)
 {
@@ -204,6 +208,9 @@ BOOST_AUTO_TEST_CASE (CellSubset)
     BOOST_CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
 }
 
+
+
+
 BOOST_AUTO_TEST_CASE (RegMapping)
 {
     typedef std::vector<double> PVal;
@@ -311,5 +318,18 @@ BOOST_AUTO_TEST_CASE (RegMapping)
     BOOST_CHECK_CLOSE(ppress[1][first] , 103.5e3 , reltol);
     BOOST_CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
 }
+
+
+
+BOOST_AUTO_TEST_CASE (DeckAllDead)
+{
+    std::shared_ptr<UnstructuredGrid>
+        grid(create_grid_cart3d(10, 1, 10), destroy_grid);
+    Opm::EclipseGridParser deck("deadfluids.DATA");
+    Opm::BlackoilPropertiesFromDeck props(deck, *grid, false);
+    Opm::equil::DeckDependent::PhasePressureComputer<Opm::EclipseGridParser> comp(props, deck, *grid);
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
