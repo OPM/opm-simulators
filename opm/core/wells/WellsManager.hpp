@@ -141,11 +141,10 @@ namespace Opm
         void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
 
-        void createWellsFromSpecs( ScheduleConstPtr schedule, size_t timeStep,
+        void createWellsFromSpecs( std::vector<WellConstPtr>& wells, size_t timeStep,
                                    const UnstructuredGrid& grid,
                                    std::vector<std::string>& well_names,
                                    std::vector<WellData>& well_data,
-                                   std::vector<std::vector<PerfData> >& wellperf_data,
                                    std::map<std::string, int> & well_names_to_index,
                                    const PhaseUsage& phaseUsage,
                                    const std::map<int,int> cartesian_to_compressed,

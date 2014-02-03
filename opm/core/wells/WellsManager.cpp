@@ -296,7 +296,7 @@ namespace Opm
         // then used to initialize the Wells struct.
         std::vector<std::string> well_names;
         std::vector<WellData> well_data;
-        std::vector<std::vector<PerfData> > wellperf_data;
+
 
         // For easy lookup:
         std::map<std::string, int> well_names_to_index;
@@ -306,60 +306,11 @@ namespace Opm
 
         well_names.reserve(wells.size());
         well_data.reserve(wells.size());
-        wellperf_data.resize(wells.size());
 
-        createWellsFromSpecs(schedule, timeStep, grid, well_names, well_data, wellperf_data, well_names_to_index, pu, cartesian_to_compressed, permeability);
+
+        createWellsFromSpecs(wells, timeStep, grid, well_names, well_data, well_names_to_index, pu, cartesian_to_compressed, permeability);
 
         setupWellControls(wells, timeStep, well_names, pu);
-
-        // Get WELTARG data
-        if (deck.hasField("WELTARG")) {
-            OPM_THROW(std::runtime_error, "We currently do not handle WELTARG.");
-            /*
-            const WELTARG& weltargs = deck.getWELTARG();
-            const int num_weltargs  = weltargs.weltarg.size();
-            for (int kw = 0; kw < num_weltargs; ++kw) {
-                std::string name = weltargs.weltarg[kw].well_;
-                std::string::size_type len = name.find('*');
-                if (len != std::string::npos) {
-                    name = name.substr(0, len);
-                }
-                bool well_found = false;
-                for (int wix = 0; wix < num_wells; ++wix) {
-                    if (well_names[wix].compare(0,len, name) == 0) { //equal
-                        well_found = true;
-                        well_data[wix].target = weltargs.weltarg[kw].new_value_;
-                        break;
-                    }
-                }
-                if (!well_found) {
-                    OPM_THROW(std::runtime_error, "Undefined well name: " << weltargs.weltarg[kw].well_
-                          << " in WELTARG");
-                }
-            }
-            */
-        }
-
-        // Debug output.
-#define EXTRA_OUTPUT
-#ifdef EXTRA_OUTPUT
-        /*
-        std::cout << "\t WELL DATA" << std::endl;
-        for(int i = 0; i< num_wells; ++i) {
-            std::cout << i << ": " << well_data[i].type << "  "
-                      << well_data[i].control << "  " << well_data[i].target
-                      << std::endl;
-        }
-
-        std::cout << "\n\t PERF DATA" << std::endl;
-        for(int i=0; i< int(wellperf_data.size()); ++i) {
-            for(int j=0; j< int(wellperf_data[i].size()); ++j) {
-                std::cout << i << ": " << wellperf_data[i][j].cell << "  "
-                          << wellperf_data[i][j].well_index << std::endl;
-            }
-        }
-        */
-#endif
 
         if (deck.hasField("WELOPEN")) {
             const WELOPEN& welopen = deck.getWELOPEN();
@@ -438,6 +389,27 @@ namespace Opm
         }
         well_collection_.setWellsPointer(w_);
         well_collection_.applyGroupControls();
+
+        // Debug output.
+#define EXTRA_OUTPUT
+#ifdef EXTRA_OUTPUT
+        /*
+        std::cout << "\t WELL DATA" << std::endl;
+        for(int i = 0; i< num_wells; ++i) {
+            std::cout << i << ": " << well_data[i].type << "  "
+                      << well_data[i].control << "  " << well_data[i].target
+                      << std::endl;
+        }
+
+        std::cout << "\n\t PERF DATA" << std::endl;
+        for(int i=0; i< int(wellperf_data.size()); ++i) {
+            for(int j=0; j< int(wellperf_data[i].size()); ++j) {
+                std::cout << i << ": " << wellperf_data[i][j].cell << "  "
+                          << wellperf_data[i][j].well_index << std::endl;
+            }
+        }
+        */
+#endif
     }
 
 
@@ -1104,17 +1076,18 @@ namespace Opm
 
     }
 
-    void WellsManager::createWellsFromSpecs(ScheduleConstPtr schedule, size_t timeStep,
+    void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t timeStep,
                                             const UnstructuredGrid& grid,
                                             std::vector<std::string>& well_names,
                                             std::vector<WellData>& well_data,
-                                            std::vector<std::vector<PerfData> >& wellperf_data,
                                             std::map<std::string, int>& well_names_to_index,
                                             const PhaseUsage& phaseUsage,
                                             std::map<int,int> cartesian_to_compressed,
                                             const double* permeability)
     {
-        std::vector<WellConstPtr> wells = schedule->getWells(timeStep);
+        std::vector<std::vector<PerfData> > wellperf_data;
+        wellperf_data.resize(wells.size());
+
         int well_index = 0;
         for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
             WellConstPtr well = (*wellIter);
